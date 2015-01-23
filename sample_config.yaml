@@ -1,0 +1,86 @@
+
+verbosity : 0
+
+# These are global parameters of the analysis.  Some of these can be
+# overriden in the analysis components block.
+common:
+
+  # FT1 file
+  evfile : null
+
+  # Spacecraft file
+  scfile : null
+
+  # LT cube (optional)
+  ltcube : null
+
+  # Set the ROI center to the coordinates of this source
+  ra     : 0.0
+  dec    : 0.0
+  srcname : null
+
+  # Binning
+  binsz      : 0.1 # spatial bin size in deg
+  binsperdec : 8   # nb energy bins per decade
+  
+  # Data selections
+  emin    : 100
+  emax    : 1000
+  zmax    : 100
+  evclass : 128
+  evtype  : null
+
+  # IRFs
+  enable_edisp : True
+  irfs : 'P8_SOURCE_V5'
+
+  # This option can be used to use a predefined analysis setup.  Any
+  # option defined in this file will override the predefined settings.
+  analysis_type : 'psf4_joint'
+
+optimization :
+
+  # Free sources within X deg of ROI center
+  free_source_radius : null
+
+  # Free sources within X deg of ROI edge (pos = outside, neg = inside)
+  free_source_roi_margin : null
+
+  # Provide explicit list of sources to be freed (either diffuse or point-source)
+  free_sources : null
+
+  # Provide a minimum TS threshold at which sources should be freed
+  free_source_ts_threshold : null
+
+
+# This is the block of the configuration where individual components
+# of the analysis are defined.  
+components:
+  
+  psf0:
+    evtype  : 4
+    emin    : 300
+    emax    : 1000
+    binsz   : 0.5
+    isodiff : 'iso_psf0.txt'
+
+  psf1:
+    evtype : 8
+    binsz  : 0.1
+    isodiff : 'iso_psf1.txt'
+    
+# Settings for ROI model
+roi:
+  galdiff  : null
+  isodiff  : null
+  limbdiff : null
+  catalogs : ['3FGL']
+
+# Settings for SED analysis
+sed: {}
+
+# Settings for lightcurve analysis
+curve: {}
+
+# Settings for MC analysis
+mc : {}
