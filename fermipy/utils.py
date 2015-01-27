@@ -1,5 +1,40 @@
 import numpy as np
 
+import xml.etree.cElementTree as et
+
+class AnalysisBase(object):
+    """The base class provides common facilities like configuration
+    parsing and saving state. """
+    def __init__(self,config,**kwargs):
+        self._config = self.get_config()
+        update_dict(self._config,config)
+        update_dict(self._config,kwargs)
+
+    @classmethod
+    def get_config(cls):
+        # Load defaults
+        return load_config(cls.defaults)
+
+    @property
+    def config(self):
+        """Return the internal configuration state of this class."""
+        return self._config
+
+def create_xml_element(root,name,attrib):
+    el = et.SubElement(root,name)
+    for k, v in attrib.iteritems(): el.set(k,v)
+    return el
+
+def prettify_xml(elem):
+    """Return a pretty-printed XML string for the Element.
+    """
+    from xml.dom import minidom
+    import xml.etree.cElementTree as et
+
+    rough_string = et.tostring(elem, 'utf-8')
+    reparsed = minidom.parseString(rough_string)
+    return reparsed.toprettyxml(indent="  ")  
+
 def load_config(defaults):
     """Create a configuration dictionary from a defaults dictionary.
     The defaults dictionary predefines valid key/value pairs and
