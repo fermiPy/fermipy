@@ -13,7 +13,7 @@ def latlon_to_xyz(lat,lon):
 
 class Source(object):
 
-    def __init__(self,col_data=None,radec=None):
+    def __init__(self,col_data=None,radec=None,extended=False):
 
         if col_data is None:            
             self._col_data = {}
@@ -33,12 +33,17 @@ class Source(object):
 
             self._names_dict[k] = name
 
+        self._extended=extended
 
     def separation(self,src):
         costh = np.sum(self._radec*src.radec)        
         costh = min(1.0,costh)
         costh = max(costh,-1.0)
         return np.degrees(np.arccos(costh))
+
+    @property
+    def extended(self):
+        return self._extended
 
     @property
     def name(self):
@@ -309,43 +314,47 @@ class ROIManager(AnalysisBase):
         srcs = [ self._srcs[i] for i in msk]
         return srcs
 
-    def load_fits(self,fitsfile):
+    def load_fits(self,fitsfile,
+                  src_hduname='LAT_Point_Source_Catalog',
+                  extsrc_hduname='ExtendedSources'):
         """Load sources from a FITS catalog file."""
         
         hdulist = pyfits.open(fitsfile)
-        table = hdulist[1]
+        table_src = hdulist[src_hduname]
+        table_extsrc = hdulist[extsrc_hduname]
 
         # Rearrange column data in a more convenient format
-        cols = {}
-        for icol, col in enumerate(table.columns.names):
+        cols = fits_recarray_to_dict(table_src)
+        cols_extsrc = fits_recarray_to_dict(table_extsrc)
 
-            col_data = hdulist[1].data[col]
-#            print icol, col, type(col_data[0])
+        extsrc_names = cols_extsrc['Source_Name'].tolist()
+        extsrc_names = [s.strip() for s in extsrc_names]
 
-            if type(col_data[0]) == np.float32: 
-                cols[col] = np.array(col_data,dtype=float)
-            elif type(col_data[0]) == np.float64: 
-                cols[col] = np.array(col_data,dtype=float)
-            elif type(col_data[0]) == str: 
-                cols[col] = np.array(col_data,dtype=str)
-            elif type(col_data[0]) == np.int16: 
-                cols[col] = np.array(col_data,dtype=int)
-            elif type(col_data[0]) == np.ndarray: 
-                cols[col] = np.array(col_data)
-            else:
-                raise Exception('Unrecognized column type.')
+        print table_extsrc.columns.names
+        print table_extsrc.data['Source_Name']
 
-        nsrc = len(hdulist[1].data)
+        nsrc = len(table_src.data)
         for i in range(nsrc):
 
             src_dict = {}
             for icol, col in enumerate(cols):
-                if not col in cols: continue
                 src_dict[col] = cols[col][i]
 
-            src_dict['Source_Name'] = src_dict['Source_Name'].strip()  
+            extflag=False
 
-            
+            src_dict['Source_Name'] = src_dict['Source_Name'].strip()  
+            extsrc_name = src_dict['Extended_Source_Name'].strip()
+
+            if len(extsrc_name.strip()) > 0:
+                extflag=True
+                extsrc_index = extsrc_names.index(extsrc_name) 
+                
+                for icol, col in enumerate(cols_extsrc):
+                    if col in cols: continue
+                    src_dict[col] = cols_extsrc[col][extsrc_index]
+
+                src_dict['Spatial_Filename'] = src_dict['Spatial_Filename'].strip()
+
             phi = np.radians(src_dict['RAJ2000'])
             theta = np.pi/2.-np.radians(src_dict['DEJ2000'])
 
@@ -353,9 +362,9 @@ class ROIManager(AnalysisBase):
                                   np.sin(theta)*np.sin(phi),
                                   np.cos(theta)])
 
-            src = Source(src_dict,src_radec)
+            src = Source(src_dict,src_radec,extended=extflag)
             self._srcs.append(src)
-              
+
         self.build_src_index()
 
 #            cat.load_source(ROIManagerSource(src))
@@ -385,7 +394,10 @@ class ROIManager(AnalysisBase):
     def create_roi_from_source(self,xmlfile,name,isodiff,galdiff,radius=180.0):
 
         srcs = self.get_nearby_sources(name,radius)
-        self.create_roi(srcs,isodiff,galdiff,xmlfile)
+
+        print len(srcs)
+
+        self.create_roi(xmlfile,srcs,isodiff,galdiff)
 
     def create_roi_from_ft1(self,ft1file):
         """Create an ROI model by extracting the sources coordinates
@@ -399,41 +411,60 @@ class ROIManager(AnalysisBase):
         root.set('title','source_library')
 
         for s in srcs:
-            
-            source_element = create_xml_element(root,'source',
-                                                dict(name=s['Source_Name'],
-                                                     type='PointSource'))
+
+            if not s.extended:
+                source_element = create_xml_element(root,'source',
+                                                    dict(name=s['Source_Name'],
+                                                         type='PointSource'))
+
+                spat_el = et.SubElement(source_element,'spatialModel')
+                spat_el.set('type','SkyDirFunction')
+
+                create_xml_element(spat_el,'parameter',
+                                   dict(name = 'RA',value = str(s['RAJ2000']),
+                                        free='0',min='-360.0',max='360.0',
+                                        scale='1.0'))
+
+                create_xml_element(spat_el,'parameter',
+                                   dict(name = 'DEC',value = str(s['DEJ2000']),
+                                        free='0',min='-90.0',max='90.0',
+                                        scale='1.0'))
+
+            else:
+                source_element = create_xml_element(root,'source',
+                                                    dict(name=s['Source_Name'],
+                                                         type='DiffuseSource'))
+
+                spat_el = create_xml_element(source_element,'spatialModel',
+                                             dict(map_based_integral='True',
+                                                  type='SpatialMap',
+                                                  file=s['Spatial_Filename']))
+
+                create_xml_element(spat_el,'parameter',
+                                   dict(name = 'Prefactor',value = '1',
+                                        free='0',min='0.001',max='1000',
+                                        scale='1.0'))
+
+#                spat_el = et.SubElement(source_element,'spatialModel')
+#                spat_el.set('type','')
 
             spec_element = et.SubElement(source_element,'spectrum')
 
             stype = s['SpectrumType'].strip()            
             spec_element.set('type',stype)
 
+            print stype
+
             if stype == 'PowerLaw':
                 ROIManager.create_powerlaw(s,spec_element)
             elif stype == 'LogParabola':
                 ROIManager.create_logparabola(s,spec_element)
-            elif stype == 'PLSuperExpCutoff':
+            elif stype == 'PLSuperExpCutoff' or stype == 'PLExpCutoff':
+                spec_element.set('type','PLSuperExpCutoff')
                 ROIManager.create_plsuperexpcutoff(s,spec_element)
-                
-            spat_el = et.SubElement(source_element,'spatialModel')
-            spat_el.set('type','SkyDirFunction')
-
-            create_xml_element(spat_el,'parameter',
-                               dict(name = 'RA',
-                                    value = str(s['RAJ2000']),
-                                    free='0',
-                                    min='-360.0',
-                                    max='360.0',
-                                    scale='1.0'))
-
-            create_xml_element(spat_el,'parameter',
-                               dict(name = 'DEC',
-                                    value = str(s['DEJ2000']),
-                                    free='0',
-                                    min='-90.0',
-                                    max='90.0',
-                                    scale='1.0'))
+            else:
+                raise Exception('Unrecognized spectral type: ' + stype)
+            
             
         isodiff_el = ROIManager.create_isotropic(root,isodiff)
         galdiff_el = ROIManager.create_galactic(root,galdiff)
@@ -458,10 +489,10 @@ if __name__ == '__main__':
     roi = ROIManager()
 
 
-    roi.load_fits('gll_psc_v11.fit')
+    roi.load_fits('gll_fssc_psc_v14.fit')
 
 
-    src = roi.get_source_by_name('vela')
+    src = roi.get_source_by_name('lmc')
 
 
     import pprint
@@ -469,9 +500,9 @@ if __name__ == '__main__':
 
     print src
 
-    srcs = roi.get_nearby_sources('vela',10.0)
+    srcs = roi.get_nearby_sources('lmc',10.0)
 
-    for s in srcs:        
-        print s.name, s.associations, s.separation(src)
+#    for s in srcs:        
+#        print s.name, s.associations, s.separation(src)
 
-    roi.create_roi_from_source('test.xml','vela','test','test',10.0)
+    roi.create_roi_from_source('test.xml','lmc','test','test',90.0)

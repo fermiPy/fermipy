@@ -20,6 +20,30 @@ class AnalysisBase(object):
         """Return the internal configuration state of this class."""
         return self._config
 
+def fits_recarray_to_dict(table):
+    """Convert a FITS recarray to a python dictionary."""
+
+    cols = {}
+    for icol, col in enumerate(table.columns.names):
+
+        col_data = table.data[col]
+#            print icol, col, type(col_data[0])
+        
+        if type(col_data[0]) == np.float32: 
+            cols[col] = np.array(col_data,dtype=float)
+        elif type(col_data[0]) == np.float64: 
+            cols[col] = np.array(col_data,dtype=float)
+        elif type(col_data[0]) == str: 
+            cols[col] = np.array(col_data,dtype=str)
+        elif type(col_data[0]) == np.int16: 
+            cols[col] = np.array(col_data,dtype=int)
+        elif type(col_data[0]) == np.ndarray: 
+            cols[col] = np.array(col_data)
+        else:
+            raise Exception('Unrecognized column type.')
+    
+    return cols
+
 def create_xml_element(root,name,attrib):
     el = et.SubElement(root,name)
     for k, v in attrib.iteritems(): el.set(k,v)
