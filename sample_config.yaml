@@ -5,30 +5,37 @@ verbosity : 0
 # overriden in the analysis components block.
 common:
 
+  base   : 'mkn421'
+
+  # Define input data files (FT1, FT2, LTCube)
+
   # FT1 file
-  evfile : null
+  evfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V4/P8_SOURCE_V4_239557414_428903014_z100_r180_gticut1_ft1.lst
 
   # Spacecraft file
-  scfile : null
+  scfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V4/P8_P301_SOURCE_239557414_428903014_ft2.fits 
 
   # LT cube (optional)
-  ltcube : null
+  ltcube : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V4/P8_SOURCE_V4_239557414_428903014_z100_r180_gticut1_ltcube.fits
+
+  # Binning
+  roi_width  : 5.0
+  npix       : null
+  binsz      : 0.2 # spatial bin size in deg
+  binsperdec : 8   # nb energy bins per decade
+  
+  # Data selections
+  emin    : 1000
+  emax    : 10000
+  zmax    : 100
+  evclass : 128
+  evtype  : null
 
   # Set the ROI center to the coordinates of this source
   ra     : 0.0
   dec    : 0.0
-  srcname : null
-
-  # Binning
-  binsz      : 0.1 # spatial bin size in deg
-  binsperdec : 8   # nb energy bins per decade
-  
-  # Data selections
-  emin    : 100
-  emax    : 1000
-  zmax    : 100
-  evclass : 128
-  evtype  : null
+  target : 'mkn421'
+  radius : 10.0
 
   # IRFs
   enable_edisp : True
@@ -58,23 +65,29 @@ optimization :
 components:
   
   psf0:
-    evtype  : 4
-    emin    : 300
-    emax    : 1000
-    binsz   : 0.5
-    isodiff : 'iso_psf0.txt'
+    evtype  : 16
+    binsz   : 0.2
+    irfs    : P8_SOURCE_V5_PSF2
+
+    roi:
+      isodiff : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_psf2_4years_P8V3.txt'
 
   psf1:
-    evtype : 8
+    evtype : 32
     binsz  : 0.1
-    isodiff : 'iso_psf1.txt'
+    irfs    : P8_SOURCE_V5_PSF3
+
+    roi:
+      isodiff : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_psf3_4years_P8V3.txt'
     
 # Settings for ROI model
 roi:
-  galdiff  : null
+  radius   : 10.0
+  galdiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/template_4years_P8_V2_scaled.fits'
   isodiff  : null
   limbdiff : null
-  catalogs : ['3FGL']
+  catalogs : 
+    - 'gll_psc_v14.fit'
 
 # Settings for SED analysis
 sed: {}

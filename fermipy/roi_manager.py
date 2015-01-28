@@ -11,6 +11,36 @@ def latlon_to_xyz(lat,lon):
                      np.sin(theta)*np.sin(phi),
                      np.cos(theta)]).T
 
+class IsoSource(object):
+
+    def __init__(self,filefunction,name,norm=1.0):
+        self._norm = norm
+        self._filefunction = filefunction
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name        
+        
+    @property
+    def filefunction(self):
+        return self._filefunction
+        
+class MapCubeSource(object):
+
+    def __init__(self,mapcube,name,norm=1.0):
+        self._norm = norm
+        self._mapcube = mapcube
+        self._name = name
+
+    @property
+    def name(self):
+        return self._name        
+        
+    @property
+    def mapcube(self):
+        return self._mapcube
+        
 class Source(object):
 
     def __init__(self,col_data=None,radec=None,extended=False):
@@ -68,8 +98,8 @@ class Source(object):
         return self._col_data[key]
 
 class ROIManager(AnalysisBase):
-    """This class is responsible for reading and writing XML model
-    files."""
+    """This class is responsible for managing the ROI definition.
+    Catalogs can be read from either FITS or XML files."""
 
     defaults = dict(GTAnalysisDefaults.defaults_roi.items())
 
@@ -81,15 +111,68 @@ class ROIManager(AnalysisBase):
     def __init__(self,config=None,**kwargs):
         super(ROIManager,self).__init__(config,**kwargs)
 
+        # Coordinate for ROI center (defaults to 0,0)
+        self._radec = kwargs.get('radec',np.array([0.0,0.0]))    
+        self._srcs = kwargs.get('srcs',[])
+        self._diffuse_srcs = kwargs.get('diffuse_srcs',[])
+
+        self.build_src_index()
+
+    def __iter__(self):
+        return iter(self._srcs + self._diffuse_srcs)
+
+    @property
+    def radec(self):
+        """Return the center of the ROI."""        
+        return self._radec
+
+    def load_diffuse_srcs(self):
+        self._diffuse_srcs = []
+        
+        if self.config['isodiff'] is not None:
+            self._diffuse_srcs.append(IsoSource(self.config['isodiff'],'isodiff'))
+
+        if self.config['galdiff'] is not None:
+            self._diffuse_srcs.append(MapCubeSource(self.config['galdiff'],'galdiff'))
+            
+    def load(self):
+
         self._srcs = []
 
-        if config is None: return
-
+        self.load_diffuse_srcs()
+            
         for c in self.config['catalogs']:
             self.load_fits(c)
+
+    # Creation Methods
             
     @staticmethod
-    def create_isotropic(root,filefunction,name='isodiff'):
+    def create_roi_from_coords(name,config):
+        """Create an ROI centered on the given coordinates."""
+        pass
+        
+    @staticmethod
+    def create_roi_from_source(name,config):
+        """Create an ROI centered on the given source."""
+        
+        roi = ROIManager(config)
+        roi.load()
+
+        src = roi.get_source_by_name(name)
+        srcs = roi.get_nearby_sources(name,roi.config['radius'])
+        radec = np.array([src['RAJ2000'],src['DEJ2000']])
+        
+        return ROIManager(config,srcs=srcs,
+                          diffuse_srcs=roi._diffuse_srcs,radec=radec)
+
+    @staticmethod
+    def create_roi_from_ft1(ft1file,config):
+        """Create an ROI model by extracting the sources coordinates
+        form an FT1 file."""
+        pass        
+            
+    @staticmethod
+    def create_isotropic(src,root,filefunction=None):
 
         default_norm = dict(name='Normalization',value='1.0',free='1',
                             max='10000.0',min='0.0001',scale='1.0')
@@ -97,8 +180,10 @@ class ROIManager(AnalysisBase):
                              max='10.0', min='0.0',scale='1.0')
 
         el = create_xml_element(root,'source',
-                                dict(name=name,
+                                dict(name=src.name,
                                      type='DiffuseSource'))
+
+        if filefunction is None: filefunction = src.filefunction
         
         spec_el = create_xml_element(el,'spectrum',
                                      dict(file=filefunction,
@@ -115,10 +200,10 @@ class ROIManager(AnalysisBase):
         return el
 
     @staticmethod
-    def create_galactic(root,mapcube,name='galdiff'):
-
+    def create_mapcube(src,root,mapcube=None):
+        
         el = create_xml_element(root,'source',
-                                dict(name=name,
+                                dict(name=src.name,
                                      type='DiffuseSource'))
 
         spec_el = create_xml_element(el,'spectrum',
@@ -151,7 +236,7 @@ class ROIManager(AnalysisBase):
 
         spat_el = create_xml_element(el,'spatialModel',
                                      dict(type='MapCubeFunction',
-                                          file=mapcube))
+                                          file=src.mapcube))
                 
         create_xml_element(spat_el,'parameter',
                            dict(name='Normalization',
@@ -291,6 +376,8 @@ class ROIManager(AnalysisBase):
 
     def get_nearby_sources(self,name,radius,min_radius=None):
 
+        if radius is None: radius = 180.0
+        
         src = self.get_source_by_name(name)
         return self.get_sources_by_position(src['RAJ2000'],
                                             src['DEJ2000'],
@@ -330,9 +417,6 @@ class ROIManager(AnalysisBase):
         extsrc_names = cols_extsrc['Source_Name'].tolist()
         extsrc_names = [s.strip() for s in extsrc_names]
 
-        print table_extsrc.columns.names
-        print table_extsrc.data['Source_Name']
-
         nsrc = len(table_src.data)
         for i in range(nsrc):
 
@@ -370,8 +454,8 @@ class ROIManager(AnalysisBase):
 #            cat.load_source(ROIManagerSource(src))
 
     def build_src_index(self):
-        """Build an index of sources for fast lookup of sources given
-        a source name."""
+        """Build an indices for fast lookup of a source given its name
+        or coordinates."""
         
         self._src_index = {}
         nsrc = len(self._srcs)
@@ -388,29 +472,16 @@ class ROIManager(AnalysisBase):
                 self._src_index[name.replace(' ','')] = i
                 self._src_index[name.replace(' ','').lower()] = i
 
-#        import pprint
-#        pprint.pprint(self._src_index)
+    
 
-    def create_roi_from_source(self,xmlfile,name,isodiff,galdiff,radius=180.0):
-
-        srcs = self.get_nearby_sources(name,radius)
-
-        print len(srcs)
-
-        self.create_roi(xmlfile,srcs,isodiff,galdiff)
-
-    def create_roi_from_ft1(self,ft1file):
-        """Create an ROI model by extracting the sources coordinates
-        form an FT1 file."""
-        pass
         
-
-    def create_roi(self,xmlfile,srcs,isodiff,galdiff):
-
+    def write_xml(self,xmlfile,isodiff=None,galdiff=None):
+        """Save this ROI model as an XML file."""
+        
         root = et.Element('source_library')
         root.set('title','source_library')
 
-        for s in srcs:
+        for s in self._srcs:
 
             if not s.extended:
                 source_element = create_xml_element(root,'source',
@@ -445,15 +516,10 @@ class ROIManager(AnalysisBase):
                                         free='0',min='0.001',max='1000',
                                         scale='1.0'))
 
-#                spat_el = et.SubElement(source_element,'spatialModel')
-#                spat_el.set('type','')
-
             spec_element = et.SubElement(source_element,'spectrum')
 
             stype = s['SpectrumType'].strip()            
             spec_element.set('type',stype)
-
-            print stype
 
             if stype == 'PowerLaw':
                 ROIManager.create_powerlaw(s,spec_element)
@@ -465,21 +531,24 @@ class ROIManager(AnalysisBase):
             else:
                 raise Exception('Unrecognized spectral type: ' + stype)
             
-            
-        isodiff_el = ROIManager.create_isotropic(root,isodiff)
-        galdiff_el = ROIManager.create_galactic(root,galdiff)
-        
+
+        for s in self._diffuse_srcs:
+
+            if isodiff is not None:
+                ROIManager.create_isotropic(s,root)            
+            elif isinstance(s,IsoSource):
+                ROIManager.create_isotropic(s,root)
+            elif isinstance(s,MapCubeSource):
+                ROIManager.create_mapcube(s,root)
+            else:
+                raise Exception('Unkown diffuse source type: ' + type(s))
+                
         output_file = open(xmlfile,'w')
         output_file.write(prettify_xml(root))
 
     def load_xml(self):
         """Load sources from an XML file."""
 
-        pass
-
-
-    def write_xml(self,xmlfile):
-        """Save current model definition as XML file."""
         pass
 
 

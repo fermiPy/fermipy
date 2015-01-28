@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 import xml.etree.cElementTree as et
@@ -7,9 +9,12 @@ class AnalysisBase(object):
     parsing and saving state. """
     def __init__(self,config,**kwargs):
         self._config = self.get_config()
+        self.configure(config,**kwargs)
+
+    def configure(self,config,**kwargs):
         update_dict(self._config,config)
         update_dict(self._config,kwargs)
-
+        
     @classmethod
     def get_config(cls):
         # Load defaults
@@ -20,6 +25,10 @@ class AnalysisBase(object):
         """Return the internal configuration state of this class."""
         return self._config
 
+def mkdir(dir):
+    if not os.path.exists(dir):  os.makedirs(dir)
+    return dir
+    
 def fits_recarray_to_dict(table):
     """Convert a FITS recarray to a python dictionary."""
 
@@ -92,6 +101,8 @@ def load_config(defaults):
                 group = o.setdefault(groupname,{})
                 group[key] = value
             else:
+                if key in o: raise Exception('Duplicate key.')
+                
                 o[key] = value
         else:
             raise Exception('Unrecognized type for default dict element.')
