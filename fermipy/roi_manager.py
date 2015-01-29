@@ -1,4 +1,4 @@
-from defaults import *
+import defaults 
 from utils import *
 import pyfits
 
@@ -101,7 +101,7 @@ class ROIManager(AnalysisBase):
     """This class is responsible for managing the ROI definition.
     Catalogs can be read from either FITS or XML files."""
 
-    defaults = dict(GTAnalysisDefaults.defaults_roi.items())
+    defaults = dict(defaults.roi.items())
 
     src_name_cols = ['Source_Name',
                      'ASSOC1','ASSOC2','ASSOC_GAM',
@@ -116,6 +116,9 @@ class ROIManager(AnalysisBase):
         self._srcs = kwargs.get('srcs',[])
         self._diffuse_srcs = kwargs.get('diffuse_srcs',[])
 
+        self._src_index = {}
+        self._diffuse_src_index = {}
+        
         self.build_src_index()
 
     def __iter__(self):
@@ -144,8 +147,7 @@ class ROIManager(AnalysisBase):
         for c in self.config['catalogs']:
             self.load_fits(c)
 
-    # Creation Methods
-            
+    # Creation Methods           
     @staticmethod
     def create_roi_from_coords(name,config):
         """Create an ROI centered on the given coordinates."""
@@ -473,7 +475,8 @@ class ROIManager(AnalysisBase):
                 self._src_index[name.replace(' ','').lower()] = i
 
     
-
+        for i, s in enumerate(self._diffuse_srcs):
+            pass
         
     def write_xml(self,xmlfile,isodiff=None,galdiff=None):
         """Save this ROI model as an XML file."""
