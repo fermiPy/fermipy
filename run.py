@@ -1,16 +1,18 @@
 from fermipy.AnalysisMain import *
 from fermipy.roi_manager import *
+from fermipy.config import *
 import yaml
 import pprint
+from fermipy.Logger import *
 
-config = yaml.load(open('sample_config.yaml'))
-
+        
+config = ConfigManager.create('sample_config.yaml')
 
 gta = GTAnalysis(config)
 
-pprint.pprint(gta.config)
-
 gta.setup()
+
+sys.exit(0)
 
 gta.write_results('input_model')
 gta.write_results('input_model.yaml')

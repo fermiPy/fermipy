@@ -55,6 +55,7 @@ fileio = {
     'scratchdir'  : (None,''),
     'savedir'     : (None,'Override the output directory.'),
     'workdir'     : (None,'Override the working directory.'),
+    'logfile'     : (None,''),
     'saveoutput'  : (True,'Save intermediate FITS data products.')
     }
 

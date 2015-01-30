@@ -1,5 +1,5 @@
 import os
-
+import yaml
 import numpy as np
 
 import xml.etree.cElementTree as et
@@ -24,6 +24,14 @@ class AnalysisBase(object):
     def config(self):
         """Return the internal configuration state of this class."""
         return self._config
+
+    def print_config(self,logger,loglevel=None):
+
+        if loglevel is None:
+            logger.info('Configuration:\n'+ yaml.dump(self.config))
+        else:
+            logger.log(loglevel,'Configuration:\n'+ yaml.dump(self.config))
+        
 
 def mkdir(dir):
     if not os.path.exists(dir):  os.makedirs(dir)

@@ -1,5 +1,5 @@
 
-verbosity : 0
+verbosity : 3
 
 # These are global parameters of the analysis.  Some of these can be
 # overriden in the analysis components block.

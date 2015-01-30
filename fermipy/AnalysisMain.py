@@ -5,10 +5,12 @@ import sys
 import copy
 import yaml
 from utils import *
-import defaults 
+import defaults
+import fermipy
 from roi_manager import *
 from Logger import Logger
 from Logger import logLevel as ll
+import logging
 
 # pylikelihood
 from GtApp import GtApp
@@ -22,10 +24,18 @@ import pyLikelihood as pyLike
 from LikelihoodState import LikelihoodState
 from UpperLimits import UpperLimits
 
+def run_gtapp(appname,logger,kw):
+
+     logger.info('Running %s'%appname)
+     logger.debug('\n' + yaml.dump(kw))
+     filter_dict(kw,None)
+     gtapp=GtApp(appname)
+     gtapp.run(print_command=False,**kw)
+     logger.info(gtapp.command())
+
 def filter_dict(d,val):
     for k, v in d.items():
         if v == val: del d[k]
-
 
 def gtlike_spectrum_to_dict(spectrum):
     """ Convert a pyLikelihood object to a python 
@@ -62,16 +72,14 @@ class GTAnalysis(AnalysisBase):
         super(GTAnalysis,self).__init__(config,**kwargs)
 
 
-        pprint.pprint(self.config)
-        
-        rootdir = os.getcwd()
-        
-                
+        # Setup directories
+        self._rootdir = os.getcwd()
+                        
         # Destination directory for output data products
         if self.config['common']['base'] is not None:
 #            self._savedir = os.path.abspath(config['common']['savedir'])
 #        elif config['common']['name'] is not None:
-            self._savedir = os.path.join(rootdir,
+            self._savedir = os.path.join(self._rootdir,
                                          self.config['common']['base'])
             mkdir(self._savedir)
         else:
@@ -87,12 +95,15 @@ class GTAnalysis(AnalysisBase):
 
         # put pfiles into savedir
         os.environ['PFILES']=self._savedir+';'+os.environ['PFILES'].split(';')[-1]
-            
-        self.logger = Logger(os.path.join(self._savedir,
-                                          self.config['common']['base']),
-                             self.__class__.__name__,
-                             ll(self.config['verbosity'])).get()
 
+        logfile = os.path.join(self._savedir,self.config['common']['base'])
+
+        self.logger = Logger.get(self.__class__.__name__,logfile,
+                                 ll(self.config['verbosity']))
+
+        self.logger.info("This is fermipy version {}.".format(fermipy.__version__))
+        self.print_config(self.logger)
+        
         # Setup the ROI definition
         self._roi = ROIManager.create_roi_from_source(self.config['common']['target'],
                                                       self.config['common']['roi'])
@@ -113,10 +124,11 @@ class GTAnalysis(AnalysisBase):
             self.logger.info("Creating Analysis Component: " + k)
             comp = GTBinnedAnalysis(cfg,roi,
                                     name=k,
-                                    logger=self.logger,
                                     file_suffix='_' + k,
+                                    logfile=logfile,
                                     savedir=self._savedir,
-                                    workdir=self._workdir)
+                                    workdir=self._workdir,
+                                    verbosity=self.config['verbosity'])
 
             self._components.append(comp)
                 
@@ -135,6 +147,10 @@ class GTAnalysis(AnalysisBase):
         will run everything except the likelihood optimization: data
         selection (gtselect, gtmktime), counts maps generation
         (gtbin), model generation (gtexpcube2,gtsrcmaps,gtdiffrsp)."""
+
+        # Run data selection step
+
+        
         for i, c in enumerate(self._components):
 
             self.logger.info("Performing setup for Analysis Component: " +
@@ -215,7 +231,7 @@ class GTAnalysis(AnalysisBase):
         """Run likelihood optimization."""
 
         if not self.like.logLike.getNumFreeParams(): 
-            print "Skipping fit.  No free parameters."
+            self.logger.info("Skipping fit.  No free parameters.")
             return
         
         saved_state = LikelihoodState(self.like)
@@ -224,11 +240,11 @@ class GTAnalysis(AnalysisBase):
 #tol=1E-4
 #                  optimizer='DRMNFB')
         
-#        if 'verbosity' not in kwargs: kwargs['verbosity'] = max(self.config['chatter'] - 1, 0)
+# if 'verbosity' not in kwargs: kwargs['verbosity'] = max(self.config['chatter'] - 1, 0)
         niter = 0; max_niter = self.config['common']['retries']
         try: 
             while niter < max_niter:
-                print "Fit iteration:", niter
+                self.logger.info("Fit iteration: %i"%niter)
                 niter += 1
                 self.like.fit(**kw)
                 if isinstance(self.like.optObject,pyLike.Minuit) or \
@@ -238,7 +254,7 @@ class GTAnalysis(AnalysisBase):
                 else: return
             raise Exception("Failed to converge with %s"%self.like.optimizer)
         except Exception, message:
-            print message
+            self.logger.error('Likelihood optimization failed.', exc_info=True)
             saved_state.restore()
         
 
@@ -309,7 +325,7 @@ class GTAnalysis(AnalysisBase):
         yaml.dump(o,open(outfile,'w'))
 
     def get_roi_dict(self):
-        """Populate a dictionary with the parameters of the current ROI model."""
+        """Populate a dictionary with the current parameters of the ROI model."""
         
         o = {}        
         for name in self.like.sourceNames():
@@ -328,17 +344,19 @@ class GTBinnedAnalysis(AnalysisBase):
                     defaults.inputs.items()+
                     defaults.fileio.items(),
                     roi=defaults.roi,
-                    file_suffix=('',''))
+                    file_suffix=('',''),
+                    verbosity=(0,''))
 
 
     def __init__(self,config,roi,name='binned_analyais',
-                 logger=None,**kwargs):
+                 **kwargs):
         super(GTBinnedAnalysis,self).__init__(config,**kwargs)
 
-        pprint.pprint(self.config)
+        self.logger = Logger.get(self.__class__.__name__,
+                                 self.config['logfile'],
+                                 ll(self.config['verbosity']))
 
-        if logger is not None:
-            self._logger = logger
+        self.print_config(self.logger,loglevel=logging.DEBUG)
         
         savedir = self.config['savedir']
         self._roi = roi
@@ -399,14 +417,10 @@ class GTBinnedAnalysis(AnalysisBase):
                   zmax=self.config['zmax'])
 #                  chatter=self.config['chatter'])
 
-        filter_dict(kw,None)
-        pprint.pprint(kw)
-
         if not os.path.isfile(self._ft1_file):
-            gtselect=GtApp('gtselect','gtselect')
-            gtselect.run(**kw)
+            run_gtapp('gtselect',self.logger,kw)
         else:
-            self._logger.info('Skipping gtselect')
+            self.logger.info('Skipping gtselect')
         
         # Run gtmktime
 
@@ -421,21 +435,19 @@ class GTBinnedAnalysis(AnalysisBase):
                   evfile=self._ft1_file,
                   outfile=self._ccube_file,
                   scfile=self.config['scfile'],
-                  xref=self.roi.radec[0], yref=self.roi.radec[1], axisrot=0,
+                  xref=float(self.roi.radec[0]),
+                  yref=float(self.roi.radec[1]),
+                  axisrot=0,
                   proj=self.config['proj'],
                   ebinalg='LOG', emin=self.config['emin'], emax=self.config['emax'],
                   enumbins=self.enumbins,
                   coordsys=self.config['coordsys'])
 #                  chatter=self.config['chatter']
-
-        filter_dict(kw,None)
-        pprint.pprint(kw)
         
         if not os.path.isfile(self._ccube_file):
-            gtbin=GtApp('gtbin','gtbin')
-            gtbin.run(**kw)
+            run_gtapp('gtbin',self.logger,kw)            
         else:
-            self._logger.info('Skipping gtbin')
+            self.logger.info('Skipping gtbin')
 
         # Run gtexpcube2
         kw = dict(infile=self._ltcube,cmap='none',
@@ -448,15 +460,11 @@ class GTBinnedAnalysis(AnalysisBase):
                   irfs=self.config['irfs'],
                   coordsys=self.config['coordsys'])
 #                  chatter=self.config['chatter'])
-        
-        filter_dict(kw,None)
-        pprint.pprint(kw)
 
         if not os.path.isfile(self._bexpmap_file):
-            gtexpcube=GtApp('gtexpcube2','gtexpcube2')
-            gtexpcube.run(**kw)
+            run_gtapp('gtexpcube2',self.logger,kw)              
         else:
-            print 'Skipping gtexpcube'
+            self.logger.info('Skipping gtexpcube')
 
         # Run gtsrcmaps
         kw = dict(scfile=self.config['scfile'],
@@ -473,23 +481,22 @@ class GTBinnedAnalysis(AnalysisBase):
                   emapbnds='no' ) 
 
         if not os.path.isfile(self._srcmap_file):
-            gtsrcmaps=GtApp('gtsrcmaps','gtsrcmaps')
-            gtsrcmaps.run(**kw)
+            run_gtapp('gtsrcmaps',self.logger,kw)             
         else:
-            print 'Skipping gtsrcmaps'
+            self.logger.info('Skipping gtsrcmaps')
 
         # Create BinnedObs
-        print 'Creating BinnedObs'
+        self.logger.info('Creating BinnedObs')
         self._obs=BinnedObs(srcMaps=self._srcmap_file,expCube=self._ltcube,
                             binnedExpMap=self._bexpmap_file,irfs=self.config['irfs'])
 
         # Create BinnedAnalysis
-        print 'Creating BinnedAnalysis'
+        self.logger.info('Creating BinnedAnalysis')
         self._like = BinnedAnalysis(binnedData=self._obs,srcModel=self._srcmdl_file,
                                     optimizer='MINUIT')
 
         if self.config['enable_edisp']:
-            print 'Enabling energy dispersion'
+            self.logger.info('Enabling energy dispersion')
             self.like.logLike.set_edisp_flag(True)
 #            os.environ['USE_BL_EDISP'] = 'true'
 
@@ -513,26 +520,28 @@ class GTBinnedAnalysis(AnalysisBase):
         
         # May consider generating a custom source model file
 
-        if not os.path.isfile(outfile):        
-            gtmodel=GtApp('gtmodel')
-            gtmodel.run(srcmaps = self._srcmap_file,
-                        srcmdl  = srcmdl,
-                        bexpmap = self._bexpmap_file,
-                        outfile = outfile,
-                        expcube = self._ltcube,
-                        irfs    = self.config['irfs'],
-                        # edisp   = bool(self.config['enable_edisp']),
-                        outtype = 'ccube')
+        if not os.path.isfile(outfile):
+
+            kw = dict(srcmaps = self._srcmap_file,
+                      srcmdl  = srcmdl,
+                      bexpmap = self._bexpmap_file,
+                      outfile = outfile,
+                      expcube = self._ltcube,
+                      irfs    = self.config['irfs'],
+                      # edisp   = bool(self.config['enable_edisp']),
+                      outtype = 'ccube')
 #                    chatter=self.config['chatter'],
+            
+            run_gtapp('model',self.logger,kw)       
         else:
-            print 'Skipping gtmodel'
+            self.logger.info('Skipping gtmodel')
             
 
     def write_xml(self,model_name):
         """Write the XML model for this analysis component."""
         
         xmlfile = self.get_model_path(model_name)            
-        print "Writing %s..."%xmlfile
+        self.logger.info('Writing %s...'%xmlfile)
         self.like.writeXml(xmlfile)
 
     def get_model_path(self,name):
