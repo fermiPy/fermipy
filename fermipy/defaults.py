@@ -25,8 +25,14 @@ selection = {
 
 # Options for ROI model.
 roi = {
-    'radius'        : (None,'Set the radius of the ROI.  This determines what sources '
-                       'will be included in the ROI model.  If none then no cut is applied.'),
+    'radius'        :
+        (None,'Set the maximum distance for inclusion of sources in the ROI model.  '
+         'Selects all sources within a circle of this radius centered on the ROI.  '
+         'If none then no selection is applied.  This selection will be ORed with '
+         'sources passing the cut on roisize.'),
+    'roisize'        :
+        (None,'Select sources within a box of RxR centered on the ROI.  If none then no cut is applied.'),
+    
     'isodiff'       : (None,''),
     'galdiff'       : (None,''),
     'limbdiff'      : (None,''),

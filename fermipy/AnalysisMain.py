@@ -20,6 +20,7 @@ from pyLikelihood import ParameterVector
 #from Composite2 import *
 from SummedLikelihood import SummedLikelihood
 import pyLikelihood as pyLike
+from FluxDensity import FluxDensity
 
 from LikelihoodState import LikelihoodState
 from UpperLimits import UpperLimits
@@ -204,7 +205,7 @@ class GTAnalysis(AnalysisBase):
 
         normPar = self.like.normPar(name).getName()
         par_index = self.like.par_index(name,normPar)
-        self.like[idx].setFree(free)
+        self.like[par_index].setFree(free)
         self.like.syncSrcParams(name)
 
     def free_index(self,name,free=True):
@@ -284,10 +285,7 @@ class GTAnalysis(AnalysisBase):
 
     def load_xml(self,xmlfile):
         """Load model definition from XML."""
-
-        
-        
-        pass
+        raise NotImplementedError()
 
     def write_xml(self,model_name):
         """Save current model definition as XML file.
@@ -314,7 +312,7 @@ class GTAnalysis(AnalysisBase):
         else:
             outfile, ext = os.path.splitext(outfile)
             if not ext:
-                outfile = os.path.join(self._savedir,outfile + ext)
+                outfile = os.path.join(self._savedir,outfile + '.yaml')
             else:
                 outfile = outfile + ext
                         
@@ -325,14 +323,46 @@ class GTAnalysis(AnalysisBase):
         yaml.dump(o,open(outfile,'w'))
 
     def get_roi_dict(self):
-        """Populate a dictionary with the current parameters of the ROI model."""
+        """Populate a dictionary with the current parameters of the
+        ROI model as extracted from the pylikelihood object."""
+
         
-        o = {}        
+        gf = {}        
         for name in self.like.sourceNames():
             source = self.like[name].src
             spectrum = source.spectrum()
-            o[name] = gtlike_spectrum_to_dict(spectrum)
 
+            src_dict = gtlike_spectrum_to_dict(spectrum)
+
+            # Should we update the TS values at the end of fitting?
+            src_dict['ts'] = self.like.Ts(name,reoptimize=False)
+
+            # Get NPred
+            src_dict['npred'] = self.like.NpredValue(name)
+
+            # Get NPred vs. energy bin?
+            
+            print name, src_dict['ts'], src_dict['npred']
+            
+            # Extract covariance matrix
+            src_dict['covar'] = None
+            
+            try:
+                 fd = FluxDensity(self.like,name)
+                 src_dict['covar'] = fd.covar
+            except RuntimeError, ex:
+                 if ex.message == 'Covariance matrix has not been computed.':
+                      pass
+                 else: 
+                      raise ex
+                 
+            # Extract bowtie            
+            gf[name] = src_dict
+
+        o = {}
+        o['global_fit'] = gf
+        o['sed'] = {}
+        
         return o
         
             

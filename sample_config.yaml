@@ -48,11 +48,11 @@ common:
   # Settings for ROI model
   roi:
 
-    # Include all catalog sources within this distance from the ROI center
-    radius   : 10.0
+    # Include catalog sources within this distance from the ROI center
+    radius  : null
 
-    # Include all catalog sources within this distance from the ROI edge
-    roi_margin : null
+    # Include catalog sources within a box of width roisrc.
+    roisize : 10.0
 
     galdiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/template_4years_P8_V2_scaled.fits'
     isodiff  : null

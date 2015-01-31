@@ -4,13 +4,57 @@ import pyfits
 
 import xml.etree.cElementTree as et
 
-def latlon_to_xyz(lat,lon):
+
+def xyz_to_lonlat(*args):
+
+    if len(args) == 1:
+        x, y, z = args[0][0],args[0][1],args[0][2]
+    else:
+        x, y, z = args[0], args[1], args[2]
+        
+    lat = np.pi/2. - np.arctan2(np.sqrt(x**2+y**2),z)
+    lon = np.arctan2(y,x)
+    return lon,lat
+    
+def lonlat_to_xyz(lon,lat):
+    
     phi = lon
     theta = np.pi/2.-lat
     return np.array([np.sin(theta)*np.cos(phi),
                      np.sin(theta)*np.sin(phi),
-                     np.cos(theta)]).T
+                     np.cos(theta)])
 
+def project(lon0,lat0,lon1,lat1):
+    """This function performs a stereographic projection on the unit
+    vector (lon1,lat1) with the pole defined at the reference unit
+    vector (lon0,lat0)."""
+
+    costh = np.cos(np.pi/2.-lat0)
+    cosphi = np.cos(lon0)
+
+    sinth = np.sin(np.pi/2.-lat0)
+    sinphi = np.sin(lon0)
+
+    xyz = lonlat_to_xyz(lon1,lat1)
+    x1 = xyz[0]; y1 = xyz[1]; z1 = xyz[2]
+    
+    x1p = x1*costh*cosphi + y1*costh*sinphi - z1*sinth
+    y1p = -x1*sinphi + y1*cosphi
+    z1p = x1*sinth*cosphi + y1*sinth*sinphi + z1*costh
+    
+    r = np.arctan2(np.sqrt(x1p**2+y1p**2),z1p)
+    phi = np.arctan2(y1p,x1p)
+
+    return r*np.cos(phi), r*np.sin(phi)
+
+
+def get_dist_to_edge(lon0,lat0,lon1,lat1,width):
+
+    x,y = project(lon0,lat0,lon1,lat1)
+    delta_edge = np.array([np.abs(x) - width,np.abs(y) - width])
+    dtheta = np.max(delta_edge,axis=0)
+    return dtheta
+    
 class IsoSource(object):
 
     def __init__(self,filefunction,name,norm=1.0):
@@ -66,11 +110,16 @@ class Source(object):
         self._extended=extended
 
     def separation(self,src):
-        costh = np.sum(self._radec*src.radec)        
+
+        if isinstance(src,Source):        
+            costh = np.sum(self._radec*src.radec) 
+        else:
+            costh = np.sum(self._radec*src) 
+            
         costh = min(1.0,costh)
         costh = max(costh,-1.0)
         return np.degrees(np.arccos(costh))
-
+    
     @property
     def extended(self):
         return self._extended
@@ -118,6 +167,7 @@ class ROIManager(AnalysisBase):
 
         self._src_index = {}
         self._diffuse_src_index = {}
+        self._src_radius = []
         
         self.build_src_index()
 
@@ -161,7 +211,28 @@ class ROIManager(AnalysisBase):
         roi.load()
 
         src = roi.get_source_by_name(name)
-        srcs = roi.get_nearby_sources(name,roi.config['radius'])
+
+        srcs_dict = {}
+        
+        if roi.config['radius'] is not None:
+        
+            rsrc, srcs = roi.get_nearby_sources(name,roi.config['radius'])
+            for s,r in zip(srcs,rsrc):
+                srcs_dict[s.name] = (s,r)
+
+        if roi.config['roisize'] is not None:                
+            rsrc, srcs = roi.get_nearby_sources(name,roi.config['roisize']/2.,
+                                                selection='roi')
+            for s,r in zip(srcs,rsrc):
+                srcs_dict[s.name] = (s,r)
+
+        srcs = []
+        rsrc = []
+                
+        for k, v in srcs_dict.items():
+            srcs.append(v[0])
+            rsrc.append(v[1])
+               
         radec = np.array([src['RAJ2000'],src['DEJ2000']])
         
         return ROIManager(config,srcs=srcs,
@@ -376,33 +447,57 @@ class ROIManager(AnalysisBase):
         else:
             raise Exception('No source matching name: ',name)
 
-    def get_nearby_sources(self,name,radius,min_radius=None):
-
-        if radius is None: radius = 180.0
+    def get_nearby_sources(self,name,dist,min_dist=None,
+                           selection='circle'):
+        
+        if dist is None: dist = 180.0
         
         src = self.get_source_by_name(name)
         return self.get_sources_by_position(src['RAJ2000'],
                                             src['DEJ2000'],
-                                            radius,min_radius)
+                                            dist,min_dist,selection)
 
-    def get_sources_by_position(self,ra,dec,radius,min_radius=None):
+    def get_sources_by_position(self,ra,dec,dist,min_dist=None,
+                                selection='circle'):
         """Retrieve sources within a certain angular distance of an
-        (ra,dec) coordinate."""
+        (ra,dec) coordinate.  This function currently supports two
+        types of geometric selections: circle and roi.  The circle
+        selection finds all sources within a circle of radius dist.
+        The roi selection finds sources within a square box of R x
+        R where R = 2 x dist."""
 
-        x = latlon_to_xyz(np.radians(dec),np.radians(ra))
-        costh = np.sum(x*self._src_radec,axis=1)        
+        x = lonlat_to_xyz(np.radians(ra),np.radians(dec))
+        costh = np.sum(x[:,np.newaxis]*self._src_radec,axis=0)        
         costh[costh>1.0] = 1.0
         costh[costh<-1.0] = -1.0
-
-        if min_radius is not None:
-            msk = np.where((np.arccos(costh) < np.radians(radius)) &
-                           (np.arccos(costh) > np.radians(min_radius)))[0]
+        radius = np.arccos(costh)
+        
+        if selection == 'circle':                    
+            dtheta = radius            
+        elif selection == 'roi':
+            ra0, dec0 = xyz_to_lonlat(self._src_radec)
+            dtheta = get_dist_to_edge(np.radians(ra),np.radians(dec),
+                                      ra0,dec0,np.radians(dist))
+            dtheta += np.radians(dist)            
         else:
-            msk = np.where(np.arccos(costh) < np.radians(radius))[0]
+            raise Exception('Unrecognized selection type: ' + selection)
+        
+        if min_dist is not None:
+            msk = np.where((dtheta < np.radians(dist)) &
+                           (dtheta > np.radians(min_dist)))[0]
+        else:
+            msk = np.where(dtheta < np.radians(dist))[0]
 
-        srcs = [ self._srcs[i] for i in msk]
-        return srcs
+        radius = radius[msk]
+        srcs = [ self._srcs[i] for i in msk ]
 
+        isort = np.argsort(radius)
+
+        radius = radius[isort]
+        srcs = [srcs[i] for i in isort]
+            
+        return radius, srcs
+    
     def load_fits(self,fitsfile,
                   src_hduname='LAT_Point_Source_Catalog',
                   extsrc_hduname='ExtendedSources'):
@@ -462,11 +557,13 @@ class ROIManager(AnalysisBase):
         self._src_index = {}
         nsrc = len(self._srcs)
 
-        self._src_radec = np.zeros(shape=(nsrc,3))
+        self._src_radec = np.zeros(shape=(3,nsrc))
+        self._src_radius = np.zeros(nsrc)
 
         for i, s in enumerate(self._srcs):
  
-            self._src_radec[i] = s.radec
+            self._src_radec[:,i] = s.radec
+            self._src_radius[i] = s.separation(lonlat_to_xyz(self._radec[0],self._radec[1]))
             for c in ROIManager.src_name_cols:
                 if not c in s: continue
                 name = s[c].strip()
