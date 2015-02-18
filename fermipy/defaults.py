@@ -16,6 +16,7 @@ selection = {
     'zmax'    : (None,'Maximum zenith angle.'),
     'evclass' : (None,'Event class selection.'),
     'evtype'  : (None,'Event type selection.'),
+    'convtype': (None,'Conversion type selection.'),
     'target'  : (None,'Choose a target object at which the ROI will be '
                  'centered.  This option takes precendence over ra/dec.'),
     'ra'      : (None,''),

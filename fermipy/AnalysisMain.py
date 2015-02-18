@@ -27,12 +27,23 @@ from UpperLimits import UpperLimits
 
 def run_gtapp(appname,logger,kw):
 
-     logger.info('Running %s'%appname)
-     logger.debug('\n' + yaml.dump(kw))
-     filter_dict(kw,None)
-     gtapp=GtApp(appname)
-     gtapp.run(print_command=False,**kw)
-     logger.info(gtapp.command())
+    logger.info('Running %s'%appname)
+
+    cmd = '%s '%appname
+    for k, v in kw.items():
+         if isinstance(v,str):
+              cmd += '%s=\"%s\" '%(k,v)
+         else:
+              cmd += '%s=%s '%(k,v)
+               
+    logger.info(cmd)
+     
+          
+    logger.debug('\n' + yaml.dump(kw))
+    filter_dict(kw,None)
+    gtapp=GtApp(appname)
+    gtapp.run(print_command=False,**kw)
+    logger.info(gtapp.command())
 
 def filter_dict(d,val):
     for k, v in d.items():
@@ -95,7 +106,8 @@ class GTAnalysis(AnalysisBase):
 
 
         # put pfiles into savedir
-        os.environ['PFILES']=self._savedir+';'+os.environ['PFILES'].split(';')[-1]
+        os.environ['PFILES']= \
+            self._savedir+';'+os.environ['PFILES'].split(';')[-1]
 
         logfile = os.path.join(self._savedir,self.config['common']['base'])
 
@@ -106,8 +118,9 @@ class GTAnalysis(AnalysisBase):
         self.print_config(self.logger)
         
         # Setup the ROI definition
-        self._roi = ROIManager.create_roi_from_source(self.config['common']['target'],
-                                                      self.config['common']['roi'])
+        self._roi = \
+            ROIManager.create_roi_from_source(self.config['common']['target'],
+                                              self.config['common']['roi'])
 
 
         self._like = SummedLikelihood()
@@ -161,7 +174,10 @@ class GTAnalysis(AnalysisBase):
             
 
     def generate_model(self,model_name=None):
-        """Generate model maps for all components."""
+        """Generate model maps for all components.  model_name should
+        be a unique identifier for the model.  If model_name is None
+        then the model maps will be generated using the current
+        parameters of the ROI."""
 
         for i, c in enumerate(self._components):
             c.generate_model(model_name=model_name)
@@ -169,7 +185,22 @@ class GTAnalysis(AnalysisBase):
         # If all model maps have the same spatial/energy binning we
         # could generate a co-added model map here
             
+
+    def free_sources(self,free=True,radius=3.0):
+        """Free all sources within a certain radius of the given sky
+        coordinate."""
+
+        print self._roi.radec
         
+        rsrc, srcs = self._roi.get_sources_by_position(self._roi.radec[0],
+                                                       self._roi.radec[1],
+                                                       radius)
+
+        for r, s in zip(rsrc,srcs):
+#            print r, s, s.name
+            print 'Freeing norm for ', s.name
+            self.free_norm(s.name)
+            
     def free_source(self,name,free=True,skip_pars=['Scale']):
         """Free/Fix all parameters of a source."""
 
@@ -326,6 +357,10 @@ class GTAnalysis(AnalysisBase):
         """Populate a dictionary with the current parameters of the
         ROI model as extracted from the pylikelihood object."""
 
+        # Should we skip extracting fit results for sources that
+        # weren't free in the last fit?
+
+        # Determine what sources had at least one free parameter
         
         gf = {}        
         for name in self.like.sourceNames():
@@ -342,7 +377,7 @@ class GTAnalysis(AnalysisBase):
 
             # Get NPred vs. energy bin?
             
-            print name, src_dict['ts'], src_dict['npred']
+#            print name, src_dict['ts'], src_dict['npred']
             
             # Extract covariance matrix
             src_dict['covar'] = None
@@ -440,18 +475,19 @@ class GTBinnedAnalysis(AnalysisBase):
                   outfile=self._ft1_file,
                   ra=roi_center[0], dec=roi_center[1],
                   rad=self.config['radius'],
+                  convtype=self.config['convtype'],
                   evtype=self.config['evtype'],
                   evclass=self.config['evclass'],
                   tmin=self.config['tmin'], tmax=self.config['tmax'],
                   emin=self.config['emin'], emax=self.config['emax'],
-                  zmax=self.config['zmax'])
-#                  chatter=self.config['chatter'])
+                  zmax=self.config['zmax'],
+                  chatter=self.config['verbosity'])
 
         if not os.path.isfile(self._ft1_file):
             run_gtapp('gtselect',self.logger,kw)
         else:
             self.logger.info('Skipping gtselect')
-        
+            
         # Run gtmktime
 
         # Run gtltcube
@@ -469,27 +505,40 @@ class GTBinnedAnalysis(AnalysisBase):
                   yref=float(self.roi.radec[1]),
                   axisrot=0,
                   proj=self.config['proj'],
-                  ebinalg='LOG', emin=self.config['emin'], emax=self.config['emax'],
+                  ebinalg='LOG', emin=self.config['emin'],
+                  emax=self.config['emax'],
                   enumbins=self.enumbins,
-                  coordsys=self.config['coordsys'])
-#                  chatter=self.config['chatter']
+                  coordsys=self.config['coordsys'],
+                  chatter=self.config['verbosity'])
         
         if not os.path.isfile(self._ccube_file):
             run_gtapp('gtbin',self.logger,kw)            
         else:
             self.logger.info('Skipping gtbin')
 
+        # kludge for determining whether STs accept evtype argument
+        if 'P8R2' in self.config['irfs']:
+            evtype=self.config['evtype']
+        else:
+            evtype=None
+
+        if self.config['irfs'] == 'CALDB':
+            cmap = self._ccube_file
+        else:
+            cmap = 'none'
+            
         # Run gtexpcube2
-        kw = dict(infile=self._ltcube,cmap='none',
-#                  cmap=self._ccube_file,
+        kw = dict(infile=self._ltcube,cmap=cmap,
                   ebinalg='LOG',
                   emin=self.config['emin'], emax=self.config['emax'],
                   enumbins=self.enumbins,
                   outfile=self._bexpmap_file, proj='CAR',
                   nxpix=360, nypix=180, binsz=1,
+                  xref=0.0,yref=0.0,
+                  evtype=evtype,
                   irfs=self.config['irfs'],
-                  coordsys=self.config['coordsys'])
-#                  chatter=self.config['chatter'])
+                  coordsys=self.config['coordsys'],
+                  chatter=self.config['verbosity'])
 
         if not os.path.isfile(self._bexpmap_file):
             run_gtapp('gtexpcube2',self.logger,kw)              
@@ -504,10 +553,11 @@ class GTBinnedAnalysis(AnalysisBase):
                   bexpmap=self._bexpmap_file,
                   outfile=self._srcmap_file,
                   irfs=self.config['irfs'],
+                  evtype=evtype,
 #                   rfactor=self.config['rfactor'],
 #                   resample=self.config['resample'],
 #                   minbinsz=self.config['minbinsz'],
-#                   chatter=self.config['chatter'],
+                  chatter=self.config['verbosity'],
                   emapbnds='no' ) 
 
         if not os.path.isfile(self._srcmap_file):
@@ -517,12 +567,17 @@ class GTBinnedAnalysis(AnalysisBase):
 
         # Create BinnedObs
         self.logger.info('Creating BinnedObs')
-        self._obs=BinnedObs(srcMaps=self._srcmap_file,expCube=self._ltcube,
-                            binnedExpMap=self._bexpmap_file,irfs=self.config['irfs'])
+        kw = dict(srcMaps=self._srcmap_file,expCube=self._ltcube,
+                  binnedExpMap=self._bexpmap_file,
+                  irfs=self.config['irfs'])
+        self.logger.info(kw)
+        
+        self._obs=BinnedObs(**kw)
 
         # Create BinnedAnalysis
         self.logger.info('Creating BinnedAnalysis')
-        self._like = BinnedAnalysis(binnedData=self._obs,srcModel=self._srcmdl_file,
+        self._like = BinnedAnalysis(binnedData=self._obs,
+                                    srcModel=self._srcmdl_file,
                                     optimizer='MINUIT')
 
         if self.config['enable_edisp']:
@@ -531,7 +586,7 @@ class GTBinnedAnalysis(AnalysisBase):
 #            os.environ['USE_BL_EDISP'] = 'true'
 
             
-    def generate_model(self,outfile=None,model_name=None):
+    def generate_model(self,model_name=None,outfile=None):
         """Generate a counts model map.
 
         Parameters
@@ -541,12 +596,25 @@ class GTBinnedAnalysis(AnalysisBase):
         
             Name of the model.  If no name is given it will default to
             the seed model.
+
+        outfile : str
+
+            Override the name of the output model file.
+            
         """
 
-        if outfile is None: outfile = self._mcube_file
+
         
         if model_name is None: srcmdl = self._srcmdl_file
         else: srcmdl = self.get_model_path(model_name)
+
+        if not os.path.isfile(srcmdl):
+            raise Exception("Model file does not exist: %s"%srcmdl)
+        
+#        if outfile is None: outfile = self._mcube_file
+        outfile = os.path.join(self.config['savedir'],
+                               'mcube_%s%s.fits'%(model_name,
+                                                  self.config['file_suffix']))
         
         # May consider generating a custom source model file
 
@@ -558,11 +626,12 @@ class GTBinnedAnalysis(AnalysisBase):
                       outfile = outfile,
                       expcube = self._ltcube,
                       irfs    = self.config['irfs'],
+                      evtype  = self.config['evtype'],
                       # edisp   = bool(self.config['enable_edisp']),
-                      outtype = 'ccube')
-#                    chatter=self.config['chatter'],
+                      outtype = 'ccube',
+                      chatter = self.config['verbosity'])
             
-            run_gtapp('model',self.logger,kw)       
+            run_gtapp('gtmodel',self.logger,kw)       
         else:
             self.logger.info('Skipping gtmodel')
             

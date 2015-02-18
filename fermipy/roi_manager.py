@@ -1,6 +1,7 @@
 import defaults 
 from utils import *
 import pyfits
+import fermipy
 
 import xml.etree.cElementTree as et
 
@@ -176,17 +177,19 @@ class ROIManager(AnalysisBase):
 
     @property
     def radec(self):
-        """Return the center of the ROI."""        
+        """Return the coordinates of the center of the ROI in deg."""        
         return self._radec
 
     def load_diffuse_srcs(self):
         self._diffuse_srcs = []
         
         if self.config['isodiff'] is not None:
-            self._diffuse_srcs.append(IsoSource(self.config['isodiff'],'isodiff'))
+            self._diffuse_srcs.append(IsoSource(self.config['isodiff'],
+                                                'isodiff'))
 
         if self.config['galdiff'] is not None:
-            self._diffuse_srcs.append(MapCubeSource(self.config['galdiff'],'galdiff'))
+            self._diffuse_srcs.append(MapCubeSource(self.config['galdiff'],
+                                                    'galdiff'))
             
     def load(self):
 
@@ -464,7 +467,17 @@ class ROIManager(AnalysisBase):
         types of geometric selections: circle and roi.  The circle
         selection finds all sources within a circle of radius dist.
         The roi selection finds sources within a square box of R x
-        R where R = 2 x dist."""
+        R where R = 2 x dist.
+
+        Parameters
+        ----------
+
+        ra : float
+
+        dec : float
+        
+
+        """
 
         x = lonlat_to_xyz(np.radians(ra),np.radians(dec))
         costh = np.sum(x[:,np.newaxis]*self._src_radec,axis=0)        
@@ -502,6 +515,9 @@ class ROIManager(AnalysisBase):
                   src_hduname='LAT_Point_Source_Catalog',
                   extsrc_hduname='ExtendedSources'):
         """Load sources from a FITS catalog file."""
+
+        if not os.path.isfile(fitsfile):
+            fitsfile = os.path.join(fermipy.PACKAGE_ROOT,fitsfile)
         
         hdulist = pyfits.open(fitsfile)
         table_src = hdulist[src_hduname]
