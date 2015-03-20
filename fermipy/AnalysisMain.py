@@ -13,14 +13,13 @@ from Logger import logLevel as ll
 import logging
 
 # pylikelihood
-from GtApp import GtApp
-from BinnedAnalysis import BinnedObs,BinnedAnalysis
-from UnbinnedAnalysis import UnbinnedObs, UnbinnedAnalysis
-from pyLikelihood import ParameterVector
-#from Composite2 import *
-from SummedLikelihood import SummedLikelihood
 import pyLikelihood as pyLike
-from FluxDensity import FluxDensity
+import GtApp
+import BinnedAnalysis as ba
+import UnbinnedAnalysis as uba
+import Composite2
+import SummedLikelihood
+import FluxDensity
 
 from LikelihoodState import LikelihoodState
 from UpperLimits import UpperLimits
@@ -28,22 +27,18 @@ from UpperLimits import UpperLimits
 def run_gtapp(appname,logger,kw):
 
     logger.info('Running %s'%appname)
-
-    cmd = '%s '%appname
-    for k, v in kw.items():
-         if isinstance(v,str):
-              cmd += '%s=\"%s\" '%(k,v)
-         else:
-              cmd += '%s=%s '%(k,v)
-               
-    logger.info(cmd)
-     
-          
-    logger.debug('\n' + yaml.dump(kw))
+#    logger.debug('\n' + yaml.dump(kw))
     filter_dict(kw,None)
-    gtapp=GtApp(appname)
-    gtapp.run(print_command=False,**kw)
+    gtapp=GtApp.GtApp(appname)
+
+    for k,v in kw.items(): gtapp[k] = v
     logger.info(gtapp.command())
+    stdin, stdout = gtapp.runWithOutput(print_command=False)
+
+    for line in stdout:
+        logger.info(line.strip())
+
+    # Capture return code?
 
 def filter_dict(d,val):
     for k, v in d.items():
@@ -52,7 +47,7 @@ def filter_dict(d,val):
 def gtlike_spectrum_to_dict(spectrum):
     """ Convert a pyLikelihood object to a python 
         dictionary which can be easily saved to a file. """
-    parameters=ParameterVector()
+    parameters=pyLike.ParameterVector()
     spectrum.getParams(parameters)
     d = dict(name = spectrum.genericName())
     for p in parameters: 
@@ -77,12 +72,11 @@ class GTAnalysis(AnalysisBase):
                          defaults.optimizer.items() +
                          defaults.inputs.items(),
                          roi=defaults.roi),
-#                'roi' : defaults.roi,
-                'verbosity' : (0,'')}
+                'verbosity' : (0,''),
+                'components' : (None,'')}
 
     def __init__(self,config,**kwargs):
         super(GTAnalysis,self).__init__(config,**kwargs)
-
 
         # Setup directories
         self._rootdir = os.getcwd()
@@ -109,12 +103,13 @@ class GTAnalysis(AnalysisBase):
         os.environ['PFILES']= \
             self._savedir+';'+os.environ['PFILES'].split(';')[-1]
 
-        logfile = os.path.join(self._savedir,self.config['common']['base'])
+        logfile = os.path.join(self._savedir,'fermipy')
 
         self.logger = Logger.get(self.__class__.__name__,logfile,
                                  ll(self.config['verbosity']))
 
-        self.logger.info("This is fermipy version {}.".format(fermipy.__version__))
+        self.logger.info('\n' + '-'*80 + '\n' + "This is fermipy version {}.".
+                         format(fermipy.__version__))
         self.print_config(self.logger)
         
         # Setup the ROI definition
@@ -123,38 +118,64 @@ class GTAnalysis(AnalysisBase):
                                               self.config['common']['roi'])
 
 
-        self._like = SummedLikelihood()
+        self._like = SummedLikelihood.SummedLikelihood()
         self._components = []
-        for i,k in enumerate(sorted(config['components'].keys())):
+        configs = self.create_component_configs()
 
-            cfg = self.config['common']
-            cfg['roi'] = self.config['common']['roi']
-            update_dict(cfg,config['components'][k])
-
-            roi = copy.deepcopy(self._roi)
-            roi.configure(cfg['roi'])
-            roi.load_diffuse_srcs()
-            
-            self.logger.info("Creating Analysis Component: " + k)
-            comp = GTBinnedAnalysis(cfg,roi,
-                                    name=k,
-                                    file_suffix='_' + k,
-                                    logfile=logfile,
-                                    savedir=self._savedir,
-                                    workdir=self._workdir,
-                                    verbosity=self.config['verbosity'])
-
+        for cfg in configs:
+            comp = self.create_component(cfg,logfile)
             self._components.append(comp)
                 
 
     @property
     def like(self):
         return self._like
+
+    def create_component_configs(self):
+        configs = []
+
+        components = self.config['components']
+        
+        if components is None:
+            cfg = copy.copy(self.config['common'])
+            cfg['file_suffix'] = '_00'
+            cfg['name'] = '00'      
+            configs.append(self.config['common'])
+        elif isinstance(components,dict):            
+            for i,k in enumerate(sorted(components.keys())):
+                cfg = copy.copy(self.config['common'])                
+                cfg = merge_dict(cfg,components[k])
+                cfg['file_suffix'] = '_' + k
+                cfg['name'] = k
+                configs.append(cfg)
+        elif isinstance(components,list):
+            for i,c in enumerate(components):
+                cfg = copy.copy(self.config['common'])                
+                cfg = merge_dict(cfg,components[k])
+                cfg['file_suffix'] = '_%02i'%i
+                cfg['name'] = '%02i'%i
+                configs.append(cfg)
+        else:
+            raise Exception('Invalid type for component block.')
+
+        return configs
+                
+    def init_components(self):
+        self._components = []        
+    
+    def create_component(self,cfg,logfile):
+        roi = copy.deepcopy(self._roi)
+        roi.configure(cfg['roi'])
+        roi.load_diffuse_srcs()
             
-    def create_components(self,analysis_type):
-        """Auto-generate a set of components given an analysis type flag."""
-        # Lookup a pregenerated config file for the desired analysis setup
-        pass
+        self.logger.info("Creating Analysis Component: " + cfg['name'])
+        comp = GTBinnedAnalysis(cfg,roi,
+                                logfile=logfile,
+                                savedir=self._savedir,
+                                workdir=self._workdir,
+                                verbosity=self.config['verbosity'])
+
+        return comp
 
     def setup(self):
         """Run pre-processing step for each analysis component.  This
@@ -164,7 +185,7 @@ class GTAnalysis(AnalysisBase):
 
         # Run data selection step
 
-        
+        self._like = SummedLikelihood.SummedLikelihood()
         for i, c in enumerate(self._components):
 
             self.logger.info("Performing setup for Analysis Component: " +
@@ -186,38 +207,59 @@ class GTAnalysis(AnalysisBase):
         # could generate a co-added model map here
             
 
-    def free_sources(self,free=True,radius=3.0):
+    def free_sources(self,free=True,pars=None,radius=3.0):
         """Free all sources within a certain radius of the given sky
         coordinate."""
 
-        print self._roi.radec
-        
         rsrc, srcs = self._roi.get_sources_by_position(self._roi.radec[0],
                                                        self._roi.radec[1],
                                                        radius)
 
         for r, s in zip(rsrc,srcs):
 #            print r, s, s.name
-            print 'Freeing norm for ', s.name
+            self.logger.debug('Freeing norm for ' + s.name)
             self.free_norm(s.name)
             
-    def free_source(self,name,free=True,skip_pars=['Scale']):
-        """Free/Fix all parameters of a source."""
+    def free_source(self,name,free=True,pars=None,skip_pars=['Scale']):
+        """Free/Fix parameters of a source.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        free : bool        
+            Choose whether to free (free=True) or fix (free=False)
+            source parameters.
+
+        pars : list        
+            Set a list of parameters to be freed/fixed for this source.  If
+            none then all source parameters will be freed/fixed with the
+            exception of those defined in the skip_pars list.
+            
+        """
 
         # Find the source
         if not name in ['isodiff','galdiff','limbdiff']:
             name = self._roi.get_source_by_name(name).name
 
         # Deduce here the names of all parameters from the spectral type
-        parNames = pyLike.StringVector()
-        self.like[name].src.spectrum().getParamNames(parNames)
+        src_par_names = pyLike.StringVector()
+        self.like[name].src.spectrum().getParamNames(src_par_names)
 
         par_indices = []
-        for p in parNames:
-            if p in skip_pars: continue            
+        par_names = []
+        for p in src_par_names:
+            if p in skip_pars: continue
+            if pars is not None and not p in pars: continue
             par_indices.append(self.like.par_index(name,p))
-        
-        for idx in par_indices:        
+            par_names.append(p)
+            
+        for (idx,par_name) in zip(par_indices,par_names):
+            self.logger.debug('Freeing parameter %s for source %s'
+                              %(par_name,name))
+            
             self.like[idx].setFree(free)
         self.like.syncSrcParams(name)
                 
@@ -351,7 +393,7 @@ class GTAnalysis(AnalysisBase):
                 
         # Get the subset of sources with free parameters
             
-        yaml.dump(o,open(outfile,'w'))
+        yaml.dump(tolist(o),open(outfile,'w'))
 
     def get_roi_dict(self):
         """Populate a dictionary with the current parameters of the
@@ -383,7 +425,7 @@ class GTAnalysis(AnalysisBase):
             src_dict['covar'] = None
             
             try:
-                 fd = FluxDensity(self.like,name)
+                 fd = FluxDensity.FluxDensity(self.like,name)
                  src_dict['covar'] = fd.covar
             except RuntimeError, ex:
                  if ex.message == 'Covariance matrix has not been computed.':
@@ -409,12 +451,11 @@ class GTBinnedAnalysis(AnalysisBase):
                     defaults.inputs.items()+
                     defaults.fileio.items(),
                     roi=defaults.roi,
+                    name=('00',''),
                     file_suffix=('',''),
                     verbosity=(0,''))
 
-
-    def __init__(self,config,roi,name='binned_analyais',
-                 **kwargs):
+    def __init__(self,config,roi,**kwargs):
         super(GTBinnedAnalysis,self).__init__(config,**kwargs)
 
         self.logger = Logger.get(self.__class__.__name__,
@@ -425,7 +466,7 @@ class GTBinnedAnalysis(AnalysisBase):
         
         savedir = self.config['savedir']
         self._roi = roi
-        self._name = name
+        self._name = self.config['name']
         
         from os.path import join
 
@@ -516,12 +557,8 @@ class GTBinnedAnalysis(AnalysisBase):
         else:
             self.logger.info('Skipping gtbin')
 
-        # kludge for determining whether STs accept evtype argument
-        if 'P8R2' in self.config['irfs']:
-            evtype=self.config['evtype']
-        else:
-            evtype=None
-
+        evtype = self.config['evtype']
+            
         if self.config['irfs'] == 'CALDB':
             cmap = self._ccube_file
         else:
@@ -572,13 +609,13 @@ class GTBinnedAnalysis(AnalysisBase):
                   irfs=self.config['irfs'])
         self.logger.info(kw)
         
-        self._obs=BinnedObs(**kw)
+        self._obs=ba.BinnedObs(**kw)
 
         # Create BinnedAnalysis
         self.logger.info('Creating BinnedAnalysis')
-        self._like = BinnedAnalysis(binnedData=self._obs,
-                                    srcModel=self._srcmdl_file,
-                                    optimizer='MINUIT')
+        self._like = ba.BinnedAnalysis(binnedData=self._obs,
+                                       srcModel=self._srcmdl_file,
+                                       optimizer='MINUIT')
 
         if self.config['enable_edisp']:
             self.logger.info('Enabling energy dispersion')

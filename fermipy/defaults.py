@@ -21,6 +21,8 @@ selection = {
                  'centered.  This option takes precendence over ra/dec.'),
     'ra'      : (None,''),
     'dec'     : (None,''),
+    'glat'    : (None,''),
+    'glon'    : (None,''),
     'radius'  : (None,''),
     }
 
