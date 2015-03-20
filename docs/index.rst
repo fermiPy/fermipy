@@ -11,6 +11,13 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+##################################
+Test
+##################################
+
+This is the Fermipy documentation page.  Fermipy is a set of python tools for
+automating LAT analysis.
+
 
 
 Indices and tables
