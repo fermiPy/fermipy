@@ -20,7 +20,7 @@ class ConfigManager(object):
 #        config['logging'] = config_logging
         
         user_config = ConfigManager.load(configfile)
-        update_dict(config,user_config,True)
+        config = merge_dict(config,user_config,True)
 
         return config        
 

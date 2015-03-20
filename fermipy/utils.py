@@ -1,7 +1,8 @@
 import os
+import copy
 import yaml
 import numpy as np
-
+from collections import OrderedDict
 import xml.etree.cElementTree as et
 
 class AnalysisBase(object):
@@ -12,8 +13,8 @@ class AnalysisBase(object):
         self.configure(config,**kwargs)
 
     def configure(self,config,**kwargs):
-        update_dict(self._config,config)
-        update_dict(self._config,kwargs)
+        self._config = merge_dict(self._config,config)
+        self._config = merge_dict(self._config,kwargs)
         
     @classmethod
     def get_config(cls):
@@ -118,27 +119,103 @@ def load_config(defaults):
     return o
 
 
-def update_dict(d0,d1,add_new_keys=False,append=False):
-    """Recursively update the contents of python dictionary d0 with
+def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
+    """Recursively merge the contents of python dictionary d0 with
     the contents of another python dictionary, d1.
 
-    add_new_keys : Do not skip keys that already exist in d0.
-    """
+    add_new_keys : Do not skip keys that only exist in d1.
 
-    if d0 is None or d1 is None: return
+    append_arrays : If an element is a numpy array set the value of
+    that element by concatenating the two arrays.
+    """
+    
+    if d1 is None: return d0
+    elif d0 is None: return d1
+    elif d0 is None and d1 is None: return {}
+
+    od = {}
     
     for k, v in d0.iteritems():
-
-        if not k in d1: continue
-
-        if isinstance(v,dict) and isinstance(d1[k],dict):
-            update_dict(d0[k],d1[k],add_new_keys,append)
+        
+        if not k in d1:
+            od[k] = copy.copy(d0[k])
+        elif isinstance(v,dict) and isinstance(d1[k],dict):
+            od[k] = merge_dict(d0[k],d1[k],add_new_keys,append_arrays)
         elif isinstance(v,list) and isinstance(d1[k],str):
-            d0[k] = d1[k].split(',')            
-        elif isinstance(v,np.ndarray) and append:
-            d0[k] = np.concatenate((v,d1[k]))
-        else: d0[k] = d1[k]
+            od[k] = d1[k].split(',')            
+        elif isinstance(v,np.ndarray) and append_arrays:
+            od[k] = np.concatenate((v,d1[k]))
+        elif (d0[k] is not None and d1[k] is not None) and \
+                (type(d0[k]) != type(d1[k])):
+            raise Exception('Conflicting types in dictionary merge.')
+        else: od[k] = copy.copy(d1[k])
 
     if add_new_keys:
         for k, v in d1.iteritems(): 
-            if not k in d0: d0[k] = d1[k]
+            if not k in d0: od[k] = copy.copy(d1[k])
+
+    return od
+
+def tolist(x):
+    """ convenience function that takes in a 
+        nested structure of lists and dictionaries
+        and converts everything to its base objects.
+        This is useful for dupming a file to yaml.
+
+        (a) numpy arrays into python lists
+
+            >>> type(tolist(np.asarray(123))) == int
+            True
+            >>> tolist(np.asarray([1,2,3])) == [1,2,3]
+            True
+
+        (b) numpy strings into python strings.
+
+            >>> tolist([np.asarray('cat')])==['cat']
+            True
+
+        (c) an ordered dict to a dict
+
+            >>> ordered=OrderedDict(a=1, b=2)
+            >>> type(tolist(ordered)) == dict
+            True
+
+        (d) converts unicode to regular strings
+
+            >>> type(u'a') == str
+            False
+            >>> type(tolist(u'a')) == str
+            True
+
+        (e) converts numbers & bools in strings to real represntation,
+            (i.e. '123' -> 123)
+
+            >>> type(tolist(np.asarray('123'))) == int
+            True
+            >>> type(tolist('123')) == int
+            True
+            >>> tolist('False') == False
+            True
+    """
+    if isinstance(x,list):
+        return map(tolist,x)
+    elif isinstance(x,dict):
+        return dict((tolist(k),tolist(v)) for k,v in x.items())
+    elif isinstance(x,np.ndarray) or isinstance(x,np.number):
+        # note, call tolist again to convert strings of numbers to numbers
+        return tolist(x.tolist())
+    elif isinstance(x,OrderedDict):
+        return dict(x)
+    elif isinstance(x,basestring) or isinstance(x,np.str):
+        x=str(x) # convert unicode & numpy strings 
+        try:
+            return int(x)
+        except:
+            try:
+                return float(x)
+            except:
+                if x == 'True': return True
+                elif x == 'False': return False
+                else: return x
+    else:
+        return x
