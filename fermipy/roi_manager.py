@@ -186,6 +186,8 @@ class ROIManager(AnalysisBase):
         if self.config['isodiff'] is not None:
             self._diffuse_srcs.append(IsoSource(self.config['isodiff'],
                                                 'isodiff'))
+#        else:
+#            self._diffuse_srcs.append(IsoSource(None,'isodiff'))
 
         if self.config['galdiff'] is not None:
             self._diffuse_srcs.append(MapCubeSource(self.config['galdiff'],
@@ -475,10 +477,13 @@ class ROIManager(AnalysisBase):
         ra : float
 
         dec : float
-        
 
+        dist : float
+        
         """
 
+        if dist is None: dist = 180.
+        
         x = lonlat_to_xyz(np.radians(ra),np.radians(dec))
         costh = np.sum(x[:,np.newaxis]*self._src_radec,axis=0)        
         costh[costh>1.0] = 1.0

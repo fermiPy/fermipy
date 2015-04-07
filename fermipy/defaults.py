@@ -24,6 +24,7 @@ selection = {
     'glat'    : (None,''),
     'glon'    : (None,''),
     'radius'  : (None,''),
+    'filter'  : ('DATA_QUAL>0 && LAT_CONFIG==1',''),
     }
 
 # Options for ROI model.
@@ -34,7 +35,8 @@ roi = {
          'If none then no selection is applied.  This selection will be ORed with '
          'sources passing the cut on roisize.'),
     'roisize'        :
-        (None,'Select sources within a box of RxR centered on the ROI.  If none then no cut is applied.'),
+        (None,'Select sources within a box of RxR centered on the ROI.  If none then no '
+         'cut is applied.'),
     
     'isodiff'       : (None,''),
     'galdiff'       : (None,''),

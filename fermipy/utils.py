@@ -34,6 +34,19 @@ class AnalysisBase(object):
             logger.log(loglevel,'Configuration:\n'+ yaml.dump(self.config))
         
 
+def valToBin(edges,x):
+    """Convert axis coordinate to bin index."""
+    ibin = np.digitize(np.array(x,ndmin=1),edges)-1
+    return ibin
+        
+def valToBinBounded(edges,x):
+    """Convert axis coordinate to bin index."""
+    nbins = len(edges)-1
+    ibin = valToBin(edges,x)
+    ibin[ibin < 0] = 0
+    ibin[ibin > nbins-1] = nbins-1
+    return ibin
+            
 def mkdir(dir):
     if not os.path.exists(dir):  os.makedirs(dir)
     return dir
