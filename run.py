@@ -1,11 +1,21 @@
 from fermipy.AnalysisMain import *
 from fermipy.roi_manager import *
 from fermipy.config import *
+from fermipy.logger import *
 import yaml
 import pprint
-from fermipy.Logger import *
-        
-config = ConfigManager.create('sample_config.yaml')
+import argparse
+
+
+usage = "usage: %(prog)s [config file]"
+description = "Run fermipy analysis chain."
+parser = argparse.ArgumentParser(usage=usage,description=description)
+
+parser.add_argument('--config', default = 'sample_config.yaml')
+
+args = parser.parse_args()
+
+config = ConfigManager.create(args.config)
 
 gta = GTAnalysis(config)
 

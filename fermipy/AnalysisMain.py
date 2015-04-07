@@ -174,7 +174,7 @@ class GTAnalysis(AnalysisBase):
         elif isinstance(components,list):
             for i,c in enumerate(components):
                 cfg = copy.copy(self.config['common'])                
-                cfg = merge_dict(cfg,components[k])
+                cfg = merge_dict(cfg,c)
                 cfg['file_suffix'] = '_%02i'%i
                 cfg['name'] = '%02i'%i
                 configs.append(cfg)
