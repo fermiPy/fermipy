@@ -18,18 +18,21 @@ common:
   # LT cube (optional)
   ltcube : null
 
+  #----------------------------------------------------------------------------
   # Binning
   roi_width  : 5.0
   npix       : null
   binsz      : 0.1 # spatial bin size in deg
   binsperdec : 8   # nb energy bins per decade
   
+  #----------------------------------------------------------------------------
   # Data selections
   emin    : 100
   emax    : 100000
   zmax    : 100
   evclass : 128
   evtype  : null
+  filter  : 'DATA_QUAL>0 && LAT_CONFIG==1' # gtmktime filter string
 
   # Set the ROI center to the coordinates of this source
   ra     : 0.0
@@ -37,6 +40,7 @@ common:
   target : 'mkn421'
   radius : 10.0
 
+  #----------------------------------------------------------------------------
   # IRFs
   enable_edisp : True
   irfs : 'P8R2_SOURCE_V6'
