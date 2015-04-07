@@ -33,7 +33,11 @@ gta.generate_model()
 
 gta.fit()
 
+# Write the post fit XML model
 gta.write_xml('fit0.xml')
+
+# Compute the SED
+gta.sed('mkn421')
 
 # Write results yaml file
 gta.write_roi('fit_model')
