@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="gammaCygni" type="DiffuseSource">
+    <spectrum normPar="Integral" type="PowerLaw2">
+      <parameter free="0" max="10000" min="1e-05" name="Integral" scale="1e-09" value="0.69"/>
+      <parameter free="0" max="0" min="-5" name="Index" scale="1" value="-1.53"/>
+      <parameter free="0" max="200000" min="20" name="LowerLimit" scale="1" value="1000"/>
+      <parameter free="0" max="1000000" min="20" name="UpperLimit" scale="1" value="100000"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/gammaCygni.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1000" min="0.001" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

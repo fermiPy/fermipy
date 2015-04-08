@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="CenALobes" type="DiffuseSource">
+    <spectrum normPar="Integral" type="PowerLaw2">
+      <parameter free="1" max="1000" min="1e-07" name="Integral" scale="1e-07" value="1.144290832"/>
+      <parameter free="1" max="5" min="-5" name="Index" scale="1" value="-2.527932726"/>
+      <parameter free="0" max="1000000" min="10" name="LowerLimit" scale="1" value="100"/>
+      <parameter free="0" max="1000000" min="10" name="UpperLimit" scale="1" value="500000"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/CenALobes.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1000" min="0.001" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

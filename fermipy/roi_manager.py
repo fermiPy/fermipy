@@ -3,7 +3,7 @@ from utils import *
 import pyfits
 import fermipy
 
-import xml.etree.cElementTree as et
+import xml.etree.cElementTree as ElementTree
 
 
 def xyz_to_lonlat(*args):
@@ -49,6 +49,14 @@ def project(lon0,lat0,lon1,lat1):
     return r*np.cos(phi), r*np.sin(phi)
 
 
+def scale_parameter(p):
+
+    if p > 0:    
+        scale = 10**-np.round(np.log10(1./p))
+        return p/scale, scale
+    else:
+        return p, 1.0
+    
 def get_dist_to_edge(lon0,lat0,lon1,lat1,width):
 
     x,y = project(lon0,lat0,lon1,lat1)
@@ -58,10 +66,24 @@ def get_dist_to_edge(lon0,lat0,lon1,lat1,width):
     
 class IsoSource(object):
 
-    def __init__(self,filefunction,name,norm=1.0):
-        self._norm = norm
+    def __init__(self,filefunction,name,spectral_pars=None,spatial_pars=None):
         self._filefunction = filefunction
         self._name = name
+
+        self._spectral_pars = {} if spectral_pars is None else spectral_pars
+        self._spatial_pars = {} if spatial_pars is None else spatial_pars
+
+        if not self._spectral_pars:
+            self._spectral_pars = {
+                'Normalization' : {'name' : 'Normalization', 'scale' : '1.0',
+                                   'value' : '1.0', 'min' : '0.001', 'max' : '1000.0',
+                                   'free' : '0' } }
+
+        if not self._spatial_pars:            
+            self._spatial_pars = {
+                'Value' : {'name' : 'Value', 'scale' : '1',
+                           'value' : '1', 'min' : '0', 'max' : '10',
+                           'free' : '0' } }
 
     @property
     def name(self):
@@ -70,13 +92,57 @@ class IsoSource(object):
     @property
     def filefunction(self):
         return self._filefunction
+
+    def write_xml(self,root):
+        
+        source_element = create_xml_element(root,'source',
+                                            dict(name=self.name,
+                                                 type='DiffuseSource'))
+
+        
+        spec_el = create_xml_element(source_element,'spectrum',
+                                     dict(file=self.filefunction,
+                                          type='FileFunction',
+                                          ctype='-1'))
+                        
+        spat_el = create_xml_element(source_element,'spatialModel',
+                                     dict(type='ConstantValue'))
+
+
+        for k,v in self._spectral_pars.items():                
+            create_xml_element(spec_el,'parameter',v)
+
+        for k,v in self._spatial_pars.items():                
+            create_xml_element(spat_el,'parameter',v)
         
 class MapCubeSource(object):
 
-    def __init__(self,mapcube,name,norm=1.0):
-        self._norm = norm
+    def __init__(self,mapcube,name,spectral_pars=None,spatial_pars=None):
         self._mapcube = mapcube
         self._name = name
+
+        self._spectral_pars = {} if spectral_pars is None else spectral_pars
+        self._spatial_pars = {} if spatial_pars is None else spatial_pars
+
+        if not self._spectral_pars:
+            self._spectral_pars = {
+                'Prefactor' : {'name' : 'Prefactor', 'scale' : '1',
+                               'value' : '0.0', 'min' : '-1.0', 'max' : '1.0',
+                               'free' : '0' },
+                'Index' : {'name' : 'Index', 'scale' : '1',
+                               'value' : '1.0', 'min' : '0.0', 'max' : '10.0',
+                               'free' : '0' },
+                'Scale' : {'name' : 'Scale', 'scale' : '1',
+                           'value' : '1000.0', 'min' : '1000.0', 'max' : '10000.0',
+                           'free' : '0' },
+                }
+
+        if not self._spatial_pars:            
+            self._spatial_pars = {
+                'Normalization' :
+                    {'name' : 'Normalization', 'scale' : '1',
+                     'value' : '1', 'min' : '0', 'max' : '10',
+                     'free' : '0' } }
 
     @property
     def name(self):
@@ -85,18 +151,45 @@ class MapCubeSource(object):
     @property
     def mapcube(self):
         return self._mapcube
+
+    def write_xml(self,root):
+        
+        source_element = create_xml_element(root,'source',
+                                            dict(name=self.name,
+                                                 type='DiffuseSource'))
+
+        spec_el = create_xml_element(source_element,'spectrum',
+                                     dict(type='PowerLaw'))
+                        
+        spat_el = create_xml_element(source_element,'spatialModel',
+                                     dict(type='MapCubeFunction',
+                                          file=self._mapcube))
+
+
+        for k,v in self._spectral_pars.items():                
+            create_xml_element(spec_el,'parameter',v)
+
+        for k,v in self._spatial_pars.items():                
+            create_xml_element(spat_el,'parameter',v)
         
 class Source(object):
 
-    def __init__(self,col_data=None,radec=None,extended=False):
+    def __init__(self,col_data=None,
+                 spectral_pars=None,
+                 spatial_pars=None,
+                 extended=False):
 
-        if col_data is None:            
-            self._col_data = {}
-        else:
-            self._col_data = col_data
+        self._col_data = {} if col_data is None else col_data
+        self._spectral_pars = {} if spectral_pars is None else spectral_pars
+        self._spatial_pars = {} if spatial_pars is None else spatial_pars
+                    
+        phi = np.radians(col_data['RAJ2000'])
+        theta = np.pi/2.-np.radians(col_data['DEJ2000'])
 
-        self._radec = radec
-
+        self._radec = np.array([np.sin(theta)*np.cos(phi),
+                                np.sin(theta)*np.sin(phi),
+                                np.cos(theta)])
+            
         self._names = []
         self._names_dict = {}
         for k in ROIManager.src_name_cols:
@@ -110,6 +203,90 @@ class Source(object):
 
         self._extended=extended
 
+        if not self._spectral_pars:
+            self._update_spectral_pars()
+
+        if not self.extended and not self._spatial_pars:
+            
+            self._spatial_pars = {
+                'RA' : {'name' : 'RA',  'value' : str(self['RAJ2000']), 'free' : '0',
+                        'min' : '-360.0','max' : '360.0','scale' : '1.0'},
+                'DEC' : {'name' : 'DEC',  'value' : str(self['DEJ2000']), 'free' : '0',
+                         'min' : '-90.0','max' : '90.0','scale' : '1.0'}
+                }
+        elif self.extended and not self._spatial_pars:
+
+            self._spatial_pars = {
+                'Prefactor' : {'name' : 'Prefactor', 'value' : '1',
+                               'free' : '0', 'min' : '0.001', 'max' : '1000',
+                               'scale' : '1.0'}
+                }
+            
+    def _update_spectral_pars(self):
+
+        if self['SpectrumType'] == 'PowerLaw':
+
+            prefactor, prefactor_scale = scale_parameter(self['Flux_Density'])
+            
+            self._spectral_pars = {
+                'Prefactor' : {'name' : 'Prefactor', 'value' : str(prefactor),
+                               'scale' : str(prefactor_scale),
+                               'min' : '0.01', 'max' : '100.0', 'free' : '0'},
+                'Index' : {'name' : 'Index', 'value' : str(self['Spectral_Index']),
+                           'scale' : str(-1.0), 'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
+                'Scale' :  {'name' : 'Scale', 'value' : str(self['Pivot_Energy']),
+                            'scale' : str(1.0),
+                            'min' : str(self['Pivot_Energy']),
+                            'max' : str(self['Pivot_Energy']), 'free' : '0'}
+                }
+
+        elif self['SpectrumType'] == 'LogParabola':
+
+            norm_value, norm_scale = scale_parameter(self['Flux_Density'])
+            eb_value, eb_scale = scale_parameter(self['Pivot_Energy'])
+
+            self._spectral_pars = {
+                'norm' : {'name' : 'norm', 'value' : str(norm_value),
+                          'scale' : str(norm_scale),
+                          'min' : '0.01', 'max' : '100.0', 'free' : '0'},
+                'alpha' : {'name' : 'alpha', 'value' : str(self['Spectral_Index']),
+                           'scale' : str(1.0), 'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
+                'beta' :  {'name' : 'beta', 'value' : str(self['beta']),
+                           'scale' : str(1.0),
+                           'min' : '-10.0', 'max' : '10.0', 'free' : '0'},
+                'Eb' :  {'name' : 'Eb', 'value' : str(eb_value),
+                         'scale' : str(eb_scale),
+                         'min' : '0.01', 'max' : '100.0', 'free' : '0'},
+                }
+        elif self['SpectrumType'] == 'PLSuperExpCutoff':
+
+            prefactor, prefactor_scale = scale_parameter(self['Flux_Density'])
+            cutoff, cutoff_scale = scale_parameter(self['Cutoff'])
+                
+            self._spectral_pars = {
+                'Prefactor' : {'name' : 'Prefactor', 'value' : str(prefactor),
+                               'scale' : str(prefactor_scale),
+                               'min' : '0.01', 'max' : '100.0', 'free' : '0'},
+                'Index1' : {'name' : 'Index1', 'value' : str(self['Spectral_Index']),
+                           'scale' : str(-1.0), 'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
+                'Index2' : {'name' : 'Index2', 'value' : str(self['Exp_Index']),
+                           'scale' : str(1.0), 'min' : '0.0', 'max' : '2.0', 'free' : '0'},
+                'Cutoff' : {'name' : 'Cutoff', 'value' : str(cutoff),
+                           'scale' : str(cutoff_scale), 'min' : '0.01', 'max' : '100.0', 'free' : '0'},
+                'Scale' :  {'name' : 'Scale', 'value' : str(self['Pivot_Energy']),
+                            'scale' : str(1.0),
+                            'min' : str(self['Pivot_Energy']),
+                            'max' : str(self['Pivot_Energy']), 'free' : '0'}
+                }
+        else:
+
+            import pprint
+            pprint.pprint(self._col_data)
+
+            sys.exit(0)
+            
+            
+                               
     def separation(self,src):
 
         if isinstance(src,Source):        
@@ -141,12 +318,102 @@ class Source(object):
     def data(self):
         return self._col_data
 
+    @staticmethod
+    def load_from_xml(root,extdir=None):
+        
+        spec = load_xml_elements(root,'spectrum')
+        spat = load_xml_elements(root,'spatialModel')
+        spectral_pars = load_xml_elements(root,'spectrum/parameter')
+        spatial_pars = load_xml_elements(root,'spatialModel/parameter')
+
+        src_type = root.attrib['type']
+        spatial_type = spat['type']
+        spectral_type = spec['type']
+        
+        src_dict = copy.deepcopy(root.attrib)
+
+        src_dict['Source_Name'] = src_dict['name']
+        src_dict['SpectrumType'] = spec['type']
+
+        if src_type =='PointSource' or spatial_type == 'SpatialMap':
+        
+            extflag=False        
+            if 'file' in spat: 
+                src_dict['Spatial_Filename'] = spat['file']
+                extflag=True
+
+                if not os.path.isfile(src_dict['Spatial_Filename']) \
+                        and extdir is not None:
+                    src_dict['Spatial_Filename'] = \
+                        os.path.join(extdir,'Templates',
+                                     src_dict['Spatial_Filename'])
+
+            
+            
+            if 'RA' in src_dict:
+                src_dict['RAJ2000'] = float(src_dict['RA'])
+                src_dict['DEJ2000'] = float(src_dict['DEC'])
+            else:
+                src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
+                src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
+            
+            return Source(src_dict,
+                          spectral_pars=spectral_pars,
+                          spatial_pars=spatial_pars,extended=extflag)
+
+        elif src_type == 'DiffuseSource' and spatial_type == 'ConstantValue':
+            return IsoSource(spec['file'],'isodiff',spectral_pars,spatial_pars)
+        elif src_type == 'DiffuseSource' and spatial_type == 'MapCubeFunction':
+            return MapCubeSource(spat['file'],'galdiff',spectral_pars,spatial_pars)
+        else:
+            raise Exception('Unrecognized type for source: %s'%src_dict['Source_Name'])
+        
+    def write_xml(self,root):
+
+        if not self.extended:
+            source_element = create_xml_element(root,'source',
+                                                dict(name=self['Source_Name'],
+                                                     type='PointSource'))
+            
+            spat_el = ElementTree.SubElement(source_element,'spatialModel')
+            spat_el.set('type','SkyDirFunction')
+             
+        else:
+            source_element = create_xml_element(root,'source',
+                                                dict(name=self['Source_Name'],
+                                                     type='DiffuseSource'))
+            
+            spat_el = create_xml_element(source_element,'spatialModel',
+                                         dict(map_based_integral='True',
+                                              type='SpatialMap',
+                                              file=self['Spatial_Filename']))
+                    
+        for k,v in self._spatial_pars.items():                
+            create_xml_element(spat_el,'parameter',v)
+
+                
+        el = ElementTree.SubElement(source_element,'spectrum')  
+        
+        stype = self['SpectrumType'].strip()            
+        el.set('type',stype)
+
+#        spec_element.set('type','PLSuperExpCutoff')
+        
+        for k,v in self._spectral_pars.items():                
+            create_xml_element(el,'parameter',v)
+
+        
+            
+    
     def __contains__(self,key):
         return key in self._col_data
 
     def __getitem__(self,key):
         return self._col_data[key]
 
+    def __setitem__(self,key,value):
+        self._col_data[key]=value
+    
 class ROIManager(AnalysisBase):
     """This class is responsible for managing the ROI definition.
     Catalogs can be read from either FITS or XML files."""
@@ -161,6 +428,10 @@ class ROIManager(AnalysisBase):
     def __init__(self,config=None,**kwargs):
         super(ROIManager,self).__init__(config,**kwargs)
 
+        if not os.path.isdir(self.config['extdir']):
+            self._config['extdir'] = os.path.join(fermipy.PACKAGE_ROOT,
+                                                  'catalogs',self.config['extdir'])
+        
         # Coordinate for ROI center (defaults to 0,0)
         self._radec = kwargs.get('radec',np.array([0.0,0.0]))    
         self._srcs = kwargs.get('srcs',[])
@@ -200,7 +471,15 @@ class ROIManager(AnalysisBase):
         self.load_diffuse_srcs()
             
         for c in self.config['catalogs']:
-            self.load_fits(c)
+
+            extname = os.path.splitext(c)[1]
+            
+            if extname == '.fits' or extname == '.fit':
+                self.load_fits(c)
+            elif extname == '.xml':
+                self.load_xml(c)
+            else:
+                raise Exception('Unrecognized catalog file extension: %s'%c)
 
     # Creation Methods           
     @staticmethod
@@ -326,124 +605,7 @@ class ROIManager(AnalysisBase):
 
         return el
     
-        
-    @staticmethod
-    def create_powerlaw(src,root):
-
-        if src['Flux_Density'] > 0:        
-            scale = np.round(np.log10(1./src['Flux_Density']))
-        else:
-            scale = 0.0
-            
-        value = src['Flux_Density']*10**scale
                 
-        create_xml_element(root,'parameter',
-                           dict(name='Prefactor',
-                                free='0',
-                                min='0.01',
-                                max='100.0',
-                                value=str(value),
-                                scale=str(10**-scale)))
-
-        create_xml_element(root,'parameter',
-                           dict(name='Index',
-                                free='0',
-                                min='-5.0',
-                                max='5.0',
-                                value=str(src['Spectral_Index']),
-                                scale=str(-1.0)))
-        
-        create_xml_element(root,'parameter',
-                           dict(name='Scale',
-                                free='0',
-                                min=str(src['Pivot_Energy']),
-                                max=str(src['Pivot_Energy']),
-                                value=str(src['Pivot_Energy']),
-                                scale=str(1.0)))
-
-    @staticmethod
-    def create_logparabola(src,root):
-
-        norm_scale = np.round(np.log10(1./src['Flux_Density']))
-        norm_value = src['Flux_Density']*10**norm_scale
-
-        eb_scale = np.round(np.log10(1./src['Pivot_Energy']))
-        eb_value = src['Pivot_Energy']*10**eb_scale
-        
-        create_xml_element(root,'parameter',
-                           dict(name='norm',
-                                free='0',
-                                min='0.01',
-                                max='100.0',
-                                value=str(norm_value),
-                                scale=str(10**-norm_scale)))
-
-        create_xml_element(root,'parameter',
-                           dict(name='alpha',
-                                free='0',
-                                min='-5.0',
-                                max='5.0',
-                                value=str(src['Spectral_Index']),
-                                scale=str(1.0)))
-
-        create_xml_element(root,'parameter',
-                           dict(name='beta',
-                                free='0',
-                                min='0.0',
-                                max='5.0',
-                                value=str(src['beta']),
-                                scale=str(1.0)))
-
-        
-        create_xml_element(root,'parameter',
-                           dict(name='Eb',
-                                free='0',
-                                min='0.01',
-                                max='100.0',
-                                value=str(eb_value),
-                                scale=str(10**-eb_scale)))
-        
-    @staticmethod
-    def create_plsuperexpcutoff(src,root):
-
-        norm_scale = np.round(np.log10(1./src['Flux_Density']))
-        norm_value = src['Flux_Density']*10**norm_scale
-
-        eb_scale = np.round(np.log10(1./src['Pivot_Energy']))
-        eb_value = src['Pivot_Energy']*10**eb_scale
-        
-        create_xml_element(root,'parameter',
-                           dict(name='norm',
-                                free='0',
-                                min='0.01',
-                                max='100.0',
-                                value=str(norm_value),
-                                scale=str(10**-norm_scale)))
-
-        create_xml_element(root,'parameter',
-                           dict(name='alpha',
-                                free='0',
-                                min='-5.0',
-                                max='5.0',
-                                value=str(src['Spectral_Index']),
-                                scale=str(1.0)))
-
-        create_xml_element(root,'parameter',
-                           dict(name='beta',
-                                free='0',
-                                min='0.0',
-                                max='5.0',
-                                value=str(src['beta']),
-                                scale=str(1.0)))
-        
-        create_xml_element(root,'parameter',
-                           dict(name='Eb',
-                                free='0',
-                                min='0.01',
-                                max='100.0',
-                                value=str(eb_value),
-                                scale=str(10**-eb_scale)))
-
     def get_source_by_name(self,name):
         """Retrieve source by name."""
 
@@ -522,7 +684,7 @@ class ROIManager(AnalysisBase):
         """Load sources from a FITS catalog file."""
 
         if not os.path.isfile(fitsfile):
-            fitsfile = os.path.join(fermipy.PACKAGE_ROOT,fitsfile)
+            fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',fitsfile)
         
         hdulist = pyfits.open(fitsfile)
         table_src = hdulist[src_hduname]
@@ -557,14 +719,15 @@ class ROIManager(AnalysisBase):
 
                 src_dict['Spatial_Filename'] = src_dict['Spatial_Filename'].strip()
 
-            phi = np.radians(src_dict['RAJ2000'])
-            theta = np.pi/2.-np.radians(src_dict['DEJ2000'])
-
-            src_radec = np.array([np.sin(theta)*np.cos(phi),
-                                  np.sin(theta)*np.sin(phi),
-                                  np.cos(theta)])
-
-            src = Source(src_dict,src_radec,extended=extflag)
+                if not os.path.isfile(src_dict['Spatial_Filename']) and self.config['extdir']:
+                    src_dict['Spatial_Filename'] = os.path.join(self.config['extdir'],'Templates',
+                                                                src_dict['Spatial_Filename'])
+            
+            src_dict['SpectrumType'] = src_dict['SpectrumType'].strip()
+            if src_dict['SpectrumType'] == 'PLExpCutoff':
+                src_dict['SpectrumType'] = 'PLSuperExpCutoff'
+            
+            src = Source(src_dict,extended=extflag)
             self._srcs.append(src)
 
         self.build_src_index()
@@ -584,7 +747,8 @@ class ROIManager(AnalysisBase):
         for i, s in enumerate(self._srcs):
  
             self._src_radec[:,i] = s.radec
-            self._src_radius[i] = s.separation(lonlat_to_xyz(self._radec[0],self._radec[1]))
+            self._src_radius[i] = s.separation(lonlat_to_xyz(self._radec[0],
+                                                             self._radec[1]))
             for c in ROIManager.src_name_cols:
                 if not c in s: continue
                 name = s[c].strip()
@@ -599,79 +763,43 @@ class ROIManager(AnalysisBase):
     def write_xml(self,xmlfile,isodiff=None,galdiff=None):
         """Save this ROI model as an XML file."""
         
-        root = et.Element('source_library')
+        root = ElementTree.Element('source_library')
         root.set('title','source_library')
 
         for s in self._srcs:
-
-            if not s.extended:
-                source_element = create_xml_element(root,'source',
-                                                    dict(name=s['Source_Name'],
-                                                         type='PointSource'))
-
-                spat_el = et.SubElement(source_element,'spatialModel')
-                spat_el.set('type','SkyDirFunction')
-
-                create_xml_element(spat_el,'parameter',
-                                   dict(name = 'RA',value = str(s['RAJ2000']),
-                                        free='0',min='-360.0',max='360.0',
-                                        scale='1.0'))
-
-                create_xml_element(spat_el,'parameter',
-                                   dict(name = 'DEC',value = str(s['DEJ2000']),
-                                        free='0',min='-90.0',max='90.0',
-                                        scale='1.0'))
-
-            else:
-                source_element = create_xml_element(root,'source',
-                                                    dict(name=s['Source_Name'],
-                                                         type='DiffuseSource'))
-
-                spat_el = create_xml_element(source_element,'spatialModel',
-                                             dict(map_based_integral='True',
-                                                  type='SpatialMap',
-                                                  file=s['Spatial_Filename']))
-
-                create_xml_element(spat_el,'parameter',
-                                   dict(name = 'Prefactor',value = '1',
-                                        free='0',min='0.001',max='1000',
-                                        scale='1.0'))
-
-            spec_element = et.SubElement(source_element,'spectrum')
-
-            stype = s['SpectrumType'].strip()            
-            spec_element.set('type',stype)
-
-            if stype == 'PowerLaw':
-                ROIManager.create_powerlaw(s,spec_element)
-            elif stype == 'LogParabola':
-                ROIManager.create_logparabola(s,spec_element)
-            elif stype == 'PLSuperExpCutoff' or stype == 'PLExpCutoff':
-                spec_element.set('type','PLSuperExpCutoff')
-                ROIManager.create_plsuperexpcutoff(s,spec_element)
-            else:
-                raise Exception('Unrecognized spectral type: ' + stype)
-            
-
+            s.write_xml(root)
+                
         for s in self._diffuse_srcs:
-
-            if isodiff is not None:
-                ROIManager.create_isotropic(s,root)            
-            elif isinstance(s,IsoSource):
-                ROIManager.create_isotropic(s,root)
-            elif isinstance(s,MapCubeSource):
-                ROIManager.create_mapcube(s,root)
-            else:
-                raise Exception('Unkown diffuse source type: ' + type(s))
+            s.write_xml(root)
+#            if isodiff is not None:
+#                ROIManager.create_isotropic(s,root)            
+#            elif isinstance(s,IsoSource):
+#                ROIManager.create_isotropic(s,root)
+#            elif isinstance(s,MapCubeSource):
+#                ROIManager.create_mapcube(s,root)
+#            else:
+#                raise Exception('Unkown diffuse source type: ' + type(s))
                 
         output_file = open(xmlfile,'w')
         output_file.write(prettify_xml(root))
 
-    def load_xml(self):
+    def load_xml(self,xmlfile):
         """Load sources from an XML file."""
 
-        pass
+        if not os.path.isfile(xmlfile):
+            xmlfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',xmlfile)
+        
+        root = ElementTree.ElementTree(file=xmlfile).getroot()
 
+        for s in root.findall('source'):
+
+            src = Source.load_from_xml(s,extdir=self.config['extdir'])
+            if isinstance(src,Source):
+                self._srcs.append(src)
+            else:
+                self._diffuse_srcs.append(src)
+
+        self.build_src_index()
 
 if __name__ == '__main__':
 

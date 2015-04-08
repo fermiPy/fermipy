@@ -41,6 +41,7 @@ roi = {
     'isodiff'       : (None,''),
     'galdiff'       : (None,''),
     'limbdiff'      : (None,''),
+    'extdir'        : ('Extended_archive_v14',''),
     'catalogs'      : (None,'',None,list)
     }
 

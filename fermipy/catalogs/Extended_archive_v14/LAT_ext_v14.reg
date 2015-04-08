@@ -1,0 +1,32 @@
+# Extended sources to be used in the 4-year Fermi-LAT source list
+# Generated 20 December 2013 (ECF)
+
+global color=black
+global width=2 
+global font="helvetica 9 normal"
+
+fk5;ellipse(  14.7500, -72.7000,  1.350, 1.350,  90) # text={SMC}
+fk5;ellipse(  81.6500, -68.4200,  1.870, 1.870,  90) # text={LMC}
+fk5;ellipse(  85.1000,  27.9400,  1.500, 1.500,  90) # text={S 147}
+fk5;ellipse(  94.3100,  22.5800,  0.270, 0.270,  90) # text={IC443}
+fk5;ellipse( 125.6600, -42.8400,  0.370, 0.370,  90) # text={Puppis A}
+fk5;ellipse( 128.2872, -45.1901,  0.910, 0.910,  90) # text={Vela X}
+fk5;ellipse( 133.2000, -46.5200,  1.120, 1.120,  90) # text={Vela Jr}
+fk5;ellipse( 195.7500, -63.2000,  0.240, 0.240,  90) # text={HESS J1303-631}
+fk5;ellipse( 201.0000, -43.5000,  2.500, 1.000, 100) # text={CenA Lobes}
+fk5;ellipse( 228.5070, -59.2560,  0.250, 0.250,  90) # text={MSH 15-52}
+fk5;ellipse( 243.8300, -51.7800,  0.420, 0.420,  90) # text={HESS J1614-518}
+fk5;ellipse( 244.0600, -50.9100,  0.320, 0.320,  90) # text={HESS J1616-508}
+fk5;ellipse( 248.2500, -47.7700,  0.350, 0.350,  90) # text={HESS J1632-478}
+fk5;ellipse( 258.3900, -39.7600,  0.560, 0.560,  90) # text={RX J1713.7-3946}
+fk5;ellipse( 270.3400, -23.4400,  0.390, 0.390,  90) # text={W28}
+fk5;ellipse( 271.4083, -21.6117,  0.370, 0.370,  90) # text={W30}
+fk5;ellipse( 276.1298, -13.8521,  0.750, 0.750,  90) # text={HESS J1825-137}
+fk5;ellipse( 279.1400,  -6.9200,  0.330, 0.330,  90) # text={HESS J1837-069}
+fk5;ellipse( 280.2300,  -5.5500,  0.620, 0.380, 129) # text={HESS J1841-055}
+fk5;ellipse( 283.9900,   1.3550,  0.300, 0.190,  57) # text={W44}
+fk5;ellipse( 290.8180,  14.1450,  0.375, 0.260,  90) # text={W51C}
+fk5;ellipse( 305.2700,  40.5200,  0.630, 0.630, 180) # text={gamma Cygni}
+fk5;ellipse( 307.1700,  41.1700,  3.000, 3.000,  90) # text={Cygnus Cocoon}
+fk5;ellipse( 311.3200,  50.4400,  1.190, 1.190,  90) # text={HB21}
+fk5;ellipse( 312.7500,  30.6700,  1.650, 1.650,  90) # text={Cygnus Loop}

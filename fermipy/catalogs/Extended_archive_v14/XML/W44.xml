@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="W44" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter free="1" max="100000" min="1e-05" name="norm" scale="1e-11" value="2.891247798"/>
+      <parameter free="1" max="5" min="0" name="alpha" scale="1" value="2.399924084"/>
+      <parameter free="1" max="5" min="-1" name="beta" scale="1" value="0.2532196784"/>
+      <parameter free="0" max="300000" min="20" name="Eb" scale="1" value="1737.352167"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/W44.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1000" min="0.001" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

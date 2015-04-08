@@ -80,6 +80,17 @@ def create_xml_element(root,name,attrib):
     for k, v in attrib.iteritems(): el.set(k,v)
     return el
 
+def load_xml_elements(root,path):
+
+    o = {}
+    for p in root.findall(path):
+
+        if 'name' in p.attrib:
+            o[p.attrib['name']] = copy.deepcopy(p.attrib)
+        else:
+            o.update(p.attrib)
+    return o
+        
 def prettify_xml(elem):
     """Return a pretty-printed XML string for the Element.
     """

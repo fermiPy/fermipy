@@ -1,0 +1,152 @@
+Changes from archive version 13 to archive version 14:
+
+- Updated all XML template files to reflect spectral fits from 3FGL. 
+- Updated XML spectral models for sources that changed their spectral forms in the revised analyisis. They are:
+-- SMC changed from PLSuperExpCutoff to PowerLaw
+-- LMC changed from PLSuperExpCutoff to LogParabola
+-- PuppisA changed from PowerLaw2 to PowerLaw
+-- HESS J1825-137 changed from PowerLaw2 to LogParabola
+- Added XML spatialModel attribute map_based_integral="true" where missing
+- Updated the main FITS file to reflect the spectral changes noted above.
+
+_______________________________________________________
+Changes from archive version 12 to archive version 13:
+
+- Added templates and models for HB21, HESS J1303-631, and HESS J1841-055.
+
+NOTE TO USERS: The XML files included in this archive are for your reference only. They do not represent the current best fit to the data. As with all sources, we suggest you populate your extended source XML model with initial values appropriate to your data set.
+
+_______________________________________________________
+Changes from archive version 11 to archive version 12:
+
+- Added column to main file for 2FGL association
+- Removed Test_statistic and TS_extension columns as those are not static values
+- Filled in values for Photon_Flux and Energy_Flux based on current XML models
+- Changed Photon_Flux calculation to match that in the 2FGL catalog (1 to 100 Gev)
+- Updated template and xml for Cygnus Loop
+- Corrected Galactic coordinates for LMC, CenA Lobes, and Cygnus Loop
+- Corrected value of W30 radius in main fits file
+- Added ds9 .reg file giving positions and extents for each extended source
+- Changed archive generation from incremental modifications to scripted FITS table creation
+
+_______________________________________________________
+Changes from archive version 10 to archive version 11:
+(Note: version 11 was a development version)
+
+Added XX sources based on recent publications/detections:
+- Cygnus Cocoon (Science paper)
+  Template gauss 2D taken from the paper
+  Spectrum was not explicitly given in paper.
+  F1000 = 5.8 +/- 0.9 E-8 from band analysis
+  Handled together with gamma Cygni.
+- gamma Cygni (extended source search paper)
+  Disk template taken from that paper rather than more complex one (with
+  2nd structure at position of Veritas source) in Cocoon paper
+  Dedicated study (Jamie Holder) uses point source on top of disk
+  Spectrum above 10 GeV cannot necessarily be extrapolated toward low
+  energies.
+  F1000 = 6.9 +/- 1.4 E-10 from band analysis (Luigi)
+  Handled together with Cygnus Cocoon.
+- Spectral analysis for Cygnus Cocoon and gamma Cygni by Luigi
+  Cygnus cocoon: Gamma=2.17+/-0.01
+  gamma Cygni: Gamma=1.53+/-0.03
+
+- HESS J1614-518, HESS J1616-508, HESS J1632-478, HESS J1837-069
+  (extended source search paper)
+  Disk templates taken from the paper
+  Spectra above 10 GeV in the paper cannot necessarily be extrapolated
+  toward low energies.
+  Analysis was redone from 100 MeV using Front and Back together
+- Spectral analysis for HESS J1614-518 and HESS J1616-508
+  HESS J1614-518: F1000=1.4E-8; Gamma=1.99; TS=328; TScurve=2.2
+  HESS J1616-508: F1000=1.6E-8; Gamma=2.06; RS=333; TScurve=31.9 with beta=0.1
+- Spectral analysis for HESS J1632-478
+  F1000=1.9E-8; Gamma=2.01; TS=478; TScurve=47.8 avec beta=0.1
+- Spectral analysis for HESS J1837-069
+  F1000=1.4E-8; Gamma=2.05; TS=262; TScurve=61.1
+
+- Puppis A (extended source search paper)
+  Disk template taken from the paper
+  Power-law spectrum taken from the paper (above 1 GeV)
+
+- RX J1713.7-3946 (dedicated paper)
+  HESS template cropped to reduce the 0 area
+  Power-law spectrum taken from the paper (above 1 GeV)
+
+- S 147 (dedicated paper)
+  Halpha template
+  Power-law spectrum taken from the paper (above 200 MeV)
+
+- Vela Jr (dedicated paper)
+  Disk template taken from the paper
+  Power-law spectrum taken from the paper (above 1 GeV)
+
+_______________________________________________________
+Changes from archive version 09 to archive version 10:
+- Corrected Declination value for W30 in main FITS file
+- Changed permissions for CygnusLoop.xml and W30.xml to remove execute permissions
+- Changed permissions for CygnusLoop.fits and W30.fits to remove execute permissions
+- Changed "revisions.txt" to be a cumulative change log
+
+_______________________________________________________
+Changes from archive version 08 to archive version 09:
+
+- Removed CTB 37A from primary FITS file, XML directory, and Templates directory
+- Corrected integral flux and flux error for VelaX
+
+_______________________________________________________
+Changes from archive version 07 to archive version 08:
+
+- Renamed primary fits file to include the archive version number in the filename
+- Added new line for CTB 37A
+- Added Templates/CTB37A.fits
+- Added XML/CTB37A.xml
+
+_______________________________________________________
+Changes to the main FITs file in archive version 07:
+
+- Changed 1FGL Name of CenA Lobes to 1FGL J1322.0-4515
+- Added Test_Statistic and TS_Extension for LMC
+- Added TS_Extension for VelaX
+- Added Photon_Flux and Test_Statistic for Centaurus A (used south lobe)
+- Added Photon_Flux, Test_Statistic, and TS_Extension for MSH 15-52
+- Added new line for W30
+- Added Photon_Flux, Test_Statistic, and TS_Extension for HESS J1825-137
+- Added Photon_Flux, Test_Statistic, and TS_Extension for W44
+- Added TS_Extension for W51C
+- Added new line for Cygnus Loop
+
+
+Changes to other files:
+- Rescaled CygnusLoop.fits to account for solid angle
+- Rescaled W30.fits to account for solid angle
+- Changed CygnusLoop.xml from ExpCutoff to PLSuperExpCutoff
+- Changed W30.xml from BrokenPowerLaw to LogParabola
+- Changed W30.xml source library title to be consistent with other XML files
+
+_______________________________________________________
+Changes to the main FITs file in jbb04:
+
+- Changed order of rows to make it go with RA (as it did before)
+- Changed name of CenA_Lobes to CenA Lobes (remove _ for consistency
+  with other names)
+- Changed position of CenA Lobes to 201,-43.5 (closer to brighter emission)
+- Filled GLON, GLAT for CenA Lobes
+- Filled Model_SemiMajor, Model_SemiMinor and Model_PosAng which are used
+  in the catalog pipeline to know whether the source contributes to an RoI
+  or not, gets close to another source or not
+- Changed Spectral_Function to LogParabola for IC443, W28, W44, W51C
+  to reflect what it now is (should have done it last time)
+
+Changes to other files:
+- Changed name of CenA Lobes template and XML description to remove _
+- Changed CenA_Lobes to CenALobes in XML description
+- Changed reference to spatial template in HESSJ1825-137.xml to
+  HESSJ1825-137.fits (-137 missing)
+- Changed reference to spatial template in MSH15-52.xml to MSH15-52.fits
+  (.fits missing)
+- Rescaled Cutoff parameter in LMC.xml and SMC.xml so that the fit works with
+  a parameter close to 1.
+
+_______________________________________________________
+Prior changes were not recorded.

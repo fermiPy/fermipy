@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="IC443" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter free="1" max="100000" min="1e-05" name="norm" scale="1e-10" value="0.3250416483"/>
+      <parameter free="1" max="5" min="0" name="alpha" scale="1" value="2.007219622"/>
+      <parameter free="1" max="10" min="-5" name="beta" scale="0.1" value="1.335088491"/>
+      <parameter free="0" max="300000" min="20" name="Eb" scale="1" value="1484.417837"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/IC443.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="3.402823466e+38" min="-3.402823466e+38" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

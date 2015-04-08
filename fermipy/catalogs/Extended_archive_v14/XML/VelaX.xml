@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="VelaX" type="DiffuseSource">
+    <spectrum normPar="Integral" type="PowerLaw2">
+      <parameter free="0" max="1e+10" min="0" name="Integral" scale="1e-07" value="4.73"/>
+      <parameter free="0" max="0" min="-5" name="Index" scale="1" value="-2.41006"/>
+      <parameter free="0" max="200000" min="20" name="LowerLimit" scale="1" value="100"/>
+      <parameter free="0" max="1000000" min="20" name="UpperLimit" scale="1" value="200000"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/VelaX.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1000" min="0.001" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>
