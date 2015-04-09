@@ -16,12 +16,13 @@ class ConfigManager(object):
         # populate config dictionary with an initial set of values
         config_logging = ConfigManager.load('logging.yaml')
 
-        config = {}
-#        config['logging'] = config_logging
+        config = {'common' : {} }
+        config['common'].setdefault('base',os.path.dirname(configfile))
+        #        config['logging'] = config_logging
         
         user_config = ConfigManager.load(configfile)
         config = merge_dict(config,user_config,True)
-
+        
         return config        
 
     @staticmethod

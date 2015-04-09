@@ -89,7 +89,9 @@ def gtlike_spectrum_to_dict(spectrum):
 
         pname = p.getName()
         d[pname]= p.getTrueValue()
-        d['%s_err' % pname]= p.error()*p.getScale() if p.isFree() else np.nan
+        d['%s_err' % pname]= \
+            abs(p.error()*p.getScale()) if p.isFree() else np.nan
+        
         if d['spectrum_type'] == 'FileFunction': 
             ff=pyLike.FileFunction_cast(spectrum)
             d['file']=ff.filename()
@@ -446,11 +448,16 @@ class GTAnalysis(AnalysisBase):
             self.logger.debug('Fitting %s SED from %.0fMeV to %.0fMeV' % (name,10**emin,10**emax))
             self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
             self.fit()
+
+            ecenter = 0.5*(emin+emax)
+            deltae = 10**emax - 10**emin
+            flux = self.like[name].flux(10**emin, 10**emax)
+            flux_err = self.like.fluxError(name,10**emin, 10**emax)
             
-            o['flux'][i] = self.like[name].flux(10**emin, 10**emax)
-            o['eflux'][i] = self.like[name].energyFlux(10**emin, 10**emax)
-            o['flux_err'][i] = self.like.fluxError(name,10**emin, 10**emax)
-            o['eflux_err'][i] = self.like.energyFluxError(name,10**emin, 10**emax)
+            o['flux'][i] = flux/deltae 
+            o['eflux'][i] = flux/deltae*10**(2*ecenter)
+            o['flux_err'][i] = flux_err/deltae
+            o['eflux_err'][i] = flux_err/deltae*10**(2*ecenter)
 
             cs = self.modelCountsSpectrum(name,emin,emax)
             for c in cs: o['npred'][i] = np.sum(c)            
@@ -654,7 +661,26 @@ class GTAnalysis(AnalysisBase):
         # Get the subset of sources with free parameters
             
         yaml.dump(tolist(o),open(outfile,'w'))
+                    
+    def bowtie(self,fd,energies=None):
+        
+        if energies is None:
+            emin = self.energies[0]
+            emax = self.energies[-1]        
+            energies = np.linspace(emin,emax,50)
+        
+        
+        flux = [fd.value(10**x) for x in energies]
+        flux_err = [fd.error(10**x) for x in energies]
 
+        flux = np.array(flux)
+        flux_err = np.array(flux_err)
+        fhi = flux*(1.0 + flux_err/flux)
+        flo = flux/(1.0 + flux_err/flux)
+
+        return {'ecenter' : energies, 'flux' : flux,
+                'fluxlo' : flo, 'fluxhi' : fhi }
+        
     def get_roi_dict(self):
         """Populate a dictionary with the current parameters of the
         ROI model as extracted from the pylikelihood object."""
@@ -679,6 +705,7 @@ class GTAnalysis(AnalysisBase):
             
             # Extract covariance matrix
             src_dict['covar'] = None
+            fd = None
             
             try:
                  fd = FluxDensity.FluxDensity(self.like,name)
@@ -689,8 +716,11 @@ class GTAnalysis(AnalysisBase):
 #                      pass
 #                 elif 
 #                      raise ex
-                 
-            # Extract bowtie            
+
+            # Extract bowtie   
+            if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
+                src_dict['model_flux'] = self.bowtie(fd)
+                
             gf[name] = src_dict
 
         self._roi_model = merge_dict(self._roi_model,gf,add_new_keys=True) 

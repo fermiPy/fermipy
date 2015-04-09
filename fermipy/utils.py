@@ -171,7 +171,8 @@ def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
             od[k] = np.concatenate((v,d1[k]))
         elif (d0[k] is not None and d1[k] is not None) and \
                 (type(d0[k]) != type(d1[k])):
-            raise Exception('Conflicting types in dictionary merge.')
+            raise Exception('Conflicting types in dictionary merge for '
+                            'key %s %s %s'%(k,type(d0[k]),type(d1[k])))
         else: od[k] = copy.copy(d1[k])
 
     if add_new_keys:

@@ -695,7 +695,7 @@ class ROIManager(AnalysisBase):
                                                                 src_dict['Spatial_Filename'])
             
             src_dict['SpectrumType'] = src_dict['SpectrumType'].strip()
-            if src_dict['SpectrumType'] == 'ExpCutoff':
+            if src_dict['SpectrumType'] == 'PLExpCutoff':
                 src_dict['SpectrumType'] = 'PLSuperExpCutoff'
             
             src = Source(src_dict,extended=extflag)
