@@ -24,6 +24,41 @@ import FluxDensity
 from LikelihoodState import LikelihoodState
 from UpperLimits import UpperLimits
 
+
+norm_parameters = {
+    'ConstantValue' : ['Value'],
+    'PowerLaw' : ['Prefactor'],
+    'PowerLaw2' : ['Integral'],
+    'BrokenPowerLaw' : ['Prefactor'],    
+    'LogParabola' : ['norm'],
+    'PLSuperExpCutoff' : ['Prefactor'],
+    'ExpCutoff' : ['Prefactor'],
+    'FileFunction' : ['Normalization'],
+    }
+
+shape_parameters = {
+    'ConstantValue' : [],
+    'PowerLaw' : ['Index'],
+    'PowerLaw2' : ['Index'],
+    'BrokenPowerLaw' : ['Index1','Index2'],    
+    'LogParabola' : ['alpha','beta','Eb'],    
+    'PLSuperExpCutoff' : ['Index1','Index2','Cutoff'],
+    'ExpCutoff' : ['Index1','Cutoff'],
+    'FileFunction' : [],
+    }
+
+index_parameters = {
+    'ConstantValue' : [],
+    'PowerLaw' : ['Index'],
+    'PowerLaw2' : ['Index'],
+    'BrokenPowerLaw' : ['Index1','Index2'],    
+    'LogParabola' : ['alpha','beta'],    
+    'PLSuperExpCutoff' : ['Index1','Index2'],
+    'ExpCutoff' : ['Index1'],
+    'FileFunction' : [],
+    }
+             
+
 def run_gtapp(appname,logger,kw):
 
     logger.info('Running %s'%appname)
@@ -69,12 +104,13 @@ class GTAnalysis(AnalysisBase):
     defaults = {'common' :
                     dict(defaults.selection.items() +
                          defaults.fileio.items() +
+                         defaults.logging.items() +
                          defaults.binning.items() +
                          defaults.irfs.items() +
                          defaults.optimizer.items() +
                          defaults.inputs.items(),
                          roi=defaults.roi),
-                'verbosity' : (0,''),
+                'logging' : defaults.logging,
                 'components' : (None,'')}
 
     def __init__(self,config,**kwargs):
@@ -105,10 +141,10 @@ class GTAnalysis(AnalysisBase):
         os.environ['PFILES']= \
             self._savedir+';'+os.environ['PFILES'].split(';')[-1]
 
-        logfile = os.path.join(self._savedir,'fermipy')
+        self._logfile = os.path.join(self._savedir,'fermipy')
 
-        self.logger = Logger.get(self.__class__.__name__,logfile,
-                                 ll(self.config['verbosity']))
+        self.logger = Logger.get(self.__class__.__name__,self._logfile,
+                                 ll(self.config['logging']['verbosity']))
 
         self.logger.info('\n' + '-'*80 + '\n' + "This is fermipy version {}.".
                          format(fermipy.__version__))
@@ -116,8 +152,10 @@ class GTAnalysis(AnalysisBase):
         
         # Setup the ROI definition
         self._roi = \
-            ROIManager.create_roi_from_source(self.config['common']['target'],
-                                              self.config['common']['roi'])
+            ROIManager.create_from_source(self.config['common']['target'],
+                                          self.config['common']['roi'],
+                                          logfile=self._logfile,
+                                          logging=self.config['logging'])
 
 
         self._like = SummedLikelihood.SummedLikelihood()
@@ -125,7 +163,7 @@ class GTAnalysis(AnalysisBase):
         configs = self.create_component_configs()
 
         for cfg in configs:
-            comp = self._create_component(cfg,logfile)
+            comp = self._create_component(cfg,self._logfile)
             self._components.append(comp)
 
         energies = np.zeros(0)
@@ -158,12 +196,12 @@ class GTAnalysis(AnalysisBase):
         configs = []
 
         components = self.config['components']
-        
+
         if components is None:
             cfg = copy.copy(self.config['common'])
             cfg['file_suffix'] = '_00'
             cfg['name'] = '00'      
-            configs.append(self.config['common'])
+            configs.append(cfg)
         elif isinstance(components,dict):            
             for i,k in enumerate(sorted(components.keys())):
                 cfg = copy.copy(self.config['common'])                
@@ -187,16 +225,13 @@ class GTAnalysis(AnalysisBase):
         self._components = []        
     
     def _create_component(self,cfg,logfile):
-        roi = copy.deepcopy(self._roi)
-        roi.configure(cfg['roi'])
-        roi.load_diffuse_srcs()
             
         self.logger.info("Creating Analysis Component: " + cfg['name'])
-        comp = GTBinnedAnalysis(cfg,roi,
+        comp = GTBinnedAnalysis(cfg,
                                 logfile=logfile,
                                 savedir=self._savedir,
                                 workdir=self._workdir,
-                                verbosity=self.config['verbosity'])
+                                logging=self.config['logging'])
 
         return comp
 
@@ -259,8 +294,7 @@ class GTAnalysis(AnalysisBase):
 
         pars : list        
             Set a list of parameters to be freed/fixed for this source.  If
-            none then all source parameters will be freed/fixed with the
-            exception of those defined in the skip_pars list.
+            none then all source parameters will be freed/fixed.
 
         radius : float        
             Distance out to which sources should be freed or fixed.
@@ -278,7 +312,7 @@ class GTAnalysis(AnalysisBase):
         for s in self._roi._diffuse_srcs:
             self.free_source(s.name,free=free,pars=pars)
             
-    def free_source(self,name,free=True,pars=None,skip_pars=['Scale']):
+    def free_source(self,name,free=True,pars=None):
         """Free/Fix parameters of a source.
 
         Parameters
@@ -299,9 +333,14 @@ class GTAnalysis(AnalysisBase):
         """
 
         # Find the source
-        if not name in ['isodiff','galdiff','limbdiff']:
-            name = self._roi.get_source_by_name(name).name
-            
+        src = self._roi.get_source_by_name(name)
+        name = src.name
+        
+        if pars is None:
+            pars = []
+            pars += norm_parameters[src['SpectrumType']]
+            pars += shape_parameters[src['SpectrumType']]
+                
         # Deduce here the names of all parameters from the spectral type
         src_par_names = pyLike.StringVector()
         self.like[name].src.spectrum().getParamNames(src_par_names)
@@ -309,7 +348,6 @@ class GTAnalysis(AnalysisBase):
         par_indices = []
         par_names = []
         for p in src_par_names:
-            if p in skip_pars: continue
             if pars is not None and not p in pars: continue
             par_indices.append(self.like.par_index(name,p))
             par_names.append(p)
@@ -350,6 +388,8 @@ class GTAnalysis(AnalysisBase):
         
         """
 
+        name = self._roi.get_source_by_name(name).name
+        
         if free: self.logger.debug('Freeing norm for ' + name)
         else: self.logger.debug('Fixing norm for ' + name)
         
@@ -360,18 +400,32 @@ class GTAnalysis(AnalysisBase):
 
     def free_index(self,name,free=True):
         """Free/Fix index of a source."""
-        pass
+        src = self._roi.get_source_by_name(name)
+
+        self.free_source(src.name,free=free,
+                         pars=index_parameters[src['SpectrumType']])
+        
+    def free_shape(self,name,free=True):
+        """Free/Fix shape parameters of a source."""
+        src = self._roi.get_source_by_name(name)
+
+        self.free_source(src.name,free=free,
+                         pars=shape_parameters[src['SpectrumType']])
+        
     
-    def sed(self,name,compute_lnlprofile=True):
+    def sed(self,name,compute_lnlprofile=True,energies=None):
         
         # Find the source
-        if not name in ['isodiff','galdiff','limbdiff']:
-            name = self._roi.get_source_by_name(name).name
+        name = self._roi.get_source_by_name(name).name
+
+        self.logger.info('Computing SED for %s'%name)
         
         saved_state = LikelihoodState(self.like)
+
+        if energies is None: energies = self.energies
+        else: energies = np.array(energies)
         
-        energies = self.energies
-        nbins = self.enumbins
+        nbins = len(energies)-1
 
         o = {'emin' : energies[:-1],
              'emax' : energies[1:],
@@ -421,8 +475,7 @@ class GTAnalysis(AnalysisBase):
         """ Profile the likelihood for the given source and parameter.  
         """
         # Find the source
-        if not name in ['isodiff','galdiff','limbdiff']:
-            name = self._roi.get_source_by_name(name).name
+        name = self._roi.get_source_by_name(name).name
 
         par = self.like.normPar(name)
         parName = self.like.normPar(name).getName()
@@ -438,17 +491,17 @@ class GTAnalysis(AnalysisBase):
         self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
         
         logLike0 = self.like()
-        print parName, idx, scale, bounds, par.getValue(), par.error()
+#        print parName, idx, scale, bounds, par.getValue(), par.error()
 
         if xvals is None:
 
             err = par.error()
             val = par.getValue()
-            if err <= 0 or val <= 3*err:
-                xvals = np.linspace(-2.0,1.0,41)
-                xvals = err*10**xvals
+            if err <= 0 or val <= 3*err:                
+                xvals = 10**np.linspace(-2.0,2.0,51)
+                if val < xvals[0]: xvals = np.insert(xvals,val,0)
             else:
-                xvals = np.linspace(0,1,21)
+                xvals = np.linspace(0,1,25)
                 xvals = np.concatenate((-1.0*xvals[1:][::-1],xvals))
                 xvals = val*10**xvals
 
@@ -518,7 +571,7 @@ class GTAnalysis(AnalysisBase):
         
         saved_state = LikelihoodState(self.like)
         kw = dict(optObject = self.create_optObject(),
-                  covar=True,verbosity=0)
+                  covar=True,verbosity=2)
 #tol=1E-4
 #                  optimizer='DRMNFB')
         
@@ -651,21 +704,26 @@ class GTBinnedAnalysis(AnalysisBase):
                     defaults.inputs.items()+
                     defaults.fileio.items(),
                     roi=defaults.roi,
+                    logging=defaults.logging,
                     name=('00',''),
-                    file_suffix=('',''),
-                    verbosity=(0,''))
+                    file_suffix=('',''))
 
-    def __init__(self,config,roi,**kwargs):
+    def __init__(self,config,**kwargs):
         super(GTBinnedAnalysis,self).__init__(config,**kwargs)
 
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['logfile'],
-                                 ll(self.config['verbosity']))
+                                 ll(self.config['logging']['verbosity']))
+
+        self._roi = \
+            ROIManager.create_from_source(config['target'],
+                                          config['roi'],
+                                          logfile=self.config['logfile'],
+                                          logging=self.config['logging'])
 
         self.print_config(self.logger,loglevel=logging.DEBUG)
         
         savedir = self.config['savedir']
-        self._roi = roi
         self._name = self.config['name']
         
         from os.path import join
@@ -723,8 +781,6 @@ class GTBinnedAnalysis(AnalysisBase):
         cs = np.array(self.like.logLike.modelCountsSpectrum(name))
         imin = valToBinBounded(self.energies,emin+1E-7)[0]
         imax = valToBinBounded(self.energies,emax-1E-7)[0]+1
-
-        print emin, emax, imin, imax
         
         if imax <= imin: raise Exception('Invalid energy range.')        
         return cs[imin:imax]
@@ -747,7 +803,7 @@ class GTBinnedAnalysis(AnalysisBase):
                            tmin=self.config['tmin'], tmax=self.config['tmax'],
                            emin=self.config['emin'], emax=self.config['emax'],
                            zmax=self.config['zmax'],
-                           chatter=self.config['verbosity'])
+                           chatter=self.config['logging']['chatter'])
 
         kw_gtmktime = dict(evfile=self._ft1_file,
                            outfile=self._ft1_filtered_file,
@@ -791,7 +847,7 @@ class GTBinnedAnalysis(AnalysisBase):
                   emax=self.config['emax'],
                   enumbins=self._enumbins,
                   coordsys=self.config['coordsys'],
-                  chatter=self.config['verbosity'])
+                  chatter=self.config['logging']['chatter'])
         
         if not os.path.isfile(self._ccube_file):
             run_gtapp('gtbin',self.logger,kw)            
@@ -816,7 +872,7 @@ class GTBinnedAnalysis(AnalysisBase):
                   evtype=evtype,
                   irfs=self.config['irfs'],
                   coordsys=self.config['coordsys'],
-                  chatter=self.config['verbosity'])
+                  chatter=self.config['logging']['chatter'])
 
         if not os.path.isfile(self._bexpmap_file):
             run_gtapp('gtexpcube2',self.logger,kw)              
@@ -835,7 +891,7 @@ class GTBinnedAnalysis(AnalysisBase):
 #                   rfactor=self.config['rfactor'],
 #                   resample=self.config['resample'],
 #                   minbinsz=self.config['minbinsz'],
-                  chatter=self.config['verbosity'],
+                  chatter=self.config['logging']['chatter'],
                   emapbnds='no' ) 
 
         if not os.path.isfile(self._srcmap_file):
@@ -861,6 +917,8 @@ class GTBinnedAnalysis(AnalysisBase):
         if self.config['enable_edisp']:
             self.logger.info('Enabling energy dispersion')
             self.like.logLike.set_edisp_flag(True)
+
+        self.logger.info('Finished setup')
             
     def generate_model(self,model_name=None,outfile=None):
         """Generate a counts model map.
@@ -905,7 +963,7 @@ class GTBinnedAnalysis(AnalysisBase):
                       evtype  = self.config['evtype'],
                       # edisp   = bool(self.config['enable_edisp']),
                       outtype = 'ccube',
-                      chatter = self.config['verbosity'])
+                      chatter = self.config['logging']['chatter'])
             
             run_gtapp('gtmodel',self.logger,kw)       
         else:

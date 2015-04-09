@@ -2,6 +2,8 @@ import defaults
 from utils import *
 import pyfits
 import fermipy
+from fermipy.logger import Logger
+from fermipy.logger import logLevel as ll
 
 import xml.etree.cElementTree as ElementTree
 
@@ -63,20 +65,46 @@ def get_dist_to_edge(lon0,lat0,lon1,lat1,width):
     delta_edge = np.array([np.abs(x) - width,np.abs(y) - width])
     dtheta = np.max(delta_edge,axis=0)
     return dtheta
-    
-class IsoSource(object):
 
-    def __init__(self,filefunction,name,spectral_pars=None,spatial_pars=None):
-        self._filefunction = filefunction
-        self._name = name
+class Model(object):
 
+    def __init__(self,data=None,
+                 spectral_pars=None,
+                 spatial_pars=None):
+        self._data = {} if data is None else data
         self._spectral_pars = {} if spectral_pars is None else spectral_pars
         self._spatial_pars = {} if spatial_pars is None else spatial_pars
+        
+    def __contains__(self,key):
+        return key in self._data
+
+    def __getitem__(self,key):
+        return self._data[key]
+
+    def __setitem__(self,key,value):
+        self._data[key]=value
+
+    def update(self,m):
+        self._data = merge_dict(self._data,m._data,add_new_keys=True)
+        self._spectral_pars = merge_dict(self._spectral_pars,
+                                         m._spectral_pars,add_new_keys=True)
+        self._spatial_pars = merge_dict(self._spatial_pars,
+                                        m._spatial_pars,add_new_keys=True)
+        
+class IsoSource(Model):
+
+    def __init__(self,filefunction,name,spectral_pars=None,spatial_pars=None):
+        super(IsoSource,self).__init__(None,spectral_pars,spatial_pars)
+        
+        self._filefunction = filefunction
+        self._name = name
+        self['SpectrumType'] = 'FileFunction'
 
         if not self._spectral_pars:
             self._spectral_pars = {
                 'Normalization' : {'name' : 'Normalization', 'scale' : '1.0',
-                                   'value' : '1.0', 'min' : '0.001', 'max' : '1000.0',
+                                   'value' : '1.0',
+                                   'min' : '0.001', 'max' : '1000.0',
                                    'free' : '0' } }
 
         if not self._spatial_pars:            
@@ -115,25 +143,26 @@ class IsoSource(object):
         for k,v in self._spatial_pars.items():                
             create_xml_element(spat_el,'parameter',v)
         
-class MapCubeSource(object):
+class MapCubeSource(Model):
 
     def __init__(self,mapcube,name,spectral_pars=None,spatial_pars=None):
+        super(MapCubeSource,self).__init__(None,spectral_pars,spatial_pars)
+
         self._mapcube = mapcube
         self._name = name
-
-        self._spectral_pars = {} if spectral_pars is None else spectral_pars
-        self._spatial_pars = {} if spatial_pars is None else spatial_pars
+        self['SpectrumType'] = 'PowerLaw'
 
         if not self._spectral_pars:
             self._spectral_pars = {
                 'Prefactor' : {'name' : 'Prefactor', 'scale' : '1',
-                               'value' : '0.0', 'min' : '-1.0', 'max' : '1.0',
+                               'value' : '1.0', 'min' : '0.1', 'max' : '10.0',
                                'free' : '0' },
-                'Index' : {'name' : 'Index', 'scale' : '1',
-                               'value' : '1.0', 'min' : '0.0', 'max' : '10.0',
-                               'free' : '0' },
+                'Index' : {'name' : 'Index', 'scale' : '-1',
+                           'value' : '0.0', 'min' : '-1.0', 'max' : '1.0',
+                           'free' : '0' },
                 'Scale' : {'name' : 'Scale', 'scale' : '1',
-                           'value' : '1000.0', 'min' : '1000.0', 'max' : '10000.0',
+                           'value' : '1000.0',
+                           'min' : '1000.0', 'max' : '1000.0',
                            'free' : '0' },
                 }
 
@@ -172,19 +201,16 @@ class MapCubeSource(object):
         for k,v in self._spatial_pars.items():                
             create_xml_element(spat_el,'parameter',v)
         
-class Source(object):
+class Source(Model):
 
-    def __init__(self,col_data=None,
+    def __init__(self,data=None,
                  spectral_pars=None,
                  spatial_pars=None,
                  extended=False):
-
-        self._col_data = {} if col_data is None else col_data
-        self._spectral_pars = {} if spectral_pars is None else spectral_pars
-        self._spatial_pars = {} if spatial_pars is None else spatial_pars
+        super(Source,self).__init__(data,spectral_pars,spatial_pars)
                     
-        phi = np.radians(col_data['RAJ2000'])
-        theta = np.pi/2.-np.radians(col_data['DEJ2000'])
+        phi = np.radians(data['RAJ2000'])
+        theta = np.pi/2.-np.radians(data['DEJ2000'])
 
         self._radec = np.array([np.sin(theta)*np.cos(phi),
                                 np.sin(theta)*np.sin(phi),
@@ -194,9 +220,9 @@ class Source(object):
         self._names_dict = {}
         for k in ROIManager.src_name_cols:
 
-            if not k in self._col_data: continue
+            if not k in self._data: continue
 
-            name = self._col_data[k].strip()
+            name = self._data[k].strip()
             if name != '':  self._names.append(name)
 
             self._names_dict[k] = name
@@ -209,9 +235,11 @@ class Source(object):
         if not self.extended and not self._spatial_pars:
             
             self._spatial_pars = {
-                'RA' : {'name' : 'RA',  'value' : str(self['RAJ2000']), 'free' : '0',
+                'RA' : {'name' : 'RA',  'value' : str(self['RAJ2000']),
+                        'free' : '0',
                         'min' : '-360.0','max' : '360.0','scale' : '1.0'},
-                'DEC' : {'name' : 'DEC',  'value' : str(self['DEJ2000']), 'free' : '0',
+                'DEC' : {'name' : 'DEC',  'value' : str(self['DEJ2000']),
+                         'free' : '0',
                          'min' : '-90.0','max' : '90.0','scale' : '1.0'}
                 }
         elif self.extended and not self._spatial_pars:
@@ -232,9 +260,12 @@ class Source(object):
                 'Prefactor' : {'name' : 'Prefactor', 'value' : str(prefactor),
                                'scale' : str(prefactor_scale),
                                'min' : '0.01', 'max' : '100.0', 'free' : '0'},
-                'Index' : {'name' : 'Index', 'value' : str(self['Spectral_Index']),
-                           'scale' : str(-1.0), 'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
-                'Scale' :  {'name' : 'Scale', 'value' : str(self['Pivot_Energy']),
+                'Index' : {'name' : 'Index',
+                           'value' : str(self['Spectral_Index']),
+                           'scale' : str(-1.0),
+                           'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
+                'Scale' :  {'name' : 'Scale',
+                            'value' : str(self['Pivot_Energy']),
                             'scale' : str(1.0),
                             'min' : str(self['Pivot_Energy']),
                             'max' : str(self['Pivot_Energy']), 'free' : '0'}
@@ -249,8 +280,10 @@ class Source(object):
                 'norm' : {'name' : 'norm', 'value' : str(norm_value),
                           'scale' : str(norm_scale),
                           'min' : '0.01', 'max' : '100.0', 'free' : '0'},
-                'alpha' : {'name' : 'alpha', 'value' : str(self['Spectral_Index']),
-                           'scale' : str(1.0), 'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
+                'alpha' : {'name' : 'alpha',
+                           'value' : str(self['Spectral_Index']),
+                           'scale' : str(1.0),
+                           'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
                 'beta' :  {'name' : 'beta', 'value' : str(self['beta']),
                            'scale' : str(1.0),
                            'min' : '-10.0', 'max' : '10.0', 'free' : '0'},
@@ -281,7 +314,7 @@ class Source(object):
         else:
 
             import pprint
-            pprint.pprint(self._col_data)
+            pprint.pprint(self._data)
 
             sys.exit(0)
             
@@ -304,7 +337,7 @@ class Source(object):
 
     @property
     def name(self):
-        return self._col_data['Source_Name']
+        return self._data['Source_Name']
 
     @property
     def associations(self):
@@ -316,7 +349,7 @@ class Source(object):
 
     @property
     def data(self):
-        return self._col_data
+        return self._data
 
     @staticmethod
     def load_from_xml(root,extdir=None):
@@ -334,7 +367,7 @@ class Source(object):
 
         src_dict['Source_Name'] = src_dict['name']
         src_dict['SpectrumType'] = spec['type']
-
+        
         if src_type =='PointSource' or spatial_type == 'SpatialMap':
         
             extflag=False        
@@ -353,10 +386,14 @@ class Source(object):
             if 'RA' in src_dict:
                 src_dict['RAJ2000'] = float(src_dict['RA'])
                 src_dict['DEJ2000'] = float(src_dict['DEC'])
-            else:
+            elif 'RA' in spatial_pars:
                 src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
                 src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
-            
+            else:
+                hdu = pyfits.open(src_dict['Spatial_Filename'])
+                src_dict['RAJ2000'] = float(hdu[0].header['CRVAL1'])
+                src_dict['DEJ2000'] = float(hdu[0].header['CRVAL2'])
+                                
             return Source(src_dict,
                           spectral_pars=spectral_pars,
                           spatial_pars=spatial_pars,extended=extflag)
@@ -364,7 +401,8 @@ class Source(object):
         elif src_type == 'DiffuseSource' and spatial_type == 'ConstantValue':
             return IsoSource(spec['file'],'isodiff',spectral_pars,spatial_pars)
         elif src_type == 'DiffuseSource' and spatial_type == 'MapCubeFunction':
-            return MapCubeSource(spat['file'],'galdiff',spectral_pars,spatial_pars)
+            return MapCubeSource(spat['file'],'galdiff',
+                                 spectral_pars,spatial_pars)
         else:
             raise Exception('Unrecognized type for source: %s'%src_dict['Source_Name'])
         
@@ -401,24 +439,14 @@ class Source(object):
         
         for k,v in self._spectral_pars.items():                
             create_xml_element(el,'parameter',v)
-
-        
-            
-    
-    def __contains__(self,key):
-        return key in self._col_data
-
-    def __getitem__(self,key):
-        return self._col_data[key]
-
-    def __setitem__(self,key,value):
-        self._col_data[key]=value
     
 class ROIManager(AnalysisBase):
     """This class is responsible for managing the ROI definition.
     Catalogs can be read from either FITS or XML files."""
 
-    defaults = dict(defaults.roi.items())
+    defaults = dict(defaults.roi.items()+
+                    defaults.fileio.items(),
+                    logging=defaults.logging)
 
     src_name_cols = ['Source_Name',
                      'ASSOC1','ASSOC2','ASSOC_GAM',
@@ -428,18 +456,25 @@ class ROIManager(AnalysisBase):
     def __init__(self,config=None,**kwargs):
         super(ROIManager,self).__init__(config,**kwargs)
 
+        self.logger = Logger.get(self.__class__.__name__,
+                                 self.config['logfile'],
+                                 ll(self.config['logging']['verbosity']))
+        
         if not os.path.isdir(self.config['extdir']):
-            self._config['extdir'] = os.path.join(fermipy.PACKAGE_ROOT,
-                                                  'catalogs',self.config['extdir'])
+            self._config['extdir'] = \
+                os.path.join(fermipy.PACKAGE_ROOT,
+                             'catalogs',self.config['extdir'])
         
         # Coordinate for ROI center (defaults to 0,0)
         self._radec = kwargs.get('radec',np.array([0.0,0.0]))    
-        self._srcs = kwargs.get('srcs',[])
-        self._diffuse_srcs = kwargs.get('diffuse_srcs',[])
-
+        self._srcs = []
+        self._diffuse_srcs = []
         self._src_index = {}
-        self._diffuse_src_index = {}
         self._src_radius = []
+        
+        srcs = kwargs.get('srcs',[]) + kwargs.get('diffuse_srcs',[])
+        for s in srcs:
+            self.load_source(s)
         
         self.build_src_index()
 
@@ -452,28 +487,42 @@ class ROIManager(AnalysisBase):
         return self._radec
 
     def load_diffuse_srcs(self):
-        self._diffuse_srcs = []
         
         if self.config['isodiff'] is not None:
-            self._diffuse_srcs.append(IsoSource(self.config['isodiff'],
-                                                'isodiff'))
-#        else:
-#            self._diffuse_srcs.append(IsoSource(None,'isodiff'))
+            self.load_source(IsoSource(self.config['isodiff'],'isodiff'))
 
         if self.config['galdiff'] is not None:
-            self._diffuse_srcs.append(MapCubeSource(self.config['galdiff'],
-                                                    'galdiff'))
+            self.load_source(MapCubeSource(self.config['galdiff'],'galdiff'))
+
+    def load_source(self,src):
+
+        if src.name in self._src_index:
+            self.logger.info('Updating source model for %s'%src.name)
+            self._src_index[src.name].update(src)
+            return
+
+        self._src_index[src.name] = src
+        
+        for c in ROIManager.src_name_cols:
+            if not c in src: continue
+            name = src[c].strip()
+            self._src_index[name] = src
+            self._src_index[name.replace(' ','')] = src
+            self._src_index[name.replace(' ','').lower()] = src
+
+        if isinstance(src,Source):
+            self._srcs.append(src)
+        else:
+            self._diffuse_srcs.append(src)
             
     def load(self):
 
         self._srcs = []
-
         self.load_diffuse_srcs()
             
         for c in self.config['catalogs']:
 
-            extname = os.path.splitext(c)[1]
-            
+            extname = os.path.splitext(c)[1]            
             if extname == '.fits' or extname == '.fit':
                 self.load_fits(c)
             elif extname == '.xml':
@@ -483,15 +532,15 @@ class ROIManager(AnalysisBase):
 
     # Creation Methods           
     @staticmethod
-    def create_roi_from_coords(name,config):
+    def create_from_coords(name,config,**kwargs):
         """Create an ROI centered on the given coordinates."""
         pass
         
     @staticmethod
-    def create_roi_from_source(name,config):
+    def create_from_source(name,config,**kwargs):
         """Create an ROI centered on the given source."""
         
-        roi = ROIManager(config)
+        roi = ROIManager(config,**kwargs)
         roi.load()
 
         src = roi.get_source_by_name(name)
@@ -520,97 +569,19 @@ class ROIManager(AnalysisBase):
         radec = np.array([src['RAJ2000'],src['DEJ2000']])
         
         return ROIManager(config,srcs=srcs,
-                          diffuse_srcs=roi._diffuse_srcs,radec=radec)
+                          diffuse_srcs=roi._diffuse_srcs,radec=radec,**kwargs)
 
     @staticmethod
     def create_roi_from_ft1(ft1file,config):
         """Create an ROI model by extracting the sources coordinates
         form an FT1 file."""
-        pass        
-            
-    @staticmethod
-    def create_isotropic(src,root,filefunction=None):
-
-        default_norm = dict(name='Normalization',value='1.0',free='1',
-                            max='10000.0',min='0.0001',scale='1.0')
-        default_value = dict(name='Value',value='1.0',free='0',
-                             max='10.0', min='0.0',scale='1.0')
-
-        el = create_xml_element(root,'source',
-                                dict(name=src.name,
-                                     type='DiffuseSource'))
-
-        if filefunction is None: filefunction = src.filefunction
-        
-        spec_el = create_xml_element(el,'spectrum',
-                                     dict(file=filefunction,
-                                          type='FileFunction',
-                                          ctype='-1'))
-
-        create_xml_element(spec_el,'parameter',default_norm)
-                        
-        spat_el = create_xml_element(el,'spatialModel',
-                                     dict(type='ConstantValue'))
-
-        create_xml_element(spat_el,'parameter',default_value)
-
-        return el
-
-    @staticmethod
-    def create_mapcube(src,root,mapcube=None):
-        
-        el = create_xml_element(root,'source',
-                                dict(name=src.name,
-                                     type='DiffuseSource'))
-
-        spec_el = create_xml_element(el,'spectrum',
-                                     dict(type='PowerLaw'))
-        
-                
-        create_xml_element(spec_el,'parameter',
-                           dict(name='Prefactor',
-                                value='1.0',
-                                free='1',
-                                max='10.0',
-                                min='0.1',
-                                scale='1.0'))
-        
-        create_xml_element(spec_el,'parameter',
-                           dict(name='Index',
-                                value='0.0',
-                                free='0',
-                                max='1.0',
-                                min='-1.0',
-                                scale='-1.0'))
-
-        create_xml_element(spec_el,'parameter',
-                           dict(name='Scale',
-                                value='1000.0',
-                                free='0',
-                                max='1000.0',
-                                min='1000.0',
-                                scale='1.0'))
-
-        spat_el = create_xml_element(el,'spatialModel',
-                                     dict(type='MapCubeFunction',
-                                          file=src.mapcube))
-                
-        create_xml_element(spat_el,'parameter',
-                           dict(name='Normalization',
-                                value='1.0',
-                                free='0',
-                                max='1E3',
-                                min='1E-3',
-                                scale='1.0'))
-
-        return el
-    
+        pass            
                 
     def get_source_by_name(self,name):
         """Retrieve source by name."""
 
         if name in self._src_index:
-            return self._srcs[self._src_index[name]]
+            return self._src_index[name]
         else:
             raise Exception('No source matching name: ',name)
 
@@ -724,11 +695,12 @@ class ROIManager(AnalysisBase):
                                                                 src_dict['Spatial_Filename'])
             
             src_dict['SpectrumType'] = src_dict['SpectrumType'].strip()
-            if src_dict['SpectrumType'] == 'PLExpCutoff':
+            if src_dict['SpectrumType'] == 'ExpCutoff':
                 src_dict['SpectrumType'] = 'PLSuperExpCutoff'
             
             src = Source(src_dict,extended=extflag)
-            self._srcs.append(src)
+            self.load_source(src)
+#            self._srcs.append(src)
 
         self.build_src_index()
 
@@ -738,9 +710,7 @@ class ROIManager(AnalysisBase):
         """Build an indices for fast lookup of a source given its name
         or coordinates."""
         
-        self._src_index = {}
         nsrc = len(self._srcs)
-
         self._src_radec = np.zeros(shape=(3,nsrc))
         self._src_radius = np.zeros(nsrc)
 
@@ -749,12 +719,12 @@ class ROIManager(AnalysisBase):
             self._src_radec[:,i] = s.radec
             self._src_radius[i] = s.separation(lonlat_to_xyz(self._radec[0],
                                                              self._radec[1]))
-            for c in ROIManager.src_name_cols:
-                if not c in s: continue
-                name = s[c].strip()
-                self._src_index[name] = i
-                self._src_index[name.replace(' ','')] = i
-                self._src_index[name.replace(' ','').lower()] = i
+#            for c in ROIManager.src_name_cols:
+#                if not c in s: continue
+#                name = s[c].strip()
+#                self._src_index[name] = i
+#                self._src_index[name.replace(' ','')] = i
+#                self._src_index[name.replace(' ','').lower()] = i
 
     
         for i, s in enumerate(self._diffuse_srcs):
@@ -762,7 +732,7 @@ class ROIManager(AnalysisBase):
         
     def write_xml(self,xmlfile,isodiff=None,galdiff=None):
         """Save this ROI model as an XML file."""
-        
+
         root = ElementTree.Element('source_library')
         root.set('title','source_library')
 
@@ -771,14 +741,6 @@ class ROIManager(AnalysisBase):
                 
         for s in self._diffuse_srcs:
             s.write_xml(root)
-#            if isodiff is not None:
-#                ROIManager.create_isotropic(s,root)            
-#            elif isinstance(s,IsoSource):
-#                ROIManager.create_isotropic(s,root)
-#            elif isinstance(s,MapCubeSource):
-#                ROIManager.create_mapcube(s,root)
-#            else:
-#                raise Exception('Unkown diffuse source type: ' + type(s))
                 
         output_file = open(xmlfile,'w')
         output_file.write(prettify_xml(root))
@@ -792,12 +754,8 @@ class ROIManager(AnalysisBase):
         root = ElementTree.ElementTree(file=xmlfile).getroot()
 
         for s in root.findall('source'):
-
             src = Source.load_from_xml(s,extdir=self.config['extdir'])
-            if isinstance(src,Source):
-                self._srcs.append(src)
-            else:
-                self._diffuse_srcs.append(src)
+            self.load_source(src)
 
         self.build_src_index()
 

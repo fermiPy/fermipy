@@ -71,6 +71,11 @@ fileio = {
     'saveoutput'  : (True,'Save intermediate FITS data products.')
     }
 
+logging = {
+    'chatter'     : (3,''),
+    'verbosity'   : (3,'')
+    }
+
 # Options related to likelihood optimizer
 optimizer = {
     'optimizer'   : ('MINUIT','Set the optimizer name.'),
