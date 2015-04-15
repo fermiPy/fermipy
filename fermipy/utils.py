@@ -29,9 +29,11 @@ class AnalysisBase(object):
     def print_config(self,logger,loglevel=None):
 
         if loglevel is None:
-            logger.info('Configuration:\n'+ yaml.dump(self.config))
+            logger.info('Configuration:\n'+ yaml.dump(self.config,
+                                                      default_flow_style=False))
         else:
-            logger.log(loglevel,'Configuration:\n'+ yaml.dump(self.config))
+            logger.log(loglevel,'Configuration:\n'+ yaml.dump(self.config,
+                                                              default_flow_style=False))
         
 
 def valToBin(edges,x):
@@ -160,6 +162,12 @@ def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
     od = {}
     
     for k, v in d0.iteritems():
+
+        t0 = None
+        t1 = None
+        
+        if k in d0: t0 = type(d0[k])
+        if k in d1: t1 = type(d1[k])
         
         if not k in d1:
             od[k] = copy.copy(d0[k])
@@ -169,10 +177,12 @@ def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
             od[k] = d1[k].split(',')            
         elif isinstance(v,np.ndarray) and append_arrays:
             od[k] = np.concatenate((v,d1[k]))
-        elif (d0[k] is not None and d1[k] is not None) and \
-                (type(d0[k]) != type(d1[k])):
-            raise Exception('Conflicting types in dictionary merge for '
-                            'key %s %s %s'%(k,type(d0[k]),type(d1[k])))
+        elif (d0[k] is not None and d1[k] is not None) and t0 != t1:
+
+            if t0 == float and t1 == int: od[k] = float(d1[k])
+            else:
+                raise Exception('Conflicting types in dictionary merge for '
+                                'key %s %s %s'%(k,t0,t1))
         else: od[k] = copy.copy(d1[k])
 
     if add_new_keys:
@@ -244,3 +254,51 @@ def tolist(x):
                 else: return x
     else:
         return x
+
+
+def get_offset_wcs(lon,lat,coordsys='GAL',projection='AIT'):
+
+    from astropy import wcs
+    
+    if coordsys == 'CEL':
+        ctype1 = 'RA--'
+        ctype2 = 'DEC-'
+    elif coordsys == 'GAL':
+        ctype1 = 'GLON'
+        ctype2 = 'GLAT'
+    else:
+        raise Exception('Unrecognized coordinate system.')
+    
+    w = wcs.WCS(naxis=2)
+    w.wcs.crpix = [1.,1.]
+    w.wcs.cdelt = np.array([-1.0, 1.0])
+    w.wcs.crval = [np.squeeze(lon), np.squeeze(lat)]
+    w.wcs.ctype = ["%s-%s"%(ctype1,projection),
+                   "%s-%s"%(ctype2,projection)]
+
+    return w
+    
+def offset_to_sky(lon,lat,offset_lon,offset_lat,
+                  coordsys='GAL',projection='AIT'):
+    """Convert a coordinate offset (X,Y) in the given projection into
+    a pair of spherical coordinates."""
+    
+    offset_lon = np.array(offset_lon,ndmin=1)
+    offset_lat = np.array(offset_lat,ndmin=1)
+
+    w = get_offset_wcs(lon,lat,coordsys,projection)
+    pixcrd = np.vstack((offset_lon,offset_lat)).T
+    
+    return w.wcs_pix2world(pixcrd,0)
+
+def sky_to_offset(lon,lat,lon1,lat1,coordsys='GAL',projection='AIT'):
+    """Convert sky coordinates to a projected offset.  This function
+    is the inverse of offset_to_sky."""
+    
+    lon = np.array(lon,ndmin=1)
+    lat = np.array(lat,ndmin=1)
+    
+    w = get_offset_wcs(lon,lat,coordsys,projection)
+    skycrd = np.vstack((lon1,lat1)).T
+    
+    return w.wcs_world2pix(skycrd,0)

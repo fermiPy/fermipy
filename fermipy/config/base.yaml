@@ -1,0 +1,114 @@
+
+# These parameters control logging.
+logging:
+
+  verbosity : 3
+  chatter : 3
+
+fileio:
+
+  # Set the output directory.  If null then the output directory will
+  # be set to the directory of the configuration file.
+  outdir : null
+
+  # Stage data products in a temporary working directory.
+  stageoutput : False
+
+  # Set the directory under which the working directory will be
+  # created.  If stageoutput is True then the analysis will be run in
+  # a temporary working directory under scratchdir.
+  scratchdir  : '/scratch'
+
+# These are global parameters of the analysis.  Some of these can be
+# overriden in the analysis components block.
+common:
+
+  #----------------------------------------------------------------------------
+  # Define input data files (FT1, FT2, LTCube)
+
+  # FT1 file
+  evfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V6/P8_SOURCE_V6_239557414_428903014_z100_r180_gti_ft1.lst
+
+  # Spacecraft file
+  scfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V4/P8_P301_SOURCE_239557414_428903014_ft2.fits 
+
+  # LT cube (optional)
+  ltcube : null
+
+  #----------------------------------------------------------------------------
+  # Binning
+  roi_width  : 5.0
+  npix       : null
+  binsz      : 0.2 # spatial bin size in deg
+  binsperdec : 8   # nb energy bins per decade
+  
+  #----------------------------------------------------------------------------
+  # Data selections
+  emin    : 100.0
+  emax    : 100000.0
+  zmax    : 100.0
+  evclass : 128
+  evtype  : null
+  filter  : 'DATA_QUAL>0 && LAT_CONFIG==1' # gtmktime filter string
+
+  # Set the ROI center to the coordinates of this source
+  ra     : 0.0
+  dec    : 0.0
+  target : 'mkn421'
+  radius : 10.0
+
+  #----------------------------------------------------------------------------
+  # IRFs
+  enable_edisp : True
+  irfs : 'P8R2_SOURCE_V6'
+
+  # This option can be used to use a predefined analysis setup.  Any
+  # option defined in this file will override the predefined settings.
+  analysis_type : 'psf4_joint'
+
+  # Settings for ROI model
+  roi:
+
+    # Include catalog sources within this distance from the ROI center
+    radius  : null
+
+    # Include catalog sources within a box of width roisize.
+    roisize : 10.0
+
+    galdiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/template_4years_P8_V2_scaled.fits'
+    isodiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_4years_P8V3.txt'
+    limbdiff : null
+
+    # List of catalogs to be used in the model.
+    catalogs : 
+      - 'catalogs/gll_psc_v14.fit'
+
+    # Remove duplicate sources
+    remove_duplicates : False
+
+optimization :
+
+  # Free sources within X deg of ROI center
+  free_source_radius : null
+
+  # Free sources within X deg of ROI edge (pos = outside, neg = inside)
+  free_source_roi_margin : null
+
+  # Provide explicit list of sources to be freed (either diffuse or point-source)
+  free_sources : null
+
+  # Provide a minimum TS threshold at which sources should be freed
+  free_source_ts_threshold : null
+
+# This is the block of the configuration where individual components
+# of the analysis are defined.  
+components: null
+    
+# Settings for SED analysis
+sed: {}
+
+# Settings for lightcurve analysis
+curve: {}
+
+# Settings for MC analysis
+mc : {}
