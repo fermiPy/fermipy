@@ -61,7 +61,14 @@ def scale_parameter(p):
     
 def get_dist_to_edge(lon0,lat0,lon1,lat1,width):
 
-    x,y = project(lon0,lat0,lon1,lat1)
+#    x,y = project(lon0,lat0,lon1,lat1)
+    xy = sky_to_offset(np.degrees(lon0),np.degrees(lat0),
+                       np.degrees(lon1),np.degrees(lat1),
+                       coordsys='GAL')
+
+    x = np.radians(xy[:,0])
+    y = np.radians(xy[:,1])
+    
     delta_edge = np.array([np.abs(x) - width,np.abs(y) - width])
     dtheta = np.max(delta_edge,axis=0)
     return dtheta

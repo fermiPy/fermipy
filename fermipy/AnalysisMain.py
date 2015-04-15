@@ -1,16 +1,18 @@
 
-import pprint
 import os
 import sys
 import copy
+import glob
+import shutil
 import yaml
 from utils import *
 import defaults
 import fermipy
 from roi_manager import *
-from fermipy.logger import Logger
+from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 import logging
+import tempfile
 
 # pylikelihood
 import pyLikelihood as pyLike
@@ -97,7 +99,6 @@ def gtlike_spectrum_to_dict(spectrum):
             d['file']=ff.filename()
     return d
         
-
 class GTAnalysis(AnalysisBase):
     """High-level analysis interface that internally manages a set of
     analysis component objects.  Most of the interactive functionality
@@ -105,14 +106,13 @@ class GTAnalysis(AnalysisBase):
 
     defaults = {'common' :
                     dict(defaults.selection.items() +
-                         defaults.fileio.items() +
-                         defaults.logging.items() +
                          defaults.binning.items() +
                          defaults.irfs.items() +
                          defaults.optimizer.items() +
                          defaults.inputs.items(),
                          roi=defaults.roi),
                 'logging' : defaults.logging,
+                'fileio'  : defaults.fileio,
                 'components' : (None,'')}
 
     def __init__(self,config,**kwargs):
@@ -122,22 +122,12 @@ class GTAnalysis(AnalysisBase):
         self._rootdir = os.getcwd()
                         
         # Destination directory for output data products
-        if self.config['common']['base'] is not None:
-#            self._savedir = os.path.abspath(config['common']['savedir'])
-#        elif config['common']['name'] is not None:
+        if self.config['fileio']['outdir'] is not None:
             self._savedir = os.path.join(self._rootdir,
-                                         self.config['common']['base'])
+                                         self.config['fileio']['outdir'])
             mkdir(self._savedir)
         else:
             raise Exception('Save directory not defined.')
-            
-        # Working directory (can be the same as savedir)
-        if self.config['common']['scratchdir'] is not None:
-            self._workdir = mkdtemp(prefix=os.environ['USER'] + '.',
-                                    dir=self.config['common']['scratchdir'])
-        else:
-            self._workdir = self._savedir
-
 
         # put pfiles into savedir
         os.environ['PFILES']= \
@@ -151,6 +141,17 @@ class GTAnalysis(AnalysisBase):
         self.logger.info('\n' + '-'*80 + '\n' + "This is fermipy version {}.".
                          format(fermipy.__version__))
         self.print_config(self.logger)
+#        Logger.capture_stdout(self.logger)
+        
+        # Working directory (can be the same as savedir)
+#        if self.config['fileio']['scratchdir'] is not None:
+        if self.config['fileio']['stageoutput']:
+            self._workdir = tempfile.mkdtemp(prefix=os.environ['USER'] + '.',
+                                             dir=self.config['fileio']['scratchdir'])
+            self.logger.info('Created working directory: %s'%self._workdir)
+            self.stage_input()
+        else:
+            self._workdir = self._savedir
         
         # Setup the ROI definition
         self._roi = \
@@ -158,7 +159,6 @@ class GTAnalysis(AnalysisBase):
                                           self.config['common']['roi'],
                                           logfile=self._logfile,
                                           logging=self.config['logging'])
-
 
         self._like = SummedLikelihood.SummedLikelihood()
         self._components = []
@@ -175,7 +175,11 @@ class GTAnalysis(AnalysisBase):
         self._ebin_edges = np.sort(np.unique(energies.round(5)))
         self._enumbins = len(self._ebin_edges)-1
         self._roi_model = {}
-            
+
+    def __del__(self):
+        self.stage_output()
+        self.cleanup()
+        
     @property
     def like(self):
         """Return the global likelihood object."""
@@ -192,6 +196,7 @@ class GTAnalysis(AnalysisBase):
 
     @property
     def enumbins(self):
+        """Return the number of energy bins."""
         return self._enumbins    
     
     def create_component_configs(self):
@@ -223,9 +228,6 @@ class GTAnalysis(AnalysisBase):
 
         return configs
                 
-    def init_components(self):
-        self._components = []        
-    
     def _create_component(self,cfg,logfile):
             
         self.logger.info("Creating Analysis Component: " + cfg['name'])
@@ -237,6 +239,29 @@ class GTAnalysis(AnalysisBase):
 
         return comp
 
+    def stage_output(self):
+        """Copy data products to final output directory."""
+
+        if self._workdir == self._savedir:
+            return
+        elif os.path.isdir(self._workdir):
+            self.logger.info('Staging output data products to %s'%self._savedir)
+            for f in glob.glob(os.path.join(self._workdir,'*.fits')):
+                shutil.copy(f,self._savedir)
+        else:
+            self.logger.error('Working directory does not exist.')
+
+    def stage_input(self):
+        """Copy data products to intermediate working directory."""
+
+        if self._workdir == self._savedir:
+            return
+        elif os.path.isdir(self._workdir):
+            for f in glob.glob(os.path.join(self._savedir,'*')):
+                shutil.copy(f,self._workdir)
+        else:
+            self.logger.error('Working directory does not exist.')
+            
     def setup(self):
         """Run pre-processing step for each analysis component.  This
         will run everything except the likelihood optimization: data
@@ -255,7 +280,13 @@ class GTAnalysis(AnalysisBase):
 
         for name in self.like.sourceNames():
             self._roi_model[name] = {'sed' : None}
-            
+
+    def cleanup(self):
+
+        if self._workdir == self._savedir: return
+        elif os.path.isdir(self._workdir):
+            self.logger.info('Deleting working directory: ' + self._workdir)
+            shutil.rmtree(self._workdir)
             
     def generate_model(self,model_name=None):
         """Generate model maps for all components.  model_name should
@@ -578,7 +609,7 @@ class GTAnalysis(AnalysisBase):
         
         saved_state = LikelihoodState(self.like)
         kw = dict(optObject = self.create_optObject(),
-                  covar=True,verbosity=2)
+                  covar=True,verbosity=1)
 #tol=1E-4
 #                  optimizer='DRMNFB')
         
@@ -695,7 +726,9 @@ class GTAnalysis(AnalysisBase):
             source = self.like[name].src
             spectrum = source.spectrum()
 
-            src_dict = gtlike_spectrum_to_dict(spectrum)
+            src_dict = {}
+            
+            src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
             
             # Should we update the TS values at the end of fitting?
             src_dict['ts'] = self.like.Ts(name,reoptimize=False)
@@ -731,10 +764,11 @@ class GTBinnedAnalysis(AnalysisBase):
     defaults = dict(defaults.selection.items()+
                     defaults.binning.items()+
                     defaults.irfs.items()+
-                    defaults.inputs.items()+
-                    defaults.fileio.items(),
+                    defaults.inputs.items(),
                     roi=defaults.roi,
                     logging=defaults.logging,
+                    workdir=defaults.fileio['workdir'],
+                    logfile=(None,''),
                     name=('00',''),
                     file_suffix=('',''))
 
@@ -753,26 +787,26 @@ class GTBinnedAnalysis(AnalysisBase):
 
         self.print_config(self.logger,loglevel=logging.DEBUG)
         
-        savedir = self.config['savedir']
+        workdir = self.config['workdir']
         self._name = self.config['name']
         
         from os.path import join
 
-        self._ft1_file=join(savedir,
+        self._ft1_file=join(workdir,
                             'ft1%s.fits'%self.config['file_suffix'])
-        self._ft1_filtered_file=join(savedir,
+        self._ft1_filtered_file=join(workdir,
                                      'ft1_filtered%s.fits'%self.config['file_suffix'])        
-        self._ltcube=join(savedir,
+        self._ltcube=join(workdir,
                           'ltcube%s.fits'%self.config['file_suffix'])
-        self._ccube_file=join(savedir,
+        self._ccube_file=join(workdir,
                              'ccube%s.fits'%self.config['file_suffix'])
-        self._mcube_file=join(savedir,
+        self._mcube_file=join(workdir,
                               'mcube%s.fits'%self.config['file_suffix'])
-        self._srcmap_file=join(savedir,
+        self._srcmap_file=join(workdir,
                                'srcmap%s.fits'%self.config['file_suffix'])
-        self._bexpmap_file=join(savedir,
+        self._bexpmap_file=join(workdir,
                                 'bexpmap%s.fits'%self.config['file_suffix'])
-        self._srcmdl_file=join(savedir,
+        self._srcmdl_file=join(workdir,
                                'srcmdl%s.xml'%self.config['file_suffix'])
 
         self._enumbins = np.round(self.config['binsperdec']*
@@ -976,7 +1010,7 @@ class GTBinnedAnalysis(AnalysisBase):
             raise Exception("Model file does not exist: %s"%srcmdl)
         
 #        if outfile is None: outfile = self._mcube_file
-        outfile = os.path.join(self.config['savedir'],
+        outfile = os.path.join(self.config['workdir'],
                                'mcube_%s%s.fits'%(model_name,
                                                   self.config['file_suffix']))
         
@@ -1014,8 +1048,8 @@ class GTBinnedAnalysis(AnalysisBase):
         if not ext: ext = '.xml'
         xmlfile = name + self.config['file_suffix'] + ext
 
-        if os.path.commonprefix([self.config['savedir'],xmlfile]) \
-                != self.config['savedir']:        
-            xmlfile = os.path.join(self.config['savedir'],xmlfile)
+        if os.path.commonprefix([self.config['workdir'],xmlfile]) \
+                != self.config['workdir']:        
+            xmlfile = os.path.join(self.config['workdir'],xmlfile)
 
         return xmlfile
