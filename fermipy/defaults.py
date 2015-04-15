@@ -1,4 +1,9 @@
 
+import fermipy
+
+#def build_defaults():
+#    path = os.path.join(fermipy.PACKAGE_ROOT,'config','defaults.yaml')
+#    with open(path,'r') as f: config = yaml.load(f)
 
 # Options for defining input data files
 inputs = {
@@ -17,8 +22,8 @@ selection = {
     'evclass' : (None,'Event class selection.'),
     'evtype'  : (None,'Event type selection.'),
     'convtype': (None,'Conversion type selection.'),
-    'target'  : (None,'Choose a target object at which the ROI will be '
-                 'centered.  This option takes precendence over ra/dec.'),
+    'target'  : (None,'Choose an object name that will define the center of the ROI.  '
+                 'This option takes precendence over ra/dec.'),
     'ra'      : (None,''),
     'dec'     : (None,''),
     'glat'    : (None,''),
@@ -38,8 +43,8 @@ roi = {
         (None,'Select sources within a box of RxR centered on the ROI.  If none then no '
          'cut is applied.'),
     
-    'isodiff'       : (None,''),
-    'galdiff'       : (None,''),
+    'isodiff'       : (None,'Set the isotropic template.'),
+    'galdiff'       : (None,'Set the galactic IEM mapcube.'),
     'limbdiff'      : (None,''),
     'extdir'        : ('Extended_archive_v14',''),
     'catalogs'      : (None,'',None,list)
@@ -54,7 +59,8 @@ irfs = {
 binning = {
     'proj'       : ('AIT',''),
     'coordsys'   : ('CEL',''),        
-    'npix'       : (None,'Number of spatial bins.  If none this will be inferred from roi_width and binsz.'),        
+    'npix'       : (None,
+                    'Number of spatial bins.  If none this will be inferred from roi_width and binsz.'),        
     'roi_width'  : (10.0,'Set the width of the ROI in degrees.'),
     'binsz'      : (0.1,'Set the bin size in degrees.'),
     'binsperdec' : (8,'Set the number of energy bins per decade.'),
@@ -63,16 +69,17 @@ binning = {
 
 # Options related to I/O and output file bookkeeping
 fileio = {
-    'base'        : (None,'Set the name of the output'),
-    'scratchdir'  : (None,''),
-    'savedir'     : (None,'Override the output directory.'),
-    'workdir'     : (None,'Override the working directory.'),
-    'logfile'     : (None,''),
-    'saveoutput'  : (True,'Save intermediate FITS data products.')
+    'outdir'       : (None,'Set the name of the output directory.'),
+    'scratchdir'   : (None,'/scratch'),
+    'savedir'      : (None,'Override the output directory.'),
+    'workdir'      : (None,'Override the working directory.'),
+    'logfile'      : (None,''),
+    'saveoutput'   : (True,'Save intermediate FITS data products.'),
+    'stageoutput'  : (True,'Stage output to an intermediate working directory.'),
     }
 
 logging = {
-    'chatter'     : (3,''),
+    'chatter'     : (3,'Set the chatter parameter of the STs.'),
     'verbosity'   : (3,'')
     }
 
@@ -82,3 +89,11 @@ optimizer = {
     'tol'         : (1E-4,'Set the optimizer tolerance.'),
     'retries'     : (3,'Number of times to retry the fit.')
     }
+
+
+common = dict(selection.items() +
+              binning.items() +
+              irfs.items() +
+              optimizer.items() +
+              inputs.items(),
+              roi=roi)
