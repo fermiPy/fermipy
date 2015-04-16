@@ -105,10 +105,9 @@ def prettify_xml(elem):
 
 def load_config(defaults):
     """Create a configuration dictionary from a defaults dictionary.
-    The defaults dictionary predefines valid key/value pairs and
-    populates those with default values.  The config dictionary and
-    kwargs are then used to update the values in the default
-    configuration dictionary."""
+    The defaults dictionary defines valid configuration keys with
+    default values and docstrings.  Each dictionary element should be
+    a tuple or list containing (default value,docstring,type)."""
 
     o = {}
     for key, item in defaults.iteritems():
@@ -116,9 +115,9 @@ def load_config(defaults):
         if isinstance(item,dict):
             o[key] = load_config(item)
         elif isinstance(item,tuple):
-            item_list = [None,'',None,str]
+            item_list = [None,'',str]
             item_list[:len(item)] = item        
-            value, comment, groupname, item_type = item_list
+            value, comment, item_type = item_list
 
             if len(item) == 1:
                 raise Exception('Option tuple must have at least one element.')
@@ -126,19 +125,9 @@ def load_config(defaults):
             if value is None and (item_type == list or item_type == dict):
                 value = item_type()
             
-            keypath = key.split('.')
-
-            if len(keypath) > 1:
-                groupname = keypath[0]
-                key = keypath[1]
-                    
-            if groupname:
-                group = o.setdefault(groupname,{})
-                group[key] = value
-            else:
-                if key in o: raise Exception('Duplicate key.')
+            if key in o: raise Exception('Duplicate key.')
                 
-                o[key] = value
+            o[key] = value
         else:
             raise Exception('Unrecognized type for default dict element.')
 

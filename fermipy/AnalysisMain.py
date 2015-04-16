@@ -104,15 +104,10 @@ class GTAnalysis(AnalysisBase):
     analysis component objects.  Most of the interactive functionality
     of the fermiPy package is provided through the methods of this class."""
 
-    defaults = {'common' :
-                    dict(defaults.selection.items() +
-                         defaults.binning.items() +
-                         defaults.irfs.items() +
-                         defaults.optimizer.items() +
-                         defaults.inputs.items(),
-                         roi=defaults.roi),
-                'logging' : defaults.logging,
-                'fileio'  : defaults.fileio,
+    defaults = {'common'     : defaults.common,
+                'logging'    : defaults.logging,
+                'fileio'     : defaults.fileio,
+                'optimizer'  : defaults.optimizer,
                 'components' : (None,'')}
 
     def __init__(self,config,**kwargs):
@@ -233,7 +228,6 @@ class GTAnalysis(AnalysisBase):
         self.logger.info("Creating Analysis Component: " + cfg['name'])
         comp = GTBinnedAnalysis(cfg,
                                 logfile=logfile,
-                                savedir=self._savedir,
                                 workdir=self._workdir,
                                 logging=self.config['logging'])
 

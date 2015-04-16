@@ -83,8 +83,13 @@ common:
     catalogs : 
       - 'catalogs/gll_psc_v14.fit'
 
-    # Remove duplicate sources
-    remove_duplicates : False
+optimizer:
+
+  optimizer : 'MINUIT'
+
+  tol : 0.0001
+
+  retries : 3 
 
 optimization :
 

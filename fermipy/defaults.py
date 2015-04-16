@@ -35,19 +35,18 @@ selection = {
 # Options for ROI model.
 roi = {
     'radius'        :
-        (None,'Set the maximum distance for inclusion of sources in the ROI model.  '
-         'Selects all sources within a circle of this radius centered on the ROI.  '
-         'If none then no selection is applied.  This selection will be ORed with '
-         'sources passing the cut on roisize.'),
+        (None,'Set the maximum distance for inclusion of sources in the ROI '
+         'model.  Selects all sources within a circle of this radius centered '
+         'on the ROI.  If none then no selection is applied.  This selection '
+         'will be ORed with sources passing the cut on roisize.'),
     'roisize'        :
-        (None,'Select sources within a box of RxR centered on the ROI.  If none then no '
-         'cut is applied.'),
-    
+        (None,'Select sources within a box of RxR centered on the ROI.  If '
+         'none then no cut is applied.'),    
     'isodiff'       : (None,'Set the isotropic template.'),
     'galdiff'       : (None,'Set the galactic IEM mapcube.'),
     'limbdiff'      : (None,''),
     'extdir'        : ('Extended_archive_v14',''),
-    'catalogs'      : (None,'',None,list)
+    'catalogs'      : (None,'',list)
     }
 
 irfs = {
@@ -59,8 +58,10 @@ irfs = {
 binning = {
     'proj'       : ('AIT',''),
     'coordsys'   : ('CEL',''),        
-    'npix'       : (None,
-                    'Number of spatial bins.  If none this will be inferred from roi_width and binsz.'),        
+    'npix'       : 
+    (None,
+     'Number of spatial bins.  If none this will be inferred from roi_width '
+     'and binsz.'), 
     'roi_width'  : (10.0,'Set the width of the ROI in degrees.'),
     'binsz'      : (0.1,'Set the bin size in degrees.'),
     'binsperdec' : (8,'Set the number of energy bins per decade.'),
@@ -70,12 +71,12 @@ binning = {
 # Options related to I/O and output file bookkeeping
 fileio = {
     'outdir'       : (None,'Set the name of the output directory.'),
-    'scratchdir'   : (None,'/scratch'),
-    'savedir'      : (None,'Override the output directory.'),
+    'scratchdir'   : ('/scratch',''),
     'workdir'      : (None,'Override the working directory.'),
     'logfile'      : (None,''),
     'saveoutput'   : (True,'Save intermediate FITS data products.'),
-    'stageoutput'  : (True,'Stage output to an intermediate working directory.'),
+    'stageoutput'  : 
+    (True,'Stage output to an intermediate working directory.'),
     }
 
 logging = {
@@ -85,15 +86,16 @@ logging = {
 
 # Options related to likelihood optimizer
 optimizer = {
-    'optimizer'   : ('MINUIT','Set the optimizer name.'),
+    'optimizer'   : 
+    ('MINUIT','Set the optimization algorithm to use when maximizing the '
+     'likelihood function.'),
     'tol'         : (1E-4,'Set the optimizer tolerance.'),
-    'retries'     : (3,'Number of times to retry the fit.')
+    'retries'     : (3,'Set the number of times to retry the fit.')
     }
 
-
+# A collection of common options related to gtlike
 common = dict(selection.items() +
               binning.items() +
               irfs.items() +
-              optimizer.items() +
               inputs.items(),
               roi=roi)
