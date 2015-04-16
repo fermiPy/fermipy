@@ -279,7 +279,10 @@ class GTAnalysis(AnalysisBase):
             self._like.addComponent(c.like)
 
         for name in self.like.sourceNames():
-            self._roi_model[name] = {'sed' : None}
+
+            src_model = {'sed' : None}
+            src_model.update(self.get_src_model(name,True))            
+            self._roi_model[name] = src_model
 
     def cleanup(self):
 
@@ -444,9 +447,16 @@ class GTAnalysis(AnalysisBase):
 
         self.free_source(src.name,free=free,
                          pars=shape_parameters[src['SpectrumType']])
-        
+
+
+    def get_free_source_params(self,name):
+        src = self._roi.get_source_by_name(name)
+        spectrum = self.like[name].src.spectrum()
+        parNames = pyLike.StringVector()
+        spectrum.getFreeParamNames(parNames)
+        return [str(p) for p in parNames]
     
-    def sed(self,name,compute_lnlprofile=True,energies=None):
+    def sed(self,name,profile=False,energies=None):
         
         # Find the source
         name = self._roi.get_source_by_name(name).name
@@ -464,9 +474,9 @@ class GTAnalysis(AnalysisBase):
              'emax' : energies[1:],
              'ecenter' : 0.5*(energies[:-1]+energies[1:]),
              'flux' : np.zeros(nbins),
-             'eflux' : np.zeros(nbins),
+             'e2flux' : np.zeros(nbins),
              'flux_err' : np.zeros(nbins),
-             'eflux_err' : np.zeros(nbins),
+             'e2flux_err' : np.zeros(nbins),
              'npred' : np.zeros(nbins),
              'ts' : np.zeros(nbins),
              'lnlprofile' : []
@@ -476,9 +486,10 @@ class GTAnalysis(AnalysisBase):
             saved_state.restore()
             self.free_sources(free=False)
             self.free_norm(name)            
-            self.logger.debug('Fitting %s SED from %.0fMeV to %.0fMeV' % (name,10**emin,10**emax))
+            self.logger.info('Fitting %s SED from %.0f MeV to %.0f MeV' %
+                             (name,10**emin,10**emax))
             self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
-            self.fit()
+            self.fit(update=False)
 
             ecenter = 0.5*(emin+emax)
             deltae = 10**emax - 10**emin
@@ -486,22 +497,21 @@ class GTAnalysis(AnalysisBase):
             flux_err = self.like.fluxError(name,10**emin, 10**emax)
             
             o['flux'][i] = flux/deltae 
-            o['eflux'][i] = flux/deltae*10**(2*ecenter)
+            o['e2flux'][i] = flux/deltae*10**(2*ecenter)
             o['flux_err'][i] = flux_err/deltae
-            o['eflux_err'][i] = flux_err/deltae*10**(2*ecenter)
+            o['e2flux_err'][i] = flux_err/deltae*10**(2*ecenter)
 
             cs = self.modelCountsSpectrum(name,emin,emax)
             for c in cs: o['npred'][i] = np.sum(c)            
             o['ts'][i] = self.like.Ts(name,reoptimize=False)
 
-            if compute_lnlprofile:
+            if profile:
                 o['lnlprofile'] += [self.profile(name,emin=emin,emax=emax)]
             
 #            nobs.append(self.gtlike.nobs[i])
-        saved_state.restore()
 
         self.setEnergyRange(float(10**energies[0])+1, float(10**energies[-1])-1)
-        
+        saved_state.restore()        
         src_model = self._roi_model.get(name,{})
         src_model['sed'] = copy.deepcopy(o)        
         return o
@@ -524,6 +534,9 @@ class GTAnalysis(AnalysisBase):
         emin = min(self.energies) if emin is None else emin
         emax = max(self.energies) if emax is None else emax
 
+        ecenter = 0.5*(emin+emax)
+        deltae = 10**emax - 10**emin
+        
         saved_state = LikelihoodState(self.like)
         
         self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
@@ -547,8 +560,8 @@ class GTAnalysis(AnalysisBase):
 
         o = {'xvals'    : xvals,
              'npred'    : np.zeros(len(xvals)),
-             'fluxes'   : np.zeros(len(xvals)),
-             'efluxes'  : np.zeros(len(xvals)),
+             'flux'   : np.zeros(len(xvals)),
+             'e2flux'  : np.zeros(len(xvals)),
              'dlogLike' : np.zeros(len(xvals)) }
                      
         for i, x in enumerate(xvals):
@@ -563,9 +576,13 @@ class GTAnalysis(AnalysisBase):
                 self.like.thaw(idx)
                 
             logLike1 = self.like()
+
+            flux = self.like[name].flux(10**emin, 10**emax)
+            
             o['dlogLike'][i] = logLike0 - logLike1
-            o['fluxes'][i] = self.like[name].flux(10**emin, 10**emax)
-            o['efluxes'][i] = self.like[name].energyFlux(10**emin, 10**emax)
+            o['flux'][i] = flux/deltae
+            o['e2flux'][i] = flux/deltae*10**(2*ecenter)
+#self.like[name].energyFlux(10**emin, 10**emax)
 
             cs = self.modelCountsSpectrum(name,emin,emax)
             for c in cs: o['npred'][i] += np.sum(c)
@@ -600,16 +617,19 @@ class GTAnalysis(AnalysisBase):
             optObject = optFactory.create(optimizer, self.like.logLike)
         return optObject
     
-    def fit(self):
+    def fit(self,update=True,**kwargs):
         """Run likelihood optimization."""
-
+        
         if not self.like.logLike.getNumFreeParams(): 
             self.logger.info("Skipping fit.  No free parameters.")
             return
+
+        verbosity = kwargs.get('verbosity',0)
+        covar = kwargs.get('covar',True)
         
         saved_state = LikelihoodState(self.like)
         kw = dict(optObject = self.create_optObject(),
-                  covar=True,verbosity=1)
+                  covar=covar,verbosity=verbosity)
 #tol=1E-4
 #                  optimizer='DRMNFB')
         
@@ -620,16 +640,24 @@ class GTAnalysis(AnalysisBase):
                 self.logger.info("Fit iteration: %i"%niter)
                 niter += 1
                 self.like.fit(**kw)
+                quality=3                
                 if isinstance(self.like.optObject,pyLike.Minuit) or \
                         isinstance(self.like.optObject,pyLike.NewMinuit):
                     quality = self.like.optObject.getQuality()
-                    if quality > 2: return
-                else: return
-            raise Exception("Failed to converge with %s"%self.like.optimizer)
+                if quality > 2: break
+
+            if quality <= 2:
+                raise Exception("Failed to converge with %s"%self.like.optimizer)
         except Exception, message:
             self.logger.error('Likelihood optimization failed.', exc_info=True)
             saved_state.restore()
-        
+
+        if not update: return
+
+        for name in self.like.sourceNames():
+            freePars = self.get_free_source_params(name)                
+            if len(freePars) == 0: continue
+            self._roi_model[name] = self.get_src_model(name)
 
     def fitDRM(self):
         
@@ -687,7 +715,7 @@ class GTAnalysis(AnalysisBase):
             else:
                 outfile = outfile + ext
                         
-        o = self.get_roi_dict()
+        o = self.get_roi_model()
                 
         # Get the subset of sources with free parameters
             
@@ -712,7 +740,7 @@ class GTAnalysis(AnalysisBase):
         return {'ecenter' : energies, 'flux' : flux,
                 'fluxlo' : flo, 'fluxhi' : fhi }
         
-    def get_roi_dict(self):
+    def get_roi_model(self):
         """Populate a dictionary with the current parameters of the
         ROI model as extracted from the pylikelihood object."""
 
@@ -723,42 +751,49 @@ class GTAnalysis(AnalysisBase):
         gf = {}        
         for name in self.like.sourceNames():
             
-            source = self.like[name].src
-            spectrum = source.spectrum()
+#            source = self.like[name].src
+#            spectrum = source.spectrum()
 
-            src_dict = {}
-            
-            src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
-            
-            # Should we update the TS values at the end of fitting?
-            src_dict['ts'] = self.like.Ts(name,reoptimize=False)
+            gf[name] = self.get_src_model(name)
 
-            # Get NPred
-            src_dict['npred'] = self.like.NpredValue(name)
+        self._roi_model = merge_dict(self._roi_model,gf,add_new_keys=True) 
+        return copy.deepcopy(self._roi_model)        
+
+    def get_src_model(self,name,paramsonly=False):
+        source = self.like[name].src
+        spectrum = source.spectrum()
+
+        src_dict = { }
+
+        src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
+
+        # Get NPred
+        src_dict['npred'] = self.like.NpredValue(name)
+
+        if not self.get_free_source_params(name) or paramsonly:
+            return src_dict
+        
+        # Should we update the TS values at the end of fitting?
+        src_dict['ts'] = self.like.Ts(name,reoptimize=False)
             
-            # Extract covariance matrix
-            src_dict['covar'] = None
-            fd = None
-            
-            try:
-                 fd = FluxDensity.FluxDensity(self.like,name)
-                 src_dict['covar'] = fd.covar
-            except RuntimeError, ex:
-                pass
+        # Extract covariance matrix
+        fd = None            
+        try:
+            fd = FluxDensity.FluxDensity(self.like,name)
+            src_dict['covar'] = fd.covar
+        except RuntimeError, ex:
+            pass
 #                 if ex.message == 'Covariance matrix has not been computed.':
 #                      pass
 #                 elif 
 #                      raise ex
 
             # Extract bowtie   
-            if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
-                src_dict['model_flux'] = self.bowtie(fd)
-                
-            gf[name] = src_dict
+        if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
+            src_dict['model_flux'] = self.bowtie(fd)
 
-        self._roi_model = merge_dict(self._roi_model,gf,add_new_keys=True) 
-        return copy.deepcopy(self._roi_model)        
-            
+        return src_dict
+    
 class GTBinnedAnalysis(AnalysisBase):
 
     defaults = dict(defaults.selection.items()+
