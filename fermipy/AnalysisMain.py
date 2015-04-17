@@ -90,9 +90,9 @@ def gtlike_spectrum_to_dict(spectrum):
     for p in parameters:
 
         pname = p.getName()
-        d[pname]= p.getTrueValue()
-        d['%s_err' % pname]= \
-            abs(p.error()*p.getScale()) if p.isFree() else np.nan
+        pval = p.getTrueValue()
+        perr = abs(p.error()*p.getScale()) if p.isFree() else np.nan        
+        d[pname]= np.array([pval,perr])
         
         if d['spectrum_type'] == 'FileFunction': 
             ff=pyLike.FileFunction_cast(spectrum)
@@ -169,7 +169,7 @@ class GTAnalysis(AnalysisBase):
             
         self._ebin_edges = np.sort(np.unique(energies.round(5)))
         self._enumbins = len(self._ebin_edges)-1
-        self._roi_model = {}
+        self._roi_model = {'roi' : {'logLike' : np.nan}}
 
     def __del__(self):
         self.stage_output()
@@ -274,9 +274,18 @@ class GTAnalysis(AnalysisBase):
 
         for name in self.like.sourceNames():
 
+            src = self._roi.get_source_by_name(name)
+            
             src_model = {'sed' : None}
+
+            if isinstance(src,Source):
+                src_model['RA'] = src['RAJ2000']
+                src_model['DEC'] = src['DEJ2000']
+
             src_model.update(self.get_src_model(name,True))            
             self._roi_model[name] = src_model
+
+        self._roi_model['roi']['nobs'] = np.zeros(self.enumbins)
 
     def cleanup(self):
 
@@ -310,10 +319,10 @@ class GTAnalysis(AnalysisBase):
         for c in self.components: 
             cs += [c.modelCountsSpectrum(name,emin,emax)]
         return cs
-            
-    def free_sources(self,free=True,pars=None,radius=None):
-        """Free all sources within a certain radius of the given sky
-        coordinate.
+
+    def free_sources(self,free=True,pars=None,cuts=None,
+                     distance=None,roilike=False):
+        """Free/Fix sources within the ROI.
 
         Parameters
         ----------
@@ -323,24 +332,60 @@ class GTAnalysis(AnalysisBase):
             source parameters.
 
         pars : list        
-            Set a list of parameters to be freed/fixed for this source.  If
-            none then all source parameters will be freed/fixed.
+            Set a list of parameters to be freed/fixed for this
+            source.  If none then all source parameters will be
+            freed/fixed.  If pars='norm' then only normalization
+            parameters will be freed.
 
         radius : float        
             Distance out to which sources should be freed or fixed.
             If none then all sources will be selected.
+
+        roilike : bool        
+            Apply an ROI-like selection on the maximum distance in
+            either X or Y in projected cartesian coordinates.        
         
         """
-
         rsrc, srcs = self._roi.get_sources_by_position(self._roi.radec[0],
                                                        self._roi.radec[1],
-                                                       radius)
+                                                       distance,roilike=roilike)
         
-        for r, s in zip(rsrc,srcs):
+        if cuts is None: cuts = []        
+        for s,r in zip(srcs,rsrc):
+            if not s.check_cuts(cuts): continue
             self.free_source(s.name,free=free,pars=pars)
 
         for s in self._roi._diffuse_srcs:
+#            if not s.check_cuts(cuts): continue
             self.free_source(s.name,free=free,pars=pars)
+                                        
+    def free_sources_by_position(self,free=True,pars=None,distance=None,roilike=False):
+        """Free/Fix all sources within a certain radius of the given sky
+        coordinate.  By default it will use the ROI center.
+
+        Parameters
+        ----------
+
+        free : bool        
+            Choose whether to free (free=True) or fix (free=False)
+            source parameters.
+
+        pars : list        
+            Set a list of parameters to be freed/fixed for this
+            source.  If none then all source parameters will be
+            freed/fixed.  If pars='norm' then only normalization
+            parameters will be freed.
+
+        radius : float        
+            Distance out to which sources should be freed or fixed.
+            If none then all sources will be selected.
+
+        roilike : bool        
+            Apply an ROI-like selection on the maximum distance in
+            either X or Y in projected cartesian coordinates.        
+        """
+
+        self.free_sources(free,pars,cuts=None,distance=distance,roilike=roilike)
             
     def free_source(self,name,free=True,pars=None):
         """Free/Fix parameters of a source.
@@ -370,7 +415,15 @@ class GTAnalysis(AnalysisBase):
             pars = []
             pars += norm_parameters[src['SpectrumType']]
             pars += shape_parameters[src['SpectrumType']]
-                
+        elif pars == 'norm':
+            pars = []
+            pars += norm_parameters[src['SpectrumType']]
+        elif pars == 'shape':
+            pars = []
+            pars += shape_parameters[src['SpectrumType']]            
+        else:
+            raise Exception('Invalid parameter list.')
+            
         # Deduce here the names of all parameters from the spectral type
         src_par_names = pyLike.StringVector()
         self.like[name].src.spectrum().getParamNames(src_par_names)
@@ -381,15 +434,17 @@ class GTAnalysis(AnalysisBase):
             if pars is not None and not p in pars: continue
             par_indices.append(self.like.par_index(name,p))
             par_names.append(p)
+
+        if free:
+            self.logger.info('Freeing parameters for %-20s: %s'
+                             %(name,par_names))
+        else:
+            self.logger.info('Fixing parameters for %-20s: %s'
+                             %(name,par_names))
             
         for (idx,par_name) in zip(par_indices,par_names):
 
-            if free:
-                self.logger.debug('Freeing parameter %s for source %s'
-                                  %(par_name,name))
-            else:
-                self.logger.debug('Fixing parameter %s for source %s'
-                                  %(par_name,name))
+            
                 
             self.like[idx].setFree(free)
         self.like.syncSrcParams(name)
@@ -471,7 +526,7 @@ class GTAnalysis(AnalysisBase):
              'e2flux' : np.zeros(nbins),
              'flux_err' : np.zeros(nbins),
              'e2flux_err' : np.zeros(nbins),
-             'npred' : np.zeros(nbins),
+             'Npred' : np.zeros(nbins),
              'ts' : np.zeros(nbins),
              'lnlprofile' : []
              }
@@ -496,7 +551,7 @@ class GTAnalysis(AnalysisBase):
             o['e2flux_err'][i] = flux_err/deltae*10**(2*ecenter)
 
             cs = self.modelCountsSpectrum(name,emin,emax)
-            for c in cs: o['npred'][i] = np.sum(c)            
+            for c in cs: o['Npred'][i] = np.sum(c)            
             o['ts'][i] = self.like.Ts(name,reoptimize=False)
 
             if profile:
@@ -553,7 +608,7 @@ class GTAnalysis(AnalysisBase):
         self.like[idx].setBounds(xvals[0],xvals[-1])
 
         o = {'xvals'    : xvals,
-             'npred'    : np.zeros(len(xvals)),
+             'Npred'    : np.zeros(len(xvals)),
              'flux'   : np.zeros(len(xvals)),
              'e2flux'  : np.zeros(len(xvals)),
              'dlogLike' : np.zeros(len(xvals)) }
@@ -579,7 +634,7 @@ class GTAnalysis(AnalysisBase):
 #self.like[name].energyFlux(10**emin, 10**emax)
 
             cs = self.modelCountsSpectrum(name,emin,emax)
-            for c in cs: o['npred'][i] += np.sum(c)
+            for c in cs: o['Npred'][i] += np.sum(c)
             
 #            if verbosity:
 #                print "%-10i%-12.5g%-12.5g%-12.5g%-12.5g%-12.5g"%(i,x,npred[-1],fluxes[-1],
@@ -601,7 +656,7 @@ class GTAnalysis(AnalysisBase):
     def create_optObject(self):
         """ Make MINUIT or NewMinuit type optimizer object """
 
-        optimizer = self.config['common']['optimizer']
+        optimizer = self.config['optimizer']['optimizer']
         if optimizer.upper() == 'MINUIT':
             optObject = pyLike.Minuit(self.like.logLike)
         elif optimizer.upper == 'NEWMINUIT':
@@ -628,7 +683,7 @@ class GTAnalysis(AnalysisBase):
 #                  optimizer='DRMNFB')
         
 # if 'verbosity' not in kwargs: kwargs['verbosity'] = max(self.config['chatter'] - 1, 0)
-        niter = 0; max_niter = self.config['common']['retries']
+        niter = 0; max_niter = self.config['optimizer']['retries']
         try: 
             while niter < max_niter:
                 self.logger.info("Fit iteration: %i"%niter)
@@ -652,6 +707,8 @@ class GTAnalysis(AnalysisBase):
             freePars = self.get_free_source_params(name)                
             if len(freePars) == 0: continue
             self._roi_model[name] = self.get_src_model(name)
+
+        self._roi_model['roi']['logLike'] = self.like()
 
     def fitDRM(self):
         
@@ -762,7 +819,7 @@ class GTAnalysis(AnalysisBase):
         src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
 
         # Get NPred
-        src_dict['npred'] = self.like.NpredValue(name)
+        src_dict['Npred'] = self.like.NpredValue(name)
 
         if not self.get_free_source_params(name) or paramsonly:
             return src_dict

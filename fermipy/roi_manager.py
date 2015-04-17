@@ -325,7 +325,21 @@ class Source(Model):
 
             sys.exit(0)
             
+    def check_cuts(self,cuts):
+
+        if isinstance(cuts,tuple): cuts = [cuts]
+        
+        for c in cuts:
+
+            if not isinstance(c,tuple) or len(c) != 3:
+                raise Exception('Wrong format for cuts tuple.')
             
+            (pname,pmin,pmax) = c
+            if not pname in self._data: continue
+            if pmin is not None and self[pname] < pmin: return False
+            if pmax is not None and self[pname] > pmax: return False
+
+        return True
                                
     def separation(self,src):
 
@@ -590,7 +604,7 @@ class ROIManager(AnalysisBase):
         if name in self._src_index:
             return self._src_index[name]
         else:
-            raise Exception('No source matching name: ',name)
+            raise Exception('No source matching name: ' + name)
 
     def get_nearby_sources(self,name,dist,min_dist=None,
                            selection='circle'):
@@ -602,14 +616,25 @@ class ROIManager(AnalysisBase):
                                             src['DEJ2000'],
                                             dist,min_dist,selection)
 
+    def get_sources_by_property(self,pname,pmin,pmax=None):
+
+        srcs = []
+        for i, s in enumerate(self._srcs):
+            if not pname in s: continue
+            if pmin is not None and s[pname] < pmin: continue
+            if pmax is not None and s[pname] > pmax: continue
+            srcs.append(s)
+        return srcs
+    
     def get_sources_by_position(self,ra,dec,dist,min_dist=None,
-                                selection='circle'):
+                                roilike=False):
         """Retrieve sources within a certain angular distance of an
-        (ra,dec) coordinate.  This function currently supports two
-        types of geometric selections: circle and roi.  The circle
-        selection finds all sources within a circle of radius dist.
-        The roi selection finds sources within a square box of R x
-        R where R = 2 x dist.
+        (ra,dec) coordinate.  This function supports two types of
+        geometric selections: circle (roilike=False) and roi
+        (roilike=True).  The former selects all sources with a given
+        angular distance of the target position.  The roi selection
+        finds sources within an ROI-like region of size R x R where R
+        = 2 x dist.
 
         Parameters
         ----------
@@ -630,15 +655,15 @@ class ROIManager(AnalysisBase):
         costh[costh<-1.0] = -1.0
         radius = np.arccos(costh)
         
-        if selection == 'circle':                    
+        if not roilike:                    
             dtheta = radius            
-        elif selection == 'roi':
+        elif roilike:
             ra0, dec0 = xyz_to_lonlat(self._src_radec)
             dtheta = get_dist_to_edge(np.radians(ra),np.radians(dec),
                                       ra0,dec0,np.radians(dist))
             dtheta += np.radians(dist)            
-        else:
-            raise Exception('Unrecognized selection type: ' + selection)
+#        else:
+#            raise Exception('Unrecognized selection type: ' + selection)
         
         if min_dist is not None:
             msk = np.where((dtheta < np.radians(dist)) &

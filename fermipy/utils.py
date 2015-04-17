@@ -168,10 +168,10 @@ def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
             od[k] = np.concatenate((v,d1[k]))
         elif (d0[k] is not None and d1[k] is not None) and t0 != t1:
 
-            if t0 == float and t1 == int: od[k] = float(d1[k])
-            else:
+            if t0 == dict or t0 == list: 
                 raise Exception('Conflicting types in dictionary merge for '
                                 'key %s %s %s'%(k,t0,t1))
+            od[k] = t0(d1[k]) 
         else: od[k] = copy.copy(d1[k])
 
     if add_new_keys:
