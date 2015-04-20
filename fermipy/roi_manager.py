@@ -335,7 +335,7 @@ class Source(Model):
                 raise Exception('Wrong format for cuts tuple.')
             
             (pname,pmin,pmax) = c
-            if not pname in self._data: continue
+            if not pname in self._data: return False
             if pmin is not None and self[pname] < pmin: return False
             if pmax is not None and self[pname] > pmax: return False
 
