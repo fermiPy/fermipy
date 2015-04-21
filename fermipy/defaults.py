@@ -89,8 +89,9 @@ optimizer = {
     'optimizer'   : 
     ('MINUIT','Set the optimization algorithm to use when maximizing the '
      'likelihood function.'),
-    'tol'         : (1E-4,'Set the optimizer tolerance.'),
-    'retries'     : (3,'Set the number of times to retry the fit.')
+    'tol'              : (1E-4,'Set the optimizer tolerance.'),
+    'retries'          : (3,'Set the number of times to retry the fit.'),
+    'min_fit_quality'  : (3,'Set the minimum fit quality.')
     }
 
 # A collection of common options related to gtlike

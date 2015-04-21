@@ -352,7 +352,7 @@ class GTAnalysis(AnalysisBase):
         
         if cuts is None: cuts = []        
         for s,r in zip(srcs,rsrc):
-            if not s.check_cuts(cuts): continue
+            if not s.check_cuts(cuts): continue            
             self.free_source(s.name,free=free,pars=pars)
 
         for s in self._roi._diffuse_srcs:
@@ -683,25 +683,33 @@ class GTAnalysis(AnalysisBase):
 #                  optimizer='DRMNFB')
         
 # if 'verbosity' not in kwargs: kwargs['verbosity'] = max(self.config['chatter'] - 1, 0)
+
+        quality=0
         niter = 0; max_niter = self.config['optimizer']['retries']
         try: 
             while niter < max_niter:
                 self.logger.info("Fit iteration: %i"%niter)
                 niter += 1
                 self.like.fit(**kw)
-                quality=3                
                 if isinstance(self.like.optObject,pyLike.Minuit) or \
                         isinstance(self.like.optObject,pyLike.NewMinuit):
                     quality = self.like.optObject.getQuality()
+                else:
+                    quality = 3
+                    
                 if quality > 2: break
-
-            if quality <= 2:
-                raise Exception("Failed to converge with %s"%self.like.optimizer)
+            
         except Exception, message:
             self.logger.error('Likelihood optimization failed.', exc_info=True)
             saved_state.restore()
+            return quality
 
-        if not update: return
+        if quality < self.config['optimizer']['min_fit_quality']:
+            self.logger.error("Failed to converge with %s"%self.like.optimizer)
+            saved_state.restore()
+            return quality
+        elif not update:
+            return quality
 
         for name in self.like.sourceNames():
             freePars = self.get_free_source_params(name)                
@@ -709,7 +717,10 @@ class GTAnalysis(AnalysisBase):
             self._roi_model[name] = self.get_src_model(name)
 
         self._roi_model['roi']['logLike'] = self.like()
+        self._roi_model['roi']['fit_quality'] = quality
 
+        return quality
+        
     def fitDRM(self):
         
         kw = dict(optObject = None, #pyLike.Minuit(self.like.logLike),
