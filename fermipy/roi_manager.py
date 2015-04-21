@@ -92,7 +92,12 @@ class Model(object):
         self._data[key]=value
 
     def update(self,m):
+
+        if self['SpectrumType'] != m['SpectrumType']:
+            self._spectral_pars = {}
+        
         self._data = merge_dict(self._data,m._data,add_new_keys=True)
+            
         self._spectral_pars = merge_dict(self._spectral_pars,
                                          m._spectral_pars,add_new_keys=True)
         self._spatial_pars = merge_dict(self._spatial_pars,
@@ -388,7 +393,7 @@ class Source(Model):
 
         src_dict['Source_Name'] = src_dict['name']
         src_dict['SpectrumType'] = spec['type']
-        
+            
         if src_type =='PointSource' or spatial_type == 'SpatialMap':
         
             extflag=False        
@@ -751,13 +756,6 @@ class ROIManager(AnalysisBase):
             self._src_radec[:,i] = s.radec
             self._src_radius[i] = s.separation(lonlat_to_xyz(self._radec[0],
                                                              self._radec[1]))
-#            for c in ROIManager.src_name_cols:
-#                if not c in s: continue
-#                name = s[c].strip()
-#                self._src_index[name] = i
-#                self._src_index[name.replace(' ','')] = i
-#                self._src_index[name.replace(' ','').lower()] = i
-
     
         for i, s in enumerate(self._diffuse_srcs):
             pass
@@ -782,7 +780,9 @@ class ROIManager(AnalysisBase):
 
         if not os.path.isfile(xmlfile):
             xmlfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',xmlfile)
-        
+
+        self.logger.info('Reading XML Model: ' + xmlfile)
+            
         root = ElementTree.ElementTree(file=xmlfile).getroot()
 
         for s in root.findall('source'):
