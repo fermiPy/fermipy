@@ -91,6 +91,9 @@ class Model(object):
     def __setitem__(self,key,value):
         self._data[key]=value
 
+    def __eq__(self, other): 
+        return self.name == other.name
+        
     def update(self,m):
 
         if self['SpectrumType'] != m['SpectrumType']:
@@ -227,7 +230,18 @@ class Source(Model):
         self._radec = np.array([np.sin(theta)*np.cos(phi),
                                 np.sin(theta)*np.sin(phi),
                                 np.cos(theta)])
-            
+
+
+        ts_keys = ['Sqrt_TS30_100','Sqrt_TS100_300',
+                   'Sqrt_TS300_1000','Sqrt_TS1000_3000',
+                   'Sqrt_TS3000_10000','Sqrt_TS10000_100000']
+
+        if ts_keys[0] in self:        
+            self._data['TS_value'] = 0
+            for k in ts_keys:
+                if k in self and np.isfinite(self[k]):
+                    self._data['TS_value'] += self[k]**2
+        
         self._names = []
         self._names_dict = {}
         for k in ROIManager.src_name_cols:
@@ -521,7 +535,7 @@ class ROIManager(AnalysisBase):
             self.load_source(MapCubeSource(self.config['galdiff'],'galdiff'))
 
     def load_source(self,src):
-
+        
         if src.name in self._src_index:
             self.logger.info('Updating source model for %s'%src.name)
             self._src_index[src.name].update(src)
@@ -556,6 +570,18 @@ class ROIManager(AnalysisBase):
             else:
                 raise Exception('Unrecognized catalog file extension: %s'%c)
 
+    def delete_sources(self,srcs):
+
+#        srcs = []
+#        for n in names:        
+#            if not n in self._src_index:
+#                raise Exception('No source with name: %s'%n)
+#            srcs.append(self._src_index[n])
+        
+        self._src_index = {k:v for k,v in self._src_index.items() if not v in srcs}
+        self._srcs = [s for s in self._srcs if not s in srcs]
+        self.build_src_index()
+        
     # Creation Methods           
     @staticmethod
     def create_from_coords(name,config,**kwargs):
@@ -589,6 +615,10 @@ class ROIManager(AnalysisBase):
         rsrc = []
                 
         for k, v in srcs_dict.items():
+
+#            if not v[0].check_cuts(('TS_value',roi.config['min_ts'],None)): continue
+#            print v[0].name, v[0]['TS_value']
+            
             srcs.append(v[0])
             rsrc.append(v[1])
                

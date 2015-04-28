@@ -320,6 +320,27 @@ class GTAnalysis(AnalysisBase):
             cs += [c.modelCountsSpectrum(name,emin,emax)]
         return cs
 
+    def get_sources(self,cuts=None,distance=None,roilike=False):
+        """Retrieve list of sources satisfying the given selections."""
+        rsrc, srcs = self._roi.get_sources_by_position(self._roi.radec[0],
+                                                       self._roi.radec[1],
+                                                       distance,roilike=roilike)
+        o = []
+        if cuts is None: cuts = []        
+        for s,r in zip(srcs,rsrc):
+            if not s.check_cuts(cuts): continue            
+            o.append(s)
+
+        return o
+        
+    
+    def delete_sources(self,cuts=None,distance=None,roilike=False):
+        
+        srcs = self.get_sources(cuts,distance,roilike)
+        self._roi.delete_sources(srcs)    
+        for c in self.components:
+            c.delete_sources(srcs)
+    
     def free_sources(self,free=True,pars=None,cuts=None,
                      distance=None,roilike=False):
         """Free/Fix sources within the ROI.
@@ -511,7 +532,6 @@ class GTAnalysis(AnalysisBase):
         name = self._roi.get_source_by_name(name).name
 
         self.logger.info('Computing SED for %s'%name)
-        
         saved_state = LikelihoodState(self.like)
 
         if energies is None: energies = self.energies
@@ -528,18 +548,20 @@ class GTAnalysis(AnalysisBase):
              'e2flux_err' : np.zeros(nbins),
              'Npred' : np.zeros(nbins),
              'ts' : np.zeros(nbins),
+             'fit_quality' : np.zeros(nbins),
              'lnlprofile' : []
              }
         
         for i, (emin,emax) in enumerate(zip(energies[:-1],energies[1:])):
             saved_state.restore()
             self.free_sources(free=False)
-            self.free_norm(name)            
+            self.free_norm(name)
             self.logger.info('Fitting %s SED from %.0f MeV to %.0f MeV' %
                              (name,10**emin,10**emax))
             self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
-            self.fit(update=False)
+            o['fit_quality'][i] = self.fit(update=False)
 
+            print 'Getting flux'
             ecenter = 0.5*(emin+emax)
             deltae = 10**emax - 10**emin
             flux = self.like[name].flux(10**emin, 10**emax)
@@ -553,13 +575,13 @@ class GTAnalysis(AnalysisBase):
             cs = self.modelCountsSpectrum(name,emin,emax)
             for c in cs: o['Npred'][i] = np.sum(c)            
             o['ts'][i] = self.like.Ts(name,reoptimize=False)
-
             if profile:
                 o['lnlprofile'] += [self.profile(name,emin=emin,emax=emax)]
             
 #            nobs.append(self.gtlike.nobs[i])
 
         self.setEnergyRange(float(10**energies[0])+1, float(10**energies[-1])-1)
+        print 'Restoring state'
         saved_state.restore()        
         src_model = self._roi_model.get(name,{})
         src_model['sed'] = copy.deepcopy(o)        
@@ -665,7 +687,23 @@ class GTAnalysis(AnalysisBase):
             optFactory = pyLike.OptimizerFactory_instance()
             optObject = optFactory.create(optimizer, self.like.logLike)
         return optObject
-    
+
+    def _run_fit(self,**kwargs):
+
+        try:
+            self.like.fit(**kwargs)            
+        except Exception, message:
+            self.logger.error('Likelihood optimization failed.', exc_info=True)
+
+        if isinstance(self.like.optObject,pyLike.Minuit) or \
+                isinstance(self.like.optObject,pyLike.NewMinuit):
+            quality = self.like.optObject.getQuality()
+        else:
+            quality = 3
+
+        return quality
+            
+                
     def fit(self,update=True,**kwargs):
         """Run likelihood optimization."""
         
@@ -673,36 +711,28 @@ class GTAnalysis(AnalysisBase):
             self.logger.info("Skipping fit.  No free parameters.")
             return
 
-        verbosity = kwargs.get('verbosity',0)
+        verbosity = kwargs.get('verbosity',self.config['optimizer']['verbosity'])
         covar = kwargs.get('covar',True)
+        tol = kwargs.get('tol',self.config['optimizer']['tol'])
         
         saved_state = LikelihoodState(self.like)
         kw = dict(optObject = self.create_optObject(),
-                  covar=covar,verbosity=verbosity)
-#tol=1E-4
+                  covar=covar,verbosity=verbosity,tol=tol)
 #                  optimizer='DRMNFB')
-        
-# if 'verbosity' not in kwargs: kwargs['verbosity'] = max(self.config['chatter'] - 1, 0)
 
         quality=0
         niter = 0; max_niter = self.config['optimizer']['retries']
-        try: 
-            while niter < max_niter:
-                self.logger.info("Fit iteration: %i"%niter)
-                niter += 1
-                self.like.fit(**kw)
-                if isinstance(self.like.optObject,pyLike.Minuit) or \
-                        isinstance(self.like.optObject,pyLike.NewMinuit):
-                    quality = self.like.optObject.getQuality()
-                else:
-                    quality = 3
-                    
-                if quality > 2: break
+        while niter < max_niter:
+            self.logger.info("Fit iteration: %i"%niter)
+            niter += 1
+            quality = self._run_fit(**kw)
+            if quality > 2: break
             
-        except Exception, message:
-            self.logger.error('Likelihood optimization failed.', exc_info=True)
-            saved_state.restore()
-            return quality
+#        except Exception, message:
+#            print self.like.optObject.getQuality()
+#            self.logger.error('Likelihood optimization failed.', exc_info=True)
+#            saved_state.restore()
+#            return quality
 
         if quality < self.config['optimizer']['min_fit_quality']:
             self.logger.error("Failed to converge with %s"%self.like.optimizer)
@@ -726,12 +756,8 @@ class GTAnalysis(AnalysisBase):
         kw = dict(optObject = None, #pyLike.Minuit(self.like.logLike),
                   covar=True,#tol=1E-4
                   optimizer='DRMNFB')
-
-        
-
         
 #        self.MIN.tol = float(self.likelihoodConf['mintol'])
-        
         
         try:
             self.like.fit(**kw)
@@ -882,7 +908,7 @@ class GTBinnedAnalysis(AnalysisBase):
                                           logfile=self.config['logfile'],
                                           logging=self.config['logging'])
 
-        self.print_config(self.logger,loglevel=logging.DEBUG)
+        
         
         workdir = self.config['workdir']
         self._name = self.config['name']
@@ -918,6 +944,14 @@ class GTBinnedAnalysis(AnalysisBase):
             self.npix = int(np.round(self.config['roi_width']/self.config['binsz']))
         else:
             self.npix = self.config['npix']
+
+        if self.config['radius'] is None:
+            self._config['radius'] = np.sqrt(2.)*0.5*self.npix*self.config['binsz']+0.5
+            self.logger.info('Automatically setting selection radius to %s deg'%self.config['radius'])
+
+        self._like = None
+            
+        self.print_config(self.logger,loglevel=logging.DEBUG)
             
     @property
     def roi(self):
@@ -935,6 +969,11 @@ class GTBinnedAnalysis(AnalysisBase):
     def energies(self):
         return self._ebin_edges
 
+    def delete_sources(self,srcs):
+        for s in srcs:
+            if self.like: self.like.deleteSource(s.name)
+        self._roi.delete_sources(srcs)
+    
     def setEnergyRange(self,emin,emax):
         self.like.setEnergyRange(emin,emax)
 

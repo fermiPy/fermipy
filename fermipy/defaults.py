@@ -46,7 +46,9 @@ roi = {
     'galdiff'       : (None,'Set the galactic IEM mapcube.'),
     'limbdiff'      : (None,''),
     'extdir'        : ('Extended_archive_v14',''),
-    'catalogs'      : (None,'',list)
+    'catalogs'      : (None,'',list),
+    'min_ts'        : (None,''),
+    'min_flux'      : (None,''),
     }
 
 irfs = {
@@ -91,7 +93,8 @@ optimizer = {
      'likelihood function.'),
     'tol'              : (1E-4,'Set the optimizer tolerance.'),
     'retries'          : (3,'Set the number of times to retry the fit.'),
-    'min_fit_quality'  : (3,'Set the minimum fit quality.')
+    'min_fit_quality'  : (3,'Set the minimum fit quality.'),
+    'verbosity'        : (0,'')
     }
 
 # A collection of common options related to gtlike
