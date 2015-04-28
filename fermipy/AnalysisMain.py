@@ -311,14 +311,34 @@ class GTAnalysis(AnalysisBase):
         for c in self.components:
             c.setEnergyRange(emin,emax)
             
-    def modelCountsSpectrum(self,name,emin,emax):
+    def modelCountsSpectrum(self,name,emin,emax,summed=False):
         """Return the predicted number of model counts versus energy
-        for a given source and energy range."""
+        for a given source and energy range.  If summed=True return
+        the counts spectrum summed over all components otherwise
+        return a list of model spectra."""
 
-        cs = []
-        for c in self.components: 
-            cs += [c.modelCountsSpectrum(name,emin,emax)]
-        return cs
+        
+        
+        if summed:
+            cs = np.zeros(self.enumbins)
+            imin = valToBinBounded(self.energies,emin+1E-7)[0]
+            imax = valToBinBounded(self.energies,emax-1E-7)[0]+1
+
+            for c in self.components:
+                ecenter = 0.5*(c.energies[:-1]+c.energies[1:])
+                counts = c.modelCountsSpectrum(name,self.energies[0],
+                                               self.energies[-1])
+
+                cs += np.histogram(ecenter,
+                                   weights=counts,
+                                   bins=self.energies)[0]
+
+            return cs[imin:imax]
+        else:        
+            cs = []
+            for c in self.components: 
+                cs += [c.modelCountsSpectrum(name,emin,emax)]            
+            return cs
 
     def get_sources(self,cuts=None,distance=None,roilike=False):
         """Retrieve list of sources satisfying the given selections."""
@@ -335,6 +355,7 @@ class GTAnalysis(AnalysisBase):
         
     
     def delete_sources(self,cuts=None,distance=None,roilike=False):
+        """Delete sources within the ROI."""
         
         srcs = self.get_sources(cuts,distance,roilike)
         self._roi.delete_sources(srcs)    
@@ -561,7 +582,6 @@ class GTAnalysis(AnalysisBase):
             self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
             o['fit_quality'][i] = self.fit(update=False)
 
-            print 'Getting flux'
             ecenter = 0.5*(emin+emax)
             deltae = 10**emax - 10**emin
             flux = self.like[name].flux(10**emin, 10**emax)
@@ -572,25 +592,51 @@ class GTAnalysis(AnalysisBase):
             o['flux_err'][i] = flux_err/deltae
             o['e2flux_err'][i] = flux_err/deltae*10**(2*ecenter)
 
-            cs = self.modelCountsSpectrum(name,emin,emax)
-            for c in cs: o['Npred'][i] = np.sum(c)            
+            cs = self.modelCountsSpectrum(name,emin,emax,summed=True)
+            o['Npred'][i] = np.sum(cs)            
             o['ts'][i] = self.like.Ts(name,reoptimize=False)
             if profile:
-                o['lnlprofile'] += [self.profile(name,emin=emin,emax=emax)]
+                o['lnlprofile'] += [self.profile_norm(name,emin=emin,emax=emax)]
             
 #            nobs.append(self.gtlike.nobs[i])
 
         self.setEnergyRange(float(10**energies[0])+1, float(10**energies[-1])-1)
-        print 'Restoring state'
         saved_state.restore()        
         src_model = self._roi_model.get(name,{})
         src_model['sed'] = copy.deepcopy(o)        
         return o
-            
-    def profile(self, name, emin=None,emax=None, reoptimize=False,xvals=None,npts=None):
-#                  flux_min=0, flux_max=10, emin=None, emax=None, 
-#                  npts=None, fix_src_pars=False, verbosity=0, log=True, 
-#                  **kwargs):
+
+    def profile_norm(self,name, emin=None,emax=None, reoptimize=False,xvals=None,npts=None):
+        # Find the source
+        name = self._roi.get_source_by_name(name).name
+
+        par = self.like.normPar(name)
+        parName = self.like.normPar(name).getName()
+        idx = self.like.par_index(name,parName)
+        bounds = self.like.model[idx].getBounds()
+        emin = min(self.energies) if emin is None else emin
+        emax = max(self.energies) if emax is None else emax
+
+        npred = np.sum(self.modelCountsSpectrum(name,emin,emax,summed=True))
+        
+        if xvals is None:
+
+            err = par.error()
+            val = par.getValue()
+
+            if npred < 10:
+                val *= 1./min(1.0,npred)
+                xvals = val*10**np.linspace(-2.0,2.0,101)
+                xvals = np.insert(xvals,0.0,0)
+            else:
+                xvals = np.linspace(0,1,51)
+                xvals = np.concatenate((-1.0*xvals[1:][::-1],xvals))
+                xvals = val*10**xvals
+        
+        return self.profile(name,parName,emin=emin,emax=emax,reoptimize=reoptimize,xvals=xvals)
+    
+    def profile(self, name, parName, emin=None,emax=None, reoptimize=False,xvals=None,npts=None):
+        #                  **kwargs):
         """ Profile the likelihood for the given source and parameter.  
         """
         # Find the source
@@ -607,6 +653,7 @@ class GTAnalysis(AnalysisBase):
 
         ecenter = 0.5*(emin+emax)
         deltae = 10**emax - 10**emin
+        npred = np.sum(self.modelCountsSpectrum(name,emin,emax,summed=True))
         
         saved_state = LikelihoodState(self.like)
         
@@ -655,8 +702,8 @@ class GTAnalysis(AnalysisBase):
             o['e2flux'][i] = flux/deltae*10**(2*ecenter)
 #self.like[name].energyFlux(10**emin, 10**emax)
 
-            cs = self.modelCountsSpectrum(name,emin,emax)
-            for c in cs: o['Npred'][i] += np.sum(c)
+            cs = self.modelCountsSpectrum(name,emin,emax,summed=True)
+            o['Npred'][i] += np.sum(cs)
             
 #            if verbosity:
 #                print "%-10i%-12.5g%-12.5g%-12.5g%-12.5g%-12.5g"%(i,x,npred[-1],fluxes[-1],

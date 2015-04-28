@@ -64,10 +64,12 @@ binning = {
     (None,
      'Number of spatial bins.  If none this will be inferred from roi_width '
      'and binsz.'), 
-    'roi_width'  : (10.0,'Set the width of the ROI in degrees.'),
+    'roi_width'  : (10.0,'Set the width of the ROI in degrees.  If both roi_width and binsz are '
+                    'given the roi_width will be rounded up to be a multiple of binsz.'),
     'binsz'      : (0.1,'Set the bin size in degrees.'),
     'binsperdec' : (8,'Set the number of energy bins per decade.'),
-    'enumbins'   : (None,'Number of energy bins.  If none this will be inferred from energy range and binsperdec.')
+    'enumbins'   : (None,'Number of energy bins.  If none this will be inferred from energy '
+                    'range and binsperdec.')
     }
 
 # Options related to I/O and output file bookkeeping
