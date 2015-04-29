@@ -627,7 +627,7 @@ class GTAnalysis(AnalysisBase):
             if npred < 10:
                 val *= 1./min(1.0,npred)
                 xvals = val*10**np.linspace(-2.0,2.0,101)
-                xvals = np.insert(xvals,0.0,0)
+                xvals = np.insert(xvals,0,0.0)
             else:
                 xvals = np.linspace(0,1,51)
                 xvals = np.concatenate((-1.0*xvals[1:][::-1],xvals))
