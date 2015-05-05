@@ -80,7 +80,7 @@ def run_gtapp(appname,logger,kw):
 def filter_dict(d,val):
     for k, v in d.items():
         if v == val: del d[k]
-
+        
 def gtlike_spectrum_to_dict(spectrum):
     """ Convert a pyLikelihood object to a python 
         dictionary which can be easily saved to a file. """
@@ -821,7 +821,7 @@ class GTAnalysis(AnalysisBase):
         """Load model definition from XML."""
         raise NotImplementedError()
 
-    def write_xml(self,model_name):
+    def write_xml(self,xmlfile,save_model_map=True):
         """Save current model definition as XML file.
 
         Parameters
@@ -832,8 +832,12 @@ class GTAnalysis(AnalysisBase):
 
         """
 
+        model_name = os.path.splitext(xmlfile)[0]
+        
         for i, c in enumerate(self._components):
-            c.write_xml(model_name)
+            c.write_xml(xmlfile)
+            if save_model_map:
+                c.generate_model_map(model_name)
 
         # Write a common XML file?
 
@@ -1016,6 +1020,35 @@ class GTBinnedAnalysis(AnalysisBase):
     def energies(self):
         return self._ebin_edges
 
+    @property
+    def enumbins(self):
+        return len(self._ebin_edges)-1
+
+    def add_source(self,name,radec=None):
+
+        if radec is None:
+            radec = self.roi.radec
+        
+        src = pyLike.PointSource(0, 0,
+                                 self.like.logLike.observation())
+        pl = pyLike.SourceFactory_funcFactory().create("PowerLaw")
+        pl.setParamValues((1, -2, 100))
+        indexPar = pl.getParam("Index")
+        indexPar.setBounds(-3.5, -1)
+        pl.setParam(indexPar)
+        prefactor = pl.getParam("Prefactor")
+        prefactor.setBounds(1e-10, 1e3)
+        prefactor.setScale(1e-9)
+        pl.setParam(prefactor)
+        src.setSpectrum(pl)
+        src.setName(name)
+        src.setDir(radec[0],radec[1],True,False)
+        self.like.addSource(src)
+
+    def delete_source(self,name):
+        
+        self.like.deleteSource(name)
+        
     def delete_sources(self,srcs):
         for s in srcs:
             if self.like: self.like.deleteSource(s.name)
@@ -1024,6 +1057,27 @@ class GTBinnedAnalysis(AnalysisBase):
     def setEnergyRange(self,emin,emax):
         self.like.setEnergyRange(emin,emax)
 
+    def countsMap(self):
+
+        z = self.like.logLike.countsMap().data()
+        z = np.array(z).reshape(self.enumbins,self.npix,self.npix).swapaxes(0,2)
+        return z
+        
+    def modelCountsMap(self,name=None):
+
+        v = pyLike.FloatVector(self.npix**2*self.enumbins)
+        if name is None:
+            for name in self.like.sourceNames():
+                model = self.like.logLike.getSourceMap(name)
+                self.like.logLike.updateModelMap(v,model)
+        else:
+            model = self.like.logLike.getSourceMap(name)
+            self.like.logLike.updateModelMap(v,model)
+        
+        retVals = np.array(v).reshape(self.enumbins,
+                                      self.npix,self.npix).swapaxes(0,2)
+        return retVals
+        
     def modelCountsSpectrum(self,name,emin,emax):
         cs = np.array(self.like.logLike.modelCountsSpectrum(name))
         imin = valToBinBounded(self.energies,emin+1E-7)[0]
@@ -1166,17 +1220,32 @@ class GTBinnedAnalysis(AnalysisBase):
             self.like.logLike.set_edisp_flag(True)
 
         self.logger.info('Finished setup')
-            
+
+    def generate_model_map(self,model_name=None):
+        
+        if model_name is None: suffix = self.config['file_suffix']
+        else:
+            suffix = '_%s%s'%(model_name,self.config['file_suffix'])
+        
+        outfile = os.path.join(self.config['workdir'],'mcube%s.fits'%(suffix))
+        
+        h = pyfits.open(self._ccube_file)
+        
+        counts = self.modelCountsMap()        
+        hdu_image = pyfits.PrimaryHDU(counts.T,header=h[0].header)
+        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])        
+        hdulist.writeto(outfile,clobber=True)
+        
     def generate_model(self,model_name=None,outfile=None):
-        """Generate a counts model map.
+        """Generate a counts model map from an XML model file.
 
         Parameters
         ----------
 
         model_name : str
         
-            Name of the model.  If no name is given it will default to
-            the seed model.
+            Name of the model.  If no name is given it will use 
+            the baseline model.
 
         outfile : str
 
@@ -1184,21 +1253,22 @@ class GTBinnedAnalysis(AnalysisBase):
             
         """
 
-
+        if model_name is not None:
+            model_name = os.path.splitext(model_name)[0]
         
-        if model_name is None: srcmdl = self._srcmdl_file
+        if model_name is None or model_name == '': srcmdl = self._srcmdl_file
         else: srcmdl = self.get_model_path(model_name)
 
         if not os.path.isfile(srcmdl):
             raise Exception("Model file does not exist: %s"%srcmdl)
+
+        if model_name is None: suffix = self.config['file_suffix']
+        else:
+            suffix = '_%s%s'%(model_name,self.config['file_suffix'])
         
-#        if outfile is None: outfile = self._mcube_file
-        outfile = os.path.join(self.config['workdir'],
-                               'mcube_%s%s.fits'%(model_name,
-                                                  self.config['file_suffix']))
+        outfile = os.path.join(self.config['workdir'],'mcube%s.fits'%(suffix))
         
         # May consider generating a custom source model file
-
         if not os.path.isfile(outfile):
 
             kw = dict(srcmaps = self._srcmap_file,
@@ -1208,7 +1278,7 @@ class GTBinnedAnalysis(AnalysisBase):
                       expcube = self._ltcube,
                       irfs    = self.config['irfs'],
                       evtype  = self.config['evtype'],
-                      # edisp   = bool(self.config['enable_edisp']),
+                      edisp   = bool(self.config['enable_edisp']),
                       outtype = 'ccube',
                       chatter = self.config['logging']['chatter'])
             
@@ -1217,10 +1287,10 @@ class GTBinnedAnalysis(AnalysisBase):
             self.logger.info('Skipping gtmodel')
             
 
-    def write_xml(self,model_name):
+    def write_xml(self,xmlfile):
         """Write the XML model for this analysis component."""
         
-        xmlfile = self.get_model_path(model_name)            
+        xmlfile = self.get_model_path(xmlfile)            
         self.logger.info('Writing %s...'%xmlfile)
         self.like.writeXml(xmlfile)
 
