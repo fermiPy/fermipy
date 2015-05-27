@@ -1,22 +1,25 @@
 
-verbosity : 3
+# These parameters control logging.
+logging:
+
+  verbosity : 3
+  chatter : 3
+
+fileio:
+
+  outdir : null
+  stageoutput : True
+  scratchdir  : '/scratch'
 
 # These are global parameters of the analysis.  Some of these can be
 # overriden in the analysis components block.
 common:
 
-  base   : 'mkn421'
-
   #----------------------------------------------------------------------------
   # Define input data files (FT1, FT2, LTCube)
 
-  # FT1 file
   evfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V6/P8_SOURCE_V6_239557414_428903014_z100_r180_gti_ft1.lst
-
-  # Spacecraft file
   scfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V4/P8_P301_SOURCE_239557414_428903014_ft2.fits 
-
-  # LT cube (optional)
   ltcube : null
 
   #----------------------------------------------------------------------------
@@ -28,8 +31,8 @@ common:
   
   #----------------------------------------------------------------------------
   # Data selections
-  emin    : 1000
-  emax    : 10000
+  emin    : 100
+  emax    : 100000
   zmax    : 100
   evclass : 128
   evtype  : null
@@ -60,7 +63,7 @@ common:
     roisize : 10.0
 
     galdiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/template_4years_P8_V2_scaled.fits'
-    isodiff  : null
+    isodiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_4years_P8V3.txt'
     limbdiff : null
 
     # List of catalogs to be used in the model.
@@ -86,23 +89,7 @@ optimization :
 
 # This is the block of the configuration where individual components
 # of the analysis are defined.  
-components:
-  
-  psf2:
-    evtype  : 16
-    binsz   : 0.2
-    irfs    : P8_SOURCE_V5_PSF2
-
-    roi:
-      isodiff : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_psf2_4years_P8V3.txt'
-
-  psf3:
-    evtype : 32
-    binsz  : 0.2
-    irfs    : P8_SOURCE_V5_PSF3
-
-    roi:
-      isodiff : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_psf3_4years_P8V3.txt'
+components: null
     
 # Settings for SED analysis
 sed: {}

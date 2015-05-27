@@ -101,8 +101,12 @@ def gtlike_spectrum_to_dict(spectrum):
         
 class GTAnalysis(AnalysisBase):
     """High-level analysis interface that internally manages a set of
-    analysis component objects.  Most of the interactive functionality
-    of the fermiPy package is provided through the methods of this class."""
+    analysis component objects.  Most of the functionality of the
+    fermiPy package is provided through the methods of this class.
+    The class constructor accepts a dictionary that defines the
+    configuration for the analysis.  Keyword arguments provided as
+    **kwargs can be used to override parameter values in the
+    configuration dictionary."""
 
     defaults = {'common'     : defaults.common,
                 'logging'    : defaults.logging,
@@ -136,7 +140,6 @@ class GTAnalysis(AnalysisBase):
         self.logger.info('\n' + '-'*80 + '\n' + "This is fermipy version {}.".
                          format(fermipy.__version__))
         self.print_config(self.logger)
-#        Logger.capture_stdout(self.logger)
         
         # Working directory (can be the same as savedir)
 #        if self.config['fileio']['scratchdir'] is not None:
@@ -316,8 +319,6 @@ class GTAnalysis(AnalysisBase):
         for a given source and energy range.  If summed=True return
         the counts spectrum summed over all components otherwise
         return a list of model spectra."""
-
-        
         
         if summed:
             cs = np.zeros(self.enumbins)
@@ -379,7 +380,7 @@ class GTAnalysis(AnalysisBase):
             freed/fixed.  If pars='norm' then only normalization
             parameters will be freed.
 
-        radius : float        
+        distance : float        
             Distance out to which sources should be freed or fixed.
             If none then all sources will be selected.
 
@@ -402,7 +403,7 @@ class GTAnalysis(AnalysisBase):
             self.free_source(s.name,free=free,pars=pars)
                                         
     def free_sources_by_position(self,free=True,pars=None,distance=None,roilike=False):
-        """Free/Fix all sources within a certain radius of the given sky
+        """Free/Fix all sources within a certain distance of the given sky
         coordinate.  By default it will use the ROI center.
 
         Parameters
@@ -418,7 +419,7 @@ class GTAnalysis(AnalysisBase):
             freed/fixed.  If pars='norm' then only normalization
             parameters will be freed.
 
-        radius : float        
+        distance : float        
             Distance out to which sources should be freed or fixed.
             If none then all sources will be selected.
 
@@ -607,6 +608,10 @@ class GTAnalysis(AnalysisBase):
         return o
 
     def profile_norm(self,name, emin=None,emax=None, reoptimize=False,xvals=None,npts=None):
+        """
+        Profile the normalization of a source.
+        """
+        
         # Find the source
         name = self._roi.get_source_by_name(name).name
 
@@ -1064,7 +1069,9 @@ class GTBinnedAnalysis(AnalysisBase):
         return z
         
     def modelCountsMap(self,name=None):
-
+        """Return the model counts map for a single source or for the
+        sum of all sources in the ROI."""
+        
         v = pyLike.FloatVector(self.npix**2*self.enumbins)
         if name is None:
             for name in self.like.sourceNames():
@@ -1237,7 +1244,8 @@ class GTBinnedAnalysis(AnalysisBase):
         hdulist.writeto(outfile,clobber=True)
         
     def generate_model(self,model_name=None,outfile=None):
-        """Generate a counts model map from an XML model file.
+        """Generate a counts model map from an XML model file using
+        gtmodel.
 
         Parameters
         ----------

@@ -27,10 +27,10 @@ common:
   # Define input data files (FT1, FT2, LTCube)
 
   # FT1 file
-  evfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V6/P8_SOURCE_V6_239557414_428903014_z100_r180_gti_ft1.lst
+  evfile : null
 
   # Spacecraft file
-  scfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V4/P8_P301_SOURCE_239557414_428903014_ft2.fits 
+  scfile : null
 
   # LT cube (optional)
   ltcube : null
@@ -54,7 +54,7 @@ common:
   # Set the ROI center to the coordinates of this source
   ra     : 0.0
   dec    : 0.0
-  target : 'mkn421'
+  target : null
   radius : 10.0
 
   #----------------------------------------------------------------------------
