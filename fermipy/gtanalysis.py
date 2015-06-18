@@ -60,6 +60,11 @@ index_parameters = {
     'FileFunction' : [],
     }
              
+def cl_to_dlnl(cl):
+
+    import scipy.special as spfn    
+    alpha = 1.0-cl    
+    return np.power(np.sqrt(2.)*spfn.erfinv(1-2*alpha),2.)    
 
 def run_gtapp(appname,logger,kw):
 
@@ -559,7 +564,7 @@ class GTAnalysis(AnalysisBase):
         spectrum.getFreeParamNames(parNames)
         return [str(p) for p in parNames]
     
-    def sed(self,name,profile=False,energies=None):
+    def sed(self,name,profile=True,energies=None):
         
         # Find the source
         name = self._roi.get_source_by_name(name).name
@@ -579,6 +584,8 @@ class GTAnalysis(AnalysisBase):
              'e2flux' : np.zeros(nbins),
              'flux_err' : np.zeros(nbins),
              'e2flux_err' : np.zeros(nbins),
+             'flux_ul95' : np.zeros(nbins),
+             'e2flux_ul95' : np.zeros(nbins),
              'Npred' : np.zeros(nbins),
              'ts' : np.zeros(nbins),
              'fit_quality' : np.zeros(nbins),
@@ -608,7 +615,16 @@ class GTAnalysis(AnalysisBase):
             o['Npred'][i] = np.sum(cs)            
             o['ts'][i] = self.like.Ts(name,reoptimize=False)
             if profile:
-                o['lnlprofile'] += [self.profile_norm(name,emin=emin,emax=emax)]
+
+                lnlp = self.profile_norm(name,emin=emin,emax=emax)                
+                o['lnlprofile'] += [lnlp]
+                
+                imax = np.argmax(lnlp['dlogLike'])
+                lnlmax = lnlp['dlogLike'][imax]
+                dlogLike = lnlp['dlogLike'][imax:]-lnlmax
+                                
+                o['flux_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlogLike,lnlp['flux'][imax:])
+                o['e2flux_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlogLike,lnlp['e2flux'][imax:])
             
 #            nobs.append(self.gtlike.nobs[i])
 
