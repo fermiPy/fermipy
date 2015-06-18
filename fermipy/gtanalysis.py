@@ -8,7 +8,7 @@ import yaml
 from utils import *
 import defaults
 import fermipy
-from roi_manager import *
+from fermipy.roi_model import *
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 import logging

@@ -1,5 +1,5 @@
 from fermipy.gtanalysis import *
-from fermipy.roi_manager import *
+from fermipy.roi_model import *
 from fermipy.config import *
 from fermipy.logger import *
 import yaml
