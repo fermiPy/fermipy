@@ -19,12 +19,9 @@ fileio:
   # a temporary working directory under scratchdir.
   scratchdir  : '/scratch'
 
-# These are global parameters of the analysis.  Some of these can be
-# overriden in the analysis components block.
-common:
-
-  #----------------------------------------------------------------------------
-  # Define input data files (FT1, FT2, LTCube)
+#----------------------------------------------------------------------------
+# Define input data files (FT1, FT2, LTCube)
+data:
 
   # FT1 file
   evfile : null
@@ -35,15 +32,21 @@ common:
   # LT cube (optional)
   ltcube : null
 
-  #----------------------------------------------------------------------------
-  # Binning
-  roi_width  : 5.0
+#----------------------------------------------------------------------------
+# Binning
+binning:
+
+  coordsys   : 'CEL'
+  proj       : 'AIT'
+  roiwidth   : 5.0
   npix       : null
   binsz      : 0.2 # spatial bin size in deg
   binsperdec : 8   # nb energy bins per decade
   
-  #----------------------------------------------------------------------------
-  # Data selections
+#----------------------------------------------------------------------------
+# Data selections
+selection:
+
   emin    : 100.0
   emax    : 100000.0
   zmax    : 100.0
@@ -57,31 +60,34 @@ common:
   target : null
   radius : 10.0
 
+gtlike:
+
   #----------------------------------------------------------------------------
   # IRFs
   enable_edisp : True
   irfs : 'P8R2_SOURCE_V6'
+  likelihood : 'binned'
 
   # This option can be used to use a predefined analysis setup.  Any
   # option defined in this file will override the predefined settings.
-  analysis_type : 'psf4_joint'
+  #  analysis_type : 'psf4_joint'
 
-  # Settings for ROI model
-  roi:
+# Settings for ROI model
+model:
 
-    # Include catalog sources within this distance from the ROI center
-    radius  : null
+  # Include catalog sources within this distance from the ROI center
+  src_radius  : null
 
-    # Include catalog sources within a box of width roisize.
-    roisize : 10.0
+  # Include catalog sources within a box of the given width.
+  src_roiwidth : 10.0
 
-    galdiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/template_4years_P8_V2_scaled.fits'
-    isodiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_4years_P8V3.txt'
-    limbdiff : null
+  galdiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/template_4years_P8_V2_scaled.fits'
+  isodiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_4years_P8V3.txt'
+  limbdiff : null
 
-    # List of catalogs to be used in the model.
-    catalogs : 
-      - 'catalogs/gll_psc_v14.fit'
+  # List of catalogs to be used in the model.
+  catalogs : 
+    - 'catalogs/gll_psc_v14.fit'
 
 optimizer:
 
@@ -91,29 +97,29 @@ optimizer:
 
   retries : 3 
 
-optimization :
+#roiopt :
 
   # Free sources within X deg of ROI center
-  free_source_radius : null
+#  free_source_radius : null
 
   # Free sources within X deg of ROI edge (pos = outside, neg = inside)
-  free_source_roi_margin : null
+#  free_source_roi_margin : null
 
   # Provide explicit list of sources to be freed (either diffuse or point-source)
-  free_sources : null
+#  free_sources : null
 
   # Provide a minimum TS threshold at which sources should be freed
-  free_source_ts_threshold : null
+#  free_source_ts_threshold : null
 
 # This is the block of the configuration where individual components
 # of the analysis are defined.  
 components: null
     
 # Settings for SED analysis
-sed: {}
+#sed: {}
 
 # Settings for lightcurve analysis
-curve: {}
+#curve: {}
 
 # Settings for MC analysis
 mc : {}

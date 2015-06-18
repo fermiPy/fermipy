@@ -108,10 +108,16 @@ class GTAnalysis(AnalysisBase):
     **kwargs can be used to override parameter values in the
     configuration dictionary."""
 
-    defaults = {'common'     : defaults.common,
-                'logging'    : defaults.logging,
+    defaults = {'logging'    : defaults.logging,
                 'fileio'     : defaults.fileio,
                 'optimizer'  : defaults.optimizer,
+                'binning'    : defaults.binning,
+                'selection'  : defaults.selection,
+                'model'      : defaults.model,
+                'data'       : defaults.data,
+                'gtlike'     : defaults.gtlike,
+                'mc'         : defaults.mc,
+#                'roiopt'     : defaults.roiopt,
                 'components' : (None,'')}
 
     def __init__(self,config,**kwargs):
@@ -132,9 +138,10 @@ class GTAnalysis(AnalysisBase):
         os.environ['PFILES']= \
             self._savedir+';'+os.environ['PFILES'].split(';')[-1]
 
-        self._logfile = os.path.join(self._savedir,'fermipy')
-
-        self.logger = Logger.get(self.__class__.__name__,self._logfile,
+        if self.config['fileio']['logfile'] is None:
+            self._config['fileio']['logfile'] = os.path.join(self._savedir,'fermipy')
+            
+        self.logger = Logger.get(self.__class__.__name__,self.config['fileio']['logfile'],
                                  ll(self.config['logging']['verbosity']))
 
         self.logger.info('\n' + '-'*80 + '\n' + "This is fermipy version {}.".
@@ -153,9 +160,9 @@ class GTAnalysis(AnalysisBase):
         
         # Setup the ROI definition
         self._roi = \
-            ROIManager.create_from_source(self.config['common']['target'],
-                                          self.config['common']['roi'],
-                                          logfile=self._logfile,
+            ROIModel.create_from_source(self.config['selection']['target'],
+                                          self.config['model'],
+                                          logfile=self.config['fileio']['logfile'],
                                           logging=self.config['logging'])
 
         self._like = SummedLikelihood.SummedLikelihood()
@@ -163,7 +170,7 @@ class GTAnalysis(AnalysisBase):
         configs = self.create_component_configs()
 
         for cfg in configs:
-            comp = self._create_component(cfg,self._logfile)
+            comp = self._create_component(cfg)
             self._components.append(comp)
 
         energies = np.zeros(0)
@@ -202,21 +209,24 @@ class GTAnalysis(AnalysisBase):
 
         components = self.config['components']
 
+        common_config = GTBinnedAnalysis.get_config()
+        common_config = merge_dict(common_config,self.config)
+        
         if components is None:
-            cfg = copy.copy(self.config['common'])
+            cfg = copy.copy(common_config)
             cfg['file_suffix'] = '_00'
             cfg['name'] = '00'      
             configs.append(cfg)
         elif isinstance(components,dict):            
             for i,k in enumerate(sorted(components.keys())):
-                cfg = copy.copy(self.config['common'])                
+                cfg = copy.copy(common_config)                
                 cfg = merge_dict(cfg,components[k])
                 cfg['file_suffix'] = '_' + k
                 cfg['name'] = k
                 configs.append(cfg)
         elif isinstance(components,list):
             for i,c in enumerate(components):
-                cfg = copy.copy(self.config['common'])                
+                cfg = copy.copy(common_config)                
                 cfg = merge_dict(cfg,c)
                 cfg['file_suffix'] = '_%02i'%i
                 cfg['name'] = '%02i'%i
@@ -226,12 +236,13 @@ class GTAnalysis(AnalysisBase):
 
         return configs
                 
-    def _create_component(self,cfg,logfile):
+    def _create_component(self,cfg):
             
         self.logger.info("Creating Analysis Component: " + cfg['name'])
+
+        cfg['fileio']['workdir'] = self._workdir
+        
         comp = GTBinnedAnalysis(cfg,
-                                logfile=logfile,
-                                workdir=self._workdir,
                                 logging=self.config['logging'])
 
         return comp
@@ -940,14 +951,13 @@ class GTAnalysis(AnalysisBase):
     
 class GTBinnedAnalysis(AnalysisBase):
 
-    defaults = dict(defaults.selection.items()+
-                    defaults.binning.items()+
-                    defaults.irfs.items()+
-                    defaults.inputs.items(),
-                    roi=defaults.roi,
+    defaults = dict(selection=defaults.selection,
+                    binning=defaults.binning,
+                    gtlike=defaults.gtlike,
+                    data=defaults.data,
+                    model=defaults.model,
                     logging=defaults.logging,
-                    workdir=defaults.fileio['workdir'],
-                    logfile=(None,''),
+                    fileio=defaults.fileio,
                     name=('00',''),
                     file_suffix=('',''))
 
@@ -955,18 +965,18 @@ class GTBinnedAnalysis(AnalysisBase):
         super(GTBinnedAnalysis,self).__init__(config,**kwargs)
 
         self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['logfile'],
+                                 self.config['fileio']['logfile'],
                                  ll(self.config['logging']['verbosity']))
 
         self._roi = \
-            ROIManager.create_from_source(config['target'],
-                                          config['roi'],
-                                          logfile=self.config['logfile'],
-                                          logging=self.config['logging'])
+            ROIModel.create_from_source(config['selection']['target'],
+                                        config['model'],
+                                        logfile=self.config['fileio']['logfile'],
+                                        logging=self.config['logging'])
 
         
         
-        workdir = self.config['workdir']
+        workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
         
         from os.path import join
@@ -988,21 +998,22 @@ class GTBinnedAnalysis(AnalysisBase):
         self._srcmdl_file=join(workdir,
                                'srcmdl%s.xml'%self.config['file_suffix'])
 
-        self._enumbins = np.round(self.config['binsperdec']*
-                                 np.log10(self.config['emax']/self.config['emin']))
+        self._enumbins = np.round(self.config['binning']['binsperdec']*
+                                 np.log10(self.config['selection']['emax']/
+                                          self.config['selection']['emin']))
         self._enumbins = int(self._enumbins)
-        self._ebin_edges = np.linspace(np.log10(self.config['emin']),
-                                       np.log10(self.config['emax']),
+        self._ebin_edges = np.linspace(np.log10(self.config['selection']['emin']),
+                                       np.log10(self.config['selection']['emax']),
                                        self._enumbins+1)
         self._ebin_center = 0.5*(self._ebin_edges[1:] + self._ebin_edges[:-1])
         
-        if self.config['npix'] is None:
-            self.npix = int(np.round(self.config['roi_width']/self.config['binsz']))
+        if self.config['binning']['npix'] is None:
+            self.npix = int(np.round(self.config['binning']['roiwidth']/self.config['binning']['binsz']))
         else:
-            self.npix = self.config['npix']
+            self.npix = self.config['binning']['npix']
 
-        if self.config['radius'] is None:
-            self._config['radius'] = np.sqrt(2.)*0.5*self.npix*self.config['binsz']+0.5
+        if self.config['selection']['radius'] is None:
+            self._config['selection']['radius'] = np.sqrt(2.)*0.5*self.npix*self.config['binning']['binsz']+0.5
             self.logger.info('Automatically setting selection radius to %s deg'%self.config['radius'])
 
         self._like = None
@@ -1101,23 +1112,25 @@ class GTBinnedAnalysis(AnalysisBase):
         roi_center = self._roi.radec
         
         # Run gtselect and gtmktime
-        kw_gtselect = dict(infile=self.config['evfile'],
+        kw_gtselect = dict(infile=self.config['data']['evfile'],
                            outfile=self._ft1_file,
                            ra=roi_center[0], dec=roi_center[1],
-                           rad=self.config['radius'],
-                           convtype=self.config['convtype'],
-                           evtype=self.config['evtype'],
-                           evclass=self.config['evclass'],
-                           tmin=self.config['tmin'], tmax=self.config['tmax'],
-                           emin=self.config['emin'], emax=self.config['emax'],
-                           zmax=self.config['zmax'],
+                           rad=self.config['selection']['radius'],
+                           convtype=self.config['selection']['convtype'],
+                           evtype=self.config['selection']['evtype'],
+                           evclass=self.config['selection']['evclass'],
+                           tmin=self.config['selection']['tmin'],
+                           tmax=self.config['selection']['tmax'],
+                           emin=self.config['selection']['emin'],
+                           emax=self.config['selection']['emax'],
+                           zmax=self.config['selection']['zmax'],
                            chatter=self.config['logging']['chatter'])
 
         kw_gtmktime = dict(evfile=self._ft1_file,
                            outfile=self._ft1_filtered_file,
-                           scfile=self.config['scfile'],
-                           roicut='no',
-                           filter=self.config['filter'])
+                           scfile=self.config['data']['scfile'],
+                           roicut=self.config['selection']['roicut'],
+                           filter=self.config['selection']['filter'])
 
         if not os.path.isfile(self._ft1_file):
             run_gtapp('gtselect',self.logger,kw_gtselect)
@@ -1128,12 +1141,12 @@ class GTBinnedAnalysis(AnalysisBase):
             
         # Run gtltcube
         kw = dict(evfile=self._ft1_file,
-                  scfile=self.config['scfile'],
+                  scfile=self.config['data']['scfile'],
                   outfile=self._ltcube,
-                  zmax=self.config['zmax'])
+                  zmax=self.config['selection']['zmax'])
         
-        if self.config['ltcube'] is not None:
-            self._ltcube = self.config['ltcube']
+        if self.config['data']['ltcube'] is not None:
+            self._ltcube = self.config['data']['ltcube']
         elif not os.path.isfile(self._ltcube):             
             run_gtapp('gtltcube',self.logger,kw)
         else:
@@ -1142,19 +1155,19 @@ class GTBinnedAnalysis(AnalysisBase):
         # Run gtbin
         kw = dict(algorithm='ccube',
                   nxpix=self.npix, nypix=self.npix,
-                  binsz=self.config['binsz'],
+                  binsz=self.config['binning']['binsz'],
                   evfile=self._ft1_file,
                   outfile=self._ccube_file,
-                  scfile=self.config['scfile'],
+                  scfile=self.config['data']['scfile'],
                   xref=float(self.roi.radec[0]),
                   yref=float(self.roi.radec[1]),
                   axisrot=0,
-                  proj=self.config['proj'],
+                  proj=self.config['binning']['proj'],
                   ebinalg='LOG',
-                  emin=self.config['emin'],
-                  emax=self.config['emax'],
+                  emin=self.config['selection']['emin'],
+                  emax=self.config['selection']['emax'],
                   enumbins=self._enumbins,
-                  coordsys=self.config['coordsys'],
+                  coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
         
         if not os.path.isfile(self._ccube_file):
@@ -1162,9 +1175,9 @@ class GTBinnedAnalysis(AnalysisBase):
         else:
             self.logger.info('Skipping gtbin')
 
-        evtype = self.config['evtype']
+        evtype = self.config['selection']['evtype']
             
-        if self.config['irfs'] == 'CALDB':
+        if self.config['gtlike']['irfs'] == 'CALDB':
             cmap = self._ccube_file
         else:
             cmap = 'none'
@@ -1172,14 +1185,15 @@ class GTBinnedAnalysis(AnalysisBase):
         # Run gtexpcube2
         kw = dict(infile=self._ltcube,cmap=cmap,
                   ebinalg='LOG',
-                  emin=self.config['emin'], emax=self.config['emax'],
+                  emin=self.config['selection']['emin'],
+                  emax=self.config['selection']['emax'],
                   enumbins=self._enumbins,
                   outfile=self._bexpmap_file, proj='CAR',
                   nxpix=360, nypix=180, binsz=1,
                   xref=0.0,yref=0.0,
                   evtype=evtype,
-                  irfs=self.config['irfs'],
-                  coordsys=self.config['coordsys'],
+                  irfs=self.config['gtlike']['irfs'],
+                  coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
 
         if not os.path.isfile(self._bexpmap_file):
@@ -1188,13 +1202,13 @@ class GTBinnedAnalysis(AnalysisBase):
             self.logger.info('Skipping gtexpcube')
 
         # Run gtsrcmaps
-        kw = dict(scfile=self.config['scfile'],
+        kw = dict(scfile=self.config['data']['scfile'],
                   expcube=self._ltcube,
                   cmap=self._ccube_file,
                   srcmdl=self._srcmdl_file,
                   bexpmap=self._bexpmap_file,
                   outfile=self._srcmap_file,
-                  irfs=self.config['irfs'],
+                  irfs=self.config['gtlike']['irfs'],
                   evtype=evtype,
 #                   rfactor=self.config['rfactor'],
 #                   resample=self.config['resample'],
@@ -1211,7 +1225,7 @@ class GTBinnedAnalysis(AnalysisBase):
         self.logger.info('Creating BinnedObs')
         kw = dict(srcMaps=self._srcmap_file,expCube=self._ltcube,
                   binnedExpMap=self._bexpmap_file,
-                  irfs=self.config['irfs'])
+                  irfs=self.config['gtlike']['irfs'])
         self.logger.info(kw)
         
         self._obs=ba.BinnedObs(**kw)
@@ -1221,11 +1235,11 @@ class GTBinnedAnalysis(AnalysisBase):
         self._like = ba.BinnedAnalysis(binnedData=self._obs,
                                        srcModel=self._srcmdl_file,
                                        optimizer='MINUIT')
-
-        if self.config['enable_edisp']:
+        
+        if self.config['gtlike']['enable_edisp']:
             self.logger.info('Enabling energy dispersion')
             self.like.logLike.set_edisp_flag(True)
-
+            
         self.logger.info('Finished setup')
 
     def generate_model_map(self,model_name=None):
@@ -1234,7 +1248,7 @@ class GTBinnedAnalysis(AnalysisBase):
         else:
             suffix = '_%s%s'%(model_name,self.config['file_suffix'])
         
-        outfile = os.path.join(self.config['workdir'],'mcube%s.fits'%(suffix))
+        outfile = os.path.join(self.config['fileio']['workdir'],'mcube%s.fits'%(suffix))
         
         h = pyfits.open(self._ccube_file)
         
@@ -1274,7 +1288,7 @@ class GTBinnedAnalysis(AnalysisBase):
         else:
             suffix = '_%s%s'%(model_name,self.config['file_suffix'])
         
-        outfile = os.path.join(self.config['workdir'],'mcube%s.fits'%(suffix))
+        outfile = os.path.join(self.config['fileio']['workdir'],'mcube%s.fits'%(suffix))
         
         # May consider generating a custom source model file
         if not os.path.isfile(outfile):
@@ -1284,9 +1298,9 @@ class GTBinnedAnalysis(AnalysisBase):
                       bexpmap = self._bexpmap_file,
                       outfile = outfile,
                       expcube = self._ltcube,
-                      irfs    = self.config['irfs'],
-                      evtype  = self.config['evtype'],
-                      edisp   = bool(self.config['enable_edisp']),
+                      irfs    = self.config['gtlike']['irfs'],
+                      evtype  = self.config['selection']['evtype'],
+                      edisp   = bool(self.config['gtlike']['enable_edisp']),
                       outtype = 'ccube',
                       chatter = self.config['logging']['chatter'])
             
@@ -1309,8 +1323,8 @@ class GTBinnedAnalysis(AnalysisBase):
         if not ext: ext = '.xml'
         xmlfile = name + self.config['file_suffix'] + ext
 
-        if os.path.commonprefix([self.config['workdir'],xmlfile]) \
-                != self.config['workdir']:        
-            xmlfile = os.path.join(self.config['workdir'],xmlfile)
+        if os.path.commonprefix([self.config['fileio']['workdir'],xmlfile]) \
+                != self.config['fileio']['workdir']:        
+            xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
 
         return xmlfile

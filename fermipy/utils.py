@@ -13,8 +13,12 @@ class AnalysisBase(object):
         self.configure(config,**kwargs)
 
     def configure(self,config,**kwargs):
+
+        config = merge_dict(config,kwargs,add_new_keys=True)
+        validate_config(config,self.defaults)
+        
         self._config = merge_dict(self._config,config)
-        self._config = merge_dict(self._config,kwargs)
+#        self._config = merge_dict(self._config,kwargs)
         
     @classmethod
     def get_config(cls):
@@ -110,7 +114,7 @@ def load_config(defaults):
     a tuple or list containing (default value,docstring,type)."""
 
     o = {}
-    for key, item in defaults.iteritems():
+    for key, item in defaults.items():
 
         if isinstance(item,dict):
             o[key] = load_config(item)
@@ -129,10 +133,23 @@ def load_config(defaults):
                 
             o[key] = value
         else:
+
+            print key, item, type(item)
+            
             raise Exception('Unrecognized type for default dict element.')
 
     return o
 
+
+def validate_config(config,defaults,block='root'):
+
+    for key, item in config.items():
+        
+        if not key in defaults:
+            raise Exception('Invalid key in \'%s\' block of configuration: %s'%(block,key))
+        
+        if isinstance(item,dict):
+            validate_config(config[key],defaults[key],key)
 
 def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
     """Recursively merge the contents of python dictionary d0 with

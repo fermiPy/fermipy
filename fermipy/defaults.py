@@ -6,7 +6,7 @@ import fermipy
 #    with open(path,'r') as f: config = yaml.load(f)
 
 # Options for defining input data files
-inputs = {
+data = {
     'evfile'    : (None,'Input FT1 file.'),
     'scfile'    : (None,'Input FT2 file.'),
     'ltcube'    : (None,'Input LT cube file (optional).'),
@@ -30,16 +30,17 @@ selection = {
     'glon'    : (None,''),
     'radius'  : (None,''),
     'filter'  : ('DATA_QUAL>0 && LAT_CONFIG==1',''),
+    'roicut'  : ('no','')
     }
 
 # Options for ROI model.
-roi = {
-    'radius'        :
+model = {
+    'src_radius'        :
         (None,'Set the maximum distance for inclusion of sources in the ROI '
          'model.  Selects all sources within a circle of this radius centered '
          'on the ROI.  If none then no selection is applied.  This selection '
-         'will be ORed with sources passing the cut on roisize.'),
-    'roisize'        :
+         'will be ORed with sources passing the cut on src_roiwidth.'),
+    'src_roiwidth'        :
         (None,'Select sources within a box of RxR centered on the ROI.  If '
          'none then no cut is applied.'),    
     'isodiff'       : (None,'Set the isotropic template.'),
@@ -49,11 +50,14 @@ roi = {
     'catalogs'      : (None,'',list),
     'min_ts'        : (None,''),
     'min_flux'      : (None,''),
+    'remove_duplicates' : (False,'Remove duplicate catalog sources.')
     }
 
-irfs = {
+# Options for configuring likelihood analysis
+gtlike = {
     'irfs'          : (None,''),
-    'enable_edisp'  : (False,'')
+    'enable_edisp'  : (False,''),
+    'likelihood'    : ('binned','')
     }
 
 # Options for binning.
@@ -62,10 +66,10 @@ binning = {
     'coordsys'   : ('CEL',''),        
     'npix'       : 
     (None,
-     'Number of spatial bins.  If none this will be inferred from roi_width '
+     'Number of spatial bins.  If none this will be inferred from roiwidth '
      'and binsz.'), 
-    'roi_width'  : (10.0,'Set the width of the ROI in degrees.  If both roi_width and binsz are '
-                    'given the roi_width will be rounded up to be a multiple of binsz.'),
+    'roiwidth'  : (10.0,'Set the width of the ROI in degrees.  If both roiwidth and binsz are '
+                    'given the roiwidth will be rounded up to be a multiple of binsz.'),
     'binsz'      : (0.1,'Set the bin size in degrees.'),
     'binsperdec' : (8,'Set the number of energy bins per decade.'),
     'enumbins'   : (None,'Number of energy bins.  If none this will be inferred from energy '
@@ -99,9 +103,13 @@ optimizer = {
     'verbosity'        : (0,'')
     }
 
-# A collection of common options related to gtlike
-common = dict(selection.items() +
-              binning.items() +
-              irfs.items() +
-              inputs.items(),
-              roi=roi)
+# MC options
+mc = { }
+
+#
+roiopt = {
+    'free_source_radius'       : (None,''),
+    'free_source_roi_margin'   : (None,''),
+    'free_sources'             : (None,''),
+    'free_source_ts_threshold' : (None,'')
+    }

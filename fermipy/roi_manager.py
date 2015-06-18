@@ -244,7 +244,7 @@ class Source(Model):
         
         self._names = []
         self._names_dict = {}
-        for k in ROIManager.src_name_cols:
+        for k in ROIModel.src_name_cols:
 
             if not k in self._data: continue
 
@@ -319,7 +319,10 @@ class Source(Model):
                 }
         elif self['SpectrumType'] == 'PLSuperExpCutoff':
 
-            prefactor, prefactor_scale = scale_parameter(self['Flux_Density'])
+            flux_density = self['Flux_Density']
+            flux_density *= np.exp((self['Pivot_Energy']/self['Cutoff'])**self['Exp_Index'])
+            
+            prefactor, prefactor_scale = scale_parameter(flux_density)
             cutoff, cutoff_scale = scale_parameter(self['Cutoff'])
                 
             self._spectral_pars = {
@@ -480,12 +483,14 @@ class Source(Model):
         for k,v in self._spectral_pars.items():                
             create_xml_element(el,'parameter',v)
     
-class ROIManager(AnalysisBase):
+class ROIModel(AnalysisBase):
     """This class is responsible for managing the ROI definition.
     Catalogs can be read from either FITS or XML files."""
 
-    defaults = dict(defaults.roi.items()+
-                    defaults.fileio.items(),
+    defaults = dict(defaults.model.items(),
+                    logfile=(None,''),
+                    radec=(None,''),
+                    fileio=defaults.fileio,
                     logging=defaults.logging)
 
     src_name_cols = ['Source_Name',
@@ -493,9 +498,9 @@ class ROIManager(AnalysisBase):
                      '1FHL_Name','2FGL_Name',
                      'ASSOC_GAM1','ASSOC_GAM2','ASSOC_TEV']
 
-    def __init__(self,config=None,**kwargs):
-        super(ROIManager,self).__init__(config,**kwargs)
-
+    def __init__(self,config=None,srcs=None,diffuse_srcs=None,**kwargs):
+        super(ROIModel,self).__init__(config,**kwargs)
+        
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['logfile'],
                                  ll(self.config['logging']['verbosity']))
@@ -511,9 +516,11 @@ class ROIManager(AnalysisBase):
         self._diffuse_srcs = []
         self._src_index = {}
         self._src_radius = []
-        
-        srcs = kwargs.get('srcs',[]) + kwargs.get('diffuse_srcs',[])
-        for s in srcs:
+
+        if srcs is None: srcs = []
+        if diffuse_srcs is None: diffuse_srcs = []
+            
+        for s in srcs + diffuse_srcs:
             self.load_source(s)
         
         self.build_src_index()
@@ -543,7 +550,7 @@ class ROIManager(AnalysisBase):
 
         self._src_index[src.name] = src
         
-        for c in ROIManager.src_name_cols:
+        for c in ROIModel.src_name_cols:
             if not c in src: continue
             name = src[c].strip()
             self._src_index[name] = src
@@ -591,22 +598,22 @@ class ROIManager(AnalysisBase):
     @staticmethod
     def create_from_source(name,config,**kwargs):
         """Create an ROI centered on the given source."""
-        
-        roi = ROIManager(config,**kwargs)
+
+        roi = ROIModel(config,**kwargs)
         roi.load()
 
         src = roi.get_source_by_name(name)
 
         srcs_dict = {}
         
-        if roi.config['radius'] is not None:
-        
-            rsrc, srcs = roi.get_nearby_sources(name,roi.config['radius'])
+        if roi.config['src_radius'] is not None:        
+            rsrc, srcs = roi.get_nearby_sources(name,roi.config['src_radius'])
             for s,r in zip(srcs,rsrc):
                 srcs_dict[s.name] = (s,r)
 
-        if roi.config['roisize'] is not None:                
-            rsrc, srcs = roi.get_nearby_sources(name,roi.config['roisize']/2.,
+        if roi.config['src_roiwidth'] is not None:                
+            rsrc, srcs = roi.get_nearby_sources(name,
+                                                roi.config['src_roiwidth']/2.,
                                                 selection='roi')
             for s,r in zip(srcs,rsrc):
                 srcs_dict[s.name] = (s,r)
@@ -624,7 +631,7 @@ class ROIManager(AnalysisBase):
                
         radec = np.array([src['RAJ2000'],src['DEJ2000']])
         
-        return ROIManager(config,srcs=srcs,
+        return ROIModel(config,srcs=srcs,
                           diffuse_srcs=roi._diffuse_srcs,radec=radec,**kwargs)
 
     @staticmethod
@@ -771,7 +778,7 @@ class ROIManager(AnalysisBase):
 
         self.build_src_index()
 
-#            cat.load_source(ROIManagerSource(src))
+#            cat.load_source(ROIModelSource(src))
 
     def build_src_index(self):
         """Build an indices for fast lookup of a source given its name
@@ -824,7 +831,7 @@ class ROIManager(AnalysisBase):
 if __name__ == '__main__':
 
     
-    roi = ROIManager()
+    roi = ROIModel()
 
 
     roi.load_fits('gll_fssc_psc_v14.fit')

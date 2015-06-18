@@ -11,26 +11,27 @@ fileio:
   stageoutput : True
   scratchdir  : '/scratch'
 
-# These are global parameters of the analysis.  Some of these can be
-# overriden in the analysis components block.
-common:
-
-  #----------------------------------------------------------------------------
-  # Define input data files (FT1, FT2, LTCube)
+#----------------------------------------------------------------------------
+# Define input data files (FT1, FT2, LTCube)
+data:
 
   evfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V6/P8_SOURCE_V6_239557414_428903014_z100_r180_gti_ft1.lst
   scfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V4/P8_P301_SOURCE_239557414_428903014_ft2.fits 
   ltcube : null
 
-  #----------------------------------------------------------------------------
-  # Binning
-  roi_width  : 5.0
+#----------------------------------------------------------------------------
+# Binning
+binning:
+
+  roiwidth   : 5.0   # ROI width in deg
   npix       : null
-  binsz      : 0.2 # spatial bin size in deg
-  binsperdec : 8   # nb energy bins per decade
+  binsz      : 0.2   # spatial bin size in deg
+  binsperdec : 8     # nb energy bins per decade
   
-  #----------------------------------------------------------------------------
-  # Data selections
+#----------------------------------------------------------------------------
+# Data selections
+selection:
+
   emin    : 100
   emax    : 100000
   zmax    : 100
@@ -42,38 +43,40 @@ common:
   ra     : 0.0
   dec    : 0.0
   target : 'mkn421'
-  radius : 10.0
+  radius : null
 
-  #----------------------------------------------------------------------------
-  # IRFs
+#----------------------------------------------------------------------------
+# IRFs
+irfs:
+
   enable_edisp : True
   irfs : 'P8R2_SOURCE_V6'
 
   # This option can be used to use a predefined analysis setup.  Any
   # option defined in this file will override the predefined settings.
-  analysis_type : 'psf4_joint'
+#  analysis_type : 'psf4_joint'
 
-  # Settings for ROI model
-  roi:
+# Settings for ROI model
+model:
 
-    # Include catalog sources within this distance from the ROI center
-    radius  : null
+  # Include catalog sources within this distance from the ROI center
+  src_radius  : null
 
-    # Include catalog sources within a box of width roisize.
-    roisize : 10.0
+  # Include catalog sources within a box of the given width..
+  src_roiwidth : 10.0
 
-    galdiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/template_4years_P8_V2_scaled.fits'
-    isodiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_4years_P8V3.txt'
-    limbdiff : null
+  galdiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/template_4years_P8_V2_scaled.fits'
+  isodiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_4years_P8V3.txt'
+  limbdiff : null
 
-    # List of catalogs to be used in the model.
-    catalogs : 
-      - 'catalogs/gll_psc_v14.fit'
+  # List of catalogs to be used in the model.
+  catalogs : 
+    - 'catalogs/gll_psc_v14.fit'
 
-    # Remove duplicate sources
-    remove_duplicates : False
+  # Remove duplicate sources
+  remove_duplicates : False
 
-optimization :
+roiopt :
 
   # Free sources within X deg of ROI center
   free_source_radius : null
@@ -87,15 +90,15 @@ optimization :
   # Provide a minimum TS threshold at which sources should be freed
   free_source_ts_threshold : null
 
-# This is the block of the configuration where individual components
-# of the analysis are defined.  
+# This is the block of the configuration where analysis components
+# are defined.
 components: null
     
 # Settings for SED analysis
-sed: {}
+#sed: {}
 
 # Settings for lightcurve analysis
-curve: {}
+#curve: {}
 
 # Settings for MC analysis
 mc : {}
