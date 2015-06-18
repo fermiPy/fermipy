@@ -56,7 +56,8 @@ model = {
 # Options for configuring likelihood analysis
 gtlike = {
     'irfs'          : (None,''),
-    'enable_edisp'  : (False,''),
+    'edisp'         : (True,''),
+    'edisp_disable' : (None,'Provide a list of sources for which the edisp correction should be disabled.',list),
     'likelihood'    : ('binned','')
     }
 

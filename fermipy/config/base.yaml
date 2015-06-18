@@ -60,18 +60,16 @@ selection:
   target : null
   radius : 10.0
 
+#----------------------------------------------------------------------------
+# likelihood
 gtlike:
 
-  #----------------------------------------------------------------------------
-  # IRFs
-  enable_edisp : True
+  edisp : True
+  edisp_disable : null
   irfs : 'P8R2_SOURCE_V6'
   likelihood : 'binned'
 
-  # This option can be used to use a predefined analysis setup.  Any
-  # option defined in this file will override the predefined settings.
-  #  analysis_type : 'psf4_joint'
-
+#----------------------------------------------------------------------------
 # Settings for ROI model
 model:
 

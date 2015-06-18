@@ -47,14 +47,11 @@ selection:
 
 #----------------------------------------------------------------------------
 # IRFs
-irfs:
+gtlike:
 
-  enable_edisp : True
+  edisp : True
+  edisp_disable : ['isodiff','galdiff']
   irfs : 'P8R2_SOURCE_V6'
-
-  # This option can be used to use a predefined analysis setup.  Any
-  # option defined in this file will override the predefined settings.
-#  analysis_type : 'psf4_joint'
 
 # Settings for ROI model
 model:

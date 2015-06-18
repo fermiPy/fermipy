@@ -378,7 +378,7 @@ class GTAnalysis(AnalysisBase):
         self._roi.delete_sources(srcs)    
         for c in self.components:
             c.delete_sources(srcs)
-    
+            
     def free_sources(self,free=True,pars=None,cuts=None,
                      distance=None,roilike=False):
         """Free/Fix sources within the ROI.
@@ -445,7 +445,15 @@ class GTAnalysis(AnalysisBase):
         """
 
         self.free_sources(free,pars,cuts=None,distance=distance,roilike=roilike)
-            
+
+    def set_edisp_flag(self,name,flag=True):
+
+        src = self._roi.get_source_by_name(name)
+        name = src.name
+        
+        for c in self.components:
+            c.like[name].src.set_edisp_flag(flag)        
+        
     def free_source(self,name,free=True,pars=None):
         """Free/Fix parameters of a source.
 
@@ -781,8 +789,7 @@ class GTAnalysis(AnalysisBase):
             quality = 3
 
         return quality
-            
-                
+
     def fit(self,update=True,**kwargs):
         """Run likelihood optimization."""
         
@@ -1085,7 +1092,12 @@ class GTBinnedAnalysis(AnalysisBase):
         for s in srcs:
             if self.like: self.like.deleteSource(s.name)
         self._roi.delete_sources(srcs)
-    
+
+    def set_edisp_flag(self,name,flag=True):
+        src = self._roi.get_source_by_name(name)
+        name = src.name        
+        self.like[name].src.set_edisp_flag(flag)         
+        
     def setEnergyRange(self,emin,emax):
         self.like.setEnergyRange(emin,emax)
 
@@ -1252,10 +1264,14 @@ class GTBinnedAnalysis(AnalysisBase):
                                        srcModel=self._srcmdl_file,
                                        optimizer='MINUIT')
         
-        if self.config['gtlike']['enable_edisp']:
+        if self.config['gtlike']['edisp']:
             self.logger.info('Enabling energy dispersion')
             self.like.logLike.set_edisp_flag(True)
-            
+
+        for s in self.config['gtlike']['edisp_disable']: 
+            self.logger.info('Disabling energy dispersion for %s'%s)
+            self.set_edisp_flag(s,False)
+                       
         self.logger.info('Finished setup')
 
     def generate_model_map(self,model_name=None):
@@ -1316,7 +1332,7 @@ class GTBinnedAnalysis(AnalysisBase):
                       expcube = self._ltcube,
                       irfs    = self.config['gtlike']['irfs'],
                       evtype  = self.config['selection']['evtype'],
-                      edisp   = bool(self.config['gtlike']['enable_edisp']),
+                      edisp   = bool(self.config['gtlike']['edisp']),
                       outtype = 'ccube',
                       chatter = self.config['logging']['chatter'])
             
