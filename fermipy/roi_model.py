@@ -281,6 +281,9 @@ class Source(Model):
         if self['SpectrumType'] == 'PowerLaw':
 
             prefactor, prefactor_scale = scale_parameter(self['Flux_Density'])
+
+            index_max = max(5.0,self['Spectral_Index']+1.0)
+            index_min = min(0.0,self['Spectral_Index']-1.0)
             
             self._spectral_pars = {
                 'Prefactor' : {'name' : 'Prefactor', 'value' : str(prefactor),
@@ -289,7 +292,7 @@ class Source(Model):
                 'Index' : {'name' : 'Index',
                            'value' : str(self['Spectral_Index']),
                            'scale' : str(-1.0),
-                           'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
+                           'min' : str(index_min), 'max' : str(index_max), 'free' : '0'},
                 'Scale' :  {'name' : 'Scale',
                             'value' : str(self['Pivot_Energy']),
                             'scale' : str(1.0),
@@ -330,7 +333,7 @@ class Source(Model):
                                'scale' : str(prefactor_scale),
                                'min' : '0.01', 'max' : '100.0', 'free' : '0'},
                 'Index1' : {'name' : 'Index1', 'value' : str(self['Spectral_Index']),
-                           'scale' : str(-1.0), 'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
+                           'scale' : str(-1.0), 'min' : '0.0', 'max' : '5.0', 'free' : '0'},
                 'Index2' : {'name' : 'Index2', 'value' : str(self['Exp_Index']),
                            'scale' : str(1.0), 'min' : '0.0', 'max' : '2.0', 'free' : '0'},
                 'Cutoff' : {'name' : 'Cutoff', 'value' : str(cutoff),
@@ -343,9 +346,8 @@ class Source(Model):
         else:
 
             import pprint
-            pprint.pprint(self._data)
-
-            sys.exit(0)
+            pprint.pprint(self._data)            
+            raise Exception('Unsupported spectral type:' + self['SpectrumType'])
             
     def check_cuts(self,cuts):
 
