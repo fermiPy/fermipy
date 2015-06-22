@@ -61,10 +61,9 @@ index_parameters = {
     }
              
 def cl_to_dlnl(cl):
-
     import scipy.special as spfn    
     alpha = 1.0-cl    
-    return np.power(np.sqrt(2.)*spfn.erfinv(1-2*alpha),2.)    
+    return 0.5*np.power(np.sqrt(2.)*spfn.erfinv(1-2*alpha),2.)    
 
 def run_gtapp(appname,logger,kw):
 
@@ -592,8 +591,12 @@ class GTAnalysis(AnalysisBase):
              'e2flux' : np.zeros(nbins),
              'flux_err' : np.zeros(nbins),
              'e2flux_err' : np.zeros(nbins),
-             'flux_ul95' : np.zeros(nbins),
-             'e2flux_ul95' : np.zeros(nbins),
+             'flux_ul95' : np.zeros(nbins)*np.nan,
+             'e2flux_ul95' : np.zeros(nbins)*np.nan,
+             'flux_err_lo' : np.zeros(nbins)*np.nan,
+             'e2flux_err_lo' :  np.zeros(nbins)*np.nan,
+             'flux_err_hi' : np.zeros(nbins)*np.nan,
+             'e2flux_err_hi' :  np.zeros(nbins)*np.nan,
              'Npred' : np.zeros(nbins),
              'ts' : np.zeros(nbins),
              'fit_quality' : np.zeros(nbins),
@@ -629,11 +632,20 @@ class GTAnalysis(AnalysisBase):
                 
                 imax = np.argmax(lnlp['dlogLike'])
                 lnlmax = lnlp['dlogLike'][imax]
-                dlogLike = lnlp['dlogLike'][imax:]-lnlmax
+                dlnl = lnlp['dlogLike']-lnlmax
                                 
-                o['flux_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlogLike,lnlp['flux'][imax:])
-                o['e2flux_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlogLike,lnlp['e2flux'][imax:])
-            
+                o['flux_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlnl[imax:],lnlp['flux'][imax:])
+                o['e2flux_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlnl[imax:],lnlp['e2flux'][imax:])
+
+                o['flux_err_hi'][i] = np.interp(0.5,-dlnl[imax:],lnlp['flux'][imax:]) - lnlp['flux'][imax]
+                o['e2flux_err_hi'][i] = np.interp(0.5,-dlnl[imax:],lnlp['e2flux'][imax:]) - lnlp['e2flux'][imax] 
+
+                if dlnl[0] < -0.5:
+                    o['flux_err_lo'][i] = lnlp['flux'][imax] - np.interp(0.5,-dlnl[:imax][::-1],
+                                                                         lnlp['flux'][:imax][::-1]) 
+                    o['e2flux_err_lo'][i] = lnlp['e2flux'][imax] - np.interp(0.5,-dlnl[:imax][::-1],
+                                                                             lnlp['e2flux'][:imax][::-1])
+                
 #            nobs.append(self.gtlike.nobs[i])
 
         self.setEnergyRange(float(10**energies[0])+1, float(10**energies[-1])-1)
