@@ -6,6 +6,8 @@ from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 
 import xml.etree.cElementTree as ElementTree
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 
 def xyz_to_lonlat(*args):
@@ -219,17 +221,22 @@ class MapCubeSource(Model):
 class Source(Model):
 
     def __init__(self,data=None,
+                 radec=None,
+                 glonlat=None,
                  spectral_pars=None,
                  spatial_pars=None,
                  extended=False):
         super(Source,self).__init__(data,spectral_pars,spatial_pars)
                     
-        phi = np.radians(data['RAJ2000'])
-        theta = np.pi/2.-np.radians(data['DEJ2000'])
+#        phi = np.radians(data['RAJ2000'])
+#        theta = np.pi/2.-np.radians(data['DEJ2000'])
 
-        self._radec = np.array([np.sin(theta)*np.cos(phi),
-                                np.sin(theta)*np.sin(phi),
-                                np.cos(theta)])
+        self._radec = radec
+        self._glonlat = glonlat
+
+#        np.array([np.sin(theta)*np.cos(phi),
+#                                np.sin(theta)*np.sin(phi),
+#                                np.cos(theta)])
 
 
         ts_keys = ['Sqrt_TS30_100','Sqrt_TS100_300',
@@ -367,14 +374,10 @@ class Source(Model):
                                
     def separation(self,src):
 
-        if isinstance(src,Source):        
-            costh = np.sum(self._radec*src.radec) 
+        if isinstance(src,Source):
+            return self.radec.separation(src.skydir)
         else:
-            costh = np.sum(self._radec*src) 
-            
-        costh = min(1.0,costh)
-        costh = max(costh,-1.0)
-        return np.degrees(np.arccos(costh))
+            return self.radec.separation(src)
     
     @property
     def extended(self):
@@ -392,6 +395,10 @@ class Source(Model):
     def radec(self):
         return self._radec
 
+    @property
+    def skydir(self):
+        return SkyCoord(self._radec[0]*u.deg,self._radec[1]*u.deg)
+    
     @property
     def data(self):
         return self._data
@@ -491,7 +498,7 @@ class ROIModel(AnalysisBase):
 
     defaults = dict(defaults.model.items(),
                     logfile=(None,''),
-                    radec=(None,''),
+                    skydir=(None,''),
                     fileio=defaults.fileio,
                     logging=defaults.logging)
 
@@ -513,7 +520,8 @@ class ROIModel(AnalysisBase):
                              'catalogs',self.config['extdir'])
         
         # Coordinate for ROI center (defaults to 0,0)
-        self._radec = kwargs.get('radec',np.array([0.0,0.0]))    
+        self._skydir = kwargs.get('skydir',SkyCoord(0.0,0.0,unit=u.deg))                
+#        self._radec = SkyCoord(*kwargs.get('radec',[0.0,0.0]),unit=u.deg)
         self._srcs = []
         self._diffuse_srcs = []
         self._src_index = {}
@@ -531,9 +539,9 @@ class ROIModel(AnalysisBase):
         return iter(self._srcs + self._diffuse_srcs)
 
     @property
-    def radec(self):
-        """Return the coordinates of the center of the ROI in deg."""        
-        return self._radec
+    def skydir(self):
+        """Return the sky direction objection corresponding to the center of the ROI."""        
+        return self._skydir
 
     def load_diffuse_srcs(self):
         
@@ -590,33 +598,40 @@ class ROIModel(AnalysisBase):
         self._src_index = {k:v for k,v in self._src_index.items() if not v in srcs}
         self._srcs = [s for s in self._srcs if not s in srcs]
         self.build_src_index()
+
+    @staticmethod
+    def create(selection,config,**kwargs):
+        if selection['target'] is not None:            
+            return ROIModel.create_from_source(selection['target'],
+                                               config,**kwargs)
+        else:
+            target_skydir = get_target_skydir(selection)
+            return ROIModel.create_from_position(target_skydir,
+                                                 config,**kwargs)
         
     # Creation Methods           
     @staticmethod
-    def create_from_coords(name,config,**kwargs):
+    def create_from_position(skydir,config,**kwargs):
         """Create an ROI centered on the given coordinates."""
-        pass
-        
-    @staticmethod
-    def create_from_source(name,config,**kwargs):
-        """Create an ROI centered on the given source."""
 
-        roi = ROIModel(config,**kwargs)
-        roi.load()
-
-        src = roi.get_source_by_name(name)
+        roi = kwargs.pop('roi',None)
+        if roi is None:        
+            roi = ROIModel(config,**kwargs)
+            roi.load()
 
         srcs_dict = {}
-        
+            
         if roi.config['src_radius'] is not None:        
-            rsrc, srcs = roi.get_nearby_sources(name,roi.config['src_radius'])
+            rsrc, srcs = roi.get_sources_by_position(skydir,
+                                                     roi.config['src_radius'])
             for s,r in zip(srcs,rsrc):
                 srcs_dict[s.name] = (s,r)
 
         if roi.config['src_roiwidth'] is not None:                
-            rsrc, srcs = roi.get_nearby_sources(name,
-                                                roi.config['src_roiwidth']/2.,
-                                                selection='roi')
+            rsrc, srcs = \
+                roi.get_sources_by_position(skydir,
+                                            roi.config['src_roiwidth']/2.,
+                                            roilike=True)
             for s,r in zip(srcs,rsrc):
                 srcs_dict[s.name] = (s,r)
 
@@ -624,18 +639,25 @@ class ROIModel(AnalysisBase):
         rsrc = []
                 
         for k, v in srcs_dict.items():
-
-#            if not v[0].check_cuts(('TS_value',roi.config['min_ts'],None)): continue
-#            print v[0].name, v[0]['TS_value']
-            
             srcs.append(v[0])
             rsrc.append(v[1])
-               
-        radec = np.array([src['RAJ2000'],src['DEJ2000']])
         
         return ROIModel(config,srcs=srcs,
-                          diffuse_srcs=roi._diffuse_srcs,radec=radec,**kwargs)
+                        diffuse_srcs=roi._diffuse_srcs,
+                        skydir=skydir,**kwargs)
+        
+        
+    @staticmethod
+    def create_from_source(name,config,**kwargs):
+        """Create an ROI centered on the given source."""
 
+        roi = ROIModel(config,**kwargs)
+        roi.load()
+        src = roi.get_source_by_name(name)
+
+        return ROIModel.create_from_position(src.skydir,config,
+                                             roi=roi,**kwargs)
+        
     @staticmethod
     def create_roi_from_ft1(ft1file,config):
         """Create an ROI model by extracting the sources coordinates
@@ -651,14 +673,12 @@ class ROIModel(AnalysisBase):
             raise Exception('No source matching name: ' + name)
 
     def get_nearby_sources(self,name,dist,min_dist=None,
-                           selection='circle'):
-        
-        if dist is None: dist = 180.0
+                           roilike=False):
         
         src = self.get_source_by_name(name)
-        return self.get_sources_by_position(src['RAJ2000'],
-                                            src['DEJ2000'],
-                                            dist,min_dist,selection)
+        return self.get_sources_by_position(src.skydir,
+                                            dist,min_dist,
+                                            roilike)
 
     def get_sources_by_property(self,pname,pmin,pmax=None):
 
@@ -670,7 +690,7 @@ class ROIModel(AnalysisBase):
             srcs.append(s)
         return srcs
     
-    def get_sources_by_position(self,ra,dec,dist,min_dist=None,
+    def get_sources_by_position(self,skydir,dist,min_dist=None,
                                 roilike=False):
         """Retrieve sources within a certain angular distance of an
         (ra,dec) coordinate.  This function supports two types of
@@ -683,9 +703,7 @@ class ROIModel(AnalysisBase):
         Parameters
         ----------
 
-        ra : float
-
-        dec : float
+        pos : SkyCoord object
 
         dist : float
         
@@ -693,21 +711,20 @@ class ROIModel(AnalysisBase):
 
         if dist is None: dist = 180.
         
-        x = lonlat_to_xyz(np.radians(ra),np.radians(dec))
-        costh = np.sum(x[:,np.newaxis]*self._src_radec,axis=0)        
-        costh[costh>1.0] = 1.0
-        costh[costh<-1.0] = -1.0
-        radius = np.arccos(costh)
+        radius = self._src_skydir.separation(skydir).rad
         
         if not roilike:                    
             dtheta = radius            
-        elif roilike:
-            ra0, dec0 = xyz_to_lonlat(self._src_radec)
-            dtheta = get_dist_to_edge(np.radians(ra),np.radians(dec),
-                                      ra0,dec0,np.radians(dist))
+        else:
+#            ra0, dec0 = xyz_to_lonlat(self._src_radec)
+#            dtheta = get_dist_to_edge(np.radians(ra),np.radians(dec),
+#                                      ra0,dec0,np.radians(dist))
+            dtheta = get_dist_to_edge(skydir.ra.rad,skydir.dec.rad,
+                                      self._src_skydir.ra.rad,
+                                      self._src_skydir.dec.rad,
+                                      np.radians(dist))
+            
             dtheta += np.radians(dist)            
-#        else:
-#            raise Exception('Unrecognized selection type: ' + selection)
         
         if min_dist is not None:
             msk = np.where((dtheta < np.radians(dist)) &
@@ -722,7 +739,7 @@ class ROIModel(AnalysisBase):
 
         radius = radius[isort]
         srcs = [srcs[i] for i in isort]
-            
+        
         return radius, srcs
     
     def load_fits(self,fitsfile,
@@ -744,6 +761,12 @@ class ROIModel(AnalysisBase):
         extsrc_names = cols_extsrc['Source_Name'].tolist()
         extsrc_names = [s.strip() for s in extsrc_names]
 
+        src_skydir = SkyCoord(ra=cols['RAJ2000']*u.deg,
+                             dec=cols['DEJ2000']*u.deg)
+
+        radec = np.vstack((src_skydir.ra.deg,src_skydir.dec.deg)).T
+        glonlat = np.vstack((src_skydir.galactic.l.deg,src_skydir.galactic.b.deg)).T
+        
         nsrc = len(table_src.data)
         for i in range(nsrc):
 
@@ -767,17 +790,17 @@ class ROIModel(AnalysisBase):
                 src_dict['Spatial_Filename'] = src_dict['Spatial_Filename'].strip()
 
                 if not os.path.isfile(src_dict['Spatial_Filename']) and self.config['extdir']:
-                    src_dict['Spatial_Filename'] = os.path.join(self.config['extdir'],'Templates',
+                    src_dict['Spatial_Filename'] = os.path.join(self.config['extdir'],
+                                                                'Templates',
                                                                 src_dict['Spatial_Filename'])
             
             src_dict['SpectrumType'] = src_dict['SpectrumType'].strip()
             if src_dict['SpectrumType'] == 'PLExpCutoff':
                 src_dict['SpectrumType'] = 'PLSuperExpCutoff'
             
-            src = Source(src_dict,extended=extflag)
+            src = Source(src_dict,radec=radec[i],glonlat=glonlat[i],extended=extflag)
             self.load_source(src)
-#            self._srcs.append(src)
-
+            
         self.build_src_index()
 
 #            cat.load_source(ROIModelSource(src))
@@ -787,15 +810,14 @@ class ROIModel(AnalysisBase):
         or coordinates."""
         
         nsrc = len(self._srcs)
-        self._src_radec = np.zeros(shape=(3,nsrc))
-        self._src_radius = np.zeros(nsrc)
-
+        radec = np.zeros((2,nsrc))
+        
         for i, s in enumerate(self._srcs):
- 
-            self._src_radec[:,i] = s.radec
-            self._src_radius[i] = s.separation(lonlat_to_xyz(self._radec[0],
-                                                             self._radec[1]))
-    
+            radec[:,i] = s.radec
+
+        self._src_skydir = SkyCoord(ra=radec[0],dec=radec[1],unit=u.deg)
+        self._src_radius = self._src_skydir.separation(self.skydir)
+        
         for i, s in enumerate(self._diffuse_srcs):
             pass
         

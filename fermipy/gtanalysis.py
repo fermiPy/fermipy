@@ -102,7 +102,7 @@ def gtlike_spectrum_to_dict(spectrum):
             ff=pyLike.FileFunction_cast(spectrum)
             d['file']=ff.filename()
     return d
-        
+
 class GTAnalysis(AnalysisBase):
     """High-level analysis interface that internally manages a set of
     analysis component objects.  Most of the functionality of the
@@ -163,12 +163,11 @@ class GTAnalysis(AnalysisBase):
             self._workdir = self._savedir
         
         # Setup the ROI definition
-        self._roi = \
-            ROIModel.create_from_source(self.config['selection']['target'],
-                                          self.config['model'],
-                                          logfile=self.config['fileio']['logfile'],
-                                          logging=self.config['logging'])
-
+        self._roi = ROIModel.create(self.config['selection'],
+                                    self.config['model'],
+                                    logfile=self.config['fileio']['logfile'],
+                                    logging=self.config['logging'])
+                
         self._like = SummedLikelihood.SummedLikelihood()
         self._components = []
         configs = self.create_component_configs()
@@ -207,6 +206,31 @@ class GTAnalysis(AnalysisBase):
     def enumbins(self):
         """Return the number of energy bins."""
         return self._enumbins    
+
+    def add_source(self,name,radec=None):
+
+        if radec is None:
+            radec = self.roi.radec
+        
+        src = pyLike.PointSource(0, 0,
+                                 self.components[0].like.logLike.observation())
+        pl = pyLike.SourceFactory_funcFactory().create("PowerLaw")
+        pl.setParamValues((1, -2, 100))
+        indexPar = pl.getParam("Index")
+        indexPar.setBounds(-3.5, -1)
+        pl.setParam(indexPar)
+        prefactor = pl.getParam("Prefactor")
+        prefactor.setBounds(1e-10, 1e3)
+        prefactor.setScale(1e-9)
+        pl.setParam(prefactor)
+        src.setSpectrum(pl)
+        src.setName(name)
+        src.setDir(float(radec[0]),float(radec[1]),True,False)
+        self.like.addSource(src)
+
+    def delete_source(self,name):
+        
+        self.like.deleteSource(name)
     
     def create_component_configs(self):
         configs = []
@@ -358,9 +382,9 @@ class GTAnalysis(AnalysisBase):
 
     def get_sources(self,cuts=None,distance=None,roilike=False):
         """Retrieve list of sources satisfying the given selections."""
-        rsrc, srcs = self._roi.get_sources_by_position(self._roi.radec[0],
-                                                       self._roi.radec[1],
-                                                       distance,roilike=roilike)
+        rsrc, srcs = self._roi.get_sources_by_position(self._roi.skydir,
+                                                       distance,
+                                                       roilike=roilike)
         o = []
         if cuts is None: cuts = []        
         for s,r in zip(srcs,rsrc):
@@ -404,8 +428,7 @@ class GTAnalysis(AnalysisBase):
             either X or Y in projected cartesian coordinates.        
         
         """
-        rsrc, srcs = self._roi.get_sources_by_position(self._roi.radec[0],
-                                                       self._roi.radec[1],
+        rsrc, srcs = self._roi.get_sources_by_position(self._roi.skydir,
                                                        distance,roilike=roilike)
         
         if cuts is None: cuts = []        
@@ -417,7 +440,8 @@ class GTAnalysis(AnalysisBase):
 #            if not s.check_cuts(cuts): continue
             self.free_source(s.name,free=free,pars=pars)
                                         
-    def free_sources_by_position(self,free=True,pars=None,distance=None,roilike=False):
+    def free_sources_by_position(self,free=True,pars=None,
+                                 distance=None,roilike=False):
         """Free/Fix all sources within a certain distance of the given sky
         coordinate.  By default it will use the ROI center.
 
@@ -524,6 +548,12 @@ class GTAnalysis(AnalysisBase):
 #        else:
 #            self.like[idx].setFree(True)
 
+
+    def set_norm(self,name,value):
+        name = self.get_source_name(name)                
+        normPar = self.like.normPar(name)
+        normPar.setValue(value)
+        self.like.syncSrcParams(name)
         
     def free_norm(self,name,free=True):
         """Free/Fix normalization of a source.
@@ -539,7 +569,7 @@ class GTAnalysis(AnalysisBase):
         
         """
 
-        name = self._roi.get_source_by_name(name).name
+        name = self.get_source_name(name)
         
         if free: self.logger.debug('Freeing norm for ' + name)
         else: self.logger.debug('Fixing norm for ' + name)
@@ -563,9 +593,13 @@ class GTAnalysis(AnalysisBase):
         self.free_source(src.name,free=free,
                          pars=shape_parameters[src['SpectrumType']])
 
+    def get_source_name(self,name):
+        if not name in self.like.sourceNames():
+            name = self._roi.get_source_by_name(name).name
+        return name
 
     def get_free_source_params(self,name):
-        src = self._roi.get_source_by_name(name)
+        name = self.get_source_name(name)
         spectrum = self.like[name].src.spectrum()
         parNames = pyLike.StringVector()
         spectrum.getFreeParamNames(parNames)
@@ -812,7 +846,7 @@ class GTAnalysis(AnalysisBase):
         verbosity = kwargs.get('verbosity',self.config['optimizer']['verbosity'])
         covar = kwargs.get('covar',True)
         tol = kwargs.get('tol',self.config['optimizer']['tol'])
-        
+
         saved_state = LikelihoodState(self.like)
         kw = dict(optObject = self.create_optObject(),
                   covar=covar,verbosity=verbosity,tol=tol)
@@ -910,7 +944,68 @@ class GTAnalysis(AnalysisBase):
         # Get the subset of sources with free parameters
             
         yaml.dump(tolist(o),open(outfile,'w'))
-                    
+
+    def tsmap(self):
+        """Loop over ROI and place a test source at each position."""
+
+        saved_state = LikelihoodState(self.like)
+        
+        # Get the ROI geometry
+
+        # Loop over pixels
+
+        import astropy.io.fits as pyfits
+        
+        roi_center = self._roi.radec
+        
+        w = get_offset_wcs(roi_center[0],roi_center[1],cdelt=0.1,
+                           crpix=50.5)
+
+        hdu_image = pyfits.PrimaryHDU(np.zeros((100,100)),
+                                      header=w.to_header())
+#        for i in range(100):
+#            for j in range(100):
+#                print w.wcs_pix2world(i,j,0)
+
+        self.free_sources(free=False)
+
+        radec = w.wcs_pix2world(50,50,0)
+
+        
+        loglike0 = self.like()
+        for i in range(45,55):
+            for j in range(45,55):
+                radec = w.wcs_pix2world(i,j,0)
+                print 'Fitting source at ', radec
+            
+                self.add_source('testsource',radec)
+
+                self.like.freeze(self.like.par_index('testsource','Index'))
+                self.like.thaw(self.like.par_index('testsource','Prefactor'))
+            
+#            self.free_source('testsource',free=False)
+#            self.free_norm('testsource')
+
+
+                
+                self.fit(update=False)
+                loglike1 = self.like()
+
+                print loglike0-loglike1
+                self.delete_source('testsource')
+
+                hdu_image.data[i,j] = max(loglike0-loglike1,0)
+                
+        #kw = {'bexpmap'}
+
+        saved_state.restore() 
+        
+        hdulist = pyfits.HDUList([hdu_image])
+        hdulist.writeto('test.fits',clobber=True)
+
+
+        
+        
     def bowtie(self,fd,energies=None):
         
         if energies is None:
@@ -1003,14 +1098,11 @@ class GTBinnedAnalysis(AnalysisBase):
                                  self.config['fileio']['logfile'],
                                  ll(self.config['logging']['verbosity']))
 
-        self._roi = \
-            ROIModel.create_from_source(config['selection']['target'],
-                                        config['model'],
-                                        logfile=self.config['fileio']['logfile'],
-                                        logging=self.config['logging'])
-
-        
-        
+        self._roi = ROIModel.create(self.config['selection'],
+                                    self.config['model'],
+                                    logfile=self.config['fileio']['logfile'],
+                                    logging=self.config['logging'])
+                
         workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
         
@@ -1043,13 +1135,16 @@ class GTBinnedAnalysis(AnalysisBase):
         self._ebin_center = 0.5*(self._ebin_edges[1:] + self._ebin_edges[:-1])
         
         if self.config['binning']['npix'] is None:
-            self.npix = int(np.round(self.config['binning']['roiwidth']/self.config['binning']['binsz']))
+            self._npix = int(np.round(self.config['binning']['roiwidth']/
+                                      self.config['binning']['binsz']))
         else:
-            self.npix = self.config['binning']['npix']
+            self._npix = self.config['binning']['npix']
 
         if self.config['selection']['radius'] is None:
-            self._config['selection']['radius'] = np.sqrt(2.)*0.5*self.npix*self.config['binning']['binsz']+0.5
-            self.logger.info('Automatically setting selection radius to %s deg'%self.config['radius'])
+            self._config['selection']['radius'] = (np.sqrt(2.)*0.5*self.npix*
+                                                   self.config['binning']['binsz']+0.5)
+            self.logger.info('Automatically setting selection radius to %s deg'%
+                             self.config['radius'])
 
         self._like = None
             
@@ -1075,6 +1170,10 @@ class GTBinnedAnalysis(AnalysisBase):
     def enumbins(self):
         return len(self._ebin_edges)-1
 
+    @property
+    def npix(self):
+        return self._npix
+    
     def add_source(self,name,radec=None):
 
         if radec is None:
@@ -1093,7 +1192,7 @@ class GTBinnedAnalysis(AnalysisBase):
         pl.setParam(prefactor)
         src.setSpectrum(pl)
         src.setName(name)
-        src.setDir(radec[0],radec[1],True,False)
+        src.setDir(radec.ra.deg,radec.dec.deg,True,False)
         self.like.addSource(src)
 
     def delete_source(self,name):
@@ -1149,12 +1248,14 @@ class GTBinnedAnalysis(AnalysisBase):
 
         # Write ROI XML
         self._roi.write_xml(self._srcmdl_file)
-        roi_center = self._roi.radec
+        roi_center = self._roi.skydir
+
+        print roi_center
         
         # Run gtselect and gtmktime
         kw_gtselect = dict(infile=self.config['data']['evfile'],
                            outfile=self._ft1_file,
-                           ra=roi_center[0], dec=roi_center[1],
+                           ra=roi_center.ra.deg, dec=roi_center.dec.deg,
                            rad=self.config['selection']['radius'],
                            convtype=self.config['selection']['convtype'],
                            evtype=self.config['selection']['evtype'],
@@ -1191,6 +1292,16 @@ class GTBinnedAnalysis(AnalysisBase):
             run_gtapp('gtltcube',self.logger,kw)
         else:
             self.logger.info('Skipping gtltcube')
+
+        if self.config['binning']['coordsys'] == 'CEL':
+            xref=float(self.roi.skydir.ra.deg)
+            yref=float(self.roi.skydir.dec.deg)
+        elif self.config['binning']['coordsys'] == 'GAL':
+            xref=float(self.roi.skydir.galactic.l.deg)
+            yref=float(self.roi.skydir.galactic.b.deg)
+        else:
+            raise Exception('Unregonize coord system: ' +
+                            self.config['binning']['coordsys'])
             
         # Run gtbin
         kw = dict(algorithm='ccube',
@@ -1199,8 +1310,8 @@ class GTBinnedAnalysis(AnalysisBase):
                   evfile=self._ft1_file,
                   outfile=self._ccube_file,
                   scfile=self.config['data']['scfile'],
-                  xref=float(self.roi.radec[0]),
-                  yref=float(self.roi.radec[1]),
+                  xref=xref,
+                  yref=yref,
                   axisrot=0,
                   proj=self.config['binning']['proj'],
                   ebinalg='LOG',
@@ -1372,3 +1483,28 @@ class GTBinnedAnalysis(AnalysisBase):
             xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
 
         return xmlfile
+
+
+    def tscube(self,xmlfile):
+
+        xmlfile = self.get_model_path(xmlfile)
+        
+        outfile = os.path.join(self.config['fileio']['workdir'],
+                               'tscube%s.fits'%(self.config['file_suffix']))
+        
+        kw = dict(cmap=self._ccube_file,
+                  expcube=self._ltcube,
+                  bexpmap =  self._bexpmap_file,
+                  irfs    = self.config['gtlike']['irfs'],
+                  evtype  = self.config['selection']['evtype'],
+                  srcmdl  = xmlfile,
+                  nxpix=self.npix, nypix=self.npix,
+                  binsz=self.config['binning']['binsz'],
+                  xref=float(self.roi.skydir.ra.deg),
+                  yref=float(self.roi.skydir.dec.deg),
+                  proj=self.config['binning']['proj'],
+                  stlevel = 0,
+                  coordsys=self.config['binning']['coordsys'],
+                  outfile=outfile)
+        
+        run_gtapp('gttscube',self.logger,kw) 

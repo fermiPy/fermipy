@@ -4,6 +4,8 @@ import yaml
 import numpy as np
 from collections import OrderedDict
 import xml.etree.cElementTree as et
+from astropy import units as u
+from astropy.coordinates import SkyCoord
 
 class AnalysisBase(object):
     """The base class provides common facilities like configuration
@@ -262,7 +264,8 @@ def tolist(x):
         return x
 
 
-def get_offset_wcs(lon,lat,coordsys='GAL',projection='AIT'):
+def get_offset_wcs(lon,lat,coordsys='GAL',projection='AIT',cdelt=1.0,
+                   crpix=1.):
 
     from astropy import wcs
     
@@ -276,8 +279,8 @@ def get_offset_wcs(lon,lat,coordsys='GAL',projection='AIT'):
         raise Exception('Unrecognized coordinate system.')
     
     w = wcs.WCS(naxis=2)
-    w.wcs.crpix = [1.,1.]
-    w.wcs.cdelt = np.array([-1.0, 1.0])
+    w.wcs.crpix = [crpix,crpix]
+    w.wcs.cdelt = np.array([-cdelt, cdelt])
     w.wcs.crval = [np.squeeze(lon), np.squeeze(lat)]
     w.wcs.ctype = ["%s-%s"%(ctype1,projection),
                    "%s-%s"%(ctype2,projection)]
@@ -308,3 +311,27 @@ def sky_to_offset(lon,lat,lon1,lat1,coordsys='GAL',projection='AIT'):
     skycrd = np.vstack((lon1,lat1)).T
     
     return w.wcs_world2pix(skycrd,0)
+
+def get_target_skydir(config):
+
+    radec = config.get('radec',None)
+
+    if isinstance(radec,str):
+        return SkyCoord(radec,unit=u.deg)
+    elif isinstance(radec,list):
+        return SkyCoord(radec[0],radec[1],unit=u.deg)
+    
+    ra = config.get('ra',None)
+    dec = config.get('dec',None)
+    
+    if not ra is None and not dec is None:
+        return SkyCoord(ra,dec,unit=u.deg)
+
+    glon = config.get('glon',None)
+    glat = config.get('glat',None)
+
+    if not glon is None and not glat is None:
+        return SkyCoord(glon,glat,unit=u.deg,
+                        frame='galactic').transform_to('icrs')
+
+    return None
