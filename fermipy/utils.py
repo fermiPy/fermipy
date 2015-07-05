@@ -6,6 +6,7 @@ from collections import OrderedDict
 import xml.etree.cElementTree as et
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+import astropy.io.fits as pyfits
 
 class AnalysisBase(object):
     """The base class provides common facilities like configuration
@@ -264,51 +265,55 @@ def tolist(x):
         return x
 
 
-def get_offset_wcs(lon,lat,coordsys='GAL',projection='AIT',cdelt=1.0,
-                   crpix=1.):
-
+def create_wcs(skydir,coordsys='CEL',projection='AIT',cdelt=1.0,crpix=1.,naxis=2):
+    """Create a WCS object."""
+    
     from astropy import wcs
+
+    w = wcs.WCS(naxis=naxis)
     
     if coordsys == 'CEL':
-        ctype1 = 'RA--'
-        ctype2 = 'DEC-'
+        w.wcs.ctype[0] = 'RA---%s'%(projection)
+        w.wcs.ctype[1] = 'DEC--%s'%(projection)
+        w.wcs.crval[0]=skydir.ra.deg
+        w.wcs.crval[1]=skydir.dec.deg
     elif coordsys == 'GAL':
-        ctype1 = 'GLON'
-        ctype2 = 'GLAT'
+        w.wcs.ctype[0] = 'GLON-%s'%(projection)
+        w.wcs.ctype[1] = 'GLAT-%s'%(projection)        
+        w.wcs.crval[0]=skydir.galactic.l.deg
+        w.wcs.crval[1]=skydir.galactic.b.deg
     else:
         raise Exception('Unrecognized coordinate system.')
     
-    w = wcs.WCS(naxis=2)
-    w.wcs.crpix = [crpix,crpix]
-    w.wcs.cdelt = np.array([-cdelt, cdelt])
-    w.wcs.crval = [np.squeeze(lon), np.squeeze(lat)]
-    w.wcs.ctype = ["%s-%s"%(ctype1,projection),
-                   "%s-%s"%(ctype2,projection)]
+    w.wcs.crpix[0] = crpix
+    w.wcs.crpix[1] = crpix
+    w.wcs.cdelt[0] = -cdelt
+    w.wcs.cdelt[1] = cdelt
 
     return w
     
-def offset_to_sky(lon,lat,offset_lon,offset_lat,
-                  coordsys='GAL',projection='AIT'):
+def offset_to_sky(skydir,offset_lon,offset_lat,
+                  coordsys='CEL',projection='AIT'):
     """Convert a coordinate offset (X,Y) in the given projection into
     a pair of spherical coordinates."""
     
     offset_lon = np.array(offset_lon,ndmin=1)
     offset_lat = np.array(offset_lat,ndmin=1)
 
-    w = get_offset_wcs(lon,lat,coordsys,projection)
+    w = create_wcs(skydir,coordsys,projection)
     pixcrd = np.vstack((offset_lon,offset_lat)).T
     
     return w.wcs_pix2world(pixcrd,0)
 
-def sky_to_offset(lon,lat,lon1,lat1,coordsys='GAL',projection='AIT'):
+def sky_to_offset(skydir,lon,lat,coordsys='CEL',projection='AIT'):
     """Convert sky coordinates to a projected offset.  This function
     is the inverse of offset_to_sky."""
     
-    lon = np.array(lon,ndmin=1)
-    lat = np.array(lat,ndmin=1)
+#    lon = np.array(lon,ndmin=1)
+#    lat = np.array(lat,ndmin=1)
     
-    w = get_offset_wcs(lon,lat,coordsys,projection)
-    skycrd = np.vstack((lon1,lat1)).T
+    w = create_wcs(skydir,coordsys,projection)
+    skycrd = np.vstack((lon,lat)).T
     
     return w.wcs_world2pix(skycrd,0)
 
@@ -335,3 +340,31 @@ def get_target_skydir(config):
                         frame='galactic').transform_to('icrs')
 
     return None
+
+
+def make_gaussian_spatial_map(skydir,sigma,outfile,npix=100,cdelt=0.05):
+
+    sigma /= 1.5095921854516636        
+    sigma /= cdelt
+    
+    w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2+0.5)
+    
+    hdu_image = pyfits.PrimaryHDU(np.zeros((npix,npix)),
+                                  header=w.to_header())
+
+    fn = lambda t, s: 1./(2*np.pi*s**2)*np.exp(-t**2/(s**2*2.0))
+    
+    b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
+    k = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
+                                        b[:,np.newaxis]**2)
+    k = fn(k,sigma)
+
+
+    # Normalize map to 1
+    k /= np.sum(k)
+    k /= np.radians(cdelt)**2
+    
+    hdu_image.data[:,:] = k
+
+    hdulist = pyfits.HDUList([hdu_image])
+    hdulist.writeto(outfile,clobber=True) 

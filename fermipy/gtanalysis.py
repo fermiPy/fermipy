@@ -14,6 +14,8 @@ from fermipy.logger import logLevel as ll
 import logging
 import tempfile
 
+import astropy.io.fits as pyfits
+
 # pylikelihood
 import pyLikelihood as pyLike
 import GtApp
@@ -103,6 +105,9 @@ def gtlike_spectrum_to_dict(spectrum):
             d['file']=ff.filename()
     return d
 
+   
+    
+
 class GTAnalysis(AnalysisBase):
     """High-level analysis interface that internally manages a set of
     analysis component objects.  Most of the functionality of the
@@ -155,16 +160,17 @@ class GTAnalysis(AnalysisBase):
         # Working directory (can be the same as savedir)
 #        if self.config['fileio']['scratchdir'] is not None:
         if self.config['fileio']['stageoutput']:
-            self._workdir = tempfile.mkdtemp(prefix=os.environ['USER'] + '.',
-                                             dir=self.config['fileio']['scratchdir'])
-            self.logger.info('Created working directory: %s'%self._workdir)
+            self._config['fileio']['workdir'] = tempfile.mkdtemp(prefix=os.environ['USER'] + '.',
+                                                       dir=self.config['fileio']['scratchdir'])
+            self.logger.info('Created working directory: %s'%self.config['fileio']['workdir'])
             self.stage_input()
         else:
-            self._workdir = self._savedir
+            self._config['fileio']['workdir'] = self._savedir
         
         # Setup the ROI definition
         self._roi = ROIModel.create(self.config['selection'],
                                     self.config['model'],
+                                    fileio=self.config['fileio'],
                                     logfile=self.config['fileio']['logfile'],
                                     logging=self.config['logging'])
                 
@@ -177,12 +183,20 @@ class GTAnalysis(AnalysisBase):
             self._components.append(comp)
 
         energies = np.zeros(0)
+        roiwidths = np.zeros(0)
+        binsz = np.zeros(0)
         for c in self.components:
             energies = np.concatenate((energies,c.energies))
+            roiwidths = np.insert(roiwidths,0,c.roiwidth)
+            binsz = np.insert(binsz,0,c.binsz)
             
         self._ebin_edges = np.sort(np.unique(energies.round(5)))
         self._enumbins = len(self._ebin_edges)-1
         self._roi_model = {'roi' : {'logLike' : np.nan}}
+
+        self._roiwidth = max(roiwidths)
+        self._binsz = min(binsz)
+        self._npix = int(np.round(self._roiwidth/self._binsz))
 
     def __del__(self):
         self.stage_output()
@@ -268,7 +282,7 @@ class GTAnalysis(AnalysisBase):
             
         self.logger.info("Creating Analysis Component: " + cfg['name'])
 
-        cfg['fileio']['workdir'] = self._workdir
+        cfg['fileio']['workdir'] = self.config['fileio']['workdir']
         
         comp = GTBinnedAnalysis(cfg,
                                 logging=self.config['logging'])
@@ -278,11 +292,11 @@ class GTAnalysis(AnalysisBase):
     def stage_output(self):
         """Copy data products to final output directory."""
 
-        if self._workdir == self._savedir:
+        if self.config['fileio']['workdir'] == self._savedir:
             return
-        elif os.path.isdir(self._workdir):
+        elif os.path.isdir(self.config['fileio']['workdir']):
             self.logger.info('Staging output data products to %s'%self._savedir)
-            for f in glob.glob(os.path.join(self._workdir,'*.fits')):
+            for f in glob.glob(os.path.join(self.config['fileio']['workdir'],'*.fits')):
                 shutil.copy(f,self._savedir)
         else:
             self.logger.error('Working directory does not exist.')
@@ -290,11 +304,11 @@ class GTAnalysis(AnalysisBase):
     def stage_input(self):
         """Copy data products to intermediate working directory."""
 
-        if self._workdir == self._savedir:
+        if self.config['fileio']['workdir'] == self._savedir:
             return
-        elif os.path.isdir(self._workdir):
+        elif os.path.isdir(self.config['fileio']['workdir']):
             for f in glob.glob(os.path.join(self._savedir,'*')):
-                shutil.copy(f,self._workdir)
+                shutil.copy(f,self.config['fileio']['workdir'])
         else:
             self.logger.error('Working directory does not exist.')
             
@@ -329,12 +343,16 @@ class GTAnalysis(AnalysisBase):
 
         self._roi_model['roi']['nobs'] = np.zeros(self.enumbins)
 
+        # Make the co-added counts map here
+        #
+        
+
     def cleanup(self):
 
-        if self._workdir == self._savedir: return
-        elif os.path.isdir(self._workdir):
-            self.logger.info('Deleting working directory: ' + self._workdir)
-            shutil.rmtree(self._workdir)
+        if self.config['fileio']['workdir'] == self._savedir: return
+        elif os.path.isdir(self.config['fileio']['workdir']):
+            self.logger.info('Deleting working directory: ' + self.config['fileio']['workdir'])
+            shutil.rmtree(self.config['fileio']['workdir'])
             
     def generate_model(self,model_name=None):
         """Generate model maps for all components.  model_name should
@@ -918,13 +936,41 @@ class GTAnalysis(AnalysisBase):
         """
 
         model_name = os.path.splitext(xmlfile)[0]
+
+        # Write a common XML file?
         
         for i, c in enumerate(self._components):
             c.write_xml(xmlfile)
-            if save_model_map:
-                c.generate_model_map(model_name)
 
-        # Write a common XML file?
+        if not save_model_map: return
+            
+        counts = []        
+        for i, c in enumerate(self._components):
+            counts += [c.generate_model_map(model_name)]
+
+        # Make a co-added model map
+        w = create_wcs(self._roi.skydir,coordsys=self.config['binning']['coordsys'],
+                       projection=self.config['binning']['proj'],cdelt=self._binsz,
+                       naxis=3)
+
+        w.wcs.crpix[2]=1
+        w.wcs.crval[2]=10**self.energies[0]
+        w.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
+        w.wcs.ctype[2]='Energy'
+        
+        header = w.to_header()
+
+        data = np.zeros((self._npix,self._npix,self.enumbins))
+        for c in counts:
+            data += c
+
+        outfile = os.path.join(self.config['fileio']['workdir'],
+                               'mcube_%s.fits'%(model_name))
+        
+        hdu_image = pyfits.PrimaryHDU(data.T,header=header)
+#        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])
+        hdulist = pyfits.HDUList([hdu_image])        
+        hdulist.writeto(outfile,clobber=True)
 
     def write_roi(self,outfile=None):
         """Write out parameters of current model as yaml file."""
@@ -953,13 +999,7 @@ class GTAnalysis(AnalysisBase):
         # Get the ROI geometry
 
         # Loop over pixels
-
-        import astropy.io.fits as pyfits
-        
-        roi_center = self._roi.radec
-        
-        w = get_offset_wcs(roi_center[0],roi_center[1],cdelt=0.1,
-                           crpix=50.5)
+        w = create_wcs(self._roi.skydir,cdelt=self._binsz,crpix=50.5)
 
         hdu_image = pyfits.PrimaryHDU(np.zeros((100,100)),
                                       header=w.to_header())
@@ -1100,6 +1140,7 @@ class GTBinnedAnalysis(AnalysisBase):
 
         self._roi = ROIModel.create(self.config['selection'],
                                     self.config['model'],
+                                    fileio=self.config['fileio'],
                                     logfile=self.config['fileio']['logfile'],
                                     logging=self.config['logging'])
                 
@@ -1173,6 +1214,14 @@ class GTBinnedAnalysis(AnalysisBase):
     @property
     def npix(self):
         return self._npix
+
+    @property
+    def binsz(self):
+        return self.config['binning']['binsz']
+    
+    @property
+    def roiwidth(self):
+        return self._npix*self.config['binning']['binsz']
     
     def add_source(self,name,radec=None):
 
@@ -1249,8 +1298,6 @@ class GTBinnedAnalysis(AnalysisBase):
         # Write ROI XML
         self._roi.write_xml(self._srcmdl_file)
         roi_center = self._roi.skydir
-
-        print roi_center
         
         # Run gtselect and gtmktime
         kw_gtselect = dict(infile=self.config['data']['evfile'],
@@ -1411,6 +1458,8 @@ class GTBinnedAnalysis(AnalysisBase):
         hdu_image = pyfits.PrimaryHDU(counts.T,header=h[0].header)
         hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])        
         hdulist.writeto(outfile,clobber=True)
+
+        return counts
         
     def generate_model(self,model_name=None,outfile=None):
         """Generate a counts model map from an XML model file using

@@ -61,12 +61,10 @@ def scale_parameter(p):
     else:
         return p, 1.0
     
-def get_dist_to_edge(lon0,lat0,lon1,lat1,width):
+def get_dist_to_edge(skydir,lon,lat,width,coordsys='CEL'):
 
-#    x,y = project(lon0,lat0,lon1,lat1)
-    xy = sky_to_offset(np.degrees(lon0),np.degrees(lat0),
-                       np.degrees(lon1),np.degrees(lat1),
-                       coordsys='GAL')
+    xy = sky_to_offset(skydir,np.degrees(lon),np.degrees(lat),
+                       coordsys=coordsys)
 
     x = np.radians(xy[:,0])
     y = np.radians(xy[:,1])
@@ -287,7 +285,12 @@ class Source(Model):
 
         if self['SpectrumType'] == 'PowerLaw':
 
-            prefactor, prefactor_scale = scale_parameter(self['Flux_Density'])
+            if not 'Prefactor' in self:
+                self._data['Prefactor'] = self['Flux_Density']
+            
+            if not 'Scale' in  self:
+                self._data['Scale'] = self['Pivot_Energy']
+            prefactor, prefactor_scale = scale_parameter(self['Prefactor'])
 
             index_max = max(5.0,self['Spectral_Index']+1.0)
             index_min = min(0.0,self['Spectral_Index']-1.0)
@@ -301,10 +304,10 @@ class Source(Model):
                            'scale' : str(-1.0),
                            'min' : str(index_min), 'max' : str(index_max), 'free' : '0'},
                 'Scale' :  {'name' : 'Scale',
-                            'value' : str(self['Pivot_Energy']),
+                            'value' : str(self['Scale']),
                             'scale' : str(1.0),
-                            'min' : str(self['Pivot_Energy']),
-                            'max' : str(self['Pivot_Energy']), 'free' : '0'}
+                            'min' : str(self['Scale']),
+                            'max' : str(self['Scale']), 'free' : '0'}
                 }
 
         elif self['SpectrumType'] == 'LogParabola':
@@ -403,6 +406,37 @@ class Source(Model):
     def data(self):
         return self._data
 
+    @staticmethod
+    def load_from_dict(src_dict):
+
+        src_dict.setdefault('SpatialType','PointSource')
+        src_dict.setdefault('SpectrumType','PowerLaw')
+        src_dict.setdefault('Spectral_Index',2.0)
+        src_dict.setdefault('Pivot_Energy',1000.0)
+
+        if src_dict['SpatialType'] != 'PointSource':
+            extended=True
+        else:
+            extended=False
+        
+        if 'name' in src_dict:
+            src_dict['Source_Name'] = src_dict['name']
+        
+        skydir = get_target_skydir(src_dict)
+
+        print 'getting position'
+        print skydir
+        
+        
+        src_dict['RAJ2000'] = skydir.ra.deg
+        src_dict['DEJ2000'] = skydir.dec.deg
+
+        radec = np.array([skydir.ra.deg,skydir.dec.deg])
+        
+        print src_dict
+        
+        return Source(src_dict,radec=radec,extended=extended)
+    
     @staticmethod
     def load_from_xml(root,extdir=None):
         
@@ -551,6 +585,24 @@ class ROIModel(AnalysisBase):
         if self.config['galdiff'] is not None:
             self.load_source(MapCubeSource(self.config['galdiff'],'galdiff'))
 
+    def create_source(self,src_dict,build_index=True):
+        
+        src_dict.setdefault('SpatialType','PointSource')
+        src_dict.setdefault('SpectrumType','PowerLaw')
+        src_dict.setdefault('Spectral_Index',2.0)
+        src_dict.setdefault('Pivot_Energy',1000.0)
+                
+        src = Source.load_from_dict(src_dict)
+
+        if src['SpatialType'] == 'Gaussian':
+            template_file = os.path.join(self.config['fileio']['workdir'],'template.fits')
+            make_gaussian_spatial_map(src.skydir,0.5,template_file)
+            src['Spatial_Filename'] = template_file
+            
+        self.load_source(src)
+
+        if build_index: self.build_src_index()
+        
     def load_source(self,src):
         
         if src.name in self._src_index:
@@ -587,6 +639,11 @@ class ROIModel(AnalysisBase):
             else:
                 raise Exception('Unrecognized catalog file extension: %s'%c)
 
+        for c in self.config['sources']:
+            self.create_source(c,build_index=False)
+
+        self.build_src_index()        
+        
     def delete_sources(self,srcs):
 
 #        srcs = []
@@ -703,7 +760,7 @@ class ROIModel(AnalysisBase):
         Parameters
         ----------
 
-        pos : SkyCoord object
+        skydir : SkyCoord object
 
         dist : float
         
@@ -716,10 +773,7 @@ class ROIModel(AnalysisBase):
         if not roilike:                    
             dtheta = radius            
         else:
-#            ra0, dec0 = xyz_to_lonlat(self._src_radec)
-#            dtheta = get_dist_to_edge(np.radians(ra),np.radians(dec),
-#                                      ra0,dec0,np.radians(dist))
-            dtheta = get_dist_to_edge(skydir.ra.rad,skydir.dec.rad,
+            dtheta = get_dist_to_edge(skydir,
                                       self._src_skydir.ra.rad,
                                       self._src_skydir.dec.rad,
                                       np.radians(dist))
@@ -823,7 +877,7 @@ class ROIModel(AnalysisBase):
         
     def write_xml(self,xmlfile,isodiff=None,galdiff=None):
         """Save this ROI model as an XML file."""
-
+        
         root = ElementTree.Element('source_library')
         root.set('title','source_library')
 

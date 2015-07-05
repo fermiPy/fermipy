@@ -46,6 +46,7 @@ model = {
     'isodiff'       : (None,'Set the isotropic template.'),
     'galdiff'       : (None,'Set the galactic IEM mapcube.'),
     'limbdiff'      : (None,''),
+    'sources'       : (None,'',list),
     'extdir'        : ('Extended_archive_v14',''),
     'catalogs'      : (None,'',list),
     'min_ts'        : (None,''),
