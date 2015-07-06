@@ -5,10 +5,10 @@ import copy
 import glob
 import shutil
 import yaml
-from utils import *
-import defaults
+from fermipy.utils import AnalysisBase
+import fermipy.defaults as defaults
 import fermipy
-from fermipy.roi_model import *
+from fermipy.roi_model import ROIModel
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 import logging
@@ -17,16 +17,15 @@ import tempfile
 import astropy.io.fits as pyfits
 
 # pylikelihood
+
 import pyLikelihood as pyLike
 import GtApp
 import BinnedAnalysis as ba
 import UnbinnedAnalysis as uba
-import Composite2
 import SummedLikelihood
 import FluxDensity
-
 from LikelihoodState import LikelihoodState
-from UpperLimits import UpperLimits
+#from UpperLimits import UpperLimits
 
 
 norm_parameters = {
@@ -1429,6 +1428,7 @@ class GTBinnedAnalysis(AnalysisBase):
         self._obs=ba.BinnedObs(**kw)
 
         # Create BinnedAnalysis
+
         self.logger.info('Creating BinnedAnalysis')
         self._like = ba.BinnedAnalysis(binnedData=self._obs,
                                        srcModel=self._srcmdl_file,

@@ -1,6 +1,5 @@
 import defaults 
-from utils import *
-import pyfits
+from fermipy.utils import *
 import fermipy
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
@@ -8,7 +7,7 @@ from fermipy.logger import logLevel as ll
 import xml.etree.cElementTree as ElementTree
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-
+import astropy.io.fits as pyfits
 
 def xyz_to_lonlat(*args):
 
