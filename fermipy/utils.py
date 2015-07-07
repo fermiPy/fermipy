@@ -265,7 +265,8 @@ def tolist(x):
         return x
 
 
-def create_wcs(skydir,coordsys='CEL',projection='AIT',cdelt=1.0,crpix=1.,naxis=2):
+def create_wcs(skydir,coordsys='CEL',projection='AIT',
+               cdelt=1.0,crpix=1.,naxis=2):
     """Create a WCS object."""
     
     from astropy import wcs
@@ -368,3 +369,13 @@ def make_gaussian_spatial_map(skydir,sigma,outfile,npix=100,cdelt=0.05):
 
     hdulist = pyfits.HDUList([hdu_image])
     hdulist.writeto(outfile,clobber=True) 
+
+def make_coadd_map(counts,wcs,outfile):
+        
+    header = wcs.to_header()
+    data = np.zeros(counts[0].shape)
+    for c in counts: data += c        
+    hdu_image = pyfits.PrimaryHDU(data.T,header=header)
+#        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])
+    hdulist = pyfits.HDUList([hdu_image])        
+    hdulist.writeto(outfile,clobber=True)

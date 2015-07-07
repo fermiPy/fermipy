@@ -92,7 +92,15 @@ class Model(object):
 
     def __eq__(self, other): 
         return self.name == other.name
-        
+
+    @property
+    def spectral_pars(self):
+        return self._spectral_pars
+
+    @property
+    def spatial_pars(self):
+        return self._spatial_pars
+    
     def update(self,m):
 
         if self['SpectrumType'] != m['SpectrumType']:
@@ -601,6 +609,8 @@ class ROIModel(AnalysisBase):
         self.load_source(src)
 
         if build_index: self.build_src_index()
+
+        return src
         
     def load_source(self,src):
         

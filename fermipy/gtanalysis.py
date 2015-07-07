@@ -5,16 +5,21 @@ import copy
 import glob
 import shutil
 import yaml
-from fermipy.utils import AnalysisBase
-import fermipy.defaults as defaults
-import fermipy
-from fermipy.roi_model import ROIModel
-from fermipy.logger import Logger, StreamLogger
-from fermipy.logger import logLevel as ll
-import logging
+import numpy as np
 import tempfile
+import logging
 
 import astropy.io.fits as pyfits
+
+import fermipy
+import fermipy.defaults as defaults
+from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
+from fermipy.utils import make_coadd_map
+from fermipy.roi_model import ROIModel, Source
+from fermipy.logger import Logger, StreamLogger
+from fermipy.logger import logLevel as ll
+
+
 
 # pylikelihood
 
@@ -197,9 +202,24 @@ class GTAnalysis(AnalysisBase):
         self._binsz = min(binsz)
         self._npix = int(np.round(self._roiwidth/self._binsz))
 
+        self._wcs = create_wcs(self._roi.skydir,
+                               coordsys=self.config['binning']['coordsys'],
+                               projection=self.config['binning']['proj'],
+                               cdelt=self._binsz,
+                               naxis=3)
+        self._wcs.wcs.crpix[2]=1
+        self._wcs.wcs.crval[2]=10**self.energies[0]
+        self._wcs.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
+        self._wcs.wcs.ctype[2]='Energy'
+        
+        
     def __del__(self):
         self.stage_output()
         self.cleanup()
+
+    @property
+    def roi(self):
+        return self._roi
         
     @property
     def like(self):
@@ -220,31 +240,21 @@ class GTAnalysis(AnalysisBase):
         """Return the number of energy bins."""
         return self._enumbins    
 
-    def add_source(self,name,radec=None):
+    def add_source(self,name,src_dict):
 
-        if radec is None:
-            radec = self.roi.radec
-        
-        src = pyLike.PointSource(0, 0,
-                                 self.components[0].like.logLike.observation())
-        pl = pyLike.SourceFactory_funcFactory().create("PowerLaw")
-        pl.setParamValues((1, -2, 100))
-        indexPar = pl.getParam("Index")
-        indexPar.setBounds(-3.5, -1)
-        pl.setParam(indexPar)
-        prefactor = pl.getParam("Prefactor")
-        prefactor.setBounds(1e-10, 1e3)
-        prefactor.setScale(1e-9)
-        pl.setParam(prefactor)
-        src.setSpectrum(pl)
-        src.setName(name)
-        src.setDir(float(radec[0]),float(radec[1]),True,False)
-        self.like.addSource(src)
-
+        src_dict['name'] = name
+        src = self.roi.create_source(src_dict)
+        for c in self.components:
+            c.add_source(name,src_dict)
+            
     def delete_source(self,name):
-        
-        self.like.deleteSource(name)
-    
+
+        for c in self.components:
+            c.delete_source(name)
+
+        src = self.roi.get_source_by_name(name)        
+        self.roi.delete_sources([src])
+            
     def create_component_configs(self):
         configs = []
 
@@ -344,7 +354,15 @@ class GTAnalysis(AnalysisBase):
 
         # Make the co-added counts map here
         #
-        
+        counts = []
+        for i, c in enumerate(self.components):
+            counts += [c.countsMap()]
+
+        self._ccube_file = os.path.join(self.config['fileio']['workdir'],
+                                        'ccube.fits')
+            
+        make_coadd_map(counts,self._wcs,self._ccube_file)
+            
 
     def cleanup(self):
 
@@ -947,29 +965,10 @@ class GTAnalysis(AnalysisBase):
         for i, c in enumerate(self._components):
             counts += [c.generate_model_map(model_name)]
 
-        # Make a co-added model map
-        w = create_wcs(self._roi.skydir,coordsys=self.config['binning']['coordsys'],
-                       projection=self.config['binning']['proj'],cdelt=self._binsz,
-                       naxis=3)
-
-        w.wcs.crpix[2]=1
-        w.wcs.crval[2]=10**self.energies[0]
-        w.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
-        w.wcs.ctype[2]='Energy'
-        
-        header = w.to_header()
-
-        data = np.zeros((self._npix,self._npix,self.enumbins))
-        for c in counts:
-            data += c
-
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'mcube_%s.fits'%(model_name))
-        
-        hdu_image = pyfits.PrimaryHDU(data.T,header=header)
-#        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])
-        hdulist = pyfits.HDUList([hdu_image])        
-        hdulist.writeto(outfile,clobber=True)
+
+        make_coadd_map(counts,self._wcs,outfile)
 
     def write_roi(self,outfile=None):
         """Write out parameters of current model as yaml file."""
@@ -1187,7 +1186,17 @@ class GTBinnedAnalysis(AnalysisBase):
                              self.config['radius'])
 
         self._like = None
-            
+
+        self._wcs = create_wcs(self.roi.skydir,
+                               coordsys=self.config['binning']['coordsys'],
+                               projection=self.config['binning']['proj'],
+                               cdelt=self.binsz,
+                               naxis=3)
+        self._wcs.wcs.crpix[2]=1
+        self._wcs.wcs.crval[2]=10**self.energies[0]
+        self._wcs.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
+        self._wcs.wcs.ctype[2]='Energy'
+        
         self.print_config(self.logger,loglevel=logging.DEBUG)
             
     @property
@@ -1222,30 +1231,43 @@ class GTBinnedAnalysis(AnalysisBase):
     def roiwidth(self):
         return self._npix*self.config['binning']['binsz']
     
-    def add_source(self,name,radec=None):
+    def add_source(self,name,src_dict):
 
-        if radec is None:
-            radec = self.roi.radec
+        src_dict['name'] = name
+        src = self.roi.create_source(src_dict)
         
-        src = pyLike.PointSource(0, 0,
-                                 self.like.logLike.observation())
-        pl = pyLike.SourceFactory_funcFactory().create("PowerLaw")
-        pl.setParamValues((1, -2, 100))
-        indexPar = pl.getParam("Index")
-        indexPar.setBounds(-3.5, -1)
-        pl.setParam(indexPar)
-        prefactor = pl.getParam("Prefactor")
-        prefactor.setBounds(1e-10, 1e3)
-        prefactor.setScale(1e-9)
-        pl.setParam(prefactor)
-        src.setSpectrum(pl)
-        src.setName(name)
-        src.setDir(radec.ra.deg,radec.dec.deg,True,False)
-        self.like.addSource(src)
+#        if radec is None:
+#            radec = self.roi.radec
+
+        if src['SpatialType'] == 'PointSource':        
+            pylike_src = pyLike.PointSource(0, 0,
+                                            self.like.logLike.observation())
+            pylike_src.setDir(src.skydir.ra.deg,src.skydir.dec.deg,True,False)
+        else:
+            sm = pyLike.SpatialMap(src['Spatial_Filename'])
+            pylike_src = pyLike.DiffuseSource(sm,self.like.logLike.observation(),False)
+            
+        pl = pyLike.SourceFactory_funcFactory().create(src['SpectrumType'])
+
+        for k,v in src.spectral_pars.items():
+
+            print k, v
+            
+            par = pl.getParam(k)
+            par.setValue(float(v['value']))
+            par.setBounds(float(v['min']),float(v['max']))
+            par.setScale(float(v['scale']))
+            par.setFree(False)
+            
+        pylike_src.setSpectrum(pl)
+        pylike_src.setName(src.name)        
+        self.like.addSource(pylike_src)
 
     def delete_source(self,name):
         
         self.like.deleteSource(name)
+        src = self.roi.get_source_by_name(name)        
+        self.roi.delete_sources([src])
         
     def delete_sources(self,srcs):
         for s in srcs:
@@ -1261,7 +1283,7 @@ class GTBinnedAnalysis(AnalysisBase):
         self.like.setEnergyRange(emin,emax)
 
     def countsMap(self):
-
+        """Return 3-D counts map as a numpy array."""
         z = self.like.logLike.countsMap().data()
         z = np.array(z).reshape(self.enumbins,self.npix,self.npix).swapaxes(0,2)
         return z
