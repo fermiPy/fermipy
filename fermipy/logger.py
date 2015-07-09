@@ -62,28 +62,34 @@ class Logger(object):
 #                'version': 1,              
 #                'disable_existing_loggers': False})
         
-        if logfile is None:
-            raise Exception('Invalid log file: ' + logfile)
+#        if logfile is None:
+#            raise Exception('Invalid log file: ' + logfile)
+
+        if not logfile is None:
+            logfile = logfile.replace('.log','') + '.log'
         
         logger = logging.getLogger(name)
         logger.setLevel(logging.DEBUG)
-        logfile = logfile.replace('.log','') + '.log'
 
         datefmt = '%Y-%m-%d %H:%M:%S'
         format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         
         if not logger.handlers:
-            fh = logging.FileHandler(logfile)
-            fh.setLevel(logging.DEBUG)
+
+            formatter = logging.Formatter(format,datefmt)
+
+            if not logfile is None:
+                fh = logging.FileHandler(logfile)
+                fh.setLevel(logging.DEBUG)
+                fh.setFormatter(formatter)
+                logger.addHandler(fh)
+            
             ch = logging.StreamHandler()
             ch.setLevel(loglevel)
-            formatter = logging.Formatter(format,datefmt)
-            fh.setFormatter(formatter)
             ch.setFormatter(formatter)
-            logger.addHandler(fh)
             logger.addHandler(ch)
         else:
-            logger.handlers[1].setLevel(loglevel)
+            logger.handlers[-1].setLevel(loglevel)
             
         return logger
 

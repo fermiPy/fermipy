@@ -59,6 +59,16 @@ def scale_parameter(p):
         return p/scale, scale
     else:
         return p, 1.0
+
+def get_linear_dist(skydir,lon,lat,coordsys='CEL'):
+    xy = sky_to_offset(skydir,np.degrees(lon),np.degrees(lat),
+                       coordsys=coordsys)
+
+    x = np.radians(xy[:,0])
+    y = np.radians(xy[:,1])    
+    delta = np.array([np.abs(x),np.abs(y)])
+    dtheta = np.max(delta,axis=0)
+    return dtheta
     
 def get_dist_to_edge(skydir,lon,lat,width,coordsys='CEL'):
 
@@ -71,6 +81,10 @@ def get_dist_to_edge(skydir,lon,lat,width,coordsys='CEL'):
     delta_edge = np.array([np.abs(x) - width,np.abs(y) - width])
     dtheta = np.max(delta_edge,axis=0)
     return dtheta
+
+def create_model_name(src):
+    if src['SpectrumType'] == 'PowerLaw':
+        return 'powerlaw_%04.2f'%src['Index']
 
 class Model(object):
 
@@ -253,7 +267,20 @@ class Source(Model):
             for k in ts_keys:
                 if k in self and np.isfinite(self[k]):
                     self._data['TS_value'] += self[k]**2
-        
+
+
+        self._extended=extended
+
+        if not self._spectral_pars:
+            self._update_spectral_pars()
+
+        if not self._spatial_pars:
+            self._update_spatial_pars()
+
+
+        if not 'Source_Name' in self._data:
+            self._data['Source_Name'] = create_model_name(self)
+            
         self._names = []
         self._names_dict = {}
         for k in ROIModel.src_name_cols:
@@ -264,13 +291,10 @@ class Source(Model):
             if name != '':  self._names.append(name)
 
             self._names_dict[k] = name
+            
+    def _update_spatial_pars(self):
 
-        self._extended=extended
-
-        if not self._spectral_pars:
-            self._update_spectral_pars()
-
-        if not self.extended and not self._spatial_pars:
+        if not self.extended:
             
             self._spatial_pars = {
                 'RA' : {'name' : 'RA',  'value' : str(self['RAJ2000']),
@@ -280,7 +304,7 @@ class Source(Model):
                          'free' : '0',
                          'min' : '-90.0','max' : '90.0','scale' : '1.0'}
                 }
-        elif self.extended and not self._spatial_pars:
+        else:
 
             self._spatial_pars = {
                 'Prefactor' : {'name' : 'Prefactor', 'value' : '1',
@@ -297,17 +321,21 @@ class Source(Model):
             
             if not 'Scale' in  self:
                 self._data['Scale'] = self['Pivot_Energy']
+
+            if not 'Index' in  self:
+                self._data['Index'] = self['Spectral_Index']
+                
             prefactor, prefactor_scale = scale_parameter(self['Prefactor'])
 
-            index_max = max(5.0,self['Spectral_Index']+1.0)
-            index_min = min(0.0,self['Spectral_Index']-1.0)
+            index_max = max(5.0,self['Index']+1.0)
+            index_min = min(0.0,self['Index']-1.0)
             
             self._spectral_pars = {
                 'Prefactor' : {'name' : 'Prefactor', 'value' : str(prefactor),
                                'scale' : str(prefactor_scale),
                                'min' : '0.01', 'max' : '100.0', 'free' : '0'},
                 'Index' : {'name' : 'Index',
-                           'value' : str(self['Spectral_Index']),
+                           'value' : str(self['Index']),
                            'scale' : str(-1.0),
                            'min' : str(index_min), 'max' : str(index_max), 'free' : '0'},
                 'Scale' :  {'name' : 'Scale',
@@ -418,8 +446,9 @@ class Source(Model):
 
         src_dict.setdefault('SpatialType','PointSource')
         src_dict.setdefault('SpectrumType','PowerLaw')
-        src_dict.setdefault('Spectral_Index',2.0)
-        src_dict.setdefault('Pivot_Energy',1000.0)
+        src_dict.setdefault('Index',2.0)
+        src_dict.setdefault('Scale',1000.0)
+        src_dict.setdefault('Prefactor',1E-13)
 
         if src_dict['SpatialType'] != 'PointSource':
             extended=True
@@ -430,18 +459,11 @@ class Source(Model):
             src_dict['Source_Name'] = src_dict['name']
         
         skydir = get_target_skydir(src_dict)
-
-        print 'getting position'
-        print skydir
-        
         
         src_dict['RAJ2000'] = skydir.ra.deg
         src_dict['DEJ2000'] = skydir.dec.deg
 
         radec = np.array([skydir.ra.deg,skydir.dec.deg])
-        
-        print src_dict
-        
         return Source(src_dict,radec=radec,extended=extended)
     
     @staticmethod
@@ -486,8 +508,10 @@ class Source(Model):
                 hdu = pyfits.open(src_dict['Spatial_Filename'])
                 src_dict['RAJ2000'] = float(hdu[0].header['CRVAL1'])
                 src_dict['DEJ2000'] = float(hdu[0].header['CRVAL2'])
-                                
-            return Source(src_dict,
+
+            radec = np.array([src_dict['RAJ2000'],src_dict['DEJ2000']])
+                
+            return Source(src_dict,radec=radec,
                           spectral_pars=spectral_pars,
                           spatial_pars=spatial_pars,extended=extflag)
 
@@ -584,6 +608,14 @@ class ROIModel(AnalysisBase):
         """Return the sky direction objection corresponding to the center of the ROI."""        
         return self._skydir
 
+    @property
+    def sources(self):
+        return self._srcs
+
+    @property
+    def diffuse_sources(self):
+        return self._diffuse_srcs
+    
     def load_diffuse_srcs(self):
         
         if self.config['isodiff'] is not None:
@@ -596,8 +628,8 @@ class ROIModel(AnalysisBase):
         
         src_dict.setdefault('SpatialType','PointSource')
         src_dict.setdefault('SpectrumType','PowerLaw')
-        src_dict.setdefault('Spectral_Index',2.0)
-        src_dict.setdefault('Pivot_Energy',1000.0)
+        src_dict.setdefault('Index',2.0)
+        src_dict.setdefault('Scale',1000.0)
                 
         src = Source.load_from_dict(src_dict)
 
@@ -698,12 +730,13 @@ class ROIModel(AnalysisBase):
                 roi.get_sources_by_position(skydir,
                                             roi.config['src_roiwidth']/2.,
                                             roilike=True)
+                
             for s,r in zip(srcs,rsrc):
                 srcs_dict[s.name] = (s,r)
 
         srcs = []
         rsrc = []
-                
+        
         for k, v in srcs_dict.items():
             srcs.append(v[0])
             rsrc.append(v[1])
@@ -782,12 +815,9 @@ class ROIModel(AnalysisBase):
         if not roilike:                    
             dtheta = radius            
         else:
-            dtheta = get_dist_to_edge(skydir,
-                                      self._src_skydir.ra.rad,
-                                      self._src_skydir.dec.rad,
-                                      np.radians(dist))
-            
-            dtheta += np.radians(dist)            
+            dtheta = get_linear_dist(skydir,
+                                     self._src_skydir.ra.rad,
+                                     self._src_skydir.dec.rad)
         
         if min_dist is not None:
             msk = np.where((dtheta < np.radians(dist)) &
@@ -796,8 +826,9 @@ class ROIModel(AnalysisBase):
             msk = np.where(dtheta < np.radians(dist))[0]
 
         radius = radius[msk]
+        dtheta = dtheta[msk]
         srcs = [ self._srcs[i] for i in msk ]
-
+            
         isort = np.argsort(radius)
 
         radius = radius[isort]

@@ -272,6 +272,7 @@ def create_wcs(skydir,coordsys='CEL',projection='AIT',
     from astropy import wcs
 
     w = wcs.WCS(naxis=naxis)
+#    w = wcs.WCS()
     
     if coordsys == 'CEL':
         w.wcs.ctype[0] = 'RA---%s'%(projection)
@@ -291,6 +292,7 @@ def create_wcs(skydir,coordsys='CEL',projection='AIT',
     w.wcs.cdelt[0] = -cdelt
     w.wcs.cdelt[1] = cdelt
 
+    w = wcs.WCS(w.to_header())    
     return w
     
 def offset_to_sky(skydir,offset_lon,offset_lat,
@@ -343,6 +345,25 @@ def get_target_skydir(config):
     return None
 
 
+def make_gaussian_kernel(sigma,npix=101,cdelt=0.05):
+
+    sigma /= 1.5095921854516636        
+    sigma /= cdelt
+    
+    fn = lambda t, s: 1./(2*np.pi*s**2)*np.exp(-t**2/(s**2*2.0))
+    
+    b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
+    k = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
+                                        b[:,np.newaxis]**2)
+    k = fn(k,sigma)
+
+    # Normalize map to 1
+    k /= np.sum(k)
+    k /= np.radians(cdelt)**2
+
+    return k
+    
+
 def make_gaussian_spatial_map(skydir,sigma,outfile,npix=100,cdelt=0.05):
 
     sigma /= 1.5095921854516636        
@@ -379,3 +400,11 @@ def make_coadd_map(counts,wcs,outfile):
 #        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])
     hdulist = pyfits.HDUList([hdu_image])        
     hdulist.writeto(outfile,clobber=True)
+
+
+def make_fits_map(data,wcs,outfile):
+    
+    hdu_image = pyfits.PrimaryHDU(data.T,header=wcs.to_header())
+#        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])
+    hdulist = pyfits.HDUList([hdu_image])        
+    hdulist.writeto(outfile,clobber=True)    

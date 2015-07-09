@@ -115,3 +115,8 @@ roiopt = {
     'free_sources'             : (None,''),
     'free_source_ts_threshold' : (None,'')
     }
+
+#
+residmap = {
+    'models'                   : (None,'',list),
+    }

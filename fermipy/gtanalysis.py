@@ -9,17 +9,20 @@ import numpy as np
 import tempfile
 import logging
 
+import matplotlib.pyplot as plt
+
 import astropy.io.fits as pyfits
+
 
 import fermipy
 import fermipy.defaults as defaults
+from fermipy.residmap import ResidMapGenerator
 from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import make_coadd_map
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
-
-
+from fermipy.plotting import ROIPlotter
 
 # pylikelihood
 
@@ -130,6 +133,7 @@ class GTAnalysis(AnalysisBase):
                 'data'       : defaults.data,
                 'gtlike'     : defaults.gtlike,
                 'mc'         : defaults.mc,
+                'residmap'   : defaults.residmap,
 #                'roiopt'     : defaults.roiopt,
                 'components' : (None,'')}
 
@@ -196,7 +200,7 @@ class GTAnalysis(AnalysisBase):
             
         self._ebin_edges = np.sort(np.unique(energies.round(5)))
         self._enumbins = len(self._ebin_edges)-1
-        self._roi_model = {'roi' : {'logLike' : np.nan}}
+        self._roi_model = {'roi' : {'logLike' : np.nan, 'residmap' : {} }}
 
         self._roiwidth = max(roiwidths)
         self._binsz = min(binsz)
@@ -205,7 +209,7 @@ class GTAnalysis(AnalysisBase):
         self._wcs = create_wcs(self._roi.skydir,
                                coordsys=self.config['binning']['coordsys'],
                                projection=self.config['binning']['proj'],
-                               cdelt=self._binsz,
+                               cdelt=self._binsz,crpix=1.0+0.5*(self._npix-1),
                                naxis=3)
         self._wcs.wcs.crpix[2]=1
         self._wcs.wcs.crval[2]=10**self.energies[0]
@@ -240,6 +244,11 @@ class GTAnalysis(AnalysisBase):
         """Return the number of energy bins."""
         return self._enumbins    
 
+    @property
+    def npix(self):
+        """Return the number of energy bins."""
+        return self._npix 
+    
     def add_source(self,name,src_dict):
 
         src_dict['name'] = name
@@ -362,6 +371,7 @@ class GTAnalysis(AnalysisBase):
                                         'ccube.fits')
             
         make_coadd_map(counts,self._wcs,self._ccube_file)
+        self._roi_model['roi']['logLike'] = self.like()
             
 
     def cleanup(self):
@@ -639,7 +649,18 @@ class GTAnalysis(AnalysisBase):
         parNames = pyLike.StringVector()
         spectrum.getFreeParamNames(parNames)
         return [str(p) for p in parNames]
-    
+
+    def residmap(self,prefix):
+        """Generate data/model residual maps using the current model."""
+
+        self.logger.info('Running residual analysis')
+        
+        rmg = ResidMapGenerator(self.config['residmap'],self,
+                                fileio=self.config['fileio'],
+                                logging=self.config['logging'])
+
+        rmg.run(prefix)
+                
     def sed(self,name,profile=True,energies=None):
         
         # Find the source
@@ -757,7 +778,6 @@ class GTAnalysis(AnalysisBase):
         return self.profile(name,parName,emin=emin,emax=emax,reoptimize=reoptimize,xvals=xvals)
     
     def profile(self, name, parName, emin=None,emax=None, reoptimize=False,xvals=None,npts=None):
-        #                  **kwargs):
         """ Profile the likelihood for the given source and parameter.  
         """
         # Find the source
@@ -970,23 +990,38 @@ class GTAnalysis(AnalysisBase):
 
         make_coadd_map(counts,self._wcs,outfile)
 
-    def write_roi(self,outfile=None):
+    def write_roi(self,outfile=None,make_residuals=False):
         """Write out parameters of current model as yaml file."""
         # extract the results in a convenient format
 
         if outfile is None:
             outfile = os.path.join(self._savedir,'results.yaml')
+            prefix=''
         else:
             outfile, ext = os.path.splitext(outfile)
+            prefix = outfile + '_'
             if not ext:
                 outfile = os.path.join(self._savedir,outfile + '.yaml')
             else:
                 outfile = outfile + ext
-                        
+
+#        self.write_xml(prefix,save_model_map=save_model_map)
+
+        if make_residuals: 
+
+            self.residmap(prefix)
+        
+            for k, v in self._roi_model['roi']['residmap'].items():
+
+                imfile = os.path.join(self.config['fileio']['outdir'],
+                                       '%sresidmap_%s.png'%(prefix,k))
+                plt.figure()
+                p = ROIPlotter(v['sigma'],self.roi)
+                p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],cb_label='Significance [$\sigma$]')
+                plt.savefig(imfile)
+
         o = self.get_roi_model()
-                
-        # Get the subset of sources with free parameters
-            
+        # Get the subset of sources with free parameters            
         yaml.dump(tolist(o),open(outfile,'w'))
 
     def tsmap(self):
@@ -1040,9 +1075,6 @@ class GTAnalysis(AnalysisBase):
         
         hdulist = pyfits.HDUList([hdu_image])
         hdulist.writeto('test.fits',clobber=True)
-
-
-        
         
     def bowtie(self,fd,energies=None):
         
@@ -1190,7 +1222,7 @@ class GTBinnedAnalysis(AnalysisBase):
         self._wcs = create_wcs(self.roi.skydir,
                                coordsys=self.config['binning']['coordsys'],
                                projection=self.config['binning']['proj'],
-                               cdelt=self.binsz,
+                               cdelt=self.binsz,crpix=1.0+0.5*(self._npix-1),
                                naxis=3)
         self._wcs.wcs.crpix[2]=1
         self._wcs.wcs.crval[2]=10**self.energies[0]
@@ -1250,9 +1282,6 @@ class GTBinnedAnalysis(AnalysisBase):
         pl = pyLike.SourceFactory_funcFactory().create(src['SpectrumType'])
 
         for k,v in src.spectral_pars.items():
-
-            print k, v
-            
             par = pl.getParam(k)
             par.setValue(float(v['value']))
             par.setBounds(float(v['min']),float(v['max']))
