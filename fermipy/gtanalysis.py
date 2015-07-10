@@ -1052,7 +1052,7 @@ class GTAnalysis(AnalysisBase):
 
         o = self.get_roi_model()
         imfile = os.path.join(self.config['fileio']['outdir'],
-                              '%sroiresid.png'%(prefix))
+                              '%scounts_spectrum.png'%(prefix))
 
         make_counts_spectrum_plot(o,self.energies,imfile)
 
