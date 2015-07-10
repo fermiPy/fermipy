@@ -12,7 +12,7 @@ fileio:
   outdir : null
 
   # Stage data products in a temporary working directory.
-  stageoutput : False
+  usescratch  : False
 
   # Set the directory under which the working directory will be
   # created.  If stageoutput is True then the analysis will be run in
