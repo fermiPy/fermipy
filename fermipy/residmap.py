@@ -8,6 +8,8 @@ from astropy import wcs
 
 import fermipy.defaults as defaults
 from fermipy.utils import make_fits_map, AnalysisBase, make_gaussian_kernel
+from fermipy.logger import Logger, StreamLogger
+from fermipy.logger import logLevel as ll
 
 def poisson_lnl(nc,mu):
     nc = np.array(nc,ndmin=1)
@@ -84,6 +86,11 @@ class ResidMapGenerator(AnalysisBase):
     def __init__(self,config,gta,**kwargs):
         AnalysisBase.__init__(self,config,**kwargs)        
         self._gta = gta
+        
+        self.logger = Logger.get(self.__class__.__name__,
+                                 self.config['fileio']['logfile'],
+                                 ll(self.config['logging']['verbosity']))
+        
 
     def get_source_mask(self,kernel=None):
 
@@ -107,12 +114,15 @@ class ResidMapGenerator(AnalysisBase):
     def run(self,prefix):
 
         for m in self.config['models']:
+            self.logger.info('Generating Residual map')
+            self.logger.info(m)
             self.make_residual_map(copy.deepcopy(m),prefix)
     
     def make_residual_map(self,src_dict,prefix):
         
         # Put the test source at the pixel closest to the ROI center
-        xpix, ypix = np.round((self._gta.npix-1.0)/2.), np.round((self._gta.npix-1.0)/2.)
+        xpix, ypix = (np.round((self._gta.npix-1.0)/2.),
+                      np.round((self._gta.npix-1.0)/2.))
         cpix = np.array([xpix,ypix])
         
         w = wcs.WCS(self._gta._wcs.to_header(),naxis=[1,2])        
@@ -126,7 +136,8 @@ class ResidMapGenerator(AnalysisBase):
         if src_dict['SpatialType'] == 'Gaussian':
             src_dict['SpatialType'] = 'PointSource'
             src_dict.setdefault('Sigma',0.3)            
-            kernel = make_gaussian_kernel(src_dict['Sigma'],cdelt=0.1)
+            kernel = make_gaussian_kernel(src_dict['Sigma'],
+                                          cdelt=0.1,npix=101)
             kernel /= np.sum(kernel)
             cpix = [50,50]
             spatial_type = 'gaussian'

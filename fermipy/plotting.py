@@ -2,6 +2,7 @@ import copy
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from astropy import wcs
 import astropy.io.fits as pyfits
 import pywcsgrid2
@@ -11,6 +12,62 @@ import matplotlib.cbook as cbook
 from matplotlib.colors import NoNorm, LogNorm, Normalize
 
 from fermipy.utils import merge_dict, AnalysisBase
+
+def make_counts_spectrum_plot(o,energies,imfile):
+
+    fig = plt.figure()
+
+    gs = gridspec.GridSpec(2, 1, height_ratios = [1.4,1])
+    ax0 = fig.add_subplot(gs[0,0])
+    ax1 = fig.add_subplot(gs[1,0],sharex=ax0)
+    
+#    axes = axes_grid.Grid(fig,111,
+#                          nrows_ncols=(2,1),
+#                          axes_pad=0.05,
+#                          add_all=True)
+#    ax = axes[0]
+    
+    x = 0.5*(energies[1:] + energies[:-1])
+    xerr = 0.5*(energies[1:] - energies[:-1])
+    y = o['roi']['counts']
+    ym = o['roi']['model_counts']
+    
+
+    ax0.errorbar(x,y,yerr=np.sqrt(y),xerr=xerr,color='k',linestyle='None',marker='s',
+                       label='Data')
+
+    ax0.errorbar(x,ym,color='k',linestyle='-',marker='None',
+                       label='Total')
+        
+    for k,v in o.items():
+        if k == 'roi': continue
+
+        f = np.sum(v['model_counts'])/np.sum(o['roi']['model_counts'])
+
+        if f > 1E-2:
+            ax0.errorbar(x,v['model_counts'],linestyle='-',marker='None',
+                               label=k)
+        else:
+            ax0.errorbar(x,v['model_counts'],color='gray',linestyle='-',marker='None',
+                               label='__nolabel__')
+
+    ax0.set_yscale('log')
+    ax0.set_ylim(1,None)
+    ax0.set_xlim(energies[0],energies[-1])
+    ax0.legend(frameon=False,loc='best',prop={'size' : 8},ncol=2)
+
+    ax1.errorbar(x,(y-ym)/ym,xerr=xerr,yerr=np.sqrt(y)/ym,
+                 color='k',linestyle='None',marker='s',
+                 label='Data')
+
+    ax1.set_xlabel('Energy')
+    ax1.set_ylabel('Fractional Residual')
+    ax0.set_ylabel('Counts')
+    
+    ax1.set_ylim(-0.4,0.4)
+    ax1.axhline(0.0,color='k')
+    
+    plt.savefig(imfile)
 
 
 def load_ds9_cmap():

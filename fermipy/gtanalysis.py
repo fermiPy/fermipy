@@ -9,6 +9,14 @@ import numpy as np
 import tempfile
 import logging
 
+import matplotlib
+
+try:             os.environ['DISPLAY']
+except KeyError: matplotlib.use('Agg')
+
+#matplotlib.interactive(False)
+#matplotlib.use('Agg')
+
 import matplotlib.pyplot as plt
 
 import astropy.io.fits as pyfits
@@ -18,11 +26,11 @@ import fermipy
 import fermipy.defaults as defaults
 from fermipy.residmap import ResidMapGenerator
 from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import make_coadd_map
+from fermipy.utils import make_coadd_map, valToBinBounded
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
-from fermipy.plotting import ROIPlotter
+from fermipy.plotting import ROIPlotter, make_counts_spectrum_plot
 
 # pylikelihood
 
@@ -200,8 +208,22 @@ class GTAnalysis(AnalysisBase):
             
         self._ebin_edges = np.sort(np.unique(energies.round(5)))
         self._enumbins = len(self._ebin_edges)-1
-        self._roi_model = {'roi' : {'logLike' : np.nan, 'residmap' : {} }}
+        self._roi_model = {
+            'roi' : {
+                'logLike' : np.nan,
+                'counts'  : np.zeros(self.enumbins),
+                'model_counts'  : np.zeros(self.enumbins),
+                'residmap' : {},
+                'components' : []
+                }
+            }
 
+        for c in self._components:
+            self._roi_model['roi']['components'] += [{'logLike' : np.nan,
+                                                      'counts'  : np.zeros(self.enumbins),
+                                                      'model_counts'  : np.zeros(self.enumbins),
+                                                      'residmap' : {}}]
+        
         self._roiwidth = max(roiwidths)
         self._binsz = min(binsz)
         self._npix = int(np.round(self._roiwidth/self._binsz))
@@ -359,14 +381,19 @@ class GTAnalysis(AnalysisBase):
             src_model.update(self.get_src_model(name,True))            
             self._roi_model[name] = src_model
 
-        self._roi_model['roi']['nobs'] = np.zeros(self.enumbins)
-
+        self._roi_model['roi']['counts'] = np.zeros(self.enumbins)
+        
         # Make the co-added counts map here
         #
         counts = []
         for i, c in enumerate(self.components):
-            counts += [c.countsMap()]
-
+            cm = c.countsMap()
+            counts += [cm]
+            self._roi_model['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,cm,axes=[0,1]))
+            self._roi_model['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[0,1]))
+            
+        counts = np.zeros(self.enumbins)
+            
         self._ccube_file = os.path.join(self.config['fileio']['workdir'],
                                         'ccube.fits')
             
@@ -398,11 +425,14 @@ class GTAnalysis(AnalysisBase):
         for c in self.components:
             c.setEnergyRange(emin,emax)
             
-    def modelCountsSpectrum(self,name,emin,emax,summed=False):
+    def modelCountsSpectrum(self,name,emin=None,emax=None,summed=False):
         """Return the predicted number of model counts versus energy
         for a given source and energy range.  If summed=True return
         the counts spectrum summed over all components otherwise
         return a list of model spectra."""
+
+        if emin is None: emin = self.energies[0]
+        if emax is None: emax = self.energies[-1]
         
         if summed:
             cs = np.zeros(self.enumbins)
@@ -1007,10 +1037,10 @@ class GTAnalysis(AnalysisBase):
 
 #        self.write_xml(prefix,save_model_map=save_model_map)
 
-        if make_residuals: 
-
-            self.residmap(prefix)
         
+        
+        if make_residuals: 
+            self.residmap(prefix)        
             for k, v in self._roi_model['roi']['residmap'].items():
 
                 imfile = os.path.join(self.config['fileio']['outdir'],
@@ -1021,6 +1051,12 @@ class GTAnalysis(AnalysisBase):
                 plt.savefig(imfile)
 
         o = self.get_roi_model()
+        imfile = os.path.join(self.config['fileio']['outdir'],
+                              '%sroiresid.png'%(prefix))
+
+        make_counts_spectrum_plot(o,self.energies,imfile)
+
+        
         # Get the subset of sources with free parameters            
         yaml.dump(tolist(o),open(outfile,'w'))
 
@@ -1112,6 +1148,11 @@ class GTAnalysis(AnalysisBase):
             gf[name] = self.get_src_model(name)
 
         self._roi_model = merge_dict(self._roi_model,gf,add_new_keys=True) 
+
+        self._roi_model['roi']['model_counts'].fill(0)
+        for name in self.like.sourceNames():
+            self._roi_model['roi']['model_counts'] += gf[name]['model_counts']
+
         return copy.deepcopy(self._roi_model)        
 
     def get_src_model(self,name,paramsonly=False):
@@ -1125,6 +1166,9 @@ class GTAnalysis(AnalysisBase):
         # Get NPred
         src_dict['Npred'] = self.like.NpredValue(name)
 
+        # Get Counts Spectrum
+        src_dict['model_counts'] = self.modelCountsSpectrum(name,summed=True)
+        
         if not self.get_free_source_params(name) or paramsonly:
             return src_dict
         
@@ -1268,13 +1312,13 @@ class GTBinnedAnalysis(AnalysisBase):
         src_dict['name'] = name
         src = self.roi.create_source(src_dict)
         
-#        if radec is None:
-#            radec = self.roi.radec
-
         if src['SpatialType'] == 'PointSource':        
-            pylike_src = pyLike.PointSource(0, 0,
-                                            self.like.logLike.observation())
-            pylike_src.setDir(src.skydir.ra.deg,src.skydir.dec.deg,True,False)
+            #pylike_src = pyLike.PointSource(0, 0,
+#            pylike_src = pyLike.PointSource(src.skydir.ra.deg,src.skydir.dec.deg,
+#                                            self.like.logLike.observation())
+
+            pylike_src = pyLike.PointSource(self.like.logLike.observation())
+            pylike_src.setDir(src.skydir.ra.deg,src.skydir.dec.deg,False,False)
         else:
             sm = pyLike.SpatialMap(src['Spatial_Filename'])
             pylike_src = pyLike.DiffuseSource(sm,self.like.logLike.observation(),False)
