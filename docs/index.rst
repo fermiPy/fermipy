@@ -25,7 +25,48 @@ analysis tasks.  For a short introduction to using fermiPy see the
 Installation
 ------------
 
-Contents:
+.. note:: 
+
+   It is recommended to only use the fermipy package with the v10r0p5
+   ST release or later.
+
+These instructions assume that you already have a local installation
+of the Fermi STs.  Instructions for downloading and installing the STs
+are provided by through the `FSSC
+<http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.
+
+Before starting the installation process determine whether you have
+setuptools and pip installed in your local python environment.  Installing
+these packages may be necessary is you are running with the binary version
+of the Fermi Science Tools distributed by the FSSC:
+
+.. code-block:: bash
+
+   >>> curl https://bootstrap.pypa.io/get-pip.py | python -
+
+Next install the ez_setup module with pip (required by pywcsgrid2):
+
+.. code-block:: bash
+
+   >>> pip install ez_setup
+
+Download the latest version of fermiPy from the github repository:
+
+.. code-block:: bash
+
+   >>> git clone https://github.com/fermiPy/fermipy.git
+
+Run the setup.py script.  This will install all of the python
+dependencies in your local python environment:
+
+.. code-block:: bash
+
+   >>> cd fermipy
+   >>> python setup.py install
+
+
+Documentation Contents
+----------------------
 
 .. toctree::
    :maxdepth: 2

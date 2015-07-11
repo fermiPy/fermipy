@@ -52,7 +52,7 @@ The configuration file is divided into blocks that group together
 related options.  The *data* block defines the FT1 and FT2 files.
 Here *evfile* points to a list of FT1 files that encompass the chosen
 ROI, energy range, and time selection.  The parameters in the
-*binning* block define the width of the ROI and the spatial and energy
+*binning* block define the dimensions of the ROI and the spatial and energy
 bin size.  The *selection* block defines parameters related to the
 data selection (energy range, zmax cut, and event class/type).  The
 *target* parameter in this block defines the ROI center to have the
