@@ -180,16 +180,16 @@ class ResidMapGenerator(AnalysisBase):
         sigma[excess<0] *= -1
         
         sigma_map_file = os.path.join(self.config['fileio']['workdir'],
-                                      '%sresidmap_%s_sigma.fits'%(prefix,modelname))
+                                      '%s_residmap_%s_sigma.fits'%(prefix,modelname))
 
         data_map_file = os.path.join(self.config['fileio']['workdir'],
-                                     '%sresidmap_%s_data.fits'%(prefix,modelname))
+                                     '%s_residmap_%s_data.fits'%(prefix,modelname))
 
         model_map_file = os.path.join(self.config['fileio']['workdir'],
-                                      '%sresidmap_%s_model.fits'%(prefix,modelname))
+                                      '%s_residmap_%s_model.fits'%(prefix,modelname))
 
         excess_map_file = os.path.join(self.config['fileio']['workdir'],
-                                       '%sresidmap_%s_excess.fits'%(prefix,modelname))
+                                       '%s_residmap_%s_excess.fits'%(prefix,modelname))
         
         make_fits_map(sigma,w,sigma_map_file)
         make_fits_map(cmst,w,data_map_file)

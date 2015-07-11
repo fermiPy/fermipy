@@ -19,6 +19,8 @@ except KeyError: matplotlib.use('Agg')
 
 import matplotlib.pyplot as plt
 
+import pyLikelihood as pyLike
+
 import astropy.io.fits as pyfits
 
 
@@ -31,10 +33,10 @@ from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 from fermipy.plotting import ROIPlotter, make_counts_spectrum_plot
+from fermipy.config import ConfigManager
 
 # pylikelihood
 
-import pyLikelihood as pyLike
 import GtApp
 import BinnedAnalysis as ba
 import UnbinnedAnalysis as uba
@@ -146,6 +148,10 @@ class GTAnalysis(AnalysisBase):
                 'components' : (None,'')}
 
     def __init__(self,config,**kwargs):
+
+        if not isinstance(config,dict):
+            config = ConfigManager.create(config)
+
         super(GTAnalysis,self).__init__(config,**kwargs)
 
         # Setup directories
@@ -1020,8 +1026,8 @@ class GTAnalysis(AnalysisBase):
 
         make_coadd_map(counts,self._wcs,outfile)
 
-    def write_roi(self,outfile=None,make_residuals=False):
-        """Write out parameters of current model as yaml file."""
+    def write_roi(self,outfile=None,make_residuals=False,save_model_map=True):
+        """Write current model as yaml file."""
         # extract the results in a convenient format
 
         if outfile is None:
@@ -1029,22 +1035,20 @@ class GTAnalysis(AnalysisBase):
             prefix=''
         else:
             outfile, ext = os.path.splitext(outfile)
-            prefix = outfile + '_'
+            prefix = outfile 
             if not ext:
                 outfile = os.path.join(self._savedir,outfile + '.yaml')
             else:
                 outfile = outfile + ext
 
-#        self.write_xml(prefix,save_model_map=save_model_map)
-
-        
+        self.write_xml(prefix,save_model_map=save_model_map)
         
         if make_residuals: 
             self.residmap(prefix)        
             for k, v in self._roi_model['roi']['residmap'].items():
 
                 imfile = os.path.join(self.config['fileio']['outdir'],
-                                       '%sresidmap_%s.png'%(prefix,k))
+                                       '%s_residmap_%s.png'%(prefix,k))
                 plt.figure()
                 p = ROIPlotter(v['sigma'],self.roi)
                 p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],cb_label='Significance [$\sigma$]')
@@ -1052,11 +1056,13 @@ class GTAnalysis(AnalysisBase):
 
         o = self.get_roi_model()
         imfile = os.path.join(self.config['fileio']['outdir'],
-                              '%scounts_spectrum.png'%(prefix))
+                              '%s_counts_spectrum.png'%(prefix))
 
         make_counts_spectrum_plot(o,self.energies,imfile)
 
         
+        self.logger.info('Writing %s...'%outfile)
+
         # Get the subset of sources with free parameters            
         yaml.dump(tolist(o),open(outfile,'w'))
 
