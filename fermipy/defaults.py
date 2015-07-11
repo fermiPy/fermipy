@@ -85,7 +85,7 @@ fileio = {
     'workdir'      : (None,'Override the working directory.'),
     'logfile'      : (None,''),
     'savefits'     : (True,'Save intermediate FITS data products.'),
-    'usescratch'   : (True,'Perform analysis in a working directory.'),
+    'usescratch'   : (True,'Perform analysis in a temporary working directory.'),
     }
 
 logging = {

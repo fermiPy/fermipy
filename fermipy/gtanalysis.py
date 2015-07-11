@@ -351,15 +351,10 @@ class GTAnalysis(AnalysisBase):
 
                 if not os.path.splitext(f)[1] in extensions: continue
                 
-#                for ext in extensions:               
-#                print re.search(f,'(.xml)')
-                
                 self.logger.info('Copying ' + f)
                 shutil.copy(os.path.join(self.config['fileio']['workdir'],f),
                             self._savedir)
             
-#            for f in glob.glob(os.path.join(self.config['fileio']['workdir'],'*.fits')):
-#                shutil.copy(f,self._savedir)
         else:
             self.logger.error('Working directory does not exist.')
 
