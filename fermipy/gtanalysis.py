@@ -1017,14 +1017,20 @@ class GTAnalysis(AnalysisBase):
 
         if not save_model_map: return
             
-        counts = []        
+        counts = []
+        outfiles = []
         for i, c in enumerate(self._components):
-            counts += [c.generate_model_map(model_name)]
+
+            of, cc = c.generate_model_map(model_name)
+            counts += [cc]
+            outfiles += [of]
 
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'mcube_%s.fits'%(model_name))
 
         make_coadd_map(counts,self._wcs,outfile)
+
+        return [outfile] +  outfiles
 
     def write_roi(self,outfile=None,make_residuals=False,save_model_map=True):
         """Write current model as yaml file."""
@@ -1041,7 +1047,7 @@ class GTAnalysis(AnalysisBase):
             else:
                 outfile = outfile + ext
 
-        self.write_xml(prefix,save_model_map=save_model_map)
+        mcube_files = self.write_xml(prefix,save_model_map=save_model_map)
         
         if make_residuals: 
             self.residmap(prefix)        
@@ -1053,6 +1059,16 @@ class GTAnalysis(AnalysisBase):
                 p = ROIPlotter(v['sigma'],self.roi)
                 p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],cb_label='Significance [$\sigma$]')
                 plt.savefig(imfile)
+
+        if len(mcube_files):
+
+            imfile = os.path.join(self.config['fileio']['outdir'],
+                                  '%s_model_map.png'%(prefix))
+
+            plt.figure()        
+            p = ROIPlotter(mcube_files[0],self.roi)
+            p.plot(cb_label='Counts',zscale='sqrt')
+            plt.savefig(imfile)
 
         o = self.get_roi_model()
         imfile = os.path.join(self.config['fileio']['outdir'],
@@ -1560,7 +1576,7 @@ class GTBinnedAnalysis(AnalysisBase):
         hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])        
         hdulist.writeto(outfile,clobber=True)
 
-        return counts
+        return outfile, counts
         
     def generate_model(self,model_name=None,outfile=None):
         """Generate a counts model map from an XML model file using

@@ -277,6 +277,8 @@ class Source(Model):
         if not self._spatial_pars:
             self._update_spatial_pars()
 
+        if 'name' in self._data and self._data['name'] is not None:
+            self._data['Source_Name'] = self._data.pop('name')
 
         if not 'Source_Name' in self._data:
             self._data['Source_Name'] = create_model_name(self)
@@ -347,15 +349,24 @@ class Source(Model):
 
         elif self['SpectrumType'] == 'LogParabola':
 
-            norm_value, norm_scale = scale_parameter(self['Flux_Density'])
-            eb_value, eb_scale = scale_parameter(self['Pivot_Energy'])
+            if not 'norm' in self:
+                self._data['norm'] = self['Flux_Density']
+            
+            if not 'Eb' in  self:
+                self._data['Eb'] = self['Pivot_Energy']
+
+            if not 'alpha' in  self:
+                self._data['alpha'] = self['Spectral_Index']
+
+            norm_value, norm_scale = scale_parameter(self['norm'])
+            eb_value, eb_scale = scale_parameter(self['Eb'])
 
             self._spectral_pars = {
                 'norm' : {'name' : 'norm', 'value' : str(norm_value),
                           'scale' : str(norm_scale),
                           'min' : '0.01', 'max' : '100.0', 'free' : '0'},
                 'alpha' : {'name' : 'alpha',
-                           'value' : str(self['Spectral_Index']),
+                           'value' : str(self['alpha']),
                            'scale' : str(1.0),
                            'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
                 'beta' :  {'name' : 'beta', 'value' : str(self['beta']),
@@ -442,13 +453,31 @@ class Source(Model):
         return self._data
 
     @staticmethod
-    def load_from_dict(src_dict):
+    def create_from_dict(src_dict):
+        """Create a source object from a python dictionary."""
 
-        src_dict.setdefault('SpatialType','PointSource')
-        src_dict.setdefault('SpectrumType','PowerLaw')
-        src_dict.setdefault('Index',2.0)
-        src_dict.setdefault('Scale',1000.0)
-        src_dict.setdefault('Prefactor',1E-13)
+        default_src_dict = dict(name = None,
+                                Source_Name = None,
+                                SpatialType = 'PointSource',
+                                SpatialWidth = 0.5,
+                                SpectrumType = 'PowerLaw',
+                                Index = 2.0,
+                                Scale = 1000.0,
+                                Prefactor = 1E-13,
+                                Eb = 1000.0,
+                                beta = 0.0,
+                                alpha = 2.0,
+                                norm = 1E-13,
+                                Cutoff = 1000.0,
+                                Index1 = 2.0,
+                                Index2 = 1.0,
+                                ra = None,
+                                dec = None,
+                                glon = None,
+                                glat = None)
+
+        validate_config(src_dict,default_src_dict)
+        src_dict = merge_dict(default_src_dict,src_dict)
 
         if src_dict['SpatialType'] != 'PointSource':
             extended=True
@@ -467,7 +496,7 @@ class Source(Model):
         return Source(src_dict,radec=radec,extended=extended)
     
     @staticmethod
-    def load_from_xml(root,extdir=None):
+    def create_from_xml(root,extdir=None):
         
         spec = load_xml_elements(root,'spectrum')
         spat = load_xml_elements(root,'spatialModel')
@@ -625,21 +654,32 @@ class ROIModel(AnalysisBase):
             self.load_source(MapCubeSource(self.config['galdiff'],'galdiff'))
 
     def create_source(self,src_dict,build_index=True):
+        """Create and load a source object to the ROI model."""
         
-        src_dict.setdefault('SpatialType','PointSource')
-        src_dict.setdefault('SpectrumType','PowerLaw')
-        src_dict.setdefault('Index',2.0)
-        src_dict.setdefault('Scale',1000.0)
-                
-        src = Source.load_from_dict(src_dict)
+        src = Source.create_from_dict(src_dict)
 
-        if src['SpatialType'] == 'Gaussian':
-            template_file = os.path.join(self.config['fileio']['workdir'],'template.fits')
-            make_gaussian_spatial_map(src.skydir,0.5,template_file)
+        if src['SpatialType'] == 'PointSource':
+            pass
+        elif src['SpatialType'] == 'GaussianSource':
+            template_file = \
+                os.path.join(self.config['fileio']['workdir'],
+                             '%s_template_gauss_%04.2f.fits'%(src.name,src['SpatialWidth']))
+            make_gaussian_spatial_map(src.skydir,src['SpatialWidth'],template_file)
             src['Spatial_Filename'] = template_file
-            
-        self.load_source(src)
+        elif src['SpatialType'] == 'DiskSource':            
+            template_file = \
+                os.path.join(self.config['fileio']['workdir'],
+                             '%s_template_disk_%04.2f.fits'%(src.name,src['SpatialWidth']))
+            make_disk_spatial_map(src.skydir,src['SpatialWidth'],template_file)
+            src['Spatial_Filename'] = template_file
+        else:
+            raise Exception('Unrecognized SpatialType: ' + src['SpatialType'] +
+                            '\n Valid choices are: PointSource, GaussianSource, DiskSource ')
 
+        self.logger.info('Creating source ' + src.name)
+        self.logger.info(src._data)
+
+        self.load_source(src)
         if build_index: self.build_src_index()
 
         return src
@@ -941,7 +981,7 @@ class ROIModel(AnalysisBase):
         root = ElementTree.ElementTree(file=xmlfile).getroot()
 
         for s in root.findall('source'):
-            src = Source.load_from_xml(s,extdir=self.config['extdir'])
+            src = Source.create_from_xml(s,extdir=self.config['extdir'])
             self.load_source(src)
 
         self.build_src_index()

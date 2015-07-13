@@ -149,7 +149,8 @@ def validate_config(config,defaults,block='root'):
     for key, item in config.items():
         
         if not key in defaults:
-            raise Exception('Invalid key in \'%s\' block of configuration: %s'%(block,key))
+            raise Exception('Invalid key in \'%s\' block of configuration: %s'%
+                            (block,key))
         
         if isinstance(item,dict):
             validate_config(config[key],defaults[key],key)
@@ -358,36 +359,44 @@ def make_gaussian_kernel(sigma,npix=101,cdelt=0.05):
     k = fn(k,sigma)
 
     # Normalize map to 1
-    k /= np.sum(k)
-    k /= np.radians(cdelt)**2
+    k /= (np.sum(k)*np.radians(cdelt)**2)
 
     return k
     
+def make_disk_kernel(sigma,npix=101,cdelt=0.05):
 
-def make_gaussian_spatial_map(skydir,sigma,outfile,npix=100,cdelt=0.05):
-
-    sigma /= 1.5095921854516636        
-    sigma /= cdelt
-    
-    w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2+0.5)
-    
-    hdu_image = pyfits.PrimaryHDU(np.zeros((npix,npix)),
-                                  header=w.to_header())
-
-    fn = lambda t, s: 1./(2*np.pi*s**2)*np.exp(-t**2/(s**2*2.0))
+    sigma /= cdelt    
+    fn = lambda t, s: 0.5 * (np.sign(s-t) + 1.0)
     
     b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
     k = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
                                         b[:,np.newaxis]**2)
     k = fn(k,sigma)
 
-
     # Normalize map to 1
-    k /= np.sum(k)
-    k /= np.radians(cdelt)**2
-    
-    hdu_image.data[:,:] = k
+    k /= (np.sum(k)*np.radians(cdelt)**2)
 
+    return k
+
+def make_gaussian_spatial_map(skydir,sigma,outfile,npix=101,cdelt=0.05):
+    
+    w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5)    
+    hdu_image = pyfits.PrimaryHDU(np.zeros((npix,npix)),
+                                  header=w.to_header())
+    
+    hdu_image.data[:,:] = make_gaussian_kernel(sigma,npix=npix,cdelt=cdelt)
+    hdulist = pyfits.HDUList([hdu_image])
+    hdulist.writeto(outfile,clobber=True) 
+
+def make_disk_spatial_map(skydir,sigma,outfile,npix=101,cdelt=0.05):
+
+    sigma /= cdelt    
+    w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5)
+    
+    hdu_image = pyfits.PrimaryHDU(np.zeros((npix,npix)),
+                                  header=w.to_header())
+    
+    hdu_image.data[:,:] = make_disk_kernel(sigma,npix=npix,cdelt=cdelt)
     hdulist = pyfits.HDUList([hdu_image])
     hdulist.writeto(outfile,clobber=True) 
 

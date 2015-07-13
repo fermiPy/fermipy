@@ -174,9 +174,13 @@ class ImagePlotter(object):
         hdulist = pyfits.open(fitsfile)        
         header = hdulist[0].header
         header = pyfits.Header.fromstring(header.tostring())
-        self._wcs = wcs.WCS(header)
 
-        self._data = copy.deepcopy(hdulist[0].data)
+        if header['NAXIS'] == 3:
+            self._wcs = wcs.WCS(header,naxis=[1,2])
+            self._data = copy.deepcopy(np.sum(hdulist[0].data,axis=0))
+        else:
+            self._wcs = wcs.WCS(header)
+            self._data = copy.deepcopy(hdulist[0].data)
         
     def plot(self,subplot=111,catalog=None,cmap='jet',**kwargs):
 
@@ -272,10 +276,6 @@ class ROIPlotter(AnalysisBase):
         self._roi = roi
 
     def plot(self,**kwargs):
-
-#        ax = kwargs.get('ax',plt.gca())
-
-        
         
         marker_threshold = 10
         label_threshold = 10
