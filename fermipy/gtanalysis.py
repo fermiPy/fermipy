@@ -1,5 +1,6 @@
 
 import os
+import re
 import sys
 import copy
 import glob
@@ -181,7 +182,7 @@ class GTAnalysis(AnalysisBase):
         
         # Working directory (can be the same as savedir)
 #        if self.config['fileio']['scratchdir'] is not None:
-        if self.config['fileio']['stageoutput']:
+        if self.config['fileio']['usescratch']:
             self._config['fileio']['workdir'] = tempfile.mkdtemp(prefix=os.environ['USER'] + '.',
                                                        dir=self.config['fileio']['scratchdir'])
             self.logger.info('Created working directory: %s'%self.config['fileio']['workdir'])
@@ -338,23 +339,41 @@ class GTAnalysis(AnalysisBase):
     def stage_output(self):
         """Copy data products to final output directory."""
 
+        extensions = ['.xml','.par','.yaml','.png','.pdf']        
+        if self.config['fileio']['savefits']:
+            extensions += ['.fits','.fit']
+        
         if self.config['fileio']['workdir'] == self._savedir:
             return
         elif os.path.isdir(self.config['fileio']['workdir']):
-            self.logger.info('Staging output data products to %s'%self._savedir)
-            for f in glob.glob(os.path.join(self.config['fileio']['workdir'],'*.fits')):
-                shutil.copy(f,self._savedir)
+            self.logger.info('Staging files to %s'%self._savedir)
+            for f in os.listdir(self.config['fileio']['workdir']):
+
+                if not os.path.splitext(f)[1] in extensions: continue
+                
+                self.logger.info('Copying ' + f)
+                shutil.copy(os.path.join(self.config['fileio']['workdir'],f),
+                            self._savedir)
+            
         else:
             self.logger.error('Working directory does not exist.')
 
     def stage_input(self):
         """Copy data products to intermediate working directory."""
 
+        extensions = ['.fits','.fit']
+        
         if self.config['fileio']['workdir'] == self._savedir:
             return
         elif os.path.isdir(self.config['fileio']['workdir']):
-            for f in glob.glob(os.path.join(self._savedir,'*')):
-                shutil.copy(f,self.config['fileio']['workdir'])
+            self.logger.info('Staging files to %s'%
+                             self.config['fileio']['workdir'])
+#            for f in glob.glob(os.path.join(self._savedir,'*')):
+            for f in os.listdir(self._savedir):
+                if not os.path.splitext(f)[1] in extensions: continue
+                self.logger.info('Copying ' + f)
+                shutil.copy(os.path.join(self._savedir,f),
+                            self.config['fileio']['workdir'])
         else:
             self.logger.error('Working directory does not exist.')
             
@@ -397,8 +416,6 @@ class GTAnalysis(AnalysisBase):
             counts += [cm]
             self._roi_model['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,cm,axes=[0,1]))
             self._roi_model['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[0,1]))
-            
-        counts = np.zeros(self.enumbins)
             
         self._ccube_file = os.path.join(self.config['fileio']['workdir'],
                                         'ccube.fits')

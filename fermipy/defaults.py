@@ -84,9 +84,8 @@ fileio = {
     'scratchdir'   : ('/scratch',''),
     'workdir'      : (None,'Override the working directory.'),
     'logfile'      : (None,''),
-    'saveoutput'   : (True,'Save intermediate FITS data products.'),
-    'stageoutput'  : 
-    (True,'Stage output to an intermediate working directory.'),
+    'savefits'     : (True,'Save intermediate FITS data products.'),
+    'usescratch'   : (True,'Perform analysis in a temporary working directory.'),
     }
 
 logging = {
