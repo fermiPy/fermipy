@@ -32,9 +32,9 @@ def smooth(m,k,cpix,mode='constant',threshold=0.01):
     from scipy import ndimage
     
     o = np.zeros(m.shape)
-    for i in range(m.shape[2]):
+    for i in range(m.shape[0]):
 
-        ks = k[:,:,i]
+        ks = k[i,:,:]
         
 #        print 'Smoothing map ', i
 
@@ -58,7 +58,7 @@ def smooth(m,k,cpix,mode='constant',threshold=0.01):
         if ks.shape[0]%2==0: origin[0] += 1
         if ks.shape[1]%2==0: origin[1] += 1
             
-        o[:,:,i] = ndimage.convolve(m[:,:,i],ks,mode=mode,origin=origin,cval=0.0)
+        o[i,:,:] = ndimage.convolve(m[i,:,:],ks,mode=mode,origin=origin,cval=0.0)
 
     o /= np.sum(k**2)
     return o
@@ -68,7 +68,7 @@ def create_model_name(src,spatial_type):
     o = spatial_type
 
     if spatial_type == 'gaussian':
-        o += '_s%04.2f'%src['Sigma']
+        o += '_s%04.2f'%src['SpatialWidth']
     
     if src['SpectrumType'] == 'PowerLaw':
         o += '_powerlaw_%04.2f'%src['Index']
@@ -101,8 +101,8 @@ class ResidMapGenerator(AnalysisBase):
             zs += np.sum(z)
             
             if kernel is not None:
-                shape = kernel.shape + (z.shape[2],)                
-                z = np.apply_over_axes(np.sum,z,axes=[0,1])*np.ones(shape)*kernel[:,:,np.newaxis]
+                shape = (z.shape[0],) + kernel.shape 
+                z = np.apply_over_axes(np.sum,z,axes=[1,2])*np.ones(shape)*kernel[np.newaxis,:,:]
             
             sm.append(z)
 
@@ -135,8 +135,7 @@ class ResidMapGenerator(AnalysisBase):
         
         if src_dict['SpatialType'] == 'Gaussian':
             src_dict['SpatialType'] = 'PointSource'
-            src_dict.setdefault('Sigma',0.3)            
-            kernel = make_gaussian_kernel(src_dict['Sigma'],
+            kernel = make_gaussian_kernel(src_dict['SpatialWidth'],
                                           cdelt=0.1,npix=101)
             kernel /= np.sum(kernel)
             cpix = [50,50]
@@ -166,8 +165,8 @@ class ResidMapGenerator(AnalysisBase):
 
             ccs = smooth(cc,sm[i],cpix)
             mcs = smooth(mc,sm[i],cpix)
-            cms = np.sum(ccs,axis=2)
-            mms = np.sum(mcs,axis=2)
+            cms = np.sum(ccs,axis=0)
+            mms = np.sum(mcs,axis=0)
             
             cmst += cms
             mmst += mms

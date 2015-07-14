@@ -38,18 +38,17 @@ def make_counts_spectrum_plot(o,energies,imfile):
 
     ax0.errorbar(x,ym,color='k',linestyle='-',marker='None',
                        label='Total')
-        
-    for k,v in o.items():
-        if k == 'roi': continue
 
-        f = np.sum(v['model_counts'])/np.sum(o['roi']['model_counts'])
+    src_dict = { k : v for k, v in o.items() if k != 'roi' }
+    
+    for v in sorted(src_dict.values(),key=lambda t: t['Npred'],reverse=True)[:6]:
+        ax0.errorbar(x,v['model_counts'],linestyle='-',marker='None',
+                     label=v['name'])
 
-        if f > 1E-2:
-            ax0.errorbar(x,v['model_counts'],linestyle='-',marker='None',
-                               label=k)
-        else:
-            ax0.errorbar(x,v['model_counts'],color='gray',linestyle='-',marker='None',
-                               label='__nolabel__')
+
+    for v in sorted(src_dict.values(),key=lambda t: t['Npred'],reverse=True)[6:]:
+        ax0.errorbar(x,v['model_counts'],color='gray',linestyle='-',marker='None',
+                         label='__nolabel__')
 
     ax0.set_yscale('log')
     ax0.set_ylim(1,None)
@@ -60,7 +59,7 @@ def make_counts_spectrum_plot(o,energies,imfile):
                  color='k',linestyle='None',marker='s',
                  label='Data')
 
-    ax1.set_xlabel('Energy')
+    ax1.set_xlabel('Energy [log$_{10}$(E/MeV)]')
     ax1.set_ylabel('Fractional Residual')
     ax0.set_ylabel('Counts')
     
@@ -174,13 +173,13 @@ class ImagePlotter(object):
         hdulist = pyfits.open(fitsfile)        
         header = hdulist[0].header
         header = pyfits.Header.fromstring(header.tostring())
-
+        
         if header['NAXIS'] == 3:
             self._wcs = wcs.WCS(header,naxis=[1,2])
-            self._data = copy.deepcopy(np.sum(hdulist[0].data,axis=0))
+            self._data = copy.deepcopy(np.sum(hdulist[0].data,axis=0)).T
         else:
             self._wcs = wcs.WCS(header)
-            self._data = copy.deepcopy(hdulist[0].data)
+            self._data = copy.deepcopy(hdulist[0].data).T
         
     def plot(self,subplot=111,catalog=None,cmap='jet',**kwargs):
 
@@ -303,7 +302,7 @@ class ROIPlotter(AnalysisBase):
                 
         im, ax = self._implot.plot(**im_kwargs)
         pixcrd = self._implot._wcs.wcs_world2pix(self._roi._src_skydir.ra.deg,
-                                           self._roi._src_skydir.dec.deg,0)
+                                                 self._roi._src_skydir.dec.deg,0)
         
         for i, s in enumerate(self._roi.sources):
 

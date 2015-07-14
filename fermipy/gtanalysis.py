@@ -414,8 +414,8 @@ class GTAnalysis(AnalysisBase):
         for i, c in enumerate(self.components):
             cm = c.countsMap()
             counts += [cm]
-            self._roi_model['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,cm,axes=[0,1]))
-            self._roi_model['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[0,1]))
+            self._roi_model['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,cm,axes=[1,2]))
+            self._roi_model['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[1,2]))
             
         self._ccube_file = os.path.join(self.config['fileio']['workdir'],
                                         'ccube.fits')
@@ -1087,6 +1087,14 @@ class GTAnalysis(AnalysisBase):
             p.plot(cb_label='Counts',zscale='sqrt')
             plt.savefig(imfile)
 
+        imfile = os.path.join(self.config['fileio']['outdir'],
+                              '%s_counts_map.png'%(prefix))
+
+        plt.figure()        
+        p = ROIPlotter(self._ccube_file,self.roi)
+        p.plot(cb_label='Counts')
+        plt.savefig(imfile)
+            
         o = self.get_roi_model()
         imfile = os.path.join(self.config['fileio']['outdir'],
                               '%s_counts_spectrum.png'%(prefix))
@@ -1198,7 +1206,7 @@ class GTAnalysis(AnalysisBase):
         source = self.like[name].src
         spectrum = source.spectrum()
 
-        src_dict = { }
+        src_dict = { 'name' : name }
 
         src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
 
@@ -1397,7 +1405,7 @@ class GTBinnedAnalysis(AnalysisBase):
     def countsMap(self):
         """Return 3-D counts map as a numpy array."""
         z = self.like.logLike.countsMap().data()
-        z = np.array(z).reshape(self.enumbins,self.npix,self.npix).swapaxes(0,2)
+        z = np.array(z).reshape(self.enumbins,self.npix,self.npix)#.swapaxes(0,2)
         return z
         
     def modelCountsMap(self,name=None):
@@ -1413,9 +1421,8 @@ class GTBinnedAnalysis(AnalysisBase):
             model = self.like.logLike.getSourceMap(name)
             self.like.logLike.updateModelMap(v,model)
         
-        retVals = np.array(v).reshape(self.enumbins,
-                                      self.npix,self.npix).swapaxes(0,2)
-        return retVals
+        z = np.array(v).reshape(self.enumbins,self.npix,self.npix)        
+        return z
         
     def modelCountsSpectrum(self,name,emin,emax):
         cs = np.array(self.like.logLike.modelCountsSpectrum(name))
@@ -1588,8 +1595,8 @@ class GTBinnedAnalysis(AnalysisBase):
         
         h = pyfits.open(self._ccube_file)
         
-        counts = self.modelCountsMap()        
-        hdu_image = pyfits.PrimaryHDU(counts.T,header=h[0].header)
+        counts = self.modelCountsMap()
+        hdu_image = pyfits.PrimaryHDU(counts,header=h[0].header)
         hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])        
         hdulist.writeto(outfile,clobber=True)
 
