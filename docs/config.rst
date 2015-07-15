@@ -36,8 +36,7 @@ overriden to 10000.
    }
 
    gta = GTAnalysis(config,selection={'emax' : 10000})
-
-
+   
 
 ##################################
 Configuration File
@@ -78,7 +77,9 @@ data
 
 The *data* block defines the input data files for the analysis (FT1,
 FT2, and livetime cube).  *evfile* and *scfile* can either be an
-individual file or group of files.  The optional *ltcube*
+individual file or group of files.  The optional *ltcube* option can
+be used to choose a pre-generated livetime cube.  If this parameter is
+null a livetime cube will be generated at runtime.
 
 .. code-block:: yaml
 
@@ -89,25 +90,33 @@ individual file or group of files.  The optional *ltcube*
 
 model
 -----
-The *model* block collects options related to the ROI model.
+The *model* block collects options related to the definition of the
+ROI model.  These parameters control 
 
 .. code-block:: yaml
 
    model :
    
+     # Diffuse components
+     galdiff  : '$FERMI_DIR/refdata/fermi/galdiffuse/gll_iem_v06.fits'
+     isodiff  : '$FERMI_DIR/refdata/fermi/galdiffuse/iso_P8R2_SOURCE_V6_v06.txt'
+     limbdiff : null
+
+     # List of catalogs to be used in the model.
+     catalogs : 
+       - 'gll_psc_v14.fit'
+
+     sources :
+       - { 'name' : 'SourceA', 'ra' : 60.0, 'dec' : 30.0, 'SpectrumType' : PowerLaw }
+       - { 'name' : 'SourceB', 'ra' : 58.0, 'dec' : 35.0, 'SpectrumType' : PowerLaw }
+
      # Include catalog sources within this distance from the ROI center
      src_radius  : null
 
      # Include catalog sources within a box of width roisrc.
      src_roiwidth : 15.0
 
-     galdiff  : '/Users/mdwood/fermi/diffuse/v5r0/gll_iem_v06.fits'
-     isodiff  : '/Users/mdwood/fermi/diffuse/v5r0/iso_P8R2_SOURCE_V6_v06.txt'
-     limbdiff : null
 
-     # List of catalogs to be used in the model.
-     catalogs : 
-       - 'gll_psc_v14.fit'
 
 binning
 -------
@@ -139,10 +148,40 @@ selection
 components
 ----------
 
-The *components* block defines a set of configurations for
-subcomponents of the analysis.  These configurations can either be
-defined as a list or a dictionary.  This block is optional.
+The *components* block is used to define a joint analysis formed by
+the product of likelihoods for different subselection of the data
+(implemented with the SummedLikelihood class in pyLikelihood).  This
+block is optional and when set to null (the default) fermiPy will
+construct a single likelihood using the parameters of the root
+analysis configuration.
 
+The component block can be defined as either a list or dictionary of
+dictionary elements where each element sets analysis parameters for a
+different subcomponent of the analysis.  Dictionary elements have the
+same hierarchy of parameters as the root analysis configuration.
+Parameters not defined in a given element will default to the values
+set in the root analysis configuration.
 
+The following example illustrates how to define a Front/Back analysis
+with the a list of dictionaries.  In this case files associated to
+each component will be named according to their order in the list
+(e.g. file_00.fits, file_01.fits, etc.).
+
+.. code-block:: yaml
+
+   # Component block for Front/Back analysis with list style
+   components:
+     - { selection : { evtype : 1 } } # Front
+     - { selection : { evtype : 2 } } # Back
+
+This example illustrates how to define the components as a dictionary
+of dictionaries.  In this case the files of a component will be
+appended with its corresponding key (e.g. file_front.fits, file_back.fits):.
+.. code-block:: yaml
+
+   # Component block for Front/Back analysis with dictionary style
+   components:
+     front : { selection : { evtype : 1 } } # Front
+     back  : { selection : { evtype : 2 } } # Back
 
 
