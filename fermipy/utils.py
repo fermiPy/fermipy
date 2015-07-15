@@ -180,7 +180,7 @@ def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
         if k in d1: t1 = type(d1[k])
         
         if not k in d1:
-            od[k] = copy.copy(d0[k])
+            od[k] = copy.deepcopy(d0[k])
         elif isinstance(v,dict) and isinstance(d1[k],dict):
             od[k] = merge_dict(d0[k],d1[k],add_new_keys,append_arrays)
         elif isinstance(v,list) and isinstance(d1[k],str):
@@ -197,7 +197,7 @@ def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
 
     if add_new_keys:
         for k, v in d1.iteritems(): 
-            if not k in d0: od[k] = copy.copy(d1[k])
+            if not k in d0: od[k] = copy.deepcopy(d1[k])
 
     return od
 
@@ -268,7 +268,15 @@ def tolist(x):
 
 def create_wcs(skydir,coordsys='CEL',projection='AIT',
                cdelt=1.0,crpix=1.,naxis=2):
-    """Create a WCS object."""
+    """Create a WCS object.
+
+    Parameters
+    ----------
+
+    skydir : SkyCoord
+        Sky coordinate of the WCS reference point.
+
+    """
     
     from astropy import wcs
 
@@ -313,14 +321,45 @@ def sky_to_offset(skydir,lon,lat,coordsys='CEL',projection='AIT'):
     """Convert sky coordinates to a projected offset.  This function
     is the inverse of offset_to_sky."""
     
-#    lon = np.array(lon,ndmin=1)
-#    lat = np.array(lat,ndmin=1)
-    
     w = create_wcs(skydir,coordsys,projection)
     skycrd = np.vstack((lon,lat)).T
     
     return w.wcs_world2pix(skycrd,0)
 
+def wcs_to_axes(w,npix):
+    """Generate a sequence of bin edge vectors corresponding to the
+    axes of a WCS object."""
+    
+    npix = npix[::-1]
+    
+    x = np.linspace(-(npix[0])/2.,(npix[0])/2.,
+                    npix[0]+1)*np.abs(w.wcs.cdelt[0])
+    y = np.linspace(-(npix[1])/2.,(npix[1])/2.,
+                    npix[1]+1)*np.abs(w.wcs.cdelt[1])
+
+    cdelt2 = np.log10((w.wcs.cdelt[2]+w.wcs.crval[2])/w.wcs.crval[2])
+    
+    z = (np.linspace(0,npix[2],npix[2]+1))*cdelt2
+    z += np.log10(w.wcs.crval[2])
+
+    return x, y, z
+
+def wcs_to_coords(w,shape):
+    """Generate an N x D list of pixel center coordinates where N is
+    the number of pixels and D is the dimensionality of the map."""
+    
+    z, y, x = wcs_to_axes(w,shape)
+
+    x = 0.5*(x[1:] + x[:-1])
+    y = 0.5*(y[1:] + y[:-1])
+    z = 0.5*(z[1:] + z[:-1])    
+
+    x = np.ravel(np.ones(shape)*x[:,np.newaxis,np.newaxis])
+    y = np.ravel(np.ones(shape)*y[np.newaxis,:,np.newaxis])
+    z = np.ravel(np.ones(shape)*z[np.newaxis,np.newaxis,:])
+            
+    return np.vstack((x,y,z))    
+    
 def get_target_skydir(config):
 
     radec = config.get('radec',None)
@@ -400,18 +439,20 @@ def make_disk_spatial_map(skydir,sigma,outfile,npix=101,cdelt=0.05):
     hdulist = pyfits.HDUList([hdu_image])
     hdulist.writeto(outfile,clobber=True) 
 
-def make_coadd_map(counts,wcs,outfile):
+def make_coadd_map(maps,wcs,shape):
         
     header = wcs.to_header()
-    data = np.zeros(counts[0].shape)
-    for c in counts: data += c        
-    hdu_image = pyfits.PrimaryHDU(data,header=header)
-#        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])
-    hdulist = pyfits.HDUList([hdu_image])        
-    hdulist.writeto(outfile,clobber=True)
+    data = np.zeros(shape)
+    axes = wcs_to_axes(wcs,shape)
+    
+    for z, w in maps:
+        c = wcs_to_coords(w,z.shape)
+        o = np.histogramdd(c.T,bins=axes[::-1],weights=np.ravel(z))[0]
+        data += o
+        
+    return data
 
-
-def make_fits_map(data,wcs,outfile):
+def write_fits_image(data,wcs,outfile):
     
     hdu_image = pyfits.PrimaryHDU(data,header=wcs.to_header())
 #        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from astropy import wcs
 import astropy.io.fits as pyfits
+import astropy.wcs as pywcs
 import pywcsgrid2
 import numpy as np
 from numpy import ma
@@ -168,19 +169,17 @@ class PowerNorm(mpl.colors.Normalize):
 
 class ImagePlotter(object):
 
-    def __init__(self,fitsfile):
+    def __init__(self,data,wcs):
 
-        hdulist = pyfits.open(fitsfile)        
-        header = hdulist[0].header
-        header = pyfits.Header.fromstring(header.tostring())
-        
-        if header['NAXIS'] == 3:
-            self._wcs = wcs.WCS(header,naxis=[1,2])
-            self._data = copy.deepcopy(np.sum(hdulist[0].data,axis=0)).T
+        if data.ndim == 3:
+            data = np.sum(data,axis=0)
+            wcs = pywcs.WCS(wcs.to_header(),naxis=[1,2])
         else:
-            self._wcs = wcs.WCS(header)
-            self._data = copy.deepcopy(hdulist[0].data).T
-        
+            data = copy.deepcopy(data)
+            
+        self._data = data
+        self._wcs = wcs
+            
     def plot(self,subplot=111,catalog=None,cmap='jet',**kwargs):
 
         
@@ -216,11 +215,11 @@ class ImagePlotter(object):
         kwargs_imshow = merge_dict(kwargs_imshow,kwargs)
         kwargs_contour = merge_dict(kwargs_contour,kwargs)
         
-        im = ax.imshow(data.T,**kwargs_imshow)
+        im = ax.imshow(data,**kwargs_imshow)
         im.set_cmap(colormap)
 
         if kwargs_contour['levels']:        
-            cs = ax.contour(data.T,**kwargs_contour)
+            cs = ax.contour(data,**kwargs_contour)
         #        plt.clabel(cs, fontsize=5, inline=0)
         
 #        im.set_clim(vmin=np.min(self._counts[~self._roi_msk]),
@@ -268,12 +267,33 @@ class ROIPlotter(AnalysisBase):
         'source_color'     : ('w','')
         }
     
-    def __init__(self,fitsfile,roi,**kwargs):
+    def __init__(self,data,wcs,roi,**kwargs):
         AnalysisBase.__init__(self,None,**kwargs)
+
+        print 'here'
+        print data.shape
         
-        self._implot = ImagePlotter(fitsfile)
+        self._implot = ImagePlotter(data,wcs)            
         self._roi = roi
 
+    @staticmethod
+    def create_from_fits(fitsfile,roi,**kwargs):
+
+        hdulist = pyfits.open(fitsfile)        
+        header = hdulist[0].header
+        header = pyfits.Header.fromstring(header.tostring())
+        
+        if header['NAXIS'] == 3:
+            wcs = pywcs.WCS(header,naxis=[1,2])
+            data = copy.deepcopy(np.sum(hdulist[0].data,axis=0))
+        else:
+            wcs = pywcs.WCS(header)
+            data = copy.deepcopy(hdulist[0].data)
+
+        print data.shape
+            
+        return ROIPlotter(data,wcs,roi,**kwargs)
+        
     def plot(self,**kwargs):
         
         marker_threshold = 10

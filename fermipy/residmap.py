@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from astropy import wcs 
 
 import fermipy.defaults as defaults
-from fermipy.utils import make_fits_map, AnalysisBase, make_gaussian_kernel
+from fermipy.utils import write_fits_image, AnalysisBase, make_gaussian_kernel
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 
@@ -86,6 +86,7 @@ class ResidMapGenerator(AnalysisBase):
     def __init__(self,config,gta,**kwargs):
         AnalysisBase.__init__(self,config,**kwargs)        
         self._gta = gta
+        self._maps = {}
         
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
@@ -98,16 +99,24 @@ class ResidMapGenerator(AnalysisBase):
         zs = 0
         for c in self._gta.components:
             z = c.modelCountsMap('testsource').astype('float')
-            zs += np.sum(z)
+
+
+            print zs
             
             if kernel is not None:
                 shape = (z.shape[0],) + kernel.shape 
                 z = np.apply_over_axes(np.sum,z,axes=[1,2])*np.ones(shape)*kernel[np.newaxis,:,:]
-            
+                zs += np.sum(z)
+            else:
+                zs += np.sum(z)
+                
             sm.append(z)
 
         for i, m in enumerate(sm):
             sm[i] /= zs
+
+            print i, np.sum(sm[i])
+
             
         return sm
 
@@ -130,6 +139,7 @@ class ResidMapGenerator(AnalysisBase):
         src_dict['ra'] = radec[0]
         src_dict['dec'] = radec[1]
         src_dict.setdefault('SpatialType','PointSource')
+        src_dict.setdefault('SpatialWidth',0.3)
         
         kernel = None
         
@@ -163,6 +173,10 @@ class ResidMapGenerator(AnalysisBase):
             mc = c.modelCountsMap().astype('float')
             cc = c.countsMap().astype('float')
 
+            print mc.shape
+            print cc.shape
+            print sm[i].shape
+            
             ccs = smooth(cc,sm[i],cpix)
             mcs = smooth(mc,sm[i],cpix)
             cms = np.sum(ccs,axis=0)
@@ -170,9 +184,14 @@ class ResidMapGenerator(AnalysisBase):
             
             cmst += cms
             mmst += mms
+
+            print i, np.sum(cmst)
+            print i, np.sum(mmst)
             
             cts = 2.0*(poisson_lnl(cms,cms) - poisson_lnl(cms,mms))
             excess += cms - mms
+
+            
             
         ts = 2.0*(poisson_lnl(cmst,cmst) - poisson_lnl(cmst,mmst))
         sigma = np.sqrt(ts)
@@ -190,18 +209,25 @@ class ResidMapGenerator(AnalysisBase):
         excess_map_file = os.path.join(self.config['fileio']['workdir'],
                                        '%s_residmap_%s_excess.fits'%(prefix,modelname))
         
-        make_fits_map(sigma,w,sigma_map_file)
-        make_fits_map(cmst,w,data_map_file)
-        make_fits_map(mmst,w,model_map_file)
-        make_fits_map(excess,w,excess_map_file)
+        write_fits_image(sigma,w,sigma_map_file)
+        write_fits_image(cmst,w,data_map_file)
+        write_fits_image(mmst,w,model_map_file)
+        write_fits_image(excess,w,excess_map_file)
                        
         self._gta.delete_source('testsource')
 
+        self._maps[modelname] = {
+            'wcs'    : w,
+            'sigma'  : sigma,
+            'model'  : mmst,
+            'data'   : cmst,
+            'excess' : excess }
+        
         self._gta._roi_model['roi']['residmap'][modelname] = {
-            'sigma'  : sigma_map_file,
-            'model'  : model_map_file,
-            'data'   : data_map_file,
-            'excess' : excess_map_file }
+            'sigma'  : os.path.basename(sigma_map_file),
+            'model'  : os.path.basename(model_map_file),
+            'data'   : os.path.basename(data_map_file),
+            'excess' : os.path.basename(excess_map_file) }
             
     def run_lnl(self):
         

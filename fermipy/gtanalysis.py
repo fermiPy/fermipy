@@ -29,7 +29,7 @@ import fermipy
 import fermipy.defaults as defaults
 from fermipy.residmap import ResidMapGenerator
 from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import make_coadd_map, valToBinBounded
+from fermipy.utils import make_coadd_map, valToBinBounded, write_fits_image
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
@@ -244,6 +244,10 @@ class GTAnalysis(AnalysisBase):
         self._wcs.wcs.crval[2]=10**self.energies[0]
         self._wcs.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
         self._wcs.wcs.ctype[2]='Energy'
+
+        self._rmg = ResidMapGenerator(self.config['residmap'],self,
+                                      fileio=self.config['fileio'],
+                                      logging=self.config['logging'])
         
         
     def __del__(self):
@@ -384,7 +388,8 @@ class GTAnalysis(AnalysisBase):
         (gtbin), model generation (gtexpcube2,gtsrcmaps,gtdiffrsp)."""
 
         # Run data selection step
-
+        rm = self._roi_model
+        
         self._like = SummedLikelihood.SummedLikelihood()
         for i, c in enumerate(self._components):
 
@@ -404,26 +409,25 @@ class GTAnalysis(AnalysisBase):
                 src_model['DEC'] = src['DEJ2000']
 
             src_model.update(self.get_src_model(name,True))            
-            self._roi_model[name] = src_model
+            rm[name] = src_model
 
-        self._roi_model['roi']['counts'] = np.zeros(self.enumbins)
+        rm['roi']['counts'] = np.zeros(self.enumbins)
+        rm['roi']['logLike'] = self.like()
+
+        self._ccube_file = os.path.join(self.config['fileio']['workdir'],
+                                        'ccube.fits')
         
-        # Make the co-added counts map here
-        #
         counts = []
         for i, c in enumerate(self.components):
             cm = c.countsMap()
-            counts += [cm]
-            self._roi_model['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,cm,axes=[1,2]))
-            self._roi_model['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[1,2]))
-            
-        self._ccube_file = os.path.join(self.config['fileio']['workdir'],
-                                        'ccube.fits')
-            
-        make_coadd_map(counts,self._wcs,self._ccube_file)
-        self._roi_model['roi']['logLike'] = self.like()
-            
+            counts += [(cm,c.wcs)]
+            rm['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[1,2]))
 
+        shape = (self.enumbins,self.npix,self.npix)
+        self._counts = make_coadd_map(counts,self._wcs,shape)
+        write_fits_image(self._counts,self._wcs,self._ccube_file)        
+        rm['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,self._counts,axes=[1,2]))        
+        
     def cleanup(self):
 
         if self.config['fileio']['workdir'] == self._savedir: return
@@ -707,12 +711,7 @@ class GTAnalysis(AnalysisBase):
         """Generate data/model residual maps using the current model."""
 
         self.logger.info('Running residual analysis')
-        
-        rmg = ResidMapGenerator(self.config['residmap'],self,
-                                fileio=self.config['fileio'],
-                                logging=self.config['logging'])
-
-        rmg.run(prefix)
+        self._rmg.run(prefix)
                 
     def sed(self,name,profile=True,energies=None):
         
@@ -1035,22 +1034,21 @@ class GTAnalysis(AnalysisBase):
         if not save_model_map: return
             
         counts = []
-        outfiles = []
         for i, c in enumerate(self._components):
 
-            of, cc = c.generate_model_map(model_name)
-            counts += [cc]
-            outfiles += [of]
+            cm = c.generate_model_map(model_name)
+            counts += [(cm,c.wcs)]
 
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'mcube_%s.fits'%(model_name))
 
-        make_coadd_map(counts,self._wcs,outfile)
-
-        return [outfile] +  outfiles
+        shape = (self.enumbins,self.npix,self.npix)
+        model_counts = make_coadd_map(counts,self._wcs,shape)
+        write_fits_image(model_counts,self._wcs,outfile)        
+        return [(model_counts,self._wcs)] + counts
 
     def write_roi(self,outfile=None,make_residuals=False,save_model_map=True):
-        """Write current model as yaml file."""
+        """Write current model to a yaml file."""
         # extract the results in a convenient format
 
         if outfile is None:
@@ -1064,7 +1062,7 @@ class GTAnalysis(AnalysisBase):
             else:
                 outfile = outfile + ext
 
-        mcube_files = self.write_xml(prefix,save_model_map=save_model_map)
+        mcube_maps = self.write_xml(prefix,save_model_map=save_model_map)
         
         if make_residuals: 
             self.residmap(prefix)        
@@ -1073,17 +1071,21 @@ class GTAnalysis(AnalysisBase):
                 imfile = os.path.join(self.config['fileio']['outdir'],
                                        '%s_residmap_%s.png'%(prefix,k))
                 plt.figure()
-                p = ROIPlotter(v['sigma'],self.roi)
+                p = ROIPlotter(self._rmg._maps[k]['sigma'],
+                               self._rmg._maps[k]['wcs'],self.roi)
                 p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],cb_label='Significance [$\sigma$]')
                 plt.savefig(imfile)
 
-        if len(mcube_files):
+        if len(mcube_maps):
 
             imfile = os.path.join(self.config['fileio']['outdir'],
                                   '%s_model_map.png'%(prefix))
 
+
+            print type(mcube_maps[0][0]), type(mcube_maps[0][1])
+
             plt.figure()        
-            p = ROIPlotter(mcube_files[0],self.roi)
+            p = ROIPlotter(mcube_maps[0][0],mcube_maps[0][1],self.roi)
             p.plot(cb_label='Counts',zscale='sqrt')
             plt.savefig(imfile)
 
@@ -1091,7 +1093,7 @@ class GTAnalysis(AnalysisBase):
                               '%s_counts_map.png'%(prefix))
 
         plt.figure()        
-        p = ROIPlotter(self._ccube_file,self.roi)
+        p = ROIPlotter.create_from_fits(self._ccube_file,self.roi)
         p.plot(cb_label='Counts')
         plt.savefig(imfile)
             
@@ -1353,6 +1355,10 @@ class GTBinnedAnalysis(AnalysisBase):
     @property
     def roiwidth(self):
         return self._npix*self.config['binning']['binsz']
+
+    @property
+    def wcs(self):
+        return self._wcs
     
     def add_source(self,name,src_dict):
 
@@ -1405,7 +1411,7 @@ class GTBinnedAnalysis(AnalysisBase):
     def countsMap(self):
         """Return 3-D counts map as a numpy array."""
         z = self.like.logLike.countsMap().data()
-        z = np.array(z).reshape(self.enumbins,self.npix,self.npix)#.swapaxes(0,2)
+        z = np.array(z).reshape(self.enumbins,self.npix,self.npix)
         return z
         
     def modelCountsMap(self,name=None):
@@ -1590,17 +1596,19 @@ class GTBinnedAnalysis(AnalysisBase):
         if model_name is None: suffix = self.config['file_suffix']
         else:
             suffix = '_%s%s'%(model_name,self.config['file_suffix'])
-        
-        outfile = os.path.join(self.config['fileio']['workdir'],'mcube%s.fits'%(suffix))
-        
-        h = pyfits.open(self._ccube_file)
-        
-        counts = self.modelCountsMap()
-        hdu_image = pyfits.PrimaryHDU(counts,header=h[0].header)
-        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])        
-        hdulist.writeto(outfile,clobber=True)
 
-        return outfile, counts
+        self.logger.info('Generating model map for component %s'%self.name)
+            
+        outfile = os.path.join(self.config['fileio']['workdir'],'mcube%s.fits'%(suffix))        
+        h = pyfits.open(self._ccube_file)        
+        counts = self.modelCountsMap()
+        write_fits_image(counts,self.wcs,outfile)
+        
+#        hdu_image = pyfits.PrimaryHDU(counts,header=h[0].header)
+#        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])        
+#        hdulist.writeto(outfile,clobber=True)
+
+        return counts
         
     def generate_model(self,model_name=None,outfile=None):
         """Generate a counts model map from an XML model file using
