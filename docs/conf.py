@@ -48,8 +48,8 @@ sys.path.insert(0, os.path.abspath('../../fermipy'))
 # ones.
 extensions = [
     'sphinx.ext.mathjax', 'sphinx.ext.autodoc', 'sphinx.ext.viewcode',
-    'numpydoc'
-]
+    'sphinx.ext.napoleon']
+#    'numpydoc'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
