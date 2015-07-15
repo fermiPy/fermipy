@@ -482,11 +482,11 @@ class GTAnalysis(AnalysisBase):
                 cs += [c.modelCountsSpectrum(name,emin,emax)]            
             return cs
 
-    def get_sources(self,cuts=None,distance=None,roilike=False):
+    def get_sources(self,cuts=None,distance=None,square=False):
         """Retrieve list of sources satisfying the given selections."""
         rsrc, srcs = self._roi.get_sources_by_position(self._roi.skydir,
                                                        distance,
-                                                       roilike=roilike)
+                                                       square=square)
         o = []
         if cuts is None: cuts = []        
         for s,r in zip(srcs,rsrc):
@@ -496,16 +496,16 @@ class GTAnalysis(AnalysisBase):
         return o
         
     
-    def delete_sources(self,cuts=None,distance=None,roilike=False):
+    def delete_sources(self,cuts=None,distance=None,square=False):
         """Delete sources within the ROI."""
         
-        srcs = self.get_sources(cuts,distance,roilike)
+        srcs = self.get_sources(cuts,distance,square)
         self._roi.delete_sources(srcs)    
         for c in self.components:
             c.delete_sources(srcs)
             
     def free_sources(self,free=True,pars=None,cuts=None,
-                     distance=None,roilike=False):
+                     distance=None,square=False):
         """Free/Fix sources within the ROI.
 
         Parameters
@@ -525,13 +525,13 @@ class GTAnalysis(AnalysisBase):
             Distance out to which sources should be freed or fixed.
             If none then all sources will be selected.
 
-        roilike : bool        
+        square : bool        
             Apply an ROI-like selection on the maximum distance in
             either X or Y in projected cartesian coordinates.        
         
         """
         rsrc, srcs = self._roi.get_sources_by_position(self._roi.skydir,
-                                                       distance,roilike=roilike)
+                                                       distance,square=square)
         
         if cuts is None: cuts = []        
         for s,r in zip(srcs,rsrc):
@@ -543,7 +543,7 @@ class GTAnalysis(AnalysisBase):
             self.free_source(s.name,free=free,pars=pars)
                                         
     def free_sources_by_position(self,free=True,pars=None,
-                                 distance=None,roilike=False):
+                                 distance=None,square=False):
         """Free/Fix all sources within a certain distance of the given sky
         coordinate.  By default it will use the ROI center.
 
@@ -561,15 +561,15 @@ class GTAnalysis(AnalysisBase):
             parameters will be freed.
 
         distance : float        
-            Distance out to which sources should be freed or fixed.
-            If none then all sources will be selected.
+            Distance in degrees out to which sources should be freed
+            or fixed.  If none then all sources will be selected.
 
-        roilike : bool        
-            Apply an ROI-like selection on the maximum distance in
+        square : bool        
+            Apply a square (ROI-like) selection on the maximum distance in
             either X or Y in projected cartesian coordinates.        
         """
 
-        self.free_sources(free,pars,cuts=None,distance=distance,roilike=roilike)
+        self.free_sources(free,pars,cuts=None,distance=distance,square=square)
 
     def set_edisp_flag(self,name,flag=True):
 

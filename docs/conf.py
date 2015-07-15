@@ -25,11 +25,12 @@ class Mock(MagicMock):
 
 MOCK_MODULES = ['pyLikelihood','BinnedAnalysis','UnbinnedAnalysis',
                 'SummedLikelihood','FluxDensity','LikelihoodState',
-                'GtApp','astropy',
+                'GtApp','pywcsgrid2','astropy',
                 'astropy.coordinates',
-                'astropy.io',
-                'astropy.io.fits',
-                'numpy']
+                'astropy.io','astropy.wcs','astropy.io.fits',
+                'numpy',
+                'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
+                'matplotlib.axes','matplotlib.cbook','matplotlib.colors']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -46,7 +47,8 @@ sys.path.insert(0, os.path.abspath('../../fermipy'))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.mathjax', 'sphinx.ext.autodoc', 'sphinx.ext.viewcode'
+    'sphinx.ext.mathjax', 'sphinx.ext.autodoc', 'sphinx.ext.viewcode',
+    'numpydoc'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

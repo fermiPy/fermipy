@@ -35,8 +35,6 @@ def smooth(m,k,cpix,mode='constant',threshold=0.01):
     for i in range(m.shape[0]):
 
         ks = k[i,:,:]
-        
-#        print 'Smoothing map ', i
 
         mx = ks[cpix[0],:] > ks[cpix[0],cpix[1]]*threshold
         my = ks[:,cpix[1]] > ks[cpix[0],cpix[1]]*threshold
@@ -48,19 +46,15 @@ def smooth(m,k,cpix,mode='constant',threshold=0.01):
         sy = slice(cpix[1]-ny,cpix[1]+ny+1)
 
         ks = ks[sx,sy]
-
-#        print nx, ny
-#        print ks.shape        
-#        print ks/np.max(ks)
-#        print origin
         
         origin=[0,0]        
         if ks.shape[0]%2==0: origin[0] += 1
         if ks.shape[1]%2==0: origin[1] += 1
             
-        o[i,:,:] = ndimage.convolve(m[i,:,:],ks,mode=mode,origin=origin,cval=0.0)
+        o[i,:,:] = ndimage.convolve(m[i,:,:],ks,mode=mode,
+                                    origin=origin,cval=0.0)
 
-    o /= np.sum(k**2)
+#    o /= np.sum(k**2)
     return o
 
 def create_model_name(src,spatial_type):
@@ -76,8 +70,13 @@ def create_model_name(src,spatial_type):
     return o
 
 class ResidMapGenerator(AnalysisBase):
-    """This class is responsible for generating a residual map from a
-    source map file."""
+    """This class generates spatial residual maps from the difference
+    of data and model maps smoothed with a user-defined
+    spatial/spectral template.  The resulting map of source
+    significance can be interpreted in the same way as the TS map (the
+    likelihood of a source at the given location).  The algorithm
+    approximates the best-fit source amplitude that would be derived
+    from a least-squares fit to the data."""
 
     defaults = dict(defaults.residmap.items(),
                     fileio=defaults.fileio,
@@ -93,31 +92,29 @@ class ResidMapGenerator(AnalysisBase):
                                  ll(self.config['logging']['verbosity']))
         
 
-    def get_source_mask(self,kernel=None):
+    def get_source_mask(self,name,kernel=None):
 
         sm = []
         zs = 0
         for c in self._gta.components:
-            z = c.modelCountsMap('testsource').astype('float')
-
-
-            print zs
-            
+            z = c.modelCountsMap(name).astype('float')
             if kernel is not None:
                 shape = (z.shape[0],) + kernel.shape 
                 z = np.apply_over_axes(np.sum,z,axes=[1,2])*np.ones(shape)*kernel[np.newaxis,:,:]
                 zs += np.sum(z)
             else:
                 zs += np.sum(z)
-                
-            sm.append(z)
 
+            sm.append(z)
+            
+        sm2 = 0
         for i, m in enumerate(sm):
             sm[i] /= zs
+            sm2 += np.sum(sm[i]**2)
+        
+        for i, m in enumerate(sm):
+            sm[i] /= sm2
 
-            print i, np.sum(sm[i])
-
-            
         return sm
 
     def run(self,prefix):
@@ -163,7 +160,7 @@ class ResidMapGenerator(AnalysisBase):
         mmst = np.zeros((npix,npix))
         cmst = np.zeros((npix,npix))
         
-        sm = self.get_source_mask(kernel)
+        sm = self.get_source_mask('testsource',kernel)
         ts = np.zeros((npix,npix))
         sigma = np.zeros((npix,npix))
         excess = np.zeros((npix,npix))
@@ -172,10 +169,6 @@ class ResidMapGenerator(AnalysisBase):
             
             mc = c.modelCountsMap().astype('float')
             cc = c.countsMap().astype('float')
-
-            print mc.shape
-            print cc.shape
-            print sm[i].shape
             
             ccs = smooth(cc,sm[i],cpix)
             mcs = smooth(mc,sm[i],cpix)
@@ -184,14 +177,9 @@ class ResidMapGenerator(AnalysisBase):
             
             cmst += cms
             mmst += mms
-
-            print i, np.sum(cmst)
-            print i, np.sum(mmst)
             
             cts = 2.0*(poisson_lnl(cms,cms) - poisson_lnl(cms,mms))
             excess += cms - mms
-
-            
             
         ts = 2.0*(poisson_lnl(cmst,cmst) - poisson_lnl(cmst,mmst))
         sigma = np.sqrt(ts)

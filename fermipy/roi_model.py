@@ -769,7 +769,7 @@ class ROIModel(AnalysisBase):
             rsrc, srcs = \
                 roi.get_sources_by_position(skydir,
                                             roi.config['src_roiwidth']/2.,
-                                            roilike=True)
+                                            square=True)
                 
             for s,r in zip(srcs,rsrc):
                 srcs_dict[s.name] = (s,r)
@@ -812,12 +812,12 @@ class ROIModel(AnalysisBase):
             raise Exception('No source matching name: ' + name)
 
     def get_nearby_sources(self,name,dist,min_dist=None,
-                           roilike=False):
+                           square=False):
         
         src = self.get_source_by_name(name)
         return self.get_sources_by_position(src.skydir,
                                             dist,min_dist,
-                                            roilike)
+                                            square)
 
     def get_sources_by_property(self,pname,pmin,pmax=None):
 
@@ -830,12 +830,12 @@ class ROIModel(AnalysisBase):
         return srcs
     
     def get_sources_by_position(self,skydir,dist,min_dist=None,
-                                roilike=False):
+                                square=False):
         """Retrieve sources within a certain angular distance of an
         (ra,dec) coordinate.  This function supports two types of
-        geometric selections: circle (roilike=False) and roi
-        (roilike=True).  The former selects all sources with a given
-        angular distance of the target position.  The roi selection
+        geometric selections: circular (square=False) and square
+        (square=True).  The circular selection finds all sources with a given
+        angular distance of the target position.  The square selection
         finds sources within an ROI-like region of size R x R where R
         = 2 x dist.
 
@@ -843,8 +843,13 @@ class ROIModel(AnalysisBase):
         ----------
 
         skydir : SkyCoord object
+            Sky direction with respect to which the selection will be applied.
 
         dist : float
+            Maximum distance in degrees from the sky coordinate.
+
+        square : bool
+            Choose whether to apply a circular or square selection.
         
         """
 
@@ -852,7 +857,7 @@ class ROIModel(AnalysisBase):
         
         radius = self._src_skydir.separation(skydir).rad
         
-        if not roilike:                    
+        if not square:                    
             dtheta = radius            
         else:
             dtheta = get_linear_dist(skydir,

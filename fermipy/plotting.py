@@ -269,10 +269,6 @@ class ROIPlotter(AnalysisBase):
     
     def __init__(self,data,wcs,roi,**kwargs):
         AnalysisBase.__init__(self,None,**kwargs)
-
-        print 'here'
-        print data.shape
-        
         self._implot = ImagePlotter(data,wcs)            
         self._roi = roi
 
@@ -289,8 +285,6 @@ class ROIPlotter(AnalysisBase):
         else:
             wcs = pywcs.WCS(header)
             data = copy.deepcopy(hdulist[0].data)
-
-        print data.shape
             
         return ROIPlotter(data,wcs,roi,**kwargs)
         
