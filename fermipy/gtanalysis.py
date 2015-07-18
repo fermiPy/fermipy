@@ -735,8 +735,7 @@ class GTAnalysis(AnalysisBase):
                 
     def sed(self,name,profile=True,energies=None,**kwargs):
         """Generate an SED for a source.  This function will fit the
-        source normalization in each energy bin and derive a flux
-        value and upper limit.
+        normalization of a given source in each energy bin.
 
         Parameters
         ----------
@@ -757,6 +756,12 @@ class GTAnalysis(AnalysisBase):
         bin_index : float        
             Index that will be use when fitting the energy
             distribution within the energy bin.
+
+        use_local_index : bool
+
+            Use a power-law approximation to the shape of the global
+            spectrum in each bin.  If this is false then a constant
+            index set to `bin_index` will be used.
             
             
         """
@@ -812,7 +817,7 @@ class GTAnalysis(AnalysisBase):
             gf_bin_index += [g]
             gf_bin_flux += [f]
 
-        bin_index = kwargs.get('index',self.config['sed']['bin_index'])
+        bin_index = kwargs.get('bin_index',self.config['sed']['bin_index'])
         use_local_index = kwargs.get('use_local_index',self.config['sed']['use_local_index'])
         
         source = self.components[0].like.logLike.getSource(name)
@@ -832,7 +837,7 @@ class GTAnalysis(AnalysisBase):
             if use_local_index:
                 o['index'][i] = -min(gf_bin_index[i],5.0)
             else:
-                o['index'][i] = -powerlaw_index
+                o['index'][i] = -bin_index
                 
             self.set_parameter(name,'Index',o['index'][i],scale=1.0)
                 
@@ -1277,16 +1282,16 @@ class GTAnalysis(AnalysisBase):
             energies = np.linspace(emin,emax,50)
         
         
-        flux = [fd.value(10**x) for x in energies]
-        flux_err = [fd.error(10**x) for x in energies]
+        dfde = [fd.value(10**x) for x in energies]
+        dfde_err = [fd.error(10**x) for x in energies]
 
-        flux = np.array(flux)
-        flux_err = np.array(flux_err)
-        fhi = flux*(1.0 + flux_err/flux)
-        flo = flux/(1.0 + flux_err/flux)
+        dfde = np.array(dfde)
+        dfde_err = np.array(dfde_err)
+        fhi = dfde*(1.0 + dfde_err/dfde)
+        flo = dfde/(1.0 + dfde_err/dfde)
 
-        return {'ecenter' : energies, 'flux' : flux,
-                'fluxlo' : flo, 'fluxhi' : fhi }
+        return {'ecenter' : energies, 'dfde' : dfde,
+                'dfde_lo' : flo, 'dfde_hi' : fhi }
         
     def get_roi_model(self):
         """Populate a dictionary with the current parameters of the
