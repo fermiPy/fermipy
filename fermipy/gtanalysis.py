@@ -145,6 +145,7 @@ class GTAnalysis(AnalysisBase):
                 'gtlike'     : defaults.gtlike,
                 'mc'         : defaults.mc,
                 'residmap'   : defaults.residmap,
+                'sed'        : defaults.sed,
 #                'roiopt'     : defaults.roiopt,
                 'components' : (None,'')}
 
@@ -381,7 +382,7 @@ class GTAnalysis(AnalysisBase):
         else:
             self.logger.error('Working directory does not exist.')
             
-    def setup(self):
+    def setup(self,xmlmodel=None):
         """Run pre-processing step for each analysis component.  This
         will run everything except the likelihood optimization: data
         selection (gtselect, gtmktime), counts maps generation
@@ -395,7 +396,7 @@ class GTAnalysis(AnalysisBase):
 
             self.logger.info("Performing setup for Analysis Component: " +
                              c.name)
-            c.setup()
+            c.setup(xmlmodel=xmlmodel)
             self._like.addComponent(c.like)
 
         for name in self.like.sourceNames():
@@ -578,6 +579,25 @@ class GTAnalysis(AnalysisBase):
         
         for c in self.components:
             c.like[name].src.set_edisp_flag(flag)        
+
+    def set_parameter(self,name,par,value,true_value=True,scale=None,
+                      bounds=None):
+        idx = self.like.par_index(name,par)
+        if true_value:
+            self.like[idx].parameter.setTrueValue(value)
+        else:
+            self.like[idx].parameter.setValue(value)
+
+        if scale is not None:
+            self.like[idx].parameter.setScale(scale)
+
+        if bounds is not None:
+            self.like[idx].parameter.setBounds(*bounds)
+            
+            
+    def free_parameter(self,name,par,free=True):
+        idx = self.like.par_index(name,par)
+        self.like[idx].parameter.setFree(free)
         
     def free_source(self,name,free=True,pars=None):
         """Free/Fix parameters of a source.
@@ -713,90 +733,170 @@ class GTAnalysis(AnalysisBase):
         self.logger.info('Running residual analysis')
         self._rmg.run(prefix)
                 
-    def sed(self,name,profile=True,energies=None):
+    def sed(self,name,profile=True,energies=None,**kwargs):
+        """Generate an SED for a source.  This function will fit the
+        source normalization in each energy bin and derive a flux
+        value and upper limit.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        profile : bool        
+            Profile the likelihood in each energy bin.
+
+        energies : array        
+            Sequence of energies in log10(E/MeV) that defining the
+            edges of the energy bins.  If this argument is None then
+            the analysis energy bins will be used.  The energies in
+            this sequence must align with the bin edges of the
+            underyling analysis.
+
+        bin_index : float        
+            Index that will be use when fitting the energy
+            distribution within the energy bin.
+            
+            
+        """
+        
         
         # Find the source
-        name = self._roi.get_source_by_name(name).name
+        name = self.roi.get_source_by_name(name).name
 
         self.logger.info('Computing SED for %s'%name)
         saved_state = LikelihoodState(self.like)
 
+        self.free_sources(free=False)
+        
         if energies is None: energies = self.energies
         else: energies = np.array(energies)
         
         nbins = len(energies)-1
 
-        o = {'emin' : energies[:-1],
-             'emax' : energies[1:],
-             'ecenter' : 0.5*(energies[:-1]+energies[1:]),
-             'flux' : np.zeros(nbins),
-             'e2flux' : np.zeros(nbins),
-             'flux_err' : np.zeros(nbins),
-             'e2flux_err' : np.zeros(nbins),
-             'flux_ul95' : np.zeros(nbins)*np.nan,
-             'e2flux_ul95' : np.zeros(nbins)*np.nan,
-             'flux_err_lo' : np.zeros(nbins)*np.nan,
-             'e2flux_err_lo' :  np.zeros(nbins)*np.nan,
-             'flux_err_hi' : np.zeros(nbins)*np.nan,
-             'e2flux_err_hi' :  np.zeros(nbins)*np.nan,
+        o = {'emin'      : energies[:-1],
+             'emax'      : energies[1:],
+             'ecenter'   : 0.5*(energies[:-1]+energies[1:]),
+             'flux'      : np.zeros(nbins),
+             'eflux'     : np.zeros(nbins),
+             'dfde'      : np.zeros(nbins),
+             'e2dfde'    : np.zeros(nbins),
+             'flux_err'  : np.zeros(nbins),
+             'eflux_err' : np.zeros(nbins),
+             'dfde_err'  : np.zeros(nbins),
+             'e2dfde_err' : np.zeros(nbins),
+             'dfde_ul95' : np.zeros(nbins)*np.nan,
+             'e2dfde_ul95' : np.zeros(nbins)*np.nan,
+             'dfde_err_lo' : np.zeros(nbins)*np.nan,
+             'e2dfde_err_lo' :  np.zeros(nbins)*np.nan,
+             'dfde_err_hi' : np.zeros(nbins)*np.nan,
+             'e2dfde_err_hi' :  np.zeros(nbins)*np.nan,
+             'index' : np.zeros(nbins),
              'Npred' : np.zeros(nbins),
              'ts' : np.zeros(nbins),
              'fit_quality' : np.zeros(nbins),
              'lnlprofile' : []
              }
-        
+
+        # Precompute fluxes in each bin from global fit
+        gf_bin_flux = []
+        gf_bin_index = []
         for i, (emin,emax) in enumerate(zip(energies[:-1],energies[1:])):
-            saved_state.restore()
-            self.free_sources(free=False)
+
+            delta = 1E-5
+            f = self.like[name].flux(10**emin, 10**emax)
+            f0 = self.like[name].flux(10**emin*(1-delta), 10**emin*(1+delta))
+            f1 = self.like[name].flux(10**emax*(1-delta), 10**emax*(1+delta))
+            g = 1-np.log10(f0/f1)/np.log10(10**emin/10**emax)
+            gf_bin_index += [g]
+            gf_bin_flux += [f]
+
+        bin_index = kwargs.get('index',self.config['sed']['bin_index'])
+        use_local_index = kwargs.get('use_local_index',self.config['sed']['use_local_index'])
+        
+        source = self.components[0].like.logLike.getSource(name)
+        old_spectrum=source.spectrum()
+        self.like.setSpectrum(name,'PowerLaw')
+        self.free_parameter(name,'Index',False)
+        self.set_parameter(name,'Prefactor',1.0,scale=1E-13,true_value=False,
+                           bounds=[1E-10,1E10])
+                
+        for i, (emin,emax) in enumerate(zip(energies[:-1],energies[1:])):
+#            saved_state.restore()
+
+            ecenter = 0.5*(emin+emax)
+            deltae = 10**emax - 10**emin
+            self.set_parameter(name,'Scale',10**ecenter,scale=1.0)
+            
+            if use_local_index:
+                o['index'][i] = -min(gf_bin_index[i],5.0)
+            else:
+                o['index'][i] = -powerlaw_index
+                
+            self.set_parameter(name,'Index',o['index'][i],scale=1.0)
+                
+            normVal = self.like.normPar(name).getValue()
+            flux_ratio = gf_bin_flux[i]/self.like[name].flux(10**emin, 10**emax)
+            newVal = max(normVal*flux_ratio,1E-10)
+            self.set_norm(name,newVal)
+            
+            self.like.syncSrcParams(name)
             self.free_norm(name)
             self.logger.info('Fitting %s SED from %.0f MeV to %.0f MeV' %
                              (name,10**emin,10**emax))
             self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
             o['fit_quality'][i] = self.fit(update=False)
 
-            ecenter = 0.5*(emin+emax)
-            deltae = 10**emax - 10**emin
+            prefactor=self.like[self.like.par_index(name, 'Prefactor')] 
+            
             flux = self.like[name].flux(10**emin, 10**emax)
             flux_err = self.like.fluxError(name,10**emin, 10**emax)
+            eflux = self.like[name].energyFlux(10**emin, 10**emax)
+            eflux_err = self.like.energyFluxError(name,10**emin, 10**emax)
+            dfde = prefactor.getTrueValue()
+            dfde_err = dfde_err = dfde*flux_err/flux
             
-            o['flux'][i] = flux/deltae 
-            o['e2flux'][i] = flux/deltae*10**(2*ecenter)
-            o['flux_err'][i] = flux_err/deltae
-            o['e2flux_err'][i] = flux_err/deltae*10**(2*ecenter)
+            o['flux'][i] = flux
+            o['eflux'][i] = eflux
+            o['dfde'][i] = dfde
+            o['e2dfde'][i] = dfde*10**(2*ecenter)
+            o['flux_err'][i] = flux_err
+            o['eflux_err'][i] = eflux_err
+            o['dfde_err'][i] = dfde_err
+            o['e2dfde_err'][i] = dfde_err*10**(2*ecenter)
 
             cs = self.modelCountsSpectrum(name,emin,emax,summed=True)
             o['Npred'][i] = np.sum(cs)            
-            o['ts'][i] = self.like.Ts(name,reoptimize=False)
+            o['ts'][i] = max(self.like.Ts(name,reoptimize=False),0.0)
             if profile:
 
-                lnlp = self.profile_norm(name,emin=emin,emax=emax)                
+                lnlp = self.profile_norm(name,emin=emin,emax=emax,savestate=False)                
                 o['lnlprofile'] += [lnlp]
                 
                 imax = np.argmax(lnlp['dlogLike'])
                 lnlmax = lnlp['dlogLike'][imax]
                 dlnl = lnlp['dlogLike']-lnlmax
                                 
-                o['flux_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlnl[imax:],lnlp['flux'][imax:])
-                o['e2flux_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlnl[imax:],lnlp['e2flux'][imax:])
-
-                o['flux_err_hi'][i] = np.interp(0.5,-dlnl[imax:],lnlp['flux'][imax:]) - lnlp['flux'][imax]
-                o['e2flux_err_hi'][i] = np.interp(0.5,-dlnl[imax:],lnlp['e2flux'][imax:]) - lnlp['e2flux'][imax] 
+                o['dfde_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlnl[imax:],lnlp['dfde'][imax:])
+                o['e2dfde_ul95'][i] = o['dfde_ul95'][i]*10**(2*ecenter)
+                o['dfde_err_hi'][i] = np.interp(0.5,-dlnl[imax:],lnlp['dfde'][imax:]) - lnlp['dfde'][imax]
+                o['e2dfde_err_hi'][i] = o['e2dfde_err_hi'][i]*10**(2*ecenter)
 
                 if dlnl[0] < -0.5:
-                    o['flux_err_lo'][i] = lnlp['flux'][imax] - np.interp(0.5,-dlnl[:imax][::-1],
-                                                                         lnlp['flux'][:imax][::-1]) 
-                    o['e2flux_err_lo'][i] = lnlp['e2flux'][imax] - np.interp(0.5,-dlnl[:imax][::-1],
-                                                                             lnlp['e2flux'][:imax][::-1])
+                    o['dfde_err_lo'][i] = lnlp['dfde'][imax] - np.interp(0.5,-dlnl[:imax][::-1],
+                                                                         lnlp['dfde'][:imax][::-1]) 
+                    o['e2dfde_err_lo'][i] = o['dfde_err_lo'][i]*10**(2*ecenter)
                 
-#            nobs.append(self.gtlike.nobs[i])
-
         self.setEnergyRange(float(10**energies[0])+1, float(10**energies[-1])-1)
+        self.like.setSpectrum(name,old_spectrum)
         saved_state.restore()        
         src_model = self._roi_model.get(name,{})
         src_model['sed'] = copy.deepcopy(o)        
         return o
 
-    def profile_norm(self,name, emin=None,emax=None, reoptimize=False,xvals=None,npts=None):
+    def profile_norm(self,name, emin=None,emax=None, reoptimize=False,xvals=None,npts=None,
+                     savestate=True):
         """
         Profile the normalization of a source.
         """
@@ -827,9 +927,11 @@ class GTAnalysis(AnalysisBase):
                 xvals = np.concatenate((-1.0*xvals[1:][::-1],xvals))
                 xvals = val*10**xvals
         
-        return self.profile(name,parName,emin=emin,emax=emax,reoptimize=reoptimize,xvals=xvals)
+        return self.profile(name,parName,emin=emin,emax=emax,reoptimize=reoptimize,xvals=xvals,
+                            savestate=savestate)
     
-    def profile(self, name, parName, emin=None,emax=None, reoptimize=False,xvals=None,npts=None):
+    def profile(self, name, parName, emin=None,emax=None, reoptimize=False,xvals=None,npts=None,
+                savestate=True):
         """ Profile the likelihood for the given source and parameter.  
         """
         # Find the source
@@ -847,13 +949,13 @@ class GTAnalysis(AnalysisBase):
         ecenter = 0.5*(emin+emax)
         deltae = 10**emax - 10**emin
         npred = np.sum(self.modelCountsSpectrum(name,emin,emax,summed=True))
-        
-        saved_state = LikelihoodState(self.like)
-        
+
+        if savestate:
+            saved_state = LikelihoodState(self.like)
+
         self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
         
         logLike0 = self.like()
-#        print parName, idx, scale, bounds, par.getValue(), par.error()
 
         if xvals is None:
 
@@ -871,10 +973,11 @@ class GTAnalysis(AnalysisBase):
 
         o = {'xvals'    : xvals,
              'Npred'    : np.zeros(len(xvals)),
-             'flux'   : np.zeros(len(xvals)),
-             'e2flux'  : np.zeros(len(xvals)),
+             'dfde'     : np.zeros(len(xvals)),
+             'flux'     : np.zeros(len(xvals)),
+             'eflux'    : np.zeros(len(xvals)),
              'dlogLike' : np.zeros(len(xvals)) }
-                     
+
         for i, x in enumerate(xvals):
             
             self.like[idx] = x
@@ -889,26 +992,25 @@ class GTAnalysis(AnalysisBase):
             logLike1 = self.like()
 
             flux = self.like[name].flux(10**emin, 10**emax)
+            eflux = self.like[name].energyFlux(10**emin, 10**emax)
+            prefactor=self.like[self.like.par_index(name, 'Prefactor')]             
             
             o['dlogLike'][i] = logLike0 - logLike1
-            o['flux'][i] = flux/deltae
-            o['e2flux'][i] = flux/deltae*10**(2*ecenter)
-#self.like[name].energyFlux(10**emin, 10**emax)
+            o['dfde'][i] = prefactor.getTrueValue()
+            o['flux'][i] = flux
+            o['eflux'][i] = eflux
 
             cs = self.modelCountsSpectrum(name,emin,emax,summed=True)
             o['Npred'][i] += np.sum(cs)
             
-#            if verbosity:
-#                print "%-10i%-12.5g%-12.5g%-12.5g%-12.5g%-12.5g"%(i,x,npred[-1],fluxes[-1],
-#                                                                  efluxes[-1],dlogLike[-1])
 #        if len(self.like.model.srcs) == 1 and fluxes[0] == 0:
 #            # Likelihood is undefined with one source and no flux, hack it..
 #            dlogLike[0] = dlogLike[1]
 
         # Restore model parameters to original values
-        saved_state.restore()
+        if savestate:
+            saved_state.restore()
         self.like[idx].setBounds(*bounds)
-#        print parName, idx, scale, bounds, par.getValue(), par.error()
         
         return o
     
@@ -944,7 +1046,11 @@ class GTAnalysis(AnalysisBase):
         return quality
 
     def fit(self,update=True,**kwargs):
-        """Run likelihood optimization."""
+        """Run likelihood optimization.
+
+        
+
+        """
         
         if not self.like.logLike.getNumFreeParams(): 
             self.logger.info("Skipping fit.  No free parameters.")
@@ -977,17 +1083,17 @@ class GTAnalysis(AnalysisBase):
             self.logger.error("Failed to converge with %s"%self.like.optimizer)
             saved_state.restore()
             return quality
-        elif not update:
-            return quality
 
-        for name in self.like.sourceNames():
-            freePars = self.get_free_source_params(name)                
-            if len(freePars) == 0: continue
-            self._roi_model[name] = self.get_src_model(name)
+        if update:
+            for name in self.like.sourceNames():
+                freePars = self.get_free_source_params(name)                
+                if len(freePars) == 0: continue
+                self._roi_model[name] = self.get_src_model(name)
 
-        self._roi_model['roi']['logLike'] = self.like()
-        self._roi_model['roi']['fit_quality'] = quality
+            self._roi_model['roi']['logLike'] = self.like()
+            self._roi_model['roi']['fit_quality'] = quality
 
+        self.logger.info("Fit returned with quality: %i"%quality)
         return quality
         
     def fitDRM(self):
@@ -1011,7 +1117,9 @@ class GTAnalysis(AnalysisBase):
         
     def load_xml(self,xmlfile):
         """Load model definition from XML."""
-        raise NotImplementedError()
+
+        for c in self.components:
+            c.load_xml(xmlfile)        
 
     def write_xml(self,xmlfile,save_model_map=True):
         """Save current model definition as XML file.
@@ -1359,7 +1467,7 @@ class GTBinnedAnalysis(AnalysisBase):
     @property
     def wcs(self):
         return self._wcs
-    
+
     def add_source(self,name,src_dict):
 
         src_dict['name'] = name
@@ -1438,12 +1546,12 @@ class GTBinnedAnalysis(AnalysisBase):
         if imax <= imin: raise Exception('Invalid energy range.')        
         return cs[imin:imax]
         
-    def setup(self):
+    def setup(self,xmlmodel=None):
         """Run pre-processing step."""
 
         # Write ROI XML
-        self._roi.write_xml(self._srcmdl_file)
-        roi_center = self._roi.skydir
+        self.roi.write_xml(self._srcmdl_file)
+        roi_center = self.roi.skydir
         
         # Run gtselect and gtmktime
         kw_gtselect = dict(infile=self.config['data']['evfile'],
@@ -1662,6 +1770,14 @@ class GTBinnedAnalysis(AnalysisBase):
             self.logger.info('Skipping gtmodel')
             
 
+    def load_xml(self,xmlfile):
+
+        xmlfile = self.get_model_path(xmlfile)
+        self.logger.info('Creating BinnedAnalysis')
+        self._like = ba.BinnedAnalysis(binnedData=self._obs,
+                                       srcModel=xmlfile,
+                                       optimizer='MINUIT')
+            
     def write_xml(self,xmlfile):
         """Write the XML model for this analysis component."""
         

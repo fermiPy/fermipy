@@ -119,3 +119,9 @@ roiopt = {
 residmap = {
     'models'                   : (None,'',list),
     }
+
+# Options for SED analysis
+sed = {
+    'bin_index'                : (2.0,''),
+    'use_local_index'          : (False,'')
+    }
