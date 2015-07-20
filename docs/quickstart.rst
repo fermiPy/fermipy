@@ -43,8 +43,8 @@ Markarian 421 with all event types combined (evtype=3).
 
    model:
      src_roiwidth : 10.0
-     galdiff  : '$(DIFFUSEDIR)/template_4years_P8_V2_scaled.fits'
-     isodiff  : '$(DIFFUSEDIR)/isotropic_source_4years_P8V3.txt'
+     galdiff  : '$FERMI_DIFFUSE_DIR/template_4years_P8_V2_scaled.fits'
+     isodiff  : '$FERMI_DIFFUSE_DIR/isotropic_source_4years_P8V3.txt'
      catalogs : 
        - 'gll_psc_v14.fit'
 
@@ -100,11 +100,11 @@ Creating an Analysis Script
 
 .. These classes are also directly exposed
 
-Once a configuration file has been composed, the user executes their
-analysis by creating an instance of
-:py:class:`fermipy.gtanalysis.GTAnalysis` with this configuration and
+Once the configuration file has been composed, the analysis is
+executed by creating an instance of
+:py:class:`~fermipy.gtanalysis.GTAnalysis` with this configuration and
 calling its associated methods.
-:py:class:`fermipy.gtanalysis.GTAnalysis` provides a similar
+:py:class:`~fermipy.gtanalysis.GTAnalysis` provides a similar
 functionality to the underlying BinnedAnalysis/UnbinnedAnalysis
 classes with methods to fix/free parameters, add/remove sources from
 the model, and perform a fit to the ROI.
@@ -128,36 +128,87 @@ will often be the slowest step in the analysis sequence.
 
 Once the *GTAnalysis* object is initialized we can control which
 sources and source parameters will be free in the fit.  By default all
-parameters of the model start as fixed.  In the following example we
-free catalog sources within 3 deg of the ROI center and free the
-galactic and isotropic components by name.
+models parameters are initially fixed.  In the following example we
+free the normalization of catalog sources within 3 deg of the ROI
+center and free the galactic and isotropic components by name.
 
 .. code-block:: python
 
-   # Free Sources
-   gta.free_sources(distance=3.0)
+   # Free Normalization of all Sources within 3 deg of ROI center
+   gta.free_sources(distance=3.0,pars='norm')
+
+   # Free all parameters of isotropic and galactic diffuse components 
    gta.free_source('galdiff')
    gta.free_source('isodiff')
+
+Note that when passing a source name argument both case and whitespace
+are ignored.  A source can also be identified by the name of any of
+its source associations.  Thus the following calls are equivalent ways
+of freeing the parameters of Mkn 421:
+
+.. code-block:: python
+
+   # These calls are equivalent
+   gta.free_source('mkn421')
+   gta.free_source('Mkn 421')
+   gta.free_source('3FGL J1104.4+3812')
+   gta.free_source('3fglj1104.4+3812')
+
+After freeing the parameters of one or more sources we can execute a
+fit by calling :py:meth:`~fermipy.gtanalysis.GTAnalysis.fit`.  The will
+maximize the likelihood with respect to the model parameters that are
+currently free in the model.
 
 .. code-block:: python
 
    gta.fit()
-   gta.write_xml('fit_model.xml')
-   gta.sed('mkn421')
 
-   # Write results yaml file
+After the fitting is complete we can write the current state of the
+best-fit model with the
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi` method:
+
+.. code-block:: python
+
    gta.write_roi('fit_model')
 
+This will write both an XML model file and a YAML results file with a
+variety of information about each source.  By default the fit to each
+source is performed with a global spectral model that spans the entire
+analysis energy range.  To extract a bin-by-bin flux spectrum (i.e. a
+SED) you can call :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed`
+method with the name of the source:
 
+.. code-block:: python
 
-.. code-block:: bash
-   
-   >>>
-   >>>
+   gta.sed('mkn421')
 
 
 Extracting Analysis Results
 ---------------------------
 
+Results of the analysis can be extracted from the output yaml file
+written by :py:meth:`fermipy.gtanalysis.GTAnalysis.write_roi`.  This
+method will write the current state of the model to both an XML model
+file and yaml file.  The contents of the YAML file are organized in a
+dictionary with keys for each source in the model.  Each source
+dictionary contains all information about the given source (TS, NPred,
+best-fit parameters, etc.) computed up to that point.
 
+.. code-block:: python
+   
+   >>> import yaml
+   >>> c = yaml.load(open('fit_model.yaml'))
+   >>> print c.keys()
+   ['3FGL J0954.2+4913',
+    '3FGL J0957.4+4728',
+    '3FGL J1006.7+3453',
 
+    ...
+
+    '3FGL J1153.4+4932',
+    '3FGL J1159.5+2914',
+    '3FGL J1203.2+3847',
+    '3FGL J1209.4+4119',
+    'galdiff',
+    'isodiff',
+    'roi']

@@ -132,7 +132,7 @@ class IsoSource(Model):
     def __init__(self,filefunction,name,spectral_pars=None,spatial_pars=None):
         super(IsoSource,self).__init__(None,spectral_pars,spatial_pars)
         
-        self._filefunction = filefunction
+        self._filefunction = os.path.expandvars(filefunction)
         self._name = name
         self['SpectrumType'] = 'FileFunction'
 
@@ -184,7 +184,7 @@ class MapCubeSource(Model):
     def __init__(self,mapcube,name,spectral_pars=None,spatial_pars=None):
         super(MapCubeSource,self).__init__(None,spectral_pars,spatial_pars)
 
-        self._mapcube = mapcube
+        self._mapcube = os.path.expandvars(mapcube)
         self._name = name
         self['SpectrumType'] = 'PowerLaw'
 
