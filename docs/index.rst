@@ -84,6 +84,7 @@ Documentation Contents
 
    config
    quickstart
+   model
    fermipy
 
 
