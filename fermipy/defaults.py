@@ -43,8 +43,8 @@ model = {
     'src_roiwidth'        :
         (None,'Select sources within a box of RxR centered on the ROI.  If '
          'none then no cut is applied.'),    
-    'isodiff'       : (None,'Set the isotropic template.'),
-    'galdiff'       : (None,'Set the galactic IEM mapcube.'),
+    'isodiff'       : (None,'Set the isotropic template.',list),
+    'galdiff'       : (None,'Set the galactic IEM mapcube.',list),
     'limbdiff'      : (None,''),
     'sources'       : (None,'',list),
     'extdir'        : ('Extended_archive_v14',''),

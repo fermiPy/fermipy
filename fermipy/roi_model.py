@@ -1,3 +1,6 @@
+
+import re
+
 import defaults 
 from fermipy.utils import *
 import fermipy
@@ -88,12 +91,26 @@ def create_model_name(src):
 
 class Model(object):
 
-    def __init__(self,data=None,
+    def __init__(self,name,data=None,
                  spectral_pars=None,
                  spatial_pars=None):
+
+        self._name = name
         self._data = {} if data is None else data
         self._spectral_pars = {} if spectral_pars is None else spectral_pars
         self._spatial_pars = {} if spatial_pars is None else spatial_pars
+
+        self._names = [name]
+        self._names_dict = {}
+        for k in ROIModel.src_name_cols:
+
+            if not k in self._data: continue            
+            name = self._data[k].strip()
+            if name != '' and not name in self._names:
+                self._names.append(name)
+
+            self._names_dict[k] = name
+        
         
     def __contains__(self,key):
         return key in self._data
@@ -114,6 +131,17 @@ class Model(object):
     @property
     def spatial_pars(self):
         return self._spatial_pars
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def names(self):
+        return self._names
+
+    def add_name(self,name):
+        self._names.append(name)
     
     def update(self,m):
 
@@ -129,11 +157,10 @@ class Model(object):
         
 class IsoSource(Model):
 
-    def __init__(self,filefunction,name,spectral_pars=None,spatial_pars=None):
-        super(IsoSource,self).__init__(None,spectral_pars,spatial_pars)
+    def __init__(self,name,filefunction,spectral_pars=None,spatial_pars=None):
+        super(IsoSource,self).__init__(name,None,spectral_pars,spatial_pars)
         
         self._filefunction = filefunction
-        self._name = name
         self['SpectrumType'] = 'FileFunction'
 
         if not self._spectral_pars:
@@ -149,9 +176,7 @@ class IsoSource(Model):
                            'value' : '1', 'min' : '0', 'max' : '10',
                            'free' : '0' } }
 
-    @property
-    def name(self):
-        return self._name        
+        
         
     @property
     def filefunction(self):
@@ -181,11 +206,10 @@ class IsoSource(Model):
         
 class MapCubeSource(Model):
 
-    def __init__(self,mapcube,name,spectral_pars=None,spatial_pars=None):
-        super(MapCubeSource,self).__init__(None,spectral_pars,spatial_pars)
+    def __init__(self,name,mapcube,spectral_pars=None,spatial_pars=None):
+        super(MapCubeSource,self).__init__(name,None,spectral_pars,spatial_pars)
 
         self._mapcube = mapcube
-        self._name = name
         self['SpectrumType'] = 'PowerLaw'
 
         if not self._spectral_pars:
@@ -208,10 +232,6 @@ class MapCubeSource(Model):
                     {'name' : 'Normalization', 'scale' : '1',
                      'value' : '1', 'min' : '0', 'max' : '10',
                      'free' : '0' } }
-
-    @property
-    def name(self):
-        return self._name        
         
     @property
     def mapcube(self):
@@ -239,13 +259,13 @@ class MapCubeSource(Model):
         
 class Source(Model):
 
-    def __init__(self,data=None,
+    def __init__(self,name,data=None,
                  radec=None,
                  glonlat=None,
                  spectral_pars=None,
                  spatial_pars=None,
                  extended=False):
-        super(Source,self).__init__(data,spectral_pars,spatial_pars)
+        super(Source,self).__init__(name,data,spectral_pars,spatial_pars)
                     
 #        phi = np.radians(data['RAJ2000'])
 #        theta = np.pi/2.-np.radians(data['DEJ2000'])
@@ -277,22 +297,12 @@ class Source(Model):
         if not self._spatial_pars:
             self._update_spatial_pars()
 
-        if 'name' in self._data and self._data['name'] is not None:
-            self._data['Source_Name'] = self._data.pop('name')
-
-        if not 'Source_Name' in self._data:
-            self._data['Source_Name'] = create_model_name(self)
+#        if 'name' in self._data and self._data['name'] is not None:
+#            self._data['Source_Name'] = self._data.pop('name')
+#        if not 'Source_Name' in self._data:
+#            self._data['Source_Name'] = create_model_name(self)
             
-        self._names = []
-        self._names_dict = {}
-        for k in ROIModel.src_name_cols:
 
-            if not k in self._data: continue
-
-            name = self._data[k].strip()
-            if name != '':  self._names.append(name)
-
-            self._names_dict[k] = name
             
     def _update_spatial_pars(self):
 
@@ -433,10 +443,6 @@ class Source(Model):
         return self._extended
 
     @property
-    def name(self):
-        return self._data['Source_Name']
-
-    @property
     def associations(self):
         return self._names
 
@@ -485,15 +491,20 @@ class Source(Model):
             extended=False
         
         if 'name' in src_dict:
-            src_dict['Source_Name'] = src_dict['name']
-        
+            name = src_dict['name']
+            src_dict['Source_Name'] = src_dict.pop('name')
+        elif 'Source_Name' in src_dict:
+            name = src_dict['Source_Name']
+        else:
+            raise Exception('Source name undefined.')
+            
         skydir = get_target_skydir(src_dict)
         
         src_dict['RAJ2000'] = skydir.ra.deg
         src_dict['DEJ2000'] = skydir.dec.deg
 
         radec = np.array([skydir.ra.deg,skydir.dec.deg])
-        return Source(src_dict,radec=radec,extended=extended)
+        return Source(name,src_dict,radec=radec,extended=extended)
     
     @staticmethod
     def create_from_xml(root,extdir=None):
@@ -540,14 +551,16 @@ class Source(Model):
 
             radec = np.array([src_dict['RAJ2000'],src_dict['DEJ2000']])
                 
-            return Source(src_dict,radec=radec,
+            return Source(src_dict['Source_Name'],
+                          src_dict,radec=radec,
                           spectral_pars=spectral_pars,
                           spatial_pars=spatial_pars,extended=extflag)
 
         elif src_type == 'DiffuseSource' and spatial_type == 'ConstantValue':
-            return IsoSource(spec['file'],'isodiff',spectral_pars,spatial_pars)
+            return IsoSource(src_dict['Source_Name'],spec['file'],
+                             spectral_pars,spatial_pars)
         elif src_type == 'DiffuseSource' and spatial_type == 'MapCubeFunction':
-            return MapCubeSource(spat['file'],'galdiff',
+            return MapCubeSource(src_dict['Source_Name'],spat['file'],
                                  spectral_pars,spatial_pars)
         else:
             raise Exception('Unrecognized type for source: %s'%src_dict['Source_Name'])
@@ -592,7 +605,6 @@ class ROIModel(AnalysisBase):
 
     defaults = dict(defaults.model.items(),
                     logfile=(None,''),
-                    skydir=(None,''),
                     fileio=defaults.fileio,
                     logging=defaults.logging)
 
@@ -602,6 +614,9 @@ class ROIModel(AnalysisBase):
                      'ASSOC_GAM1','ASSOC_GAM2','ASSOC_TEV']
 
     def __init__(self,config=None,srcs=None,diffuse_srcs=None,**kwargs):
+        # Coordinate for ROI center (defaults to 0,0)
+        self._skydir = kwargs.pop('skydir',SkyCoord(0.0,0.0,unit=u.deg)) 
+
         super(ROIModel,self).__init__(config,**kwargs)
         
         self.logger = Logger.get(self.__class__.__name__,
@@ -613,9 +628,6 @@ class ROIModel(AnalysisBase):
                 os.path.join(fermipy.PACKAGE_ROOT,
                              'catalogs',self.config['extdir'])
         
-        # Coordinate for ROI center (defaults to 0,0)
-        self._skydir = kwargs.get('skydir',SkyCoord(0.0,0.0,unit=u.deg))                
-#        self._radec = SkyCoord(*kwargs.get('radec',[0.0,0.0]),unit=u.deg)
         self._srcs = []
         self._diffuse_srcs = []
         self._src_index = {}
@@ -646,12 +658,54 @@ class ROIModel(AnalysisBase):
         return self._diffuse_srcs
     
     def load_diffuse_srcs(self):
-        
-        if self.config['isodiff'] is not None:
-            self.load_source(IsoSource(self.config['isodiff'],'isodiff'))
 
+        isodiff = []
+        if self.config['isodiff'] is not None:
+            isodiff = self.config['isodiff']
+
+        galdiff = []
         if self.config['galdiff'] is not None:
-            self.load_source(MapCubeSource(self.config['galdiff'],'galdiff'))
+            galdiff = self.config['galdiff']
+        
+        for i, t in enumerate(isodiff):
+            
+            if isinstance(t,str):
+                src_dict = {'file' : t}
+            elif isinstance(t,dict):
+                src_dict = copy.deepcopy(t)
+                
+            if not 'name' in src_dict:                
+                if len(isodiff) == 1:
+                    src_dict['name'] = 'isodiff'
+                else:
+                    src_dict['name'] = 'isodiff%02i'%i
+
+            src = IsoSource(src_dict['name'],src_dict['file'])
+            altname = os.path.basename(src_dict['file'])
+            altname = re.sub(r'(\.txt$)','', altname)
+            src.add_name(altname)            
+            self.load_source(src)
+
+        for i, t in enumerate(galdiff):
+
+            if isinstance(t,str):
+                src_dict = {'file' : t}
+            elif isinstance(t,dict):
+                src_dict = copy.deepcopy(t)
+
+            if not 'name' in src_dict:
+                if len(galdiff) == 1:
+                    src_dict['name'] = 'galdiff'
+                else:
+                    src_dict['name'] = 'galdiff%02i'%i
+
+            src = MapCubeSource(src_dict['name'],src_dict['file'])
+
+            altname = os.path.basename(src_dict['file'])
+            altname = re.sub(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',
+                             '', altname)            
+            src.add_name(altname)            
+            self.load_source(src)
 
     def create_source(self,src_dict,build_index=True):
         """Create and load a source object to the ROI model."""
@@ -692,12 +746,8 @@ class ROIModel(AnalysisBase):
             return
 
         self._src_index[src.name] = src
-        
-        for c in ROIModel.src_name_cols:
-            if not c in src: continue
-            name = src[c].strip()
-            self._src_index[name] = src
-            self._src_index[name.replace(' ','')] = src
+
+        for name in src.names:
             self._src_index[name.replace(' ','').lower()] = src
 
         if isinstance(src,Source):
@@ -806,8 +856,10 @@ class ROIModel(AnalysisBase):
     def get_source_by_name(self,name):
         """Retrieve source by name."""
 
-        if name in self._src_index:
-            return self._src_index[name]
+        index_name = name.replace(' ','').lower()
+        
+        if index_name in self._src_index:
+            return self._src_index[index_name]
         else:
             raise Exception('No source matching name: ' + name)
 
@@ -937,7 +989,7 @@ class ROIModel(AnalysisBase):
             if src_dict['SpectrumType'] == 'PLExpCutoff':
                 src_dict['SpectrumType'] = 'PLSuperExpCutoff'
             
-            src = Source(src_dict,radec=radec[i],glonlat=glonlat[i],extended=extflag)
+            src = Source(src_dict['Source_Name'],src_dict,radec=radec[i],glonlat=glonlat[i],extended=extflag)
             self.load_source(src)
             
         self.build_src_index()
