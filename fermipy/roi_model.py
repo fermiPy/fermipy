@@ -160,7 +160,7 @@ class IsoSource(Model):
     def __init__(self,name,filefunction,spectral_pars=None,spatial_pars=None):
         super(IsoSource,self).__init__(name,None,spectral_pars,spatial_pars)
         
-        self._filefunction = filefunction
+        self._filefunction = os.path.expandvars(filefunction)
         self['SpectrumType'] = 'FileFunction'
 
         if not self._spectral_pars:
@@ -209,7 +209,7 @@ class MapCubeSource(Model):
     def __init__(self,name,mapcube,spectral_pars=None,spatial_pars=None):
         super(MapCubeSource,self).__init__(name,None,spectral_pars,spatial_pars)
 
-        self._mapcube = mapcube
+        self._mapcube = os.path.expandvars(mapcube)
         self['SpectrumType'] = 'PowerLaw'
 
         if not self._spectral_pars:

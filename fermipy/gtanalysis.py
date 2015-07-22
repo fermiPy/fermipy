@@ -1593,7 +1593,7 @@ class GTBinnedAnalysis(AnalysisBase):
                   zmax=self.config['selection']['zmax'])
         
         if self.config['data']['ltcube'] is not None:
-            self._ltcube = self.config['data']['ltcube']
+            self._ltcube = os.path.expandvars(self.config['data']['ltcube'])
         elif not os.path.isfile(self._ltcube):             
             run_gtapp('gtltcube',self.logger,kw)
         else:

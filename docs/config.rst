@@ -90,8 +90,19 @@ null a livetime cube will be generated at runtime.
 
 model
 -----
-The *model* block collects options related to the definition of the
-ROI model.  These parameters control 
+
+The *model* block collects options that control the inclusion of
+point-source and diffuse components in the model.  *galdiff* and
+*isodiff* set the templates for the Galactic IEM and isotropic diffuse
+respectively.  *catalogs* defines a list of catalogs that will be
+merged to form a master analysis catalog from which sources will be
+drawn.  Valid entries in this list can be FITS files or XML model
+files.  *sources* can be used to insert additional point-source or
+extended components beyond those defined in the master catalog.
+*src_radius* and *src_roiwidth* set the maximum distance from the ROI
+center at which sources in the master catalog will be included in the
+ROI model.
+
 
 .. code-block:: yaml
 
@@ -100,11 +111,11 @@ ROI model.  These parameters control
      # Diffuse components
      galdiff  : '$FERMI_DIR/refdata/fermi/galdiffuse/gll_iem_v06.fits'
      isodiff  : '$FERMI_DIR/refdata/fermi/galdiffuse/iso_P8R2_SOURCE_V6_v06.txt'
-     limbdiff : null
 
      # List of catalogs to be used in the model.
      catalogs : 
        - 'gll_psc_v14.fit'
+       - 'extra_sources.xml'
 
      sources :
        - { 'name' : 'SourceA', 'ra' : 60.0, 'dec' : 30.0, 'SpectrumType' : PowerLaw }
@@ -116,8 +127,6 @@ ROI model.  These parameters control
      # Include catalog sources within a box of width roisrc.
      src_roiwidth : 15.0
 
-
-
 binning
 -------
 
@@ -125,25 +134,44 @@ binning
 
    binning:
 
+     # Binning
+     roiwidth   : 10.0
+     npix       : null
+     binsz      : 0.1 # spatial bin size in deg
+     binsperdec : 8   # nb energy bins per decade
+
 
 selection
 ---------
+
+The *selection* block collects parameters related to the data
+selection and target definition.  The majority of the parameters
+correspond to the arguments for *gtselect* and *gtmktime*.  The ROI
+center can be set with the *target* parameter by providing the name of
+a source in the master catalog (defined in the *model* block).
+Alternatively the ROI center can be defined by giving explicit sky
+coordinates with *ra* and *dec* or *glon* and *glat*.
 
 .. code-block:: yaml
 
    selection:
 
-     # Data selections
+     # gtselect parameters
      emin    : 100
      emax    : 100000
      zmax    : 90
      evclass : 128
      evtype  : 3
      tmin    : 239557414
-     tmax    : 428903014 # 6 years
+     tmax    : 428903014 
+
+     # gtmktime parameters
+     filter : 'DATA_QUAL>0 && LAT_CONFIG==1'
+     roicut : 'no'
 
      # Set the ROI center to the coordinates of this source
      target : 'mkn421'
+
 
 components
 ----------
@@ -176,7 +204,9 @@ each component will be named according to their order in the list
 
 This example illustrates how to define the components as a dictionary
 of dictionaries.  In this case the files of a component will be
-appended with its corresponding key (e.g. file_front.fits, file_back.fits):.
+appended with its corresponding key (e.g. file_front.fits,
+file_back.fits).
+
 .. code-block:: yaml
 
    # Component block for Front/Back analysis with dictionary style
