@@ -1418,10 +1418,10 @@ class GTBinnedAnalysis(AnalysisBase):
             self._npix = self.config['binning']['npix']
 
         if self.config['selection']['radius'] is None:
-            self._config['selection']['radius'] = (np.sqrt(2.)*0.5*self.npix*
-                                                   self.config['binning']['binsz']+0.5)
+            self._config['selection']['radius'] = float(np.sqrt(2.)*0.5*self.npix*
+                                                        self.config['binning']['binsz']+0.5)
             self.logger.info('Automatically setting selection radius to %s deg'%
-                             self.config['radius'])
+                             self.config['selection']['radius'])
 
         self._like = None
 

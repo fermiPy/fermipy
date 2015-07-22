@@ -30,9 +30,13 @@ class AnalysisBase(object):
 
     @property
     def config(self):
-        """Return the internal configuration state of this class."""
+        """Return the configuration dictionary of this class."""
         return self._config
 
+    def write_config(self,outfile):
+        """Write the configuration dictionary to an output file."""
+        yaml.dump(self.config,open(outfile,'w'),default_flow_style=False)
+    
     def print_config(self,logger,loglevel=None):
 
         if loglevel is None:
@@ -134,7 +138,7 @@ def load_config(defaults):
             
             if key in o: raise Exception('Duplicate key.')
                 
-            o[key] = value
+            o[key] = value            
         else:
 
             print key, item, type(item)
