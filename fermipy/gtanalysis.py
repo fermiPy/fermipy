@@ -498,7 +498,8 @@ class GTAnalysis(AnalysisBase):
         
     
     def delete_sources(self,cuts=None,distance=None,square=False):
-        """Delete sources within the ROI."""
+        """Delete sources within the ROI satisfying the given
+        selection."""
         
         srcs = self.get_sources(cuts,distance,square)
         self._roi.delete_sources(srcs)    
@@ -507,7 +508,8 @@ class GTAnalysis(AnalysisBase):
             
     def free_sources(self,free=True,pars=None,cuts=None,
                      distance=None,square=False):
-        """Free/Fix sources within the ROI.
+        """Free/Fix sources within the ROI satisfying the given
+        selection.
 
         Parameters
         ----------
@@ -716,6 +718,8 @@ class GTAnalysis(AnalysisBase):
                          pars=shape_parameters[src['SpectrumType']])
 
     def get_source_name(self,name):
+        """Return the name of a source as it is defined in the
+        pyLikelihood model object."""
         if not name in self.like.sourceNames():
             name = self._roi.get_source_by_name(name).name
         return name
@@ -1132,9 +1136,11 @@ class GTAnalysis(AnalysisBase):
         Parameters
         ----------
 
-        model_name : str
-            Name of the output model.
+        xmlfile : str
+            Name of the output XML file.
 
+        save_model_map : bool
+            Save the current counts model as a FITS file.
         """
 
         model_name = os.path.splitext(xmlfile)[0]
@@ -1144,7 +1150,7 @@ class GTAnalysis(AnalysisBase):
         for i, c in enumerate(self._components):
             c.write_xml(xmlfile)
 
-        if not save_model_map: return
+        if not save_model_map: return []
             
         counts = []
         for i, c in enumerate(self._components):
@@ -1161,7 +1167,23 @@ class GTAnalysis(AnalysisBase):
         return [(model_counts,self._wcs)] + counts
 
     def write_roi(self,outfile=None,make_residuals=False,save_model_map=True):
-        """Write current model to a yaml file."""
+        """Write current model to a yaml file.  This function will
+        also write an XML model file with the same base name as the
+        YAML file.
+
+        Parameters
+        ----------
+
+        outfile : str
+            Name of the output YAML file.
+
+        make_residuals : bool
+            Run residual analysis.
+            
+        save_model_map : bool
+            Save the current counts model as a FITS file.
+
+        """
         # extract the results in a convenient format
 
         if outfile is None:
@@ -1186,16 +1208,14 @@ class GTAnalysis(AnalysisBase):
                 plt.figure()
                 p = ROIPlotter(self._rmg._maps[k]['sigma'],
                                self._rmg._maps[k]['wcs'],self.roi)
-                p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],cb_label='Significance [$\sigma$]')
+                p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
+                       cb_label='Significance [$\sigma$]')
                 plt.savefig(imfile)
 
         if len(mcube_maps):
 
             imfile = os.path.join(self.config['fileio']['outdir'],
                                   '%s_model_map.png'%(prefix))
-
-
-            print type(mcube_maps[0][0]), type(mcube_maps[0][1])
 
             plt.figure()        
             p = ROIPlotter(mcube_maps[0][0],mcube_maps[0][1],self.roi)
@@ -1207,7 +1227,7 @@ class GTAnalysis(AnalysisBase):
 
         plt.figure()        
         p = ROIPlotter.create_from_fits(self._ccube_file,self.roi)
-        p.plot(cb_label='Counts')
+        p.plot(cb_label='Counts',zscale='sqrt')
         plt.savefig(imfile)
             
         o = self.get_roi_model()
@@ -1223,7 +1243,8 @@ class GTAnalysis(AnalysisBase):
         yaml.dump(tolist(o),open(outfile,'w'))
 
     def tsmap(self):
-        """Loop over ROI and place a test source at each position."""
+        """Loop over ROI, place a test source at each position, and
+        evaluated the TS for that source."""
 
         saved_state = LikelihoodState(self.like)
         
@@ -1275,6 +1296,11 @@ class GTAnalysis(AnalysisBase):
         hdulist.writeto('test.fits',clobber=True)
         
     def bowtie(self,fd,energies=None):
+        """Generate a bowtie function for the given source.  This will
+        create a band as a function of energy by propagating the
+        errors on the global fit parameters.  Note that this band only
+        reflects the uncertainty for parameters that were left free in
+        the fit."""
         
         if energies is None:
             emin = self.energies[0]
