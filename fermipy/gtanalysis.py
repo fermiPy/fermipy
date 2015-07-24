@@ -414,7 +414,7 @@ class GTAnalysis(AnalysisBase):
 
         rm['roi']['counts'] = np.zeros(self.enumbins)
         rm['roi']['logLike'] = self.like()
-
+        
         self._ccube_file = os.path.join(self.config['fileio']['workdir'],
                                         'ccube.fits')
         
@@ -423,7 +423,8 @@ class GTAnalysis(AnalysisBase):
             cm = c.countsMap()
             counts += [(cm,c.wcs)]
             rm['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[1,2]))
-
+            rm['roi']['components'][i]['logLike'] = c.like()
+            
         shape = (self.enumbins,self.npix,self.npix)
         self._counts = make_coadd_map(counts,self._wcs,shape)
         write_fits_image(self._counts,self._wcs,self._ccube_file)        
@@ -1102,6 +1103,9 @@ class GTAnalysis(AnalysisBase):
             self._roi_model['roi']['logLike'] = self.like()
             self._roi_model['roi']['fit_quality'] = quality
 
+            for i,c in enumerate(self.components):
+                self._roi_model['roi']['components'][i] = c.like()
+            
         self.logger.info("Fit returned with quality: %i"%quality)
         return quality
         
@@ -1167,15 +1171,17 @@ class GTAnalysis(AnalysisBase):
         return [(model_counts,self._wcs)] + counts
 
     def write_roi(self,outfile=None,make_residuals=False,save_model_map=True):
-        """Write current model to a yaml file.  This function will
-        also write an XML model file with the same base name as the
-        YAML file.
+        """Write current model to a file.  This function will write an
+        XML model file and an ROI dictionary in both YAML and npy
+        formats.
 
         Parameters
         ----------
 
-        outfile : str
-            Name of the output YAML file.
+        outfile : str        
+            Name of the output file.  The extension of this string
+            will be stripped when generating the XML, YAML and
+            Numpy filenames.
 
         make_residuals : bool
             Run residual analysis.
@@ -1187,16 +1193,14 @@ class GTAnalysis(AnalysisBase):
         # extract the results in a convenient format
 
         if outfile is None:
-            outfile = os.path.join(self._savedir,'results.yaml')
+            outfile = os.path.join(self._savedir,'results')
             prefix=''
         else:
             outfile, ext = os.path.splitext(outfile)
-            prefix = outfile 
-            if not ext:
-                outfile = os.path.join(self._savedir,outfile + '.yaml')
-            else:
-                outfile = outfile + ext
-
+            prefix = outfile
+            if not os.path.isabs(outfile):            
+                outfile = os.path.join(self._savedir,outfile)
+            
         mcube_maps = self.write_xml(prefix,save_model_map=save_model_map)
         
         if make_residuals: 
@@ -1237,11 +1241,12 @@ class GTAnalysis(AnalysisBase):
         make_counts_spectrum_plot(o,self.energies,imfile)
 
         
-        self.logger.info('Writing %s...'%outfile)
+        self.logger.info('Writing %s...'%(outfile + '.yaml'))
+        yaml.dump(tolist(o),open(outfile + '.yaml','w'))
 
-        # Get the subset of sources with free parameters            
-        yaml.dump(tolist(o),open(outfile,'w'))
-
+        self.logger.info('Writing %s...'%(outfile + '.npy'))
+        np.save(outfile + '.npy',o)
+        
     def tsmap(self):
         """Loop over ROI, place a test source at each position, and
         evaluated the TS for that source."""
@@ -1344,10 +1349,20 @@ class GTAnalysis(AnalysisBase):
         return copy.deepcopy(self._roi_model)        
 
     def get_src_model(self,name,paramsonly=False):
+        """Compose a dictionary for the given source."""
+
+        name = self.get_source_name(name)        
         source = self.like[name].src
         spectrum = source.spectrum()
 
-        src_dict = { 'name' : name }
+        src_dict = { 'name' : name,
+                     'flux' : np.ones(2)*np.nan,
+                     'flux100' : np.ones(2)*np.nan,
+                     'flux1000' : np.ones(2)*np.nan,
+                     'flux10000' : np.ones(2)*np.nan,
+                     'dfde100' : np.ones(2)*np.nan,
+                     'dfde1000' : np.ones(2)*np.nan,
+                     'dfde10000' : np.ones(2)*np.nan }
 
         src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
 
@@ -1356,9 +1371,23 @@ class GTAnalysis(AnalysisBase):
 
         # Get Counts Spectrum
         src_dict['model_counts'] = self.modelCountsSpectrum(name,summed=True)
+
+        # Get the Model Fluxes
+        src_dict['flux'][0] = self.like.flux(name,10**self.energies[0], 10**self.energies[-1])
+        src_dict['flux100'][0] = self.like.flux(name,100., 10**5.75)
+        src_dict['flux1000'][0] = self.like.flux(name,1000., 10**5.75)
+        src_dict['flux10000'][0] = self.like.flux(name,10000., 10**5.75)
+        src_dict['dfde100'][0] = self.like[name].spectrum()(pyLike.dArg(100.))
+        src_dict['dfde1000'][0] = self.like[name].spectrum()(pyLike.dArg(1000.))
+        src_dict['dfde10000'][0] = self.like[name].spectrum()(pyLike.dArg(10000.))
         
         if not self.get_free_source_params(name) or paramsonly:
             return src_dict
+
+        src_dict['flux'][1] = self.like.fluxError(name,10**self.energies[0], 10**self.energies[-1])
+        src_dict['flux100'][1] = self.like.fluxError(name,100., 10**self.energies[-1])
+        src_dict['flux1000'][1] = self.like.fluxError(name,1000., 10**self.energies[-1])
+        src_dict['flux10000'][1] = self.like.fluxError(name,10000., 10**self.energies[-1])
         
         # Should we update the TS values at the end of fitting?
         src_dict['ts'] = self.like.Ts(name,reoptimize=False)
@@ -1377,8 +1406,11 @@ class GTAnalysis(AnalysisBase):
 
             # Extract bowtie   
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
-            src_dict['model_flux'] = self.bowtie(fd)
-
+            src_dict['model_flux'] = self.bowtie(fd)            
+            src_dict['dfde100'][1] = fd.error(100.)
+            src_dict['dfde1000'][1] = fd.error(1000.)
+            src_dict['dfde10000'][1] = fd.error(10000.)
+            
         return src_dict
     
 class GTBinnedAnalysis(AnalysisBase):
@@ -1500,7 +1532,9 @@ class GTBinnedAnalysis(AnalysisBase):
         return self._wcs
 
     def add_source(self,name,src_dict):
-
+        """Add a new source to the model with the properties defined
+        in the input dictionary."""
+        
         src_dict['name'] = name
         src = self.roi.create_source(src_dict)
         
@@ -1731,6 +1765,8 @@ class GTBinnedAnalysis(AnalysisBase):
         self.logger.info('Finished setup')
 
     def generate_model_map(self,model_name=None):
+        """Generate a counts model map from the in-memory source map
+        data structures."""
         
         if model_name is None: suffix = self.config['file_suffix']
         else:
@@ -1742,10 +1778,6 @@ class GTBinnedAnalysis(AnalysisBase):
         h = pyfits.open(self._ccube_file)        
         counts = self.modelCountsMap()
         write_fits_image(counts,self.wcs,outfile)
-        
-#        hdu_image = pyfits.PrimaryHDU(counts,header=h[0].header)
-#        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])        
-#        hdulist.writeto(outfile,clobber=True)
 
         return counts
         
@@ -1823,9 +1855,12 @@ class GTBinnedAnalysis(AnalysisBase):
         if not ext: ext = '.xml'
         xmlfile = name + self.config['file_suffix'] + ext
 
-        if os.path.commonprefix([self.config['fileio']['workdir'],xmlfile]) \
-                != self.config['fileio']['workdir']:        
+        if not os.path.isabs(xmlfile): 
             xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
+            
+#        if os.path.commonprefix([self.config['fileio']['workdir'],xmlfile]) \
+#                != self.config['fileio']['workdir']:        
+#            xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
 
         return xmlfile
 
