@@ -1373,22 +1373,28 @@ class GTAnalysis(AnalysisBase):
         src_dict['model_counts'] = self.modelCountsSpectrum(name,summed=True)
 
         # Get the Model Fluxes
-        src_dict['flux'][0] = self.like.flux(name,10**self.energies[0], 10**self.energies[-1])
-        src_dict['flux100'][0] = self.like.flux(name,100., 10**5.75)
-        src_dict['flux1000'][0] = self.like.flux(name,1000., 10**5.75)
-        src_dict['flux10000'][0] = self.like.flux(name,10000., 10**5.75)
-        src_dict['dfde100'][0] = self.like[name].spectrum()(pyLike.dArg(100.))
-        src_dict['dfde1000'][0] = self.like[name].spectrum()(pyLike.dArg(1000.))
-        src_dict['dfde10000'][0] = self.like[name].spectrum()(pyLike.dArg(10000.))
-        
+        try:
+            src_dict['flux'][0] = self.like.flux(name,10**self.energies[0], 10**self.energies[-1])
+            src_dict['flux100'][0] = self.like.flux(name,100., 10**5.5)
+            src_dict['flux1000'][0] = self.like.flux(name,1000., 10**5.5)
+            src_dict['flux10000'][0] = self.like.flux(name,10000., 10**5.5)
+            src_dict['dfde100'][0] = self.like[name].spectrum()(pyLike.dArg(100.))
+            src_dict['dfde1000'][0] = self.like[name].spectrum()(pyLike.dArg(1000.))
+            src_dict['dfde10000'][0] = self.like[name].spectrum()(pyLike.dArg(10000.))
+        except Exception, ex:
+            self.logger.error('Failed to update source parameters.', exc_info=True)
+            
         if not self.get_free_source_params(name) or paramsonly:
             return src_dict
 
-        src_dict['flux'][1] = self.like.fluxError(name,10**self.energies[0], 10**self.energies[-1])
-        src_dict['flux100'][1] = self.like.fluxError(name,100., 10**self.energies[-1])
-        src_dict['flux1000'][1] = self.like.fluxError(name,1000., 10**self.energies[-1])
-        src_dict['flux10000'][1] = self.like.fluxError(name,10000., 10**self.energies[-1])
-        
+        try:
+            src_dict['flux'][1] = self.like.fluxError(name,10**self.energies[0], 10**self.energies[-1])
+            src_dict['flux100'][1] = self.like.fluxError(name,100., 10**5.5)
+            src_dict['flux1000'][1] = self.like.fluxError(name,1000., 10**5.5)
+            src_dict['flux10000'][1] = self.like.fluxError(name,10000., 10**5.5)
+        except Exception, ex:
+            self.logger.error('Failed to update source parameters.', exc_info=True)
+            
         # Should we update the TS values at the end of fitting?
         src_dict['ts'] = self.like.Ts(name,reoptimize=False)
             
@@ -1592,15 +1598,22 @@ class GTBinnedAnalysis(AnalysisBase):
         sum of all sources in the ROI."""
         
         v = pyLike.FloatVector(self.npix**2*self.enumbins)
+
+        print self.like.logLike.fixedModelUpdated()
+        
         if name is None:
+            if not self.like.logLike.fixedModelUpdated():
+                self.like.logLike.buildFixedModelWts(True)
+            self.like.logLike.computeModelMap(v)            
+        elif name == 'all':            
             for name in self.like.sourceNames():
                 model = self.like.logLike.getSourceMap(name)
                 self.like.logLike.updateModelMap(v,model)
         else:
             model = self.like.logLike.getSourceMap(name)
             self.like.logLike.updateModelMap(v,model)
-        
-        z = np.array(v).reshape(self.enumbins,self.npix,self.npix)        
+            
+        z = np.array(v).reshape(self.enumbins,self.npix,self.npix)
         return z
         
     def modelCountsSpectrum(self,name,emin,emax):
