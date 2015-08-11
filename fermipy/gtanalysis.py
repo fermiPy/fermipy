@@ -38,14 +38,19 @@ from fermipy.config import ConfigManager
 
 # pylikelihood
 
+
 import GtApp
+import AnalysisBase as ab
 import BinnedAnalysis as ba
 import UnbinnedAnalysis as uba
 import SummedLikelihood
 import FluxDensity
 from LikelihoodState import LikelihoodState
+from gtutils import BinnedAnalysis
 #from UpperLimits import UpperLimits
 
+
+    
 
 norm_parameters = {
     'ConstantValue' : ['Value'],
@@ -79,7 +84,24 @@ index_parameters = {
     'ExpCutoff' : ['Index1'],
     'FileFunction' : [],
     }
-             
+
+
+def get_upper_limit(dlogLike,yval):
+
+    imax = np.argmax(dlogLike)
+    lnlmax = dlogLike[imax]
+    dlnl = dlogLike-lnlmax
+                                
+    ul95 = np.interp(cl_to_dlnl(0.95),-dlnl[imax:],yval[imax:])
+    err_hi = np.interp(0.5,-dlnl[imax:],yval[imax:]) - yval[imax]
+    err_lo = np.nan
+    
+    if dlnl[0] < -0.5:
+        err_lo = yval[imax] - np.interp(0.5,-dlnl[:imax][::-1],yval[:imax][::-1]) 
+
+    return ul95, err_lo, err_hi
+    
+
 def cl_to_dlnl(cl):
     import scipy.special as spfn    
     alpha = 1.0-cl    
@@ -146,6 +168,7 @@ class GTAnalysis(AnalysisBase):
                 'mc'         : defaults.mc,
                 'residmap'   : defaults.residmap,
                 'sed'        : defaults.sed,
+                'extension'  : defaults.extension,
 #                'roiopt'     : defaults.roiopt,
                 'components' : (None,'')}
 
@@ -285,10 +308,18 @@ class GTAnalysis(AnalysisBase):
     
     def add_source(self,name,src_dict):
 
-        src_dict['name'] = name
-        src = self.roi.create_source(src_dict)
+        if not isinstance(src_dict,Source):
+            src_dict['name'] = name
+            src = self.roi.create_source(src_dict)
+        else:
+            src = src_dict        
+            self.roi.load_source(src)
+            
         for c in self.components:
             c.add_source(name,src_dict)
+
+        self.like.syncSrcParams(name)            
+        self.like.model = self.like.components[0].model
             
     def delete_source(self,name):
 
@@ -403,13 +434,13 @@ class GTAnalysis(AnalysisBase):
 
             src = self._roi.get_source_by_name(name)
             
-            src_model = {'sed' : None}
+            src_model = {'sed' : None, 'extension' : None }
 
             if isinstance(src,Source):
                 src_model['RA'] = src['RAJ2000']
                 src_model['DEC'] = src['DEJ2000']
 
-            src_model.update(self.get_src_model(name,True))            
+            src_model.update(self.get_src_model(name,False))            
             rm[name] = src_model
 
         rm['roi']['counts'] = np.zeros(self.enumbins)
@@ -701,6 +732,7 @@ class GTAnalysis(AnalysisBase):
         
         normPar = self.like.normPar(name).getName()
         par_index = self.like.par_index(name,normPar)
+        
         self.like[par_index].setFree(free)
         self.like.syncSrcParams(name)
 
@@ -737,6 +769,82 @@ class GTAnalysis(AnalysisBase):
 
         self.logger.info('Running residual analysis')
         self._rmg.run(prefix)
+
+    def extension(self,name):
+        """Perform an angular extension test for this source."""
+        
+        name = self.roi.get_source_by_name(name).name
+        
+        self.logger.info('Running extension analysis for %s'%name)
+
+        model_name = '%s_ext'%(name.lower().replace(' ','_'))
+        
+        saved_state = LikelihoodState(self.like)
+
+        self.free_sources(free=False)
+
+        
+        # Compute TS_ext
+        logLike0 = self.like()
+
+        print 'logLike0 ', logLike0
+
+        self.generate_model_map(model_name='%s%i'%(model_name,0),name=name)
+        
+        print 'Deleting source ' + name
+        src = self.like.deleteSource(name)
+        
+        self.generate_model_map(model_name=model_name)
+
+        
+        if self.config['extension']['width'] is not None:
+            width = self.config['extension']['width']
+        else:
+            width = np.logspace(np.log10(self.config['extension']['width_min']),
+                                np.log10(self.config['extension']['width_max']),
+                                self.config['extension']['width_nstep'])
+
+        print width
+            
+        ext = {'width' : width, 'dlogLike' : np.zeros(len(width)),
+               'fit' : []}
+            
+        for i, w in enumerate(width):
+            
+            # make a copy
+            s = copy.deepcopy(self.roi.get_source_by_name(name))
+            s.set_name(model_name)
+            s.set_spatial_model('GaussianSource',w,self.config['fileio']['workdir'])
+
+            self.logger.info('Adding test source with width: %f'%w)
+            self.add_source(model_name,s)
+            self.free_norm(model_name)
+            
+            self.fit()
+            
+            logLike = self.like()
+
+            ext['dlogLike'][i] = logLike-logLike0
+            
+            print logLike0, logLike, logLike0 - logLike
+
+            sd = self.get_src_model(model_name)
+
+            ext['fit'].append(sd)
+            
+            self.generate_model_map(model_name='%s%i'%(model_name,i+1),name=model_name)
+
+            self.delete_source(model_name)
+            
+        print 'Adding source ' + name
+        self.like.addSource(src)
+
+        saved_state.restore()
+
+        src_model = self._roi_model.get(name,{})
+        src_model['extension'] = copy.deepcopy(ext)   
+        
+        return ext
                 
     def sed(self,name,profile=True,energies=None,**kwargs):
         """Generate an SED for a source.  This function will fit the
@@ -1003,7 +1111,7 @@ class GTAnalysis(AnalysisBase):
 
             flux = self.like[name].flux(10**emin, 10**emax)
             eflux = self.like[name].energyFlux(10**emin, 10**emax)
-            prefactor=self.like[self.like.par_index(name, 'Prefactor')]             
+            prefactor=self.like[idx]
             
             o['dlogLike'][i] = logLike0 - logLike1
             o['dfde'][i] = prefactor.getTrueValue()
@@ -1089,6 +1197,8 @@ class GTAnalysis(AnalysisBase):
 #            saved_state.restore()
 #            return quality
 
+        logLike = self.like()
+            
         if quality < self.config['optimizer']['min_fit_quality']:
             self.logger.error("Failed to converge with %s"%self.like.optimizer)
             saved_state.restore()
@@ -1100,13 +1210,14 @@ class GTAnalysis(AnalysisBase):
                 if len(freePars) == 0: continue
                 self._roi_model[name] = self.get_src_model(name)
 
-            self._roi_model['roi']['logLike'] = self.like()
+            self._roi_model['roi']['logLike'] = logLike
             self._roi_model['roi']['fit_quality'] = quality
 
             for i,c in enumerate(self.components):
                 self._roi_model['roi']['components'][i] = c.like()
             
-        self.logger.info("Fit returned with quality: %i"%quality)
+        self.logger.info("Fit returned successfully.")
+        self.logger.info("Fit Quality: %i LogLike: %12.3f"%(quality,logLike))
         return quality
         
     def fitDRM(self):
@@ -1154,12 +1265,15 @@ class GTAnalysis(AnalysisBase):
         for i, c in enumerate(self._components):
             c.write_xml(xmlfile)
 
-        if not save_model_map: return []
-            
+        if not save_model_map: return []            
+        return self.generate_model_map(model_name)
+
+    def generate_model_map(self,model_name,name=None):
+        
         counts = []
         for i, c in enumerate(self._components):
 
-            cm = c.generate_model_map(model_name)
+            cm = c.generate_model_map(model_name,name)
             counts += [(cm,c.wcs)]
 
         outfile = os.path.join(self.config['fileio']['workdir'],
@@ -1169,8 +1283,9 @@ class GTAnalysis(AnalysisBase):
         model_counts = make_coadd_map(counts,self._wcs,shape)
         write_fits_image(model_counts,self._wcs,outfile)        
         return [(model_counts,self._wcs)] + counts
-
-    def write_roi(self,outfile=None,make_residuals=False,save_model_map=True):
+    
+    def write_roi(self,outfile=None,make_residuals=False,save_model_map=True,
+                  update_sources=False):
         """Write current model to a file.  This function will write an
         XML model file and an ROI dictionary in both YAML and npy
         formats.
@@ -1188,6 +1303,8 @@ class GTAnalysis(AnalysisBase):
             
         save_model_map : bool
             Save the current counts model as a FITS file.
+
+        update_sources : bool
 
         """
         # extract the results in a convenient format
@@ -1234,7 +1351,7 @@ class GTAnalysis(AnalysisBase):
         p.plot(cb_label='Counts',zscale='sqrt')
         plt.savefig(imfile)
             
-        o = self.get_roi_model()
+        o = self.get_roi_model(update_sources=update_sources)
         imfile = os.path.join(self.config['fileio']['outdir'],
                               '%s_counts_spectrum.png'%(prefix))
 
@@ -1324,7 +1441,7 @@ class GTAnalysis(AnalysisBase):
         return {'ecenter' : energies, 'dfde' : dfde,
                 'dfde_lo' : flo, 'dfde_hi' : fhi }
         
-    def get_roi_model(self):
+    def get_roi_model(self,update_sources=False):
         """Populate a dictionary with the current parameters of the
         ROI model as extracted from the pylikelihood object."""
 
@@ -1332,25 +1449,26 @@ class GTAnalysis(AnalysisBase):
         # weren't free in the last fit?
 
         # Determine what sources had at least one free parameter?
-        gf = {}        
-        for name in self.like.sourceNames():
-            
-#            source = self.like[name].src
-#            spectrum = source.spectrum()
 
-            gf[name] = self.get_src_model(name)
+        if update_sources:
+        
+            gf = {}        
+            for name in self.like.sourceNames():
+                gf[name] = self.get_src_model(name)
 
-        self._roi_model = merge_dict(self._roi_model,gf,add_new_keys=True) 
+            self._roi_model = merge_dict(self._roi_model,gf,add_new_keys=True) 
 
         self._roi_model['roi']['model_counts'].fill(0)
         for name in self.like.sourceNames():
-            self._roi_model['roi']['model_counts'] += gf[name]['model_counts']
+            self._roi_model['roi']['model_counts'] += self._roi_model[name]['model_counts']
 
         return copy.deepcopy(self._roi_model)        
 
     def get_src_model(self,name,paramsonly=False):
         """Compose a dictionary for the given source."""
 
+        self.logger.info('Generating source dict for ' + name)
+        
         name = self.get_source_name(name)        
         source = self.like[name].src
         spectrum = source.spectrum()
@@ -1362,7 +1480,12 @@ class GTAnalysis(AnalysisBase):
                      'flux10000' : np.ones(2)*np.nan,
                      'dfde100' : np.ones(2)*np.nan,
                      'dfde1000' : np.ones(2)*np.nan,
-                     'dfde10000' : np.ones(2)*np.nan }
+                     'dfde10000' : np.ones(2)*np.nan,
+                     'flux_ul95' : np.nan,
+                     'flux100_ul95' : np.nan,
+                     'flux1000_ul95' : np.nan,
+                     'flux10000_ul95' : np.nan,                     
+                     }
 
         src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
 
@@ -1383,7 +1506,8 @@ class GTAnalysis(AnalysisBase):
             src_dict['dfde10000'][0] = self.like[name].spectrum()(pyLike.dArg(10000.))
         except Exception, ex:
             self.logger.error('Failed to update source parameters.', exc_info=True)
-            
+
+        # Only try to compute TS, errors, and ULs if the source was free in the fit
         if not self.get_free_source_params(name) or paramsonly:
             return src_dict
 
@@ -1416,7 +1540,16 @@ class GTAnalysis(AnalysisBase):
             src_dict['dfde100'][1] = fd.error(100.)
             src_dict['dfde1000'][1] = fd.error(1000.)
             src_dict['dfde10000'][1] = fd.error(10000.)
-            
+
+        lnlp = self.profile_norm(name,savestate=True)
+        flux_ul95, flux_err_lo, flux_err_hi = get_upper_limit(lnlp['dlogLike'],
+                                                              lnlp['flux'])
+
+        src_dict['flux_ul95'] = flux_ul95
+        src_dict['flux100_ul95'] = src_dict['flux100'][0]*(flux_ul95/src_dict['flux'][0])
+        src_dict['flux1000_ul95'] = src_dict['flux1000'][0]*(flux_ul95/src_dict['flux'][0])
+        src_dict['flux10000_ul95'] = src_dict['flux10000'][0]*(flux_ul95/src_dict['flux'][0])
+        
         return src_dict
     
 class GTBinnedAnalysis(AnalysisBase):
@@ -1540,10 +1673,14 @@ class GTBinnedAnalysis(AnalysisBase):
     def add_source(self,name,src_dict):
         """Add a new source to the model with the properties defined
         in the input dictionary."""
-        
-        src_dict['name'] = name
-        src = self.roi.create_source(src_dict)
-        
+
+        if not isinstance(src_dict,Source):
+            src_dict['name'] = name
+            src = self.roi.create_source(src_dict)
+        else:
+            src = src_dict
+            self.roi.load_source(src)
+
         if src['SpatialType'] == 'PointSource':        
             #pylike_src = pyLike.PointSource(0, 0,
 #            pylike_src = pyLike.PointSource(src.skydir.ra.deg,src.skydir.dec.deg,
@@ -1563,10 +1700,13 @@ class GTBinnedAnalysis(AnalysisBase):
             par.setBounds(float(v['min']),float(v['max']))
             par.setScale(float(v['scale']))
             par.setFree(False)
+            pl.setParam(par)
             
         pylike_src.setSpectrum(pl)
-        pylike_src.setName(src.name)        
+        pylike_src.setName(src.name)
+        
         self.like.addSource(pylike_src)
+        self.like.syncSrcParams(name)
 
     def delete_source(self,name):
         
@@ -1599,7 +1739,7 @@ class GTBinnedAnalysis(AnalysisBase):
         
         v = pyLike.FloatVector(self.npix**2*self.enumbins)
 
-        print self.like.logLike.fixedModelUpdated()
+#        print self.like.logLike.fixedModelUpdated()
         
         if name is None:
             if not self.like.logLike.fixedModelUpdated():
@@ -1608,6 +1748,10 @@ class GTBinnedAnalysis(AnalysisBase):
         elif name == 'all':            
             for name in self.like.sourceNames():
                 model = self.like.logLike.getSourceMap(name)
+                self.like.logLike.updateModelMap(v,model)
+        elif isinstance(name,list):
+            for n in name:
+                model = self.like.logLike.getSourceMap(n)
                 self.like.logLike.updateModelMap(v,model)
         else:
             model = self.like.logLike.getSourceMap(name)
@@ -1763,9 +1907,15 @@ class GTBinnedAnalysis(AnalysisBase):
         # Create BinnedAnalysis
 
         self.logger.info('Creating BinnedAnalysis')
-        self._like = ba.BinnedAnalysis(binnedData=self._obs,
-                                       srcModel=self._srcmdl_file,
-                                       optimizer='MINUIT')
+        self._like = BinnedAnalysis(binnedData=self._obs,
+                                    srcModel=self._srcmdl_file,
+                                    optimizer='MINUIT',
+                                    minbinsz=self.config['gtlike']['minbinsz'],
+                                    resamp_fact=self.config['gtlike']['rfactor'])
+
+        print self.like.logLike.use_single_fixed_map()
+        self.like.logLike.set_use_single_fixed_map(False)
+        print self.like.logLike.use_single_fixed_map()
         
         if self.config['gtlike']['edisp']:
             self.logger.info('Enabling energy dispersion')
@@ -1777,7 +1927,7 @@ class GTBinnedAnalysis(AnalysisBase):
                        
         self.logger.info('Finished setup')
 
-    def generate_model_map(self,model_name=None):
+    def generate_model_map(self,model_name=None,name=None):
         """Generate a counts model map from the in-memory source map
         data structures."""
         
@@ -1789,7 +1939,7 @@ class GTBinnedAnalysis(AnalysisBase):
             
         outfile = os.path.join(self.config['fileio']['workdir'],'mcube%s.fits'%(suffix))        
         h = pyfits.open(self._ccube_file)        
-        counts = self.modelCountsMap()
+        counts = self.modelCountsMap(name)
         write_fits_image(counts,self.wcs,outfile)
 
         return counts

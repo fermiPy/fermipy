@@ -59,7 +59,9 @@ gtlike = {
     'irfs'          : (None,''),
     'edisp'         : (True,''),
     'edisp_disable' : (None,'Provide a list of sources for which the edisp correction should be disabled.',list),
-    'likelihood'    : ('binned','')
+    'likelihood'    : ('binned',''),
+    'minbinsz'      : (0.05,''),
+    'rfactor'       : (2.0,'')
     }
 
 # Options for binning.
@@ -124,4 +126,13 @@ residmap = {
 sed = {
     'bin_index'                : (2.0,''),
     'use_local_index'          : (False,'')
+    }
+
+# Options for extension analysis
+extension = {
+    'spatial_model'            : ('GaussianSource',''),
+    'width'                    : (None,''),
+    'width_min'                : (0.0316,''),
+    'width_max'                : (1.0,''),
+    'width_nstep'              : (3,''),
     }

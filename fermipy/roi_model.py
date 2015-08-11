@@ -140,6 +140,13 @@ class Model(object):
     def names(self):
         return self._names
 
+    def set_name(self,name,names=None):
+        self._name = name
+        if names is None:
+            self._names = []
+        else:
+            self._names = names
+    
     def add_name(self,name):
         self._names.append(name)
     
@@ -307,7 +314,7 @@ class Source(Model):
     def _update_spatial_pars(self):
 
         if not self.extended:
-            
+            self._data['SpatialType'] = 'PointSource'
             self._spatial_pars = {
                 'RA' : {'name' : 'RA',  'value' : str(self['RAJ2000']),
                         'free' : '0',
@@ -414,7 +421,32 @@ class Source(Model):
             import pprint
             pprint.pprint(self._data)            
             raise Exception('Unsupported spectral type:' + self['SpectrumType'])
-            
+
+    def set_spatial_model(self,spatial_type,spatial_width,workdir):
+
+        self._data['SpatialType'] = spatial_type
+        self._data['SpatialWidth'] = spatial_width
+        
+        if self['SpatialType'] == 'PointSource':
+            self._extended = False
+        elif self['SpatialType'] == 'GaussianSource':
+            self._extended = True
+            template_file = os.path.join(workdir,
+                                         '%s_template_gauss_%05.3f.fits'%(self.name,self['SpatialWidth']))
+            make_gaussian_spatial_map(self.skydir,self['SpatialWidth'],template_file,npix=500)
+            self['Spatial_Filename'] = template_file
+        elif self['SpatialType'] == 'DiskSource':
+            self._extended = True
+            template_file = os.path.join(workdir,
+                                         '%s_template_disk_%05.3f.fits'%(self.name,self['SpatialWidth']))
+            make_disk_spatial_map(self.skydir,self['SpatialWidth'],template_file,npix=500)
+            self['Spatial_Filename'] = template_file
+        else:
+            raise Exception('Unrecognized SpatialType: ' + self['SpatialType'] +
+                            '\n Valid choices are: PointSource, GaussianSource, DiskSource ')
+        
+        self._update_spatial_pars()
+        
     def check_cuts(self,cuts):
 
         if isinstance(cuts,tuple): cuts = [cuts]
@@ -480,7 +512,8 @@ class Source(Model):
                                 ra = None,
                                 dec = None,
                                 glon = None,
-                                glat = None)
+                                glat = None,
+                                spectral_pars = None)
 
         validate_config(src_dict,default_src_dict)
         src_dict = merge_dict(default_src_dict,src_dict)
@@ -502,9 +535,10 @@ class Source(Model):
         
         src_dict['RAJ2000'] = skydir.ra.deg
         src_dict['DEJ2000'] = skydir.dec.deg
-
+        
         radec = np.array([skydir.ra.deg,skydir.dec.deg])
-        return Source(name,src_dict,radec=radec,extended=extended)
+        return Source(name,src_dict,radec=radec,extended=extended,
+                      spectral_pars=src_dict['spectral_pars'])
     
     @staticmethod
     def create_from_xml(root,extdir=None):
@@ -711,25 +745,8 @@ class ROIModel(AnalysisBase):
         """Create and load a source object to the ROI model."""
         
         src = Source.create_from_dict(src_dict)
-
-        if src['SpatialType'] == 'PointSource':
-            pass
-        elif src['SpatialType'] == 'GaussianSource':
-            template_file = \
-                os.path.join(self.config['fileio']['workdir'],
-                             '%s_template_gauss_%04.2f.fits'%(src.name,src['SpatialWidth']))
-            make_gaussian_spatial_map(src.skydir,src['SpatialWidth'],template_file)
-            src['Spatial_Filename'] = template_file
-        elif src['SpatialType'] == 'DiskSource':            
-            template_file = \
-                os.path.join(self.config['fileio']['workdir'],
-                             '%s_template_disk_%04.2f.fits'%(src.name,src['SpatialWidth']))
-            make_disk_spatial_map(src.skydir,src['SpatialWidth'],template_file)
-            src['Spatial_Filename'] = template_file
-        else:
-            raise Exception('Unrecognized SpatialType: ' + src['SpatialType'] +
-                            '\n Valid choices are: PointSource, GaussianSource, DiskSource ')
-
+        src.set_spatial_model(src['SpatialType'],self.config['fileio']['workdir'])
+        
         self.logger.info('Creating source ' + src.name)
         self.logger.info(src._data)
 

@@ -389,7 +389,7 @@ def get_target_skydir(config):
     return None
 
 
-def make_gaussian_kernel(sigma,npix=101,cdelt=0.05):
+def make_gaussian_kernel(sigma,npix=501,cdelt=0.01):
 
     sigma /= 1.5095921854516636        
     sigma /= cdelt
@@ -406,7 +406,7 @@ def make_gaussian_kernel(sigma,npix=101,cdelt=0.05):
 
     return k
     
-def make_disk_kernel(sigma,npix=101,cdelt=0.05):
+def make_disk_kernel(sigma,npix=501,cdelt=0.01):
 
     sigma /= cdelt    
     fn = lambda t, s: 0.5 * (np.sign(s-t) + 1.0)
@@ -421,7 +421,7 @@ def make_disk_kernel(sigma,npix=101,cdelt=0.05):
 
     return k
 
-def make_gaussian_spatial_map(skydir,sigma,outfile,npix=101,cdelt=0.05):
+def make_gaussian_spatial_map(skydir,sigma,outfile,npix=501,cdelt=0.01):
     
     w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5)    
     hdu_image = pyfits.PrimaryHDU(np.zeros((npix,npix)),
@@ -431,7 +431,7 @@ def make_gaussian_spatial_map(skydir,sigma,outfile,npix=101,cdelt=0.05):
     hdulist = pyfits.HDUList([hdu_image])
     hdulist.writeto(outfile,clobber=True) 
 
-def make_disk_spatial_map(skydir,sigma,outfile,npix=101,cdelt=0.05):
+def make_disk_spatial_map(skydir,sigma,outfile,npix=501,cdelt=0.01):
 
     sigma /= cdelt    
     w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5)
