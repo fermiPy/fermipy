@@ -1629,7 +1629,8 @@ class GTAnalysis(AnalysisBase):
             src_dict['flux1000'][1] = self.like.fluxError(name,1000., 10**5.5)
             src_dict['flux10000'][1] = self.like.fluxError(name,10000., 10**5.5)
         except Exception, ex:
-            self.logger.error('Failed to update source parameters.', exc_info=True)
+            pass
+#            self.logger.error('Failed to update source parameters.', exc_info=True)
 
         lnlp = self.profile_norm(name,savestate=True)
         flux_ul95, flux_err_lo, flux_err_hi = get_upper_limit(lnlp['dlogLike'],
@@ -1855,7 +1856,7 @@ class GTBinnedAnalysis(AnalysisBase):
     def setEnergyRange(self,emin,emax):
         imin = valToEdge(self.energies,emin)[0]
         imax = valToEdge(self.energies,emax)[0]
-        self.like.selectEbounds(imin,imax)
+        self.like.selectEbounds(int(imin),int(imax))
 
     def countsMap(self):
         """Return 3-D counts map as a numpy array."""
@@ -2053,6 +2054,7 @@ class GTBinnedAnalysis(AnalysisBase):
         self._like = BinnedAnalysis(binnedData=self._obs,
                                     srcModel=self._srcmdl_file,
                                     optimizer='MINUIT',
+#                                    convolve=False,
                                     minbinsz=self.config['gtlike']['minbinsz'],
                                     resamp_fact=self.config['gtlike']['rfactor'])
 

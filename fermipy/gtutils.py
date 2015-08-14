@@ -99,8 +99,8 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
 
     def __init__(self, binnedData, srcModel=None, optimizer='Drmngb',
-                 use_bl2=False, verbosity=0, psfcorr=True,resamp_fact=2,
-                 minbinsz=0.1):
+                 use_bl2=False, verbosity=0, psfcorr=True,convolve=True,
+                 resamp_fact=2,minbinsz=0.1):
         AnalysisBase.__init__(self)
         if srcModel is None:
             srcModel, optimizer = self._srcDialog()
@@ -111,14 +111,14 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
             self.logLike = pyLike.BinnedLikelihood2(binnedData.countsMap,
                                                     binnedData.observation,
                                                     binnedData.srcMaps,
-                                                    True, psfcorr, True, True,
+                                                    True, psfcorr, convolve, True,
                                                     resamp_fact,
                                                     minbinsz)
         else:
             self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
                                                    binnedData.observation,
                                                    binnedData.srcMaps,
-                                                   True, psfcorr, True, True,
+                                                   True, psfcorr, convolve, True,
                                                    resamp_fact,
                                                    minbinsz)
         self.verbosity = verbosity
