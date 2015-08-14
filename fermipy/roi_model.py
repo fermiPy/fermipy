@@ -402,19 +402,27 @@ class Source(Model):
             cutoff, cutoff_scale = scale_parameter(self['Cutoff'])
                 
             self._spectral_pars = {
-                'Prefactor' : {'name' : 'Prefactor', 'value' : str(prefactor),
-                               'scale' : str(prefactor_scale),
-                               'min' : '0.01', 'max' : '100.0', 'free' : '0'},
-                'Index1' : {'name' : 'Index1', 'value' : str(self['Spectral_Index']),
-                           'scale' : str(-1.0), 'min' : '0.0', 'max' : '5.0', 'free' : '0'},
-                'Index2' : {'name' : 'Index2', 'value' : str(self['Exp_Index']),
-                           'scale' : str(1.0), 'min' : '0.0', 'max' : '2.0', 'free' : '0'},
-                'Cutoff' : {'name' : 'Cutoff', 'value' : str(cutoff),
-                           'scale' : str(cutoff_scale), 'min' : '0.01', 'max' : '100.0', 'free' : '0'},
-                'Scale' :  {'name' : 'Scale', 'value' : str(self['Pivot_Energy']),
-                            'scale' : str(1.0),
-                            'min' : str(self['Pivot_Energy']),
-                            'max' : str(self['Pivot_Energy']), 'free' : '0'}
+                'Prefactor' : {
+                    'name' : 'Prefactor', 'value' : str(prefactor),
+                    'scale' : str(prefactor_scale),
+                    'min' : '0.01', 'max' : '100.0', 'free' : '0'},
+                'Index1' : {
+                    'name' : 'Index1', 'value' : str(self['Spectral_Index']),
+                    'scale' : str(-1.0), 'min' : '0.0', 'max' : '5.0',
+                    'free' : '0'},
+                'Index2' : {
+                    'name' : 'Index2', 'value' : str(self['Exp_Index']),
+                    'scale' : str(1.0), 'min' : '0.0', 'max' : '2.0',
+                    'free' : '0'},
+                'Cutoff' : {
+                    'name' : 'Cutoff', 'value' : str(cutoff),
+                    'scale' : str(cutoff_scale),
+                    'min' : '0.01', 'max' : '100.0', 'free' : '0'},
+                'Scale' :  {
+                    'name' : 'Scale', 'value' : str(self['Pivot_Energy']),
+                    'scale' : str(1.0),
+                    'min' : str(self['Pivot_Energy']),
+                    'max' : str(self['Pivot_Energy']), 'free' : '0'}
                 }
         else:
 
@@ -422,6 +430,10 @@ class Source(Model):
             pprint.pprint(self._data)            
             raise Exception('Unsupported spectral type:' + self['SpectrumType'])
 
+#    def update(self,src):
+
+        
+        
     def set_spatial_model(self,spatial_type,spatial_width,workdir):
 
         self._data['SpatialType'] = spatial_type
@@ -745,7 +757,8 @@ class ROIModel(AnalysisBase):
         """Create and load a source object to the ROI model."""
         
         src = Source.create_from_dict(src_dict)
-        src.set_spatial_model(src['SpatialType'],self.config['fileio']['workdir'])
+        src.set_spatial_model(src['SpatialType'],src['SpatialWidth'],
+                              self.config['fileio']['workdir'])
         
         self.logger.info('Creating source ' + src.name)
         self.logger.info(src._data)

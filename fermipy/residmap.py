@@ -150,7 +150,7 @@ class ResidMapGenerator(AnalysisBase):
         elif src_dict['SpatialType'] == 'PointSource':
             spatial_type = 'ptsrc'
             
-        self._gta.add_source('testsource',src_dict)        
+        self._gta.add_source('testsource',src_dict,free=True)        
         src = self._gta.roi.get_source_by_name('testsource')
         modelname = create_model_name(src,spatial_type)
         

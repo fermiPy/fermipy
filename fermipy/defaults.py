@@ -61,7 +61,9 @@ gtlike = {
     'edisp_disable' : (None,'Provide a list of sources for which the edisp correction should be disabled.',list),
     'likelihood'    : ('binned',''),
     'minbinsz'      : (0.05,''),
-    'rfactor'       : (2.0,'')
+    'rfactor'       : (2,''),
+    'srcmap'        : (None,''),
+    'bexpmap'       : (None,''),
     }
 
 # Options for binning.
@@ -111,10 +113,11 @@ mc = { }
 
 #
 roiopt = {
-    'free_source_radius'       : (None,''),
-    'free_source_roi_margin'   : (None,''),
-    'free_sources'             : (None,''),
-    'free_source_ts_threshold' : (None,'')
+#    'free_source_radius'       : (None,''),
+#    'free_source_roi_margin'   : (None,''),
+#    'free_sources'             : (None,''),
+#    'free_source_ts_threshold' : (None,'')
+    'npred_threshold'          : (1.0,'')
     }
 
 #
@@ -132,7 +135,7 @@ sed = {
 extension = {
     'spatial_model'            : ('GaussianSource',''),
     'width'                    : (None,''),
-    'width_min'                : (0.0316,''),
+    'width_min'                : (0.01,''),
     'width_max'                : (1.0,''),
-    'width_nstep'              : (3,''),
+    'width_nstep'              : (5,''),
     }

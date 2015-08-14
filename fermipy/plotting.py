@@ -40,7 +40,7 @@ def make_counts_spectrum_plot(o,energies,imfile):
     ax0.errorbar(x,ym,color='k',linestyle='-',marker='None',
                        label='Total')
 
-    src_dict = { k : v for k, v in o.items() if k != 'roi' }
+    src_dict = o['sources']
     
     for v in sorted(src_dict.values(),key=lambda t: t['Npred'],reverse=True)[:6]:
         ax0.errorbar(x,v['model_counts'],linestyle='-',marker='None',

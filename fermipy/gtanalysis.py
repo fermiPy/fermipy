@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 import pyLikelihood as pyLike
 
 import astropy.io.fits as pyfits
-
+from astropy import wcs
 
 import fermipy
 import fermipy.defaults as defaults
@@ -40,13 +40,11 @@ from fermipy.config import ConfigManager
 
 
 import GtApp
-import AnalysisBase as ab
-import BinnedAnalysis as ba
-import UnbinnedAnalysis as uba
-import SummedLikelihood
 import FluxDensity
+from BinnedAnalysis import BinnedObs
 from LikelihoodState import LikelihoodState
-from gtutils import BinnedAnalysis
+from gtutils import BinnedAnalysis, SummedLikelihood
+import BinnedAnalysis as ba
 #from UpperLimits import UpperLimits
 
 
@@ -169,7 +167,7 @@ class GTAnalysis(AnalysisBase):
                 'residmap'   : defaults.residmap,
                 'sed'        : defaults.sed,
                 'extension'  : defaults.extension,
-#                'roiopt'     : defaults.roiopt,
+                'roiopt'     : defaults.roiopt,
                 'components' : (None,'')}
 
     def __init__(self,config,**kwargs):
@@ -221,7 +219,7 @@ class GTAnalysis(AnalysisBase):
                                     logfile=self.config['fileio']['logfile'],
                                     logging=self.config['logging'])
                 
-        self._like = SummedLikelihood.SummedLikelihood()
+        self._like = SummedLikelihood()
         self._components = []
         configs = self.create_component_configs()
 
@@ -242,15 +240,18 @@ class GTAnalysis(AnalysisBase):
         self._roi_model = {
             'roi' : {
                 'logLike' : np.nan,
+                'Npred'   : 0.0,
                 'counts'  : np.zeros(self.enumbins),
                 'model_counts'  : np.zeros(self.enumbins),
                 'residmap' : {},
                 'components' : []
-                }
+                },
+            'sources' : {}
             }
-
+        
         for c in self._components:
             self._roi_model['roi']['components'] += [{'logLike' : np.nan,
+                                                      'Npred'   : 0.0,
                                                       'counts'  : np.zeros(self.enumbins),
                                                       'model_counts'  : np.zeros(self.enumbins),
                                                       'residmap' : {}}]
@@ -305,9 +306,34 @@ class GTAnalysis(AnalysisBase):
     def npix(self):
         """Return the number of energy bins."""
         return self._npix 
-    
-    def add_source(self,name,src_dict):
 
+    def _update_roi(self):
+
+        # Need to account for alignment of energy bins
+        
+        rm = self._roi_model
+        
+        rm['roi']['model_counts'].fill(0)
+        rm['roi']['Npred'] = 0
+        for i, c in enumerate(self.components):
+            rm['roi']['components'][i]['model_counts'].fill(0)
+            rm['roi']['components'][i]['Npred'] = 0
+        
+        for name in self.like.sourceNames():
+            rm['roi']['model_counts'] += rm['sources'][name]['model_counts']
+            rm['roi']['Npred'] += np.sum(rm['sources'][name]['model_counts'])
+
+            mc = self.modelCountsSpectrum(name)
+            
+            for i, c in enumerate(self.components):
+                rm['roi']['components'][i]['model_counts'] += mc[i]
+                rm['roi']['components'][i]['Npred'] += np.sum(mc[i])
+
+                
+    def add_source(self,name,src_dict,free=False):
+
+        self.logger.info('Adding source ' + name)
+        
         if not isinstance(src_dict,Source):
             src_dict['name'] = name
             src = self.roi.create_source(src_dict)
@@ -316,13 +342,15 @@ class GTAnalysis(AnalysisBase):
             self.roi.load_source(src)
             
         for c in self.components:
-            c.add_source(name,src_dict)
+            c.add_source(name,src_dict,free=free)
 
         self.like.syncSrcParams(name)            
         self.like.model = self.like.components[0].model
             
     def delete_source(self,name):
 
+        self.logger.info('Deleting source ' + name)
+        
         for c in self.components:
             c.delete_source(name)
 
@@ -422,7 +450,7 @@ class GTAnalysis(AnalysisBase):
         # Run data selection step
         rm = self._roi_model
         
-        self._like = SummedLikelihood.SummedLikelihood()
+        self._like = SummedLikelihood()
         for i, c in enumerate(self._components):
 
             self.logger.info("Performing setup for Analysis Component: " +
@@ -441,7 +469,7 @@ class GTAnalysis(AnalysisBase):
                 src_model['DEC'] = src['DEJ2000']
 
             src_model.update(self.get_src_model(name,False))            
-            rm[name] = src_model
+            rm['sources'][name] = src_model
 
         rm['roi']['counts'] = np.zeros(self.enumbins)
         rm['roi']['logLike'] = self.like()
@@ -459,7 +487,8 @@ class GTAnalysis(AnalysisBase):
         shape = (self.enumbins,self.npix,self.npix)
         self._counts = make_coadd_map(counts,self._wcs,shape)
         write_fits_image(self._counts,self._wcs,self._ccube_file)        
-        rm['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,self._counts,axes=[1,2]))        
+        rm['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,self._counts,axes=[1,2]))
+        self._update_roi()
         
     def cleanup(self):
 
@@ -614,6 +643,11 @@ class GTAnalysis(AnalysisBase):
         for c in self.components:
             c.like[name].src.set_edisp_flag(flag)        
 
+    def scale_parameter(self,name,par,scale):
+
+        idx = self.like.par_index(name,par)
+        self.like[idx].parameter.setScale(self.like[idx].parameter.getScale()*scale)        
+            
     def set_parameter(self,name,par,value,true_value=True,scale=None,
                       bounds=None):
         idx = self.like.par_index(name,par)
@@ -653,6 +687,8 @@ class GTAnalysis(AnalysisBase):
             
         """
 
+        free_pars = self.get_free_params()
+        
         # Find the source
         src = self._roi.get_source_by_name(name)
         name = src.name
@@ -666,7 +702,9 @@ class GTAnalysis(AnalysisBase):
             pars += norm_parameters[src['SpectrumType']]
         elif pars == 'shape':
             pars = []
-            pars += shape_parameters[src['SpectrumType']]            
+            pars += shape_parameters[src['SpectrumType']]
+        elif isinstance(pars,list):
+            pass
         else:
             raise Exception('Invalid parameter list.')
             
@@ -678,32 +716,35 @@ class GTAnalysis(AnalysisBase):
         par_names = []
         for p in src_par_names:
             if pars is not None and not p in pars: continue
-            par_indices.append(self.like.par_index(name,p))
+
+            idx = self.like.par_index(name,p)
+            if free == free_pars[idx]: continue
+            
+            par_indices.append(idx)
             par_names.append(p)
 
+        if len(par_names) == 0: return
+            
         if free:
-            self.logger.info('Freeing parameters for %-20s: %s'
+            self.logger.info('Freeing parameters for %-22s: %s'
                              %(name,par_names))
         else:
-            self.logger.info('Fixing parameters for %-20s: %s'
+            self.logger.info('Fixing parameters for %-22s: %s'
                              %(name,par_names))
             
         for (idx,par_name) in zip(par_indices,par_names):
-
-            
-                
             self.like[idx].setFree(free)
         self.like.syncSrcParams(name)
                 
 #        freePars = self.like.freePars(name)
-#        normPar = self.like.normPar(name).getName()
-#        idx = self.like.par_index(name, normPar)
-        
 #        if not free:
 #            self.like.setFreeFlag(name, freePars, False)
 #        else:
 #            self.like[idx].setFree(True)
 
+    def zero_source(self,name):
+
+        pass
 
     def set_norm(self,name,value):
         name = self.get_source_name(name)                
@@ -727,14 +768,15 @@ class GTAnalysis(AnalysisBase):
 
         name = self.get_source_name(name)
         
-        if free: self.logger.debug('Freeing norm for ' + name)
-        else: self.logger.debug('Fixing norm for ' + name)
+#        if free: self.logger.info('Freeing norm for ' + name)
+#        else: self.logger.info('Fixing norm for ' + name)
         
         normPar = self.like.normPar(name).getName()
-        par_index = self.like.par_index(name,normPar)
+        self.free_source(name,pars=[normPar],free=free)
         
-        self.like[par_index].setFree(free)
-        self.like.syncSrcParams(name)
+#        par_index = self.like.par_index(name,normPar)        
+#        self.like[par_index].setFree(free)
+#        self.like.syncSrcParams(name)
 
     def free_index(self,name,free=True):
         """Free/Fix index of a source."""
@@ -764,12 +806,86 @@ class GTAnalysis(AnalysisBase):
         spectrum.getFreeParamNames(parNames)
         return [str(p) for p in parNames]
 
+    def get_free_params(self):
+        free = []
+        for p in self.like.params():
+            free.append(p.isFree())
+        return free
+
+    def set_free_params(self,free):
+        for i,t in enumerate(free):
+            if t: self.like.thaw(t)
+            else: self.like.freeze(t)
+    
     def residmap(self,prefix):
         """Generate data/model residual maps using the current model."""
 
         self.logger.info('Running residual analysis')
         self._rmg.run(prefix)
+        
+    def optimize(self):
+        """Iteratively optimize the ROI model."""
 
+        self.logger.info('Running ROI Optimization')
+        
+        # preserve free parameters
+        free = self.get_free_params()
+
+        # Fix all parameters
+        self.free_sources(free=False)
+
+        # Free norms of sources that compose 95% of total counts
+        npred_sum = 0
+        skip_sources = []
+        for k, v in sorted(self._roi_model['sources'].items(),
+                           key=lambda t: t[1]['Npred'],reverse=True):
+
+            npred_sum += v['Npred']
+            npred_frac = npred_sum/self._roi_model['roi']['Npred']
+            self.free_norm(k)
+            skip_sources.append(k)
+
+            if npred_frac > 0.95: break
+
+        self.fit()
+        self.free_sources(free=False)
+
+        # Step through remaining sources and re-fit normalizations
+        for k, v in sorted(self._roi_model['sources'].items(),
+                           key=lambda t: t[1]['Npred'],reverse=True):
+
+            if k in skip_sources: continue
+            
+            if  v['Npred'] < self.config['roiopt']['npred_threshold']:
+                self.logger.info('Skipping %s with Npred %10.3f'%(k,v['Npred']))
+                continue
+
+            self.logger.info('Fitting %s Npred: %10.3f'%(k,v['Npred']))
+            
+            self.free_norm(k)
+            self.fit()
+
+            v0 = self._roi_model['sources'][k]
+            
+            self.logger.info('Post-fit Results Npred: %10.3f TS: %10.3f'%(v0['Npred'],v0['ts']))
+            
+            self.free_norm(k,free=False)        
+
+        # Refit spectral shape parameters for sources with TS > 100
+        for k, v in sorted(self._roi_model['sources'].items(),
+                           key=lambda t: t[1]['ts'] if np.isfinite(t[1]['ts']) else 0,
+                           reverse=True):
+            
+            if v['ts'] < 100 or not np.isfinite(v['ts']): continue
+
+            self.logger.info('Fitting shape %s TS: %10.3f'%(k,v['ts']))
+            
+            self.free_source(k)
+            self.fit()
+            self.free_source(k,free=False)
+            
+        self.set_free_params(free)
+        
     def extension(self,name):
         """Perform an angular extension test for this source."""
         
@@ -778,23 +894,21 @@ class GTAnalysis(AnalysisBase):
         self.logger.info('Running extension analysis for %s'%name)
 
         model_name = '%s_ext'%(name.lower().replace(' ','_'))
+        null_model_name = '%s_noext'%(name.lower().replace(' ','_'))
         
         saved_state = LikelihoodState(self.like)
 
         self.free_sources(free=False)
-
         
         # Compute TS_ext
         logLike0 = self.like()
+        self.generate_model_map(model_name=null_model_name,name=name)
 
-        print 'logLike0 ', logLike0
-
-        self.generate_model_map(model_name='%s%i'%(model_name,0),name=name)
+#        src = self.like.deleteSource(name)
+        normPar = self.like.normPar(name).getName()        
+        self.scale_parameter(name,normPar,1E-10)
         
-        print 'Deleting source ' + name
-        src = self.like.deleteSource(name)
-        
-        self.generate_model_map(model_name=model_name)
+        self.generate_model_map(model_name=model_name+'_bkg')
 
         
         if self.config['extension']['width'] is not None:
@@ -804,44 +918,41 @@ class GTAnalysis(AnalysisBase):
                                 np.log10(self.config['extension']['width_max']),
                                 self.config['extension']['width_nstep'])
 
-        print width
-            
         ext = {'width' : width, 'dlogLike' : np.zeros(len(width)),
                'fit' : []}
-            
+        
         for i, w in enumerate(width):
             
             # make a copy
             s = copy.deepcopy(self.roi.get_source_by_name(name))
             s.set_name(model_name)
-            s.set_spatial_model('GaussianSource',w,self.config['fileio']['workdir'])
+            s.set_spatial_model('GaussianSource',w,
+                                self.config['fileio']['workdir'])
 
             self.logger.info('Adding test source with width: %f'%w)
-            self.add_source(model_name,s)
+            for k,v in s.spectral_pars.items():
+                s._spectral_pars[k]['value'] = str(self.like[name].src.spectrum().getParamValue(k))
+                
+            self.add_source(model_name,s,free=True)
             self.free_norm(model_name)
-            
-            self.fit()
-            
+
+            self.fit(update=False)
             logLike = self.like()
 
             ext['dlogLike'][i] = logLike-logLike0
-            
-            print logLike0, logLike, logLike0 - logLike
 
             sd = self.get_src_model(model_name)
 
             ext['fit'].append(sd)
             
-            self.generate_model_map(model_name='%s%i'%(model_name,i+1),name=model_name)
-
+            self.generate_model_map(model_name='%s%02i'%(model_name,i),name=model_name)
             self.delete_source(model_name)
             
-        print 'Adding source ' + name
-        self.like.addSource(src)
-
+        self.scale_parameter(name,normPar,1E10)
+            
         saved_state.restore()
 
-        src_model = self._roi_model.get(name,{})
+        src_model = self._roi_model['sources'].get(name,{})
         src_model['extension'] = copy.deepcopy(ext)   
         
         return ext
@@ -1009,7 +1120,7 @@ class GTAnalysis(AnalysisBase):
         self.setEnergyRange(float(10**energies[0])+1, float(10**energies[-1])-1)
         self.like.setSpectrum(name,old_spectrum)
         saved_state.restore()        
-        src_model = self._roi_model.get(name,{})
+        src_model = self._roi_model['sources'].get(name,{})
         src_model['sed'] = copy.deepcopy(o)        
         return o
 
@@ -1174,7 +1285,8 @@ class GTAnalysis(AnalysisBase):
             self.logger.info("Skipping fit.  No free parameters.")
             return
 
-        verbosity = kwargs.get('verbosity',self.config['optimizer']['verbosity'])
+        verbosity = kwargs.get('verbosity',
+                               self.config['optimizer']['verbosity'])
         covar = kwargs.get('covar',True)
         tol = kwargs.get('tol',self.config['optimizer']['tol'])
 
@@ -1208,14 +1320,19 @@ class GTAnalysis(AnalysisBase):
             for name in self.like.sourceNames():
                 freePars = self.get_free_source_params(name)                
                 if len(freePars) == 0: continue
-                self._roi_model[name] = self.get_src_model(name)
+
+                sd = self.get_src_model(name)
+                self._roi_model['sources'][name] = sd
 
             self._roi_model['roi']['logLike'] = logLike
             self._roi_model['roi']['fit_quality'] = quality
 
             for i,c in enumerate(self.components):
-                self._roi_model['roi']['components'][i] = c.like()
-            
+                self._roi_model['roi']['components'][i]['logLike'] = c.like()
+
+            # Update roi model counts
+            self._update_roi()
+                
         self.logger.info("Fit returned successfully.")
         self.logger.info("Fit Quality: %i LogLike: %12.3f"%(quality,logLike))
         return quality
@@ -1320,7 +1437,10 @@ class GTAnalysis(AnalysisBase):
             
         mcube_maps = self.write_xml(prefix,save_model_map=save_model_map)
         
-        if make_residuals: 
+        if make_residuals:
+
+            print 'Running residuals'
+            
             self.residmap(prefix)        
             for k, v in self._roi_model['roi']['residmap'].items():
 
@@ -1456,11 +1576,8 @@ class GTAnalysis(AnalysisBase):
             for name in self.like.sourceNames():
                 gf[name] = self.get_src_model(name)
 
-            self._roi_model = merge_dict(self._roi_model,gf,add_new_keys=True) 
-
-        self._roi_model['roi']['model_counts'].fill(0)
-        for name in self.like.sourceNames():
-            self._roi_model['roi']['model_counts'] += self._roi_model[name]['model_counts']
+            self._roi_model['sources'] = merge_dict(self._roi_model['sources'],
+                                                    gf,add_new_keys=True) 
 
         return copy.deepcopy(self._roi_model)        
 
@@ -1484,7 +1601,8 @@ class GTAnalysis(AnalysisBase):
                      'flux_ul95' : np.nan,
                      'flux100_ul95' : np.nan,
                      'flux1000_ul95' : np.nan,
-                     'flux10000_ul95' : np.nan,                     
+                     'flux10000_ul95' : np.nan,
+                     'ts' : np.nan
                      }
 
         src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
@@ -1506,7 +1624,7 @@ class GTAnalysis(AnalysisBase):
             src_dict['dfde10000'][0] = self.like[name].spectrum()(pyLike.dArg(10000.))
         except Exception, ex:
             self.logger.error('Failed to update source parameters.', exc_info=True)
-
+            
         # Only try to compute TS, errors, and ULs if the source was free in the fit
         if not self.get_free_source_params(name) or paramsonly:
             return src_dict
@@ -1518,10 +1636,10 @@ class GTAnalysis(AnalysisBase):
             src_dict['flux10000'][1] = self.like.fluxError(name,10000., 10**5.5)
         except Exception, ex:
             self.logger.error('Failed to update source parameters.', exc_info=True)
-            
+
         # Should we update the TS values at the end of fitting?
-        src_dict['ts'] = self.like.Ts(name,reoptimize=False)
-            
+        src_dict['ts'] = self.like.Ts2(name,reoptimize=False)
+        
         # Extract covariance matrix
         fd = None            
         try:
@@ -1596,6 +1714,8 @@ class GTBinnedAnalysis(AnalysisBase):
                                'srcmap%s.fits'%self.config['file_suffix'])
         self._bexpmap_file=join(workdir,
                                 'bexpmap%s.fits'%self.config['file_suffix'])
+        self._bexpmap_local_file=join(workdir,
+                                      'bexpmap_local%s.fits'%self.config['file_suffix'])        
         self._srcmdl_file=join(workdir,
                                'srcmdl%s.xml'%self.config['file_suffix'])
 
@@ -1620,6 +1740,16 @@ class GTBinnedAnalysis(AnalysisBase):
             self.logger.info('Automatically setting selection radius to %s deg'%
                              self.config['selection']['radius'])
 
+        if self.config['binning']['coordsys'] == 'CEL':
+            self._xref=float(self.roi.skydir.ra.deg)
+            self._yref=float(self.roi.skydir.dec.deg)
+        elif self.config['binning']['coordsys'] == 'GAL':
+            self._xref=float(self.roi.skydir.galactic.l.deg)
+            self._yref=float(self.roi.skydir.galactic.b.deg)
+        else:
+            raise Exception('Unrecognized coord system: ' +
+                            self.config['binning']['coordsys'])
+            
         self._like = None
 
         self._wcs = create_wcs(self.roi.skydir,
@@ -1670,7 +1800,7 @@ class GTBinnedAnalysis(AnalysisBase):
     def wcs(self):
         return self._wcs
 
-    def add_source(self,name,src_dict):
+    def add_source(self,name,src_dict,free=False):
         """Add a new source to the model with the properties defined
         in the input dictionary."""
 
@@ -1704,13 +1834,18 @@ class GTBinnedAnalysis(AnalysisBase):
             
         pylike_src.setSpectrum(pl)
         pylike_src.setName(src.name)
-        
+
+        # Initialize source as free/fixed
+        pylike_src.spectrum().normPar().setFree(free)
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(name)
 
     def delete_source(self,name):
+
+        self.logger.info('Deleting source ' + name)
         
         self.like.deleteSource(name)
+        self.like.logLike.eraseSourceMap(name)
         src = self.roi.get_source_by_name(name)        
         self.roi.delete_sources([src])
         
@@ -1739,22 +1874,22 @@ class GTBinnedAnalysis(AnalysisBase):
         
         v = pyLike.FloatVector(self.npix**2*self.enumbins)
 
-#        print self.like.logLike.fixedModelUpdated()
-        
+        self.like.logLike.buildFixedModelWts()
+        if not self.like.logLike.fixedModelUpdated():
+            self.like.logLike.buildFixedModelWts(True)
+            
         if name is None:
-            if not self.like.logLike.fixedModelUpdated():
-                self.like.logLike.buildFixedModelWts(True)
-            self.like.logLike.computeModelMap(v)            
+            self.like.logLike.computeModelMap(v)
         elif name == 'all':            
             for name in self.like.sourceNames():
-                model = self.like.logLike.getSourceMap(name)
+                model = self.like.logLike.sourceMap(name)
                 self.like.logLike.updateModelMap(v,model)
         elif isinstance(name,list):
             for n in name:
-                model = self.like.logLike.getSourceMap(n)
+                model = self.like.logLike.sourceMap(n)
                 self.like.logLike.updateModelMap(v,model)
         else:
-            model = self.like.logLike.getSourceMap(name)
+            model = self.like.logLike.sourceMap(name)
             self.like.logLike.updateModelMap(v,model)
             
         z = np.array(v).reshape(self.enumbins,self.npix,self.npix)
@@ -1815,16 +1950,6 @@ class GTBinnedAnalysis(AnalysisBase):
             run_gtapp('gtltcube',self.logger,kw)
         else:
             self.logger.info('Skipping gtltcube')
-
-        if self.config['binning']['coordsys'] == 'CEL':
-            xref=float(self.roi.skydir.ra.deg)
-            yref=float(self.roi.skydir.dec.deg)
-        elif self.config['binning']['coordsys'] == 'GAL':
-            xref=float(self.roi.skydir.galactic.l.deg)
-            yref=float(self.roi.skydir.galactic.b.deg)
-        else:
-            raise Exception('Unregonize coord system: ' +
-                            self.config['binning']['coordsys'])
             
         # Run gtbin
         kw = dict(algorithm='ccube',
@@ -1833,8 +1958,8 @@ class GTBinnedAnalysis(AnalysisBase):
                   evfile=self._ft1_file,
                   outfile=self._ccube_file,
                   scfile=self.config['data']['scfile'],
-                  xref=xref,
-                  yref=yref,
+                  xref=self._xref,
+                  yref=self._yref,
                   axisrot=0,
                   proj=self.config['binning']['proj'],
                   ebinalg='LOG',
@@ -1875,6 +2000,26 @@ class GTBinnedAnalysis(AnalysisBase):
         else:
             self.logger.info('Skipping gtexpcube')
 
+        
+        kw = dict(infile=self._ltcube,cmap='none',
+                  ebinalg='LOG',
+                  emin=self.config['selection']['emin'],
+                  emax=self.config['selection']['emax'],
+                  enumbins=self._enumbins,
+                  outfile=self._bexpmap_local_file, proj='CAR',
+                  nxpix=self.npix, nypix=self.npix,
+                  binsz=self.config['binning']['binsz'],
+                  xref=self._xref,yref=self._yref,
+                  evtype=self.config['selection']['evtype'],
+                  irfs=self.config['gtlike']['irfs'],
+                  coordsys=self.config['binning']['coordsys'],
+                  chatter=self.config['logging']['chatter'])
+
+        if not os.path.isfile(self._bexpmap_local_file):
+            run_gtapp('gtexpcube2',self.logger,kw)              
+        else:
+            self.logger.info('Skipping local gtexpcube')
+        
         # Run gtsrcmaps
         kw = dict(scfile=self.config['data']['scfile'],
                   expcube=self._ltcube,
@@ -1884,14 +2029,17 @@ class GTBinnedAnalysis(AnalysisBase):
                   outfile=self._srcmap_file,
                   irfs=self.config['gtlike']['irfs'],
                   evtype=evtype,
-#                   rfactor=self.config['rfactor'],
+                  rfactor=self.config['gtlike']['rfactor'],
 #                   resample=self.config['resample'],
-#                   minbinsz=self.config['minbinsz'],
+                  minbinsz=self.config['gtlike']['minbinsz'],
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no' ) 
 
         if not os.path.isfile(self._srcmap_file):
-            run_gtapp('gtsrcmaps',self.logger,kw)             
+            if self.config['gtlike']['srcmap'] and self.config['gtlike']['bexpmap']:
+                self.make_scaled_srcmap()
+            else:
+                run_gtapp('gtsrcmaps',self.logger,kw)
         else:
             self.logger.info('Skipping gtsrcmaps')
 
@@ -1913,9 +2061,9 @@ class GTBinnedAnalysis(AnalysisBase):
                                     minbinsz=self.config['gtlike']['minbinsz'],
                                     resamp_fact=self.config['gtlike']['rfactor'])
 
-        print self.like.logLike.use_single_fixed_map()
-        self.like.logLike.set_use_single_fixed_map(False)
-        print self.like.logLike.use_single_fixed_map()
+#        print self.like.logLike.use_single_fixed_map()
+#        self.like.logLike.set_use_single_fixed_map(False)
+#        print self.like.logLike.use_single_fixed_map()
         
         if self.config['gtlike']['edisp']:
             self.logger.info('Enabling energy dispersion')
@@ -1927,6 +2075,33 @@ class GTBinnedAnalysis(AnalysisBase):
                        
         self.logger.info('Finished setup')
 
+    def make_scaled_srcmap(self):
+        """Make an exposure cube with the same binning as the counts map."""
+
+        self.logger.info('Computing scaled source map.')
+        
+        bexp0 = pyfits.open(self._bexpmap_local_file)
+        bexp1 = pyfits.open(self.config['gtlike']['bexpmap'])
+        srcmap = pyfits.open(self.config['gtlike']['srcmap'])
+
+        if bexp0[0].data.shape != bexp1[0].data.shape:
+            raise Exception('Wrong shape for input exposure map file.')
+        
+        bexp_ratio = bexp0[0].data/bexp1[0].data
+        
+        self.logger.info('Min/Med/Max exposure correction: %f %f %f'%(np.min(bexp_ratio),
+                                                                      np.median(bexp_ratio),
+                                                                      np.max(bexp_ratio)))
+        
+        for hdu in srcmap[1:]:
+
+            if hdu.name == 'GTI': continue
+            if hdu.name == 'EBOUNDS': continue
+            hdu.data *= bexp_ratio
+        
+        srcmap.writeto(self._srcmap_file,clobber=True)
+
+        
     def generate_model_map(self,model_name=None,name=None):
         """Generate a counts model map from the in-memory source map
         data structures."""
@@ -2000,9 +2175,9 @@ class GTBinnedAnalysis(AnalysisBase):
 
         xmlfile = self.get_model_path(xmlfile)
         self.logger.info('Creating BinnedAnalysis')
-        self._like = ba.BinnedAnalysis(binnedData=self._obs,
-                                       srcModel=xmlfile,
-                                       optimizer='MINUIT')
+        self._like = BinnedAnalysis(binnedData=self._obs,
+                                    srcModel=xmlfile,
+                                    optimizer='MINUIT')
             
     def write_xml(self,xmlfile):
         """Write the XML model for this analysis component."""
