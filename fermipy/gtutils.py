@@ -27,7 +27,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
             comp.scaleSource(srcName,1E-10)
             comp._ts_src = comp.logLike.getSource(srcName)
             free_flag = comp._ts_src.spectrum().normPar().isFree()
-            comp._ts_src.spectrum().normPar().setFree(False)
+            #comp._ts_src.spectrum().normPar().setFree(False)
             
         logLike0 = -self()
         if tol is None:
@@ -58,7 +58,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
         Ts_value = 2*(logLike1 - logLike0)
         for comp in self.components:
             comp.scaleSource(srcName,1E10)
-            comp._ts_src.spectrum().normPar().setFree(free_flag)
+            #comp._ts_src.spectrum().normPar().setFree(free_flag)
             self.syncSrcParams(srcName)
             comp.logLike.setFreeParamValues(freeParams)
             comp.model = SourceModel(comp.logLike)

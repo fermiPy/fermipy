@@ -51,7 +51,16 @@ def valToBin(edges,x):
     """Convert axis coordinate to bin index."""
     ibin = np.digitize(np.array(x,ndmin=1),edges)-1
     return ibin
-        
+
+def valToEdge(edges,x):
+    """Convert axis coordinate to bin index."""
+    edges = np.array(edges)
+    w = edges[1:] - edges[:-1]
+    w = np.insert(w,0,w[0])
+    ibin = np.digitize(np.array(x,ndmin=1),edges-0.5*w)-1
+    ibin[ibin<0] = 0    
+    return ibin
+
 def valToBinBounded(edges,x):
     """Convert axis coordinate to bin index."""
     nbins = len(edges)-1

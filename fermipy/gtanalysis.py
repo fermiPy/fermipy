@@ -29,7 +29,7 @@ import fermipy
 import fermipy.defaults as defaults
 from fermipy.residmap import ResidMapGenerator
 from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import make_coadd_map, valToBinBounded, write_fits_image
+from fermipy.utils import make_coadd_map, valToBinBounded, valToEdge, write_fits_image
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
@@ -243,6 +243,7 @@ class GTAnalysis(AnalysisBase):
                 'Npred'   : 0.0,
                 'counts'  : np.zeros(self.enumbins),
                 'model_counts'  : np.zeros(self.enumbins),
+                'energies'  : np.copy(self.energies),
                 'residmap' : {},
                 'components' : []
                 },
@@ -252,8 +253,9 @@ class GTAnalysis(AnalysisBase):
         for c in self._components:
             self._roi_model['roi']['components'] += [{'logLike' : np.nan,
                                                       'Npred'   : 0.0,
-                                                      'counts'  : np.zeros(self.enumbins),
-                                                      'model_counts'  : np.zeros(self.enumbins),
+                                                      'counts'  : np.zeros(c.enumbins),
+                                                      'model_counts'  : np.zeros(c.enumbins),
+                                                      'energies'  : np.copy(c.energies),
                                                       'residmap' : {}}]
         
         self._roiwidth = max(roiwidths)
@@ -309,8 +311,6 @@ class GTAnalysis(AnalysisBase):
 
     def _update_roi(self):
 
-        # Need to account for alignment of energy bins
-        
         rm = self._roi_model
         
         rm['roi']['model_counts'].fill(0)
@@ -318,14 +318,15 @@ class GTAnalysis(AnalysisBase):
         for i, c in enumerate(self.components):
             rm['roi']['components'][i]['model_counts'].fill(0)
             rm['roi']['components'][i]['Npred'] = 0
-        
+
+            
         for name in self.like.sourceNames():
             rm['roi']['model_counts'] += rm['sources'][name]['model_counts']
             rm['roi']['Npred'] += np.sum(rm['sources'][name]['model_counts'])
 
             mc = self.modelCountsSpectrum(name)
             
-            for i, c in enumerate(self.components):
+            for i, c in enumerate(self.components):                
                 rm['roi']['components'][i]['model_counts'] += mc[i]
                 rm['roi']['components'][i]['Npred'] += np.sum(mc[i])
 
@@ -334,7 +335,7 @@ class GTAnalysis(AnalysisBase):
 
         self.logger.info('Adding source ' + name)
         
-        if not isinstance(src_dict,Source):
+        if isinstance(src_dict,dict):
             src_dict['name'] = name
             src = self.roi.create_source(src_dict)
         else:
@@ -971,22 +972,20 @@ class GTAnalysis(AnalysisBase):
             Profile the likelihood in each energy bin.
 
         energies : array        
-            Sequence of energies in log10(E/MeV) that defining the
-            edges of the energy bins.  If this argument is None then
-            the analysis energy bins will be used.  The energies in
-            this sequence must align with the bin edges of the
-            underyling analysis.
+            Sequence of energies in log10(E/MeV) defining the edges of
+            the energy bins.  If this argument is None then the
+            analysis energy bins will be used.  The energies in this
+            sequence must align with the bin edges of the underyling
+            analysis instance.
 
         bin_index : float        
-            Index that will be use when fitting the energy
-            distribution within the energy bin.
+            Spectral index that will be use when fitting the energy
+            distribution within an energy bin.
 
         use_local_index : bool
-
             Use a power-law approximation to the shape of the global
             spectrum in each bin.  If this is false then a constant
-            index set to `bin_index` will be used.
-            
+            index set to `bin_index` will be used.            
             
         """
         
@@ -1074,7 +1073,7 @@ class GTAnalysis(AnalysisBase):
             self.free_norm(name)
             self.logger.info('Fitting %s SED from %.0f MeV to %.0f MeV' %
                              (name,10**emin,10**emax))
-            self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
+            self.setEnergyRange(emin,emax)
             o['fit_quality'][i] = self.fit(update=False)
 
             prefactor=self.like[self.like.par_index(name, 'Prefactor')] 
@@ -1102,29 +1101,23 @@ class GTAnalysis(AnalysisBase):
 
                 lnlp = self.profile_norm(name,emin=emin,emax=emax,savestate=False)                
                 o['lnlprofile'] += [lnlp]
-                
-                imax = np.argmax(lnlp['dlogLike'])
-                lnlmax = lnlp['dlogLike'][imax]
-                dlnl = lnlp['dlogLike']-lnlmax
+                dfde_ul95, dfde_err_lo, dfde_err_hi = get_upper_limit(lnlp['dlogLike'],lnlp['dfde'])
                                 
-                o['dfde_ul95'][i] = np.interp(cl_to_dlnl(0.95),-dlnl[imax:],lnlp['dfde'][imax:])
-                o['e2dfde_ul95'][i] = o['dfde_ul95'][i]*10**(2*ecenter)
-                o['dfde_err_hi'][i] = np.interp(0.5,-dlnl[imax:],lnlp['dfde'][imax:]) - lnlp['dfde'][imax]
-                o['e2dfde_err_hi'][i] = o['e2dfde_err_hi'][i]*10**(2*ecenter)
-
-                if dlnl[0] < -0.5:
-                    o['dfde_err_lo'][i] = lnlp['dfde'][imax] - np.interp(0.5,-dlnl[:imax][::-1],
-                                                                         lnlp['dfde'][:imax][::-1]) 
-                    o['e2dfde_err_lo'][i] = o['dfde_err_lo'][i]*10**(2*ecenter)
+                o['dfde_ul95'][i] = dfde_ul95
+                o['e2dfde_ul95'][i] = dfde_ul95*10**(2*ecenter)
+                o['dfde_err_hi'][i] = dfde_err_hi
+                o['e2dfde_err_hi'][i] = dfde_err_hi*10**(2*ecenter)                
+                o['dfde_err_lo'][i] = dfde_err_lo
+                o['e2dfde_err_lo'][i] = dfde_err_lo*10**(2*ecenter)
                 
-        self.setEnergyRange(float(10**energies[0])+1, float(10**energies[-1])-1)
+        self.setEnergyRange(energies[0],energies[-1])
         self.like.setSpectrum(name,old_spectrum)
         saved_state.restore()        
         src_model = self._roi_model['sources'].get(name,{})
         src_model['sed'] = copy.deepcopy(o)        
         return o
 
-    def profile_norm(self,name, emin=None,emax=None, reoptimize=False,xvals=None,npts=None,
+    def profile_norm(self,name, emin=None,emax=None, reoptimize=False,xvals=None,npts=50,
                      savestate=True):
         """
         Profile the normalization of a source.
@@ -1140,7 +1133,8 @@ class GTAnalysis(AnalysisBase):
         emin = min(self.energies) if emin is None else emin
         emax = max(self.energies) if emax is None else emax
 
-        npred = np.sum(self.modelCountsSpectrum(name,emin,emax,summed=True))
+        cs = self.modelCountsSpectrum(name,emin,emax,summed=True)
+        npred = np.sum(cs)
         
         if xvals is None:
 
@@ -1149,13 +1143,13 @@ class GTAnalysis(AnalysisBase):
 
             if npred < 10:
                 val *= 1./min(1.0,npred)
-                xvals = val*10**np.linspace(-2.0,2.0,101)
+                xvals = val*10**np.linspace(-2.0,2.0,2*npts+1)
                 xvals = np.insert(xvals,0,0.0)
             else:
-                xvals = np.linspace(0,1,51)
+                xvals = np.linspace(0,1,1+npts)
                 xvals = np.concatenate((-1.0*xvals[1:][::-1],xvals))
                 xvals = val*10**xvals
-        
+
         return self.profile(name,parName,emin=emin,emax=emax,reoptimize=reoptimize,xvals=xvals,
                             savestate=savestate)
     
@@ -1163,6 +1157,7 @@ class GTAnalysis(AnalysisBase):
                 savestate=True):
         """ Profile the likelihood for the given source and parameter.  
         """
+        
         # Find the source
         name = self._roi.get_source_by_name(name).name
 
@@ -1182,8 +1177,7 @@ class GTAnalysis(AnalysisBase):
         if savestate:
             saved_state = LikelihoodState(self.like)
 
-        self.setEnergyRange(float(10**emin)+1, float(10**emax)-1)
-        
+        self.setEnergyRange(emin,emax)
         logLike0 = self.like()
 
         if xvals is None:
@@ -1609,7 +1603,7 @@ class GTAnalysis(AnalysisBase):
 
         # Get NPred
         src_dict['Npred'] = self.like.NpredValue(name)
-
+        
         # Get Counts Spectrum
         src_dict['model_counts'] = self.modelCountsSpectrum(name,summed=True)
 
@@ -1637,8 +1631,14 @@ class GTAnalysis(AnalysisBase):
         except Exception, ex:
             self.logger.error('Failed to update source parameters.', exc_info=True)
 
-        # Should we update the TS values at the end of fitting?
-        src_dict['ts'] = self.like.Ts2(name,reoptimize=False)
+        lnlp = self.profile_norm(name,savestate=True)
+        flux_ul95, flux_err_lo, flux_err_hi = get_upper_limit(lnlp['dlogLike'],
+                                                              lnlp['flux'])
+
+        src_dict['flux_ul95'] = flux_ul95
+        src_dict['flux100_ul95'] = src_dict['flux100'][0]*(flux_ul95/src_dict['flux'][0])
+        src_dict['flux1000_ul95'] = src_dict['flux1000'][0]*(flux_ul95/src_dict['flux'][0])
+        src_dict['flux10000_ul95'] = src_dict['flux10000'][0]*(flux_ul95/src_dict['flux'][0])
         
         # Extract covariance matrix
         fd = None            
@@ -1652,21 +1652,14 @@ class GTAnalysis(AnalysisBase):
 #                 elif 
 #                      raise ex
 
-            # Extract bowtie   
+        # Extract bowtie   
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
             src_dict['model_flux'] = self.bowtie(fd)            
             src_dict['dfde100'][1] = fd.error(100.)
             src_dict['dfde1000'][1] = fd.error(1000.)
             src_dict['dfde10000'][1] = fd.error(10000.)
 
-        lnlp = self.profile_norm(name,savestate=True)
-        flux_ul95, flux_err_lo, flux_err_hi = get_upper_limit(lnlp['dlogLike'],
-                                                              lnlp['flux'])
-
-        src_dict['flux_ul95'] = flux_ul95
-        src_dict['flux100_ul95'] = src_dict['flux100'][0]*(flux_ul95/src_dict['flux'][0])
-        src_dict['flux1000_ul95'] = src_dict['flux1000'][0]*(flux_ul95/src_dict['flux'][0])
-        src_dict['flux10000_ul95'] = src_dict['flux10000'][0]*(flux_ul95/src_dict['flux'][0])
+        src_dict['ts'] = self.like.Ts2(name,reoptimize=False)
         
         return src_dict
     
@@ -1804,7 +1797,7 @@ class GTBinnedAnalysis(AnalysisBase):
         """Add a new source to the model with the properties defined
         in the input dictionary."""
 
-        if not isinstance(src_dict,Source):
+        if isinstance(src_dict,dict):
             src_dict['name'] = name
             src = self.roi.create_source(src_dict)
         else:
@@ -1860,7 +1853,9 @@ class GTBinnedAnalysis(AnalysisBase):
         self.like[name].src.set_edisp_flag(flag)         
         
     def setEnergyRange(self,emin,emax):
-        self.like.setEnergyRange(emin,emax)
+        imin = valToEdge(self.energies,emin)[0]
+        imax = valToEdge(self.energies,emax)[0]
+        self.like.selectEbounds(imin,imax)
 
     def countsMap(self):
         """Return 3-D counts map as a numpy array."""
@@ -1896,10 +1891,10 @@ class GTBinnedAnalysis(AnalysisBase):
         return z
         
     def modelCountsSpectrum(self,name,emin,emax):
+
         cs = np.array(self.like.logLike.modelCountsSpectrum(name))
-        imin = valToBinBounded(self.energies,emin+1E-7)[0]
-        imax = valToBinBounded(self.energies,emax-1E-7)[0]+1
-        
+        imin = valToEdge(self.energies,emin)[0]
+        imax = valToEdge(self.energies,emax)[0]        
         if imax <= imin: raise Exception('Invalid energy range.')        
         return cs[imin:imax]
         
