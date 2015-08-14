@@ -1714,8 +1714,8 @@ class GTBinnedAnalysis(AnalysisBase):
                                'srcmap%s.fits'%self.config['file_suffix'])
         self._bexpmap_file=join(workdir,
                                 'bexpmap%s.fits'%self.config['file_suffix'])
-        self._bexpmap_local_file=join(workdir,
-                                      'bexpmap_local%s.fits'%self.config['file_suffix'])        
+        self._bexpmap_roi_file=join(workdir,
+                                      'bexpmap_roi%s.fits'%self.config['file_suffix'])        
         self._srcmdl_file=join(workdir,
                                'srcmdl%s.xml'%self.config['file_suffix'])
 
@@ -2006,7 +2006,7 @@ class GTBinnedAnalysis(AnalysisBase):
                   emin=self.config['selection']['emin'],
                   emax=self.config['selection']['emax'],
                   enumbins=self._enumbins,
-                  outfile=self._bexpmap_local_file, proj='CAR',
+                  outfile=self._bexpmap_roi_file, proj='CAR',
                   nxpix=self.npix, nypix=self.npix,
                   binsz=self.config['binning']['binsz'],
                   xref=self._xref,yref=self._yref,
@@ -2015,7 +2015,7 @@ class GTBinnedAnalysis(AnalysisBase):
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
 
-        if not os.path.isfile(self._bexpmap_local_file):
+        if not os.path.isfile(self._bexpmap_roi_file):
             run_gtapp('gtexpcube2',self.logger,kw)              
         else:
             self.logger.info('Skipping local gtexpcube')
@@ -2080,7 +2080,7 @@ class GTBinnedAnalysis(AnalysisBase):
 
         self.logger.info('Computing scaled source map.')
         
-        bexp0 = pyfits.open(self._bexpmap_local_file)
+        bexp0 = pyfits.open(self._bexpmap_roi_file)
         bexp1 = pyfits.open(self.config['gtlike']['bexpmap'])
         srcmap = pyfits.open(self.config['gtlike']['srcmap'])
 
