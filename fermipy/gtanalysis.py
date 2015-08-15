@@ -2054,7 +2054,7 @@ class GTBinnedAnalysis(AnalysisBase):
         self._like = BinnedAnalysis(binnedData=self._obs,
                                     srcModel=self._srcmdl_file,
                                     optimizer='MINUIT',
-#                                    convolve=False,
+                                    convolve=self.config['gtlike']['convolve'],
                                     minbinsz=self.config['gtlike']['minbinsz'],
                                     resamp_fact=self.config['gtlike']['rfactor'])
 

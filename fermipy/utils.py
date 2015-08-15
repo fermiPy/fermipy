@@ -430,6 +430,42 @@ def make_disk_kernel(sigma,npix=501,cdelt=0.01):
 
     return k
 
+def make_psf_kernel(event_class,event_types,egy,npix,cdelt):
+
+    from fermipy.gtutils import create_average_psf
+    
+    dtheta = np.logspace(-3,1.0,100)
+    dtheta = np.insert(dtheta,0,[0])
+    psf = create_average_psf(event_class,event_types,dtheta,egy)
+    
+    b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
+    x = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
+                                        b[:,np.newaxis]**2)
+
+    x *= cdelt
+    k = np.zeros((len(egy),npix,npix))
+    for i in range(len(egy)):
+        k[i] = np.interp(np.ravel(x),dtheta,psf[:,i]).reshape(x.shape)
+        k[i] /= (np.sum(k[i])*np.radians(cdelt)**2)
+
+    return k
+
+def make_psf_mapcube(skydir,sigma,outfile,npix=501,cdelt=0.01):
+
+    w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5,naxis=3)
+
+    wcs.wcs.crpix[2]=1
+    wcs.wcs.crval[2]=10**self.energies[0]
+    wcs.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
+    wcs.wcs.ctype[2]='Energy'
+    
+    hdu_image = pyfits.PrimaryHDU(np.zeros((npix,npix)),
+                                  header=w.to_header())
+    
+#    hdu_image.data[:,:] = make_gaussian_kernel(sigma,npix=npix,cdelt=cdelt)
+    hdulist = pyfits.HDUList([hdu_image])
+    hdulist.writeto(outfile,clobber=True) 
+    
 def make_gaussian_spatial_map(skydir,sigma,outfile,npix=501,cdelt=0.01):
     
     w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5)    

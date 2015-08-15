@@ -62,6 +62,7 @@ gtlike = {
     'likelihood'    : ('binned',''),
     'minbinsz'      : (0.05,''),
     'rfactor'       : (2,''),
+    'convolve'      : (True,''),
     'srcmap'        : (None,''),
     'bexpmap'       : (None,''),
     }
