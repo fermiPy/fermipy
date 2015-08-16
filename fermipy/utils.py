@@ -450,20 +450,30 @@ def make_psf_kernel(event_class,event_types,egy,npix,cdelt):
 
     return k
 
-def make_psf_mapcube(skydir,sigma,outfile,npix=501,cdelt=0.01):
+def make_psf_mapcube(skydir,event_class,event_types,
+                     energies,outfile,npix=501,cdelt=0.01):
+
+    ecenter = 0.5*(energies[1:] + energies[:-1])
+
+    k = make_psf_kernel(event_class,event_types,ecenter,npix,cdelt)
 
     w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5,naxis=3)
 
-    wcs.wcs.crpix[2]=1
-    wcs.wcs.crval[2]=10**self.energies[0]
-    wcs.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
-    wcs.wcs.ctype[2]='Energy'
+    print w.to_header()
+
+    w.wcs.crpix[2]=1
+    w.wcs.crval[2]=10**energies[0]
+    w.wcs.cdelt[2]=energies[1]-energies[0]
+    w.wcs.ctype[2]='Energy'
     
-    hdu_image = pyfits.PrimaryHDU(np.zeros((npix,npix)),
+    ecol = pyfits.Column(name='Energy', format='D', array=10**ecenter)
+    hdu_energies = pyfits.BinTableHDU.from_columns([ecol],name='ENERGIES')
+
+    hdu_image = pyfits.PrimaryHDU(np.zeros((len(energies)-1,npix,npix)),
                                   header=w.to_header())
-    
-#    hdu_image.data[:,:] = make_gaussian_kernel(sigma,npix=npix,cdelt=cdelt)
-    hdulist = pyfits.HDUList([hdu_image])
+
+    hdu_image.data[...] = k
+    hdulist = pyfits.HDUList([hdu_image,hdu_energies])
     hdulist.writeto(outfile,clobber=True) 
     
 def make_gaussian_spatial_map(skydir,sigma,outfile,npix=501,cdelt=0.01):

@@ -928,6 +928,7 @@ class GTAnalysis(AnalysisBase):
             s = copy.deepcopy(self.roi.get_source_by_name(name))
             s.set_name(model_name)
             s.set_spatial_model('GaussianSource',w,
+#            s.set_spatial_model('PSFSource',w,
                                 self.config['fileio']['workdir'])
 
             self.logger.info('Adding test source with width: %f'%w)
@@ -941,12 +942,11 @@ class GTAnalysis(AnalysisBase):
             logLike = self.like()
 
             ext['dlogLike'][i] = logLike-logLike0
-
             sd = self.get_src_model(model_name)
-
             ext['fit'].append(sd)
             
-            self.generate_model_map(model_name='%s%02i'%(model_name,i),name=model_name)
+            self.generate_model_map(model_name='%s%02i'%(model_name,i),
+                                    name=model_name)
             self.delete_source(model_name)
             
         self.scale_parameter(name,normPar,1E10)
@@ -1812,10 +1812,15 @@ class GTBinnedAnalysis(AnalysisBase):
 
             pylike_src = pyLike.PointSource(self.like.logLike.observation())
             pylike_src.setDir(src.skydir.ra.deg,src.skydir.dec.deg,False,False)
-        else:
+        elif src['SpatialType'] == 'SpatialMap':        
             sm = pyLike.SpatialMap(src['Spatial_Filename'])
             pylike_src = pyLike.DiffuseSource(sm,self.like.logLike.observation(),False)
-            
+        elif src['SpatialType'] == 'MapCubeFunction':
+            mcf = pyLike.MapCubeFunction2(src['Spatial_Filename'])
+            pylike_src = pyLike.DiffuseSource(mcf,self.like.logLike.observation(),False)
+        else:
+            raise Exception('Unrecognized spatial type: %s'%src['SpatialType'])
+
         pl = pyLike.SourceFactory_funcFactory().create(src['SpectrumType'])
 
         for k,v in src.spectral_pars.items():
@@ -2049,7 +2054,6 @@ class GTBinnedAnalysis(AnalysisBase):
         self._obs=ba.BinnedObs(**kw)
 
         # Create BinnedAnalysis
-
         self.logger.info('Creating BinnedAnalysis')
         self._like = BinnedAnalysis(binnedData=self._obs,
                                     srcModel=self._srcmdl_file,

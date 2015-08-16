@@ -57,9 +57,11 @@ def smooth(m,k,cpix,mode='constant',threshold=0.01):
 #    o /= np.sum(k**2)
     return o
 
-def create_model_name(src,spatial_type):
+def create_model_name(src):
 
-    o = spatial_type
+    o = ''
+    spatial_type = src['SpatialModel'].lower()
+    o += spatial_type
 
     if spatial_type == 'gaussian':
         o += '_s%04.2f'%src['SpatialWidth']
@@ -135,24 +137,21 @@ class ResidMapGenerator(AnalysisBase):
         radec = w.wcs_pix2world(xpix,ypix,0)
         src_dict['ra'] = radec[0]
         src_dict['dec'] = radec[1]
-        src_dict.setdefault('SpatialType','PointSource')
+        src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialWidth',0.3)
         
         kernel = None
         
-        if src_dict['SpatialType'] == 'Gaussian':
+        if src_dict['SpatialModel'] == 'Gaussian':
             src_dict['SpatialType'] = 'PointSource'
             kernel = make_gaussian_kernel(src_dict['SpatialWidth'],
                                           cdelt=0.1,npix=101)
             kernel /= np.sum(kernel)
             cpix = [50,50]
-            spatial_type = 'gaussian'
-        elif src_dict['SpatialType'] == 'PointSource':
-            spatial_type = 'ptsrc'
             
         self._gta.add_source('testsource',src_dict,free=True)        
         src = self._gta.roi.get_source_by_name('testsource')
-        modelname = create_model_name(src,spatial_type)
+        modelname = create_model_name(src)
         
         enumbins = self._gta.enumbins
         npix = self._gta.components[0].npix
