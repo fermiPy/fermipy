@@ -7,6 +7,8 @@ import xml.etree.cElementTree as et
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
+import scipy.special as specialfn
+from scipy.interpolate import UnivariateSpline
 
 class AnalysisBase(object):
     """The base class provides common facilities like configuration
@@ -46,7 +48,12 @@ class AnalysisBase(object):
             logger.log(loglevel,'Configuration:\n'+ yaml.dump(self.config,
                                                               default_flow_style=False))
         
+def edge_to_center(edges):
+    return 0.5*(edges[1:] + edges[:-1])
 
+def edge_to_width(edges):
+    return (edges[1:] - edges[:-1])
+            
 def valToBin(edges,x):
     """Convert axis coordinate to bin index."""
     ibin = np.digitize(np.array(x,ndmin=1),edges)-1
@@ -398,6 +405,66 @@ def get_target_skydir(config):
     return None
 
 
+def convolve2d_gauss(fn,r,sig,nstep=100):
+    """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
+    azimuthally symmetric function in two dimensions and g is a
+    gaussian given by:
+
+    g(r) = 1/(2*pi*s^2) Exp[-r^2/(2*s^2)]
+
+    Parameters
+    ----------
+
+    fn : Input function that takes a single radial coordinate parameter.
+
+    r :  Array of points at which the convolution is to be evaluated.
+
+    sig : Width parameter of the gaussian.
+
+    nstep : Number of sampling point for numeric integration.
+
+    """
+    r = np.array(r,ndmin=1)
+    sig = np.array(sig,ndmin=1)
+
+    rmin = r-10*sig
+    rmax = r+10*sig
+    rmin[rmin<0] = 0
+    delta = (rmax-rmin)/nstep
+    
+    redge = rmin[:,np.newaxis] + delta[:,np.newaxis]*np.linspace(0,nstep,nstep+1)[np.newaxis,:]
+    rp = 0.5*(redge[:,1:] + redge[:,:-1])
+    dr = redge[:,1:] - redge[:,:-1]
+    fnv = fn(rp)
+
+    r = r.reshape(r.shape + (1,))
+    saxis = 1
+
+    sig2 = sig*sig
+    x = r*rp/(sig2)
+    
+    if not 'je_fn' in convolve2d_gauss.__dict__:
+    
+        t = 10**np.linspace(-8,8,1000)
+        t = np.insert(t,0,[0])
+        je = specialfn.ive(0,t)
+        convolve2d_gauss.je_fn = UnivariateSpline(t,je,k=2,s=0)
+        
+
+#    print 'interpolating je'
+    je = convolve2d_gauss.je_fn(x.flat).reshape(x.shape)
+#    je2 = specialfn.ive(0,x)
+    v = (rp*fnv/(sig2)*je*np.exp(x-(r*r+rp*rp)/(2*sig2))*dr)
+    s = np.sum(v,axis=saxis)
+
+#    import matplotlib.pyplot as plt
+#    plt.figure()
+#    plt.plot(rp[500],v[500,:])
+#    plt.show()    
+#    print 'Done'
+
+    return s
+
 def make_gaussian_kernel(sigma,npix=501,cdelt=0.01):
 
     sigma /= 1.5095921854516636        
@@ -430,49 +497,118 @@ def make_disk_kernel(sigma,npix=501,cdelt=0.01):
 
     return k
 
-def make_psf_kernel(event_class,event_types,egy,npix,cdelt):
-
-    from fermipy.gtutils import create_average_psf
+def make_cgauss_kernel(psf,sigma,npix,cdelt):
     
-    dtheta = np.logspace(-3,1.0,100)
-    dtheta = np.insert(dtheta,0,[0])
-    psf = create_average_psf(event_class,event_types,dtheta,egy)
+    dtheta = psf.dtheta
+    egy = psf.energies
+
+    b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
+    x = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
+                                        b[:,np.newaxis]**2)
+
+    x *= cdelt
+        
+    k = np.zeros((len(egy),npix,npix))
+    for i in range(len(egy)):
+
+        fn = lambda t:  10**np.interp(t,dtheta,np.log10(psf.val[:,i]))
+        psfc = convolve2d_gauss(fn,dtheta,sigma)
+        k[i] = np.interp(np.ravel(x),dtheta,psfc).reshape(x.shape)
+        k[i] /= (np.sum(k[i])*np.radians(cdelt)**2)
+        
+    return k
+
+def make_psf_kernel(psf,npix,cdelt):
+
+    print 'make_psf_kernel ', npix, cdelt
+    
+    dtheta = psf.dtheta
+    egy = psf.energies
     
     b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
     x = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
                                         b[:,np.newaxis]**2)
 
     x *= cdelt
+
+#    import matplotlib.pyplot as plt    
+#    plt.figure()
+#    im = plt.imshow(x,interpolation='nearest'); plt.colorbar(im)
+#    plt.show()
+    
     k = np.zeros((len(egy),npix,npix))
     for i in range(len(egy)):
-        k[i] = np.interp(np.ravel(x),dtheta,psf[:,i]).reshape(x.shape)
+        k[i] = 10**np.interp(np.ravel(x),dtheta,
+                             np.log10(psf.val[:,i])).reshape(x.shape)
         k[i] /= (np.sum(k[i])*np.radians(cdelt)**2)
 
     return k
 
-def make_psf_mapcube(skydir,event_class,event_types,
-                     energies,outfile,npix=501,cdelt=0.01):
+def rebin_map(k,nebin,npix,rebin):
 
-    ecenter = 0.5*(energies[1:] + energies[:-1])
+    if rebin > 1:
+        k = np.sum(k.reshape((nebin,npix*rebin,npix,rebin)),axis=3)
+        k = k.swapaxes(1,2)
+        k = np.sum(k.reshape(nebin,npix,npix,rebin),axis=3)
+        k = k.swapaxes(1,2)
 
-    k = make_psf_kernel(event_class,event_types,ecenter,npix,cdelt)
+    k /= rebin**2
 
+    return k
+
+def make_cgauss_mapcube(skydir,psf,sigma,outfile,npix=500,cdelt=0.01,rebin=1):
+
+    energies = psf.energies
+    nebin = len(energies)
+    
+    k = make_cgauss_kernel(psf,sigma,npix*rebin,cdelt/rebin)
+
+    if rebin > 1: k = rebin_map(k,nebin,npix,rebin)
     w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5,naxis=3)
-
-    print w.to_header()
 
     w.wcs.crpix[2]=1
     w.wcs.crval[2]=10**energies[0]
     w.wcs.cdelt[2]=energies[1]-energies[0]
     w.wcs.ctype[2]='Energy'
     
-    ecol = pyfits.Column(name='Energy', format='D', array=10**ecenter)
+    ecol = pyfits.Column(name='Energy', format='D', array=10**energies)
     hdu_energies = pyfits.BinTableHDU.from_columns([ecol],name='ENERGIES')
 
-    hdu_image = pyfits.PrimaryHDU(np.zeros((len(energies)-1,npix,npix)),
+    hdu_image = pyfits.PrimaryHDU(np.zeros((nebin,npix,npix)),
                                   header=w.to_header())
 
     hdu_image.data[...] = k
+
+    hdu_image.header['CUNIT3'] = 'MeV'
+    
+    hdulist = pyfits.HDUList([hdu_image,hdu_energies])
+    hdulist.writeto(outfile,clobber=True) 
+
+def make_psf_mapcube(skydir,psf,outfile,npix=500,cdelt=0.01,rebin=1):
+
+    energies = psf.energies
+    nebin = len(energies)
+    
+    k = make_psf_kernel(psf,npix*rebin,cdelt/rebin)
+
+    if rebin > 1: k = rebin_map(k,nebin,npix,rebin)
+    w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5,naxis=3)
+
+    w.wcs.crpix[2]=1
+    w.wcs.crval[2]=10**energies[0]
+    w.wcs.cdelt[2]=energies[1]-energies[0]
+    w.wcs.ctype[2]='Energy'
+    
+    ecol = pyfits.Column(name='Energy', format='D', array=10**energies)
+    hdu_energies = pyfits.BinTableHDU.from_columns([ecol],name='ENERGIES')
+
+    hdu_image = pyfits.PrimaryHDU(np.zeros((nebin,npix,npix)),
+                                  header=w.to_header())
+
+    hdu_image.data[...] = k
+
+    hdu_image.header['CUNIT3'] = 'MeV'
+    
     hdulist = pyfits.HDUList([hdu_image,hdu_energies])
     hdulist.writeto(outfile,clobber=True) 
     

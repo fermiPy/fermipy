@@ -63,6 +63,7 @@ gtlike = {
     'minbinsz'      : (0.05,''),
     'rfactor'       : (2,''),
     'convolve'      : (True,''),
+    'resample'      : (True,''),
     'srcmap'        : (None,''),
     'bexpmap'       : (None,''),
     }
@@ -134,9 +135,16 @@ sed = {
 
 # Options for extension analysis
 extension = {
-    'spatial_model'            : ('GaussianSource',''),
+    'spatial_model'            : ('CGaussianSource',''),
     'width'                    : (None,''),
     'width_min'                : (0.01,''),
     'width_max'                : (1.0,''),
     'width_nstep'              : (5,''),
+    'save_templates'           : (False,''),
+    }
+
+# Options for anlaysis
+run = {
+    'sed' : (None,'',list),
+    'extension' : (None,'',list)
     }

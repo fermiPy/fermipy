@@ -58,7 +58,7 @@ selection:
   ra     : null
   dec    : null  
   target : null
-  radius : 10.0
+  radius : null
 
 #----------------------------------------------------------------------------
 # likelihood

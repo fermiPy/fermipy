@@ -12,7 +12,8 @@ from numpy import ma
 import matplotlib.cbook as cbook
 from matplotlib.colors import NoNorm, LogNorm, Normalize
 
-from fermipy.utils import merge_dict, AnalysisBase
+from fermipy.utils import merge_dict, AnalysisBase, wcs_to_axes
+from fermipy.utils import edge_to_center, edge_to_width, valToEdge
 
 def make_counts_spectrum_plot(o,energies,imfile):
 
@@ -172,7 +173,7 @@ class ImagePlotter(object):
     def __init__(self,data,wcs):
 
         if data.ndim == 3:
-            data = np.sum(data,axis=0)
+            data = np.sum(copy.deepcopy(data),axis=0)
             wcs = pywcs.WCS(wcs.to_header(),naxis=[1,2])
         else:
             data = copy.deepcopy(data)
@@ -260,6 +261,16 @@ class ImagePlotter(object):
         
         return im, ax
 
+def get_image_wcs(header):
+
+    if header['NAXIS'] == 3:
+        wcs = pywcs.WCS(header,naxis=[1,2])
+        data = copy.deepcopy(np.sum(hdulist[0].data,axis=0))
+    else:
+        wcs = pywcs.WCS(header)
+        data = copy.deepcopy(hdulist[0].data)
+    
+    
 class ROIPlotter(AnalysisBase):
 
     defaults = {
@@ -271,6 +282,8 @@ class ROIPlotter(AnalysisBase):
         AnalysisBase.__init__(self,None,**kwargs)
         self._implot = ImagePlotter(data,wcs)            
         self._roi = roi
+        self._data = data
+        self._wcs = wcs
 
     @staticmethod
     def create_from_fits(fitsfile,roi,**kwargs):
@@ -279,14 +292,58 @@ class ROIPlotter(AnalysisBase):
         header = hdulist[0].header
         header = pyfits.Header.fromstring(header.tostring())
         
-        if header['NAXIS'] == 3:
-            wcs = pywcs.WCS(header,naxis=[1,2])
-            data = copy.deepcopy(np.sum(hdulist[0].data,axis=0))
-        else:
-            wcs = pywcs.WCS(header)
-            data = copy.deepcopy(hdulist[0].data)
-            
+#        if header['NAXIS'] == 3:
+#            wcs = pywcs.WCS(header,naxis=[1,2])
+#            data = copy.deepcopy(np.sum(hdulist[0].data,axis=0))
+#        else:
+        wcs = pywcs.WCS(header)
+        data = copy.deepcopy(hdulist[0].data)
+
+        
+        
         return ROIPlotter(data,wcs,roi,**kwargs)
+
+    def plot_projection(self,iaxis,**kwargs):
+
+        models = kwargs.get('models',[])
+        
+        axes = wcs_to_axes(self._wcs,self._data.shape)[::-1]
+
+        x = edge_to_center(axes[iaxis+1])
+        w = edge_to_width(axes[iaxis+1])
+
+        c = self.get_data_slice(self._data,axes,iaxis)
+        plt.errorbar(x,c,yerr=c**0.5,xerr=w/2.,linestyle='None',
+                     marker='s',label='Data')
+
+        for m in models:
+            c = self.get_data_slice(m,axes,iaxis)
+            plt.plot(x,c)
+
+
+    @staticmethod
+    def get_data_slice(data,axes,iaxis,xmin=-1,xmax=1):
+
+        s0 = slice(None,None)
+        s1 = slice(None,None)
+        s2 = slice(None,None)
+        
+        if iaxis == 0:
+            i0 = valToEdge(axes[iaxis+1],xmin)
+            i1 = valToEdge(axes[iaxis+1],xmax)
+            s1 = slice(i0,i1)
+            saxes = [0,1]
+        else:
+            i0 = valToEdge(axes[iaxis+1],xmin)
+            i1 = valToEdge(axes[iaxis+1],xmax)
+            s2 = slice(i0,i1)
+            saxes = [0,2]
+            
+        c = np.apply_over_axes(np.sum,data[s0,s1,s2],axes=saxes)
+        c = np.squeeze(c)
+
+        return c
+        
         
     def plot(self,**kwargs):
         

@@ -1,6 +1,12 @@
 # pylikelihood
 
+import glob
 import numpy as np
+import healpy as hp
+
+import pyLikelihood as pyLike
+
+import astropy.io.fits as pyfits
 
 from SrcModel import SourceModel
 from AnalysisBase import AnalysisBase, _quotefn, _null_file, num
@@ -16,83 +22,23 @@ import BinnedAnalysis
 import UnbinnedAnalysis 
 import SummedLikelihood
 
+from fermipy.utils import edge_to_center
+from fermipy.utils import edge_to_width
+
 evtype_string = {
     4 : 'PSF0',
     8 : 'PSF1',
     16 : 'PSF2',
     32 : 'PSF3'
     }
-    
 
-def edge_to_center(edges):
-    return 0.5*(edges[1:] + edges[:-1])
+def bitmask_to_bits(mask):
 
-def create_average_psf(event_class,event_types,dtheta,egy):
+    bits = []    
+    for i in range(32):
+        if mask&(2**i): bits += [2**i]
 
-    cth_edge = np.linspace(0.2,1.0,9)
-    cth = edge_to_center(cth_edge)
-    
-    wpsf = np.zeros((len(dtheta),len(egy)))
-    exps = np.zeros(len(egy))
-    
-    for et in event_types:
-        psf = create_psf(event_class,et,dtheta,egy,cth)
-        exp = create_exposure(event_class,et,egy,cth)
-        
-        wpsf += np.sum(psf*exp[np.newaxis,:,:],axis=2)
-        exps += np.sum(exp,axis=1)
-
-    wpsf /= exps[np.newaxis,:]
-
-    return wpsf
-
-                
-def create_psf(event_class,event_type,dtheta,egy,cth):
-    """This function creates a sequence of DRMs versus incidence
-    angle.  The output is returned as a single 3-dimensional numpy
-    array with dimensions of etrue,erec, and incidence angle."""
-
-    if isinstance(event_type,int):
-        event_type = evtype_string[event_type]
-    
-    irf_factory=pyIrfLoader.IrfsFactory.instance()
-    irf = irf_factory.create('%s::%s'%(event_class,event_type))
-
-    theta = np.degrees(np.arccos(cth))
-    m = np.zeros((len(dtheta),len(egy),len(cth)))
-    
-    for i, x in enumerate(egy):
-        for j, y in enumerate(theta):
-            m[:,i,j] = irf.psf().value(dtheta,10**x,y,0.0)
-            
-    return m
-
-def create_exposure(event_class,event_type,egy,cth):
-    """This function creates a map of exposure versus energy and
-    incidence angle.  Binning in energy and incidence angle is
-    controlled with the ebin_edge and cth_edge input parameters."""
-
-    if isinstance(event_type,int):
-        event_type = evtype_string[event_type]
-    
-    irf_factory=pyIrfLoader.IrfsFactory.instance()
-    irf = irf_factory.create('%s::%s'%(event_class,event_type))
-
-    irf.aeff().setPhiDependence(False)
-    
-    theta = np.degrees(np.arccos(cth))
-    
-    # Exposure Matrix
-    # Dimensions are Etrue and incidence angle
-    m = np.zeros((len(egy),len(cth)))
-
-    for i, x in enumerate(egy):
-        for j, y in enumerate(theta):                     
-            m[i,j] = irf.aeff().value(10**x,y,0.0)
-
-    return m
-
-
+    return bits
 
 
     
@@ -186,7 +132,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
 
     def __init__(self, binnedData, srcModel=None, optimizer='Drmngb',
                  use_bl2=False, verbosity=0, psfcorr=True,convolve=True,
-                 resamp_fact=2,minbinsz=0.1):
+                 resample=True,resamp_fact=2,minbinsz=0.1):
         AnalysisBase.__init__(self)
         if srcModel is None:
             srcModel, optimizer = self._srcDialog()
@@ -197,14 +143,16 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
             self.logLike = pyLike.BinnedLikelihood2(binnedData.countsMap,
                                                     binnedData.observation,
                                                     binnedData.srcMaps,
-                                                    True, psfcorr, convolve, True,
+                                                    True, psfcorr, convolve,
+                                                    resample,
                                                     resamp_fact,
                                                     minbinsz)
         else:
             self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
                                                    binnedData.observation,
                                                    binnedData.srcMaps,
-                                                   True, psfcorr, convolve, True,
+                                                   True, psfcorr, convolve,
+                                                   resample,
                                                    resamp_fact,
                                                    minbinsz)
         self.verbosity = verbosity

@@ -10,6 +10,8 @@ import numpy as np
 import tempfile
 import logging
 
+from scipy.interpolate import UnivariateSpline
+
 import matplotlib
 
 try:             os.environ['DISPLAY']
@@ -30,11 +32,13 @@ import fermipy.defaults as defaults
 from fermipy.residmap import ResidMapGenerator
 from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import make_coadd_map, valToBinBounded, valToEdge, write_fits_image
+from fermipy.utils import make_psf_mapcube, make_cgauss_mapcube
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 from fermipy.plotting import ROIPlotter, make_counts_spectrum_plot
 from fermipy.config import ConfigManager
+from fermipy.irfs import LTCube, PSFModel
 
 # pylikelihood
 
@@ -84,20 +88,47 @@ index_parameters = {
     }
 
 
-def get_upper_limit(dlogLike,yval):
+def get_upper_limit(dlogLike,yval,interpolate=False):
 
-    imax = np.argmax(dlogLike)
-    lnlmax = dlogLike[imax]
-    dlnl = dlogLike-lnlmax
-                                
+    from scipy.optimize import brentq
+    
+    if interpolate:    
+        s = UnivariateSpline(yval,dlogLike,k=2,s=0)
+        sd = s.derivative()
+        y0 = brentq(sd,yval[0],yval[-1])
+        lnlmax = s(y0)
+        yval = np.linspace(yval[0],yval[-1],100)
+        dlnl = s(yval)-lnlmax
+        imax = np.argmax(dlnl)
+    else:
+        imax = np.argmax(dlogLike)
+        y0 = yval[imax]
+        lnlmax = dlogLike[imax]
+        dlnl = dlogLike-lnlmax
+
+            
+    ts = -2*dlnl[0]    
     ul95 = np.interp(cl_to_dlnl(0.95),-dlnl[imax:],yval[imax:])
     err_hi = np.interp(0.5,-dlnl[imax:],yval[imax:]) - yval[imax]
     err_lo = np.nan
-    
-    if dlnl[0] < -0.5:
-        err_lo = yval[imax] - np.interp(0.5,-dlnl[:imax][::-1],yval[:imax][::-1]) 
 
-    return ul95, err_lo, err_hi
+    if dlnl[0] < -0.5:
+        err_lo = yval[imax] - np.interp(0.5,-dlnl[:imax][::-1],
+                                        yval[:imax][::-1]) 
+    
+#    import matplotlib.pyplot as plt
+#    plt.figure()
+#    plt.plot(yval,dlnl,marker='o',linestyle='None')
+#    plt.plot(np.linspace(0,0.1,1000),s(np.linspace(0,0.1,1000))-lnlmax)
+#    plt.plot(np.linspace(0,0.1,1000),s1(np.linspace(0,0.1,1000))-lnlmax)
+#    plt.gca().set_ylim(-30,1)
+#    plt.gca().grid(True)    
+#    plt.gca().axvline(ul95)
+#    plt.gca().axvline(y0+err_hi)
+#    plt.gca().axhline(-cl_to_dlnl(0.95))
+#    plt.show()
+
+    return y0, ul95, err_lo, err_hi, ts
     
 
 def cl_to_dlnl(cl):
@@ -168,6 +199,7 @@ class GTAnalysis(AnalysisBase):
                 'sed'        : defaults.sed,
                 'extension'  : defaults.extension,
                 'roiopt'     : defaults.roiopt,
+                'run'        : defaults.run,
                 'components' : (None,'')}
 
     def __init__(self,config,**kwargs):
@@ -348,12 +380,12 @@ class GTAnalysis(AnalysisBase):
         self.like.syncSrcParams(name)            
         self.like.model = self.like.components[0].model
             
-    def delete_source(self,name):
+    def delete_source(self,name,save_template=True):
 
         self.logger.info('Deleting source ' + name)
         
         for c in self.components:
-            c.delete_source(name)
+            c.delete_source(name,save_template=save_template)
 
         src = self.roi.get_source_by_name(name)        
         self.roi.delete_sources([src])
@@ -647,26 +679,26 @@ class GTAnalysis(AnalysisBase):
     def scale_parameter(self,name,par,scale):
 
         idx = self.like.par_index(name,par)
-        self.like[idx].parameter.setScale(self.like[idx].parameter.getScale()*scale)        
-            
+        self.like[idx].setScale(self.like[idx].getScale()*scale)        
+        
     def set_parameter(self,name,par,value,true_value=True,scale=None,
                       bounds=None):
         idx = self.like.par_index(name,par)
         if true_value:
-            self.like[idx].parameter.setTrueValue(value)
+            for p in self.like[idx].pars:            
+                p.setTrueValue(value)
         else:
-            self.like[idx].parameter.setValue(value)
+            self.like[idx].setValue(value)
 
         if scale is not None:
-            self.like[idx].parameter.setScale(scale)
+            self.like[idx].setScale(scale)
 
         if bounds is not None:
-            self.like[idx].parameter.setBounds(*bounds)
-            
+            self.like[idx].setBounds(*bounds)
             
     def free_parameter(self,name,par,free=True):
         idx = self.like.par_index(name,par)
-        self.like[idx].parameter.setFree(free)
+        self.like[idx].setFree(free)
         
     def free_source(self,name,free=True,pars=None):
         """Free/Fix parameters of a source.
@@ -886,6 +918,16 @@ class GTAnalysis(AnalysisBase):
             self.free_source(k,free=False)
             
         self.set_free_params(free)
+
+    def run(self):
+        """Run extension and sed analysis for the given sources."""
+
+        for s in self.config['run']['sed']:
+            self.sed(s)
+
+        for s in self.config['run']['extension']:
+            self.extension(s)
+        
         
     def extension(self,name):
         """Perform an angular extension test for this source."""
@@ -908,6 +950,7 @@ class GTAnalysis(AnalysisBase):
 #        src = self.like.deleteSource(name)
         normPar = self.like.normPar(name).getName()        
         self.scale_parameter(name,normPar,1E-10)
+        self.like.syncSrcParams(name)
         
         self.generate_model_map(model_name=model_name+'_bkg')
 
@@ -919,7 +962,14 @@ class GTAnalysis(AnalysisBase):
                                 np.log10(self.config['extension']['width_max']),
                                 self.config['extension']['width_nstep'])
 
-        ext = {'width' : width, 'dlogLike' : np.zeros(len(width)),
+        ext = {'width' : width,
+               'dlogLike' : np.zeros(len(width)),
+               'logLike' : np.zeros(len(width)),
+               'ext' : 0.0,
+               'ext_err_hi' : 0.0,
+               'ext_err_lo' : 0.0,
+               'ext_ul95' : 0.0,
+               'ts_ext' : 0.0,
                'fit' : []}
         
         for i, w in enumerate(width):
@@ -927,27 +977,31 @@ class GTAnalysis(AnalysisBase):
             # make a copy
             s = copy.deepcopy(self.roi.get_source_by_name(name))
             s.set_name(model_name)
-            s.set_spatial_model('GaussianSource',w,
-#            s.set_spatial_model('PSFSource',w,
-                                self.config['fileio']['workdir'])
-
+            s.set_spatial_model(self.config['extension']['spatial_model'],w)
+            
             self.logger.info('Adding test source with width: %f'%w)
             for k,v in s.spectral_pars.items():
                 s._spectral_pars[k]['value'] = str(self.like[name].src.spectrum().getParamValue(k))
                 
             self.add_source(model_name,s,free=True)
             self.free_norm(model_name)
-
+            self.like.syncSrcParams(model_name)
             self.fit(update=False)
-            logLike = self.like()
+            
+            logLike1 = self.like()
 
-            ext['dlogLike'][i] = logLike-logLike0
+            ext['dlogLike'][i] = logLike0-logLike1
+            ext['logLike'][i] = logLike1
             sd = self.get_src_model(model_name)
             ext['fit'].append(sd)
             
             self.generate_model_map(model_name='%s%02i'%(model_name,i),
                                     name=model_name)
-            self.delete_source(model_name)
+            self.delete_source(model_name,
+                               save_template=self.config['extension']['save_templates'])
+
+        ext['ext'], ext['ext_ul95'], ext['ext_err_lo'], ext['ext_err_hi'], ext['ts_ext'] = \
+            get_upper_limit(ext['dlogLike'],ext['width'])
             
         self.scale_parameter(name,normPar,1E10)
             
@@ -1101,7 +1155,7 @@ class GTAnalysis(AnalysisBase):
 
                 lnlp = self.profile_norm(name,emin=emin,emax=emax,savestate=False)                
                 o['lnlprofile'] += [lnlp]
-                dfde_ul95, dfde_err_lo, dfde_err_hi = get_upper_limit(lnlp['dlogLike'],lnlp['dfde'])
+                dfde, dfde_ul95, dfde_err_lo, dfde_err_hi, dlnl0 = get_upper_limit(lnlp['dlogLike'],lnlp['dfde'])
                                 
                 o['dfde_ul95'][i] = dfde_ul95
                 o['e2dfde_ul95'][i] = dfde_ul95*10**(2*ecenter)
@@ -1199,7 +1253,9 @@ class GTAnalysis(AnalysisBase):
              'dfde'     : np.zeros(len(xvals)),
              'flux'     : np.zeros(len(xvals)),
              'eflux'    : np.zeros(len(xvals)),
-             'dlogLike' : np.zeros(len(xvals)) }
+             'dlogLike' : np.zeros(len(xvals)),
+             'logLike' : np.zeros(len(xvals))
+             }
 
         for i, x in enumerate(xvals):
             
@@ -1219,6 +1275,7 @@ class GTAnalysis(AnalysisBase):
             prefactor=self.like[idx]
             
             o['dlogLike'][i] = logLike0 - logLike1
+            o['logLike'][i] = logLike1
             o['dfde'][i] = prefactor.getTrueValue()
             o['flux'][i] = flux
             o['eflux'][i] = eflux
@@ -1432,20 +1489,23 @@ class GTAnalysis(AnalysisBase):
         mcube_maps = self.write_xml(prefix,save_model_map=save_model_map)
         
         if make_residuals:
+            self.residmap(prefix)
+        else:
+            self._roi_model['roi']['residmap'] = {}
 
-            print 'Running residuals'
-            
-            self.residmap(prefix)        
-            for k, v in self._roi_model['roi']['residmap'].items():
+        o = self.get_roi_model(update_sources=update_sources)
+        o['config'] = copy.deepcopy(self.config)
 
-                imfile = os.path.join(self.config['fileio']['outdir'],
-                                       '%s_residmap_%s.png'%(prefix,k))
-                plt.figure()
-                p = ROIPlotter(self._rmg._maps[k]['sigma'],
-                               self._rmg._maps[k]['wcs'],self.roi)
-                p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
-                       cb_label='Significance [$\sigma$]')
-                plt.savefig(imfile)
+        for k, v in self._roi_model['roi']['residmap'].items():
+
+            imfile = os.path.join(self.config['fileio']['outdir'],
+                                   '%s_residmap_%s.png'%(prefix,k))
+            plt.figure()
+            p = ROIPlotter(self._rmg._maps[k]['sigma'],
+                           self._rmg._maps[k]['wcs'],self.roi)
+            p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
+                   cb_label='Significance [$\sigma$]')
+            plt.savefig(imfile)
 
         if len(mcube_maps):
 
@@ -1457,6 +1517,37 @@ class GTAnalysis(AnalysisBase):
             p.plot(cb_label='Counts',zscale='sqrt')
             plt.savefig(imfile)
 
+        for i, c in enumerate(self.components):
+            
+            imfile = os.path.join(self.config['fileio']['outdir'],
+                                  '%s_model_map_%02i.png'%(prefix,i))
+
+            plt.figure()        
+            p = ROIPlotter(mcube_maps[i+1][0],mcube_maps[i+1][1],self.roi)
+            p.plot(cb_label='Counts',zscale='sqrt')
+            plt.savefig(imfile)
+
+            p = ROIPlotter.create_from_fits(c._ccube_file,self.roi)
+            
+            imfile = os.path.join(self.config['fileio']['outdir'],
+                                  '%s_counts_map_%02i_xproj.png'%(prefix,i))
+
+            plt.figure()
+            p.plot_projection(0,models=[mcube_maps[i+1][0]])
+            plt.gca().set_ylabel('Counts')
+            plt.gca().set_xlabel('LAT Offset')
+            plt.savefig(imfile)
+
+            imfile = os.path.join(self.config['fileio']['outdir'],
+                                  '%s_counts_map_%02i_yproj.png'%(prefix,i))
+            
+            plt.figure()
+            p.plot_projection(1,models=[mcube_maps[i+1][0]])
+            plt.gca().set_ylabel('Counts')
+            plt.gca().set_xlabel('LON Offset')
+            plt.savefig(imfile)
+
+            
         imfile = os.path.join(self.config['fileio']['outdir'],
                               '%s_counts_map.png'%(prefix))
 
@@ -1464,8 +1555,25 @@ class GTAnalysis(AnalysisBase):
         p = ROIPlotter.create_from_fits(self._ccube_file,self.roi)
         p.plot(cb_label='Counts',zscale='sqrt')
         plt.savefig(imfile)
-            
-        o = self.get_roi_model(update_sources=update_sources)
+
+        imfile = os.path.join(self.config['fileio']['outdir'],
+                              '%s_counts_map_xproj.png'%(prefix))
+        
+        plt.figure()
+        p.plot_projection(0,models=[mcube_maps[0][0]])
+        plt.gca().set_ylabel('Counts')
+        plt.gca().set_xlabel('LAT Offset')
+        plt.savefig(imfile)
+        
+        imfile = os.path.join(self.config['fileio']['outdir'],
+                              '%s_counts_map_yproj.png'%(prefix))
+         
+        plt.figure()
+        p.plot_projection(1,models=[mcube_maps[0][0]])
+        plt.gca().set_ylabel('Counts')
+        plt.gca().set_xlabel('LON Offset')
+        plt.savefig(imfile)
+        
         imfile = os.path.join(self.config['fileio']['outdir'],
                               '%s_counts_spectrum.png'%(prefix))
 
@@ -1633,8 +1741,8 @@ class GTAnalysis(AnalysisBase):
 #            self.logger.error('Failed to update source parameters.', exc_info=True)
 
         lnlp = self.profile_norm(name,savestate=True)
-        flux_ul95, flux_err_lo, flux_err_hi = get_upper_limit(lnlp['dlogLike'],
-                                                              lnlp['flux'])
+        flux, flux_ul95, flux_err_lo, flux_err_hi, dlnl0 = get_upper_limit(lnlp['dlogLike'],
+                                                                           lnlp['flux'])
 
         src_dict['flux_ul95'] = flux_ul95
         src_dict['flux100_ul95'] = src_dict['flux100'][0]*(flux_ul95/src_dict['flux'][0])
@@ -1805,6 +1913,8 @@ class GTBinnedAnalysis(AnalysisBase):
             src = src_dict
             self.roi.load_source(src)
 
+        self.make_template(src,self.config['file_suffix'])
+            
         if src['SpatialType'] == 'PointSource':        
             #pylike_src = pyLike.PointSource(0, 0,
 #            pylike_src = pyLike.PointSource(src.skydir.ra.deg,src.skydir.dec.deg,
@@ -1839,13 +1949,17 @@ class GTBinnedAnalysis(AnalysisBase):
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(name)
 
-    def delete_source(self,name):
+    def delete_source(self,name,save_template=True):
 
         self.logger.info('Deleting source ' + name)
         
         self.like.deleteSource(name)
         self.like.logLike.eraseSourceMap(name)
-        src = self.roi.get_source_by_name(name)        
+        src = self.roi.get_source_by_name(name)
+
+        if not save_template and os.path.isfile(src['Spatial_Filename']):
+            os.remove(src['Spatial_Filename'])
+        
         self.roi.delete_sources([src])
         
     def delete_sources(self,srcs):
@@ -1951,7 +2065,17 @@ class GTBinnedAnalysis(AnalysisBase):
             run_gtapp('gtltcube',self.logger,kw)
         else:
             self.logger.info('Skipping gtltcube')
+
+
             
+        self._ltc = LTCube.create(self._ltcube)
+
+        self.logger.info('Creating PSF model')
+        self._psf = PSFModel(self.roi.skydir,self._ltc,
+                             self.config['gtlike']['irfs'],
+                             self.config['selection']['evtype'],
+                             np.linspace(1.0,6.0,81))
+        
         # Run gtbin
         kw = dict(algorithm='ccube',
                   nxpix=self.npix, nypix=self.npix,
@@ -2059,6 +2183,7 @@ class GTBinnedAnalysis(AnalysisBase):
                                     srcModel=self._srcmdl_file,
                                     optimizer='MINUIT',
                                     convolve=self.config['gtlike']['convolve'],
+                                    resample=self.config['gtlike']['resample'],
                                     minbinsz=self.config['gtlike']['minbinsz'],
                                     resamp_fact=self.config['gtlike']['rfactor'])
 
@@ -2119,7 +2244,42 @@ class GTBinnedAnalysis(AnalysisBase):
         write_fits_image(counts,self.wcs,outfile)
 
         return counts
-        
+
+    def make_template(self,src,suffix):
+
+        if src['SpatialModel'] == 'PointSource' or src['SpatialModel'] == 'Gaussian':
+            pass
+        elif src['SpatialModel'] == 'PSFSource':            
+            template_file = os.path.join(self.config['fileio']['workdir'],
+                                         '%s_template_psf%s.fits'%(src.name,suffix))
+            make_psf_mapcube(src.skydir,self._psf,template_file,npix=self.npix,
+                             cdelt=self.config['binning']['binsz'],rebin=4)
+            src['Spatial_Filename'] = template_file
+        elif src['SpatialModel'] == 'CGaussianSource':            
+            template_file = os.path.join(self.config['fileio']['workdir'],
+                                         '%s_template_cgauss_%05.3f%s.fits'%(src.name,src['SpatialWidth'],
+                                                                             suffix))  
+            make_cgauss_mapcube(src.skydir,self._psf,src['SpatialWidth'],template_file,
+                                npix=self.npix,
+                                cdelt=self.config['binning']['binsz'],rebin=4)
+            src['Spatial_Filename'] = template_file
+
+        elif src['SpatialModel'] == 'GaussianSource':
+            template_file = os.path.join(self.config['fileio']['workdir'],
+                                         '%s_template_gauss_%05.3f%s.fits'%(src.name,src['SpatialWidth'],
+                                                                            suffix))
+            make_gaussian_spatial_map(src.skydir,src['SpatialWidth'],template_file,npix=500)
+            src['Spatial_Filename'] = template_file
+        elif src['SpatialModel'] == 'DiskSource':
+            template_file = os.path.join(self.config['fileio']['workdir'],
+                                         '%s_template_disk_%05.3f%s.fits'%(src.name,src['SpatialWidth'],
+                                                                           suffix))
+            make_disk_spatial_map(src.skydir,src['SpatialWidth'],template_file,npix=500)
+            src['Spatial_Filename'] = template_file
+        else:
+            raise Exception('Unrecognized SpatialModel: ' + src['SpatialModel'] +
+                            '\n Valid models: PointSource, GaussianSource, DiskSource, PSFSource ')
+    
     def generate_model(self,model_name=None,outfile=None):
         """Generate a counts model map from an XML model file using
         gtmodel.

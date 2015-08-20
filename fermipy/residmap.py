@@ -100,6 +100,7 @@ class ResidMapGenerator(AnalysisBase):
         zs = 0
         for c in self._gta.components:
             z = c.modelCountsMap(name).astype('float')
+            
             if kernel is not None:
                 shape = (z.shape[0],) + kernel.shape 
                 z = np.apply_over_axes(np.sum,z,axes=[1,2])*np.ones(shape)*kernel[np.newaxis,:,:]
@@ -108,6 +109,7 @@ class ResidMapGenerator(AnalysisBase):
                 zs += np.sum(z)
 
             sm.append(z)
+
             
         sm2 = 0
         for i, m in enumerate(sm):
@@ -143,14 +145,21 @@ class ResidMapGenerator(AnalysisBase):
         kernel = None
         
         if src_dict['SpatialModel'] == 'Gaussian':
-            src_dict['SpatialType'] = 'PointSource'
             kernel = make_gaussian_kernel(src_dict['SpatialWidth'],
-                                          cdelt=0.1,npix=101)
+                                          cdelt=self._gta.components[0].binsz,
+                                          npix=101)
             kernel /= np.sum(kernel)
             cpix = [50,50]
+
+
+#            plt.figure()
+#            plt.imshow(kernel,interpolation='nearest')
+#            plt.show()
+            
             
         self._gta.add_source('testsource',src_dict,free=True)        
         src = self._gta.roi.get_source_by_name('testsource')
+        
         modelname = create_model_name(src)
         
         enumbins = self._gta.enumbins

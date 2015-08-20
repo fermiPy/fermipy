@@ -434,7 +434,7 @@ class Source(Model):
 
         
         
-    def set_spatial_model(self,spatial_model,spatial_width,workdir):
+    def set_spatial_model(self,spatial_model,spatial_width):
 
         self._data['SpatialModel'] = spatial_model
         self._data['SpatialWidth'] = spatial_width
@@ -442,28 +442,15 @@ class Source(Model):
         if self['SpatialModel'] == 'PointSource' or self['SpatialModel'] == 'Gaussian':
             self._extended = False
             self._data['SpatialType'] = 'PointSource'
-        elif self['SpatialModel'] == 'PSFSource':
+        elif self['SpatialModel'] == 'PSFSource' or self['SpatialModel'] == 'CGaussianSource':
             self._extended = True
             self._data['SpatialType'] = 'MapCubeFunction'
-            template_file = os.path.join(workdir,
-                                         '%s_template_psf.fits'%(self.name))
-            make_psf_mapcube(self.skydir,'P8R2_SOURCE_V6',['PSF2'],np.linspace(2.5,5.5,25),template_file)
-            self['Spatial_Filename'] = template_file
-
         elif self['SpatialModel'] == 'GaussianSource':
             self._extended = True
             self._data['SpatialType'] = 'SpatialMap'
-            template_file = os.path.join(workdir,
-                                         '%s_template_gauss_%05.3f.fits'%(self.name,self['SpatialWidth']))
-            make_gaussian_spatial_map(self.skydir,self['SpatialWidth'],template_file,npix=500)
-            self['Spatial_Filename'] = template_file
         elif self['SpatialModel'] == 'DiskSource':
             self._extended = True
             self._data['SpatialType'] = 'SpatialMap'
-            template_file = os.path.join(workdir,
-                                         '%s_template_disk_%05.3f.fits'%(self.name,self['SpatialWidth']))
-            make_disk_spatial_map(self.skydir,self['SpatialWidth'],template_file,npix=500)
-            self['Spatial_Filename'] = template_file
         else:
             raise Exception('Unrecognized SpatialModel: ' + self['SpatialModel'] +
                             '\n Valid choices are: PointSource, GaussianSource, DiskSource ')
@@ -537,9 +524,6 @@ class Source(Model):
                                 glon = None,
                                 glat = None,
                                 spectral_pars = None)
-
-        if 'SpatialType' in src_dict:
-            src_dict['SpatialModel'] = src_dict.pop('SpatialType')
 
         validate_config(src_dict,default_src_dict)
         src_dict = merge_dict(default_src_dict,src_dict)
@@ -772,8 +756,7 @@ class ROIModel(AnalysisBase):
         
 
         src = Source.create_from_dict(src_dict)
-        src.set_spatial_model(src['SpatialModel'],src['SpatialWidth'],
-                              self.config['fileio']['workdir'])
+        src.set_spatial_model(src['SpatialModel'],src['SpatialWidth'])
         
         self.logger.info('Creating source ' + src.name)
         self.logger.info(src._data)
@@ -916,6 +899,19 @@ class ROIModel(AnalysisBase):
                                             dist,min_dist,
                                             square)
 
+    def get_sources(self,cuts=None,distance=None,square=False):
+        """Retrieve list of sources satisfying the given selections."""
+        rsrc, srcs = self.get_sources_by_position(self.skydir,
+                                                  distance,
+                                                  square=square)
+        o = []
+        if cuts is None: cuts = []        
+        for s,r in zip(srcs,rsrc):
+            if not s.check_cuts(cuts): continue            
+            o.append(s)
+
+        return o
+    
     def get_sources_by_property(self,pname,pmin,pmax=None):
 
         srcs = []
