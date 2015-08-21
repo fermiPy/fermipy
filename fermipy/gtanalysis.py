@@ -70,7 +70,7 @@ shape_parameters = {
     'PowerLaw' : ['Index'],
     'PowerLaw2' : ['Index'],
     'BrokenPowerLaw' : ['Index1','Index2'],    
-    'LogParabola' : ['alpha','beta','Eb'],    
+    'LogParabola' : ['alpha','beta'],    
     'PLSuperExpCutoff' : ['Index1','Index2','Cutoff'],
     'ExpCutoff' : ['Index1','Cutoff'],
     'FileFunction' : [],
@@ -95,7 +95,11 @@ def get_upper_limit(dlogLike,yval,interpolate=False):
     if interpolate:    
         s = UnivariateSpline(yval,dlogLike,k=2,s=0)
         sd = s.derivative()
-        y0 = brentq(sd,yval[0],yval[-1])
+        if np.sign(sd(yval[0])) == -1:
+            y0 = yval[0]
+        else:
+            y0 = brentq(sd,yval[0],yval[-1])
+            
         lnlmax = s(y0)
         yval = np.linspace(yval[0],yval[-1],100)
         dlnl = s(yval)-lnlmax
@@ -1001,7 +1005,7 @@ class GTAnalysis(AnalysisBase):
                                save_template=self.config['extension']['save_templates'])
 
         ext['ext'], ext['ext_ul95'], ext['ext_err_lo'], ext['ext_err_hi'], ext['ts_ext'] = \
-            get_upper_limit(ext['dlogLike'],ext['width'])
+            get_upper_limit(ext['dlogLike'],ext['width'],interpolate=True)
             
         self.scale_parameter(name,normPar,1E10)
             
@@ -1498,81 +1502,94 @@ class GTAnalysis(AnalysisBase):
 
         for k, v in self._roi_model['roi']['residmap'].items():
 
-            imfile = os.path.join(self.config['fileio']['outdir'],
-                                   '%s_residmap_%s.png'%(prefix,k))
-            plt.figure()
+            fig = plt.figure()
             p = ROIPlotter(self._rmg._maps[k]['sigma'],
                            self._rmg._maps[k]['wcs'],self.roi)
             p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
                    cb_label='Significance [$\sigma$]')
-            plt.savefig(imfile)
+            plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                     '%s_residmap_%s.png'%(prefix,k)))
+            plt.close(fig)
 
         if len(mcube_maps):
 
-            imfile = os.path.join(self.config['fileio']['outdir'],
-                                  '%s_model_map.png'%(prefix))
-
-            plt.figure()        
+            fig = plt.figure()        
             p = ROIPlotter(mcube_maps[0][0],mcube_maps[0][1],self.roi)
-            p.plot(cb_label='Counts',zscale='sqrt')
-            plt.savefig(imfile)
+            p.plot(cb_label='Counts',zscale='pow',gamma=1./3.)
+            plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                  '%s_model_map.png'%(prefix)))
+            plt.close(fig)
+
+
+        figx = plt.figure('xproj')
+        figy = plt.figure('yproj')
+
+        colors = ['k','b','g','r']
+        data_style = {'marker' : 's', 'linestyle' : 'None'}
 
         for i, c in enumerate(self.components):
-            
-            imfile = os.path.join(self.config['fileio']['outdir'],
-                                  '%s_model_map_%02i.png'%(prefix,i))
 
-            plt.figure()        
+            fig = plt.figure()        
             p = ROIPlotter(mcube_maps[i+1][0],mcube_maps[i+1][1],self.roi)
-            p.plot(cb_label='Counts',zscale='sqrt')
-            plt.savefig(imfile)
+            p.plot(cb_label='Counts',zscale='pow',gamma=1./3.)
+            plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                     '%s_model_map_%02i.png'%(prefix,i)))
+            plt.close(fig)
 
+            
+            
+            plt.figure(figx.number)
             p = ROIPlotter.create_from_fits(c._ccube_file,self.roi)
-            
-            imfile = os.path.join(self.config['fileio']['outdir'],
-                                  '%s_counts_map_%02i_xproj.png'%(prefix,i))
-
-            plt.figure()
-            p.plot_projection(0,models=[mcube_maps[i+1][0]])
+            p.plot_projection(0,color=colors[i%4],label='Component %i'%i,**data_style)
+            p.plot_projection(0,data=mcube_maps[i+1][0].T,color=colors[i%4],noerror=True)
             plt.gca().set_ylabel('Counts')
-            plt.gca().set_xlabel('LAT Offset')
-            plt.savefig(imfile)
-
-            imfile = os.path.join(self.config['fileio']['outdir'],
-                                  '%s_counts_map_%02i_yproj.png'%(prefix,i))
+            plt.gca().set_xlabel('LON Offset [deg]')
+            plt.gca().legend(frameon=False)
             
-            plt.figure()
-            p.plot_projection(1,models=[mcube_maps[i+1][0]])
+            plt.figure(figy.number)
+            p.plot_projection(1,color=colors[i%4],label='Component %i'%i,**data_style)
+            p.plot_projection(1,data=mcube_maps[i+1][0].T,color=colors[i%4],noerror=True)
             plt.gca().set_ylabel('Counts')
-            plt.gca().set_xlabel('LON Offset')
-            plt.savefig(imfile)
-
+            plt.gca().set_xlabel('LAT Offset [deg]')
+            plt.gca().legend(frameon=False)
             
-        imfile = os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_map.png'%(prefix))
 
-        plt.figure()        
+        figx.savefig(os.path.join(self.config['fileio']['outdir'],
+                                  '%s_counts_map_comp_xproj.png'%(prefix)))
+        figy.savefig(os.path.join(self.config['fileio']['outdir'],
+                                  '%s_counts_map_comp_yproj.png'%(prefix)))
+        plt.close(figx)
+        plt.close(figy)
+            
+        fig = plt.figure()        
         p = ROIPlotter.create_from_fits(self._ccube_file,self.roi)
         p.plot(cb_label='Counts',zscale='sqrt')
-        plt.savefig(imfile)
+        plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                              '%s_counts_map.png'%(prefix)))
+        plt.close(fig)
 
-        imfile = os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_map_xproj.png'%(prefix))
-        
-        plt.figure()
-        p.plot_projection(0,models=[mcube_maps[0][0]])
+        fig = plt.figure()
+        p.plot_projection(0,label='Data',color='k',**data_style)
+        p.plot_projection(0,data=mcube_maps[0][0].T,label='Model',noerror=True)
         plt.gca().set_ylabel('Counts')
-        plt.gca().set_xlabel('LAT Offset')
-        plt.savefig(imfile)
+        plt.gca().set_xlabel('LON Offset [deg]')
+        plt.gca().legend(frameon=False)
+#        plt.gca().set_yscale('log')
+        plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                              '%s_counts_map_xproj.png'%(prefix)))
+        plt.close(fig)
         
-        imfile = os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_map_yproj.png'%(prefix))
-         
-        plt.figure()
-        p.plot_projection(1,models=[mcube_maps[0][0]])
+        fig = plt.figure()
+        p.plot_projection(1,label='Data',color='k',**data_style)
+        p.plot_projection(1,data=mcube_maps[0][0].T,label='Model',noerror=True)
         plt.gca().set_ylabel('Counts')
-        plt.gca().set_xlabel('LON Offset')
-        plt.savefig(imfile)
+        plt.gca().set_xlabel('LAT Offset [deg]')
+        plt.gca().legend(frameon=False)
+#        plt.gca().set_yscale('log')
+        plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                              '%s_counts_map_yproj.png'%(prefix)))
+        
+        plt.close(fig)
         
         imfile = os.path.join(self.config['fileio']['outdir'],
                               '%s_counts_spectrum.png'%(prefix))

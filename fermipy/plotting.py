@@ -35,22 +35,26 @@ def make_counts_spectrum_plot(o,energies,imfile):
     ym = o['roi']['model_counts']
     
 
-    ax0.errorbar(x,y,yerr=np.sqrt(y),xerr=xerr,color='k',linestyle='None',marker='s',
-                       label='Data')
+    ax0.errorbar(x,y,yerr=np.sqrt(y),xerr=xerr,color='k',
+                 linestyle='None',marker='s',
+                 label='Data')
 
     ax0.errorbar(x,ym,color='k',linestyle='-',marker='None',
                        label='Total')
 
     src_dict = o['sources']
     
-    for v in sorted(src_dict.values(),key=lambda t: t['Npred'],reverse=True)[:6]:
+    for v in sorted(src_dict.values(),
+                    key=lambda t: t['Npred'],reverse=True)[:6]:
         ax0.errorbar(x,v['model_counts'],linestyle='-',marker='None',
                      label=v['name'])
 
 
-    for v in sorted(src_dict.values(),key=lambda t: t['Npred'],reverse=True)[6:]:
-        ax0.errorbar(x,v['model_counts'],color='gray',linestyle='-',marker='None',
-                         label='__nolabel__')
+    for v in sorted(src_dict.values(),
+                    key=lambda t: t['Npred'],reverse=True)[6:]:
+        ax0.errorbar(x,v['model_counts'],color='gray',
+                     linestyle='-',marker='None',
+                     label='__nolabel__')
 
     ax0.set_yscale('log')
     ax0.set_ylim(1,None)
@@ -69,6 +73,7 @@ def make_counts_spectrum_plot(o,energies,imfile):
     ax1.axhline(0.0,color='k')
     
     plt.savefig(imfile)
+    plt.close(fig)
 
 
 def load_ds9_cmap():
@@ -282,7 +287,7 @@ class ROIPlotter(AnalysisBase):
         AnalysisBase.__init__(self,None,**kwargs)
         self._implot = ImagePlotter(data,wcs)            
         self._roi = roi
-        self._data = data
+        self._data = data.T
         self._wcs = wcs
 
     @staticmethod
@@ -305,38 +310,36 @@ class ROIPlotter(AnalysisBase):
 
     def plot_projection(self,iaxis,**kwargs):
 
-        models = kwargs.get('models',[])
+        data = kwargs.pop('data',self._data)
+        noerror = kwargs.pop('noerror',False)
         
-        axes = wcs_to_axes(self._wcs,self._data.shape)[::-1]
-
-        x = edge_to_center(axes[iaxis+1])
-        w = edge_to_width(axes[iaxis+1])
-
-        c = self.get_data_slice(self._data,axes,iaxis)
-        plt.errorbar(x,c,yerr=c**0.5,xerr=w/2.,linestyle='None',
-                     marker='s',label='Data')
-
-        for m in models:
-            c = self.get_data_slice(m,axes,iaxis)
-            plt.plot(x,c)
-
+        axes = wcs_to_axes(self._wcs,self._data.shape[::-1])
+        x = edge_to_center(axes[iaxis])
+        w = edge_to_width(axes[iaxis])
+        
+        c = self.get_data_projection(data,axes,iaxis)
+        
+        if noerror:
+            plt.errorbar(x,c,**kwargs)
+        else:
+            plt.errorbar(x,c,yerr=c**0.5,xerr=w/2.,**kwargs)
 
     @staticmethod
-    def get_data_slice(data,axes,iaxis,xmin=-1,xmax=1):
+    def get_data_projection(data,axes,iaxis,xmin=-1,xmax=1):
 
         s0 = slice(None,None)
         s1 = slice(None,None)
         s2 = slice(None,None)
         
         if iaxis == 0:
-            i0 = valToEdge(axes[iaxis+1],xmin)
-            i1 = valToEdge(axes[iaxis+1],xmax)
+            i0 = valToEdge(axes[iaxis],xmin)
+            i1 = valToEdge(axes[iaxis],xmax)
             s1 = slice(i0,i1)
-            saxes = [0,1]
+            saxes = [1,2]
         else:
-            i0 = valToEdge(axes[iaxis+1],xmin)
-            i1 = valToEdge(axes[iaxis+1],xmax)
-            s2 = slice(i0,i1)
+            i0 = valToEdge(axes[iaxis],xmin)
+            i1 = valToEdge(axes[iaxis],xmax)
+            s0 = slice(i0,i1)
             saxes = [0,2]
             
         c = np.apply_over_axes(np.sum,data[s0,s1,s2],axes=saxes)
