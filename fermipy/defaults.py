@@ -148,3 +148,8 @@ run = {
     'sed' : (None,'',list),
     'extension' : (None,'',list)
     }
+
+# Options for plotting
+plotting = {
+    'erange' : (None,'',list)
+    }

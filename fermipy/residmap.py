@@ -150,12 +150,6 @@ class ResidMapGenerator(AnalysisBase):
                                           npix=101)
             kernel /= np.sum(kernel)
             cpix = [50,50]
-
-
-#            plt.figure()
-#            plt.imshow(kernel,interpolation='nearest')
-#            plt.show()
-            
             
         self._gta.add_source('testsource',src_dict,free=True)        
         src = self._gta.roi.get_source_by_name('testsource')
@@ -167,27 +161,36 @@ class ResidMapGenerator(AnalysisBase):
 
         mmst = np.zeros((npix,npix))
         cmst = np.zeros((npix,npix))
+        emst = np.zeros((npix,npix))
         
         sm = self.get_source_mask('testsource',kernel)
         ts = np.zeros((npix,npix))
         sigma = np.zeros((npix,npix))
         excess = np.zeros((npix,npix))
 
+        self._gta.delete_source('testsource')
+        
         for i, c in enumerate(self._gta.components):
             
             mc = c.modelCountsMap().astype('float')
             cc = c.countsMap().astype('float')
+            ec = np.ones(mc.shape)
             
             ccs = smooth(cc,sm[i],cpix)
             mcs = smooth(mc,sm[i],cpix)
+            ecs = smooth(ec,sm[i],cpix)
+            
             cms = np.sum(ccs,axis=0)
             mms = np.sum(mcs,axis=0)
+            ems = np.sum(ecs,axis=0)
             
             cmst += cms
             mmst += mms
+            emst += ems
             
             cts = 2.0*(poisson_lnl(cms,cms) - poisson_lnl(cms,mms))
             excess += cms - mms
+
             
         ts = 2.0*(poisson_lnl(cmst,cmst) - poisson_lnl(cmst,mmst))
         sigma = np.sqrt(ts)
@@ -204,13 +207,15 @@ class ResidMapGenerator(AnalysisBase):
 
         excess_map_file = os.path.join(self.config['fileio']['workdir'],
                                        '%s_residmap_%s_excess.fits'%(prefix,modelname))
+
+        
+
+        emst /= np.max(emst)
         
         write_fits_image(sigma,w,sigma_map_file)
-        write_fits_image(cmst,w,data_map_file)
-        write_fits_image(mmst,w,model_map_file)
-        write_fits_image(excess,w,excess_map_file)
-                       
-        self._gta.delete_source('testsource')
+        write_fits_image(cmst/emst,w,data_map_file)
+        write_fits_image(mmst/emst,w,model_map_file)
+        write_fits_image(excess/emst,w,excess_map_file)
 
         self._maps[modelname] = {
             'wcs'    : w,

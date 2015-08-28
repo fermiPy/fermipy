@@ -1,4 +1,6 @@
 import copy
+import glob
+import os
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -57,7 +59,7 @@ def make_counts_spectrum_plot(o,energies,imfile):
                      label='__nolabel__')
 
     ax0.set_yscale('log')
-    ax0.set_ylim(1,None)
+    ax0.set_ylim(0.5,None)
     ax0.set_xlim(energies[0],energies[-1])
     ax0.legend(frameon=False,loc='best',prop={'size' : 8},ncol=2)
 
@@ -178,7 +180,7 @@ class ImagePlotter(object):
     def __init__(self,data,wcs):
 
         if data.ndim == 3:
-            data = np.sum(copy.deepcopy(data),axis=0)
+            data = np.sum(copy.deepcopy(data),axis=2)
             wcs = pywcs.WCS(wcs.to_header(),naxis=[1,2])
         else:
             data = copy.deepcopy(data)
@@ -221,11 +223,11 @@ class ImagePlotter(object):
         kwargs_imshow = merge_dict(kwargs_imshow,kwargs)
         kwargs_contour = merge_dict(kwargs_contour,kwargs)
         
-        im = ax.imshow(data,**kwargs_imshow)
+        im = ax.imshow(data.T,**kwargs_imshow)
         im.set_cmap(colormap)
 
         if kwargs_contour['levels']:        
-            cs = ax.contour(data,**kwargs_contour)
+            cs = ax.contour(data.T,**kwargs_contour)
         #        plt.clabel(cs, fontsize=5, inline=0)
         
 #        im.set_clim(vmin=np.min(self._counts[~self._roi_msk]),
@@ -280,31 +282,40 @@ class ROIPlotter(AnalysisBase):
 
     defaults = {
         'marker_threshold' : (10,''),
-        'source_color'     : ('w','')
+        'source_color'     : ('w',''),
+        'erange'           : (None,'')
         }
     
     def __init__(self,data,wcs,roi,**kwargs):
         AnalysisBase.__init__(self,None,**kwargs)
-        self._implot = ImagePlotter(data,wcs)            
+        
         self._roi = roi
         self._data = data.T
         self._wcs = wcs
+        self._erange = self.config['erange']
 
+        if self._erange:
+            axes = wcs_to_axes(self._wcs,self._data.shape[::-1])
+            i0 = valToEdge(axes[2],self._erange[0])
+            i1 = valToEdge(axes[2],self._erange[1])
+            imdata = self._data[:,:,i0:i1]
+        else:
+            imdata = self._data
+            
+        self._implot = ImagePlotter(imdata,wcs)
+            
+    @property
+    def data(self):
+        return self._data
+        
     @staticmethod
     def create_from_fits(fitsfile,roi,**kwargs):
 
         hdulist = pyfits.open(fitsfile)        
         header = hdulist[0].header
         header = pyfits.Header.fromstring(header.tostring())
-        
-#        if header['NAXIS'] == 3:
-#            wcs = pywcs.WCS(header,naxis=[1,2])
-#            data = copy.deepcopy(np.sum(hdulist[0].data,axis=0))
-#        else:
         wcs = pywcs.WCS(header)
         data = copy.deepcopy(hdulist[0].data)
-
-        
         
         return ROIPlotter(data,wcs,roi,**kwargs)
 
@@ -317,7 +328,7 @@ class ROIPlotter(AnalysisBase):
         x = edge_to_center(axes[iaxis])
         w = edge_to_width(axes[iaxis])
         
-        c = self.get_data_projection(data,axes,iaxis)
+        c = self.get_data_projection(data,axes,iaxis,erange=self._erange)
         
         if noerror:
             plt.errorbar(x,c,**kwargs)
@@ -325,7 +336,7 @@ class ROIPlotter(AnalysisBase):
             plt.errorbar(x,c,yerr=c**0.5,xerr=w/2.,**kwargs)
 
     @staticmethod
-    def get_data_projection(data,axes,iaxis,xmin=-1,xmax=1):
+    def get_data_projection(data,axes,iaxis,xmin=-1,xmax=1,erange=None):
 
         s0 = slice(None,None)
         s1 = slice(None,None)
@@ -341,13 +352,36 @@ class ROIPlotter(AnalysisBase):
             i1 = valToEdge(axes[iaxis],xmax)
             s0 = slice(i0,i1)
             saxes = [0,2]
+
+        if erange is not None:
+            j0 = valToEdge(axes[2],erange[0])
+            j1 = valToEdge(axes[2],erange[1])
+            s2 = slice(j0,j1)
             
         c = np.apply_over_axes(np.sum,data[s0,s1,s2],axes=saxes)
         c = np.squeeze(c)
 
         return c
+
+
+    @staticmethod
+    def setup_projection_axis(iaxis,erange=None):
         
+        if erange:
+            plt.gca().annotate('E = %.3f - %.3f GeV'%(10**erange[0]/1E3,
+                                                      10**erange[1]/1E3),
+                               xy=(0.05,0.93),
+                               xycoords='axes fraction', fontsize=12,
+                               xytext=(-5, 5), textcoords='offset points',
+                               ha='left', va='center')
         
+        plt.gca().legend(frameon=False,prop={'size' : 10})
+        plt.gca().set_ylabel('Counts')
+        if iaxis ==0:
+            plt.gca().set_xlabel('LON Offset [deg]')
+        else:
+            plt.gca().set_xlabel('LAT Offset [deg]')
+            
     def plot(self,**kwargs):
         
         marker_threshold = 10
@@ -395,3 +429,125 @@ class ROIPlotter(AnalysisBase):
         cb = plt.colorbar(im,**cb_kwargs)
         if cb_label: cb.set_label(cb_label)
         
+class SEDPlotter(object):
+
+    def __init__(self,src):
+
+        self._src = copy.deepcopy(src)
+        self._sed = self._src['sed']
+        
+    def plot(self):
+
+        sed = self._sed
+        src = self._src
+        ax = plt.gca()
+        name = src['name']
+        
+        if src['assoc']:
+            name += ' (%s)'%src['assoc']
+        
+        ax.annotate(name,
+                    xy=(0.05,0.93),
+                    xycoords='axes fraction', fontsize=12,
+                    xytext=(-5, 5), textcoords='offset points',
+                    ha='left', va='center')
+        
+        m = sed['ts'] < 4
+
+        x = 10**np.array(sed['ecenter'])
+        y = np.array(sed['e2dfde'])
+        yerr = np.array(sed['e2dfde_err'])
+        yul = np.array(sed['e2dfde_ul95'])
+
+        y[m] = yul[m]
+        yerr[m] = 0
+
+        delo = 10**sed['ecenter']-10**sed['emin']
+        dehi = 10**sed['emax']-10**sed['ecenter']
+        xerr = np.vstack((delo,dehi))
+
+        #xerr = 10**(0.5*(np.array(sed['emax'])-np.array(sed['emin'])))
+
+        plt.errorbar(x,y,xerr=xerr,yerr=yerr,linestyle='None',marker='o',
+                     color='k')
+
+        
+        e2 = 10**(2*src['model_flux']['ecenter'])
+
+        ax.plot(10**src['model_flux']['ecenter'],
+                src['model_flux']['dfde']*e2,
+                color='k')
+
+        ax.fill_between(10**src['model_flux']['ecenter'],
+                        src['model_flux']['dfde_lo']*e2,
+                        src['model_flux']['dfde_hi']*e2,
+                        color='b',alpha=0.5)
+
+        for t,z in zip(x[m],y[m]):
+            plt.arrow( t,z,0.0,-z*0.2, fc="k", ec="k",
+                       head_width=t*0.1, head_length=z*0.05 )
+
+        #plt.arrow( x[m], y[m],
+        #           0.1*np.ones(np.sum(m)), -0.2*np.ones(np.sum(m)), fc="k", ec="k",
+        #           head_width=0.05, head_length=0.1 )
+
+        ax.set_yscale('log')
+        ax.set_xscale('log')
+        ax.set_xlabel('Energy [MeV]')
+        ax.set_ylabel('E$^{2}$dF/dE [MeV cm$^{-1}$ s$^{-1}$]')
+
+        ax.set_ylim(min(y)*0.5,max(y)*1.6)
+
+#        dirname = os.path.dirname(sys.argv[1])
+#        plt.savefig(os.path.join(dirname,name + '_sed.png'))
+
+
+class ExtensionPlotter(object):
+
+    def __init__(self,src,roi,suffix,workdir,erange=None):
+
+        self._src = copy.deepcopy(src)
+
+        name = src['name'].lower().replace(' ','_')
+
+        self._file0 = os.path.join(workdir,'mcube_%s_noext%s.fits'%(name,suffix))
+        self._file1 = os.path.join(workdir,'mcube_%s_ext_bkg%s.fits'%(name,suffix))
+        self._file2 = os.path.join(workdir,'ccube%s.fits'%suffix)
+        
+        self._files = []
+        self._width = src['extension']['width']
+        for i,w in enumerate(src['extension']['width']):        
+            self._files += [os.path.join(workdir,'mcube_%s_ext%02i%s.fits'%(name,i,suffix))]
+        self._roi = roi
+        self._erange = erange
+        
+    def plot(self,iaxis):
+
+#        p0 = ROIPlotter.create_from_fits(self._file0,self._roi)
+
+#        p0.plot_projection(0,color='k',noerror=True)
+
+
+        p0 = ROIPlotter.create_from_fits(self._file2,self._roi,erange=self._erange)
+        p1 = ROIPlotter.create_from_fits(self._file1,self._roi,erange=self._erange)
+        p0.plot_projection(iaxis,color='k',label='Data',marker='s',
+                           linestyle='None')
+        p1.plot_projection(iaxis,color='b',noerror=True,label='Background')
+
+        import matplotlib
+
+        n = len(self._width)
+        step = int(n/5.)
+        
+        fw = zip(self._files,self._width)[::step]
+        
+        for i, (f,w) in enumerate(fw):
+
+            cf = float(i)/float(len(fw)-1.0)
+            cf = 0.2+cf*0.8
+            
+            p = ROIPlotter.create_from_fits(f,self._roi,erange=self._erange)
+            p._data += p1.data            
+            p.plot_projection(iaxis,color=matplotlib.cm.Reds(cf),
+                              noerror=True,label='%.4f$^\circ$'%w)
+            

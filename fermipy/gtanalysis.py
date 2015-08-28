@@ -36,7 +36,7 @@ from fermipy.utils import make_psf_mapcube, make_cgauss_mapcube
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
-from fermipy.plotting import ROIPlotter, make_counts_spectrum_plot
+from fermipy.plotting import ROIPlotter, SEDPlotter, ExtensionPlotter, make_counts_spectrum_plot
 from fermipy.config import ConfigManager
 from fermipy.irfs import LTCube, PSFModel
 
@@ -204,6 +204,7 @@ class GTAnalysis(AnalysisBase):
                 'extension'  : defaults.extension,
                 'roiopt'     : defaults.roiopt,
                 'run'        : defaults.run,
+                'plotting'   : defaults.plotting,
                 'components' : (None,'')}
 
     def __init__(self,config,**kwargs):
@@ -499,8 +500,15 @@ class GTAnalysis(AnalysisBase):
 
             src = self._roi.get_source_by_name(name)
             
-            src_model = {'sed' : None, 'extension' : None }
+            src_model = {'sed' : None, 'extension' : None,
+                         'assoc' : None, 'class' : None }
 
+            if 'ASSOC1' in src:
+                src_model['assoc'] = src['ASSOC1'].strip()
+
+            if 'CLASS1' in src:
+                src_model['class'] = src['CLASS1'].strip()
+                
             if isinstance(src,Source):
                 src_model['RA'] = src['RAJ2000']
                 src_model['DEC'] = src['DEJ2000']
@@ -1004,8 +1012,11 @@ class GTAnalysis(AnalysisBase):
             self.delete_source(model_name,
                                save_template=self.config['extension']['save_templates'])
 
-        ext['ext'], ext['ext_ul95'], ext['ext_err_lo'], ext['ext_err_hi'], ext['ts_ext'] = \
-            get_upper_limit(ext['dlogLike'],ext['width'],interpolate=True)
+        try:
+            ext['ext'], ext['ext_ul95'], ext['ext_err_lo'], ext['ext_err_hi'], ext['ts_ext'] = \
+                get_upper_limit(ext['dlogLike'],ext['width'],interpolate=True)
+        except Exception, message:
+            self.logger.error('Upper limit failed.', exc_info=True)
             
         self.scale_parameter(name,normPar,1E10)
             
@@ -1085,6 +1096,9 @@ class GTAnalysis(AnalysisBase):
              'lnlprofile' : []
              }
 
+        max_index = 5.0
+        min_flux = 1E-30
+        
         # Precompute fluxes in each bin from global fit
         gf_bin_flux = []
         gf_bin_index = []
@@ -1094,10 +1108,15 @@ class GTAnalysis(AnalysisBase):
             f = self.like[name].flux(10**emin, 10**emax)
             f0 = self.like[name].flux(10**emin*(1-delta), 10**emin*(1+delta))
             f1 = self.like[name].flux(10**emax*(1-delta), 10**emax*(1+delta))
-            g = 1-np.log10(f0/f1)/np.log10(10**emin/10**emax)
-            gf_bin_index += [g]
-            gf_bin_flux += [f]
 
+            if f0 > min_flux:
+                g = 1-np.log10(f0/f1)/np.log10(10**emin/10**emax)
+                gf_bin_index += [g]
+                gf_bin_flux += [f]
+            else:
+                gf_bin_index += [max_index]
+                gf_bin_flux += [min_flux]
+                
         bin_index = kwargs.get('bin_index',self.config['sed']['bin_index'])
         use_local_index = kwargs.get('use_local_index',self.config['sed']['use_local_index'])
         
@@ -1116,7 +1135,7 @@ class GTAnalysis(AnalysisBase):
             self.set_parameter(name,'Scale',10**ecenter,scale=1.0)
             
             if use_local_index:
-                o['index'][i] = -min(gf_bin_index[i],5.0)
+                o['index'][i] = -min(gf_bin_index[i],max_index)
             else:
                 o['index'][i] = -bin_index
                 
@@ -1377,7 +1396,8 @@ class GTAnalysis(AnalysisBase):
                 if len(freePars) == 0: continue
 
                 sd = self.get_src_model(name)
-                self._roi_model['sources'][name] = sd
+                self._roi_model['sources'][name] = merge_dict(self._roi_model['sources'][name],sd,
+                                                              add_new_keys=True)
 
             self._roi_model['roi']['logLike'] = logLike
             self._roi_model['roi']['fit_quality'] = quality
@@ -1455,6 +1475,20 @@ class GTAnalysis(AnalysisBase):
         model_counts = make_coadd_map(counts,self._wcs,shape)
         write_fits_image(model_counts,self._wcs,outfile)        
         return [(model_counts,self._wcs)] + counts
+
+    def load_roi(self,infile):
+
+        self.load_xml(infile)
+
+        infile, ext = os.path.splitext(infile)
+        infile += '.npy'
+        
+        if not os.path.isfile(infile):
+            infile = os.path.join(self.config['fileio']['workdir'],
+                                  os.path.basename(infile))
+        
+        data = np.load(infile)
+        self._roi_model = np.array(data,ndmin=1)[0]
     
     def write_roi(self,outfile=None,make_residuals=False,save_model_map=True,
                   update_sources=False):
@@ -1499,25 +1533,106 @@ class GTAnalysis(AnalysisBase):
 
         o = self.get_roi_model(update_sources=update_sources)
         o['config'] = copy.deepcopy(self.config)
+        
+        self.logger.info('Writing %s...'%(outfile + '.yaml'))
+        yaml.dump(tolist(o),open(outfile + '.yaml','w'))
 
-        for k, v in self._roi_model['roi']['residmap'].items():
+        self.logger.info('Writing %s...'%(outfile + '.npy'))
+        np.save(outfile + '.npy',o)
 
-            fig = plt.figure()
-            p = ROIPlotter(self._rmg._maps[k]['sigma'],
-                           self._rmg._maps[k]['wcs'],self.roi)
-            p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
-                   cb_label='Significance [$\sigma$]')
+        self.make_plots(mcube_maps,prefix)
+
+    def make_sed_plots(self,prefix):
+
+        for k,v in self._roi_model['sources'].items():
+
+            if not 'sed' in v: continue
+            if v['sed'] is None: continue
+
+            name = k.lower().replace(' ','_')
+            
+            p = SEDPlotter(v)
+            plt.figure()
+            p.plot()            
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_residmap_%s.png'%(prefix,k)))
+                                     '%s_%s_sed.png'%(prefix,name)))
+
+
+    def make_extension_plots(self,prefix,erange=None):
+
+        for k,v in self._roi_model['sources'].items():
+
+            if not 'extension' in v: continue
+            if v['extension'] is None: continue
+
+            self._plot_extension(prefix,v,erange=erange)
+            
+    def _plot_extension(self,prefix,v,erange=None):
+
+        if erange is None:
+            erange = (self.energies[0],self.energies[-1])
+        
+        name = v['name'].lower().replace(' ','_')
+
+        esuffix = '_%.3f_%.3f'%(erange[0],erange[1])        
+            
+        p = ExtensionPlotter(v,self.roi,'',self.config['fileio']['workdir'],
+                             erange=erange)
+ 
+        fig = plt.figure()
+        p.plot(0)
+        plt.gca().set_xlim(-2,2)
+        ROIPlotter.setup_projection_axis(0,erange=erange)
+        plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                 '%s_%s_extension_xproj%s.png'%(prefix,name,esuffix)))
+        plt.close(fig)
+        
+        fig = plt.figure()
+        p.plot(1)
+        plt.gca().set_xlim(-2,2)
+        ROIPlotter.setup_projection_axis(1,erange=erange)
+        plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                 '%s_%s_extension_yproj%s.png'%(prefix,name,esuffix)))
+        plt.close(fig)
+        
+        for i, c in enumerate(self.components):
+
+            suffix = '_%02i'%i
+
+            p = ExtensionPlotter(v,self.roi,suffix,
+                                 self.config['fileio']['workdir'],erange=erange)
+            
+            fig = plt.figure()
+            p.plot(0)
+            ROIPlotter.setup_projection_axis(0,erange=erange)
+            plt.gca().set_xlim(-2,2)
+            plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                     '%s_%s_extension_xproj%s%s.png'%(prefix,name,esuffix,suffix)))
             plt.close(fig)
+            
+            fig = plt.figure()
+            p.plot(1)
+            plt.gca().set_xlim(-2,2)
+            ROIPlotter.setup_projection_axis(1,erange=erange)
+            plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                     '%s_%s_extension_yproj%s%s.png'%(prefix,name,esuffix,suffix)))
+            plt.close(fig)
+            
+        
+    def make_roi_plots(self,mcube_maps,prefix,erange=None):
+
+        if erange is None:
+            erange = (self.energies[0],self.energies[-1])
+        esuffix = '_%.3f_%.3f'%(erange[0],erange[1])  
 
         if len(mcube_maps):
 
             fig = plt.figure()        
-            p = ROIPlotter(mcube_maps[0][0],mcube_maps[0][1],self.roi)
+            p = ROIPlotter(mcube_maps[0][0],mcube_maps[0][1],
+                           self.roi,erange=erange)
             p.plot(cb_label='Counts',zscale='pow',gamma=1./3.)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                  '%s_model_map.png'%(prefix)))
+                                     '%s_model_map%s.png'%(prefix,esuffix)))
             plt.close(fig)
 
 
@@ -1530,42 +1645,46 @@ class GTAnalysis(AnalysisBase):
         for i, c in enumerate(self.components):
 
             fig = plt.figure()        
-            p = ROIPlotter(mcube_maps[i+1][0],mcube_maps[i+1][1],self.roi)
+            p = ROIPlotter(mcube_maps[i+1][0],mcube_maps[i+1][1],self.roi,
+                           erange=erange)
             p.plot(cb_label='Counts',zscale='pow',gamma=1./3.)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_model_map_%02i.png'%(prefix,i)))
+                                     '%s_model_map%s_%02i.png'%(prefix,esuffix,i)))
             plt.close(fig)
-
-            
             
             plt.figure(figx.number)
-            p = ROIPlotter.create_from_fits(c._ccube_file,self.roi)
-            p.plot_projection(0,color=colors[i%4],label='Component %i'%i,**data_style)
-            p.plot_projection(0,data=mcube_maps[i+1][0].T,color=colors[i%4],noerror=True)
-            plt.gca().set_ylabel('Counts')
-            plt.gca().set_xlabel('LON Offset [deg]')
-            plt.gca().legend(frameon=False)
+            p = ROIPlotter.create_from_fits(c._ccube_file,self.roi,
+                                            erange=erange)
+            p.plot_projection(0,color=colors[i%4],label='Component %i'%i,
+                              **data_style)
+            p.plot_projection(0,data=mcube_maps[i+1][0].T,
+                              color=colors[i%4],noerror=True)
+            
             
             plt.figure(figy.number)
-            p.plot_projection(1,color=colors[i%4],label='Component %i'%i,**data_style)
-            p.plot_projection(1,data=mcube_maps[i+1][0].T,color=colors[i%4],noerror=True)
-            plt.gca().set_ylabel('Counts')
-            plt.gca().set_xlabel('LAT Offset [deg]')
-            plt.gca().legend(frameon=False)
+            p.plot_projection(1,color=colors[i%4],label='Component %i'%i,
+                              **data_style)
+            p.plot_projection(1,data=mcube_maps[i+1][0].T,
+                              color=colors[i%4],noerror=True)
             
-
+            
+        plt.figure(figx.number)
+        ROIPlotter.setup_projection_axis(0,erange=erange)
         figx.savefig(os.path.join(self.config['fileio']['outdir'],
-                                  '%s_counts_map_comp_xproj.png'%(prefix)))
+                                  '%s_counts_map_comp_xproj%s.png'%(prefix,esuffix)))
+
+        plt.figure(figy.number)
+        ROIPlotter.setup_projection_axis(1,erange=erange)
         figy.savefig(os.path.join(self.config['fileio']['outdir'],
-                                  '%s_counts_map_comp_yproj.png'%(prefix)))
+                                  '%s_counts_map_comp_yproj%s.png'%(prefix,esuffix)))
         plt.close(figx)
         plt.close(figy)
             
         fig = plt.figure()        
-        p = ROIPlotter.create_from_fits(self._ccube_file,self.roi)
+        p = ROIPlotter.create_from_fits(self._ccube_file,self.roi,erange=erange)
         p.plot(cb_label='Counts',zscale='sqrt')
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_map.png'%(prefix)))
+                              '%s_counts_map%s.png'%(prefix,esuffix)))
         plt.close(fig)
 
         fig = plt.figure()
@@ -1576,7 +1695,7 @@ class GTAnalysis(AnalysisBase):
         plt.gca().legend(frameon=False)
 #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_map_xproj.png'%(prefix)))
+                              '%s_counts_map_xproj%s.png'%(prefix,esuffix)))
         plt.close(fig)
         
         fig = plt.figure()
@@ -1587,21 +1706,44 @@ class GTAnalysis(AnalysisBase):
         plt.gca().legend(frameon=False)
 #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_map_yproj.png'%(prefix)))
+                              '%s_counts_map_yproj%s.png'%(prefix,esuffix)))
         
         plt.close(fig)
         
+        
+    def make_plots(self,mcube_maps,prefix):
+
+        erange = [None] + self.config['plotting']['erange']
+
+        for x in erange:
+            self.make_roi_plots(mcube_maps,prefix,erange=x)
+            self.make_extension_plots(prefix,erange=x)
+
+        for k, v in self._roi_model['roi']['residmap'].items():
+
+            fig = plt.figure()
+            p = ROIPlotter(self._rmg._maps[k]['sigma'],
+                           self._rmg._maps[k]['wcs'],self.roi)
+            p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
+                   cb_label='Significance [$\sigma$]')
+            plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                     '%s_residmap_%s.png'%(prefix,k)))
+            plt.close(fig)
+
+            fig = plt.figure()
+            p = ROIPlotter(self._rmg._maps[k]['data'],
+                           self._rmg._maps[k]['wcs'],self.roi)
+            p.plot(cb_label='Smoothed Counts',zscale='pow',gamma=1./3.)
+            plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                     '%s_scmap_%s.png'%(prefix,k)))
+            plt.close(fig)
+            
+        self.make_sed_plots(prefix)
+            
         imfile = os.path.join(self.config['fileio']['outdir'],
                               '%s_counts_spectrum.png'%(prefix))
 
-        make_counts_spectrum_plot(o,self.energies,imfile)
-
-        
-        self.logger.info('Writing %s...'%(outfile + '.yaml'))
-        yaml.dump(tolist(o),open(outfile + '.yaml','w'))
-
-        self.logger.info('Writing %s...'%(outfile + '.npy'))
-        np.save(outfile + '.npy',o)
+        make_counts_spectrum_plot(self._roi_model,self.energies,imfile)
         
     def tsmap(self):
         """Loop over ROI, place a test source at each position, and
@@ -1999,7 +2141,11 @@ class GTBinnedAnalysis(AnalysisBase):
         z = self.like.logLike.countsMap().data()
         z = np.array(z).reshape(self.enumbins,self.npix,self.npix)
         return z
-        
+
+    def expMap(self):
+        """Return the exposure map."""
+        pass
+    
     def modelCountsMap(self,name=None):
         """Return the model counts map for a single source or for the
         sum of all sources in the ROI."""
@@ -2352,10 +2498,12 @@ class GTBinnedAnalysis(AnalysisBase):
     def load_xml(self,xmlfile):
 
         xmlfile = self.get_model_path(xmlfile)
-        self.logger.info('Creating BinnedAnalysis')
-        self._like = BinnedAnalysis(binnedData=self._obs,
-                                    srcModel=xmlfile,
-                                    optimizer='MINUIT')
+        self.logger.info('Loading %s'%xmlfile)
+        self.like.logLike.reReadXml(xmlfile)
+#        
+#        self._like = BinnedAnalysis(binnedData=self._obs,
+#                                    srcModel=xmlfile,
+#                                    optimizer='MINUIT')
             
     def write_xml(self,xmlfile):
         """Write the XML model for this analysis component."""

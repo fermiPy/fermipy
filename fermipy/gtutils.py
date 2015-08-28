@@ -164,7 +164,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         self.nobs = self.logLike.countsSpectrum()
         self.sourceFitPlots = []
         self.sourceFitResids  = []
-
+        
     def scaleSource(self,srcName,scale):
         src = self.logLike.getSource(srcName)
         old_scale = src.spectrum().normPar().getScale()
