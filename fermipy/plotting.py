@@ -496,7 +496,7 @@ class SEDPlotter(object):
         ax.set_xlabel('Energy [MeV]')
         ax.set_ylabel('E$^{2}$dF/dE [MeV cm$^{-1}$ s$^{-1}$]')
 
-        ax.set_ylim(min(y)*0.5,max(y)*1.6)
+        ax.set_ylim(min(y)*0.5,max(y)*1.8)
 
 #        dirname = os.path.dirname(sys.argv[1])
 #        plt.savefig(os.path.join(dirname,name + '_sed.png'))

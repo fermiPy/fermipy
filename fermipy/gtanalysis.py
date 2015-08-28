@@ -71,7 +71,7 @@ shape_parameters = {
     'PowerLaw2' : ['Index'],
     'BrokenPowerLaw' : ['Index1','Index2'],    
     'LogParabola' : ['alpha','beta'],    
-    'PLSuperExpCutoff' : ['Index1','Index2','Cutoff'],
+    'PLSuperExpCutoff' : ['Index1','Cutoff'],
     'ExpCutoff' : ['Index1','Cutoff'],
     'FileFunction' : [],
     }
@@ -1140,7 +1140,7 @@ class GTAnalysis(AnalysisBase):
                 o['index'][i] = -bin_index
                 
             self.set_parameter(name,'Index',o['index'][i],scale=1.0)
-                
+            
             normVal = self.like.normPar(name).getValue()
             flux_ratio = gf_bin_flux[i]/self.like[name].flux(10**emin, 10**emax)
             newVal = max(normVal*flux_ratio,1E-10)
@@ -1150,7 +1150,7 @@ class GTAnalysis(AnalysisBase):
             self.free_norm(name)
             self.logger.info('Fitting %s SED from %.0f MeV to %.0f MeV' %
                              (name,10**emin,10**emax))
-            self.setEnergyRange(emin,emax)
+            self.setEnergyRange(emin,emax)            
             o['fit_quality'][i] = self.fit(update=False)
 
             prefactor=self.like[self.like.par_index(name, 'Prefactor')] 
@@ -1187,7 +1187,8 @@ class GTAnalysis(AnalysisBase):
                 o['dfde_err_lo'][i] = dfde_err_lo
                 o['e2dfde_err_lo'][i] = dfde_err_lo*10**(2*ecenter)
                 
-        self.setEnergyRange(energies[0],energies[-1])
+#        self.setEnergyRange(energies[0],energies[-1])
+        self.setEnergyRange(self.energies[0],self.energies[-1])
         self.like.setSpectrum(name,old_spectrum)
         saved_state.restore()        
         src_model = self._roi_model['sources'].get(name,{})
@@ -2132,8 +2133,13 @@ class GTBinnedAnalysis(AnalysisBase):
         self.like[name].src.set_edisp_flag(flag)         
         
     def setEnergyRange(self,emin,emax):
-        imin = valToEdge(self.energies,emin)[0]
-        imax = valToEdge(self.energies,emax)[0]
+        imin = int(valToEdge(self.energies,emin)[0])
+        imax = int(valToEdge(self.energies,emax)[0])
+
+        if imin-imax == 0:
+            imin = len(self.energies)-1
+            imax = len(self.energies)-1
+        
         self.like.selectEbounds(int(imin),int(imax))
 
     def countsMap(self):
