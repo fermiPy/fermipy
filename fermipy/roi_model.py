@@ -767,10 +767,12 @@ class ROIModel(AnalysisBase):
         return src
         
     def load_source(self,src):
+
+        name = src.name.replace(' ','').lower()
         
-        if src.name in self._src_index:
+        if name in self._src_index:
             self.logger.info('Updating source model for %s'%src.name)
-            self._src_index[src.name].update(src)
+            self._src_index[name].update(src)
             return
 
         self._src_index[src.name] = src
