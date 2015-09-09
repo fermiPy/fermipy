@@ -61,6 +61,12 @@ Additional sources can be defined with the *sources* block:
         SpectrumType : 'LogParabola', norm : !!float 1E-11, Scale : 1000, beta : 0.0,
         SpatialType: 'PointSource' }
 
+fermiPy supports three types of pre-defined spatial templates:
+PointSource (the default), DiskSource, and GaussianSource.  The
+spatial extension of DiskSource and GaussianSource can be controlled
+with the *SpatialWidth* parameter which defines respectively the
+radius or 68% containment radius in degrees.
+
 
 Editing the Model at Runtime
 ----------------------------

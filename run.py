@@ -13,7 +13,7 @@ gta = GTAnalysis(args.config)
 
 gta.setup()
 
-# Iteratiely optimize all components in the ROI
+# Iteratively optimize all components in the ROI
 gta.optimize()
 
 # Fix sources w/ significance < 10

@@ -23,12 +23,14 @@ class Mock(MagicMock):
     def __getattr__(cls, name):
             return Mock()
 
-MOCK_MODULES = ['pyLikelihood','BinnedAnalysis','UnbinnedAnalysis',
+MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
+                'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
                 'SummedLikelihood','FluxDensity','LikelihoodState',
                 'GtApp','pywcsgrid2','astropy',
                 'astropy.coordinates',
                 'astropy.io','astropy.wcs','astropy.io.fits',
-                'numpy',
+                'numpy','healpy',
+                'scipy','scipy.special','scipy.interpolate',
                 'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
                 'matplotlib.axes','matplotlib.cbook','matplotlib.colors']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
