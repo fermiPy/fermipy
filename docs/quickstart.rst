@@ -111,7 +111,7 @@ the model, and perform a fit to the ROI.
 
 In the following example we lay out the sequence of python calls that
 could be run interactively or in a script to setup and run an
-analysis.  First we instantiate *GTAnalysis* with the chosen
+analysis.  First we instantiate :py:class:`~fermipy.gtanalysis.GTAnalysis` with the chosen
 configuration.
 
 .. code-block:: python
@@ -121,10 +121,11 @@ configuration.
    gta = GTAnalysis('config.yaml',logging={'verbosity' : 3})
    gta.setup()
 
-The *setup* method performs all the prepratory steps for the analysis
-(selecting the data, creating counts and exposure maps, etc.).  It
-should be noted that depending on the parameters of the analysis this
-will often be the slowest step in the analysis sequence.
+The :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup`. method performs
+all the prepratory steps for the analysis (selecting the data,
+creating counts and exposure maps, etc.).  It should be noted that
+depending on the parameters of the analysis this will often be the
+slowest step in the analysis sequence.
 
 Once the *GTAnalysis* object is initialized we can control which
 sources and source parameters will be free in the fit.  By default all
@@ -186,19 +187,48 @@ method with the name of the source:
 Extracting Analysis Results
 ---------------------------
 
-Results of the analysis can be extracted from the output yaml file
-written by :py:meth:`fermipy.gtanalysis.GTAnalysis.write_roi`.  This
-method will write the current state of the model to both an XML model
-file and yaml file.  The contents of the YAML file are organized in a
-dictionary with keys for each source in the model.  Each source
-dictionary contains all information about the given source (TS, NPred,
-best-fit parameters, etc.) computed up to that point.
+Results of the analysis can be extracted from the dictionary file
+written by :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`.  This
+method writes the current ROI model to both an XML model file and a
+results dictionary.  The results dictionary is written in both npy and
+yaml formats and can be loaded from a python session after your
+analysis is complete.  The following example demonstrates how to load
+the dictionary from either format:
 
 .. code-block:: python
    
+   >>> # Load from yaml
    >>> import yaml
    >>> c = yaml.load(open('fit_model.yaml'))
+   >>>
+   >>> # Load from npy
+   >>> import np
+   >>> c = np.load('fit_model.npy').flat[0]
+   >>>
    >>> print c.keys()
+   ['roi', 'config', 'sources']
+
+The results dictionary is split into three top-level dictionaries:
+
+roi 
+   A dictionary containing information about the ROI as a whole.
+
+config   
+   The configuration dictionary of the
+   :py:class:`~fermipy.gtanalysis.GTAnalysis` instance.
+
+sources
+   A dictionary containing information for individual
+   sources (diffuse and point-like).  Each element of this dictionary
+   maps to a single source in the ROI model.
+
+Each source dictionary collects the properties of the given source
+(TS, NPred, best-fit parameters, etc.) computed up to that point in
+the analysis.
+
+.. code-block:: python
+   
+   >>> print c['sources'].keys()
    ['3FGL J0954.2+4913',
     '3FGL J0957.4+4728',
     '3FGL J1006.7+3453',
@@ -210,5 +240,4 @@ best-fit parameters, etc.) computed up to that point.
     '3FGL J1203.2+3847',
     '3FGL J1209.4+4119',
     'galdiff',
-    'isodiff',
-    'roi']
+    'isodiff']
