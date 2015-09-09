@@ -156,7 +156,8 @@ class Model(object):
             self._spectral_pars = {}
         
         self._data = merge_dict(self._data,m._data,add_new_keys=True)
-            
+        self._name = m.name
+        self._names = list(set(self._names + m.names))        
         self._spectral_pars = merge_dict(self._spectral_pars,
                                          m._spectral_pars,add_new_keys=True)
         self._spatial_pars = merge_dict(self._spatial_pars,
@@ -610,7 +611,7 @@ class Source(Model):
             raise Exception('Unrecognized type for source: %s'%src_dict['Source_Name'])
         
     def write_xml(self,root):
-
+        
         if not self.extended:
             source_element = create_xml_element(root,'source',
                                                 dict(name=self['Source_Name'],
