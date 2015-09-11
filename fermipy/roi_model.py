@@ -56,13 +56,80 @@ def project(lon0,lat0,lon1,lat1):
 
 
 def scale_parameter(p):
-
+    
+    if isinstance(p,str): p = float(p)
+    
     if p > 0:    
         scale = 10**-np.round(np.log10(1./p))
         return p/scale, scale
     else:
         return p, 1.0
 
+
+spectrum_type_pars = {
+    'PowerLaw' : ['Prefactor','Index','Scale'],
+    'PowerLaw2' : ['Integral','Index','LowerLimit','UpperLimit'],
+    'ConstantValue' : ['Value'],
+    'BrokenPowerLaw' : ['Prefactor','Index1','Index2'],    
+    'LogParabola' : ['norm','alpha','beta','Eb'],
+    'PLSuperExpCutoff' : ['Prefactor','Index1','Index2','Cutoff','Scale'],
+    'ExpCutoff' : ['Prefactor','Index1','Cutoff'],
+    'FileFunction' : ['Normalization'],
+    }
+    
+    
+default_par_dict = {
+    'Prefactor' :
+        {'name' : 'Prefactor', 'value' : 1.0, 'scale' : None, 'min' : 0.01, 'max' : 100.0, 'free' : '0'},
+    'norm' :
+        {'name' : 'norm', 'value' : 1.0, 'scale' : None, 'min' : 0.01, 'max' : 100.0, 'free' : '0'},
+    'Scale' :
+        {'name' : 'Scale', 'value' : 1000.0, 'scale' : 1.0, 'min' : 1.0, 'max' : 1.0, 'free' : '0'},
+    'Eb' :
+        {'name' : 'Eb', 'value' : 1.0, 'scale' : None, 'min' : 0.01, 'max' : 10.0, 'free' : '0'},
+    'Cutoff' :
+        {'name' : 'Cutoff', 'value' : 1.0, 'scale' : None, 'min' : 0.01, 'max' : 10.0, 'free' : '0'},
+    'Index' :
+        {'name' : 'Index', 'value' : 2.0, 'scale' : -1.0, 'min' : 0.0, 'max' : 5.0, 'free' : '0'},
+    'alpha' :
+        {'name' : 'alpha', 'value' : 0.0, 'scale' : 1.0, 'min' : -5.0, 'max' : 5.0, 'free' : '0'},
+    'beta' :
+        {'name' : 'beta', 'value' : 0.0, 'scale' : 1.0, 'min' : -10.0, 'max' : 10.0, 'free' : '0'},
+    'Index1' :
+        {'name' : 'Index1', 'value' : 2.0, 'scale' : -1.0, 'min' : 0.0, 'max' : 5.0, 'free' : '0'},
+    'Index2' :
+        {'name' : 'Index2', 'value' : 1.0, 'scale' : 1.0, 'min' : 0.0, 'max' : 2.0, 'free' : '0'},
+    'LowerLimit' :
+        {'name' : 'LowerLimit', 'value' : 100.0, 'scale' : 1.0, 'min' : 20.0, 'max' : 1000000., 'free' : '0'},
+    'UpperLimit' :
+        {'name' : 'UpperLimit', 'value' : 100000.0, 'scale' : 1.0, 'min' : 20.0, 'max' : 1000000., 'free' : '0'},
+    }
+    
+def make_parameter_dict(pdict,fixed_par=False):
+
+    o = copy.deepcopy(pdict)
+    
+    if not 'scale' in o or o['scale'] is None:
+        value, scale = scale_parameter(o['value'])        
+        o['value'] = value
+        o['scale'] = scale
+
+    if fixed_par:
+        o['min'] = o['value']
+        o['max'] = o['value']
+        
+    if float(o['min'])>float(o['value']):
+        o['min'] = o['value']
+
+    if float(o['max'])<float(o['value']):
+        o['max'] = o['value']
+
+    for k,v in o.items():
+        o[k] = str(v)
+        
+    return o
+    
+    
 def get_linear_dist(skydir,lon,lat,coordsys='CEL'):
     xy = sky_to_offset(skydir,np.degrees(lon),np.degrees(lat),
                        coordsys=coordsys)
@@ -90,7 +157,8 @@ def create_model_name(src):
         return 'powerlaw_%04.2f'%src['Index']
 
 class Model(object):
-
+    """Base class for source objects."""
+    
     def __init__(self,name,data=None,
                  spectral_pars=None,
                  spatial_pars=None):
@@ -334,106 +402,70 @@ class Source(Model):
             
     def _update_spectral_pars(self):
 
+        self._spectral_pars = {}        
+        sp = self._spectral_pars
+        
         if self['SpectrumType'] == 'PowerLaw':
 
-            if not 'Prefactor' in self:
-                self._data['Prefactor'] = self['Flux_Density']
+            sp['Prefactor'] = copy.copy(default_par_dict['Prefactor'])
+            sp['Scale'] = copy.copy(default_par_dict['Scale'])
+            sp['Index'] = copy.copy(default_par_dict['Index'])
             
-            if not 'Scale' in  self:
-                self._data['Scale'] = self['Pivot_Energy']
-
-            if not 'Index' in  self:
-                self._data['Index'] = self['Spectral_Index']
-                
-            prefactor, prefactor_scale = scale_parameter(self['Prefactor'])
-
-            index_max = max(5.0,self['Index']+1.0)
-            index_min = min(0.0,self['Index']-1.0)
-            
-            self._spectral_pars = {
-                'Prefactor' : {'name' : 'Prefactor', 'value' : str(prefactor),
-                               'scale' : str(prefactor_scale),
-                               'min' : '0.01', 'max' : '100.0', 'free' : '0'},
-                'Index' : {'name' : 'Index',
-                           'value' : str(self['Index']),
-                           'scale' : str(-1.0),
-                           'min' : str(index_min), 'max' : str(index_max), 'free' : '0'},
-                'Scale' :  {'name' : 'Scale',
-                            'value' : str(self['Scale']),
-                            'scale' : str(1.0),
-                            'min' : str(self['Scale']),
-                            'max' : str(self['Scale']), 'free' : '0'}
-                }
+            sp['Prefactor']['value'] = self['Flux_Density']
+            sp['Scale']['value'] = self['Pivot_Energy']
+            sp['Index']['value'] = self['Spectral_Index']                           
+            sp['Index']['max'] = max(5.0,sp['Index']['value']+1.0)
+            sp['Index']['min'] = min(0.0,sp['Index']['value']-1.0)
+                        
+            sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
+            sp['Scale'] = make_parameter_dict(sp['Scale'],True)
+            sp['Index'] = make_parameter_dict(sp['Index'])
 
         elif self['SpectrumType'] == 'LogParabola':
 
-            if not 'norm' in self:
-                self._data['norm'] = self['Flux_Density']
-            
-            if not 'Eb' in  self:
-                self._data['Eb'] = self['Pivot_Energy']
+            sp['norm'] = copy.copy(default_par_dict['norm'])
+            sp['Eb'] = copy.copy(default_par_dict['Eb'])
+            sp['alpha'] = copy.copy(default_par_dict['alpha'])
+            sp['beta'] = copy.copy(default_par_dict['beta'])
 
-            if not 'alpha' in  self:
-                self._data['alpha'] = self['Spectral_Index']
-
-            norm_value, norm_scale = scale_parameter(self['norm'])
-            eb_value, eb_scale = scale_parameter(self['Eb'])
-
-            self._spectral_pars = {
-                'norm' : {'name' : 'norm', 'value' : str(norm_value),
-                          'scale' : str(norm_scale),
-                          'min' : '0.01', 'max' : '100.0', 'free' : '0'},
-                'alpha' : {'name' : 'alpha',
-                           'value' : str(self['alpha']),
-                           'scale' : str(1.0),
-                           'min' : '-5.0', 'max' : '5.0', 'free' : '0'},
-                'beta' :  {'name' : 'beta', 'value' : str(self['beta']),
-                           'scale' : str(1.0),
-                           'min' : '-10.0', 'max' : '10.0', 'free' : '0'},
-                'Eb' :  {'name' : 'Eb', 'value' : str(eb_value),
-                         'scale' : str(eb_scale),
-                         'min' : '0.01', 'max' : '100.0', 'free' : '0'},
-                }
+            sp['norm']['value'] = self['Flux_Density']
+            sp['Eb']['value'] = self['Pivot_Energy']
+            sp['alpha']['value'] = self['Spectral_Index']
+            sp['beta']['value'] = self['beta']
+                        
+            sp['norm'] = make_parameter_dict(sp['norm'])
+            sp['Eb'] = make_parameter_dict(sp['Eb'],True)
+            sp['alpha'] = make_parameter_dict(sp['alpha'])
+            sp['beta'] = make_parameter_dict(sp['beta'])            
+        
         elif self['SpectrumType'] == 'PLSuperExpCutoff':
 
             flux_density = self['Flux_Density']
             flux_density *= np.exp((self['Pivot_Energy']/self['Cutoff'])**self['Exp_Index'])
             
-            prefactor, prefactor_scale = scale_parameter(flux_density)
-            cutoff, cutoff_scale = scale_parameter(self['Cutoff'])
-                
-            self._spectral_pars = {
-                'Prefactor' : {
-                    'name' : 'Prefactor', 'value' : str(prefactor),
-                    'scale' : str(prefactor_scale),
-                    'min' : '0.01', 'max' : '100.0', 'free' : '0'},
-                'Index1' : {
-                    'name' : 'Index1', 'value' : str(self['Spectral_Index']),
-                    'scale' : str(-1.0), 'min' : '0.0', 'max' : '5.0',
-                    'free' : '0'},
-                'Index2' : {
-                    'name' : 'Index2', 'value' : str(self['Exp_Index']),
-                    'scale' : str(1.0), 'min' : '0.0', 'max' : '2.0',
-                    'free' : '0'},
-                'Cutoff' : {
-                    'name' : 'Cutoff', 'value' : str(cutoff),
-                    'scale' : str(cutoff_scale),
-                    'min' : '0.01', 'max' : '100.0', 'free' : '0'},
-                'Scale' :  {
-                    'name' : 'Scale', 'value' : str(self['Pivot_Energy']),
-                    'scale' : str(1.0),
-                    'min' : str(self['Pivot_Energy']),
-                    'max' : str(self['Pivot_Energy']), 'free' : '0'}
-                }
+            sp['Prefactor'] = copy.copy(default_par_dict['Prefactor'])
+            sp['Index1'] = copy.copy(default_par_dict['Index1'])
+            sp['Index2'] = copy.copy(default_par_dict['Index2'])
+            sp['Scale'] = copy.copy(default_par_dict['Scale'])
+            sp['Cutoff'] = copy.copy(default_par_dict['Cutoff'])
+
+            sp['Prefactor']['value'] = flux_density
+            sp['Index1']['value'] = self['Spectral_Index']
+            sp['Index2']['value'] = self['Exp_Index']
+            sp['Scale']['value'] = self['Pivot_Energy']
+            sp['Cutoff']['value'] = self['Cutoff']
+            
+            sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
+            sp['Scale'] = make_parameter_dict(sp['Scale'],True)
+            sp['Index1'] = make_parameter_dict(sp['Index1'])
+            sp['Index2'] = make_parameter_dict(sp['Index2'])
+            sp['Cutoff'] = make_parameter_dict(sp['Cutoff'])                
+
         else:
 
             import pprint
             pprint.pprint(self._data)            
             raise Exception('Unsupported spectral type:' + self['SpectrumType'])
-
-#    def update(self,src):
-
-        
         
     def set_spatial_model(self,spatial_model,spatial_width):
 
@@ -505,29 +537,41 @@ class Source(Model):
     def create_from_dict(src_dict):
         """Create a source object from a python dictionary."""
 
+        import pprint
+        
+        src_dict = copy.deepcopy(src_dict)
+        spectrum_type = src_dict.get('SpectrumType','PowerLaw')
+        
         default_src_dict = dict(name = None,
                                 Source_Name = None,
                                 SpatialModel = 'PointSource',
                                 SpatialWidth = 0.5,
                                 SpectrumType = 'PowerLaw',
-                                Index = 2.0,
-                                Scale = 1000.0,
-                                Prefactor = 1E-13,
-                                Eb = 1000.0,
-                                beta = 0.0,
-                                alpha = 2.0,
-                                norm = 1E-13,
-                                Cutoff = 1000.0,
-                                Index1 = 2.0,
-                                Index2 = 1.0,
                                 ra = None,
                                 dec = None,
                                 glon = None,
                                 glat = None,
-                                spectral_pars = None)
+                                spectral_pars = {})
 
-        validate_config(src_dict,default_src_dict)
-        src_dict = merge_dict(default_src_dict,src_dict)
+        for p in spectrum_type_pars[spectrum_type]:
+            default_src_dict['spectral_pars'][p] = copy.copy(default_par_dict[p])
+
+        for k,v in default_par_dict.items():
+            
+            if not k in src_dict: continue
+            src_dict.setdefault('spectral_pars',{})
+            src_dict['spectral_pars'].setdefault(k,{})
+            
+            if not isinstance(src_dict[k],dict):
+                src_dict['spectral_pars'][k] = {'name' : k, 'value' : src_dict.pop(k)}
+            else:
+                src_dict['spectral_pars'][k] = src_dict.pop(k)
+            
+        src_dict = merge_dict(default_src_dict,src_dict)        
+        for k, v in src_dict['spectral_pars'].items():
+            src_dict['spectral_pars'][k] = make_parameter_dict(v)
+        
+#        validate_config(src_dict,default_src_dict)
 
         if src_dict['SpatialModel'] != 'PointSource':
             extended=True
@@ -753,7 +797,8 @@ class ROIModel(AnalysisBase):
             self.load_source(src)
 
     def create_source(self,src_dict,build_index=True):
-        """Create and load a source object to the ROI model."""
+        """Create a new source object from a source dictionary and
+        load it in the ROI."""
         
 
         src = Source.create_from_dict(src_dict)

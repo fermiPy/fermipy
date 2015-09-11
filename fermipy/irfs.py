@@ -165,8 +165,6 @@ class LTCube(object):
         
 
     def load_ltfile(self,ltfile):
-
-        print 'Loading ', ltfile
         
         hdulist = pyfits.open(ltfile)
                 

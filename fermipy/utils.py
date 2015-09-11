@@ -519,8 +519,6 @@ def make_cgauss_kernel(psf,sigma,npix,cdelt):
     return k
 
 def make_psf_kernel(psf,npix,cdelt):
-
-    print 'make_psf_kernel ', npix, cdelt
     
     dtheta = psf.dtheta
     egy = psf.energies

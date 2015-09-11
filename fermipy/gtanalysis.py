@@ -32,7 +32,7 @@ import fermipy.defaults as defaults
 from fermipy.residmap import ResidMapGenerator
 from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import make_coadd_map, valToBinBounded, valToEdge, write_fits_image
-from fermipy.utils import make_psf_mapcube, make_cgauss_mapcube
+from fermipy.utils import make_psf_mapcube, make_cgauss_mapcube, make_gaussian_spatial_map
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
@@ -2094,11 +2094,16 @@ class GTBinnedAnalysis(AnalysisBase):
         pl = pyLike.SourceFactory_funcFactory().create(src['SpectrumType'])
 
         for k,v in src.spectral_pars.items():
+            
             par = pl.getParam(k)
             par.setValue(float(v['value']))
             par.setBounds(float(v['min']),float(v['max']))
             par.setScale(float(v['scale']))
-            par.setFree(False)
+
+            if 'free' in v and int(v['free']) != 0:
+                par.setFree(True)
+            else:
+                par.setFree(False)
             pl.setParam(par)
             
         pylike_src.setSpectrum(pl)
@@ -2190,10 +2195,17 @@ class GTBinnedAnalysis(AnalysisBase):
     def setup(self,xmlmodel=None):
         """Run pre-processing step."""
 
+        # Make spatial templates for extended sources
+        for s in self.roi.sources:
+
+            if not s.extended: continue
+            if not 'Spatial_Filename' in s or os.path.isfile(s['Spatial_Filename']):
+                self.make_template(s,self.config['file_suffix'])
+        
         # Write ROI XML
         self.roi.write_xml(self._srcmdl_file)
         roi_center = self.roi.skydir
-        
+
         # Run gtselect and gtmktime
         kw_gtselect = dict(infile=self.config['data']['evfile'],
                            outfile=self._ft1_file,
@@ -2230,13 +2242,19 @@ class GTBinnedAnalysis(AnalysisBase):
         
         if self.config['data']['ltcube'] is not None:
             self._ltcube = os.path.expandvars(self.config['data']['ltcube'])
+
+            if not os.path.isfile(self._ltcube):
+                raise Exception('Invalid livetime cube: %s'%self._ltcube)
+            
         elif not os.path.isfile(self._ltcube):             
             run_gtapp('gtltcube',self.logger,kw)
         else:
             self.logger.info('Skipping gtltcube')
 
-
+        
             
+
+        self.logger.info('Loading LT Cube %s'%self._ltcube)
         self._ltc = LTCube.create(self._ltcube)
 
         self.logger.info('Creating PSF model')
