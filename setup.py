@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='fermipy',
-      version='0.3.0',
+      version='0.3.1',
       author='The Fermipy developers',
       packages=['fermipy','fermipy.config','fermipy.catalogs'],
       package_data = { '' : ['*yaml','*xml','*fit'] },
@@ -16,5 +16,5 @@ setup(name='fermipy',
                         'astropy >= 0.4',
                         'pyyaml',
                         'healpy',
-                        'pywcsgrid2',
+                        'pywcsgrid2 >= 1.0-b3',
                         'scipy >= 0.13'])
