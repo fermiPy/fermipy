@@ -10,6 +10,7 @@ import numpy as np
 import tempfile
 import logging
 
+import scipy
 from scipy.interpolate import UnivariateSpline
 
 import matplotlib
@@ -87,6 +88,23 @@ index_parameters = {
     'FileFunction' : [],
     }
 
+
+def interpolate_function_min(x,y):
+
+    sp = scipy.interpolate.splrep(x,y,k=2,s=0)
+    fn = lambda t: scipy.interpolate.splev(t,sp,der=1)
+    if np.sign(fn(x[0])) == np.sign(fn(x[-1])):
+
+        if np.sign(fn(x[0])) == -1:
+            return x[-1]
+        else:
+            return x[0]
+            
+    x0 = scipy.optimize.brentq(fn,
+                               x[0], x[-1],
+                               xtol=1e-10*np.median(x)) 
+    
+    return x0
 
 def get_upper_limit(dlogLike,yval,interpolate=False):
 
@@ -1857,6 +1875,11 @@ class GTAnalysis(AnalysisBase):
                      'flux100' : np.ones(2)*np.nan,
                      'flux1000' : np.ones(2)*np.nan,
                      'flux10000' : np.ones(2)*np.nan,
+                     'eflux' : np.ones(2)*np.nan,
+                     'eflux100' : np.ones(2)*np.nan,
+                     'eflux1000' : np.ones(2)*np.nan,
+                     'eflux10000' : np.ones(2)*np.nan,
+                     'dfde' : np.ones(2)*np.nan,
                      'dfde100' : np.ones(2)*np.nan,
                      'dfde1000' : np.ones(2)*np.nan,
                      'dfde10000' : np.ones(2)*np.nan,
@@ -1864,6 +1887,11 @@ class GTAnalysis(AnalysisBase):
                      'flux100_ul95' : np.nan,
                      'flux1000_ul95' : np.nan,
                      'flux10000_ul95' : np.nan,
+                     'eflux_ul95' : np.nan,
+                     'eflux100_ul95' : np.nan,
+                     'eflux1000_ul95' : np.nan,
+                     'eflux10000_ul95' : np.nan,
+                     'pivot_energy' : 3.,
                      'ts' : np.nan
                      }
 
@@ -1877,10 +1905,17 @@ class GTAnalysis(AnalysisBase):
 
         # Get the Model Fluxes
         try:
-            src_dict['flux'][0] = self.like.flux(name,10**self.energies[0], 10**self.energies[-1])
+            src_dict['flux'][0] = self.like.flux(name,10**self.energies[0],
+                                                 10**self.energies[-1])
             src_dict['flux100'][0] = self.like.flux(name,100., 10**5.5)
             src_dict['flux1000'][0] = self.like.flux(name,1000., 10**5.5)
             src_dict['flux10000'][0] = self.like.flux(name,10000., 10**5.5)
+            src_dict['eflux'][0] = self.like.energyFlux(name,10**self.energies[0],
+                                                        10**self.energies[-1])
+            src_dict['eflux100'][0] = self.like.energyFlux(name,100., 10**5.5)
+            src_dict['eflux1000'][0] = self.like.energyFlux(name,1000., 10**5.5)
+            src_dict['eflux10000'][0] = self.like.energyFlux(name,10000., 10**5.5)
+            src_dict['dfde'][0] = self.like[name].spectrum()(pyLike.dArg(10**src_dict['pivot_energy']))
             src_dict['dfde100'][0] = self.like[name].spectrum()(pyLike.dArg(100.))
             src_dict['dfde1000'][0] = self.like[name].spectrum()(pyLike.dArg(1000.))
             src_dict['dfde10000'][0] = self.like[name].spectrum()(pyLike.dArg(10000.))
@@ -1892,10 +1927,17 @@ class GTAnalysis(AnalysisBase):
             return src_dict
 
         try:
-            src_dict['flux'][1] = self.like.fluxError(name,10**self.energies[0], 10**self.energies[-1])
+            src_dict['flux'][1] = self.like.fluxError(name,10**self.energies[0],
+                                                      10**self.energies[-1])
             src_dict['flux100'][1] = self.like.fluxError(name,100., 10**5.5)
             src_dict['flux1000'][1] = self.like.fluxError(name,1000., 10**5.5)
             src_dict['flux10000'][1] = self.like.fluxError(name,10000., 10**5.5)
+            src_dict['eflux'][1] = self.like.energyFluxError(name,10**self.energies[0],
+                                                             10**self.energies[-1])
+            src_dict['eflux100'][1] = self.like.energyFluxError(name,100., 10**5.5)
+            src_dict['eflux1000'][1] = self.like.energyFluxError(name,1000., 10**5.5)
+            src_dict['eflux10000'][1] = self.like.energyFluxError(name,10000., 10**5.5)
+            
         except Exception, ex:
             pass
 #            self.logger.error('Failed to update source parameters.', exc_info=True)
@@ -1903,11 +1945,18 @@ class GTAnalysis(AnalysisBase):
         lnlp = self.profile_norm(name,savestate=True)
         flux, flux_ul95, flux_err_lo, flux_err_hi, dlnl0 = get_upper_limit(lnlp['dlogLike'],
                                                                            lnlp['flux'])
+        eflux, eflux_ul95, eflux_err_lo, eflux_err_hi, dlnl0 = get_upper_limit(lnlp['dlogLike'],
+                                                                               lnlp['eflux'])
 
         src_dict['flux_ul95'] = flux_ul95
         src_dict['flux100_ul95'] = src_dict['flux100'][0]*(flux_ul95/src_dict['flux'][0])
         src_dict['flux1000_ul95'] = src_dict['flux1000'][0]*(flux_ul95/src_dict['flux'][0])
         src_dict['flux10000_ul95'] = src_dict['flux10000'][0]*(flux_ul95/src_dict['flux'][0])
+
+        src_dict['eflux_ul95'] = eflux_ul95
+        src_dict['eflux100_ul95'] = src_dict['eflux100'][0]*(eflux_ul95/src_dict['eflux'][0])
+        src_dict['eflux1000_ul95'] = src_dict['eflux1000'][0]*(eflux_ul95/src_dict['eflux'][0])
+        src_dict['eflux10000_ul95'] = src_dict['eflux10000'][0]*(eflux_ul95/src_dict['eflux'][0])
         
         # Extract covariance matrix
         fd = None            
@@ -1921,13 +1970,28 @@ class GTAnalysis(AnalysisBase):
 #                 elif 
 #                      raise ex
 
+
         # Extract bowtie   
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
-            src_dict['model_flux'] = self.bowtie(fd)            
+            energies = np.linspace(self.energies[0],self.energies[-1],50)
+            src_dict['model_flux'] = self.bowtie(fd,energies)            
             src_dict['dfde100'][1] = fd.error(100.)
             src_dict['dfde1000'][1] = fd.error(1000.)
             src_dict['dfde10000'][1] = fd.error(10000.)
 
+            ferr = (src_dict['model_flux']['dfde_hi']-
+                    src_dict['model_flux']['dfde_lo'])/src_dict['model_flux']['dfde']
+            
+            # Extract pivot energy
+            try:
+                src_dict['pivot_energy'] = interpolate_function_min(energies,ferr)
+            except Exception, ex:
+                self.logger.error('Failed to compute pivot energy',exc_info=True)
+                
+            e0 = src_dict['pivot_energy']
+            src_dict['dfde'][0] = self.like[name].spectrum()(pyLike.dArg(10**e0))
+            src_dict['dfde'][1] = fd.error(10**e0)
+            
         src_dict['ts'] = self.like.Ts2(name,reoptimize=False)
         
         return src_dict
