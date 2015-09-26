@@ -14,26 +14,27 @@ import scipy
 from scipy.interpolate import UnivariateSpline
 
 import matplotlib
-
 try:             os.environ['DISPLAY']
 except KeyError: matplotlib.use('Agg')
 
 #matplotlib.interactive(False)
 #matplotlib.use('Agg')
 
-import matplotlib.pyplot as plt
 
+# pyLikelihood needs to be imported before astropy to avoid CFITSIO
+# header error
 import pyLikelihood as pyLike
 
+import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
 from astropy import wcs
 
 import fermipy
 import fermipy.defaults as defaults
+import fermipy.utils as utils
 from fermipy.residmap import ResidMapGenerator
 from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import make_coadd_map, valToBinBounded, valToEdge, write_fits_image
-from fermipy.utils import make_psf_mapcube, make_cgauss_mapcube, make_gaussian_spatial_map
+from fermipy.utils import make_coadd_map, valToBinBounded, valToEdge
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
@@ -43,7 +44,6 @@ from fermipy.irfs import LTCube, PSFModel
 
 # pylikelihood
 
-
 import GtApp
 import FluxDensity
 from BinnedAnalysis import BinnedObs
@@ -51,9 +51,6 @@ from LikelihoodState import LikelihoodState
 from gtutils import BinnedAnalysis, SummedLikelihood
 import BinnedAnalysis as ba
 #from UpperLimits import UpperLimits
-
-
-    
 
 norm_parameters = {
     'ConstantValue' : ['Value'],
@@ -196,9 +193,6 @@ def gtlike_spectrum_to_dict(spectrum):
             d['file']=ff.filename()
     return d
 
-   
-    
-
 class GTAnalysis(AnalysisBase):
     """High-level analysis interface that internally manages a set of
     analysis component objects.  Most of the functionality of the
@@ -317,6 +311,12 @@ class GTAnalysis(AnalysisBase):
         self._binsz = min(binsz)
         self._npix = int(np.round(self._roiwidth/self._binsz))
 
+        self._skywcs = create_wcs(self._roi.skydir,
+                                  coordsys=self.config['binning']['coordsys'],
+                                  projection=self.config['binning']['proj'],
+                                  cdelt=self._binsz,crpix=1.0+0.5*(self._npix-1),
+                                  naxis=2)
+        
         self._wcs = create_wcs(self._roi.skydir,
                                coordsys=self.config['binning']['coordsys'],
                                projection=self.config['binning']['proj'],
@@ -549,7 +549,7 @@ class GTAnalysis(AnalysisBase):
             
         shape = (self.enumbins,self.npix,self.npix)
         self._counts = make_coadd_map(counts,self._wcs,shape)
-        write_fits_image(self._counts,self._wcs,self._ccube_file)        
+        utils.write_fits_image(self._counts,self._wcs,self._ccube_file)        
         rm['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,self._counts,axes=[1,2]))
         self._update_roi()
         
@@ -966,7 +966,7 @@ class GTAnalysis(AnalysisBase):
         
         self.logger.info('Running extension analysis for %s'%name)
 
-        model_name = '%s_ext'%(name.lower().replace(' ','_'))
+        ext_model_name = '%s_ext'%(name.lower().replace(' ','_'))
         null_model_name = '%s_noext'%(name.lower().replace(' ','_'))
         
         saved_state = LikelihoodState(self.like)
@@ -982,7 +982,7 @@ class GTAnalysis(AnalysisBase):
         self.scale_parameter(name,normPar,1E-10)
         self.like.syncSrcParams(name)
         
-        self.generate_model_map(model_name=model_name+'_bkg')
+        self.generate_model_map(model_name=ext_model_name+'_bkg')
 
         
         if self.config['extension']['width'] is not None:
@@ -1006,6 +1006,8 @@ class GTAnalysis(AnalysisBase):
             
             # make a copy
             s = copy.deepcopy(self.roi.get_source_by_name(name))
+
+            model_name = '%s%02i'%(ext_model_name,i)            
             s.set_name(model_name)
             s.set_spatial_model(self.config['extension']['spatial_model'],w)
             
@@ -1025,8 +1027,7 @@ class GTAnalysis(AnalysisBase):
             sd = self.get_src_model(model_name)
             ext['fit'].append(sd)
             
-            self.generate_model_map(model_name='%s%02i'%(model_name,i),
-                                    name=model_name)
+            self.generate_model_map(model_name=model_name,name=model_name)
             self.delete_source(model_name,
                                save_template=self.config['extension']['save_templates'])
 
@@ -1492,7 +1493,7 @@ class GTAnalysis(AnalysisBase):
 
         shape = (self.enumbins,self.npix,self.npix)
         model_counts = make_coadd_map(counts,self._wcs,shape)
-        write_fits_image(model_counts,self._wcs,outfile)        
+        utils.write_fits_image(model_counts,self._wcs,outfile)        
         return [(model_counts,self._wcs)] + counts
 
     def load_roi(self,infile):
@@ -2078,6 +2079,12 @@ class GTBinnedAnalysis(AnalysisBase):
             
         self._like = None
 
+        self._skywcs = create_wcs(self._roi.skydir,
+                                  coordsys=self.config['binning']['coordsys'],
+                                  projection=self.config['binning']['proj'],
+                                  cdelt=self.binsz,crpix=1.0+0.5*(self._npix-1),
+                                  naxis=2)
+        
         self._wcs = create_wcs(self.roi.skydir,
                                coordsys=self.config['binning']['coordsys'],
                                projection=self.config['binning']['proj'],
@@ -2138,7 +2145,8 @@ class GTBinnedAnalysis(AnalysisBase):
             self.roi.load_source(src)
 
         self.make_template(src,self.config['file_suffix'])
-            
+        self.update_srcmap_file([src],True)
+        
         if src['SpatialType'] == 'PointSource':        
             #pylike_src = pyLike.PointSource(0, 0,
 #            pylike_src = pyLike.PointSource(src.skydir.ra.deg,src.skydir.dec.deg,
@@ -2259,15 +2267,6 @@ class GTBinnedAnalysis(AnalysisBase):
     def setup(self,xmlmodel=None):
         """Run pre-processing step."""
 
-        # Make spatial templates for extended sources
-        for s in self.roi.sources:
-
-            if not s.extended: continue
-            if not 'Spatial_Filename' in s or os.path.isfile(s['Spatial_Filename']):
-                self.make_template(s,self.config['file_suffix'])
-        
-        # Write ROI XML
-        self.roi.write_xml(self._srcmdl_file)
         roi_center = self.roi.skydir
 
         # Run gtselect and gtmktime
@@ -2316,8 +2315,6 @@ class GTBinnedAnalysis(AnalysisBase):
             self.logger.info('Skipping gtltcube')
 
         
-            
-
         self.logger.info('Loading LT Cube %s'%self._ltcube)
         self._ltc = LTCube.create(self._ltcube)
 
@@ -2325,7 +2322,7 @@ class GTBinnedAnalysis(AnalysisBase):
         self._psf = PSFModel(self.roi.skydir,self._ltc,
                              self.config['gtlike']['irfs'],
                              self.config['selection']['evtype'],
-                             np.linspace(1.0,6.0,81))
+                             self.energies)
         
         # Run gtbin
         kw = dict(algorithm='ccube',
@@ -2395,7 +2392,17 @@ class GTBinnedAnalysis(AnalysisBase):
             run_gtapp('gtexpcube2',self.logger,kw)              
         else:
             self.logger.info('Skipping local gtexpcube')
-        
+
+
+        # Make spatial templates for extended sources
+        for s in self.roi.sources:
+            if not s.extended: continue
+            if not 'Spatial_Filename' in s or os.path.isfile(s['Spatial_Filename']):
+                self.make_template(s,self.config['file_suffix'])
+            
+        # Write ROI XML
+        self.roi.write_xml(self._srcmdl_file)
+            
         # Run gtsrcmaps
         kw = dict(scfile=self.config['data']['scfile'],
                   expcube=self._ltcube,
@@ -2419,6 +2426,9 @@ class GTBinnedAnalysis(AnalysisBase):
         else:
             self.logger.info('Skipping gtsrcmaps')
 
+        # Create templates for extended sources
+        self.update_srcmap_file(None,True)
+            
         # Create BinnedObs
         self.logger.info('Creating BinnedObs')
         kw = dict(srcMaps=self._srcmap_file,expCube=self._ltcube,
@@ -2487,12 +2497,12 @@ class GTBinnedAnalysis(AnalysisBase):
         else:
             suffix = '_%s%s'%(model_name,self.config['file_suffix'])
 
-        self.logger.info('Generating model map for component %s'%self.name)
+        self.logger.info('Generating model map for component %s.'%self.name)
             
         outfile = os.path.join(self.config['fileio']['workdir'],'mcube%s.fits'%(suffix))        
         h = pyfits.open(self._ccube_file)        
         counts = self.modelCountsMap(name)
-        write_fits_image(counts,self.wcs,outfile)
+        utils.write_fits_image(counts,self.wcs,outfile)
 
         return counts
 
@@ -2503,34 +2513,66 @@ class GTBinnedAnalysis(AnalysisBase):
         elif src['SpatialModel'] == 'PSFSource':            
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_psf%s.fits'%(src.name,suffix))
-            make_psf_mapcube(src.skydir,self._psf,template_file,npix=self.npix,
-                             cdelt=self.config['binning']['binsz'],rebin=4)
+            utils.make_psf_mapcube(src.skydir,self._psf,template_file,npix=self.npix,
+                                   cdelt=self.config['binning']['binsz'],rebin=4)
             src['Spatial_Filename'] = template_file
-        elif src['SpatialModel'] == 'CGaussianSource':            
-            template_file = os.path.join(self.config['fileio']['workdir'],
-                                         '%s_template_cgauss_%05.3f%s.fits'%(src.name,src['SpatialWidth'],
-                                                                             suffix))  
-            make_cgauss_mapcube(src.skydir,self._psf,src['SpatialWidth'],template_file,
-                                npix=self.npix,
-                                cdelt=self.config['binning']['binsz'],rebin=4)
-            src['Spatial_Filename'] = template_file
-
         elif src['SpatialModel'] == 'GaussianSource':
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_gauss_%05.3f%s.fits'%(src.name,src['SpatialWidth'],
                                                                             suffix))
-            make_gaussian_spatial_map(src.skydir,src['SpatialWidth'],template_file,npix=500)
+            utils.make_gaussian_spatial_map(src.skydir,src['SpatialWidth'],template_file,npix=500)
             src['Spatial_Filename'] = template_file
         elif src['SpatialModel'] == 'DiskSource':
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_disk_%05.3f%s.fits'%(src.name,src['SpatialWidth'],
                                                                            suffix))
-            make_disk_spatial_map(src.skydir,src['SpatialWidth'],template_file,npix=500)
+            utils.make_disk_spatial_map(src.skydir,src['SpatialWidth'],template_file,npix=500)
             src['Spatial_Filename'] = template_file
         else:
             raise Exception('Unrecognized SpatialModel: ' + src['SpatialModel'] +
                             '\n Valid models: PointSource, GaussianSource, DiskSource, PSFSource ')
-    
+
+    def update_srcmap_file(self,sources=None,overwrite=False):
+        """Check the contents of the source map file and generate
+        source maps for any components that are not present."""
+
+        if not os.path.isfile(self._srcmap_file):
+            return
+        
+        hdulist = pyfits.open(self._srcmap_file)
+        hdunames = [hdu.name.upper() for hdu in hdulist]
+
+        srcmaps = {}
+
+        if sources is None:
+            sources = self.roi.sources
+        
+        for s in sources:
+                        
+            if not 'SpatialModel' in s: continue
+            if s['SpatialModel'] in ['PointSource','Gaussian']: continue
+            if s.name.upper() in hdunames and not overwrite: continue
+            
+            self.logger.info('Creating source map for %s'%s.name)
+
+            xpix, ypix = utils.skydir_to_pix(s.skydir,self._skywcs)
+            xpix0, ypix0 = utils.skydir_to_pix(self.roi.skydir,self._skywcs)
+
+            xpix -= xpix0
+            ypix -= ypix0
+            
+            k = utils.make_srcmap(s.skydir,self._psf,s['SpatialModel'],
+                                  s['SpatialWidth'],
+                                  npix=self.npix,xpix=xpix,ypix=ypix,
+                                  cdelt=self.config['binning']['binsz'],rebin=4)
+            
+            
+            srcmaps[s.name] = k
+
+        if srcmaps:
+            self.logger.info('Updating source map file for component %s.'%self.name)
+            utils.update_source_maps(self._srcmap_file,srcmaps)
+        
     def generate_model(self,model_name=None,outfile=None):
         """Generate a counts model map from an XML model file using
         gtmodel.

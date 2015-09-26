@@ -135,7 +135,7 @@ sed = {
 
 # Options for extension analysis
 extension = {
-    'spatial_model'            : ('CGaussianSource',''),
+    'spatial_model'            : ('GaussianSource',''),
     'width'                    : (None,''),
     'width_min'                : (0.01,''),
     'width_max'                : (1.0,''),

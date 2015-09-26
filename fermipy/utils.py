@@ -323,7 +323,18 @@ def create_wcs(skydir,coordsys='CEL',projection='AIT',
 
     w = wcs.WCS(w.to_header())    
     return w
-    
+
+def skydir_to_pix(skydir,wcs):
+
+    if 'RA' in wcs.wcs.ctype[0]:    
+        xpix, ypix = wcs.wcs_world2pix(skydir.ra.deg,skydir.dec.deg,0)
+    elif 'GLON' in wcs.wcs.ctype[0]:
+        xpix, ypix = wcs.wcs_world2pix(skydir.glon.deg,skydir.glat.deg,0)
+    else:
+        raise Exception('Unrecognized WCS coordinate system.')
+
+    return xpix,ypix
+
 def offset_to_sky(skydir,offset_lon,offset_lat,
                   coordsys='CEL',projection='AIT'):
     """Convert a coordinate offset (X,Y) in the given projection into
@@ -404,6 +415,44 @@ def get_target_skydir(config):
 
     return None
 
+def convolve2d_disk(fn,r,sig,nstep=100):
+    """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
+    azimuthally symmetric function in two dimensions and g is a
+    step function given by:
+
+    g(r) = H(1-r/s)
+
+
+    """
+    
+    r = np.array(r,ndmin=1)
+    sig = np.array(sig,ndmin=1)
+
+    rmin = r-sig
+    rmax = r+sig
+    rmin[rmin<0] = 0
+    delta = (rmax-rmin)/nstep
+    
+    redge = rmin[:,np.newaxis] + delta[:,np.newaxis]*np.linspace(0,nstep,nstep+1)[np.newaxis,:]
+    rp = 0.5*(redge[:,1:] + redge[:,:-1])
+    dr = redge[:,1:] - redge[:,:-1]
+    fnv = fn(rp)
+    
+    r = r.reshape(r.shape + (1,))
+    saxis = 1
+
+    cphi = -np.ones(dr.shape)
+    m = ((rp+r)/sig <1) | (r == 0)
+    
+    rrp = r*rp
+    sx = r**2+rp**2-sig**2    
+    cphi[~m] = sx[~m]/(2*rrp[~m])
+    dphi = 2*np.arccos(cphi)
+    v = rp*fnv*dphi*dr
+    s = np.sum(v,axis=saxis)
+
+    return s
+    
 
 def convolve2d_gauss(fn,r,sig,nstep=100):
     """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
@@ -457,55 +506,98 @@ def convolve2d_gauss(fn,r,sig,nstep=100):
     v = (rp*fnv/(sig2)*je*np.exp(x-(r*r+rp*rp)/(2*sig2))*dr)
     s = np.sum(v,axis=saxis)
 
-#    import matplotlib.pyplot as plt
-#    plt.figure()
-#    plt.plot(rp[500],v[500,:])
-#    plt.show()    
-#    print 'Done'
-
     return s
 
-def make_gaussian_kernel(sigma,npix=501,cdelt=0.01):
+def make_pixel_offset(npix,xpix=0.0,ypix=0.0):
+    """Make a 2D array with the distance of each pixel from a
+    reference direction in pixel coordinates.  Pixel coordinates are
+    defined such that (0,0) is located at the center of the coordinate
+    grid."""
+    
+    dx = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.-xpix)
+    dy = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.-ypix)
+    dxy = np.zeros((npix,npix))
+    dxy += np.sqrt(dx[np.newaxis,:]**2 + dy[:,np.newaxis]**2)
 
+    return dxy
+
+def make_gaussian_kernel(sigma,npix=501,cdelt=0.01,xpix=0.0,ypix=0.0):
+    """Make kernel for a 2D gaussian.
+    
+    Parameters
+    ----------
+
+    sigma : 68% containment radius in degrees.
+    """
+    
     sigma /= 1.5095921854516636        
     sigma /= cdelt
     
     fn = lambda t, s: 1./(2*np.pi*s**2)*np.exp(-t**2/(s**2*2.0))
-    
-    b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
-    k = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
-                                        b[:,np.newaxis]**2)
-    k = fn(k,sigma)
-
-    # Normalize map to 1
+    dxy = make_pixel_offset(npix,xpix,ypix)
+    k = fn(dxy,sigma)
     k /= (np.sum(k)*np.radians(cdelt)**2)
 
     return k
     
-def make_disk_kernel(sigma,npix=501,cdelt=0.01):
+def make_disk_kernel(sigma,npix=501,cdelt=0.01,xpix=0.0,ypix=0.0):
+    """Make kernel for a 2D disk.
+    
+    Parameters
+    ----------
 
+    sigma : Disk radius in deg.
+    """
+    
     sigma /= cdelt    
     fn = lambda t, s: 0.5 * (np.sign(s-t) + 1.0)
     
-    b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
-    k = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
-                                        b[:,np.newaxis]**2)
-    k = fn(k,sigma)
-
-    # Normalize map to 1
+    dxy = make_pixel_offset(npix,xpix,ypix)
+    k = fn(dxy,sigma)
     k /= (np.sum(k)*np.radians(cdelt)**2)
 
     return k
 
-def make_cgauss_kernel(psf,sigma,npix,cdelt):
+def make_cdisk_kernel(psf,sigma,npix,cdelt,xpix,ypix):
+    """Make a kernel for a PSF-convolved 2D disk.
+
+    Parameters
+    ----------
+
+    sigma : 68% containment radius in degrees.
+    """
     
     dtheta = psf.dtheta
     egy = psf.energies
 
-    b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
-    x = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
-                                        b[:,np.newaxis]**2)
+    x = make_pixel_offset(npix,xpix,ypix)
+    x *= cdelt
+        
+    k = np.zeros((len(egy),npix,npix))
+    for i in range(len(egy)):
 
+        fn = lambda t:  10**np.interp(t,dtheta,np.log10(psf.val[:,i]))
+        psfc = convolve2d_disk(fn,dtheta,sigma)
+        k[i] = np.interp(np.ravel(x),dtheta,psfc).reshape(x.shape)
+        k[i] /= (np.sum(k[i])*np.radians(cdelt)**2)
+        
+    return k
+
+def make_cgauss_kernel(psf,sigma,npix,cdelt,xpix,ypix):
+    """Make a kernel for a PSF-convolved 2D gaussian.
+
+    Parameters
+    ----------
+
+    sigma : 68% containment radius in degrees.
+    """
+    
+    sigma /= 1.5095921854516636
+    
+    dtheta = psf.dtheta
+    egy = psf.energies
+
+    x = make_pixel_offset(npix,xpix,ypix)
     x *= cdelt
         
     k = np.zeros((len(egy),npix,npix))
@@ -518,21 +610,13 @@ def make_cgauss_kernel(psf,sigma,npix,cdelt):
         
     return k
 
-def make_psf_kernel(psf,npix,cdelt):
+def make_psf_kernel(psf,npix,cdelt,xpix,ypix):
     
     dtheta = psf.dtheta
     egy = psf.energies
     
-    b = np.abs(np.linspace(0,npix-1,npix) - (npix-1)/2.)
-    x = np.zeros((npix,npix)) + np.sqrt(b[np.newaxis,:]**2 +
-                                        b[:,np.newaxis]**2)
-
+    x = make_pixel_offset(npix,xpix,ypix)
     x *= cdelt
-
-#    import matplotlib.pyplot as plt    
-#    plt.figure()
-#    im = plt.imshow(x,interpolation='nearest'); plt.colorbar(im)
-#    plt.show()
     
     k = np.zeros((len(egy),npix,npix))
     for i in range(len(egy)):
@@ -552,6 +636,29 @@ def rebin_map(k,nebin,npix,rebin):
 
     k /= rebin**2
 
+    return k
+
+
+
+def make_srcmap(skydir,psf,spatial_model,sigma,npix=500,xpix=0.0,ypix=0.0,cdelt=0.01,rebin=1):
+    """Compute the source map for a given spatial model."""
+    
+    energies = psf.energies
+    nebin = len(energies)
+
+    if spatial_model == 'GaussianSource':
+        k = make_cgauss_kernel(psf,sigma,npix*rebin,cdelt/rebin,xpix,ypix)
+    elif spatial_model == 'DiskSource':
+        k = make_cdisk_kernel(psf,sigma,npix*rebin,cdelt/rebin,xpix,ypix)
+    elif spatial_model == 'PSFSource':
+        k = make_psf_kernel(psf,npix*rebin,cdelt/rebin,xpix,ypix)        
+    else:
+        raise Exception('Unrecognized spatial model: %s'%spatial_model)
+        
+    if rebin > 1: k = rebin_map(k,nebin,npix,rebin)
+
+    k *= psf.exp[:,np.newaxis,np.newaxis]*np.radians(cdelt)**2
+    
     return k
 
 def make_cgauss_mapcube(skydir,psf,sigma,outfile,npix=500,cdelt=0.01,rebin=1):
@@ -580,7 +687,7 @@ def make_cgauss_mapcube(skydir,psf,sigma,outfile,npix=500,cdelt=0.01,rebin=1):
     hdu_image.header['CUNIT3'] = 'MeV'
     
     hdulist = pyfits.HDUList([hdu_image,hdu_energies])
-    hdulist.writeto(outfile,clobber=True) 
+    hdulist.writeto(outfile,clobber=True)
 
 def make_psf_mapcube(skydir,psf,outfile,npix=500,cdelt=0.01,rebin=1):
 
@@ -622,7 +729,6 @@ def make_gaussian_spatial_map(skydir,sigma,outfile,npix=501,cdelt=0.01):
 
 def make_disk_spatial_map(skydir,sigma,outfile,npix=501,cdelt=0.01):
 
-    sigma /= cdelt    
     w = create_wcs(skydir,cdelt=cdelt,crpix=npix/2.+0.5)
     
     hdu_image = pyfits.PrimaryHDU(np.zeros((npix,npix)),
@@ -651,3 +757,24 @@ def write_fits_image(data,wcs,outfile):
 #        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])
     hdulist = pyfits.HDUList([hdu_image])        
     hdulist.writeto(outfile,clobber=True)    
+
+def update_source_maps(srcmap_file,srcmaps):
+
+    hdulist = pyfits.open(srcmap_file)
+    hdunames = [hdu.name.upper() for hdu in hdulist]
+
+    for name,data in srcmaps.items():
+    
+        if not name.upper() in hdunames:
+    
+            for hdu in hdulist[1:]:
+                if hdu.header['XTENSION'] == 'IMAGE':
+                    break
+
+            newhdu = pyfits.ImageHDU(data,hdu.header,name=name)
+            newhdu.header['EXTNAME'] = name
+            hdulist.append(newhdu)
+    
+        hdulist[name].data[...] = data        
+    hdulist.writeto(srcmap_file,clobber=True)
+

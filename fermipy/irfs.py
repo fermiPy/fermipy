@@ -35,13 +35,23 @@ class PSFModel(object):
 
     def __init__(self,skydir,ltc,event_class,event_types,egy):
 
+        if isinstance(event_types,int):
+            event_types = bitmask_to_bits(event_types)
+        
         self._dtheta = np.logspace(-4,1.5,1000)
         self._dtheta = np.insert(self._dtheta,0,[0])
         self._egy = egy
-        
+
+        self._exp = np.zeros(len(egy))
         self._psf = self.create_average_psf(skydir,ltc,event_class,event_types,
                                             self._dtheta,egy)
 
+        cth_edge = np.linspace(0.0,1.0,51)
+        cth = edge_to_center(cth_edge)
+        ltw = ltc.get_src_lthist(skydir,cth_edge)
+        for et in event_types:
+            aeff = create_exposure(event_class,et,egy,cth)
+            self._exp += np.sum(aeff*ltw[np.newaxis,:],axis=1)
 
     @property
     def dtheta(self):
@@ -54,6 +64,10 @@ class PSFModel(object):
     @property
     def val(self):
         return self._psf
+
+    @property
+    def exp(self):
+        return self._exp
     
     @staticmethod
     def create_average_psf(skydir,ltc,event_class,event_types,dtheta,egy):
@@ -95,9 +109,6 @@ def create_psf(event_class,event_type,dtheta,egy,cth):
         event_type = evtype_string[event_type]
 
     irfname = '%s::%s'%(event_class,event_type)
-
-    print 'Creating PSF for ', irfname
-    
     irf_factory=pyIrfLoader.IrfsFactory.instance()
     irf = irf_factory.create(irfname)
 
