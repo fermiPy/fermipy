@@ -1013,7 +1013,7 @@ class GTAnalysis(AnalysisBase):
         width_nstep = kwargs.get('width_nstep',self.config['extension']['width_nstep'])
         width = kwargs.get('width',self.config['extension']['width'])
 
-        if width None:
+        if width is None:
             width = np.logspace(np.log10(width_min),np.log10(width_max),width_nstep)
 
         ext = {'width' : width,
