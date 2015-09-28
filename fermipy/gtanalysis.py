@@ -498,10 +498,11 @@ class GTAnalysis(AnalysisBase):
             self.logger.error('Working directory does not exist.')
             
     def setup(self,xmlmodel=None):
-        """Run pre-processing step for each analysis component.  This
-        will run everything except the likelihood optimization: data
-        selection (gtselect, gtmktime), counts maps generation
-        (gtbin), model generation (gtexpcube2,gtsrcmaps,gtdiffrsp)."""
+        """Run pre-processing step for each analysis component and
+        construct a joint likelihood object.  This will run everything
+        except the likelihood optimization: data selection (gtselect,
+        gtmktime), counts maps generation (gtbin), model generation
+        (gtexpcube2,gtsrcmaps,gtdiffrsp)."""
 
         # Run data selection step
         rm = self._roi_model
@@ -830,10 +831,6 @@ class GTAnalysis(AnalysisBase):
         """
 
         name = self.get_source_name(name)
-        
-#        if free: self.logger.info('Freeing norm for ' + name)
-#        else: self.logger.info('Fixing norm for ' + name)
-        
         normPar = self.like.normPar(name).getName()
         self.free_source(name,pars=[normPar],free=free)
         
@@ -886,11 +883,19 @@ class GTAnalysis(AnalysisBase):
         self.logger.info('Running residual analysis')
         self._rmg.run(prefix)
         
-    def optimize(self):
+    def optimize(self,**kwargs):
         """Iteratively optimize the ROI model."""
 
         self.logger.info('Running ROI Optimization')
         
+        # Extract options from kwargs
+        npred_frac_threshold = kwargs.get('npred_frac',
+                                          self.config['roiopt']['npred_frac'])
+        npred_threshold = kwargs.get('npred_threshold',
+                                     self.config['roiopt']['npred_threshold'])
+        shape_ts_threshold = kwargs.get('shape_ts_threshold',
+                                        self.config['roiopt']['shape_ts_threshold'])
+
         # preserve free parameters
         free = self.get_free_params()
 
@@ -908,7 +913,7 @@ class GTAnalysis(AnalysisBase):
             self.free_norm(k)
             skip_sources.append(k)
 
-            if npred_frac > 0.95: break
+            if npred_frac > npred_frac_threshold: break
 
         self.fit()
         self.free_sources(free=False)
@@ -919,7 +924,7 @@ class GTAnalysis(AnalysisBase):
 
             if k in skip_sources: continue
             
-            if  v['Npred'] < self.config['roiopt']['npred_threshold']:
+            if  v['Npred'] < npred_threshold:
                 self.logger.info('Skipping %s with Npred %10.3f'%(k,v['Npred']))
                 continue
 
@@ -939,7 +944,8 @@ class GTAnalysis(AnalysisBase):
                            key=lambda t: t[1]['ts'] if np.isfinite(t[1]['ts']) else 0,
                            reverse=True):
             
-            if v['ts'] < 100 or not np.isfinite(v['ts']): continue
+            if v['ts'] < shape_ts_threshold \
+                    or not np.isfinite(v['ts']): continue
 
             self.logger.info('Fitting shape %s TS: %10.3f'%(k,v['ts']))
             
@@ -959,8 +965,24 @@ class GTAnalysis(AnalysisBase):
             self.extension(s)
         
         
-    def extension(self,name):
-        """Perform an angular extension test for this source."""
+    def extension(self,name,**kwargs):
+        """Perform an angular extension test for this source.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        Returns
+        -------
+
+        extension : dict
+            Dictionary containing results of the SED analysis.  The same
+            dictionary is also saved to the source dictionary under
+            'sed'.  
+
+        """
         
         name = self.roi.get_source_by_name(name).name
         
@@ -984,13 +1006,15 @@ class GTAnalysis(AnalysisBase):
         
         self.generate_model_map(model_name=ext_model_name+'_bkg')
 
-        
-        if self.config['extension']['width'] is not None:
-            width = self.config['extension']['width']
-        else:
-            width = np.logspace(np.log10(self.config['extension']['width_min']),
-                                np.log10(self.config['extension']['width_max']),
-                                self.config['extension']['width_nstep'])
+        # Extract options from kwargs
+        spatial_model = kwargs.get('spatial_model',self.config['extension']['spatial_model'])
+        width_min = kwargs.get('width_min',self.config['extension']['width_min'])
+        width_max = kwargs.get('width_max',self.config['extension']['width_max'])
+        width_nstep = kwargs.get('width_nstep',self.config['extension']['width_nstep'])
+        width = kwargs.get('width',self.config['extension']['width'])
+
+        if width None:
+            width = np.logspace(np.log10(width_min),np.log10(width_max),width_nstep)
 
         ext = {'width' : width,
                'dlogLike' : np.zeros(len(width)),
@@ -1009,7 +1033,7 @@ class GTAnalysis(AnalysisBase):
 
             model_name = '%s%02i'%(ext_model_name,i)            
             s.set_name(model_name)
-            s.set_spatial_model(self.config['extension']['spatial_model'],w)
+            s.set_spatial_model(spatial_model,w)
             
             self.logger.info('Adding test source with width: %f'%w)
             for k,v in s.spectral_pars.items():
@@ -1073,7 +1097,15 @@ class GTAnalysis(AnalysisBase):
         use_local_index : bool
             Use a power-law approximation to the shape of the global
             spectrum in each bin.  If this is false then a constant
-            index set to `bin_index` will be used.            
+            index set to `bin_index` will be used.  
+
+        Returns
+        -------
+
+        sed : dict
+            Dictionary containing results of the SED analysis.  The same
+            dictionary is also saved to the source dictionary under
+            'sed'.
             
         """
         
