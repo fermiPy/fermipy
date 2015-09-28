@@ -115,8 +115,8 @@ mc = { }
 
 #
 roiopt = {
-    'npred_threshold'          : (1.0,'')
-    'npred_frac'               : (0.95,'')
+    'npred_threshold'          : (1.0,''),
+    'npred_frac'               : (0.95,''),
     'shape_ts_threshold'       : (100.0,'')
     }
 
