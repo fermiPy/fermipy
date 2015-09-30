@@ -36,7 +36,7 @@ selection:
   emax    : 100000
   zmax    : 100
   evclass : 128
-  evtype  : null
+  evtype  : 3
   filter  : 'DATA_QUAL>0 && LAT_CONFIG==1' # gtmktime filter string
 
   # Set the ROI center to the coordinates of this source
@@ -62,40 +62,19 @@ model:
   # Include catalog sources within a box of the given width..
   src_roiwidth : 10.0
 
-  galdiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/template_4years_P8_V2_scaled.fits'
-  isodiff  : '/nfs/slac/g/ki/ki20/cta/mdwood/fermi/diffuse/rings/4year/preliminary/isotropic_source_4years_P8V3.txt'
-  limbdiff : null
+  galdiff  : '$GLAST_EXT/diffuseModels/v5r0/gll_iem_v06.fits'
+  isodiff  : '$GLAST_EXT/diffuseModels/v5r0/iso_P8R2_SOURCE_V6_v06.txt'
 
   # List of catalogs to be used in the model.
   catalogs : 
     - 'catalogs/gll_psc_v14.fit'
-
-  # Remove duplicate sources
-  remove_duplicates : False
-
-roiopt :
-
-  # Free sources within X deg of ROI center
-  free_source_radius : null
-
-  # Free sources within X deg of ROI edge (pos = outside, neg = inside)
-  free_source_roi_margin : null
-
-  # Provide explicit list of sources to be freed (either diffuse or point-source)
-  free_sources : null
-
-  # Provide a minimum TS threshold at which sources should be freed
-  free_source_ts_threshold : null
 
 # This is the block of the configuration where analysis components
 # are defined.
 components: null
     
 # Settings for SED analysis
-#sed: {}
+sed: {}
 
-# Settings for lightcurve analysis
-#curve: {}
-
-# Settings for MC analysis
-mc : {}
+# Settings for Extension analysis
+extension : {}
