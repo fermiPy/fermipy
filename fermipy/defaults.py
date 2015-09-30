@@ -115,11 +115,9 @@ mc = { }
 
 #
 roiopt = {
-#    'free_source_radius'       : (None,''),
-#    'free_source_roi_margin'   : (None,''),
-#    'free_sources'             : (None,''),
-#    'free_source_ts_threshold' : (None,'')
-    'npred_threshold'          : (1.0,'')
+    'npred_threshold'          : (1.0,''),
+    'npred_frac'               : (0.95,''),
+    'shape_ts_threshold'       : (100.0,'')
     }
 
 #
@@ -139,7 +137,7 @@ extension = {
     'width'                    : (None,''),
     'width_min'                : (0.01,''),
     'width_max'                : (1.0,''),
-    'width_nstep'              : (5,''),
+    'width_nstep'              : (21,''),
     'save_templates'           : (False,''),
     }
 
