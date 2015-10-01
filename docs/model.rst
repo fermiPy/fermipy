@@ -7,12 +7,16 @@ The ROIModel class is responsible for managing the source and diffuse
 components in the ROI.  Configuration of the model is controlled with
 the *model* block of YAML configuration file.
 
-The simplest configuration uses a single file for the galactic
-diffuse.  By default the galactic diffuse and isotropic model
-components will be named *galdiff* and *isodiff* respectively.  An
-alias for each component will also be created with the name of the
-mapcube or file spectrum.  For instance the galactic diffuse can be
-referred to as *galdiff* or *gll_iem_v06* in the following example.
+Configuring Diffuse Components
+------------------------------
+
+The simplest configuration uses a single file for the galactic and
+isotropic diffuse components.  By default the galactic diffuse and
+isotropic components will be named *galdiff* and *isodiff*
+respectively.  An alias for each component will also be created with
+the name of the mapcube or file spectrum.  For instance the galactic
+diffuse can be referred to as *galdiff* or *gll_iem_v06* in the
+following example.
 
 .. code-block:: yaml
    
@@ -22,8 +26,8 @@ referred to as *galdiff* or *gll_iem_v06* in the following example.
      isodiff  : '$FERMI_DIFFUSE_DIR/isotropic_source_4years_P8V3.txt'
      catalogs : ['gll_psc_v14.fit']
 
-To define two or more galactic diffuse components you can define
-either the *galdiff* and *isodiff* parameters as lists.  A separate
+To define two or more galactic diffuse components you can optionally define
+the *galdiff* and *isodiff* parameters as lists.  A separate
 component will be generated for each element in the list with the name
 *galdiffXX* or *isodiffXX* where *XX* is an integer position in the
 list.
@@ -43,9 +47,34 @@ as a dictionary containing *name* and *file* fields:
    model:
      galdiff  : 
        - { 'name' : 'component0' : 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component0.fits' }
-       - { 'name' : 'component0' : 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component0.fits' }
+       - { 'name' : 'component1' : 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component1.fits' }
 
-Additional sources can be defined with the *sources* block:
+Configuring Source Components
+-----------------------------
+
+The list of sources for inclusion in the ROI model is set by defining
+a list of catalogs with the *catalogs* parameter.  Catalog files can
+be in either XML or FITS format.  Sources from the catalogs in this
+list that satisfy either the *src_roiwidth* or *src_radius* selections
+are added to the ROI model.  If a source is defined in multiple
+catalogs the source definition from the last file in the catalogs list
+takes precedence.
+
+.. code-block:: yaml
+   
+   model:
+   
+     src_radius: 5.0
+     src_roiwidth: 10.0
+     catalogs : 
+       - 'gll_psc_v14.fit'
+       - 'extra_sources.xml'
+
+Sources in addition to those in the catalog file can be defined with
+the *sources* parameter.  This parameter contains a list of
+dictionaries that define the parameters of individual sources.  The
+keys of the source dictionary map to the spectral and spatial source
+properties as they would be defined in the XML model file.
 
 .. code-block:: yaml
    
@@ -53,28 +82,55 @@ Additional sources can be defined with the *sources* block:
      sources  : 
        - { name: 'SourceA', glon : 120.0, glat : -3.0, 
         SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
-        SpatialType: 'PointSource' }
-       - { name: 'SourceB', glon : 120.0, glat : 0.0, 
-        SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
-        SpatialType: 'DiskSource', SpatialWidth: 1.0 }
-       - { name: 'SourceC', glon : 122.0, glat : -3.0,
+        SpatialModel: 'PointSource' }
+       - { name: 'SourceB', glon : 122.0, glat : -3.0,
         SpectrumType : 'LogParabola', norm : !!float 1E-11, Scale : 1000, beta : 0.0,
-        SpatialType: 'PointSource' }
+        SpatialModel: 'PointSource' }
 
-fermiPy supports three types of pre-defined spatial templates:
-PointSource (the default), DiskSource, and GaussianSource.  The
-spatial extension of DiskSource and GaussianSource can be controlled
-with the *SpatialWidth* parameter which defines respectively the
-radius or 68% containment radius in degrees.
+For parameters defined as scalars, the scale and value properties will
+be assigned automatically from the input value.  To set these manually
+a parameter can alternatively initialized with a dictionary that
+explicitly sets the value and scale properties:
+
+.. code-block:: yaml
+   
+   model:
+     sources  : 
+       - { name: 'SourceA', glon : 120.0, glat : -3.0, 
+           SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000,
+           Prefactor : { value : 1.0, scale : !!float 1e-11, free : '0' }, 
+           SpatialModel: 'PointSource' }
+
+fermiPy supports three types of pre-defined spatial templates which
+can be defined by setting the SpatialModel property: PointSource (the
+default), DiskSource, and GaussianSource.  The spatial extension of
+DiskSource and GaussianSource can be controlled with the
+*SpatialWidth* parameter which defines respectively the radius or 68%
+containment radius in degrees.  Note that sources with the DiskSource
+and GaussianSource spatial property can only be defined with the
+*sources* parameter.
+
+.. code-block:: yaml
+   
+   model:
+     sources  : 
+       - { name: 'MyDiskSource', glon : 120.0, glat : 0.0, 
+        SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
+        SpatialModel: 'DiskSource', SpatialWidth: 1.0 }
+       - { name: 'MyGaussSource', glon : 120.0, glat : 0.0, 
+        SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
+        SpatialModel: 'GaussianSource', SpatialWidth: 1.0 }
 
 
 Editing the Model at Runtime
 ----------------------------
 
-The model can be manually editing at runtime by adding or removing
-sources before calling the
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` method.
-
+The model can be manually editing at runtime with the
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.add_source` and
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.delete_source` methods.
+Sources can be added either before or after calling
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` as shown in the
+following example.
 
 .. code-block:: python
 
@@ -82,13 +138,26 @@ sources before calling the
            
    gta = GTAnalysis('config.yaml',logging={'verbosity' : 3})
 
-   # Remove SourceA from the model
-   gta.delete_source('SourceA')
+   # Remove isodiff from the model
+   gta.delete_source('isodiff')
 
-   # Add SourceB to the model
-   gta.add_source({ 'name': 'SourceA', 'glon' : 120.0, 'glat' : -3.0, 
-                     SpectrumType : 'PowerLaw', Index : 2.0, 
-		     Scale : 1000, Prefactor : !!float 1e-11, 
-        	     SpatialType: 'PointSource' })
+   # Add SourceA to the model
+   gta.add_source('SourceA',{ 'glon' : 120.0, 'glat' : -3.0, 
+                   'SpectrumType' : 'PowerLaw', 'Index' : 2.0, 
+		   'Scale' : 1000, 'Prefactor' : 1e-11, 
+        	   'SpatialModel' : 'PointSource' })
 
    gta.setup()
+
+   # Add SourceB to the model
+   gta.add_source('SourceB',{ 'glon' : 121.0, 'glat' : -2.0, 
+                    'SpectrumType' : 'PowerLaw', 'Index' : 2.0, 
+		    'Scale' : 1000, 'Prefactor' : 1e-11, 
+        	    'SpatialModel' : 'PointSource' })
+
+Sources added before calling
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` will be appended to
+the XML model definition.  Sources added after calling
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` will be created
+dynamically through the pyLikelihood object creation mechanism.  
+
