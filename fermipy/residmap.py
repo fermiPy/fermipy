@@ -67,7 +67,7 @@ def create_model_name(src):
         o += '_s%04.2f'%src['SpatialWidth']
     
     if src['SpectrumType'] == 'PowerLaw':
-        o += '_powerlaw_%04.2f'%src['Index']
+        o += '_powerlaw_%04.2f'%float(src.spectral_pars['Index']['value'])
 
     return o
 
@@ -141,6 +141,7 @@ class ResidMapGenerator(AnalysisBase):
         src_dict['dec'] = radec[1]
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialWidth',0.3)
+        src_dict.setdefault('Index',2.0)
         
         kernel = None
         

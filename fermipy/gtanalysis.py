@@ -1055,21 +1055,24 @@ class GTAnalysis(AnalysisBase):
         null_model_name = '%s_noext'%(name.lower().replace(' ','_'))
         
         saved_state = LikelihoodState(self.like)
-
         
-        self.free_source(name,free=False)
         if fix_background:
             self.free_sources(free=False)
 
-        # Compute TS_ext
+        # Fit baseline (point-source) model
+        self.free_norm(name)
+        self.fit(update=False)
+        
+        # Save likelihood value for baseline fit
         logLike0 = self.like()
-
+        
         if save_model_map:
             self.generate_model_map(model_name=null_model_name,name=name)
 
 #        src = self.like.deleteSource(name)
         normPar = self.like.normPar(name).getName()        
         self.scale_parameter(name,normPar,1E-10)
+        self.free_source(name,free=False)
         self.like.syncSrcParams(name)
 
         if save_model_map:
@@ -1124,11 +1127,12 @@ class GTAnalysis(AnalysisBase):
                 get_upper_limit(ext['dlogLike'],ext['width'],interpolate=True)
         except Exception, message:
             self.logger.error('Upper limit failed.', exc_info=True)
-            
-        self.scale_parameter(name,normPar,1E10)
-            
-        saved_state.restore()
 
+
+        self.scale_parameter(name,normPar,1E10)
+        self.like.syncSrcParams(name)        
+        saved_state.restore()
+        
         src_model = self._roi_model['sources'].get(name,{})
         src_model['extension'] = copy.deepcopy(ext)   
         
@@ -1683,7 +1687,7 @@ class GTAnalysis(AnalysisBase):
             if not 'extension' in v: continue
             if v['extension'] is None: continue
 
-            self._plot_extension(prefix,v,erange=erange)
+#            self._plot_extension(prefix,v,erange=erange)
             
     def _plot_extension(self,prefix,v,erange=None):
         """Utility function for generating diagnostic plots for the
