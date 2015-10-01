@@ -518,8 +518,6 @@ class GTAnalysis(AnalysisBase):
             self._like.addComponent(c.like)
 
         for name in self.like.sourceNames():
-
-            print name
             
             src = self._roi.get_source_by_name(name)
             
