@@ -414,6 +414,7 @@ class GTAnalysis(AnalysisBase):
 
         src = self.roi.get_source_by_name(name)        
         self.roi.delete_sources([src])
+        self.like.model = self.like.components[0].model
             
     def create_component_configs(self):
         configs = []
@@ -634,9 +635,11 @@ class GTAnalysis(AnalysisBase):
             c.delete_sources(srcs)
             
     def free_sources(self,free=True,pars=None,cuts=None,
-                     distance=None,square=False):
+                     distance=None,min_ts=None,min_npred=None,square=False):
         """Free/Fix sources within the ROI satisfying the given
-        selection.
+        selection.  When multiple parameter selections are defined,
+        the selected sources will be those satisfying the logical AND
+        of all selections (e.g. distance < X && ts > min_ts && ...).
 
         Parameters
         ----------
@@ -653,11 +656,20 @@ class GTAnalysis(AnalysisBase):
 
         distance : float        
             Distance out to which sources should be freed or fixed.
-            If none then all sources will be selected.
+            If this parameter is none no selection will be applied.
 
-        square : bool        
-            Apply an ROI-like selection on the maximum distance in
-            either X or Y in projected cartesian coordinates.        
+        min_ts : float        
+            Free sources that have TS larger than this value.  If this
+            parameter is none no selection will be applied.
+
+        min_npred : float        
+            Free sources that have Npred larger than this value.  If this
+            parameter is none no selection will be applied.
+            
+        square : bool
+            Switch between applying a circular or square (ROI-like)
+            selection on the maximum projected distance from the ROI
+            center.
         
         """
         rsrc, srcs = self._roi.get_sources_by_position(self._roi.skydir,
@@ -665,11 +677,21 @@ class GTAnalysis(AnalysisBase):
         
         if cuts is None: cuts = []        
         for s,r in zip(srcs,rsrc):
-            if not s.check_cuts(cuts): continue            
+            if not s.check_cuts(cuts): continue
+            ts = self._roi_model['sources'][s.name]['ts']
+            npred = self._roi_model['sources'][s.name]['Npred']
+            
+            if min_ts is not None and (~np.isfinite(ts) or ts < min_ts): continue
+            if min_npred is not None and (~np.isfinite(npred) or npred < min_npred): continue
             self.free_source(s.name,free=free,pars=pars)
 
         for s in self._roi._diffuse_srcs:
 #            if not s.check_cuts(cuts): continue
+            ts = self._roi_model['sources'][s.name]['ts']
+            npred = self._roi_model['sources'][s.name]['Npred']
+            
+            if min_ts is not None and (~np.isfinite(ts) or ts < min_ts): continue
+            if min_npred is not None and (~np.isfinite(npred) or npred < min_npred): continue
             self.free_source(s.name,free=free,pars=pars)
                                         
     def free_sources_by_position(self,free=True,pars=None,
@@ -904,7 +926,8 @@ class GTAnalysis(AnalysisBase):
         # Fix all parameters
         self.free_sources(free=False)
 
-        # Free norms of sources that compose 95% of total counts
+        # Free norms of sources for which the sum of Npred is a
+        # fraction > npred_frac of the total model counts in the ROI
         npred_sum = 0
         skip_sources = []
         for k, v in sorted(self._roi_model['sources'].items(),
@@ -941,7 +964,7 @@ class GTAnalysis(AnalysisBase):
             
             self.free_norm(k,free=False)        
 
-        # Refit spectral shape parameters for sources with TS > 100
+        # Refit spectral shape parameters for sources with TS > shape_ts_threshold
         for k, v in sorted(self._roi_model['sources'].items(),
                            key=lambda t: t[1]['ts'] if np.isfinite(t[1]['ts']) else 0,
                            reverse=True):
@@ -968,7 +991,12 @@ class GTAnalysis(AnalysisBase):
         
         
     def extension(self,name,**kwargs):
-        """Perform an angular extension test for this source.
+        """Perform an angular extension test for this source.  This
+        will substitute an extended spatial template for the given
+        source and perform a one-dimensional scan of the spatial
+        extension parameter over the range specified with the width
+        parameters.  The resulting profile likelihood is used to
+        compute the best-fit value, upper limit, and TS for extension.
 
         Parameters
         ----------
@@ -976,17 +1004,50 @@ class GTAnalysis(AnalysisBase):
         name : str
             Source name.
 
+        spatial_model : str
+            Spatial model that will be used when testing extension
+            (e.g. DiskSource, GaussianSource).
+
+        width_min : float
+            Minimum value in degrees for the spatial extension scan.
+        
+        width_max : float
+            Maximum value in degrees for the spatial extension scan.
+
+        width_nstep : int
+            Number of scan points between width_min and width_max.
+
+        width : array-like        
+            Explicit sequence of values in degrees for the spatial extension
+            scan.  If this argument is None then the scan points will
+            be determined from width_min/width_max/width_nstep.
+            
+        fix_background : bool
+            Fix all background sources when performing the extension fit.
+
+        save_model_map : bool
+            Generate model maps for all steps in the likelihood scan.
+            
         Returns
         -------
 
         extension : dict
-            Dictionary containing results of the SED analysis.  The same
-            dictionary is also saved to the source dictionary under
-            'sed'.  
+            Dictionary containing results of the extension analysis.  The same
+            dictionary is also saved to the dictionary of this source under
+            'extension'.  
 
         """
         
         name = self.roi.get_source_by_name(name).name
+
+        # Extract options from kwargs
+        spatial_model = kwargs.get('spatial_model',self.config['extension']['spatial_model'])
+        width_min = kwargs.get('width_min',self.config['extension']['width_min'])
+        width_max = kwargs.get('width_max',self.config['extension']['width_max'])
+        width_nstep = kwargs.get('width_nstep',self.config['extension']['width_nstep'])
+        width = kwargs.get('width',self.config['extension']['width'])
+        fix_background = kwargs.get('fix_background',self.config['extension']['fix_background'])
+        save_model_map = kwargs.get('save_model_map',self.config['extension']['save_model_map'])
         
         self.logger.info('Running extension analysis for %s'%name)
 
@@ -995,25 +1056,24 @@ class GTAnalysis(AnalysisBase):
         
         saved_state = LikelihoodState(self.like)
 
-        self.free_sources(free=False)
         
+        self.free_source(name,free=False)
+        if fix_background:
+            self.free_sources(free=False)
+
         # Compute TS_ext
         logLike0 = self.like()
-        self.generate_model_map(model_name=null_model_name,name=name)
+
+        if save_model_map:
+            self.generate_model_map(model_name=null_model_name,name=name)
 
 #        src = self.like.deleteSource(name)
         normPar = self.like.normPar(name).getName()        
         self.scale_parameter(name,normPar,1E-10)
         self.like.syncSrcParams(name)
-        
-        self.generate_model_map(model_name=ext_model_name+'_bkg')
 
-        # Extract options from kwargs
-        spatial_model = kwargs.get('spatial_model',self.config['extension']['spatial_model'])
-        width_min = kwargs.get('width_min',self.config['extension']['width_min'])
-        width_max = kwargs.get('width_max',self.config['extension']['width_max'])
-        width_nstep = kwargs.get('width_nstep',self.config['extension']['width_nstep'])
-        width = kwargs.get('width',self.config['extension']['width'])
+        if save_model_map:
+            self.generate_model_map(model_name=ext_model_name+'_bkg')
 
         if width is None:
             width = np.logspace(np.log10(width_min),np.log10(width_max),width_nstep)
@@ -1037,7 +1097,7 @@ class GTAnalysis(AnalysisBase):
             s.set_name(model_name)
             s.set_spatial_model(spatial_model,w)
             
-            self.logger.info('Adding test source with width: %f'%w)
+            self.logger.info('Adding test source with width: %10.3f deg'%w)
             for k,v in s.spectral_pars.items():
                 s._spectral_pars[k]['value'] = str(self.like[name].src.spectrum().getParamValue(k))
                 
@@ -1052,8 +1112,10 @@ class GTAnalysis(AnalysisBase):
             ext['logLike'][i] = logLike1
             sd = self.get_src_model(model_name)
             ext['fit'].append(sd)
-            
-            self.generate_model_map(model_name=model_name,name=model_name)
+
+            if save_model_map:
+                self.generate_model_map(model_name=model_name,name=model_name)
+                
             self.delete_source(model_name,
                                save_template=self.config['extension']['save_templates'])
 
@@ -1531,7 +1593,9 @@ class GTAnalysis(AnalysisBase):
         return [(model_counts,self._wcs)] + counts
 
     def load_roi(self,infile):
-
+        """This function reloads the analysis state from a previously
+        saved instance generated with write_roi()."""
+        
         self.load_xml(infile)
 
         infile, ext = os.path.splitext(infile)
@@ -1622,7 +1686,9 @@ class GTAnalysis(AnalysisBase):
             self._plot_extension(prefix,v,erange=erange)
             
     def _plot_extension(self,prefix,v,erange=None):
-
+        """Utility function for generating diagnostic plots for the
+        extension analysis."""
+        
         if erange is None:
             erange = (self.energies[0],self.energies[-1])
         

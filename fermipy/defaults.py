@@ -139,6 +139,8 @@ extension = {
     'width_max'                : (1.0,''),
     'width_nstep'              : (21,''),
     'save_templates'           : (False,''),
+    'fix_background'           : (False,''),
+    'save_model_map'           : (False,''),    
     }
 
 # Options for anlaysis
