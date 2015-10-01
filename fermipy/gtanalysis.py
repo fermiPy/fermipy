@@ -268,7 +268,7 @@ class GTAnalysis(AnalysisBase):
                                     logfile=self.config['fileio']['logfile'],
                                     logging=self.config['logging'])
                 
-        self._like = SummedLikelihood()
+        self._like = None
         self._components = []
         configs = self.create_component_configs()
 
@@ -400,6 +400,8 @@ class GTAnalysis(AnalysisBase):
         for c in self.components:
             c.add_source(name,src_dict,free=free)
 
+        if self._like is None: return
+            
         self.like.syncSrcParams(name)            
         self.like.model = self.like.components[0].model
             
@@ -517,6 +519,8 @@ class GTAnalysis(AnalysisBase):
 
         for name in self.like.sourceNames():
 
+            print name
+            
             src = self._roi.get_source_by_name(name)
             
             src_model = {'sed' : None, 'extension' : None,
@@ -2177,6 +2181,9 @@ class GTBinnedAnalysis(AnalysisBase):
             self.roi.load_source(src)
 
         self.make_template(src,self.config['file_suffix'])
+        
+        if self._like is None: return
+        
         self.update_srcmap_file([src],True)
         
         if src['SpatialType'] == 'PointSource':        
@@ -2221,11 +2228,12 @@ class GTBinnedAnalysis(AnalysisBase):
     def delete_source(self,name,save_template=True):
 
         self.logger.info('Deleting source ' + name)
-        
-        self.like.deleteSource(name)
-        self.like.logLike.eraseSourceMap(name)
-        src = self.roi.get_source_by_name(name)
 
+        if self.like is not None:
+            self.like.deleteSource(name)
+            self.like.logLike.eraseSourceMap(name)
+        
+        src = self.roi.get_source_by_name(name)
         if not save_template and os.path.isfile(src['Spatial_Filename']):
             os.remove(src['Spatial_Filename'])
         
@@ -2262,8 +2270,18 @@ class GTBinnedAnalysis(AnalysisBase):
         pass
     
     def modelCountsMap(self,name=None):
-        """Return the model counts map for a single source or for the
-        sum of all sources in the ROI."""
+        """Return the model counts map for a single source, a list of
+        sources, or for the sum of all sources in the ROI.
+        
+        Parameters
+        ----------
+        name : str or list of str
+
+           Parameter controlling the set of sources for which the
+           model counts map will be calculated.  If name=None the
+           model map will be generated for all sources in the ROI. 
+        
+        """
         
         v = pyLike.FloatVector(self.npix**2*self.enumbins)
 
@@ -2425,12 +2443,10 @@ class GTBinnedAnalysis(AnalysisBase):
         else:
             self.logger.info('Skipping local gtexpcube')
 
-
         # Make spatial templates for extended sources
         for s in self.roi.sources:
             if not s.extended: continue
-            if not 'Spatial_Filename' in s or os.path.isfile(s['Spatial_Filename']):
-                self.make_template(s,self.config['file_suffix'])
+            self.make_template(s,self.config['file_suffix'])
             
         # Write ROI XML
         self.roi.write_xml(self._srcmdl_file)
@@ -2540,6 +2556,8 @@ class GTBinnedAnalysis(AnalysisBase):
 
     def make_template(self,src,suffix):
 
+        if not 'SpatialModel' in src: return
+        
         if src['SpatialModel'] == 'PointSource' or src['SpatialModel'] == 'Gaussian':
             pass
         elif src['SpatialModel'] == 'PSFSource':            
@@ -2603,7 +2621,7 @@ class GTBinnedAnalysis(AnalysisBase):
 
         if srcmaps:
             self.logger.info('Updating source map file for component %s.'%self.name)
-            utils.update_source_maps(self._srcmap_file,srcmaps)
+            utils.update_source_maps(self._srcmap_file,srcmaps,logger=self.logger)
         
     def generate_model(self,model_name=None,outfile=None):
         """Generate a counts model map from an XML model file using

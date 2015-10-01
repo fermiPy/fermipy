@@ -805,7 +805,7 @@ class ROIModel(AnalysisBase):
         src.set_spatial_model(src['SpatialModel'],src['SpatialWidth'])
         
         self.logger.info('Creating source ' + src.name)
-        self.logger.info(src._data)
+        self.logger.debug(src._data)
 
         self.load_source(src)
         if build_index: self.build_src_index()
@@ -852,15 +852,10 @@ class ROIModel(AnalysisBase):
         self.build_src_index()        
         
     def delete_sources(self,srcs):
-
-#        srcs = []
-#        for n in names:        
-#            if not n in self._src_index:
-#                raise Exception('No source with name: %s'%n)
-#            srcs.append(self._src_index[n])
         
         self._src_index = {k:v for k,v in self._src_index.items() if not v in srcs}
         self._srcs = [s for s in self._srcs if not s in srcs]
+        self._diffuse_srcs = [s for s in self._diffuse_srcs if not s in srcs]
         self.build_src_index()
 
     @staticmethod

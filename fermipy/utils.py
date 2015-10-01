@@ -422,7 +422,16 @@ def convolve2d_disk(fn,r,sig,nstep=100):
 
     g(r) = H(1-r/s)
 
+    Parameters
+    ----------
 
+    fn : Input function that takes a single radial coordinate parameter.
+
+    r :  Array of points at which the convolution is to be evaluated.
+
+    sig : Radius parameter of the step function.
+
+    nstep : Number of sampling point for numeric integration.
     """
     
     r = np.array(r,ndmin=1)
@@ -499,8 +508,6 @@ def convolve2d_gauss(fn,r,sig,nstep=100):
         je = specialfn.ive(0,t)
         convolve2d_gauss.je_fn = UnivariateSpline(t,je,k=2,s=0)
         
-
-#    print 'interpolating je'
     je = convolve2d_gauss.je_fn(x.flat).reshape(x.shape)
 #    je2 = specialfn.ive(0,x)
     v = (rp*fnv/(sig2)*je*np.exp(x-(r*r+rp*rp)/(2*sig2))*dr)
@@ -758,7 +765,7 @@ def write_fits_image(data,wcs,outfile):
     hdulist = pyfits.HDUList([hdu_image])        
     hdulist.writeto(outfile,clobber=True)    
 
-def update_source_maps(srcmap_file,srcmaps):
+def update_source_maps(srcmap_file,srcmaps,logger=None):
 
     hdulist = pyfits.open(srcmap_file)
     hdunames = [hdu.name.upper() for hdu in hdulist]
@@ -774,7 +781,11 @@ def update_source_maps(srcmap_file,srcmaps):
             newhdu = pyfits.ImageHDU(data,hdu.header,name=name)
             newhdu.header['EXTNAME'] = name
             hdulist.append(newhdu)
-    
+
+
+        if logger is not None:
+            logger.info('Updating source map for %s'%name)
+            
         hdulist[name].data[...] = data        
     hdulist.writeto(srcmap_file,clobber=True)
 
