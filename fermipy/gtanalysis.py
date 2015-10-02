@@ -407,7 +407,7 @@ class GTAnalysis(AnalysisBase):
             
     def delete_source(self,name,save_template=True):
 
-        self.logger.info('Deleting source ' + name)
+        self.logger.info('Deleting source %s'%name)
         
         for c in self.components:
             c.delete_source(name,save_template=save_template)
@@ -561,7 +561,8 @@ class GTAnalysis(AnalysisBase):
 
         if self.config['fileio']['workdir'] == self._savedir: return
         elif os.path.isdir(self.config['fileio']['workdir']):
-            self.logger.info('Deleting working directory: ' + self.config['fileio']['workdir'])
+            self.logger.info('Deleting working directory: ' +
+                             self.config['fileio']['workdir'])
             shutil.rmtree(self.config['fileio']['workdir'])
             
     def generate_model(self,model_name=None):
@@ -611,7 +612,8 @@ class GTAnalysis(AnalysisBase):
                 cs += [c.modelCountsSpectrum(name,emin,emax)]            
             return cs
 
-    def get_sources(self,cuts=None,distance=None,square=False):
+    def get_sources(self,cuts=None,distance=None,
+                    min_ts=None,min_npred=None,square=False):
         """Retrieve list of sources satisfying the given selections."""
         rsrc, srcs = self._roi.get_sources_by_position(self._roi.skydir,
                                                        distance,
@@ -622,10 +624,10 @@ class GTAnalysis(AnalysisBase):
             if not s.check_cuts(cuts): continue            
             o.append(s)
 
-        return o
-        
+        return o        
     
-    def delete_sources(self,cuts=None,distance=None,square=False):
+    def delete_sources(self,cuts=None,distance=None,
+                       min_ts=None,min_npred=None,square=False):
         """Delete sources within the ROI satisfying the given
         selection."""
         
@@ -682,7 +684,8 @@ class GTAnalysis(AnalysisBase):
             npred = self._roi_model['sources'][s.name]['Npred']
             
             if min_ts is not None and (~np.isfinite(ts) or ts < min_ts): continue
-            if min_npred is not None and (~np.isfinite(npred) or npred < min_npred): continue
+            if min_npred is not None and (~np.isfinite(npred) or npred < min_npred):
+                continue
             self.free_source(s.name,free=free,pars=pars)
 
         for s in self._roi._diffuse_srcs:
@@ -691,7 +694,8 @@ class GTAnalysis(AnalysisBase):
             npred = self._roi_model['sources'][s.name]['Npred']
             
             if min_ts is not None and (~np.isfinite(ts) or ts < min_ts): continue
-            if min_npred is not None and (~np.isfinite(npred) or npred < min_npred): continue
+            if min_npred is not None and (~np.isfinite(npred) or npred < min_npred):
+                continue
             self.free_source(s.name,free=free,pars=pars)
                                         
     def free_sources_by_position(self,free=True,pars=None,
@@ -2295,13 +2299,14 @@ class GTBinnedAnalysis(AnalysisBase):
 
     def delete_source(self,name,save_template=True):
 
-        self.logger.info('Deleting source ' + name)
+        src = self._roi.get_source_by_name(name)
+        
+        self.logger.info('Deleting source %s'%(name))
 
         if self.like is not None:
-            self.like.deleteSource(name)
-            self.like.logLike.eraseSourceMap(name)
+            self.like.deleteSource(src.name)
+            self.like.logLike.eraseSourceMap(src.name)
         
-        src = self.roi.get_source_by_name(name)
         if not save_template and os.path.isfile(src['Spatial_Filename']):
             os.remove(src['Spatial_Filename'])
         
@@ -2309,7 +2314,9 @@ class GTBinnedAnalysis(AnalysisBase):
         
     def delete_sources(self,srcs):
         for s in srcs:
-            if self.like: self.like.deleteSource(s.name)
+            if self.like:
+                self.like.deleteSource(s.name)
+                self.like.logLike.eraseSourceMap(s.name)
         self._roi.delete_sources(srcs)
 
     def set_edisp_flag(self,name,flag=True):
