@@ -325,7 +325,8 @@ def create_wcs(skydir,coordsys='CEL',projection='AIT',
     return w
 
 def skydir_to_pix(skydir,wcs):
-
+    """Convert skydir object to pixel coordinates."""
+    
     if 'RA' in wcs.wcs.ctype[0]:    
         xpix, ypix = wcs.wcs_world2pix(skydir.ra.deg,skydir.dec.deg,0)
     elif 'GLON' in wcs.wcs.ctype[0]:
@@ -334,6 +335,19 @@ def skydir_to_pix(skydir,wcs):
         raise Exception('Unrecognized WCS coordinate system.')
 
     return xpix,ypix
+
+def pix_to_skydir(xpix,ypix,wcs):
+    """Convert pixel coordinates to a skydir object."""
+    
+    if 'RA' in wcs.wcs.ctype[0]:    
+        ra, dec = wcs.wcs_pix2world(xpix,ypix,0)
+        return SkyCoord(ra,dec,unit=u.deg)
+    elif 'GLON' in wcs.wcs.ctype[0]:
+        glon, glat = wcs.wcs_pix2world(xpix,ypix,0)
+        return SkyCoord(glon,glat,unit=u.deg,
+                        frame='galactic').transform_to('icrs')
+    else:
+        raise Exception('Unrecognized WCS coordinate system.')
 
 def offset_to_sky(skydir,offset_lon,offset_lat,
                   coordsys='CEL',projection='AIT'):
