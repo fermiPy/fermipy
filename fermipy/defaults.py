@@ -151,5 +151,6 @@ run = {
 
 # Options for plotting
 plotting = {
-    'erange' : (None,'',list)
+    'erange' : (None,'',list),
+    'format' : ('png','')
     }
