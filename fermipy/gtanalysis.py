@@ -2089,7 +2089,8 @@ class GTAnalysis(AnalysisBase):
                      'eflux1000_ul95' : np.nan,
                      'eflux10000_ul95' : np.nan,
                      'pivot_energy' : 3.,
-                     'ts' : np.nan
+                     'ts' : np.nan,
+                     'lnlprofile' : None
                      }
 
         src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
@@ -2140,6 +2141,9 @@ class GTAnalysis(AnalysisBase):
 #            self.logger.error('Failed to update source parameters.', exc_info=True)
 
         lnlp = self.profile_norm(name,savestate=True)
+
+        src_dict['lnlprofile'] = lnlp
+        
         flux, flux_ul95, flux_err_lo, flux_err_hi, dlnl0 = get_upper_limit(lnlp['dlogLike'],
                                                                            lnlp['flux'])
         eflux, eflux_ul95, eflux_err_lo, eflux_err_hi, dlnl0 = get_upper_limit(lnlp['dlogLike'],
