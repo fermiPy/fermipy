@@ -408,13 +408,15 @@ class GTAnalysis(AnalysisBase):
         will inherit the configuration of the previously saved
         analysis.  The configuration may be overriden by providing an
         alternate config file with the config argument."""
-        
+
+        infile = os.path.abspath(infile)
         roi_data = load_roi_data(infile)
         
         if config is None:
             config = roi_data['config']
         
         gta = GTAnalysis(config)
+        
         gta.setup(init_sources=False)
         gta.load_roi(infile)
         return gta
@@ -1670,6 +1672,7 @@ class GTAnalysis(AnalysisBase):
         """This function reloads the analysis state from a previously
         saved instance generated with write_roi()."""
         
+        infile = resolve_path(infile,workdir=self.config['fileio']['workdir'])
         self.load_xml(infile)
         self._roi_model = load_roi_data(infile,workdir=self.config['fileio']['workdir'])
     
@@ -2841,7 +2844,7 @@ class GTBinnedAnalysis(AnalysisBase):
             
 
     def load_xml(self,xmlfile):
-
+        
         xmlfile = self.get_model_path(xmlfile)
         self.logger.info('Loading %s'%xmlfile)
         self.like.logLike.reReadXml(xmlfile)
@@ -2859,9 +2862,10 @@ class GTBinnedAnalysis(AnalysisBase):
         name, ext = os.path.splitext(name)
         ext = '.xml'
         xmlfile = name + self.config['file_suffix'] + ext
-
-        if not os.path.isabs(xmlfile): 
-            xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
+        xmlfile = resolve_path(xmlfile,workdir=self.config['fileio']['workdir'])
+        
+#        if not os.path.isabs(xmlfile): 
+#            xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
 
         return xmlfile
 
