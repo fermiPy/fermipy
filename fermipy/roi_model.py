@@ -735,7 +735,8 @@ class ROIModel(AnalysisBase):
 
     @property
     def skydir(self):
-        """Return the sky direction objection corresponding to the center of the ROI."""        
+        """Return the sky direction objection corresponding to the
+        center of the ROI."""        
         return self._skydir
 
     @property
