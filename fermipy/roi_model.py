@@ -749,15 +749,18 @@ class ROIModel(AnalysisBase):
     
     def load_diffuse_srcs(self):
 
-        isodiff = []
-        if self.config['isodiff'] is not None:
-            isodiff = self.config['isodiff']
+        self._load_diffuse_src('isodiff')
+        self._load_diffuse_src('galdiff')
+        self._load_diffuse_src('limbdiff')
+        self._load_diffuse_src('diffuse')
 
-        galdiff = []
-        if self.config['galdiff'] is not None:
-            galdiff = self.config['galdiff']
-        
-        for i, t in enumerate(isodiff):
+    def _load_diffuse_src(self,name,src_type='FileFunction'):
+
+        srcs = []
+        if self.config[name] is not None:
+            srcs = self.config[name]
+
+        for i, t in enumerate(srcs):
             
             if isinstance(t,str):
                 src_dict = {'file' : t}
@@ -765,37 +768,32 @@ class ROIModel(AnalysisBase):
                 src_dict = copy.deepcopy(t)
                 
             if not 'name' in src_dict:                
-                if len(isodiff) == 1:
-                    src_dict['name'] = 'isodiff'
+                if len(srcs) == 1:
+                    src_dict['name'] = name
                 else:
-                    src_dict['name'] = 'isodiff%02i'%i
+                    src_dict['name'] = name + '%02i'%i
+                    
+            if re.search(r'(\.txt$)',src_dict['file']):
+                src_type = 'FileFunction'
+            elif re.search(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',src_dict['file']):
+                src_type = 'MapCubeFunction'
+            else:
+                raise Exception('Unrecognized file format for diffuse model: %s'%src_dict['file'])
 
-            src = IsoSource(src_dict['name'],src_dict['file'])
-            altname = os.path.basename(src_dict['file'])
-            altname = re.sub(r'(\.txt$)','', altname)
+            if src_type == 'FileFunction':                    
+                src = IsoSource(src_dict['name'],src_dict['file'])
+                altname = os.path.basename(src_dict['file'])            
+                altname = re.sub(r'(\.txt$)','', altname)
+            else:
+                src = MapCubeSource(src_dict['name'],src_dict['file'])
+                altname = os.path.basename(src_dict['file'])
+                altname = re.sub(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',
+                                 '', altname)    
+                
+                
             src.add_name(altname)            
             self.load_source(src)
 
-        for i, t in enumerate(galdiff):
-
-            if isinstance(t,str):
-                src_dict = {'file' : t}
-            elif isinstance(t,dict):
-                src_dict = copy.deepcopy(t)
-
-            if not 'name' in src_dict:
-                if len(galdiff) == 1:
-                    src_dict['name'] = 'galdiff'
-                else:
-                    src_dict['name'] = 'galdiff%02i'%i
-
-            src = MapCubeSource(src_dict['name'],src_dict['file'])
-
-            altname = os.path.basename(src_dict['file'])
-            altname = re.sub(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',
-                             '', altname)            
-            src.add_name(altname)            
-            self.load_source(src)
 
     def create_source(self,src_dict,build_index=True):
         """Create a new source object from a source dictionary and
@@ -1097,7 +1095,7 @@ class ROIModel(AnalysisBase):
         for i, s in enumerate(self._diffuse_srcs):
             pass
         
-    def write_xml(self,xmlfile,isodiff=None,galdiff=None):
+    def write_xml(self,xmlfile):
         """Save this ROI model as an XML file."""
         
         root = ElementTree.Element('source_library')
