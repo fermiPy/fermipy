@@ -17,6 +17,11 @@ from matplotlib.colors import NoNorm, LogNorm, Normalize
 from fermipy.utils import merge_dict, AnalysisBase, wcs_to_axes
 from fermipy.utils import edge_to_center, edge_to_width, valToEdge
 
+def get_xerr(sed):
+    delo = 10**sed['ecenter']-10**sed['emin']
+    dehi = 10**sed['emax']-10**sed['ecenter']
+    xerr = np.vstack((delo,dehi))
+
 def make_counts_spectrum_plot(o,energies,imfile):
 
     fig = plt.figure()
@@ -436,6 +441,85 @@ class SEDPlotter(object):
         self._src = copy.deepcopy(src)
         self._sed = self._src['sed']
         
+    @staticmethod
+    def plot_sed(sed,**kwargs):
+
+        m = sed['ts'] < 4
+
+        x = 10**sed['ecenter']
+        y = sed['e2dfde']
+        yerr = sed['e2dfde_err']
+        yul = sed['e2dfde_ul95']
+
+        y[m] = yul[m]
+        yerr[m] = 0
+
+        delo = 10**sed['ecenter']-10**sed['emin']
+        dehi = 10**sed['emax']-10**sed['ecenter']
+        xerr = np.vstack((delo,dehi))
+        
+        plt.errorbar(x,y,xerr=xerr,yerr=yerr,**kwargs)
+
+    @staticmethod
+    def plot_sed_resid(src,model_flux,**kwargs):
+
+        sed = src['sed']
+
+        m = sed['ts'] < 4
+
+        x = 10**sed['ecenter']
+        y = sed['e2dfde']
+        yerr = sed['e2dfde_err']
+        yul = sed['e2dfde_ul95']
+
+        y[m] = yul[m]
+        yerr[m] = 0
+
+        delo = 10**sed['ecenter']-10**sed['emin']
+        dehi = 10**sed['emax']-10**sed['ecenter']
+        xerr = np.vstack((delo,dehi))
+        
+        ym = np.interp(sed['ecenter'],
+                       model_flux['ecenter'],
+                       10**(2*model_flux['ecenter'])*model_flux['dfde'])
+
+        
+
+        plt.errorbar(x,(y-ym)/ym,xerr=xerr,yerr=yerr/ym,**kwargs)
+        
+    @staticmethod
+    def plot_model(src,**kwargs):
+
+        ax = plt.gca()
+
+        e2 = 10**(2*src['model_flux']['ecenter'])
+
+        ax.plot(10**src['model_flux']['ecenter'],
+                src['model_flux']['dfde']*e2,**kwargs)
+
+        color = kwargs.get('color','b')
+
+        ax.fill_between(10**src['model_flux']['ecenter'],
+                        src['model_flux']['dfde_lo']*e2,
+                        src['model_flux']['dfde_hi']*e2,
+                        alpha=0.5,color=color)
+
+    @staticmethod
+    def annotate(src,xy=(0.05,0.93)):
+
+        ax = plt.gca()
+
+        name = src['name']
+        
+        if src['assoc']:
+            name += ' (%s)'%src['assoc']
+        
+        ax.annotate(name,
+                    xy=xy,
+                    xycoords='axes fraction', fontsize=12,
+                    xytext=(-5, 5), textcoords='offset points',
+                    ha='left', va='center')
+
     def plot(self):
 
         sed = self._sed
