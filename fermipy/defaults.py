@@ -45,7 +45,8 @@ model = {
          'none then no cut is applied.'),    
     'isodiff'       : (None,'Set the isotropic template.',list),
     'galdiff'       : (None,'Set the galactic IEM mapcube.',list),
-    'limbdiff'      : (None,''),
+    'limbdiff'      : (None,'',list),
+    'diffuse'       : (None,'',list),
     'sources'       : (None,'',list),
     'extdir'        : ('Extended_archive_v14',''),
     'catalogs'      : (None,'',list),
@@ -151,5 +152,6 @@ run = {
 
 # Options for plotting
 plotting = {
-    'erange' : (None,'',list)
+    'erange' : (None,'',list),
+    'format' : ('png','')
     }

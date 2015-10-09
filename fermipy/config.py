@@ -19,14 +19,14 @@ class ConfigManager(object):
 
         config = ConfigManager.load(os.path.join(fermipy.PACKAGE_ROOT,'config',
                                                  'base.yaml'))
-        config['fileio'].setdefault('outdir',os.path.dirname(configfile))
 
         if config['fileio']['outdir'] is None:
-            config['fileio']['outdir'] = os.path.dirname(configfile)
-        #        config['logging'] = config_logging
+            config['fileio']['outdir'] = os.path.abspath(os.path.dirname(configfile))
         
         user_config = ConfigManager.load(configfile)
         config = merge_dict(config,user_config,True)
+
+        config['fileio']['outdir'] = os.path.abspath(config['fileio']['outdir'])
         
         return config        
 

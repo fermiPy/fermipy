@@ -14,6 +14,7 @@ from numpy import ma
 import matplotlib.cbook as cbook
 from matplotlib.colors import NoNorm, LogNorm, Normalize
 
+import fermipy.utils as utils
 from fermipy.utils import merge_dict, AnalysisBase, wcs_to_axes
 from fermipy.utils import edge_to_center, edge_to_width, valToEdge
 
@@ -240,12 +241,14 @@ class ImagePlotter(object):
         
         ax.set_ticklabel_type("d", "d")
 
-#        if self._axes[0]._coordsys == 'gal':
-#            ax.set_xlabel('GLON')
-#            ax.set_ylabel('GLAT')
-#        else:        
-        ax.set_xlabel('RA')
-        ax.set_ylabel('DEC')
+        coordsys = utils.get_coordsys(self._wcs)
+
+        if coordsys == 'CEL':
+            ax.set_xlabel('RA')
+            ax.set_ylabel('DEC')
+        elif coordsys == 'GAL':
+            ax.set_xlabel('GLON')
+            ax.set_ylabel('GLAT')
 
         xlabel = kwargs.get('xlabel',None)
         ylabel = kwargs.get('ylabel',None)
@@ -414,8 +417,10 @@ class ROIPlotter(AnalysisBase):
         cb_kwargs = merge_dict(cb_kwargs,kwargs)
                 
         im, ax = self._implot.plot(**im_kwargs)
-        pixcrd = self._implot._wcs.wcs_world2pix(self._roi._src_skydir.ra.deg,
-                                                 self._roi._src_skydir.dec.deg,0)
+
+        
+        
+        pixcrd = utils.skydir_to_pix(self._roi._src_skydir,self._implot._wcs)
         
         for i, s in enumerate(self._roi.sources):
 

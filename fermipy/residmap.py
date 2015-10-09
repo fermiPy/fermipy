@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 from astropy import wcs 
 
 import fermipy.defaults as defaults
-from fermipy.utils import write_fits_image, AnalysisBase, make_gaussian_kernel
+import fermipy.utils as utils
+from fermipy.utils import AnalysisBase
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 
@@ -100,7 +101,6 @@ class ResidMapGenerator(AnalysisBase):
         zs = 0
         for c in self._gta.components:
             z = c.modelCountsMap(name).astype('float')
-            
             if kernel is not None:
                 shape = (z.shape[0],) + kernel.shape 
                 z = np.apply_over_axes(np.sum,z,axes=[1,2])*np.ones(shape)*kernel[np.newaxis,:,:]
@@ -134,11 +134,12 @@ class ResidMapGenerator(AnalysisBase):
         xpix, ypix = (np.round((self._gta.npix-1.0)/2.),
                       np.round((self._gta.npix-1.0)/2.))
         cpix = np.array([xpix,ypix])
+
+        skywcs = self._gta._skywcs
+        skydir = utils.pix_to_skydir(cpix[0],cpix[1],skywcs)
         
-        w = wcs.WCS(self._gta._wcs.to_header(),naxis=[1,2])        
-        radec = w.wcs_pix2world(xpix,ypix,0)
-        src_dict['ra'] = radec[0]
-        src_dict['dec'] = radec[1]
+        src_dict['ra'] = skydir.ra.deg
+        src_dict['dec'] = skydir.dec.deg
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialWidth',0.3)
         src_dict.setdefault('Index',2.0)
@@ -146,12 +147,12 @@ class ResidMapGenerator(AnalysisBase):
         kernel = None
         
         if src_dict['SpatialModel'] == 'Gaussian':
-            kernel = make_gaussian_kernel(src_dict['SpatialWidth'],
-                                          cdelt=self._gta.components[0].binsz,
-                                          npix=101)
+            kernel = utils.make_gaussian_kernel(src_dict['SpatialWidth'],
+                                                cdelt=self._gta.components[0].binsz,
+                                                npix=101)
             kernel /= np.sum(kernel)
             cpix = [50,50]
-            
+
         self._gta.add_source('testsource',src_dict,free=True)        
         src = self._gta.roi.get_source_by_name('testsource')
         
@@ -213,13 +214,13 @@ class ResidMapGenerator(AnalysisBase):
 
         emst /= np.max(emst)
         
-        write_fits_image(sigma,w,sigma_map_file)
-        write_fits_image(cmst/emst,w,data_map_file)
-        write_fits_image(mmst/emst,w,model_map_file)
-        write_fits_image(excess/emst,w,excess_map_file)
+        utils.write_fits_image(sigma,skywcs,sigma_map_file)
+        utils.write_fits_image(cmst/emst,skywcs,data_map_file)
+        utils.write_fits_image(mmst/emst,skywcs,model_map_file)
+        utils.write_fits_image(excess/emst,skywcs,excess_map_file)
 
         self._maps[modelname] = {
-            'wcs'    : w,
+            'wcs'    : skywcs,
             'sigma'  : sigma,
             'model'  : mmst,
             'data'   : cmst,

@@ -193,6 +193,43 @@ def gtlike_spectrum_to_dict(spectrum):
             d['file']=ff.filename()
     return d
 
+
+def resolve_path(path,workdir=None):
+
+    if os.path.isabs(path):
+        return path
+    elif workdir is None:
+        return os.path.abspath(path)
+    else:
+        return os.path.join(workdir,path)
+
+def load_roi_data(infile,workdir=None):
+
+    infile = resolve_path(infile,workdir=workdir)
+    infile, ext = os.path.splitext(infile)
+
+    if os.path.isfile(infile + '.npy'):
+        infile += '.npy'
+    elif os.path.isfile(infile + '.yaml'):
+        infile += '.yaml'
+    else:
+        raise Exception('Input file does not exist.')
+        
+    ext = os.path.splitext(infile)[1]
+    
+    if ext == '.npy':
+        return load_npy(infile)
+    elif ext == '.yaml':
+        return load_yaml(infile)
+    else:
+        raise Exception('Unrecognized extension.')
+
+def load_yaml(infile):
+    return yaml.load(open(infile))
+
+def load_npy(infile):
+    return np.load(infile).flat[0]
+        
 class GTAnalysis(AnalysisBase):
     """High-level analysis interface that internally manages a set of
     analysis component objects.  Most of the functionality of the
@@ -364,6 +401,26 @@ class GTAnalysis(AnalysisBase):
         """Return the number of energy bins."""
         return self._npix 
 
+    @staticmethod
+    def create(infile,config=None):
+        """Create a new instance of GTAnalysis from an analysis output
+        file generated with write_roi().  By default the new instance
+        will inherit the configuration of the previously saved
+        analysis.  The configuration may be overriden by providing an
+        alternate config file with the config argument."""
+
+        infile = os.path.abspath(infile)
+        roi_data = load_roi_data(infile)
+        
+        if config is None:
+            config = roi_data['config']
+        
+        gta = GTAnalysis(config)
+        
+        gta.setup(init_sources=False)
+        gta.load_roi(infile)
+        return gta
+        
     def _update_roi(self):
 
         rm = self._roi_model
@@ -500,12 +557,20 @@ class GTAnalysis(AnalysisBase):
         else:
             self.logger.error('Working directory does not exist.')
             
-    def setup(self,xmlmodel=None):
+    def setup(self,xmlmodel=None,init_sources=True):
         """Run pre-processing step for each analysis component and
         construct a joint likelihood object.  This will run everything
         except the likelihood optimization: data selection (gtselect,
         gtmktime), counts maps generation (gtbin), model generation
-        (gtexpcube2,gtsrcmaps,gtdiffrsp)."""
+        (gtexpcube2,gtsrcmaps,gtdiffrsp).
+
+        Parameters
+        ----------
+
+        init_sources : bool
+           Choose whether to initialize the ROI model for individual sources.
+
+        """
 
         # Run data selection step
         rm = self._roi_model
@@ -518,6 +583,26 @@ class GTAnalysis(AnalysisBase):
             c.setup(xmlmodel=xmlmodel)
             self._like.addComponent(c.like)
 
+        self._ccube_file = os.path.join(self.config['fileio']['workdir'],
+                                        'ccube.fits')
+
+        rm['roi']['counts'] = np.zeros(self.enumbins)
+        rm['roi']['logLike'] = self.like()
+        
+        counts = []
+        for i, c in enumerate(self.components):
+            cm = c.countsMap()
+            counts += [(cm,c.wcs)]
+            rm['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[1,2]))
+            rm['roi']['components'][i]['logLike'] = c.like()
+
+        shape = (self.enumbins,self.npix,self.npix)
+        self._counts = make_coadd_map(counts,self._wcs,shape)
+        utils.write_fits_image(self._counts,self._wcs,self._ccube_file)        
+        rm['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,self._counts,axes=[1,2]))
+            
+        if not init_sources: return
+            
         for name in self.like.sourceNames():
             
             src = self._roi.get_source_by_name(name)
@@ -537,24 +622,7 @@ class GTAnalysis(AnalysisBase):
 
             src_model.update(self.get_src_model(name,False))            
             rm['sources'][name] = src_model
-
-        rm['roi']['counts'] = np.zeros(self.enumbins)
-        rm['roi']['logLike'] = self.like()
         
-        self._ccube_file = os.path.join(self.config['fileio']['workdir'],
-                                        'ccube.fits')
-        
-        counts = []
-        for i, c in enumerate(self.components):
-            cm = c.countsMap()
-            counts += [(cm,c.wcs)]
-            rm['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[1,2]))
-            rm['roi']['components'][i]['logLike'] = c.like()
-            
-        shape = (self.enumbins,self.npix,self.npix)
-        self._counts = make_coadd_map(counts,self._wcs,shape)
-        utils.write_fits_image(self._counts,self._wcs,self._ccube_file)        
-        rm['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,self._counts,axes=[1,2]))
         self._update_roi()
         
     def cleanup(self):
@@ -1604,20 +1672,12 @@ class GTAnalysis(AnalysisBase):
         """This function reloads the analysis state from a previously
         saved instance generated with write_roi()."""
         
+        infile = resolve_path(infile,workdir=self.config['fileio']['workdir'])
         self.load_xml(infile)
-
-        infile, ext = os.path.splitext(infile)
-        infile += '.npy'
-        
-        if not os.path.isfile(infile):
-            infile = os.path.join(self.config['fileio']['workdir'],
-                                  os.path.basename(infile))
-        
-        data = np.load(infile)
-        self._roi_model = np.array(data,ndmin=1)[0]
+        self._roi_model = load_roi_data(infile,workdir=self.config['fileio']['workdir'])
     
     def write_roi(self,outfile=None,make_residuals=False,save_model_map=True,
-                  update_sources=False):
+                  update_sources=False,**kwargs):
         """Write current model to a file.  This function will write an
         XML model file and an ROI dictionary in both YAML and npy
         formats.
@@ -1637,6 +1697,9 @@ class GTAnalysis(AnalysisBase):
             Save the current counts model as a FITS file.
 
         update_sources : bool
+
+        format : str
+            Set the file format for plots (png, pdf, etc.).       
 
         """
         # extract the results in a convenient format
@@ -1666,36 +1729,44 @@ class GTAnalysis(AnalysisBase):
         self.logger.info('Writing %s...'%(outfile + '.npy'))
         np.save(outfile + '.npy',o)
 
-        self.make_plots(mcube_maps,prefix)
+        self.make_plots(mcube_maps,prefix,**kwargs)
 
-    def make_sed_plots(self,prefix):
+    def make_sed_plots(self,prefix,**kwargs):
 
+        format = kwargs.get('format',self.config['plotting']['format'])
+        
         for k,v in self._roi_model['sources'].items():
 
             if not 'sed' in v: continue
             if v['sed'] is None: continue
-
+            
             name = k.lower().replace(' ','_')
+
+            self.logger.info('Making SED plot for %s'%k)
             
             p = SEDPlotter(v)
             plt.figure()
             p.plot()            
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_%s_sed.png'%(prefix,name)))
+                                     '%s_%s_sed.%s'%(prefix,name,format)))
 
 
-    def make_extension_plots(self,prefix,erange=None):
+    def make_extension_plots(self,prefix,erange=None,**kwargs):
 
+        format = kwargs.get('format',self.config['plotting']['format'])
+        
         for k,v in self._roi_model['sources'].items():
 
             if not 'extension' in v: continue
             if v['extension'] is None: continue
 
-#            self._plot_extension(prefix,v,erange=erange)
+#            self._plot_extension(prefix,v,erange=erange,format=format)
             
-    def _plot_extension(self,prefix,v,erange=None):
+    def _plot_extension(self,prefix,v,erange=None,**kwargs):
         """Utility function for generating diagnostic plots for the
         extension analysis."""
+
+        format = kwargs.get('format',self.config['plotting']['format'])
         
         if erange is None:
             erange = (self.energies[0],self.energies[-1])
@@ -1747,8 +1818,21 @@ class GTAnalysis(AnalysisBase):
             plt.close(fig)
             
         
-    def make_roi_plots(self,mcube_maps,prefix,erange=None):
+    def make_roi_plots(self,mcube_maps,prefix,erange=None,**kwargs):
+        """Make various diagnostic plots for the 1D and 2D
+        counts/model distributions.
 
+        Parameters
+        ----------
+
+        prefix : str
+            Prefix that will be appended to all filenames.
+        
+        """
+
+        
+        format = kwargs.get('format',self.config['plotting']['format'])
+        
         if erange is None:
             erange = (self.energies[0],self.energies[-1])
         esuffix = '_%.3f_%.3f'%(erange[0],erange[1])  
@@ -1760,7 +1844,7 @@ class GTAnalysis(AnalysisBase):
                            self.roi,erange=erange)
             p.plot(cb_label='Counts',zscale='pow',gamma=1./3.)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_model_map%s.png'%(prefix,esuffix)))
+                                     '%s_model_map%s.%s'%(prefix,esuffix,format)))
             plt.close(fig)
 
 
@@ -1777,7 +1861,7 @@ class GTAnalysis(AnalysisBase):
                            erange=erange)
             p.plot(cb_label='Counts',zscale='pow',gamma=1./3.)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_model_map%s_%02i.png'%(prefix,esuffix,i)))
+                                     '%s_model_map%s_%02i.%s'%(prefix,esuffix,i,format)))
             plt.close(fig)
             
             plt.figure(figx.number)
@@ -1799,12 +1883,12 @@ class GTAnalysis(AnalysisBase):
         plt.figure(figx.number)
         ROIPlotter.setup_projection_axis(0,erange=erange)
         figx.savefig(os.path.join(self.config['fileio']['outdir'],
-                                  '%s_counts_map_comp_xproj%s.png'%(prefix,esuffix)))
+                                  '%s_counts_map_comp_xproj%s.%s'%(prefix,esuffix,format)))
 
         plt.figure(figy.number)
         ROIPlotter.setup_projection_axis(1,erange=erange)
         figy.savefig(os.path.join(self.config['fileio']['outdir'],
-                                  '%s_counts_map_comp_yproj%s.png'%(prefix,esuffix)))
+                                  '%s_counts_map_comp_yproj%s.%s'%(prefix,esuffix,format)))
         plt.close(figx)
         plt.close(figy)
             
@@ -1812,7 +1896,7 @@ class GTAnalysis(AnalysisBase):
         p = ROIPlotter.create_from_fits(self._ccube_file,self.roi,erange=erange)
         p.plot(cb_label='Counts',zscale='sqrt')
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_map%s.png'%(prefix,esuffix)))
+                              '%s_counts_map%s.%s'%(prefix,esuffix,format)))
         plt.close(fig)
 
         fig = plt.figure()
@@ -1823,7 +1907,7 @@ class GTAnalysis(AnalysisBase):
         plt.gca().legend(frameon=False)
 #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_map_xproj%s.png'%(prefix,esuffix)))
+                              '%s_counts_map_xproj%s.%s'%(prefix,esuffix,format)))
         plt.close(fig)
         
         fig = plt.figure()
@@ -1834,28 +1918,32 @@ class GTAnalysis(AnalysisBase):
         plt.gca().legend(frameon=False)
 #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_map_yproj%s.png'%(prefix,esuffix)))
+                              '%s_counts_map_yproj%s.%s'%(prefix,esuffix,format)))
         
         plt.close(fig)
         
         
-    def make_plots(self,mcube_maps,prefix):
+    def make_plots(self,mcube_maps,prefix,**kwargs):
 
+        format = kwargs.get('format',self.config['plotting']['format'])
+        
         erange = [None] + self.config['plotting']['erange']
 
         for x in erange:
-            self.make_roi_plots(mcube_maps,prefix,erange=x)
-            self.make_extension_plots(prefix,erange=x)
+            self.make_roi_plots(mcube_maps,prefix,erange=x,format=format)
+            self.make_extension_plots(prefix,erange=x,format=format)
 
         for k, v in self._roi_model['roi']['residmap'].items():
 
+            if not k in self._rmg._maps: continue
+            
             fig = plt.figure()
             p = ROIPlotter(self._rmg._maps[k]['sigma'],
                            self._rmg._maps[k]['wcs'],self.roi)
             p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
                    cb_label='Significance [$\sigma$]')
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_residmap_%s.png'%(prefix,k)))
+                                     '%s_residmap_%s.%s'%(prefix,k,format)))
             plt.close(fig)
 
             fig = plt.figure()
@@ -1863,13 +1951,13 @@ class GTAnalysis(AnalysisBase):
                            self._rmg._maps[k]['wcs'],self.roi)
             p.plot(cb_label='Smoothed Counts',zscale='pow',gamma=1./3.)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_scmap_%s.png'%(prefix,k)))
+                                     '%s_scmap_%s.%s'%(prefix,k,format)))
             plt.close(fig)
             
-        self.make_sed_plots(prefix)
+        self.make_sed_plots(prefix,format=format)
             
         imfile = os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_spectrum.png'%(prefix))
+                              '%s_counts_spectrum.%s'%(prefix,format))
 
         make_counts_spectrum_plot(self._roi_model,self.energies,imfile)
         
@@ -2001,7 +2089,8 @@ class GTAnalysis(AnalysisBase):
                      'eflux1000_ul95' : np.nan,
                      'eflux10000_ul95' : np.nan,
                      'pivot_energy' : 3.,
-                     'ts' : np.nan
+                     'ts' : np.nan,
+                     'lnlprofile' : None
                      }
 
         src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
@@ -2052,6 +2141,9 @@ class GTAnalysis(AnalysisBase):
 #            self.logger.error('Failed to update source parameters.', exc_info=True)
 
         lnlp = self.profile_norm(name,savestate=True)
+
+        src_dict['lnlprofile'] = lnlp
+        
         flux, flux_ul95, flux_err_lo, flux_err_hi, dlnl0 = get_upper_limit(lnlp['dlogLike'],
                                                                            lnlp['flux'])
         eflux, eflux_ul95, eflux_err_lo, eflux_err_hi, dlnl0 = get_upper_limit(lnlp['dlogLike'],
@@ -2202,6 +2294,7 @@ class GTBinnedAnalysis(AnalysisBase):
         self._wcs.wcs.crval[2]=10**self.energies[0]
         self._wcs.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
         self._wcs.wcs.ctype[2]='Energy'
+        self._coordsys = self.config['binning']['coordsys']
         
         self.print_config(self.logger,loglevel=logging.DEBUG)
             
@@ -2241,6 +2334,10 @@ class GTBinnedAnalysis(AnalysisBase):
     def wcs(self):
         return self._wcs
 
+    @property
+    def coordsys(self):
+        return self._coordsys
+    
     def add_source(self,name,src_dict,free=False):
         """Add a new source to the model with the properties defined
         in the input dictionary."""
@@ -2751,14 +2848,10 @@ class GTBinnedAnalysis(AnalysisBase):
             
 
     def load_xml(self,xmlfile):
-
+        
         xmlfile = self.get_model_path(xmlfile)
         self.logger.info('Loading %s'%xmlfile)
         self.like.logLike.reReadXml(xmlfile)
-#        
-#        self._like = BinnedAnalysis(binnedData=self._obs,
-#                                    srcModel=xmlfile,
-#                                    optimizer='MINUIT')
             
     def write_xml(self,xmlfile):
         """Write the XML model for this analysis component."""
@@ -2771,18 +2864,14 @@ class GTBinnedAnalysis(AnalysisBase):
         """Infer the path to the XML model name."""
         
         name, ext = os.path.splitext(name)
-        if not ext: ext = '.xml'
+        ext = '.xml'
         xmlfile = name + self.config['file_suffix'] + ext
-
-        if not os.path.isabs(xmlfile): 
-            xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
-            
-#        if os.path.commonprefix([self.config['fileio']['workdir'],xmlfile]) \
-#                != self.config['fileio']['workdir']:        
+        xmlfile = resolve_path(xmlfile,workdir=self.config['fileio']['workdir'])
+        
+#        if not os.path.isabs(xmlfile): 
 #            xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
 
         return xmlfile
-
 
     def tscube(self,xmlfile):
 
