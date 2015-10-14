@@ -211,7 +211,7 @@ class Model(object):
     def set_name(self,name,names=None):
         self._name = name
         if names is None:
-            self._names = []
+            self._names = [name]
         else:
             self._names = names
     
@@ -467,6 +467,14 @@ class Source(Model):
             pprint.pprint(self._data)            
             raise Exception('Unsupported spectral type:' + self['SpectrumType'])
         
+    def set_position(self,skydir):
+
+        if not isinstance(skydir,SkyCoord):
+            skydir = SkyCoord(ra=skydir[0],dec=skydir[1],unit=u.deg)
+        
+        self._radec = np.array([skydir.ra.deg,skydir.dec.deg])
+        self._glonlat = np.array([skydir.galactic.l.deg,skydir.galactic.b.deg])
+
     def set_spatial_model(self,spatial_model,spatial_width):
 
         self._data['SpatialModel'] = spatial_model

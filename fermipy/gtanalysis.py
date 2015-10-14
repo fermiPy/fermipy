@@ -443,6 +443,16 @@ class GTAnalysis(AnalysisBase):
                 rm['roi']['components'][i]['Npred'] += np.sum(mc[i])
 
                 
+    def copy_source(self,name):
+        """Create a duplicate of an existing source."""
+        
+        s = copy.deepcopy(self.roi.get_source_by_name(name))
+        for k,v in s.spectral_pars.items():
+            s._spectral_pars[k]['value'] = \
+                str(self.like[name].src.spectrum().getParamValue(k))
+
+        return s
+
     def add_source(self,name,src_dict,free=False):
 
         self.logger.info('Adding source ' + name)
@@ -902,10 +912,6 @@ class GTAnalysis(AnalysisBase):
 #        else:
 #            self.like[idx].setFree(True)
 
-    def zero_source(self,name):
-
-        pass
-
     def set_norm(self,name,value):
         name = self.get_source_name(name)                
         normPar = self.like.normPar(name)
@@ -984,6 +990,9 @@ class GTAnalysis(AnalysisBase):
 
         self.logger.info('Running ROI Optimization')
         
+        logLike0 = self.like()
+        self.logger.info('LogLike: %f'%logLike0)    
+
         # Extract options from kwargs
         npred_frac_threshold = kwargs.get('npred_frac',
                                           self.config['roiopt']['npred_frac'])
@@ -1051,6 +1060,10 @@ class GTAnalysis(AnalysisBase):
             self.free_source(k,free=False)
             
         self.set_free_params(free)
+        
+        logLike1 = self.like()
+        self.logger.info('Finished ROI Optimization')    
+        self.logger.info('LogLike: %f Delta-LogLike: %f'%(logLike1,logLike0-logLike1))    
 
     def run(self):
         """Run extension and sed analysis for the given sources."""
@@ -1061,7 +1074,80 @@ class GTAnalysis(AnalysisBase):
         for s in self.config['run']['extension']:
             self.extension(s)
         
+    def zero_source(self,name):
+        normPar = self.like.normPar(name).getName()        
+        self.scale_parameter(name,normPar,1E-10)
+        self.free_source(name,free=False)
+        self.like.syncSrcParams(name)
+
+    def unzero_source(self,name):
+        normPar = self.like.normPar(name).getName()  
+        self.scale_parameter(name,normPar,1E10)
+        self.like.syncSrcParams(name)       
+
+    def localize(self,name,**kwargs):
+        """Perform a fit for the best-fit position of this source.
         
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+        """
+
+        name = self.roi.get_source_by_name(name).name
+
+        # Extract options from kwargs
+
+        self.logger.info('Running localization for %s'%name)
+
+        saved_state = LikelihoodState(self.like)
+
+        src = self.roi.get_source_by_name(name)
+        skydir = src.skydir
+
+        # Fit baseline (point-source) model
+        self.free_norm(name)
+        self.fit(update=False)
+
+        # Save likelihood value for baseline fit
+        logLike0 = self.like()
+
+        self.zero_source(name)
+
+        nstep = 3
+        dtheta = 0.05
+        deltax = np.linspace(-dtheta,dtheta,nstep)[:,np.newaxis]
+        deltay = np.linspace(-dtheta,dtheta,nstep)[np.newaxis,:]
+        deltax = np.ones((nstep,nstep))*deltax
+        deltay = np.ones((nstep,nstep))*deltay
+
+        radec = utils.offset_to_sky(skydir,deltax.flat,deltay.flat)
+
+        for i, t in enumerate(radec):
+
+            # make a copy
+            s = self.copy_source(name)
+
+            model_name = '%s_localize_%03i'%(name.lower(),i)            
+            s.set_name(model_name)
+            s.set_position(t)
+#            s.set_spatial_model(spatial_model,w)
+
+            self.add_source(model_name,s,free=True)
+            self.free_norm(model_name)
+            self.like.syncSrcParams(model_name)
+
+            self.fit(update=False)
+            
+            logLike1 = self.like()
+            
+            sd = self.get_src_model(model_name)
+            self.delete_source(model_name)
+
+        self.unzero_source(name)
+        saved_state.restore()
+
     def extension(self,name,**kwargs):
         """Perform an angular extension test for this source.  This
         will substitute an extended spatial template for the given
@@ -2340,7 +2426,19 @@ class GTBinnedAnalysis(AnalysisBase):
     
     def add_source(self,name,src_dict,free=False):
         """Add a new source to the model with the properties defined
-        in the input dictionary."""
+        in the input dictionary.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        src_dict : dict or Source object
+            Dictionary or Source object defining the properties of the
+            source to be added.
+
+        """
 
         if isinstance(src_dict,dict):
             src_dict['name'] = name
@@ -2362,6 +2460,7 @@ class GTBinnedAnalysis(AnalysisBase):
 
             pylike_src = pyLike.PointSource(self.like.logLike.observation())
             pylike_src.setDir(src.skydir.ra.deg,src.skydir.dec.deg,False,False)
+
         elif src['SpatialType'] == 'SpatialMap':        
             sm = pyLike.SpatialMap(src['Spatial_Filename'])
             pylike_src = pyLike.DiffuseSource(sm,self.like.logLike.observation(),False)
@@ -2376,8 +2475,12 @@ class GTBinnedAnalysis(AnalysisBase):
         for k,v in src.spectral_pars.items():
             
             par = pl.getParam(k)
+
+            vmin = min(float(v['value']),float(v['min']))
+            vmax = max(float(v['value']),float(v['max']))
+
             par.setValue(float(v['value']))
-            par.setBounds(float(v['min']),float(v['max']))
+            par.setBounds(vmin,vmax)
             par.setScale(float(v['scale']))
 
             if 'free' in v and int(v['free']) != 0:
