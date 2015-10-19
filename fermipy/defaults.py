@@ -144,6 +144,12 @@ extension = {
     'save_model_map'           : (False,''),    
     }
 
+# Options for localization analysis
+localize = {
+    'nstep'                    : (10,''),
+    'dtheta_max'               : (0.05,''),
+    }
+
 # Options for anlaysis
 run = {
     'sed' : (None,'',list),

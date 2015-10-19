@@ -478,7 +478,7 @@ def convolve2d_disk(fn,r,sig,nstep=100):
     sx = r**2+rp**2-sig**2    
     cphi[~m] = sx[~m]/(2*rrp[~m])
     dphi = 2*np.arccos(cphi)
-    v = rp*fnv*dphi*dr
+    v = rp*fnv*dphi*dr/(np.pi*sig*sig)
     s = np.sum(v,axis=saxis)
 
     return s

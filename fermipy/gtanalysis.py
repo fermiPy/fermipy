@@ -11,6 +11,7 @@ import tempfile
 import logging
 
 import scipy
+import scipy.optimize
 from scipy.interpolate import UnivariateSpline
 
 import matplotlib
@@ -85,6 +86,15 @@ index_parameters = {
     'FileFunction' : [],
     }
 
+def parabola((x,y), amplitude, x0, y0, sx, sy, theta):
+
+    cth = np.cos(theta)
+    sth = np.sin(theta)    
+    a = (cth**2)/(2*sx**2) + (sth**2)/(2*sy**2)
+    b = -(np.sin(2*theta))/(4*sx**2) + (np.sin(2*theta))/(4*sy**2)
+    c = (sth**2)/(2*sx**2) + (cth**2)/(2*sy**2)
+    v = amplitude -(a*((x-x0)**2) + 2*b*(x-x0)*(y-y0) + c*((y-y0)**2))
+    return np.ravel(v)
 
 def interpolate_function_min(x,y):
 
@@ -251,6 +261,7 @@ class GTAnalysis(AnalysisBase):
                 'residmap'   : defaults.residmap,
                 'sed'        : defaults.sed,
                 'extension'  : defaults.extension,
+                'localize'   : defaults.localize,
                 'roiopt'     : defaults.roiopt,
                 'run'        : defaults.run,
                 'plotting'   : defaults.plotting,
@@ -468,7 +479,10 @@ class GTAnalysis(AnalysisBase):
             c.add_source(name,src_dict,free=free)
 
         if self._like is None: return
-            
+
+        if self.config['gtlike']['edisp'] and not s in self.config['gtlike']['edisp_disable']:
+            self.like.logLike.set_edisp_flag(True)
+        
         self.like.syncSrcParams(name)            
         self.like.model = self.like.components[0].model
             
@@ -618,7 +632,8 @@ class GTAnalysis(AnalysisBase):
             src = self._roi.get_source_by_name(name)
             
             src_model = {'sed' : None, 'extension' : None,
-                         'assoc' : None, 'class' : None }
+                         'assoc' : None, 'class' : None,
+                         'offset' : 0.0, 'offset_ra' : 0.0, 'offset_dec' : 0.0, }
 
             if 'ASSOC1' in src:
                 src_model['assoc'] = src['ASSOC1'].strip()
@@ -629,6 +644,22 @@ class GTAnalysis(AnalysisBase):
             if isinstance(src,Source):
                 src_model['RA'] = src['RAJ2000']
                 src_model['DEC'] = src['DEJ2000']
+
+                src_model['GLON'] = src.skydir.galactic.l.deg
+                src_model['GLAT'] = src.skydir.galactic.b.deg
+                
+                offset_cel = utils.sky_to_offset(self.roi.skydir,
+                                                 src_model['RA'],src_model['DEC'],'CEL')
+
+                offset_gal = utils.sky_to_offset(self.roi.skydir,
+                                                 src_model['GLON'],src_model['GLAT'],'GAL')
+
+                src_model['offset_ra'] = offset_cel[0,0]
+                src_model['offset_dec'] = offset_cel[0,1]
+                src_model['offset_glon'] = offset_gal[0,0]
+                src_model['offset_glat'] = offset_gal[0,1]
+                src_model['offset'] = self.roi.skydir.separation(src.skydir).deg
+                
 
             src_model.update(self.get_src_model(name,False))            
             rm['sources'][name] = src_model
@@ -1098,7 +1129,9 @@ class GTAnalysis(AnalysisBase):
         name = self.roi.get_source_by_name(name).name
 
         # Extract options from kwargs
-
+        nstep = kwargs.get('nstep',self.config['localize']['nstep'])
+        dtheta_max = kwargs.get('dtheta_max',self.config['localize']['dtheta_max'])
+        
         self.logger.info('Running localization for %s'%name)
 
         saved_state = LikelihoodState(self.like)
@@ -1115,21 +1148,28 @@ class GTAnalysis(AnalysisBase):
 
         self.zero_source(name)
 
-        nstep = 3
-        dtheta = 0.05
-        deltax = np.linspace(-dtheta,dtheta,nstep)[:,np.newaxis]
-        deltay = np.linspace(-dtheta,dtheta,nstep)[np.newaxis,:]
+        o = {}
+        
+        deltax = np.linspace(-dtheta_max,dtheta_max,nstep)[:,np.newaxis]
+        deltay = np.linspace(-dtheta_max,dtheta_max,nstep)[np.newaxis,:]
         deltax = np.ones((nstep,nstep))*deltax
         deltay = np.ones((nstep,nstep))*deltay
 
-        radec = utils.offset_to_sky(skydir,deltax.flat,deltay.flat)
+        scan_radec = utils.offset_to_sky(skydir,deltax.flat,deltay.flat)
 
-        for i, t in enumerate(radec):
+        lnlscan = dict(deltax = deltax,
+                       deltay = deltay,
+                       logLike = np.zeros((nstep,nstep)),
+                       dlogLike = np.zeros((nstep,nstep)))
+        
+        
+        
+        for i, t in enumerate(scan_radec):
 
             # make a copy
             s = self.copy_source(name)
 
-            model_name = '%s_localize_%03i'%(name.lower(),i)            
+            model_name = '%s_localize'%(name.lower())            
             s.set_name(model_name)
             s.set_position(t)
 #            s.set_spatial_model(spatial_model,w)
@@ -1141,12 +1181,35 @@ class GTAnalysis(AnalysisBase):
             self.fit(update=False)
             
             logLike1 = self.like()
+            lnlscan['logLike'].flat[i] = logLike1
             
-            sd = self.get_src_model(model_name)
+#            sd = self.get_src_model(model_name)
             self.delete_source(model_name)
 
+        lnlscan['dlogLike'] = np.min(lnlscan['logLike']) - lnlscan['logLike']
+
+        p0 = (0.0,0.0,0.0,0.05,0.05,0.0)
+        popt, pcov = scipy.optimize.curve_fit(parabola,(lnlscan['deltax'],lnlscan['deltay']),
+                                              lnlscan['dlogLike'].flat,p0)
+
+        o['lnlscan'] = lnlscan
+        
+        o['deltax'] = popt[1]
+        o['deltay'] = popt[2]
+        o['sigmax'] = popt[3]
+        o['sigmay'] = popt[4]
+        o['theta'] = popt[5]
+
+        radec = utils.offset_to_sky(skydir,popt[1],popt[2])
+        o['ra'] = radec[0,0]
+        o['dec'] = radec[0,1]
+        
         self.unzero_source(name)
         saved_state.restore()
+
+        src_model = self._roi_model['sources'].get(name,{})
+        src_model['localize'] = copy.deepcopy(o)        
+        return o
 
     def extension(self,name,**kwargs):
         """Perform an angular extension test for this source.  This
@@ -1754,6 +1817,20 @@ class GTAnalysis(AnalysisBase):
         utils.write_fits_image(model_counts,self._wcs,outfile)        
         return [(model_counts,self._wcs)] + counts
 
+    def print_roi(self):
+
+        print '%-25s %12s %12s %12s %12s %12s'%('name','offset','offset_ra',
+                                                'offset_dec','ts','Npred')
+        print '-'*100
+        
+        for k,s in sorted(self._roi_model['sources'].items(),key=lambda t:t[1]['offset']):
+
+            if not 'RA' in s: continue
+            
+            print '%-25s %12.3f %12.3f %12.3f %12.3f %12.3f'%(s['name'],s['offset'],
+                                                              s['offset_ra'],
+                                                              s['offset_dec'],s['ts'],s['Npred'])
+    
     def load_roi(self,infile):
         """This function reloads the analysis state from a previously
         saved instance generated with write_roi()."""
@@ -2495,6 +2572,9 @@ class GTBinnedAnalysis(AnalysisBase):
         # Initialize source as free/fixed
         pylike_src.spectrum().normPar().setFree(free)
         self.like.addSource(pylike_src)
+
+        
+        
         self.like.syncSrcParams(name)
 
     def delete_source(self,name,save_template=True):
