@@ -35,7 +35,7 @@ overriden by supplying one or more *kwargs* when executing
    # Override spatial model
    gta.extension('sourceA',spatial_model='DiskSource')
 
-By default the extension method will refit all background parameters
+By default the extension method will profile over any background parameters
 that were free when the method was executed.  One can optionally fix
 all background parameters with the *fix_background* parameter:
 
