@@ -3,11 +3,10 @@
 Configuration
 =============
 
-This page documents the configuration scheme used by the fermiPy
-package and the valid options for the configuration file.
+This page describes the configuration management scheme used within
+the fermiPy package and the documents the analysis options that can be
+controlled with the configuration file.
 
-.. The fermiPy package is controlled through a yaml-format
-.. configuration file.
 
 ##################################
 Class Configuration
@@ -20,13 +19,14 @@ configuration state.  Elements of this dictionary can be scalars (str,
 int ,float) or dictionaries defining nested blocks of the
 configuration.
 
-The configuration dictionary is set at the time of object creation by
-passing a dictionary object to the class constructor.  Optional kwargs
-arguments can be used to override options in the input dictionary.
-For instance in the following example the *config* dictionary defines
-values for the parameters *emin* and *emax*.  By passing an additional
-dictionary for the selection block the value of emax in config is
-overriden to 10000.
+The class configuration dictionary is set at the time of object
+creation by passing a dictionary or a YAML file containing a
+dictionary to the class constructor.  Optional kwargs arguments can be
+used to override options in the input dictionary.  For instance in the
+following example the *config* dictionary defines values for the
+parameters *emin* and *emax*.  By passing an additional dictionary for
+the selection block, the value of emax in the kwargs argument (1000)
+overrides the value in the config dictionary.
 
 .. code-block:: python
    
@@ -37,21 +37,28 @@ overriden to 10000.
 
    gta = GTAnalysis(config,selection={'emax' : 10000})
    
+Alternatively the config argument can be set to the path to a YAML
+configuration file:
+
+.. code-block:: python
+   
+   gta = GTAnalysis('config.yaml',selection={'emax' : 10000})
+
 
 ##################################
 Configuration File
 ##################################
 
 fermiPy uses YAML-format configuration files which define a structured
-hierarchy of parameters organized in blocks that mirrors the layout of
-the configuration dictionary.  Each configuration block groups a set
+hierarchy of parameters organized in sections that mirrors the layout of
+the configuration dictionary.  Each configuration section groups a set
 of related options.  The following sub-sections describe the options
-that can be set in each block.
+that can be set in each section.
 
 fileio
 ------
 
-The *fileio* block collects options related to file bookkeeping.  The
+The *fileio* section collects options related to file bookkeeping.  The
 *outdir* option sets the root directory of the analysis instance where
 all output files will be written.  If *outdir* is null then the output
 directory will be set to the directory of the configuration file.
@@ -75,7 +82,7 @@ a temporary scratch directory created under *scratchdir*.
 data
 ----
 
-The *data* block defines the input data files for the analysis (FT1,
+The *data* section defines the input data files for the analysis (FT1,
 FT2, and livetime cube).  *evfile* and *scfile* can either be an
 individual file or group of files.  The optional *ltcube* option can
 be used to choose a pre-generated livetime cube.  If this parameter is
@@ -91,7 +98,7 @@ null a livetime cube will be generated at runtime.
 model
 -----
 
-The *model* block collects options that control the inclusion of
+The *model* section collects options that control the inclusion of
 point-source and diffuse components in the model.  *galdiff* and
 *isodiff* set the templates for the Galactic IEM and isotropic diffuse
 respectively.  *catalogs* defines a list of catalogs that will be
@@ -102,7 +109,6 @@ extended components beyond those defined in the master catalog.
 *src_radius* and *src_roiwidth* set the maximum distance from the ROI
 center at which sources in the master catalog will be included in the
 ROI model.
-
 
 .. code-block:: yaml
 
@@ -144,13 +150,13 @@ binning
 selection
 ---------
 
-The *selection* block collects parameters related to the data
-selection and target definition.  The majority of the parameters
-correspond to the arguments for *gtselect* and *gtmktime*.  The ROI
+The *selection* section collects parameters related to the data
+selection and target definition.  The majority of the parameters in
+this section are arguments to *gtselect* and *gtmktime*.  The ROI
 center can be set with the *target* parameter by providing the name of
-a source in the master catalog (defined in the *model* block).
-Alternatively the ROI center can be defined by giving explicit sky
-coordinates with *ra* and *dec* or *glon* and *glat*.
+a source defined in one of the input catalogs (defined in the *model*
+section).  Alternatively the ROI center can be defined by giving
+explicit sky coordinates with *ra* and *dec* or *glon* and *glat*.
 
 .. code-block:: yaml
 
@@ -176,14 +182,14 @@ coordinates with *ra* and *dec* or *glon* and *glat*.
 components
 ----------
 
-The *components* block is used to define a joint analysis formed by
+The *components* section is used to define a joint analysis formed by
 the product of likelihoods for different subselection of the data
 (implemented with the SummedLikelihood class in pyLikelihood).  This
-block is optional and when set to null (the default) fermiPy will
+section is optional and when set to null (the default) fermiPy will
 construct a single likelihood using the parameters of the root
 analysis configuration.
 
-The component block can be defined as either a list or dictionary of
+The component section can be defined as either a list or dictionary of
 dictionary elements where each element sets analysis parameters for a
 different subcomponent of the analysis.  Dictionary elements have the
 same hierarchy of parameters as the root analysis configuration.
@@ -197,7 +203,7 @@ each component will be named according to their order in the list
 
 .. code-block:: yaml
 
-   # Component block for Front/Back analysis with list style
+   # Component section for Front/Back analysis with list style
    components:
      - { selection : { evtype : 1 } } # Front
      - { selection : { evtype : 2 } } # Back
@@ -209,7 +215,7 @@ file_back.fits).
 
 .. code-block:: yaml
 
-   # Component block for Front/Back analysis with dictionary style
+   # Component section for Front/Back analysis with dictionary style
    components:
      front : { selection : { evtype : 1 } } # Front
      back  : { selection : { evtype : 2 } } # Back
