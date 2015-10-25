@@ -148,6 +148,7 @@ extension = {
 localize = {
     'nstep'                    : (10,''),
     'dtheta_max'               : (0.05,''),
+    'update'                   : (False,'')
     }
 
 # Options for anlaysis

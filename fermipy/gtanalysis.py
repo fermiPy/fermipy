@@ -480,8 +480,8 @@ class GTAnalysis(AnalysisBase):
 
         if self._like is None: return
 
-        if self.config['gtlike']['edisp'] and not s in self.config['gtlike']['edisp_disable']:
-            self.like.logLike.set_edisp_flag(True)
+        if self.config['gtlike']['edisp'] and not src.name in self.config['gtlike']['edisp_disable']:
+            self.set_edisp_flag(src.name,True)
         
         self.like.syncSrcParams(name)            
         self.like.model = self.like.components[0].model
@@ -490,6 +490,11 @@ class GTAnalysis(AnalysisBase):
 
         self.logger.info('Deleting source %s'%name)
         
+        # STs require a source to be freed before deletion
+        normPar = self.like.normPar(name)
+        if not normPar.isFree():
+            self.free_norm(name)
+
         for c in self.components:
             c.delete_source(name,save_template=save_template)
 
@@ -1124,13 +1129,31 @@ class GTAnalysis(AnalysisBase):
 
         name : str
             Source name.
+
+        dtheta_max : float
+            Maximum offset in RA/DEC in deg from the nominal source
+            position that will be used to define the boundaries of the
+            scan region.
+
+        nstep : int
+            Number of steps that in RA and DEC.  The total number of
+            sampling points will be nstep**2.
+
+        update : bool
+            Update the properties of this source with the best-fit
+            location.
+
         """
 
         name = self.roi.get_source_by_name(name).name
 
         # Extract options from kwargs
-        nstep = kwargs.get('nstep',self.config['localize']['nstep'])
-        dtheta_max = kwargs.get('dtheta_max',self.config['localize']['dtheta_max'])
+        config = copy.deepcopy(self.config['localize'])
+        config.update(kwargs)
+
+        nstep = config['nstep'] 
+        dtheta_max = config['dtheta_max'] 
+        update = config['update'] 
         
         self.logger.info('Running localization for %s'%name)
 
@@ -1148,7 +1171,7 @@ class GTAnalysis(AnalysisBase):
 
         self.zero_source(name)
 
-        o = {}
+        o = {'config' : config }
         
         deltax = np.linspace(-dtheta_max,dtheta_max,nstep)[:,np.newaxis]
         deltay = np.linspace(-dtheta_max,dtheta_max,nstep)[np.newaxis,:]
@@ -1161,9 +1184,7 @@ class GTAnalysis(AnalysisBase):
                        deltay = deltay,
                        logLike = np.zeros((nstep,nstep)),
                        dlogLike = np.zeros((nstep,nstep)))
-        
-        
-        
+                
         for i, t in enumerate(scan_radec):
 
             # make a copy
@@ -1175,22 +1196,25 @@ class GTAnalysis(AnalysisBase):
 #            s.set_spatial_model(spatial_model,w)
 
             self.add_source(model_name,s,free=True)
-            self.free_norm(model_name)
-            self.like.syncSrcParams(model_name)
-
             self.fit(update=False)
             
             logLike1 = self.like()
-            lnlscan['logLike'].flat[i] = logLike1
-            
+            lnlscan['logLike'].flat[i] = logLike1            
 #            sd = self.get_src_model(model_name)
             self.delete_source(model_name)
 
         lnlscan['dlogLike'] = np.min(lnlscan['logLike']) - lnlscan['logLike']
+        dlogmax = np.max(lnlscan['dlogLike'])-np.min(lnlscan['dlogLike'])
+        sigma = (0.5*dtheta_max**2/dlogmax)**0.5
 
-        p0 = (0.0,0.0,0.0,0.05,0.05,0.0)
-        popt, pcov = scipy.optimize.curve_fit(parabola,(lnlscan['deltax'],lnlscan['deltay']),
-                                              lnlscan['dlogLike'].flat,p0)
+        p0 = (0.0,0.0,0.0,sigma,sigma,0.0)
+
+        try:            
+            popt, pcov = scipy.optimize.curve_fit(parabola,(lnlscan['deltax'],lnlscan['deltay']),
+                                                  lnlscan['dlogLike'].flat,p0)            
+        except Exception, message:
+            popt = p0
+            self.logger.error('Localization failed.', exc_info=True)
 
         o['lnlscan'] = lnlscan
         
@@ -1203,9 +1227,20 @@ class GTAnalysis(AnalysisBase):
         radec = utils.offset_to_sky(skydir,popt[1],popt[2])
         o['ra'] = radec[0,0]
         o['dec'] = radec[0,1]
-        
-        self.unzero_source(name)
+
         saved_state.restore()
+
+        if update:
+            self.logger.info('Updating source position: %.3f %.3f'%(o['ra'],o['dec']))
+            s = self.copy_source(name)
+
+            self.delete_source(name)
+            s.set_position([o['ra'],o['dec']])   
+            model_name = name
+#            model_name = '%s_localize'%(name.lower())            
+#            s.set_name(model_name)
+            self.add_source(model_name,s,free=True)
+            self.fit()
 
         src_model = self._roi_model['sources'].get(name,{})
         src_model['localize'] = copy.deepcopy(o)        
@@ -1262,13 +1297,16 @@ class GTAnalysis(AnalysisBase):
         name = self.roi.get_source_by_name(name).name
 
         # Extract options from kwargs
-        spatial_model = kwargs.get('spatial_model',self.config['extension']['spatial_model'])
-        width_min = kwargs.get('width_min',self.config['extension']['width_min'])
-        width_max = kwargs.get('width_max',self.config['extension']['width_max'])
-        width_nstep = kwargs.get('width_nstep',self.config['extension']['width_nstep'])
-        width = kwargs.get('width',self.config['extension']['width'])
-        fix_background = kwargs.get('fix_background',self.config['extension']['fix_background'])
-        save_model_map = kwargs.get('save_model_map',self.config['extension']['save_model_map'])
+        config = copy.deepcopy(self.config['extension'])
+        config.update(kwargs)
+
+        spatial_model = config['spatial_model']
+        width_min = config['width_min']
+        width_max = config['width_max']
+        width_nstep = config['width_nstep']
+        width = config['width']
+        fix_background = config['fix_background']
+        save_model_map = config['save_model_map']
         
         self.logger.info('Running extension analysis for %s'%name)
 
@@ -1302,40 +1340,42 @@ class GTAnalysis(AnalysisBase):
         if width is None:
             width = np.logspace(np.log10(width_min),np.log10(width_max),width_nstep)
 
-        ext = {'width' : width,
+        o = {'width' : width,
                'dlogLike' : np.zeros(len(width)),
-               'logLike' : np.zeros(len(width)),
-               'ext' : 0.0,
-               'ext_err_hi' : 0.0,
-               'ext_err_lo' : 0.0,
-               'ext_ul95' : 0.0,
-               'ts_ext' : 0.0,
-               'fit' : []}
+             'logLike' : np.zeros(len(width)),
+             'ext' : 0.0,
+             'ext_err_hi' : 0.0,
+             'ext_err_lo' : 0.0,
+             'ext_ul95' : 0.0,
+             'ts_ext' : 0.0,
+             'fit' : [],
+             'config' : config }
         
+        self.logger.info('Width scan vector: %s'%width)
+
         for i, w in enumerate(width):
             
             # make a copy
-            s = copy.deepcopy(self.roi.get_source_by_name(name))
+            s = self.copy_source(name)
+#            s = copy.deepcopy(self.roi.get_source_by_name(name))
 
             model_name = '%s%02i'%(ext_model_name,i)            
             s.set_name(model_name)
             s.set_spatial_model(spatial_model,w)
             
             self.logger.info('Adding test source with width: %10.3f deg'%w)
-            for k,v in s.spectral_pars.items():
-                s._spectral_pars[k]['value'] = str(self.like[name].src.spectrum().getParamValue(k))
+#            for k,v in s.spectral_pars.items():
+#                s._spectral_pars[k]['value'] = str(self.like[name].src.spectrum().getParamValue(k))
                 
             self.add_source(model_name,s,free=True)
-            self.free_norm(model_name)
-            self.like.syncSrcParams(model_name)
             self.fit(update=False)
             
             logLike1 = self.like()
 
-            ext['dlogLike'][i] = logLike0-logLike1
-            ext['logLike'][i] = logLike1
+            o['dlogLike'][i] = logLike0-logLike1
+            o['logLike'][i] = logLike1
             sd = self.get_src_model(model_name)
-            ext['fit'].append(sd)
+            o['fit'].append(sd)
 
             if save_model_map:
                 self.generate_model_map(model_name=model_name,name=model_name)
@@ -1344,8 +1384,8 @@ class GTAnalysis(AnalysisBase):
                                save_template=self.config['extension']['save_templates'])
 
         try:
-            ext['ext'], ext['ext_ul95'], ext['ext_err_lo'], ext['ext_err_hi'], ext['ts_ext'] = \
-                get_upper_limit(ext['dlogLike'],ext['width'],interpolate=True)
+            o['ext'], o['ext_ul95'], o['ext_err_lo'], o['ext_err_hi'], o['ts_ext'] = \
+                get_upper_limit(o['dlogLike'],o['width'],interpolate=True)
         except Exception, message:
             self.logger.error('Upper limit failed.', exc_info=True)
 
@@ -1355,9 +1395,9 @@ class GTAnalysis(AnalysisBase):
         saved_state.restore()
         
         src_model = self._roi_model['sources'].get(name,{})
-        src_model['extension'] = copy.deepcopy(ext)   
+        src_model['extension'] = copy.deepcopy(o)   
         
-        return ext
+        return o
                 
     def sed(self,name,profile=True,energies=None,**kwargs):
         """Generate an SED for a source.  This function will fit the
@@ -1402,6 +1442,10 @@ class GTAnalysis(AnalysisBase):
         # Find the source
         name = self.roi.get_source_by_name(name).name
 
+        # Extract options from kwargs
+        config = copy.deepcopy(self.config['sed'])
+        config.update(kwargs)
+
         self.logger.info('Computing SED for %s'%name)
         saved_state = LikelihoodState(self.like)
 
@@ -1433,7 +1477,8 @@ class GTAnalysis(AnalysisBase):
              'Npred' : np.zeros(nbins),
              'ts' : np.zeros(nbins),
              'fit_quality' : np.zeros(nbins),
-             'lnlprofile' : []
+             'lnlprofile' : [],
+             'config' : config
              }
 
         max_index = 5.0
@@ -1457,8 +1502,8 @@ class GTAnalysis(AnalysisBase):
                 gf_bin_index += [max_index]
                 gf_bin_flux += [min_flux]
                 
-        bin_index = kwargs.get('bin_index',self.config['sed']['bin_index'])
-        use_local_index = kwargs.get('use_local_index',self.config['sed']['use_local_index'])
+        bin_index = config['bin_index']
+        use_local_index = config['use_local_index']
         
         source = self.components[0].like.logLike.getSource(name)
         old_spectrum=source.spectrum()
@@ -1527,7 +1572,6 @@ class GTAnalysis(AnalysisBase):
                 o['dfde_err_lo'][i] = dfde_err_lo
                 o['e2dfde_err_lo'][i] = dfde_err_lo*10**(2*ecenter)
                 
-#        self.setEnergyRange(energies[0],energies[-1])
         self.setEnergyRange(self.energies[0],self.energies[-1])
         self.like.setSpectrum(name,old_spectrum)
         saved_state.restore()        
@@ -2550,7 +2594,7 @@ class GTBinnedAnalysis(AnalysisBase):
         pl = pyLike.SourceFactory_funcFactory().create(src['SpectrumType'])
 
         for k,v in src.spectral_pars.items():
-            
+ 
             par = pl.getParam(k)
 
             vmin = min(float(v['value']),float(v['min']))
@@ -2572,8 +2616,6 @@ class GTBinnedAnalysis(AnalysisBase):
         # Initialize source as free/fixed
         pylike_src.spectrum().normPar().setFree(free)
         self.like.addSource(pylike_src)
-
-        
         
         self.like.syncSrcParams(name)
 
