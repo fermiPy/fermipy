@@ -30,7 +30,7 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'astropy.coordinates',
                 'astropy.io','astropy.wcs','astropy.io.fits',
                 'numpy','healpy',
-                'scipy','scipy.special','scipy.interpolate',
+                'scipy','scipy.special','scipy.interpolate','scipy.optimize',
                 'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
                 'matplotlib.axes','matplotlib.cbook','matplotlib.colors']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
@@ -41,6 +41,8 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 sys.path.insert(0, os.path.abspath('../../fermipy'))
 sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('..'))
+
+import fermipy
 
 # -- General configuration ------------------------------------------------
 
@@ -79,7 +81,7 @@ author = u'Matthew Wood'
 # built documents.
 #
 # The short X.Y version.
-version = '0.1.0'
+version = fermipy.__version__ #'0.1.0'
 # The full version, including alpha/beta/rc tags.
 release = '0.1.0'
 
