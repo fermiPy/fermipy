@@ -3,6 +3,8 @@
 from setuptools import setup
 import re
 
+from version import get_git_version
+
 VERSIONFILE="fermipy/_version.py"
 verstrline = open(VERSIONFILE, "rt").read()
 VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
@@ -13,7 +15,8 @@ else:
     raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
 
 setup(name='fermipy',
-      version=verstr,
+#      version=verstr,
+      version=get_git_version(),
       author='The Fermipy developers',
       packages=['fermipy','fermipy.config','fermipy.catalogs'],
       package_data = {
