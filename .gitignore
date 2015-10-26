@@ -55,3 +55,6 @@ target/
 
 # emacs temp
 *~
+
+# package specific
+fermipy/_version.py
