@@ -35,10 +35,9 @@ __all__ = ("get_git_version")
 
 from subprocess import Popen, PIPE
 
-
 def call_git_describe(abbrev=4):
     try:
-        p = Popen(['git', 'describe', '--abbrev=%d' % abbrev],
+        p = Popen(['git', 'describe', '--abbrev=%d' % abbrev, '--dirty'],
                   stdout=PIPE, stderr=PIPE)
         p.stderr.close()
         line = p.stdout.readlines()[0]
@@ -49,28 +48,44 @@ def call_git_describe(abbrev=4):
 
 
 def read_release_version():
+
+    import re, os
+    dirname = os.path.abspath(os.path.dirname(__file__))
+
     try:
-        f = open("RELEASE-VERSION", "r")
+#        f = open(os.path.join(dirname,"RELEASE-VERSION"), "r")
+        f = open(os.path.join(dirname,"_version.py"), "r")
 
-        try:
-            version = f.readlines()[0]
-            return version.strip()
-
-        finally:
-            f.close()
+        for line in f.readlines():
+            m = re.match("__version__ = '([^']+)'", line)
+            if m:
+                ver = mo.group(1)
+                return ver
+#        try:
+#            version = f.readlines()[0]
+#            return version.strip()
+#        finally:
+#            f.close()
 
     except:
         return None
 
+    return None
 
 def write_release_version(version):
-    f = open("RELEASE-VERSION", "w")
-    f.write("%s\n" % version)
+
+    import os
+    dirname = os.path.abspath(os.path.dirname(__file__))
+
+    f = open(os.path.join(dirname,"_version.py"), "w")
+    f.write("__version__ = '%s'\n" % version)
     f.close()
 
 
 def get_git_version(abbrev=4):
-    # Read in the version that's currently in RELEASE-VERSION.
+
+    print 'getting git version'
+    # Read in the version that's currently in _version.py.
 
     release_version = read_release_version()
 
@@ -79,7 +94,7 @@ def get_git_version(abbrev=4):
     version = call_git_describe(abbrev)
 
     # If that doesn't work, fall back on the value that's in
-    # RELEASE-VERSION.
+    # _version.py.
 
     if version is None:
         version = release_version

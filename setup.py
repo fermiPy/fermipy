@@ -3,24 +3,15 @@
 from setuptools import setup
 import re
 
-from version import get_git_version
-
-VERSIONFILE="fermipy/_version.py"
-verstrline = open(VERSIONFILE, "rt").read()
-VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
-mo = re.search(VSRE, verstrline, re.M)
-if mo:
-    verstr = mo.group(1)
-else:
-    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
+from fermipy.version import get_git_version
 
 setup(name='fermipy',
-#      version=verstr,
       version=get_git_version(),
       author='The Fermipy developers',
+      license='BSD',
       packages=['fermipy','fermipy.config','fermipy.catalogs'],
       package_data = {
-        '' : ['*yaml','*xml','*fit','*fits'],
+        '' : ['*yaml','*xml','*fit'],
         'fermipy.catalogs' : ['Extended_archive_v14/*fits',
                               'Extended_archive_v14/*xml',
                               'Extended_archive_v14/*/*fits',
@@ -28,7 +19,7 @@ setup(name='fermipy',
       include_package_data = True, 
       url = "https://github.com/fermiPy/fermipy",
       scripts = [],
-      data_files=[],
+      data_files=[('fermipy',['fermipy/_version.py'])],
       install_requires=['numpy >= 1.6.1',
                         'matplotlib >= 1.1.0',
                         'astropy >= 0.4',

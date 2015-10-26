@@ -8,5 +8,8 @@ Fermi Python Analysis Framework
 
 License
 -------
-This project is licensed under version 2 of the GNU General Public License.
+This project is licensed under a 3-clause BSD style license - see the
+``licenses/LICENSE.rst`` file.
+
+
 
