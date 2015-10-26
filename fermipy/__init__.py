@@ -2,15 +2,13 @@
 
 import os
 
-#__version__ = "0.3.1"
-#from _version import __version__
+__version__ = "unknown"
 
 try:
-    import _version
-    __version__ = _version.__version__
-except:
     from version import get_git_version
     __version__ = get_git_version()
+except Exception, message:
+    print message
 
 __author__ = "Matthew Wood"
 

@@ -33,12 +33,16 @@
 
 __all__ = ("get_git_version")
 
+import os
 from subprocess import Popen, PIPE
 
 def call_git_describe(abbrev=4):
+
     try:
+        dirname = os.path.abspath(os.path.dirname(__file__))
         p = Popen(['git', 'describe', '--abbrev=%d' % abbrev, '--dirty'],
-                  stdout=PIPE, stderr=PIPE)
+                  stdout=PIPE, stderr=PIPE,
+                  cwd=os.path.join('..',dirname))
         p.stderr.close()
         line = p.stdout.readlines()[0]
         return line.strip()
@@ -49,17 +53,18 @@ def call_git_describe(abbrev=4):
 
 def read_release_version():
 
-    import re, os
+    import re
     dirname = os.path.abspath(os.path.dirname(__file__))
 
-    try:
-#        f = open(os.path.join(dirname,"RELEASE-VERSION"), "r")
-        f = open(os.path.join(dirname,"_version.py"), "r")
 
+    try:
+
+        f = open(os.path.join(dirname,"_version.py"), "r")
         for line in f.readlines():
+
             m = re.match("__version__ = '([^']+)'", line)
             if m:
-                ver = mo.group(1)
+                ver = m.group(1)
                 return ver
 #        try:
 #            version = f.readlines()[0]
@@ -74,46 +79,35 @@ def read_release_version():
 
 def write_release_version(version):
 
-    import os
     dirname = os.path.abspath(os.path.dirname(__file__))
-
     f = open(os.path.join(dirname,"_version.py"), "w")
     f.write("__version__ = '%s'\n" % version)
     f.close()
 
-
 def get_git_version(abbrev=4):
 
-    print 'getting git version'
     # Read in the version that's currently in _version.py.
-
     release_version = read_release_version()
 
     # First try to get the current version using “git describe”.
-
     version = call_git_describe(abbrev)
 
     # If that doesn't work, fall back on the value that's in
     # _version.py.
-
     if version is None:
         version = release_version
 
     # If we still don't have anything, that's an error.
-
     if version is None:
         raise ValueError("Cannot find the version number!")
 
     # If the current version is different from what's in the
-    # RELEASE-VERSION file, update the file to be current.
-
+    # _version.py file, update the file to be current.
     if version != release_version:
         write_release_version(version)
 
     # Finally, return the current version.
-
     return version
 
-
-#if __name__ == "__main__":
-#    print get_git_version()
+if __name__ == "__main__":
+    print get_git_version()

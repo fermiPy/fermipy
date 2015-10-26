@@ -1797,25 +1797,6 @@ class GTAnalysis(AnalysisBase):
         self.logger.info("Fit Quality: %i LogLike: %12.3f"%(quality,logLike))
         return quality
         
-    def fitDRM(self):
-        
-        kw = dict(optObject = None, #pyLike.Minuit(self.like.logLike),
-                  covar=True,#tol=1E-4
-                  optimizer='DRMNFB')
-        
-#        self.MIN.tol = float(self.likelihoodConf['mintol'])
-        
-        try:
-            self.like.fit(**kw)
-        except Exception, message:
-            print message
-            print "Failed to converge with DRMNFB"
-
-        kw = dict(optObject = pyLike.Minuit(self.like.logLike),
-                  covar=True)
-
-        self.like.fit(**kw)
-        
     def load_xml(self,xmlfile):
         """Load model definition from XML."""
 
@@ -1867,7 +1848,8 @@ class GTAnalysis(AnalysisBase):
                                                 'offset_dec','ts','Npred')
         print '-'*100
         
-        for k,s in sorted(self._roi_model['sources'].items(),key=lambda t:t[1]['offset']):
+        for k,s in sorted(self._roi_model['sources'].items(),
+                          key=lambda t:t[1]['offset']):
 
             if not 'RA' in s: continue
             
@@ -1929,7 +1911,8 @@ class GTAnalysis(AnalysisBase):
 
         o = self.get_roi_model(update_sources=update_sources)
         o['config'] = copy.deepcopy(self.config)
-        
+        o['version'] = fermipy.__version__
+
         self.logger.info('Writing %s...'%(outfile + '.yaml'))
         yaml.dump(tolist(o),open(outfile + '.yaml','w'))
 
