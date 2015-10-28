@@ -191,7 +191,7 @@ def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
 
     od = {}
     
-    for k, v in d0.iteritems():
+    for k, v in d0.items():
 
         t0 = None
         t1 = None

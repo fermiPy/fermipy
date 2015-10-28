@@ -23,7 +23,7 @@ def get_xerr(sed):
     dehi = 10**sed['emax']-10**sed['ecenter']
     xerr = np.vstack((delo,dehi))
 
-def make_counts_spectrum_plot(o,energies,imfile):
+def make_counts_spectrum_plot(o,roi,energies,imfile):
 
     fig = plt.figure()
 
@@ -50,17 +50,15 @@ def make_counts_spectrum_plot(o,energies,imfile):
     ax0.errorbar(x,ym,color='k',linestyle='-',marker='None',
                        label='Total')
 
-    src_dict = o['sources']
-    
-    for v in sorted(src_dict.values(),
+    for s in sorted(roi.sources,
                     key=lambda t: t['Npred'],reverse=True)[:6]:
-        ax0.errorbar(x,v['model_counts'],linestyle='-',marker='None',
-                     label=v['name'])
+        ax0.errorbar(x,s['model_counts'],linestyle='-',marker='None',
+                     label=s['name'])
 
 
-    for v in sorted(src_dict.values(),
+    for s in sorted(roi.sources,
                     key=lambda t: t['Npred'],reverse=True)[6:]:
-        ax0.errorbar(x,v['model_counts'],color='gray',
+        ax0.errorbar(x,s['model_counts'],color='gray',
                      linestyle='-',marker='None',
                      label='__nolabel__')
 
@@ -421,8 +419,8 @@ class ROIPlotter(AnalysisBase):
         
         
         pixcrd = utils.skydir_to_pix(self._roi._src_skydir,self._implot._wcs)
-        
-        for i, s in enumerate(self._roi.sources):
+
+        for i, s in enumerate(self._roi.point_sources):
 
             label = s.name
             ax.text(pixcrd[0][i]+2.0,pixcrd[1][i]+2.0,label,

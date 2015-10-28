@@ -318,7 +318,7 @@ class GTAnalysis(AnalysisBase):
                 
         self._like = None
         self._components = []
-        configs = self.create_component_configs()
+        configs = self._create_component_configs()
 
         for cfg in configs:
             comp = self._create_component(cfg)
@@ -343,8 +343,7 @@ class GTAnalysis(AnalysisBase):
                 'energies'  : np.copy(self.energies),
                 'residmap' : {},
                 'components' : []
-                },
-            'sources' : {}
+                }
             }
         
         for c in self._components:
@@ -428,7 +427,7 @@ class GTAnalysis(AnalysisBase):
         
         gta = GTAnalysis(config)
         
-        gta.setup(init_sources=False)
+        gta.setup(xmlfile=infile,init_sources=False)
         gta.load_roi(infile)
         return gta
         
@@ -441,12 +440,12 @@ class GTAnalysis(AnalysisBase):
         for i, c in enumerate(self.components):
             rm['roi']['components'][i]['model_counts'].fill(0)
             rm['roi']['components'][i]['Npred'] = 0
-
             
         for name in self.like.sourceNames():
-            rm['roi']['model_counts'] += rm['sources'][name]['model_counts']
-            rm['roi']['Npred'] += np.sum(rm['sources'][name]['model_counts'])
 
+            src = self.roi.get_source_by_name(name,True)
+            rm['roi']['model_counts'] += src['model_counts']
+            rm['roi']['Npred'] += np.sum(src['model_counts'])
             mc = self.modelCountsSpectrum(name)
             
             for i, c in enumerate(self.components):                
@@ -457,14 +456,31 @@ class GTAnalysis(AnalysisBase):
     def copy_source(self,name):
         """Create a duplicate of an existing source."""
         
-        s = copy.deepcopy(self.roi.get_source_by_name(name))
+        s = copy.deepcopy(self.roi.get_source_by_name(name,True))
         for k,v in s.spectral_pars.items():
-            s._spectral_pars[k]['value'] = \
+            s.spectral_pars[k]['value'] = \
                 str(self.like[name].src.spectrum().getParamValue(k))
 
         return s
 
     def add_source(self,name,src_dict,free=False):
+        """Add a source to the ROI model.  This function may be called
+        either before or after setup().
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        src_dict : dict or Source object
+            Dictionary or source object defining the source properties
+            (coordinates, spectral parameters, etc.).
+
+        free : bool
+            Initialize the source with a free normalization parameter.
+
+        """
 
         self.logger.info('Adding source ' + name)
         
@@ -485,8 +501,18 @@ class GTAnalysis(AnalysisBase):
         
         self.like.syncSrcParams(name)            
         self.like.model = self.like.components[0].model
-            
+        self._init_source(name)
+ 
     def delete_source(self,name,save_template=True):
+        """Delete a source from the model.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        """
 
         self.logger.info('Deleting source %s'%name)
         
@@ -498,11 +524,11 @@ class GTAnalysis(AnalysisBase):
         for c in self.components:
             c.delete_source(name,save_template=save_template)
 
-        src = self.roi.get_source_by_name(name)        
+        src = self.roi.get_source_by_name(name,True)        
         self.roi.delete_sources([src])
         self.like.model = self.like.components[0].model
-            
-    def create_component_configs(self):
+
+    def _create_component_configs(self):
         configs = []
 
         components = self.config['components']
@@ -540,15 +566,14 @@ class GTAnalysis(AnalysisBase):
 
         cfg['fileio']['workdir'] = self.config['fileio']['workdir']
         
-        comp = GTBinnedAnalysis(cfg,
-                                logging=self.config['logging'])
+        comp = GTBinnedAnalysis(cfg,logging=self.config['logging'])
 
         return comp
 
     def stage_output(self):
         """Copy data products to final output directory."""
 
-        extensions = ['.xml','.par','.yaml','.png','.pdf']        
+        extensions = ['.xml','.par','.yaml','.png','.pdf','.npy']        
         if self.config['fileio']['savefits']:
             extensions += ['.fits','.fit']
         
@@ -586,7 +611,7 @@ class GTAnalysis(AnalysisBase):
         else:
             self.logger.error('Working directory does not exist.')
             
-    def setup(self,xmlmodel=None,init_sources=True):
+    def setup(self,xmlfile=None,init_sources=True):
         """Run pre-processing step for each analysis component and
         construct a joint likelihood object.  This will run everything
         except the likelihood optimization: data selection (gtselect,
@@ -599,6 +624,9 @@ class GTAnalysis(AnalysisBase):
         init_sources : bool
            Choose whether to initialize the ROI model for individual sources.
 
+        xmlfile : str
+           Override the XML model file.
+
         """
 
         # Run data selection step
@@ -609,7 +637,7 @@ class GTAnalysis(AnalysisBase):
 
             self.logger.info("Performing setup for Analysis Component: " +
                              c.name)
-            c.setup(xmlmodel=xmlmodel)
+            c.setup(xmlfile=xmlfile)
             self._like.addComponent(c.like)
 
         self._ccube_file = os.path.join(self.config['fileio']['workdir'],
@@ -632,45 +660,44 @@ class GTAnalysis(AnalysisBase):
             
         if not init_sources: return
             
-        for name in self.like.sourceNames():
-            
-            src = self._roi.get_source_by_name(name)
-            
-            src_model = {'sed' : None, 'extension' : None,
-                         'assoc' : None, 'class' : None,
-                         'offset' : 0.0, 'offset_ra' : 0.0, 'offset_dec' : 0.0, }
-
-            if 'ASSOC1' in src:
-                src_model['assoc'] = src['ASSOC1'].strip()
-
-            if 'CLASS1' in src:
-                src_model['class'] = src['CLASS1'].strip()
-                
-            if isinstance(src,Source):
-                src_model['RA'] = src['RAJ2000']
-                src_model['DEC'] = src['DEJ2000']
-
-                src_model['GLON'] = src.skydir.galactic.l.deg
-                src_model['GLAT'] = src.skydir.galactic.b.deg
-                
-                offset_cel = utils.sky_to_offset(self.roi.skydir,
-                                                 src_model['RA'],src_model['DEC'],'CEL')
-
-                offset_gal = utils.sky_to_offset(self.roi.skydir,
-                                                 src_model['GLON'],src_model['GLAT'],'GAL')
-
-                src_model['offset_ra'] = offset_cel[0,0]
-                src_model['offset_dec'] = offset_cel[0,1]
-                src_model['offset_glon'] = offset_gal[0,0]
-                src_model['offset_glat'] = offset_gal[0,1]
-                src_model['offset'] = self.roi.skydir.separation(src.skydir).deg
-                
-
-            src_model.update(self.get_src_model(name,False))            
-            rm['sources'][name] = src_model
+        for name in self.like.sourceNames():            
+            self._init_source(name)            
         
         self._update_roi()
         
+    def _init_source(self,name):
+
+        src = self.roi.get_source_by_name(name,True)            
+        src.update_data({'sed' : None, 'extension' : None,
+                         'assoc' : None, 'class' : None,
+                         'offset' : 0.0, 'offset_ra' : 0.0, 'offset_dec' : 0.0, })
+
+        if 'ASSOC1' in src['catalog']:
+            src['assoc'] = src['catalog']['ASSOC1'].strip()
+
+        if 'CLASS1' in src['catalog']:
+            src['class'] = src['catalog']['CLASS1'].strip()
+                
+        if isinstance(src,Source):
+
+            src['glon'] = src.skydir.galactic.l.deg
+            src['glat'] = src.skydir.galactic.b.deg
+                
+            offset_cel = utils.sky_to_offset(self.roi.skydir,
+                                             src['ra'],src['dec'],'CEL')
+
+            offset_gal = utils.sky_to_offset(self.roi.skydir,
+                                             src['glon'],src['glat'],'GAL')
+
+            src['offset_ra'] = offset_cel[0,0]
+            src['offset_dec'] = offset_cel[0,1]
+            src['offset_glon'] = offset_gal[0,0]
+            src['offset_glat'] = offset_gal[0,1]
+            src['offset'] = self.roi.skydir.separation(src.skydir).deg
+                
+        src.update_data(self.get_src_model(name,False))            
+        return src
+
     def cleanup(self):
 
         if self.config['fileio']['workdir'] == self._savedir: return
@@ -728,10 +755,11 @@ class GTAnalysis(AnalysisBase):
 
     def get_sources(self,cuts=None,distance=None,
                     min_ts=None,min_npred=None,square=False):
-        """Retrieve list of sources satisfying the given selections."""
-        rsrc, srcs = self._roi.get_sources_by_position(self._roi.skydir,
-                                                       distance,
-                                                       square=square)
+        """Retrieve list of sources in the ROI model satisfying the
+        given selections."""
+        rsrc, srcs = self.roi.get_sources_by_position(self.roi.skydir,
+                                                      distance,
+                                                      square=square)
         o = []
         if cuts is None: cuts = []        
         for s,r in zip(srcs,rsrc):
@@ -742,8 +770,8 @@ class GTAnalysis(AnalysisBase):
     
     def delete_sources(self,cuts=None,distance=None,
                        min_ts=None,min_npred=None,square=False):
-        """Delete sources within the ROI satisfying the given
-        selection."""
+        """Delete sources in the ROI model satisfying the given
+        selection criteria."""
         
         srcs = self.get_sources(cuts,distance,square)
         self._roi.delete_sources(srcs)    
@@ -752,7 +780,7 @@ class GTAnalysis(AnalysisBase):
             
     def free_sources(self,free=True,pars=None,cuts=None,
                      distance=None,min_ts=None,min_npred=None,square=False):
-        """Free/Fix sources within the ROI satisfying the given
+        """Free/Fix sources in the ROI model satisfying the given
         selection.  When multiple parameter selections are defined,
         the selected sources will be those satisfying the logical AND
         of all selections (e.g. distance < X && ts > min_ts && ...).
@@ -788,24 +816,24 @@ class GTAnalysis(AnalysisBase):
             center.
         
         """
-        rsrc, srcs = self._roi.get_sources_by_position(self._roi.skydir,
-                                                       distance,square=square)
+        rsrc, srcs = self.roi.get_sources_by_position(self.roi.skydir,
+                                                      distance,square=square)
         
         if cuts is None: cuts = []        
         for s,r in zip(srcs,rsrc):
             if not s.check_cuts(cuts): continue
-            ts = self._roi_model['sources'][s.name]['ts']
-            npred = self._roi_model['sources'][s.name]['Npred']
+            ts = s['ts']
+            npred = s['Npred']
             
             if min_ts is not None and (~np.isfinite(ts) or ts < min_ts): continue
             if min_npred is not None and (~np.isfinite(npred) or npred < min_npred):
                 continue
             self.free_source(s.name,free=free,pars=pars)
 
-        for s in self._roi._diffuse_srcs:
+        for s in self.roi.diffuse_sources:
 #            if not s.check_cuts(cuts): continue
-            ts = self._roi_model['sources'][s.name]['ts']
-            npred = self._roi_model['sources'][s.name]['Npred']
+            ts = s['ts']
+            npred = s['Npred']
             
             if min_ts is not None and (~np.isfinite(ts) or ts < min_ts): continue
             if min_npred is not None and (~np.isfinite(npred) or npred < min_npred):
@@ -843,7 +871,7 @@ class GTAnalysis(AnalysisBase):
 
     def set_edisp_flag(self,name,flag=True):
 
-        src = self._roi.get_source_by_name(name)
+        src = self.roi.get_source_by_name(name,True)
         name = src.name
         
         for c in self.components:
@@ -896,7 +924,7 @@ class GTAnalysis(AnalysisBase):
         free_pars = self.get_free_params()
         
         # Find the source
-        src = self._roi.get_source_by_name(name)
+        src = self.roi.get_source_by_name(name,True)
         name = src.name
         
         if pars is None:
@@ -977,24 +1005,41 @@ class GTAnalysis(AnalysisBase):
 #        self.like.syncSrcParams(name)
 
     def free_index(self,name,free=True):
-        """Free/Fix index of a source."""
-        src = self._roi.get_source_by_name(name)
+        """Free/Fix index of a source.
 
-        self.free_source(src.name,free=free,
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        free : bool        
+            Choose whether to free (free=True) or fix (free=False).
+
+        """
+        self.free_source(name,free=free,
                          pars=index_parameters[src['SpectrumType']])
         
     def free_shape(self,name,free=True):
-        """Free/Fix shape parameters of a source."""
-        src = self._roi.get_source_by_name(name)
+        """Free/Fix shape parameters of a source.
 
-        self.free_source(src.name,free=free,
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        free : bool        
+            Choose whether to free (free=True) or fix (free=False).
+        """
+        self.free_source(name,free=free,
                          pars=shape_parameters[src['SpectrumType']])
 
     def get_source_name(self,name):
         """Return the name of a source as it is defined in the
         pyLikelihood model object."""
         if not name in self.like.sourceNames():
-            name = self._roi.get_source_by_name(name).name
+            name = self.roi.get_source_by_name(name,True).name
         return name
 
     def get_free_source_params(self,name):
@@ -1047,13 +1092,12 @@ class GTAnalysis(AnalysisBase):
         # fraction > npred_frac of the total model counts in the ROI
         npred_sum = 0
         skip_sources = []
-        for k, v in sorted(self._roi_model['sources'].items(),
-                           key=lambda t: t[1]['Npred'],reverse=True):
+        for s in sorted(self.roi.sources,key=lambda t: t['Npred'],reverse=True):
 
-            npred_sum += v['Npred']
+            npred_sum += s['Npred']
             npred_frac = npred_sum/self._roi_model['roi']['Npred']
-            self.free_norm(k)
-            skip_sources.append(k)
+            self.free_norm(s.name)
+            skip_sources.append(s.name)
 
             if npred_frac > npred_frac_threshold: break
 
@@ -1061,39 +1105,34 @@ class GTAnalysis(AnalysisBase):
         self.free_sources(free=False)
 
         # Step through remaining sources and re-fit normalizations
-        for k, v in sorted(self._roi_model['sources'].items(),
-                           key=lambda t: t[1]['Npred'],reverse=True):
+        for s in sorted(self.roi.sources,key=lambda t: t['Npred'],reverse=True):
 
-            if k in skip_sources: continue
+            if s.name in skip_sources: continue
             
-            if  v['Npred'] < npred_threshold:
-                self.logger.info('Skipping %s with Npred %10.3f'%(k,v['Npred']))
+            if  s['Npred'] < npred_threshold:
+                self.logger.info('Skipping %s with Npred %10.3f'%(s.name,s['Npred']))
                 continue
 
-            self.logger.info('Fitting %s Npred: %10.3f'%(k,v['Npred']))
+            self.logger.info('Fitting %s Npred: %10.3f TS: %10.3f'%(s.name,s['Npred'],s['ts']))
             
-            self.free_norm(k)
+            self.free_norm(s.name)
             self.fit()
-
-            v0 = self._roi_model['sources'][k]
-            
-            self.logger.info('Post-fit Results Npred: %10.3f TS: %10.3f'%(v0['Npred'],v0['ts']))
-            
-            self.free_norm(k,free=False)        
+            self.logger.info('Post-fit Results Npred: %10.3f TS: %10.3f'%(s['Npred'],s['ts']))  
+            self.free_norm(s.name,free=False)        
 
         # Refit spectral shape parameters for sources with TS > shape_ts_threshold
-        for k, v in sorted(self._roi_model['sources'].items(),
-                           key=lambda t: t[1]['ts'] if np.isfinite(t[1]['ts']) else 0,
-                           reverse=True):
+        for s in sorted(self.roi.sources,
+                        key=lambda t: t['ts'] if np.isfinite(t['ts']) else 0,
+                        reverse=True):
             
-            if v['ts'] < shape_ts_threshold \
-                    or not np.isfinite(v['ts']): continue
+            if s['ts'] < shape_ts_threshold \
+                    or not np.isfinite(s['ts']): continue
 
-            self.logger.info('Fitting shape %s TS: %10.3f'%(k,v['ts']))
+            self.logger.info('Fitting shape %s TS: %10.3f'%(s.name,s['ts']))
             
-            self.free_source(k)
+            self.free_source(s.name)
             self.fit()
-            self.free_source(k,free=False)
+            self.free_source(s.name,free=False)
             
         self.set_free_params(free)
         
@@ -1145,7 +1184,7 @@ class GTAnalysis(AnalysisBase):
 
         """
 
-        name = self.roi.get_source_by_name(name).name
+        name = self.roi.get_source_by_name(name,True).name
 
         # Extract options from kwargs
         config = copy.deepcopy(self.config['localize'])
@@ -1159,7 +1198,7 @@ class GTAnalysis(AnalysisBase):
 
         saved_state = LikelihoodState(self.like)
 
-        src = self.roi.get_source_by_name(name)
+        src = self.roi.get_source_by_name(name,True)
         skydir = src.skydir
 
         # Fit baseline (point-source) model
@@ -1242,8 +1281,8 @@ class GTAnalysis(AnalysisBase):
             self.add_source(model_name,s,free=True)
             self.fit()
 
-        src_model = self._roi_model['sources'].get(name,{})
-        src_model['localize'] = copy.deepcopy(o)        
+        src = self.roi.get_source_by_name(name,True)
+        src.update_data({'localize' : copy.deepcopy(o)})
         return o
 
     def extension(self,name,**kwargs):
@@ -1294,7 +1333,7 @@ class GTAnalysis(AnalysisBase):
 
         """
         
-        name = self.roi.get_source_by_name(name).name
+        name = self.roi.get_source_by_name(name,True).name
 
         # Extract options from kwargs
         config = copy.deepcopy(self.config['extension'])
@@ -1364,9 +1403,6 @@ class GTAnalysis(AnalysisBase):
             s.set_spatial_model(spatial_model,w)
             
             self.logger.info('Adding test source with width: %10.3f deg'%w)
-#            for k,v in s.spectral_pars.items():
-#                s._spectral_pars[k]['value'] = str(self.like[name].src.spectrum().getParamValue(k))
-                
             self.add_source(model_name,s,free=True)
             self.fit(update=False)
             
@@ -1394,8 +1430,8 @@ class GTAnalysis(AnalysisBase):
         self.like.syncSrcParams(name)        
         saved_state.restore()
         
-        src_model = self._roi_model['sources'].get(name,{})
-        src_model['extension'] = copy.deepcopy(o)   
+        src = self.roi.get_source_by_name(name,True)
+        src.update_data({'extension' : copy.deepcopy(o)})
         
         return o
                 
@@ -1440,7 +1476,7 @@ class GTAnalysis(AnalysisBase):
         
         
         # Find the source
-        name = self.roi.get_source_by_name(name).name
+        name = self.roi.get_source_by_name(name,True).name
 
         # Extract options from kwargs
         config = copy.deepcopy(self.config['sed'])
@@ -1575,8 +1611,11 @@ class GTAnalysis(AnalysisBase):
         self.setEnergyRange(self.energies[0],self.energies[-1])
         self.like.setSpectrum(name,old_spectrum)
         saved_state.restore()        
-        src_model = self._roi_model['sources'].get(name,{})
-        src_model['sed'] = copy.deepcopy(o)        
+
+        src = self.roi.get_source_by_name(name,True)
+        src.update_data({'sed' : copy.deepcopy(o)})
+#        src_model = self._roi_model['sources'].get(name,{})
+#        src_model['sed'] = copy.deepcopy(o)        
         return o
 
     def profile_norm(self,name, emin=None,emax=None, reoptimize=False,xvals=None,npts=50,
@@ -1586,7 +1625,7 @@ class GTAnalysis(AnalysisBase):
         """
         
         # Find the source
-        name = self._roi.get_source_by_name(name).name
+        name = self.roi.get_source_by_name(name,True).name
 
         par = self.like.normPar(name)
         parName = self.like.normPar(name).getName()
@@ -1621,7 +1660,7 @@ class GTAnalysis(AnalysisBase):
         """
         
         # Find the source
-        name = self._roi.get_source_by_name(name).name
+        name = self.roi.get_source_by_name(name,True).name
 
         par = self.like.normPar(name)
         parName = self.like.normPar(name).getName()
@@ -1781,8 +1820,8 @@ class GTAnalysis(AnalysisBase):
                 if len(freePars) == 0: continue
 
                 sd = self.get_src_model(name)
-                self._roi_model['sources'][name] = merge_dict(self._roi_model['sources'][name],sd,
-                                                              add_new_keys=True)
+                src = self.roi.get_source_by_name(name,True)
+                src.update_data(sd)
 
             self._roi_model['roi']['logLike'] = logLike
             self._roi_model['roi']['fit_quality'] = quality
@@ -1844,18 +1883,25 @@ class GTAnalysis(AnalysisBase):
 
     def print_roi(self):
 
-        print '%-25s %12s %12s %12s %12s %12s'%('name','offset','offset_ra',
-                                                'offset_dec','ts','Npred')
+        print '%-25s %-15s %10s %10s %10s %12s %12s'%('name','SpectrumType','offset','offset_ra',
+                                                      'offset_dec','ts','Npred')
         print '-'*100
         
-        for k,s in sorted(self._roi_model['sources'].items(),
-                          key=lambda t:t[1]['offset']):
+        for s in sorted(self.roi.sources,key=lambda t:t['offset']):
 
-            if not 'RA' in s: continue
-            
-            print '%-25s %12.3f %12.3f %12.3f %12.3f %12.3f'%(s['name'],s['offset'],
-                                                              s['offset_ra'],
-                                                              s['offset_dec'],s['ts'],s['Npred'])
+            if s.diffuse: continue            
+            print '%-25s %-15s %10.3f %10.3f %10.3f %12.2f %12.2f'%(s['name'],s['SpectrumType'],s['offset'],
+                                                                    s['offset_ra'],
+                                                                    s['offset_dec'],s['ts'],s['Npred'])
+        
+        for s in sorted(self.roi.sources,key=lambda t:t['offset']):
+
+            if not s.diffuse: continue
+            print '%-25s %-15s %10.3f %10.3f %10.3f %12.2f %12.2f'%(s['name'],s['SpectrumType'],s['offset'],
+                                                                    s['offset_ra'],
+                                                                    s['offset_dec'],s['ts'],s['Npred'])
+
+
     
     def load_roi(self,infile):
         """This function reloads the analysis state from a previously
@@ -1865,6 +1911,18 @@ class GTAnalysis(AnalysisBase):
         self.load_xml(infile)
         self._roi_model = load_roi_data(infile,workdir=self.config['fileio']['workdir'])
     
+        for k,v in self._roi_model['sources'].items():
+            if self.roi.has_source(k):
+                src = self.roi.get_source_by_name(k,True)
+                src.update_data(v)
+            else:
+                src = Source(k,data=v)
+                self.roi.load_source(src)
+                self.roi.build_src_index()
+                
+#        for s in self.roi.sources:
+#            s.update_data(
+
     def write_roi(self,outfile=None,make_residuals=False,save_model_map=True,
                   update_sources=False,**kwargs):
         """Write current model to a file.  This function will write an
@@ -1912,6 +1970,10 @@ class GTAnalysis(AnalysisBase):
         o = self.get_roi_model(update_sources=update_sources)
         o['config'] = copy.deepcopy(self.config)
         o['version'] = fermipy.__version__
+        o['sources'] = {}
+
+        for s in self.roi.sources:
+            o['sources'][s.name] = copy.deepcopy(s.data)
 
         self.logger.info('Writing %s...'%(outfile + '.yaml'))
         yaml.dump(tolist(o),open(outfile + '.yaml','w'))
@@ -1925,16 +1987,16 @@ class GTAnalysis(AnalysisBase):
 
         format = kwargs.get('format',self.config['plotting']['format'])
         
-        for k,v in self._roi_model['sources'].items():
+        for s in self.roi.sources:
 
-            if not 'sed' in v: continue
-            if v['sed'] is None: continue
+            if not 'sed' in s: continue
+            if s['sed'] is None: continue
             
-            name = k.lower().replace(' ','_')
+            name = s.name.lower().replace(' ','_')
 
-            self.logger.info('Making SED plot for %s'%k)
+            self.logger.info('Making SED plot for %s'%s.name)
             
-            p = SEDPlotter(v)
+            p = SEDPlotter(s)
             plt.figure()
             p.plot()            
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
@@ -1945,10 +2007,10 @@ class GTAnalysis(AnalysisBase):
 
         format = kwargs.get('format',self.config['plotting']['format'])
         
-        for k,v in self._roi_model['sources'].items():
+        for s in self.roi.sources:
 
-            if not 'extension' in v: continue
-            if v['extension'] is None: continue
+            if not 'extension' in s: continue
+            if s['extension'] is None: continue
 
 #            self._plot_extension(prefix,v,erange=erange,format=format)
             
@@ -2149,7 +2211,7 @@ class GTAnalysis(AnalysisBase):
         imfile = os.path.join(self.config['fileio']['outdir'],
                               '%s_counts_spectrum.%s'%(prefix,format))
 
-        make_counts_spectrum_plot(self._roi_model,self.energies,imfile)
+        make_counts_spectrum_plot(self._roi_model,self.roi,self.energies,imfile)
         
     def tsmap(self):
         """Loop over ROI, place a test source at each position, and
@@ -2239,17 +2301,20 @@ class GTAnalysis(AnalysisBase):
 
         if update_sources:
         
-            gf = {}        
-            for name in self.like.sourceNames():
-                gf[name] = self.get_src_model(name)
+            sources = self.roi.sources + self.roi.diffuse_sources
 
-            self._roi_model['sources'] = merge_dict(self._roi_model['sources'],
-                                                    gf,add_new_keys=True) 
+#            gf = {}        
+#            for name in self.like.sourceNames():
+#                gf[name] = self.get_src_model(name)
+
+#            self._roi_model['sources'] = merge_dict(self._roi_model['sources'],
+#                                                    gf,add_new_keys=True) 
 
         return copy.deepcopy(self._roi_model)        
 
     def get_src_model(self,name,paramsonly=False):
-        """Compose a dictionary for the given source."""
+        """Compose a dictionary for the given source with the current
+        best-fit parameters."""
 
         self.logger.info('Generating source dict for ' + name)
         
@@ -2280,6 +2345,7 @@ class GTAnalysis(AnalysisBase):
                      'eflux10000_ul95' : np.nan,
                      'pivot_energy' : 3.,
                      'ts' : np.nan,
+                     'Npred' : 0.0,
                      'lnlprofile' : None
                      }
 
@@ -2598,13 +2664,12 @@ class GTBinnedAnalysis(AnalysisBase):
 
         # Initialize source as free/fixed
         pylike_src.spectrum().normPar().setFree(free)
-        self.like.addSource(pylike_src)
-        
+        self.like.addSource(pylike_src)        
         self.like.syncSrcParams(name)
 
     def delete_source(self,name,save_template=True):
 
-        src = self._roi.get_source_by_name(name)
+        src = self.roi.get_source_by_name(name,True)
         
         self.logger.info('Deleting source %s'%(name))
 
@@ -2625,7 +2690,7 @@ class GTBinnedAnalysis(AnalysisBase):
         self._roi.delete_sources(srcs)
 
     def set_edisp_flag(self,name,flag=True):
-        src = self._roi.get_source_by_name(name)
+        src = self.roi.get_source_by_name(name,True)
         name = src.name        
         self.like[name].src.set_edisp_flag(flag)         
         
@@ -2694,8 +2759,12 @@ class GTBinnedAnalysis(AnalysisBase):
         if imax <= imin: raise Exception('Invalid energy range.')        
         return cs[imin:imax]
         
-    def setup(self,xmlmodel=None):
+    def setup(self,xmlfile=None):
         """Run pre-processing step."""
+
+        srcmdl_file = self._srcmdl_file
+        if xmlfile is not None:
+            srcmdl_file = self.get_model_path(xmlfile)
 
         roi_center = self.roi.skydir
 
@@ -2825,17 +2894,19 @@ class GTBinnedAnalysis(AnalysisBase):
 
         # Make spatial templates for extended sources
         for s in self.roi.sources:
+            if s.diffuse: continue
             if not s.extended: continue
             self.make_template(s,self.config['file_suffix'])
             
         # Write ROI XML
-        self.roi.write_xml(self._srcmdl_file)
+        if not os.path.isfile(srcmdl_file):
+            self.roi.write_xml(srcmdl_file)
             
         # Run gtsrcmaps
         kw = dict(scfile=self.config['data']['scfile'],
                   expcube=self._ltcube,
                   cmap=self._ccube_file,
-                  srcmdl=self._srcmdl_file,
+                  srcmdl=srcmdl_file,
                   bexpmap=self._bexpmap_file,
                   outfile=self._srcmap_file,
                   irfs=self.config['gtlike']['irfs'],
@@ -2869,7 +2940,7 @@ class GTBinnedAnalysis(AnalysisBase):
         # Create BinnedAnalysis
         self.logger.info('Creating BinnedAnalysis')
         self._like = BinnedAnalysis(binnedData=self._obs,
-                                    srcModel=self._srcmdl_file,
+                                    srcModel=srcmdl_file,
                                     optimizer='MINUIT',
                                     convolve=self.config['gtlike']['convolve'],
                                     resample=self.config['gtlike']['resample'],
@@ -2979,6 +3050,7 @@ class GTBinnedAnalysis(AnalysisBase):
         
         for s in sources:
                         
+            if s.diffuse: continue
             if not 'SpatialModel' in s: continue
             if s['SpatialModel'] in ['PointSource','Gaussian']: continue
             if s.name.upper() in hdunames and not overwrite: continue

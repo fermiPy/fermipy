@@ -1,5 +1,6 @@
 
 import re
+import collections
 
 import defaults 
 from fermipy.utils import *
@@ -163,17 +164,30 @@ class Model(object):
                  spectral_pars=None,
                  spatial_pars=None):
 
-        self._name = name
         self._data = {} if data is None else data
-        self._spectral_pars = {} if spectral_pars is None else spectral_pars
-        self._spatial_pars = {} if spatial_pars is None else spatial_pars
+        self._data['name'] = name
+
+        self._data.setdefault('spectral_pars',{})
+        self._data.setdefault('spatial_pars',{})
+        self._data.setdefault('catalog',{})
+
+        if spectral_pars is not None:
+            self._data['spectral_pars'] = spectral_pars
+            
+        if spatial_pars is not None:
+            self._data['spatial_pars'] = spatial_pars
+
+#        self._spectral_pars = {} if spectral_pars is None else spectral_pars
+#        self._spatial_pars = {} if spatial_pars is None else spatial_pars
 
         self._names = [name]
         self._names_dict = {}
+        catalog = self._data['catalog']
+
         for k in ROIModel.src_name_cols:
 
-            if not k in self._data: continue            
-            name = self._data[k].strip()
+            if not k in catalog: continue            
+            name = catalog[k].strip()
             if name != '' and not name in self._names:
                 self._names.append(name)
 
@@ -192,24 +206,31 @@ class Model(object):
     def __eq__(self, other): 
         return self.name == other.name
 
+    def items(self):
+        return self._data.items()
+
+    @property
+    def data(self):
+        return self._data
+
     @property
     def spectral_pars(self):
-        return self._spectral_pars
+        return self._data['spectral_pars']
 
     @property
     def spatial_pars(self):
-        return self._spatial_pars
+        return self._data['spatial_pars']
 
     @property
     def name(self):
-        return self._name
+        return self._data['name']
 
     @property
     def names(self):
         return self._names
 
     def set_name(self,name,names=None):
-        self._name = name
+        self._data['name'] = name
         if names is None:
             self._names = [name]
         else:
@@ -218,18 +239,21 @@ class Model(object):
     def add_name(self,name):
         self._names.append(name)
     
+    def update_data(self,d):
+        self._data = merge_dict(self._data,d,add_new_keys=True)
+
     def update(self,m):
 
-        if self['SpectrumType'] != m['SpectrumType']:
-            self._spectral_pars = {}
+        if 'SpectrumType' in m and self['SpectrumType'] != m['SpectrumType']:
+            self.spectral_pars = {}
         
         self._data = merge_dict(self._data,m._data,add_new_keys=True)
         self._name = m.name
         self._names = list(set(self._names + m.names))        
-        self._spectral_pars = merge_dict(self._spectral_pars,
-                                         m._spectral_pars,add_new_keys=True)
-        self._spatial_pars = merge_dict(self._spatial_pars,
-                                        m._spatial_pars,add_new_keys=True)
+        self._data['spectral_pars'] = merge_dict(self.spectral_pars,
+                                         m.spectral_pars,add_new_keys=True)
+        self._data['spatial_pars'] = merge_dict(self.spatial_pars,
+                                        m.spatial_pars,add_new_keys=True)
         
 class IsoSource(Model):
 
@@ -239,15 +263,15 @@ class IsoSource(Model):
         self._filefunction = os.path.expandvars(filefunction)
         self['SpectrumType'] = 'FileFunction'
 
-        if not self._spectral_pars:
-            self._spectral_pars = {
+        if not self.spectral_pars:
+            self['spectral_pars'] = {
                 'Normalization' : {'name' : 'Normalization', 'scale' : '1.0',
                                    'value' : '1.0',
                                    'min' : '0.001', 'max' : '1000.0',
                                    'free' : '0' } }
 
-        if not self._spatial_pars:            
-            self._spatial_pars = {
+        if not self.spatial_pars:            
+            self['spatial_pars'] = {
                 'Value' : {'name' : 'Value', 'scale' : '1',
                            'value' : '1', 'min' : '0', 'max' : '10',
                            'free' : '0' } }
@@ -257,6 +281,10 @@ class IsoSource(Model):
     @property
     def filefunction(self):
         return self._filefunction
+
+    @property
+    def diffuse(self):
+        return True
 
     def write_xml(self,root):
         
@@ -274,10 +302,10 @@ class IsoSource(Model):
                                      dict(type='ConstantValue'))
 
 
-        for k,v in self._spectral_pars.items():                
+        for k,v in self.spectral_pars.items():                
             create_xml_element(spec_el,'parameter',v)
 
-        for k,v in self._spatial_pars.items():                
+        for k,v in self.spatial_pars.items():                
             create_xml_element(spat_el,'parameter',v)
         
 class MapCubeSource(Model):
@@ -288,8 +316,8 @@ class MapCubeSource(Model):
         self._mapcube = os.path.expandvars(mapcube)
         self['SpectrumType'] = 'PowerLaw'
 
-        if not self._spectral_pars:
-            self._spectral_pars = {
+        if not self.spectral_pars:
+            self['spectral_pars'] = {
                 'Prefactor' : {'name' : 'Prefactor', 'scale' : '1',
                                'value' : '1.0', 'min' : '0.1', 'max' : '10.0',
                                'free' : '0' },
@@ -302,8 +330,8 @@ class MapCubeSource(Model):
                            'free' : '0' },
                 }
 
-        if not self._spatial_pars:            
-            self._spatial_pars = {
+        if not self.spatial_pars:            
+            self['spatial_pars'] = {
                 'Normalization' :
                     {'name' : 'Normalization', 'scale' : '1',
                      'value' : '1', 'min' : '0', 'max' : '10',
@@ -312,6 +340,10 @@ class MapCubeSource(Model):
     @property
     def mapcube(self):
         return self._mapcube
+
+    @property
+    def diffuse(self):
+        return True
 
     def write_xml(self,root):
         
@@ -327,32 +359,35 @@ class MapCubeSource(Model):
                                           file=self._mapcube))
 
 
-        for k,v in self._spectral_pars.items():                
+        for k,v in self.spectral_pars.items():                
             create_xml_element(spec_el,'parameter',v)
 
-        for k,v in self._spatial_pars.items():                
+        for k,v in self.spatial_pars.items():                
             create_xml_element(spat_el,'parameter',v)
         
 class Source(Model):
 
     def __init__(self,name,data=None,
                  radec=None,
-                 glonlat=None,
                  spectral_pars=None,
                  spatial_pars=None,
                  extended=False):
         super(Source,self).__init__(name,data,spectral_pars,spatial_pars)
                     
-#        phi = np.radians(data['RAJ2000'])
-#        theta = np.pi/2.-np.radians(data['DEJ2000'])
-
         self._radec = radec
-        self._glonlat = glonlat
+        catalog = self.data.get('catalog',{})
 
-#        np.array([np.sin(theta)*np.cos(phi),
-#                                np.sin(theta)*np.sin(phi),
-#                                np.cos(theta)])
+        if self._radec is None and 'RAJ2000' in catalog and 'DEJ2000' in catalog:
+            self._radec = [catalog['RAJ2000'],catalog['DEJ2000']]
+        elif self._radec is None and 'ra' in self.data and 'dec' in self.data:
+            self._radec = [self.data['ra'],self.data['dec']]
+        elif self._radec is None:
+            raise Exception('Failed to infer RADEC for source: %s'%name)
 
+        self['RAJ2000'] = self._radec[0]
+        self['DEJ2000'] = self._radec[1]
+        self['ra'] = self._radec[0]
+        self['dec'] = self._radec[1]
 
         ts_keys = ['Sqrt_TS30_100','Sqrt_TS100_300',
                    'Sqrt_TS300_1000','Sqrt_TS1000_3000',
@@ -364,27 +399,20 @@ class Source(Model):
                 if k in self and np.isfinite(self[k]):
                     self._data['TS_value'] += self[k]**2
 
-
         self._extended=extended
 
-        if not self._spectral_pars:
+        if not self.spectral_pars:
             self._update_spectral_pars()
 
-        if not self._spatial_pars:
+        if not self.spatial_pars:
             self._update_spatial_pars()
 
-#        if 'name' in self._data and self._data['name'] is not None:
-#            self._data['Source_Name'] = self._data.pop('name')
-#        if not 'Source_Name' in self._data:
-#            self._data['Source_Name'] = create_model_name(self)
-            
-
-            
     def _update_spatial_pars(self):
 
         if not self.extended:
             self._data['SpatialType'] = 'PointSource'
-            self._spatial_pars = {
+            self._data['SpatialModel'] = 'PointSource'
+            self._data['spatial_pars'] = {
                 'RA' : {'name' : 'RA',  'value' : str(self['RAJ2000']),
                         'free' : '0',
                         'min' : '-360.0','max' : '360.0','scale' : '1.0'},
@@ -394,7 +422,7 @@ class Source(Model):
                 }
         else:
 
-            self._spatial_pars = {
+            self._data['spatial_pars'] = {
                 'Prefactor' : {'name' : 'Prefactor', 'value' : '1',
                                'free' : '0', 'min' : '0.001', 'max' : '1000',
                                'scale' : '1.0'}
@@ -402,8 +430,10 @@ class Source(Model):
             
     def _update_spectral_pars(self):
 
-        self._spectral_pars = {}        
-        sp = self._spectral_pars
+        self._data['spectral_pars'] = {}        
+        sp = self['spectral_pars']
+
+        catalog = self.data.get('catalog',{})
         
         if self['SpectrumType'] == 'PowerLaw':
 
@@ -411,9 +441,9 @@ class Source(Model):
             sp['Scale'] = copy.copy(default_par_dict['Scale'])
             sp['Index'] = copy.copy(default_par_dict['Index'])
             
-            sp['Prefactor']['value'] = self['Flux_Density']
-            sp['Scale']['value'] = self['Pivot_Energy']
-            sp['Index']['value'] = self['Spectral_Index']                           
+            sp['Prefactor']['value'] = catalog['Flux_Density']
+            sp['Scale']['value'] = catalog['Pivot_Energy']
+            sp['Index']['value'] = catalog['Spectral_Index']                           
             sp['Index']['max'] = max(5.0,sp['Index']['value']+1.0)
             sp['Index']['min'] = min(0.0,sp['Index']['value']-1.0)
                         
@@ -428,10 +458,10 @@ class Source(Model):
             sp['alpha'] = copy.copy(default_par_dict['alpha'])
             sp['beta'] = copy.copy(default_par_dict['beta'])
 
-            sp['norm']['value'] = self['Flux_Density']
-            sp['Eb']['value'] = self['Pivot_Energy']
-            sp['alpha']['value'] = self['Spectral_Index']
-            sp['beta']['value'] = self['beta']
+            sp['norm']['value'] = catalog['Flux_Density']
+            sp['Eb']['value'] = catalog['Pivot_Energy']
+            sp['alpha']['value'] = catalog['Spectral_Index']
+            sp['beta']['value'] = catalog['beta']
                         
             sp['norm'] = make_parameter_dict(sp['norm'])
             sp['Eb'] = make_parameter_dict(sp['Eb'],True)
@@ -440,8 +470,8 @@ class Source(Model):
         
         elif self['SpectrumType'] == 'PLSuperExpCutoff':
 
-            flux_density = self['Flux_Density']
-            flux_density *= np.exp((self['Pivot_Energy']/self['Cutoff'])**self['Exp_Index'])
+            flux_density = catalog['Flux_Density']
+            flux_density *= np.exp((catalog['Pivot_Energy']/catalog['Cutoff'])**catalog['Exp_Index'])
             
             sp['Prefactor'] = copy.copy(default_par_dict['Prefactor'])
             sp['Index1'] = copy.copy(default_par_dict['Index1'])
@@ -450,10 +480,10 @@ class Source(Model):
             sp['Cutoff'] = copy.copy(default_par_dict['Cutoff'])
 
             sp['Prefactor']['value'] = flux_density
-            sp['Index1']['value'] = self['Spectral_Index']
-            sp['Index2']['value'] = self['Exp_Index']
-            sp['Scale']['value'] = self['Pivot_Energy']
-            sp['Cutoff']['value'] = self['Cutoff']
+            sp['Index1']['value'] = catalog['Spectral_Index']
+            sp['Index2']['value'] = catalog['Exp_Index']
+            sp['Scale']['value'] = catalog['Pivot_Energy']
+            sp['Cutoff']['value'] = catalog['Cutoff']
             
             sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
             sp['Scale'] = make_parameter_dict(sp['Scale'],True)
@@ -462,7 +492,6 @@ class Source(Model):
             sp['Cutoff'] = make_parameter_dict(sp['Cutoff'])                
 
         else:
-
             import pprint
             pprint.pprint(self._data)            
             raise Exception('Unsupported spectral type:' + self['SpectrumType'])
@@ -473,7 +502,6 @@ class Source(Model):
             skydir = SkyCoord(ra=skydir[0],dec=skydir[1],unit=u.deg)
         
         self._radec = np.array([skydir.ra.deg,skydir.dec.deg])
-        self._glonlat = np.array([skydir.galactic.l.deg,skydir.galactic.b.deg])
 
     def set_spatial_model(self,spatial_model,spatial_width):
 
@@ -521,6 +549,10 @@ class Source(Model):
         else:
             return self.radec.separation(src)
     
+    @property
+    def diffuse(self):
+        return False
+
     @property
     def extended(self):
         return self._extended
@@ -727,14 +759,14 @@ class ROIModel(AnalysisBase):
         
         self._srcs = []
         self._diffuse_srcs = []
-        self._src_index = {}
+        self._src_dict = collections.defaultdict(set)
         self._src_radius = []
 
         if srcs is None: srcs = []
         if diffuse_srcs is None: diffuse_srcs = []
             
         for s in srcs + diffuse_srcs:
-            self.load_source(s)
+            self.load_source(s,False)
         
         self.build_src_index()
 
@@ -749,6 +781,10 @@ class ROIModel(AnalysisBase):
 
     @property
     def sources(self):
+        return self._srcs + self._diffuse_srcs
+
+    @property
+    def point_sources(self):
         return self._srcs
 
     @property
@@ -797,11 +833,9 @@ class ROIModel(AnalysisBase):
                 altname = os.path.basename(src_dict['file'])
                 altname = re.sub(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',
                                  '', altname)    
-                
-                
+                                
             src.add_name(altname)            
-            self.load_source(src)
-
+            self.load_source(src,False)
 
     def create_source(self,src_dict,build_index=True):
         """Create a new source object from a source dictionary and
@@ -814,29 +848,29 @@ class ROIModel(AnalysisBase):
         self.logger.info('Creating source ' + src.name)
         self.logger.debug(src._data)
 
-        self.load_source(src)
-        if build_index: self.build_src_index()
-
+        self.load_source(src,build_index=build_index)
         return src
         
-    def load_source(self,src):
+    def load_source(self,src,build_index=True):
 
         name = src.name.replace(' ','').lower()
         
-        if name in self._src_index:
+        if name in self._src_dict and self._src_dict[name]:
             self.logger.info('Updating source model for %s'%src.name)
-            self._src_index[name].update(src)
+            list(self._src_dict[name])[0].update(src)
             return
 
-        self._src_index[src.name] = src
+        self._src_dict[src.name].add(src)
 
         for name in src.names:
-            self._src_index[name.replace(' ','').lower()] = src
+            self._src_dict[name.replace(' ','').lower()].add(src)
 
         if isinstance(src,Source):
             self._srcs.append(src)
         else:
             self._diffuse_srcs.append(src)
+
+        if build_index: self.build_src_index()
             
     def load(self):
 
@@ -860,7 +894,12 @@ class ROIModel(AnalysisBase):
         
     def delete_sources(self,srcs):
         
-        self._src_index = {k:v for k,v in self._src_index.items() if not v in srcs}
+        for k,v in self._src_dict.items():
+            for s in srcs:
+                if s in v: 
+                    self._src_dict[k].remove(s)
+            if not v: del self._src_dict[k]
+
         self._srcs = [s for s in self._srcs if not s in srcs]
         self._diffuse_srcs = [s for s in self._diffuse_srcs if not s in srcs]
         self.build_src_index()
@@ -920,7 +959,7 @@ class ROIModel(AnalysisBase):
 
         roi = ROIModel(config,**kwargs)
         roi.load()
-        src = roi.get_source_by_name(name)
+        src = roi.get_source_by_name(name,True)
 
         return ROIModel.create_from_position(src.skydir,config,
                                              roi=roi,**kwargs)
@@ -931,20 +970,48 @@ class ROIModel(AnalysisBase):
         form an FT1 file."""
         pass            
                 
-    def get_source_by_name(self,name):
-        """Retrieve source by name."""
+    def has_source(self,name):
+        
+        index_name = name.replace(' ','').lower()
+        if index_name in self._src_dict:
+            return True
+        else:
+            return False
+
+    def get_source_by_name(self,name,unique=False):
+        """Return a source in the ROI by name.  The input name string
+        can match any of the strings in the names property of the
+        source object.  Case and whitespace are ignored when matching
+        name strings.
+
+        Parameters
+        ----------
+        name : str 
+
+        unique : bool
+           Require a unique match.  If more than one source exists
+           with this name an exception is raised.
+        """
 
         index_name = name.replace(' ','').lower()
         
-        if index_name in self._src_index:
-            return self._src_index[index_name]
+        if index_name in self._src_dict:
+
+            srcs = list(self._src_dict[index_name])
+
+            if len(srcs) == 1 and unique:
+                return srcs[0]
+            elif not unique:
+                return srcs
+            else:
+                raise Exception('Multiple sources matching name: ' + name)
         else:
             raise Exception('No source matching name: ' + name)
 
     def get_nearby_sources(self,name,dist,min_dist=None,
                            square=False):
         
-        src = self.get_source_by_name(name)
+        src = self.get_source_by_name(name,True)
         return self.get_sources_by_position(src.skydir,
                                             dist,min_dist,
                                             square)
@@ -1047,19 +1114,20 @@ class ROIModel(AnalysisBase):
                              dec=cols['DEJ2000']*u.deg)
 
         radec = np.vstack((src_skydir.ra.deg,src_skydir.dec.deg)).T
-        glonlat = np.vstack((src_skydir.galactic.l.deg,src_skydir.galactic.b.deg)).T
         
         nsrc = len(table_src.data)
         for i in range(nsrc):
 
-            src_dict = {}
+            catalog = {}
+            src_dict = {'catalog' : catalog }
+            
             for icol, col in enumerate(cols):
-                src_dict[col] = cols[col][i]
+                catalog[col] = cols[col][i]
 
             extflag=False
 
-            src_dict['Source_Name'] = src_dict['Source_Name'].strip()  
-            extsrc_name = src_dict['Extended_Source_Name'].strip()
+            src_dict['Source_Name'] = catalog['Source_Name'].strip()  
+            extsrc_name = catalog['Extended_Source_Name'].strip()
 
             if len(extsrc_name.strip()) > 0:
                 extflag=True
@@ -1067,25 +1135,24 @@ class ROIModel(AnalysisBase):
                 
                 for icol, col in enumerate(cols_extsrc):
                     if col in cols: continue
-                    src_dict[col] = cols_extsrc[col][extsrc_index]
+                    catalog[col] = cols_extsrc[col][extsrc_index]
 
-                src_dict['Spatial_Filename'] = src_dict['Spatial_Filename'].strip()
+                src_dict['Spatial_Filename'] = catalog['Spatial_Filename'].strip()
 
                 if not os.path.isfile(src_dict['Spatial_Filename']) and self.config['extdir']:
                     src_dict['Spatial_Filename'] = os.path.join(self.config['extdir'],
                                                                 'Templates',
                                                                 src_dict['Spatial_Filename'])
             
-            src_dict['SpectrumType'] = src_dict['SpectrumType'].strip()
+            src_dict['SpectrumType'] = catalog['SpectrumType'].strip()
             if src_dict['SpectrumType'] == 'PLExpCutoff':
                 src_dict['SpectrumType'] = 'PLSuperExpCutoff'
             
-            src = Source(src_dict['Source_Name'],src_dict,radec=radec[i],glonlat=glonlat[i],extended=extflag)
-            self.load_source(src)
+            src = Source(src_dict['Source_Name'],src_dict,
+                         radec=radec[i],extended=extflag)
+            self.load_source(src,False)
             
         self.build_src_index()
-
-#            cat.load_source(ROIModelSource(src))
 
     def build_src_index(self):
         """Build an indices for fast lookup of a source given its name
@@ -1099,10 +1166,7 @@ class ROIModel(AnalysisBase):
 
         self._src_skydir = SkyCoord(ra=radec[0],dec=radec[1],unit=u.deg)
         self._src_radius = self._src_skydir.separation(self.skydir)
-        
-        for i, s in enumerate(self._diffuse_srcs):
-            pass
-        
+                
     def write_xml(self,xmlfile):
         """Save this ROI model as an XML file."""
         
@@ -1130,7 +1194,7 @@ class ROIModel(AnalysisBase):
 
         for s in root.findall('source'):
             src = Source.create_from_xml(s,extdir=self.config['extdir'])
-            self.load_source(src)
+            self.load_source(src,False)
 
         self.build_src_index()
 
