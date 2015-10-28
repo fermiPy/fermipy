@@ -262,6 +262,8 @@ class IsoSource(Model):
         
         self._filefunction = os.path.expandvars(filefunction)
         self['SpectrumType'] = 'FileFunction'
+        self._data.setdefault('SpatialType','DiffuseSource')
+        self._data.setdefault('SpatialModel','DiffuseSource')
 
         if not self.spectral_pars:
             self['spectral_pars'] = {
@@ -315,7 +317,9 @@ class MapCubeSource(Model):
 
         self._mapcube = os.path.expandvars(mapcube)
         self['SpectrumType'] = 'PowerLaw'
-
+        self._data.setdefault('SpatialType','DiffuseSource')
+        self._data.setdefault('SpatialModel','DiffuseSource')
+        
         if not self.spectral_pars:
             self['spectral_pars'] = {
                 'Prefactor' : {'name' : 'Prefactor', 'scale' : '1',

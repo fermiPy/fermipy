@@ -8,7 +8,7 @@ from astropy import wcs
 
 import fermipy.defaults as defaults
 import fermipy.utils as utils
-from fermipy.utils import AnalysisBase
+from fermipy.utils import AnalysisBase, Map
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 
@@ -100,7 +100,7 @@ class ResidMapGenerator(AnalysisBase):
         sm = []
         zs = 0
         for c in self._gta.components:
-            z = c.modelCountsMap(name).astype('float')
+            z = c.modelCountsMap(name).counts.astype('float')
             if kernel is not None:
                 shape = (z.shape[0],) + kernel.shape 
                 z = np.apply_over_axes(np.sum,z,axes=[1,2])*np.ones(shape)*kernel[np.newaxis,:,:]
@@ -154,7 +154,7 @@ class ResidMapGenerator(AnalysisBase):
             cpix = [50,50]
 
         self._gta.add_source('testsource',src_dict,free=True)        
-        src = self._gta.roi.get_source_by_name('testsource')
+        src = self._gta.roi.get_source_by_name('testsource',True)
         
         modelname = create_model_name(src)
         
@@ -174,8 +174,8 @@ class ResidMapGenerator(AnalysisBase):
         
         for i, c in enumerate(self._gta.components):
             
-            mc = c.modelCountsMap().astype('float')
-            cc = c.countsMap().astype('float')
+            mc = c.modelCountsMap().counts.astype('float')
+            cc = c.countsMap().counts.astype('float')
             ec = np.ones(mc.shape)
             
             ccs = smooth(cc,sm[i],cpix)
@@ -221,10 +221,10 @@ class ResidMapGenerator(AnalysisBase):
 
         self._maps[modelname] = {
             'wcs'    : skywcs,
-            'sigma'  : sigma,
-            'model'  : mmst,
-            'data'   : cmst,
-            'excess' : excess }
+            'sigma'  : Map(sigma,skywcs),
+            'model'  : Map(mmst,skywcs),
+            'data'   : Map(cmst,skywcs),
+            'excess' : Map(excess,skywcs) }
         
         self._gta._roi_model['roi']['residmap'][modelname] = {
             'sigma'  : os.path.basename(sigma_map_file),

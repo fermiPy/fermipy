@@ -33,9 +33,10 @@ from astropy import wcs
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.plotting as plotting
 from fermipy.residmap import ResidMapGenerator
 from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import make_coadd_map, valToBinBounded, valToEdge
+from fermipy.utils import valToBinBounded, valToEdge, Map
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
@@ -239,7 +240,10 @@ def load_yaml(infile):
 
 def load_npy(infile):
     return np.load(infile).flat[0]
+
+
         
+
 class GTAnalysis(AnalysisBase):
     """High-level analysis interface that internally manages a set of
     analysis component objects.  Most of the functionality of the
@@ -646,17 +650,19 @@ class GTAnalysis(AnalysisBase):
         rm['roi']['counts'] = np.zeros(self.enumbins)
         rm['roi']['logLike'] = self.like()
         
-        counts = []
+        cmaps = []
         for i, c in enumerate(self.components):
             cm = c.countsMap()
-            counts += [(cm,c.wcs)]
-            rm['roi']['components'][i]['counts'] = np.squeeze(np.apply_over_axes(np.sum,cm,axes=[1,2]))
+            cmaps += [cm]
+            rm['roi']['components'][i]['counts'] = \
+                np.squeeze(np.apply_over_axes(np.sum,cm.counts,axes=[1,2]))
             rm['roi']['components'][i]['logLike'] = c.like()
 
         shape = (self.enumbins,self.npix,self.npix)
-        self._counts = make_coadd_map(counts,self._wcs,shape)
-        utils.write_fits_image(self._counts,self._wcs,self._ccube_file)        
-        rm['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,self._counts,axes=[1,2]))
+        self._ccube = utils.make_coadd_map(cmaps,self._wcs,shape)
+        utils.write_fits_image(self._ccube.counts,self._ccube.wcs,self._ccube_file)        
+        rm['roi']['counts'] += np.squeeze(np.apply_over_axes(np.sum,self._ccube.counts,
+                                                             axes=[1,2]))
             
         if not init_sources: return
             
@@ -722,6 +728,28 @@ class GTAnalysis(AnalysisBase):
         """Set the energy range of the analysis."""
         for c in self.components:
             c.setEnergyRange(emin,emax)
+
+    def modelCountsMap(self,name=None):
+        """Return the model counts map for a single source, a list of
+        sources, or for the sum of all sources in the ROI.
+        
+        Parameters
+        ----------
+        name : str or list of str
+
+           Parameter controlling the set of sources for which the
+           model counts map will be calculated.  If name=None the
+           model map will be generated for all sources in the ROI. 
+        
+        """
+
+        maps = []
+        for c in self.components:
+            maps += [c.modelCountsMap(name)]
+
+        shape = (self.enumbins,self.npix,self.npix)
+        maps = [utils.make_coadd_map(maps,self._wcs,shape)] + maps
+        return maps
             
     def modelCountsSpectrum(self,name,emin=None,emax=None,summed=False):
         """Return the predicted number of model counts versus energy
@@ -1395,7 +1423,7 @@ class GTAnalysis(AnalysisBase):
             width = np.logspace(np.log10(width_min),np.log10(width_max),width_nstep)
 
         o = {'width' : width,
-               'dlogLike' : np.zeros(len(width)),
+             'dlogLike' : np.zeros(len(width)),
              'logLike' : np.zeros(len(width)),
              'ext' : 0.0,
              'ext_err_hi' : 0.0,
@@ -1411,9 +1439,7 @@ class GTAnalysis(AnalysisBase):
             
             # make a copy
             s = self.copy_source(name)
-#            s = copy.deepcopy(self.roi.get_source_by_name(name))
-
-            model_name = '%s%02i'%(ext_model_name,i)            
+            model_name = '%s'%(ext_model_name)            
             s.set_name(model_name)
             s.set_spatial_model(spatial_model,w)
             
@@ -1429,7 +1455,8 @@ class GTAnalysis(AnalysisBase):
             o['fit'].append(sd)
 
             if save_model_map:
-                self.generate_model_map(model_name=model_name,name=model_name)
+                self.generate_model_map(model_name=model_name + '%02i'%i,
+                                        name=model_name)
                 
             self.delete_source(model_name,
                                save_template=self.config['extension']['save_templates'])
@@ -1882,19 +1909,17 @@ class GTAnalysis(AnalysisBase):
 
     def generate_model_map(self,model_name,name=None):
         
-        counts = []
+        maps = []
         for i, c in enumerate(self._components):
-
-            cm = c.generate_model_map(model_name,name)
-            counts += [(cm,c.wcs)]
+            maps += [c.generate_model_map(model_name,name)]
 
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'mcube_%s.fits'%(model_name))
 
         shape = (self.enumbins,self.npix,self.npix)
-        model_counts = make_coadd_map(counts,self._wcs,shape)
-        utils.write_fits_image(model_counts,self._wcs,outfile)        
-        return [(model_counts,self._wcs)] + counts
+        model_counts = utils.make_coadd_map(maps,self._wcs,shape)
+        utils.write_fits_image(model_counts.counts,model_counts.wcs,outfile)        
+        return [model_counts] + maps
 
     def print_roi(self):
 
@@ -2026,10 +2051,11 @@ class GTAnalysis(AnalysisBase):
 
             if not 'extension' in s: continue
             if s['extension'] is None: continue
-
-#            self._plot_extension(prefix,v,erange=erange,format=format)
+            if not s['extension']['config']['save_model_map']: continue
             
-    def _plot_extension(self,prefix,v,erange=None,**kwargs):
+            self._plot_extension(prefix,s,erange=erange,format=format)
+            
+    def _plot_extension(self,prefix,src,erange=None,**kwargs):
         """Utility function for generating diagnostic plots for the
         extension analysis."""
 
@@ -2038,17 +2064,18 @@ class GTAnalysis(AnalysisBase):
         if erange is None:
             erange = (self.energies[0],self.energies[-1])
         
-        name = v['name'].lower().replace(' ','_')
+        name = src['name'].lower().replace(' ','_')
 
         esuffix = '_%.3f_%.3f'%(erange[0],erange[1])        
             
-        p = ExtensionPlotter(v,self.roi,'',self.config['fileio']['workdir'],
+        p = ExtensionPlotter(src,self.roi,'',self.config['fileio']['workdir'],
                              erange=erange)
  
         fig = plt.figure()
         p.plot(0)
         plt.gca().set_xlim(-2,2)
-        ROIPlotter.setup_projection_axis(0,erange=erange)
+        ROIPlotter.setup_projection_axis(0)
+        plotting.annotate(src=src,erange=erange)
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
                                  '%s_%s_extension_xproj%s.png'%(prefix,name,esuffix)))
         plt.close(fig)
@@ -2056,7 +2083,8 @@ class GTAnalysis(AnalysisBase):
         fig = plt.figure()
         p.plot(1)
         plt.gca().set_xlim(-2,2)
-        ROIPlotter.setup_projection_axis(1,erange=erange)
+        ROIPlotter.setup_projection_axis(1)
+        plotting.annotate(src=src,erange=erange)
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
                                  '%s_%s_extension_yproj%s.png'%(prefix,name,esuffix)))
         plt.close(fig)
@@ -2065,12 +2093,13 @@ class GTAnalysis(AnalysisBase):
 
             suffix = '_%02i'%i
 
-            p = ExtensionPlotter(v,self.roi,suffix,
+            p = ExtensionPlotter(src,self.roi,suffix,
                                  self.config['fileio']['workdir'],erange=erange)
             
             fig = plt.figure()
             p.plot(0)
             ROIPlotter.setup_projection_axis(0,erange=erange)
+            plotting.annotate(src=src,erange=erange)
             plt.gca().set_xlim(-2,2)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
                                      '%s_%s_extension_xproj%s%s.png'%(prefix,name,esuffix,suffix)))
@@ -2080,6 +2109,7 @@ class GTAnalysis(AnalysisBase):
             p.plot(1)
             plt.gca().set_xlim(-2,2)
             ROIPlotter.setup_projection_axis(1,erange=erange)
+            plotting.annotate(src=src,erange=erange)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
                                      '%s_%s_extension_yproj%s%s.png'%(prefix,name,esuffix,suffix)))
             plt.close(fig)
@@ -2104,11 +2134,12 @@ class GTAnalysis(AnalysisBase):
             erange = (self.energies[0],self.energies[-1])
         esuffix = '_%.3f_%.3f'%(erange[0],erange[1])  
 
+        mcube_diffuse = self.modelCountsMap('diffuse')
+        
         if len(mcube_maps):
 
             fig = plt.figure()        
-            p = ROIPlotter(mcube_maps[0][0],mcube_maps[0][1],
-                           self.roi,erange=erange)
+            p = ROIPlotter(mcube_maps[0],self.roi,erange=erange)
             p.plot(cb_label='Counts',zscale='pow',gamma=1./3.)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
                                      '%s_model_map%s.%s'%(prefix,esuffix,format)))
@@ -2124,8 +2155,7 @@ class GTAnalysis(AnalysisBase):
         for i, c in enumerate(self.components):
 
             fig = plt.figure()        
-            p = ROIPlotter(mcube_maps[i+1][0],mcube_maps[i+1][1],self.roi,
-                           erange=erange)
+            p = ROIPlotter(mcube_maps[i+1],self.roi,erange=erange)
             p.plot(cb_label='Counts',zscale='pow',gamma=1./3.)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
                                      '%s_model_map%s_%02i.%s'%(prefix,esuffix,i,format)))
@@ -2136,24 +2166,26 @@ class GTAnalysis(AnalysisBase):
                                             erange=erange)
             p.plot_projection(0,color=colors[i%4],label='Component %i'%i,
                               **data_style)
-            p.plot_projection(0,data=mcube_maps[i+1][0].T,
-                              color=colors[i%4],noerror=True)
+            p.plot_projection(0,data=mcube_maps[i+1].counts.T,
+                              color=colors[i%4],noerror=True,label='__nolegend__')
             
             
             plt.figure(figy.number)
             p.plot_projection(1,color=colors[i%4],label='Component %i'%i,
                               **data_style)
-            p.plot_projection(1,data=mcube_maps[i+1][0].T,
-                              color=colors[i%4],noerror=True)
+            p.plot_projection(1,data=mcube_maps[i+1].counts.T,
+                              color=colors[i%4],noerror=True,label='__nolegend__')
             
             
         plt.figure(figx.number)
-        ROIPlotter.setup_projection_axis(0,erange=erange)
+        ROIPlotter.setup_projection_axis(0)
+        plotting.annotate(erange=erange)
         figx.savefig(os.path.join(self.config['fileio']['outdir'],
                                   '%s_counts_map_comp_xproj%s.%s'%(prefix,esuffix,format)))
 
         plt.figure(figy.number)
-        ROIPlotter.setup_projection_axis(1,erange=erange)
+        ROIPlotter.setup_projection_axis(1)
+        plotting.annotate(erange=erange)
         figy.savefig(os.path.join(self.config['fileio']['outdir'],
                                   '%s_counts_map_comp_yproj%s.%s'%(prefix,esuffix,format)))
         plt.close(figx)
@@ -2168,10 +2200,12 @@ class GTAnalysis(AnalysisBase):
 
         fig = plt.figure()
         p.plot_projection(0,label='Data',color='k',**data_style)
-        p.plot_projection(0,data=mcube_maps[0][0].T,label='Model',noerror=True)
+        p.plot_projection(0,data=mcube_maps[0].counts.T,label='Model',noerror=True)
+        p.plot_projection(0,data=mcube_diffuse[0].counts.T,label='Diffuse',noerror=True)
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LON Offset [deg]')
         plt.gca().legend(frameon=False)
+        plotting.annotate(erange=erange)
 #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
                               '%s_counts_map_xproj%s.%s'%(prefix,esuffix,format)))
@@ -2179,10 +2213,12 @@ class GTAnalysis(AnalysisBase):
         
         fig = plt.figure()
         p.plot_projection(1,label='Data',color='k',**data_style)
-        p.plot_projection(1,data=mcube_maps[0][0].T,label='Model',noerror=True)
+        p.plot_projection(1,data=mcube_maps[0].counts.T,label='Model',noerror=True)
+        p.plot_projection(1,data=mcube_diffuse[0].counts.T,label='Diffuse',noerror=True)
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LAT Offset [deg]')
         plt.gca().legend(frameon=False)
+        plotting.annotate(erange=erange)
 #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
                               '%s_counts_map_yproj%s.%s'%(prefix,esuffix,format)))
@@ -2205,8 +2241,7 @@ class GTAnalysis(AnalysisBase):
             if not k in self._rmg._maps: continue
             
             fig = plt.figure()
-            p = ROIPlotter(self._rmg._maps[k]['sigma'],
-                           self._rmg._maps[k]['wcs'],self.roi)
+            p = ROIPlotter(self._rmg._maps[k]['sigma'],self.roi)
             p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
                    cb_label='Significance [$\sigma$]')
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
@@ -2214,8 +2249,7 @@ class GTAnalysis(AnalysisBase):
             plt.close(fig)
 
             fig = plt.figure()
-            p = ROIPlotter(self._rmg._maps[k]['data'],
-                           self._rmg._maps[k]['wcs'],self.roi)
+            p = ROIPlotter(self._rmg._maps[k]['data'],self.roi)
             p.plot(cb_label='Smoothed Counts',zscale='pow',gamma=1./3.)
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
                                      '%s_scmap_%s.%s'%(prefix,k,format)))
@@ -2723,7 +2757,7 @@ class GTBinnedAnalysis(AnalysisBase):
         """Return 3-D counts map as a numpy array."""
         z = self.like.logLike.countsMap().data()
         z = np.array(z).reshape(self.enumbins,self.npix,self.npix)
-        return z
+        return Map(z,copy.deepcopy(self.wcs))
 
     def expMap(self):
         """Return the exposure map."""
@@ -2755,6 +2789,11 @@ class GTBinnedAnalysis(AnalysisBase):
             for name in self.like.sourceNames():
                 model = self.like.logLike.sourceMap(name)
                 self.like.logLike.updateModelMap(v,model)
+        elif name == 'diffuse':            
+            for s in self.roi.sources:
+                if not s.diffuse: continue
+                model = self.like.logLike.sourceMap(s.name)
+                self.like.logLike.updateModelMap(v,model)                
         elif isinstance(name,list):
             for n in name:
                 model = self.like.logLike.sourceMap(n)
@@ -2764,7 +2803,7 @@ class GTBinnedAnalysis(AnalysisBase):
             self.like.logLike.updateModelMap(v,model)
             
         z = np.array(v).reshape(self.enumbins,self.npix,self.npix)
-        return z
+        return Map(z,copy.deepcopy(self.wcs))
         
     def modelCountsSpectrum(self,name,emin,emax):
 
@@ -3015,10 +3054,10 @@ class GTBinnedAnalysis(AnalysisBase):
             
         outfile = os.path.join(self.config['fileio']['workdir'],'mcube%s.fits'%(suffix))        
         h = pyfits.open(self._ccube_file)        
-        counts = self.modelCountsMap(name)
-        utils.write_fits_image(counts,self.wcs,outfile)
+        cmap = self.modelCountsMap(name)
+        utils.write_fits_image(cmap.counts,cmap.wcs,outfile)
 
-        return counts
+        return cmap
 
     def make_template(self,src,suffix):
 

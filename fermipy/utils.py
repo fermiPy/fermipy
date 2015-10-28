@@ -47,7 +47,22 @@ class AnalysisBase(object):
         else:
             logger.log(loglevel,'Configuration:\n'+ yaml.dump(self.config,
                                                               default_flow_style=False))
-        
+
+class Map(object):
+    """Representation of a 2D or 3D counts map."""
+    
+    def __init__(self,counts,wcs):
+        self._counts = counts
+        self._wcs = wcs
+
+    @property
+    def counts(self):
+        return self._counts
+
+    @property
+    def wcs(self):
+        return self._wcs
+            
 def edge_to_center(edges):
     return 0.5*(edges[1:] + edges[:-1])
 
@@ -772,12 +787,12 @@ def make_coadd_map(maps,wcs,shape):
     data = np.zeros(shape)
     axes = wcs_to_axes(wcs,shape)
     
-    for z, w in maps:
-        c = wcs_to_coords(w,z.shape)
-        o = np.histogramdd(c.T,bins=axes[::-1],weights=np.ravel(z))[0]
+    for m in maps:
+        c = wcs_to_coords(m.wcs,m.counts.shape)
+        o = np.histogramdd(c.T,bins=axes[::-1],weights=np.ravel(m.counts))[0]
         data += o
         
-    return data
+    return Map(data,copy.deepcopy(wcs))
 
 def write_fits_image(data,wcs,outfile):
     

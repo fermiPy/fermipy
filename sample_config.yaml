@@ -8,7 +8,6 @@ logging:
 fileio:
 
   outdir : null
-  stageoutput : True
   scratchdir  : '/scratch'
 
 #----------------------------------------------------------------------------
@@ -67,7 +66,7 @@ model:
 
   # List of catalogs to be used in the model.
   catalogs : 
-    - 'catalogs/gll_psc_v14.fit'
+    - 'catalogs/gll_psc_v16.fit'
 
 # This is the block of the configuration where analysis components
 # are defined.

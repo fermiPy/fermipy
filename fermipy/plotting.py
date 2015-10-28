@@ -15,7 +15,7 @@ import matplotlib.cbook as cbook
 from matplotlib.colors import NoNorm, LogNorm, Normalize
 
 import fermipy.utils as utils
-from fermipy.utils import merge_dict, AnalysisBase, wcs_to_axes
+from fermipy.utils import merge_dict, AnalysisBase, wcs_to_axes, Map
 from fermipy.utils import edge_to_center, edge_to_width, valToEdge
 
 def get_xerr(sed):
@@ -105,6 +105,32 @@ def load_ds9_cmap():
     plt.register_cmap(name='ds9_b', data=ds9_b) 
     plt.cm.ds9_b = plt.cm.get_cmap('ds9_b')
     return plt.cm.ds9_b
+
+def annotate(**kwargs):
+
+    ax = kwargs.pop('ax',plt.gca())
+    erange = kwargs.pop('erange',None)
+    src = kwargs.pop('src',None)
+
+    text = []
+    
+    if src:
+        if src['assoc']:
+            text += ['%s (%s)'%(src['name'],src['assoc'])]
+        else:
+            text += [src['name']]
+        
+    if erange:
+        text += ['E = %.3f - %.3f GeV'%(10**erange[0]/1E3,
+                                        10**erange[1]/1E3)]
+
+    if not text: return
+        
+    ax.annotate('\n'.join(text),
+                xy=(0.05,0.93),
+                xycoords='axes fraction', fontsize=12,
+                xytext=(-5, 5), textcoords='offset points',
+                ha='left', va='top')
 
 class PowerNorm(mpl.colors.Normalize):
     """
@@ -292,12 +318,12 @@ class ROIPlotter(AnalysisBase):
         'erange'           : (None,'')
         }
     
-    def __init__(self,data,wcs,roi,**kwargs):
+    def __init__(self,cmap,roi,**kwargs):
         AnalysisBase.__init__(self,None,**kwargs)
         
         self._roi = roi
-        self._data = data.T
-        self._wcs = wcs
+        self._data = cmap.counts.T
+        self._wcs = cmap.wcs
         self._erange = self.config['erange']
 
         if self._erange:
@@ -308,7 +334,7 @@ class ROIPlotter(AnalysisBase):
         else:
             imdata = self._data
             
-        self._implot = ImagePlotter(imdata,wcs)
+        self._implot = ImagePlotter(imdata,self._wcs)
             
     @property
     def data(self):
@@ -323,7 +349,7 @@ class ROIPlotter(AnalysisBase):
         wcs = pywcs.WCS(header)
         data = copy.deepcopy(hdulist[0].data)
         
-        return ROIPlotter(data,wcs,roi,**kwargs)
+        return ROIPlotter(Map(data,wcs),roi,**kwargs)
 
     def plot_projection(self,iaxis,**kwargs):
 
@@ -373,13 +399,13 @@ class ROIPlotter(AnalysisBase):
     @staticmethod
     def setup_projection_axis(iaxis,erange=None):
         
-        if erange:
-            plt.gca().annotate('E = %.3f - %.3f GeV'%(10**erange[0]/1E3,
-                                                      10**erange[1]/1E3),
-                               xy=(0.05,0.93),
-                               xycoords='axes fraction', fontsize=12,
-                               xytext=(-5, 5), textcoords='offset points',
-                               ha='left', va='center')
+#        if erange:
+#            plt.gca().annotate('E = %.3f - %.3f GeV'%(10**erange[0]/1E3,
+#                                                      10**erange[1]/1E3),
+#                               xy=(0.05,0.93),
+#                               xycoords='axes fraction', fontsize=12,
+#                               xytext=(-5, 5), textcoords='offset points',
+#                               ha='left', va='center')
         
         plt.gca().legend(frameon=False,prop={'size' : 10})
         plt.gca().set_ylabel('Counts')
@@ -529,15 +555,8 @@ class SEDPlotter(object):
         src = self._src
         ax = plt.gca()
         name = src['name']
-        
-        if src['assoc']:
-            name += ' (%s)'%src['assoc']
-        
-        ax.annotate(name,
-                    xy=(0.05,0.93),
-                    xycoords='axes fraction', fontsize=12,
-                    xytext=(-5, 5), textcoords='offset points',
-                    ha='left', va='center')
+
+        annotate(src=src,ax=ax)
         
         m = sed['ts'] < 4
 
@@ -558,17 +577,15 @@ class SEDPlotter(object):
         plt.errorbar(x,y,xerr=xerr,yerr=yerr,linestyle='None',marker='o',
                      color='k')
 
-        
-        e2 = 10**(2*src['model_flux']['ecenter'])
-
-        ax.plot(10**src['model_flux']['ecenter'],
-                src['model_flux']['dfde']*e2,
-                color='k')
-
-        ax.fill_between(10**src['model_flux']['ecenter'],
-                        src['model_flux']['dfde_lo']*e2,
-                        src['model_flux']['dfde_hi']*e2,
-                        color='b',alpha=0.5)
+        if 'model_flux' in src:
+            e2 = 10**(2*src['model_flux']['ecenter'])
+            ax.plot(10**src['model_flux']['ecenter'],
+                    src['model_flux']['dfde']*e2,
+                    color='k')
+            ax.fill_between(10**src['model_flux']['ecenter'],
+                            src['model_flux']['dfde_lo']*e2,
+                            src['model_flux']['dfde_hi']*e2,
+                            color='b',alpha=0.5)
 
         for t,z in zip(x[m],y[m]):
             plt.arrow( t,z,0.0,-z*0.2, fc="k", ec="k",
@@ -608,12 +625,8 @@ class ExtensionPlotter(object):
         self._roi = roi
         self._erange = erange
         
+        
     def plot(self,iaxis):
-
-#        p0 = ROIPlotter.create_from_fits(self._file0,self._roi)
-
-#        p0.plot_projection(0,color='k',noerror=True)
-
 
         p0 = ROIPlotter.create_from_fits(self._file2,self._roi,erange=self._erange)
         p1 = ROIPlotter.create_from_fits(self._file1,self._roi,erange=self._erange)
@@ -624,7 +637,7 @@ class ExtensionPlotter(object):
         import matplotlib
 
         n = len(self._width)
-        step = int(n/5.)
+        step = max(1,int(n/5.))
         
         fw = zip(self._files,self._width)[::step]
         
