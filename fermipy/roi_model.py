@@ -502,6 +502,10 @@ class Source(Model):
             skydir = SkyCoord(ra=skydir[0],dec=skydir[1],unit=u.deg)
         
         self._radec = np.array([skydir.ra.deg,skydir.dec.deg])
+        self['RAJ2000'] = self._radec[0]
+        self['DEJ2000'] = self._radec[1]
+        self['ra'] = self._radec[0]
+        self['dec'] = self._radec[1]
 
     def set_spatial_model(self,spatial_model,spatial_width):
 

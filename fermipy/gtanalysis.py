@@ -245,7 +245,7 @@ class GTAnalysis(AnalysisBase):
     analysis component objects.  Most of the functionality of the
     fermiPy package is provided through the methods of this class.
     The class constructor accepts a dictionary that defines the
-    configuration for the analysis.  Keyword arguments provided as
+    configuration for the analysis.  Keyword arguments provided in
     **kwargs can be used to override parameter values in the
     configuration dictionary."""
 
@@ -1182,6 +1182,13 @@ class GTAnalysis(AnalysisBase):
             Update the properties of this source with the best-fit
             location.
 
+        newname : str
+        
+            Name that will be assigned to the relocalized source model
+            when update=True.  If newname is not defined then the new
+            source will be called name + '_reloc'
+            
+
         """
 
         name = self.roi.get_source_by_name(name,True).name
@@ -1189,10 +1196,13 @@ class GTAnalysis(AnalysisBase):
         # Extract options from kwargs
         config = copy.deepcopy(self.config['localize'])
         config.update(kwargs)
-
+        config.setdefault('newname',
+                          name.replace(' ','').lower() + '_reloc')
+        
         nstep = config['nstep'] 
         dtheta_max = config['dtheta_max'] 
         update = config['update'] 
+        newname = config['newname']
         
         self.logger.info('Running localization for %s'%name)
 
@@ -1229,7 +1239,7 @@ class GTAnalysis(AnalysisBase):
             # make a copy
             s = self.copy_source(name)
 
-            model_name = '%s_localize'%(name.lower())            
+            model_name = '%s_localize'%(name.replace(' ','').lower())            
             s.set_name(model_name)
             s.set_position(t)
 #            s.set_spatial_model(spatial_model,w)
@@ -1270,18 +1280,23 @@ class GTAnalysis(AnalysisBase):
         saved_state.restore()
 
         if update:
+
+            if newname == name:
+                raise Exception('Error setting name for new source model.  '
+                                'Name string must be different than current source name.')
+            
             self.logger.info('Updating source position: %.3f %.3f'%(o['ra'],o['dec']))
             s = self.copy_source(name)
-
             self.delete_source(name)
             s.set_position([o['ra'],o['dec']])   
-            model_name = name
-#            model_name = '%s_localize'%(name.lower())            
-#            s.set_name(model_name)
-            self.add_source(model_name,s,free=True)
+            s.set_name(newname,names=s.names)
+            self.add_source(newname,s,free=True)
             self.fit()
+            src = self.roi.get_source_by_name(newname,True)
+        else:
+            src = self.roi.get_source_by_name(name,True)
+            
 
-        src = self.roi.get_source_by_name(name,True)
         src.update_data({'localize' : copy.deepcopy(o)})
         return o
 
