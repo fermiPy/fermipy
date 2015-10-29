@@ -856,7 +856,25 @@ class ROIModel(AnalysisBase):
 
         self.load_source(src,build_index=build_index)
         return src
-        
+
+    def load_source_data(self,sources):
+
+        # Sync source data
+        for k,v in sources.items():
+            if self.has_source(k):
+                src = self.get_source_by_name(k,True)
+                src.update_data(v)
+            else:
+                src = Source(k,data=v)
+                self.load_source(src)
+
+        # Prune sources not present in the sources dict
+        for s in self.sources:
+            if not s.name in sources.keys():
+                self.delete_sources([s])
+
+        self.build_src_index()
+            
     def load_source(self,src,build_index=True):
 
         name = src.name.replace(' ','').lower()

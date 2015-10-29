@@ -672,11 +672,12 @@ class GTAnalysis(AnalysisBase):
         self._update_roi()
         
     def _init_source(self,name):
-
+        
         src = self.roi.get_source_by_name(name,True)            
         src.update_data({'sed' : None, 'extension' : None,
                          'assoc' : None, 'class' : None,
-                         'offset' : 0.0, 'offset_ra' : 0.0, 'offset_dec' : 0.0, })
+                         'offset' : 0.0,
+                         'offset_ra' : 0.0, 'offset_dec' : 0.0, })
 
         if 'ASSOC1' in src['catalog']:
             src['assoc'] = src['catalog']['ASSOC1'].strip()
@@ -1950,19 +1951,12 @@ class GTAnalysis(AnalysisBase):
         infile = resolve_path(infile,workdir=self.config['fileio']['workdir'])
         self.load_xml(infile)
         self._roi_model = load_roi_data(infile,workdir=self.config['fileio']['workdir'])
-    
-        for k,v in self._roi_model['sources'].items():
-            if self.roi.has_source(k):
-                src = self.roi.get_source_by_name(k,True)
-                src.update_data(v)
-            else:
-                src = Source(k,data=v)
-                self.roi.load_source(src)
-                self.roi.build_src_index()
-                
-#        for s in self.roi.sources:
-#            s.update_data(
 
+        sources = self._roi_model.pop('sources')
+        self.roi.load_source_data(sources)
+        for c in self.components:
+            c.roi.load_source_data(sources)
+        
     def write_roi(self,outfile=None,make_residuals=False,save_model_map=True,
                   update_sources=False,**kwargs):
         """Write current model to a file.  This function will write an
@@ -2820,6 +2814,8 @@ class GTBinnedAnalysis(AnalysisBase):
         if xmlfile is not None:
             srcmdl_file = self.get_model_path(xmlfile)
 
+        print 'srcmdl_file ', srcmdl_file
+            
         roi_center = self.roi.skydir
 
         # Run gtselect and gtmktime
@@ -2993,13 +2989,15 @@ class GTBinnedAnalysis(AnalysisBase):
 
         # Create BinnedAnalysis
         self.logger.info('Creating BinnedAnalysis')
-        self._like = BinnedAnalysis(binnedData=self._obs,
-                                    srcModel=srcmdl_file,
-                                    optimizer='MINUIT',
-                                    convolve=self.config['gtlike']['convolve'],
-                                    resample=self.config['gtlike']['resample'],
-                                    minbinsz=self.config['gtlike']['minbinsz'],
-                                    resamp_fact=self.config['gtlike']['rfactor'])
+        kw = dict(srcModel=srcmdl_file,
+                  optimizer='MINUIT',
+                  convolve=self.config['gtlike']['convolve'],
+                  resample=self.config['gtlike']['resample'],
+                  minbinsz=self.config['gtlike']['minbinsz'],
+                  resamp_fact=self.config['gtlike']['rfactor'])
+        self.logger.info(kw)
+        
+        self._like = BinnedAnalysis(binnedData=self._obs,**kw)
 
 #        print self.like.logLike.use_single_fixed_map()
 #        self.like.logLike.set_use_single_fixed_map(False)
@@ -3012,7 +3010,10 @@ class GTBinnedAnalysis(AnalysisBase):
         for s in self.config['gtlike']['edisp_disable']: 
             self.logger.info('Disabling energy dispersion for %s'%s)
             self.set_edisp_flag(s,False)
-                       
+
+        if not self.like.logLike.fixedModelUpdated():
+            self.like.logLike.buildFixedModelWts(True)
+            
         self.logger.info('Finished setup')
 
     def make_scaled_srcmap(self):
@@ -3186,7 +3187,10 @@ class GTBinnedAnalysis(AnalysisBase):
         xmlfile = self.get_model_path(xmlfile)
         self.logger.info('Loading %s'%xmlfile)
         self.like.logLike.reReadXml(xmlfile)
-            
+
+        if not self.like.logLike.fixedModelUpdated():
+            self.like.logLike.buildFixedModelWts(True)
+        
     def write_xml(self,xmlfile):
         """Write the XML model for this analysis component."""
         
