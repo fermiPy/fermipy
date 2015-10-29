@@ -262,7 +262,7 @@ class IsoSource(Model):
         
         self._filefunction = os.path.expandvars(filefunction)
         self['SpectrumType'] = 'FileFunction'
-        self._data.setdefault('SpatialType','DiffuseSource')
+        self._data.setdefault('SpatialType','ConstantValue')
         self._data.setdefault('SpatialModel','DiffuseSource')
 
         if not self.spectral_pars:
@@ -317,7 +317,7 @@ class MapCubeSource(Model):
 
         self._mapcube = os.path.expandvars(mapcube)
         self['SpectrumType'] = 'PowerLaw'
-        self._data.setdefault('SpatialType','DiffuseSource')
+        self._data.setdefault('SpatialType','MapCubeFunction')
         self._data.setdefault('SpatialModel','DiffuseSource')
         
         if not self.spectral_pars:
@@ -387,7 +387,10 @@ class Source(Model):
             self._radec = [self.data['ra'],self.data['dec']]
         elif self._radec is None:
             raise Exception('Failed to infer RADEC for source: %s'%name)
-
+        
+        if not 'SpatialModel' in self.data:
+            self._data['SpatialModel'] = self['SpatialType']
+        
         self['RAJ2000'] = self._radec[0]
         self['DEJ2000'] = self._radec[1]
         self['ra'] = self._radec[0]
@@ -413,9 +416,13 @@ class Source(Model):
 
     def _update_spatial_pars(self):
 
-        if not self.extended:
-            self._data['SpatialType'] = 'PointSource'
-            self._data['SpatialModel'] = 'PointSource'
+        if self['SpatialModel'] == 'SpatialMap':
+            self._data['spatial_pars'] = {
+                'Prefactor' : {'name' : 'Prefactor', 'value' : '1',
+                               'free' : '0', 'min' : '0.001', 'max' : '1000',
+                               'scale' : '1.0'}
+                }        
+        else:
             self._data['spatial_pars'] = {
                 'RA' : {'name' : 'RA',  'value' : str(self['RAJ2000']),
                         'free' : '0',
@@ -424,13 +431,7 @@ class Source(Model):
                          'free' : '0',
                          'min' : '-90.0','max' : '90.0','scale' : '1.0'}
                 }
-        else:
-
-            self._data['spatial_pars'] = {
-                'Prefactor' : {'name' : 'Prefactor', 'value' : '1',
-                               'free' : '0', 'min' : '0.001', 'max' : '1000',
-                               'scale' : '1.0'}
-                }
+            
             
     def _update_spectral_pars(self):
 
@@ -516,12 +517,9 @@ class Source(Model):
         self._data['SpatialModel'] = spatial_model
         self._data['SpatialWidth'] = spatial_width
         
-        if self['SpatialModel'] == 'PointSource' or self['SpatialModel'] == 'Gaussian':
+        if self['SpatialModel'] in ['PointSource','Gaussian','PSFSource']:
             self._extended = False
             self._data['SpatialType'] = 'PointSource'
-        elif self['SpatialModel'] == 'PSFSource' or self['SpatialModel'] == 'CGaussianSource':
-            self._extended = True
-            self._data['SpatialType'] = 'MapCubeFunction'
         elif self['SpatialModel'] == 'GaussianSource':
             self._extended = True
             self._data['SpatialType'] = 'SpatialMap'
@@ -584,8 +582,6 @@ class Source(Model):
     @staticmethod
     def create_from_dict(src_dict):
         """Create a source object from a python dictionary."""
-
-        import pprint
         
         src_dict = copy.deepcopy(src_dict)
         spectrum_type = src_dict.get('SpectrumType','PowerLaw')
@@ -659,7 +655,8 @@ class Source(Model):
 
         src_dict['Source_Name'] = src_dict['name']
         src_dict['SpectrumType'] = spec['type']
-            
+        src_dict['SpatialType'] = spatial_type
+        
         if src_type =='PointSource' or spatial_type == 'SpatialMap':
         
             extflag=False        
@@ -846,7 +843,6 @@ class ROIModel(AnalysisBase):
     def create_source(self,src_dict,build_index=True):
         """Create a new source object from a source dictionary and
         load it in the ROI."""
-        
 
         src = Source.create_from_dict(src_dict)
         src.set_spatial_model(src['SpatialModel'],src['SpatialWidth'])
@@ -877,6 +873,7 @@ class ROIModel(AnalysisBase):
             
     def load_source(self,src,build_index=True):
 
+        src = copy.deepcopy(src)        
         name = src.name.replace(' ','').lower()
         
         if name in self._src_dict and self._src_dict[name]:
@@ -1171,7 +1168,14 @@ class ROIModel(AnalysisBase):
             src_dict['SpectrumType'] = catalog['SpectrumType'].strip()
             if src_dict['SpectrumType'] == 'PLExpCutoff':
                 src_dict['SpectrumType'] = 'PLSuperExpCutoff'
-            
+
+            if not extflag:
+                src_dict['SpatialType'] = 'PointSource'
+                src_dict['SpatialModel'] = 'PointSource'
+            else:
+                src_dict['SpatialType'] = 'SpatialMap'
+                src_dict['SpatialModel'] = 'SpatialMap'
+                
             src = Source(src_dict['Source_Name'],src_dict,
                          radec=radec[i],extended=extflag)
             self.load_source(src,False)
