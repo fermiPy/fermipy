@@ -1086,8 +1086,8 @@ class GTAnalysis(AnalysisBase):
 
     def set_free_params(self,free):
         for i,t in enumerate(free):
-            if t: self.like.thaw(t)
-            else: self.like.freeze(t)
+            if t: self.like.thaw(i)
+            else: self.like.freeze(i)
     
     def residmap(self,prefix):
         """Generate data/model residual maps using the current model."""
@@ -1143,7 +1143,6 @@ class GTAnalysis(AnalysisBase):
                 continue
 
             self.logger.info('Fitting %s Npred: %10.3f TS: %10.3f'%(s.name,s['Npred'],s['ts']))
-            
             self.free_norm(s.name)
             self.fit()
             self.logger.info('Post-fit Results Npred: %10.3f TS: %10.3f'%(s['Npred'],s['ts']))  
@@ -1158,11 +1157,10 @@ class GTAnalysis(AnalysisBase):
                     or not np.isfinite(s['ts']): continue
 
             self.logger.info('Fitting shape %s TS: %10.3f'%(s.name,s['ts']))
-            
             self.free_source(s.name)
             self.fit()
             self.free_source(s.name,free=False)
-            
+
         self.set_free_params(free)
         
         logLike1 = self.like()
@@ -1287,7 +1285,7 @@ class GTAnalysis(AnalysisBase):
 
         p0 = (0.0,0.0,0.0,sigma,sigma,0.0)
 
-        try:            
+        try:
             popt, pcov = scipy.optimize.curve_fit(parabola,(lnlscan['deltax'],lnlscan['deltay']),
                                                   lnlscan['dlogLike'].flat,p0)            
         except Exception, message:
