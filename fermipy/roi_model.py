@@ -722,7 +722,7 @@ class Source(Model):
                                               type='SpatialMap',
                                               file=self['Spatial_Filename']))
                     
-        for k,v in self._spatial_pars.items():                
+        for k,v in self.spatial_pars.items():                
             create_xml_element(spat_el,'parameter',v)
 
                 
@@ -730,10 +730,8 @@ class Source(Model):
         
         stype = self['SpectrumType'].strip()            
         el.set('type',stype)
-
-#        spec_element.set('type','PLSuperExpCutoff')
         
-        for k,v in self._spectral_pars.items():                
+        for k,v in self.spectral_pars.items():                
             create_xml_element(el,'parameter',v)
     
 class ROIModel(AnalysisBase):
