@@ -3081,8 +3081,6 @@ class GTBinnedAnalysis(AnalysisBase):
         if not 'SpatialModel' in src: return
         elif src['SpatialModel'] in ['PointSource','Gaussian','PSFSource','SpatialMap']:
             return
-
-        print src['SpatialModel']
         
         if src['SpatialModel'] == 'GaussianSource':
             template_file = os.path.join(self.config['fileio']['workdir'],
