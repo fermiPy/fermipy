@@ -34,15 +34,14 @@ import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
 import fermipy.plotting as plotting
+import fermipy.irfs as irfs
 from fermipy.residmap import ResidMapGenerator
-from fermipy.utils import AnalysisBase, mkdir, merge_dict, tolist, create_wcs
+from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import valToBinBounded, valToEdge, Map
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 from fermipy.plotting import ROIPlotter, SEDPlotter, ExtensionPlotter, make_counts_spectrum_plot
-from fermipy.config import ConfigManager
-from fermipy.irfs import LTCube, PSFModel
 
 # pylikelihood
 
@@ -242,9 +241,7 @@ def load_npy(infile):
     return np.load(infile).flat[0]
 
 
-        
-
-class GTAnalysis(AnalysisBase):
+class GTAnalysis(fermipy.config.Configurable):
     """High-level analysis interface that internally manages a set of
     analysis component objects.  Most of the functionality of the
     fermiPy package is provided through the methods of this class.
@@ -269,14 +266,16 @@ class GTAnalysis(AnalysisBase):
                 'roiopt'     : defaults.roiopt,
                 'run'        : defaults.run,
                 'plotting'   : defaults.plotting,
-                'components' : (None,'')}
+                'components' : (None,'',list)}
 
     def __init__(self,config,**kwargs):
 
-        if not isinstance(config,dict):
-            config = ConfigManager.create(config)
+#        if not isinstance(config,dict):
+#            config = self.create(config)
 
         super(GTAnalysis,self).__init__(config,**kwargs)
+
+        
 
         # Setup directories
         self._rootdir = os.getcwd()
@@ -304,7 +303,6 @@ class GTAnalysis(AnalysisBase):
         self.print_config(self.logger)
         
         # Working directory (can be the same as savedir)
-#        if self.config['fileio']['scratchdir'] is not None:
         if self.config['fileio']['usescratch']:
             self._config['fileio']['workdir'] = tempfile.mkdtemp(prefix=os.environ['USER'] + '.',
                                                        dir=self.config['fileio']['scratchdir'])
@@ -335,7 +333,8 @@ class GTAnalysis(AnalysisBase):
             energies = np.concatenate((energies,c.energies))
             roiwidths = np.insert(roiwidths,0,c.roiwidth)
             binsz = np.insert(binsz,0,c.binsz)
-            
+
+        print energies
         self._ebin_edges = np.sort(np.unique(energies.round(5)))
         self._enumbins = len(self._ebin_edges)-1
         self._roi_model = {
@@ -389,6 +388,7 @@ class GTAnalysis(AnalysisBase):
 
     @property
     def roi(self):
+        """Return the ROI object."""
         return self._roi
         
     @property
@@ -403,6 +403,7 @@ class GTAnalysis(AnalysisBase):
 
     @property
     def energies(self):
+        """Return the energy bin edges."""
         return self._ebin_edges
 
     @property
@@ -2514,7 +2515,7 @@ class GTAnalysis(AnalysisBase):
         
         return src_dict
     
-class GTBinnedAnalysis(AnalysisBase):
+class GTBinnedAnalysis(fermipy.config.Configurable):
 
     defaults = dict(selection=defaults.selection,
                     binning=defaults.binning,
@@ -2523,8 +2524,8 @@ class GTBinnedAnalysis(AnalysisBase):
                     model=defaults.model,
                     logging=defaults.logging,
                     fileio=defaults.fileio,
-                    name=('00',''),
-                    file_suffix=('',''))
+                    name=('00','',str),
+                    file_suffix=('','',str))
 
     def __init__(self,config,**kwargs):
         super(GTBinnedAnalysis,self).__init__(config,**kwargs)
@@ -2881,13 +2882,13 @@ class GTBinnedAnalysis(AnalysisBase):
 
         
         self.logger.info('Loading LT Cube %s'%self._ltcube)
-        self._ltc = LTCube.create(self._ltcube)
+        self._ltc = irfs.LTCube.create(self._ltcube)
 
         self.logger.info('Creating PSF model')
-        self._psf = PSFModel(self.roi.skydir,self._ltc,
-                             self.config['gtlike']['irfs'],
-                             self.config['selection']['evtype'],
-                             self.energies)
+        self._psf = irfs.PSFModel(self.roi.skydir,self._ltc,
+                                  self.config['gtlike']['irfs'],
+                                  self.config['selection']['evtype'],
+                                  self.energies)
         
         # Run gtbin
         kw = dict(algorithm='ccube',

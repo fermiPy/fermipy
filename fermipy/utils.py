@@ -10,44 +10,6 @@ import astropy.io.fits as pyfits
 import scipy.special as specialfn
 from scipy.interpolate import UnivariateSpline
 
-class AnalysisBase(object):
-    """The base class provides common facilities like configuration
-    parsing and saving state. """
-    def __init__(self,config,**kwargs):
-        self._config = self.get_config()
-        self.configure(config,**kwargs)
-
-    def configure(self,config,**kwargs):
-
-        config = merge_dict(config,kwargs,add_new_keys=True)
-        validate_config(config,self.defaults)
-        
-        self._config = merge_dict(self._config,config)
-#        self._config = merge_dict(self._config,kwargs)
-        
-    @classmethod
-    def get_config(cls):
-        # Load defaults
-        return load_config(cls.defaults)
-
-    @property
-    def config(self):
-        """Return the configuration dictionary of this class."""
-        return self._config
-
-    def write_config(self,outfile):
-        """Write the configuration dictionary to an output file."""
-        yaml.dump(self.config,open(outfile,'w'),default_flow_style=False)
-    
-    def print_config(self,logger,loglevel=None):
-
-        if loglevel is None:
-            logger.info('Configuration:\n'+ yaml.dump(self.config,
-                                                      default_flow_style=False))
-        else:
-            logger.log(loglevel,'Configuration:\n'+ yaml.dump(self.config,
-                                                              default_flow_style=False))
-
 class Map(object):
     """Representation of a 2D or 3D counts map."""
     
@@ -144,51 +106,6 @@ def prettify_xml(elem):
     rough_string = et.tostring(elem, 'utf-8')
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="  ")  
-
-def load_config(defaults):
-    """Create a configuration dictionary from a defaults dictionary.
-    The defaults dictionary defines valid configuration keys with
-    default values and docstrings.  Each dictionary element should be
-    a tuple or list containing (default value,docstring,type)."""
-
-    o = {}
-    for key, item in defaults.items():
-
-        if isinstance(item,dict):
-            o[key] = load_config(item)
-        elif isinstance(item,tuple):
-            item_list = [None,'',str]
-            item_list[:len(item)] = item        
-            value, comment, item_type = item_list
-
-            if len(item) == 1:
-                raise Exception('Option tuple must have at least one element.')
-                    
-            if value is None and (item_type == list or item_type == dict):
-                value = item_type()
-            
-            if key in o: raise Exception('Duplicate key.')
-                
-            o[key] = value            
-        else:
-
-            print key, item, type(item)
-            
-            raise Exception('Unrecognized type for default dict element.')
-
-    return o
-
-
-def validate_config(config,defaults,block='root'):
-
-    for key, item in config.items():
-        
-        if not key in defaults:
-            raise Exception('Invalid key in \'%s\' block of configuration: %s'%
-                            (block,key))
-        
-        if isinstance(item,dict):
-            validate_config(config[key],defaults[key],key)
 
 def merge_dict(d0,d1,add_new_keys=False,append_arrays=False):
     """Recursively merge the contents of python dictionary d0 with
