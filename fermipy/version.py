@@ -110,7 +110,7 @@ def get_git_version(abbrev=4):
     git_version = call_git_describe(abbrev)
 
     # Try to deduce the version from keyword expansion
-    keyword_version = read_release_keywords()
+    keyword_version = read_release_keywords(_refname)
 
     # If that doesn't work, fall back on the value that's in
     # _version.py.
