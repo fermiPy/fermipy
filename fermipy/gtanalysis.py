@@ -467,7 +467,7 @@ class GTAnalysis(AnalysisBase):
 
         return s
 
-    def add_source(self,name,src_dict,free=False):
+    def add_source(self,name,src_dict,free=False,init_source=True):
         """Add a source to the ROI model.  This function may be called
         either before or after setup().
 
@@ -505,7 +505,9 @@ class GTAnalysis(AnalysisBase):
         
         self.like.syncSrcParams(name)            
         self.like.model = self.like.components[0].model
-        self._init_source(name)
+
+        if init_source:
+            self._init_source(name)
  
     def delete_source(self,name,save_template=True):
         """Delete a source from the model.
@@ -1457,8 +1459,7 @@ class GTAnalysis(AnalysisBase):
                 self.generate_model_map(model_name=model_name + '%02i'%i,
                                         name=model_name)
                 
-            self.delete_source(model_name,
-                               save_template=self.config['extension']['save_templates'])
+            self.delete_source(model_name,save_template=False)
 
         try:
             o['ext'], o['ext_ul95'], o['ext_err_lo'], o['ext_err_hi'], o['ts_ext'] = \
@@ -1922,24 +1923,22 @@ class GTAnalysis(AnalysisBase):
 
     def print_roi(self):
 
-        print '%-25s %-15s %10s %10s %10s %12s %12s'%('name','SpectrumType','offset','offset_ra',
-                                                      'offset_dec','ts','Npred')
+        print '%-25s %-15s %-15s %10s %12s %12s'%('name','SpatialModel','SpectrumType','offset',
+                                                   'ts','Npred')
         print '-'*100
         
         for s in sorted(self.roi.sources,key=lambda t:t['offset']):
 
             if s.diffuse: continue            
-            print '%-25s %-15s %10.3f %10.3f %10.3f %12.2f %12.2f'%(s['name'],s['SpectrumType'],s['offset'],
-                                                                    s['offset_ra'],
-                                                                    s['offset_dec'],s['ts'],s['Npred'])
+            print '%-25s %-15s %-15s %10.3f %12.2f %12.2f'%(s['name'],s['SpatialModel'],s['SpectrumType'],
+                                                            s['offset'],s['ts'],s['Npred'])
         
         for s in sorted(self.roi.sources,key=lambda t:t['offset']):
 
             if not s.diffuse: continue
-            print '%-25s %-15s %10.3f %10.3f %10.3f %12.2f %12.2f'%(s['name'],s['SpectrumType'],s['offset'],
-                                                                    s['offset_ra'],
-                                                                    s['offset_dec'],s['ts'],s['Npred'])
-
+            print '%-25s %-15s %-15s %10s %12.2f %12.2f'%(s['name'],s['SpatialModel'],s['SpectrumType'],
+                                                          '-----',s['ts'],s['Npred'])
+            
 
     
     def load_roi(self,infile):
@@ -2258,55 +2257,76 @@ class GTAnalysis(AnalysisBase):
         """Loop over ROI, place a test source at each position, and
         evaluated the TS for that source."""
 
+        logLike0 = self.like()
+        self.logger.info('LogLike: %f'%logLike0)
+        
         saved_state = LikelihoodState(self.like)
         
         # Get the ROI geometry
 
         # Loop over pixels
-        w = create_wcs(self._roi.skydir,cdelt=self._binsz,crpix=50.5)
+        w = copy.deepcopy(self._skywcs)
+#        w = create_wcs(self._roi.skydir,cdelt=self._binsz,crpix=50.5)
 
-        hdu_image = pyfits.PrimaryHDU(np.zeros((100,100)),
-                                      header=w.to_header())
+        data = np.zeros((self.npix,self.npix))
+        
+#        hdu_image = pyfits.PrimaryHDU(np.zeros((self.npix,self.npix)),
+#                                      header=w.to_header())
 #        for i in range(100):
 #            for j in range(100):
 #                print w.wcs_pix2world(i,j,0)
 
-        self.free_sources(free=False)
+#        self.free_sources(free=False)
 
-        radec = w.wcs_pix2world(50,50,0)
+        xpix = np.linspace(0,self.npix-1,self.npix)[:,np.newaxis]*np.ones(data.shape)
+        ypix = np.linspace(0,self.npix-1,self.npix)[np.newaxis,:]*np.ones(data.shape)
 
+        radec = utils.pix_to_skydir(xpix,ypix,w)
+        radec = (np.ravel(radec.ra.deg),np.ravel(radec.dec.deg))
+
+        testsource_dict = {
+            'ra' : radec[0][0],
+            'dec' : radec[1][0],
+            'SpectrumType' : 'PowerLaw', 
+            'Index' : 2.0, 
+            'Scale' : 1000,
+            'Prefactor' : { 'value' : 0.0, 'scale' : 1e-13 },
+            'SpatialModel' : 'PSFSource',
+            }
+
+
+
+#        src = self.roi.get_source_by_name('tsmap_testsource',True)
         
-        loglike0 = self.like()
-        for i in range(45,55):
-            for j in range(45,55):
-                radec = w.wcs_pix2world(i,j,0)
-                print 'Fitting source at ', radec
+        for i, (ra,dec) in enumerate(zip(radec[0],radec[1])):
+
+            testsource_dict['ra'] = ra
+            testsource_dict['dec'] = dec
+#                        src.set_position([ra,dec])
+            self.add_source('tsmap_testsource',testsource_dict,free=True,init_source=False)
             
-                self.add_source('testsource',radec)
+#            for c in self.components:
+#                c.update_srcmap_file([src],True)
 
-                self.like.freeze(self.like.par_index('testsource','Index'))
-                self.like.thaw(self.like.par_index('testsource','Prefactor'))
+            self.set_parameter('tsmap_testsource','Prefactor',0.0)
+            self.fit(update=False)
+
+            logLike1 = self.like()
+            ts = max(0,2*(logLike0-logLike1))
             
-#            self.free_source('testsource',free=False)
-#            self.free_norm('testsource')
+            data.flat[i] = ts
+            
+#            print i, ra, dec, ts            
+#            print self.like()
+#            print self.components[0].like.model['tsmap_testsource']
+            
+            self.delete_source('tsmap_testsource')
 
+        saved_state.restore()
 
+        outfile = os.path.join(self.config['fileio']['workdir'],'tsmap.fits')        
+        utils.write_fits_image(data,w,outfile) 
                 
-                self.fit(update=False)
-                loglike1 = self.like()
-
-                print loglike0-loglike1
-                self.delete_source('testsource')
-
-                hdu_image.data[i,j] = max(loglike0-loglike1,0)
-                
-        #kw = {'bexpmap'}
-
-        saved_state.restore() 
-        
-        hdulist = pyfits.HDUList([hdu_image])
-        hdulist.writeto('test.fits',clobber=True)
-        
     def bowtie(self,fd,energies=None):
         """Generate a bowtie function for the given source.  This will
         create a band as a function of energy by propagating the
@@ -2653,11 +2673,11 @@ class GTBinnedAnalysis(AnalysisBase):
 
         if isinstance(src_dict,dict):
             src_dict['name'] = name
-            src = self.roi.create_source(src_dict)
+            self.roi.create_source(src_dict)
         else:
-            src = src_dict
-            self.roi.load_source(src)
+            self.roi.load_source(src_dict)
 
+        src = self.roi.get_source_by_name(name,True)
         self.make_template(src,self.config['file_suffix'])
         
         if self._like is None: return
@@ -2713,7 +2733,7 @@ class GTBinnedAnalysis(AnalysisBase):
         src = self.roi.get_source_by_name(name,True)
         
         self.logger.info('Deleting source %s'%(name))
-
+        
         if self.like is not None:
             self.like.deleteSource(src.name)
             self.like.logLike.eraseSourceMap(src.name)
@@ -2811,8 +2831,6 @@ class GTBinnedAnalysis(AnalysisBase):
         srcmdl_file = self._srcmdl_file
         if xmlfile is not None:
             srcmdl_file = self.get_model_path(xmlfile)
-
-        print 'srcmdl_file ', srcmdl_file
             
         roi_center = self.roi.skydir
 
@@ -3059,18 +3077,12 @@ class GTBinnedAnalysis(AnalysisBase):
         return cmap
 
     def make_template(self,src,suffix):
-
-        if not 'SpatialModel' in src: return
         
-        if src['SpatialModel'] == 'PointSource' or src['SpatialModel'] == 'Gaussian':
-            pass
-        elif src['SpatialModel'] == 'PSFSource':            
-            template_file = os.path.join(self.config['fileio']['workdir'],
-                                         '%s_template_psf%s.fits'%(src.name,suffix))
-            utils.make_psf_mapcube(src.skydir,self._psf,template_file,npix=self.npix,
-                                   cdelt=self.config['binning']['binsz'],rebin=4)
-            src['Spatial_Filename'] = template_file
-        elif src['SpatialModel'] == 'GaussianSource':
+        if not 'SpatialModel' in src: return
+        elif src['SpatialModel'] in ['PointSource','Gaussian','PSFSource','SpatialMap']:
+            return
+        
+        if src['SpatialModel'] == 'GaussianSource':
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_gauss_%05.3f%s.fits'%(src.name,src['SpatialWidth'],
                                                                             suffix))
@@ -3105,7 +3117,7 @@ class GTBinnedAnalysis(AnalysisBase):
                         
             if s.diffuse: continue
             if not 'SpatialModel' in s: continue
-            if s['SpatialModel'] in ['PointSource','Gaussian']: continue
+            if s['SpatialModel'] in ['PointSource','Gaussian','SpatialMap']: continue
             if s.name.upper() in hdunames and not overwrite: continue
             
             self.logger.info('Creating source map for %s'%s.name)
@@ -3123,7 +3135,7 @@ class GTBinnedAnalysis(AnalysisBase):
             
             
             srcmaps[s.name] = k
-
+            
         if srcmaps:
             self.logger.info('Updating source map file for component %s.'%self.name)
             utils.update_source_maps(self._srcmap_file,srcmaps,logger=self.logger)
