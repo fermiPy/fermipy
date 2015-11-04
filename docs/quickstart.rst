@@ -48,26 +48,26 @@ Markarian 421 with all event types combined (evtype=3).
      catalogs : 
        - 'gll_psc_v14.fit'
 
-The configuration file is divided into blocks that group together
-related options.  The *data* block defines the FT1 and FT2 files.
+The configuration file is divided into sections that group together
+related options.  The *data* section defines the FT1 and FT2 files.
 Here *evfile* points to a list of FT1 files that encompass the chosen
 ROI, energy range, and time selection.  The parameters in the
-*binning* block define the dimensions of the ROI and the spatial and energy
-bin size.  The *selection* block defines parameters related to the
+*binning* section define the dimensions of the ROI and the spatial and energy
+bin size.  The *selection* section defines parameters related to the
 data selection (energy range, zmax cut, and event class/type).  The
-*target* parameter in this block defines the ROI center to have the
+*target* parameter in this section defines the ROI center to have the
 same coordinates as the given source.   The *model*
-block defines all parameters related to the ROI model definition (diffuse
+section defines all parameters related to the ROI model definition (diffuse
 templates, point sources).  
 
 fermiPy allows the user to combine multiple data selections into a
-joint likelihood with the *components* block.  The components block
+joint likelihood with the *components* section.  The components section
 contains a list of dictionaries with the same hierarchy as the root
 analysis configuration.  Each element of the list defines the analysis
 parameters for an independent sub-selection of the data.  Any
 parameters not defined within the component dictionary default to the
 value defined in the root configuration.  The following example shows
-the components block that could be appended to the previous
+the components section that could be appended to the previous
 configuration to define a joint analysis with four PSF event types:
 
 .. code-block:: yaml
@@ -79,8 +79,9 @@ configuration to define a joint analysis with four PSF event types:
      - { selection : { evtype : 32 } } # PSF3
 
 Any configuration parameter can be changed with this mechanism.  The
-following example shows how one can use a different zmax selection and
-isotropic template for each of the four PSF event types:
+following example shows how to define a different zmax selection and
+isotropic template for an analysis using each of the four PSF event
+types:
 
 .. code-block:: yaml
 
@@ -127,8 +128,8 @@ creating counts and exposure maps, etc.).  It should be noted that
 depending on the parameters of the analysis this will often be the
 slowest step in the analysis sequence.
 
-Once the *GTAnalysis* object is initialized we can control which
-sources and source parameters will be free in the fit.  By default all
+Once the *GTAnalysis* object is initialized we can define which
+source parameters will be free in the fit.  By default all
 models parameters are initially fixed.  In the following example we
 free the normalization of catalog sources within 3 deg of the ROI
 center and free the galactic and isotropic components by name.
@@ -143,9 +144,9 @@ center and free the galactic and isotropic components by name.
    gta.free_source('isodiff')
 
 Note that when passing a source name argument both case and whitespace
-are ignored.  A source can also be identified by the name of any of
-its source associations.  Thus the following calls are equivalent ways
-of freeing the parameters of Mkn 421:
+are ignored.  When using a FITS catalog file a source can also be
+referred to by any of its associations.  Thus the following calls are
+equivalent ways of freeing the parameters of Mkn 421:
 
 .. code-block:: python
 
@@ -155,33 +156,40 @@ of freeing the parameters of Mkn 421:
    gta.free_source('3FGL J1104.4+3812')
    gta.free_source('3fglj1104.4+3812')
 
-After freeing the parameters of one or more sources we can execute a
-fit by calling :py:meth:`~fermipy.gtanalysis.GTAnalysis.fit`.  The will
-maximize the likelihood with respect to the model parameters that are
-currently free in the model.
+After freeing parameters of the model we can execute a fit by calling
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.fit`.  The will maximize the
+likelihood with respect to the model parameters that are currently
+free.
 
 .. code-block:: python
 
    gta.fit()
 
 After the fitting is complete we can write the current state of the
-best-fit model with the
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi` method:
+model with the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`
+method:
 
 .. code-block:: python
 
    gta.write_roi('fit_model')
 
-This will write both an XML model file and a YAML results file with a
-variety of information about each source.  By default the fit to each
-source is performed with a global spectral model that spans the entire
-analysis energy range.  To extract a bin-by-bin flux spectrum (i.e. a
-SED) you can call :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed`
-method with the name of the source:
+This will write several output files including an XML model file and
+an ROI dictionary file.  The names of all output files will be
+prepended with the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`
+function argument.
+
+By default, calls to :py:meth:`~fermipy.gtanalysis.GTAnalysis.fit` will
+execute a global spectral fit over the entire energy range of the
+analysis.  To extract a bin-by-bin flux spectrum (i.e. a SED) you can
+call :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` method with the
+name of the source:
 
 .. code-block:: python
 
    gta.sed('mkn421')
+
+More information about :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed`
+method can be found in the :ref:`sed` page.
 
 
 Extracting Analysis Results
@@ -208,7 +216,7 @@ the dictionary from either format:
    >>> print c.keys()
    ['roi', 'config', 'sources']
 
-The results dictionary is split into three top-level dictionaries:
+The output dictionary contains the following top-level elements:
 
 roi 
    A dictionary containing information about the ROI as a whole.
@@ -219,8 +227,13 @@ config
 
 sources
    A dictionary containing information for individual
-   sources (diffuse and point-like).  Each element of this dictionary
+   sources in the model (diffuse and point-like).  Each element of this dictionary
    maps to a single source in the ROI model.
+
+version
+   The version of the fermiPy package that was used to run this
+   analysis.  This will automatically be generated from the git release
+   tag.
 
 Each source dictionary collects the properties of the given source
 (TS, NPred, best-fit parameters, etc.) computed up to that point in
@@ -241,3 +254,57 @@ the analysis.
     '3FGL J1209.4+4119',
     'galdiff',
     'isodiff']
+
+
+Reloading from a Previous State
+-------------------------------
+
+One can reload an analysis instance that was saved with
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi` by calling either
+the :py:meth:`~fermipy.gtanalysis.GTAnalysis.create` or
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.load_roi` methods.  The
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.create` method can be used to
+construct an entirely new instance of
+:py:class:`~fermipy.gtanalysis.GTAnalysis` from a previously saved
+results file:
+
+.. code-block:: python
+   
+   from fermipy.gtanalysis import GTAnalysis
+   gta = GTAnalysis.create('fit_model.npy')
+
+   # Continue running analysis starting from the previously saved
+   # state 
+   gta.fit()
+
+where the argument is the path to an output file produced with
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`.  This function
+will instantiate a new analysis object, run the
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` method, and load the
+state of the model parameters at the time that
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi` was called.
+
+The :py:meth:`~fermipy.gtanalysis.GTAnalysis.load_roi` method can be
+used to reload a previous state of the analysis to an existing
+instance of :py:class:`~fermipy.gtanalysis.GTAnalysis`.
+
+.. code-block:: python
+   
+   from fermipy.gtanalysis import GTAnalysis
+
+   gta = GTAnalysis('config.yaml')
+   gta.setup()
+
+   gta.write_roi('prefit_model')
+
+   # Fit a source
+   gta.free_source('mkn421')
+   gta.fit()
+
+   # Restore the analysis to its prior state before the fit of mkn421
+   # was executed
+   gta.load_roi('prefit_model')
+   
+Note that using :py:meth:`~fermipy.gtanalysis.GTAnalysis.load_roi` is
+generally faster than :py:meth:`~fermipy.gtanalysis.GTAnalysis.create`
+when an analysis instance already exists.
