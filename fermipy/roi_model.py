@@ -400,11 +400,11 @@ class Source(Model):
                    'Sqrt_TS300_1000','Sqrt_TS1000_3000',
                    'Sqrt_TS3000_10000','Sqrt_TS10000_100000']
 
-        if ts_keys[0] in self:        
-            self._data['TS_value'] = 0
+        if ts_keys[0] in self['catalog']:        
+            self._data['catalog']['TS_value'] = 0
             for k in ts_keys:
-                if k in self and np.isfinite(self[k]):
-                    self._data['TS_value'] += self[k]**2
+                if k in self['catalog'] and np.isfinite(self['catalog'][k]):
+                    self._data['catalog']['TS_value'] += self['catalog'][k]**2
 
         self._extended=extended
 
