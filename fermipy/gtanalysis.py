@@ -334,7 +334,6 @@ class GTAnalysis(fermipy.config.Configurable):
             roiwidths = np.insert(roiwidths,0,c.roiwidth)
             binsz = np.insert(binsz,0,c.binsz)
 
-        print energies
         self._ebin_edges = np.sort(np.unique(energies.round(5)))
         self._enumbins = len(self._ebin_edges)-1
         self._roi_model = {
@@ -1923,24 +1922,7 @@ class GTAnalysis(fermipy.config.Configurable):
         return [model_counts] + maps
 
     def print_roi(self):
-
-        print '%-25s %-15s %-15s %10s %12s %12s'%('name','SpatialModel','SpectrumType','offset',
-                                                   'ts','Npred')
-        print '-'*100
-        
-        for s in sorted(self.roi.sources,key=lambda t:t['offset']):
-
-            if s.diffuse: continue            
-            print '%-25s %-15s %-15s %10.3f %12.2f %12.2f'%(s['name'],s['SpatialModel'],s['SpectrumType'],
-                                                            s['offset'],s['ts'],s['Npred'])
-        
-        for s in sorted(self.roi.sources,key=lambda t:t['offset']):
-
-            if not s.diffuse: continue
-            print '%-25s %-15s %-15s %10s %12.2f %12.2f'%(s['name'],s['SpatialModel'],s['SpectrumType'],
-                                                          '-----',s['ts'],s['Npred'])
-            
-
+        print(str(self.roi))
     
     def load_roi(self,infile):
         """This function reloads the analysis state from a previously

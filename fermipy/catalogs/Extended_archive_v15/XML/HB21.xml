@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="HB21" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter free="1" max="100000" min="1e-05" name="norm" scale="1e-10" value="0.556791398"/>
+      <parameter free="1" max="5" min="0" name="alpha" scale="1" value="2.009042491"/>
+      <parameter free="1" max="10" min="-5" name="beta" scale="0.1" value="3.764086462"/>
+      <parameter free="0" max="100000" min="100" name="Eb" scale="1" value="608.7838873"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/HB21.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1000" min="0.001" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

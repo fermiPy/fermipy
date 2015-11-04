@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="HESSJ1837-069" type="DiffuseSource">
+    <spectrum normPar="Integral" type="PowerLaw2">
+      <parameter free="1" max="10000" min="1e-05" name="Integral" scale="1e-08" value="0.9657806083"/>
+      <parameter free="1" max="0" min="-5" name="Index" scale="1" value="-1.966321325"/>
+      <parameter free="0" max="200000" min="20" name="LowerLimit" scale="1" value="1000"/>
+      <parameter free="0" max="1000000" min="20" name="UpperLimit" scale="1" value="100000"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/HESSJ1837-069.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1000" min="0.001" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

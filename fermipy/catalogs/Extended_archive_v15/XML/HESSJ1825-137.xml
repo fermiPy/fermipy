@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="HESSJ1825-137" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter free="1" max="100000" min="1e-05" name="norm" scale="2.046007303e-14" value="2.866436634"/>
+      <parameter free="1" max="5" min="-0" name="alpha" scale="1" value="1.631693806"/>
+      <parameter free="1" max="10" min="-10" name="beta" scale="0.1" value="1.82794223"/>
+      <parameter free="0" max="300" min="0.02" name="Eb" scale="1000" value="23.91720826"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/HESSJ1825-137.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1000" min="0.001" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

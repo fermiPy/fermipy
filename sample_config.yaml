@@ -1,10 +1,16 @@
-
-# These parameters control logging.
+#----------------------------------------------------------------------------
+# Logging
 logging:
 
+  # Set the fermiPy log level
   verbosity : 3
+
+  # Set the STs chatter level
   chatter : 3
 
+#----------------------------------------------------------------------------
+# Parameters that control where files are written and the location of
+# the analysis output directory
 fileio:
 
   outdir : null
@@ -23,7 +29,6 @@ data:
 binning:
 
   roiwidth   : 5.0   # ROI width in deg
-  npix       : null
   binsz      : 0.2   # spatial bin size in deg
   binsperdec : 8     # nb energy bins per decade
   
@@ -38,11 +43,8 @@ selection:
   evtype  : 3
   filter  : 'DATA_QUAL>0 && LAT_CONFIG==1' # gtmktime filter string
 
-  # Set the ROI center to the coordinates of this source
-  ra     : 0.0
-  dec    : 0.0
+  # Set the ROI center to the coordinates of 'target'
   target : 'mkn421'
-  radius : null
 
 #----------------------------------------------------------------------------
 # IRFs
@@ -52,28 +54,33 @@ gtlike:
   edisp_disable : ['isodiff','galdiff']
   irfs : 'P8R2_SOURCE_V6'
 
+#----------------------------------------------------------------------------
 # Settings for ROI model
 model:
 
   # Include catalog sources within this distance from the ROI center
   src_radius  : null
 
-  # Include catalog sources within a box of the given width..
+  # Include catalog sources within a box of the given width. This
+  # parameter should be at least as large as roiwidth.
   src_roiwidth : 10.0
 
   galdiff  : '$GLAST_EXT/diffuseModels/v5r0/gll_iem_v06.fits'
   isodiff  : '$GLAST_EXT/diffuseModels/v5r0/iso_P8R2_SOURCE_V6_v06.txt'
 
-  # List of catalogs to be used in the model.
+  # List of catalogs from which sources will be drawn.
   catalogs : 
-    - 'catalogs/gll_psc_v16.fit'
+    - '3FGL'
 
+#----------------------------------------------------------------------------
 # This is the block of the configuration where analysis components
 # are defined.
 components: null
     
+#----------------------------------------------------------------------------
 # Settings for SED analysis
 sed: {}
 
+#----------------------------------------------------------------------------
 # Settings for Extension analysis
 extension : {}

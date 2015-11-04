@@ -1,0 +1,13 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="PuppisA" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter free="1" max="100000" min="1e-05" name="Prefactor" scale="9.400526078e-13" value="1.430779027"/>
+      <parameter free="1" max="0" min="-5" name="Index" scale="1" value="-2.051624856"/>
+      <parameter free="0" max="300" min="0.02" name="Scale" scale="1000" value="2.499008065"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/PuppisA.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1000" min="0.001" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

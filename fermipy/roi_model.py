@@ -67,6 +67,14 @@ def scale_parameter(p):
     else:
         return p, 1.0
 
+def resolve_file_path(path,filename):
+
+    if filename is None: return None
+    elif os.path.isfile(filename): return filename    
+    elif os.path.isfile(os.path.join(path,filename)):
+        return os.path.join(path,filename)
+    else:
+        return filename
 
 spectrum_type_pars = {
     'PowerLaw' : ['Prefactor','Index','Scale'],
@@ -107,6 +115,11 @@ default_par_dict = {
         {'name' : 'UpperLimit', 'value' : 100000.0, 'scale' : 1.0, 'min' : 20.0, 'max' : 1000000., 'free' : '0'},
     }
     
+catalog_alias = {
+    '3FGL' : {'file' : 'gll_psc_v16.fit', 'extdir' : 'Extended_archive_v15'},
+    '2FGL' : {'file' : 'gll_psc_v08.fit', 'extdir' : 'Extended_archive_v07'}
+    }
+
 def make_parameter_dict(pdict,fixed_par=False):
 
     o = copy.deepcopy(pdict)
@@ -777,6 +790,27 @@ class ROIModel(fermipy.config.Configurable):
     def __iter__(self):
         return iter(self._srcs + self._diffuse_srcs)
 
+    def __str__(self):
+
+        o = ''
+        o += '%-25s %-15s %-15s %10s %12s %12s\n'%('name','SpatialModel','SpectrumType','offset',
+                                                   'ts','Npred')
+        o += '-'*100 + '\n'
+        
+        for s in sorted(self.sources,key=lambda t:t['offset']):
+
+            if s.diffuse: continue            
+            o += '%-25s %-15s %-15s %10.3f %12.2f %12.2f\n'%(s['name'][:24],s['SpatialModel'],s['SpectrumType'],
+                                                           s['offset'],s['ts'],s['Npred'])
+        
+        for s in sorted(self.sources,key=lambda t:t['offset']):
+
+            if not s.diffuse: continue
+            o += '%-25s %-15s %-15s %10s %12.2f %12.2f\n'%(s['name'][:24],s['SpatialModel'],s['SpectrumType'],
+                                                         '-----',s['ts'],s['Npred'])
+
+        return o
+
     @property
     def skydir(self):
         """Return the sky direction objection corresponding to the
@@ -804,6 +838,8 @@ class ROIModel(fermipy.config.Configurable):
 
     def _load_diffuse_src(self,name,src_type='FileFunction'):
 
+        diffuse_dir = os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
+
         srcs = []
         if self.config[name] is not None:
             srcs = self.config[name]
@@ -815,6 +851,9 @@ class ROIModel(fermipy.config.Configurable):
             elif isinstance(t,dict):
                 src_dict = copy.deepcopy(t)
                 
+            if os.path.isdir(diffuse_dir):
+                src_dict['file'] = resolve_file_path(diffuse_dir,src_dict['file'])
+
             if not 'name' in src_dict:                
                 if len(srcs) == 1:
                     src_dict['name'] = name
@@ -901,11 +940,18 @@ class ROIModel(fermipy.config.Configurable):
             
         for c in self.config['catalogs']:
 
-            extname = os.path.splitext(c)[1]            
+            if c in catalog_alias:
+                catalog_file = catalog_alias[c]['file']
+                extdir = catalog_alias[c]['extdir']
+            else:
+                catalog_file = c
+                extdir = self.config['extdir']
+
+            extname = os.path.splitext(catalog_file)[1]            
             if extname == '.fits' or extname == '.fit':
-                self.load_fits(c)
+                self.load_fits(catalog_file,extdir)
             elif extname == '.xml':
-                self.load_xml(c)
+                self.load_xml(catalog_file,extdir)
             else:
                 raise Exception('Unrecognized catalog file extension: %s'%c)
 
@@ -1113,7 +1159,7 @@ class ROIModel(fermipy.config.Configurable):
         
         return radius, srcs
     
-    def load_fits(self,fitsfile,
+    def load_fits(self,fitsfile,extdir,
                   src_hduname='LAT_Point_Source_Catalog',
                   extsrc_hduname='ExtendedSources'):
         """Load sources from a FITS catalog file."""
@@ -1161,9 +1207,8 @@ class ROIModel(fermipy.config.Configurable):
 
                 src_dict['Spatial_Filename'] = catalog['Spatial_Filename'].strip()
 
-                if not os.path.isfile(src_dict['Spatial_Filename']) and self.config['extdir']:
-                    src_dict['Spatial_Filename'] = os.path.join(self.config['extdir'],
-                                                                'Templates',
+                if not os.path.isfile(src_dict['Spatial_Filename']) and extdir:
+                    src_dict['Spatial_Filename'] = os.path.join(extdir,'Templates',
                                                                 src_dict['Spatial_Filename'])
             
             src_dict['SpectrumType'] = catalog['SpectrumType'].strip()
@@ -1211,8 +1256,11 @@ class ROIModel(fermipy.config.Configurable):
         output_file = open(xmlfile,'w')
         output_file.write(prettify_xml(root))
 
-    def load_xml(self,xmlfile):
+    def load_xml(self,xmlfile,extdir=None):
         """Load sources from an XML file."""
+
+        if extdir is None:
+            extdir=self.config['extdir']
 
         if not os.path.isfile(xmlfile):
             xmlfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',xmlfile)
@@ -1222,7 +1270,7 @@ class ROIModel(fermipy.config.Configurable):
         root = ElementTree.ElementTree(file=xmlfile).getroot()
 
         for s in root.findall('source'):
-            src = Source.create_from_xml(s,extdir=self.config['extdir'])
+            src = Source.create_from_xml(s,extdir=extdir)
             self.load_source(src,False)
 
         self.build_src_index()
