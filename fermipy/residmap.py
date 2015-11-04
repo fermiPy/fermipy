@@ -6,9 +6,10 @@ import astropy.io.fits as pyfits
 import matplotlib.pyplot as plt
 from astropy import wcs 
 
+import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
-from fermipy.utils import AnalysisBase, Map
+from fermipy.utils import Map
 from fermipy.logger import Logger, StreamLogger
 from fermipy.logger import logLevel as ll
 
@@ -72,7 +73,7 @@ def create_model_name(src):
 
     return o
 
-class ResidMapGenerator(AnalysisBase):
+class ResidMapGenerator(fermipy.config.Configurable):
     """This class generates spatial residual maps from the difference
     of data and model maps smoothed with a user-defined
     spatial/spectral template.  The resulting map of source
@@ -86,7 +87,7 @@ class ResidMapGenerator(AnalysisBase):
                     logging=defaults.logging)
     
     def __init__(self,config,gta,**kwargs):
-        AnalysisBase.__init__(self,config,**kwargs)        
+        super(ResidMapGenerator,self).__init__(config,**kwargs)        
         self._gta = gta
         self._maps = {}
         

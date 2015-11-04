@@ -14,8 +14,10 @@ from numpy import ma
 import matplotlib.cbook as cbook
 from matplotlib.colors import NoNorm, LogNorm, Normalize
 
+import fermipy
+import fermipy.config
 import fermipy.utils as utils
-from fermipy.utils import merge_dict, AnalysisBase, wcs_to_axes, Map
+from fermipy.utils import merge_dict, wcs_to_axes, Map
 from fermipy.utils import edge_to_center, edge_to_width, valToEdge
 
 def get_xerr(sed):
@@ -310,16 +312,17 @@ def get_image_wcs(header):
         data = copy.deepcopy(hdulist[0].data)
     
     
-class ROIPlotter(AnalysisBase):
+class ROIPlotter(fermipy.config.Configurable):
 
     defaults = {
-        'marker_threshold' : (10,''),
-        'source_color'     : ('w',''),
-        'erange'           : (None,'')
+        'marker_threshold' : (10,'',float),
+        'source_color'     : ('w','',str),
+        'erange'           : (None,'',list)
         }
     
     def __init__(self,cmap,roi,**kwargs):
-        AnalysisBase.__init__(self,None,**kwargs)
+#        super(ROIPlotter,self).__init__(None,**kwargs)
+        fermipy.config.Configurable.__init__(self,None,**kwargs)
         
         self._roi = roi
         self._data = cmap.counts.T
@@ -510,9 +513,7 @@ class SEDPlotter(object):
         
         ym = np.interp(sed['ecenter'],
                        model_flux['ecenter'],
-                       10**(2*model_flux['ecenter'])*model_flux['dfde'])
-
-        
+                       10**(2*model_flux['ecenter'])*model_flux['dfde'])        
 
         plt.errorbar(x,(y-ym)/ym,xerr=xerr,yerr=yerr/ym,**kwargs)
         

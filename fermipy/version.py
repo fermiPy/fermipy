@@ -36,6 +36,11 @@ __all__ = ("get_git_version")
 import os
 from subprocess import Popen, PIPE
 
+_refname = '$Format: %D$'
+_tree_hash = '$Format: %t$'
+_commit_info = '$Format:%cd by %aN$'
+_commit_hash = '$Format: %h$'
+
 def call_git_describe(abbrev=4):
 
     try:
@@ -50,7 +55,19 @@ def call_git_describe(abbrev=4):
     except:
         return None
 
+def read_release_keywords(keyword):
 
+    refnames = keyword.strip()
+    if refnames.startswith("$Format"): return None
+
+    refs = set([r.strip() for r in refnames.strip("()").split(",")])
+    TAG = "tag: "
+    tags = set([r[len(TAG):] for r in refs if r.startswith(TAG)])
+    if not tags: return None
+
+    for ref in sorted(tags):
+        return ref
+        
 def read_release_version():
 
     import re
@@ -90,12 +107,21 @@ def get_git_version(abbrev=4):
     release_version = read_release_version()
 
     # First try to get the current version using “git describe”.
-    version = call_git_describe(abbrev)
+    git_version = call_git_describe(abbrev)
+
+    # Try to deduce the version from keyword expansion
+    keyword_version = read_release_keywords(_refname)
 
     # If that doesn't work, fall back on the value that's in
     # _version.py.
-    if version is None:
+    if git_version is not None:
+        version = git_version
+    elif release_version is not None:
         version = release_version
+    elif keyword_version is not None:
+        version = keyword_version
+    else:
+        version = 'unknown'
 
     # If we still don't have anything, that's an error.
     if version is None:
@@ -103,7 +129,7 @@ def get_git_version(abbrev=4):
 
     # If the current version is different from what's in the
     # _version.py file, update the file to be current.
-    if version != release_version:
+    if version != release_version and version != 'unknown':
         write_release_version(version)
 
     # Finally, return the current version.

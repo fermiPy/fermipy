@@ -5,6 +5,7 @@ import collections
 import defaults 
 from fermipy.utils import *
 import fermipy
+import fermipy.config
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 
@@ -731,12 +732,12 @@ class Source(Model):
         for k,v in self.spectral_pars.items():                
             create_xml_element(el,'parameter',v)
     
-class ROIModel(AnalysisBase):
+class ROIModel(fermipy.config.Configurable):
     """This class is responsible for managing the ROI definition.
     Catalogs can be read from either FITS or XML files."""
 
     defaults = dict(defaults.model.items(),
-                    logfile=(None,''),
+                    logfile=(None,'',str),
                     fileio=defaults.fileio,
                     logging=defaults.logging)
 
@@ -808,7 +809,7 @@ class ROIModel(AnalysisBase):
             srcs = self.config[name]
 
         for i, t in enumerate(srcs):
-            
+
             if isinstance(t,str):
                 src_dict = {'file' : t}
             elif isinstance(t,dict):
