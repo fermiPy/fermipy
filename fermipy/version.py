@@ -118,7 +118,7 @@ def get_git_version(abbrev=4):
         version = git_version
     elif release_version is not None:
         version = release_version
-    elif release_version is not None:
+    elif keyword_version is not None:
         version = keyword_version
     else:
         version = 'unknown'
