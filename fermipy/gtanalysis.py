@@ -2524,7 +2524,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 
         workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
-        
+
         from os.path import join
 
         self._ft1_file=join(workdir,
@@ -2595,7 +2595,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._wcs.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
         self._wcs.wcs.ctype[2]='Energy'
         self._coordsys = self.config['binning']['coordsys']
-        
+
         self.print_config(self.logger,loglevel=logging.DEBUG)
             
     @property
@@ -2853,7 +2853,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   zmax=self.config['selection']['zmax'])
         
         if self.config['data']['ltcube'] is not None:
+
             self._ltcube = os.path.expandvars(self.config['data']['ltcube'])
+            if not os.path.isfile(self._ltcube):
+                self._ltcube = os.path.join(self.config['fileio']['workdir'],
+                                            self._ltcube)
 
             if not os.path.isfile(self._ltcube):
                 raise Exception('Invalid livetime cube: %s'%self._ltcube)
