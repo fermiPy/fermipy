@@ -29,7 +29,7 @@ selection = {
     'glat'    : (None,'',float),
     'glon'    : (None,'',float),
     'radius'  : (None,'',float),
-    'filter'  : ('DATA_QUAL>0 && LAT_CONFIG==1','',str),
+    'filter'  : (None,'',str),
     'roicut'  : ('no','',str)
     }
 
@@ -48,7 +48,7 @@ model = {
     'limbdiff'      : (None,'',list),
     'diffuse'       : (None,'',list),
     'sources'       : (None,'',list),
-    'extdir'        : ('Extended_archive_v14','',str),
+    'extdir'        : ('Extended_archive_v15','',str),
     'catalogs'      : (None,'',list),
     'min_ts'        : (None,'',float),
     'min_flux'      : (None,'',float),
@@ -81,7 +81,7 @@ binning = {
     'binsz'      : (0.1,'Set the bin size in degrees.',float),
     'binsperdec' : (8,'Set the number of energy bins per decade.',float),
     'enumbins'   : (None,'Number of energy bins.  If none this will be inferred from energy '
-                    'range and binsperdec.',int)
+                    'range and binsperdec parameter.',int)
     }
 
 # Options related to I/O and output file bookkeeping
