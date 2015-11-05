@@ -2840,8 +2840,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if not os.path.isfile(self._ft1_file):
             run_gtapp('gtselect',self.logger,kw_gtselect)
-            run_gtapp('gtmktime',self.logger,kw_gtmktime)
-            os.system('mv %s %s'%(self._ft1_filtered_file,self._ft1_file))
+            if self.config['selection']['filter'] is None:
+                run_gtapp('gtmktime',self.logger,kw_gtmktime)
+                os.system('mv %s %s'%(self._ft1_filtered_file,self._ft1_file))
         else:
             self.logger.info('Skipping gtselect')
             
