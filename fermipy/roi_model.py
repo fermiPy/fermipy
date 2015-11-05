@@ -117,9 +117,9 @@ default_par_dict = {
     
 catalog_alias = {
     '3FGL' : {'file' : 'gll_psc_v16.fit',
-              'extdir' : os.path.join(fermipy.PACKAGE_ROOT,'catalogs','Extended_archive_v15')},
+              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v15')},
     '2FGL' : {'file' : 'gll_psc_v08.fit',
-              'extdir' : os.path.join(fermipy.PACKAGE_ROOT,'catalogs','Extended_archive_v07')},
+              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v07')},
     }
 
 def make_parameter_dict(pdict,fixed_par=False):

@@ -13,3 +13,4 @@ except Exception, message:
 __author__ = "Matthew Wood"
 
 PACKAGE_ROOT = os.path.abspath(os.path.dirname(__file__))
+os.environ['FERMIPY_ROOT'] = PACKAGE_ROOT
