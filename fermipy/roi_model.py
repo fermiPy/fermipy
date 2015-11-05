@@ -277,7 +277,7 @@ class IsoSource(Model):
     def __init__(self,name,filefunction,spectral_pars=None,spatial_pars=None):
         super(IsoSource,self).__init__(name,None,spectral_pars,spatial_pars)
         
-        self._filefunction = os.path.expandvars(filefunction)
+        self._filefunction = filefunction
         self['SpectrumType'] = 'FileFunction'
         self._data.setdefault('SpatialType','ConstantValue')
         self._data.setdefault('SpatialModel','DiffuseSource')
@@ -312,8 +312,9 @@ class IsoSource(Model):
                                                  type='DiffuseSource'))
 
         
+        filename = re.sub(r'\$([a-zA-Z\_]+)',r'$(\1)',self.filefunction)        
         spec_el = create_xml_element(source_element,'spectrum',
-                                     dict(file=self.filefunction,
+                                     dict(file=filename,
                                           type='FileFunction',
                                           ctype='-1'))
                         
@@ -332,7 +333,7 @@ class MapCubeSource(Model):
     def __init__(self,name,mapcube,spectral_pars=None,spatial_pars=None):
         super(MapCubeSource,self).__init__(name,None,spectral_pars,spatial_pars)
 
-        self._mapcube = os.path.expandvars(mapcube)
+        self._mapcube = mapcube
         self['SpectrumType'] = 'PowerLaw'
         self._data.setdefault('SpatialType','MapCubeFunction')
         self._data.setdefault('SpatialModel','DiffuseSource')
@@ -374,10 +375,11 @@ class MapCubeSource(Model):
 
         spec_el = create_xml_element(source_element,'spectrum',
                                      dict(type='PowerLaw'))
-                        
+
+        filename = re.sub(r'\$([a-zA-Z\_]+)',r'$(\1)',self.mapcube)        
         spat_el = create_xml_element(source_element,'spatialModel',
                                      dict(type='MapCubeFunction',
-                                          file=self._mapcube))
+                                          file=filename))
 
 
         for k,v in self.spectral_pars.items():                
@@ -730,11 +732,14 @@ class Source(Model):
             source_element = create_xml_element(root,'source',
                                                 dict(name=self['Source_Name'],
                                                      type='DiffuseSource'))
+
+            filename = self['Spatial_Filename']
+            filename = re.sub(r'\$([a-zA-Z\_]+)',r'$(\1)',filename)
             
             spat_el = create_xml_element(source_element,'spatialModel',
                                          dict(map_based_integral='True',
                                               type='SpatialMap',
-                                              file=self['Spatial_Filename']))
+                                              file=filename))
                     
         for k,v in self.spatial_pars.items():                
             create_xml_element(spat_el,'parameter',v)
@@ -841,7 +846,10 @@ class ROIModel(fermipy.config.Configurable):
 
     def _load_diffuse_src(self,name,src_type='FileFunction'):
 
-        diffuse_dir = os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
+        if 'FERMI_DIR' in os.environ and not 'FERMI_DIFFUSE_DIR' in os.environ:
+            os.environ['FERMI_DIFFUSE_DIR'] = '$FERMI_DIR/refdata/fermi/galdiffuse'
+        
+#        diffuse_dir = os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
 
         srcs = []
         if self.config[name] is not None:
@@ -854,9 +862,10 @@ class ROIModel(fermipy.config.Configurable):
             elif isinstance(t,dict):
                 src_dict = copy.deepcopy(t)
                 
-            if os.path.isdir(diffuse_dir):
-                src_dict['file'] = resolve_file_path(diffuse_dir,src_dict['file'])
-
+            if not os.path.isfile(os.path.expandvars(src_dict['file'])):
+                src_dict['file'] = os.path.join('$FERMI_DIFFUSE_DIR',
+                                                src_dict['file'])
+                
             if not 'name' in src_dict:                
                 if len(srcs) == 1:
                     src_dict['name'] = name

@@ -101,7 +101,7 @@ class ResidMapGenerator(fermipy.config.Configurable):
         sm = []
         zs = 0
         for c in self._gta.components:
-            z = c.modelCountsMap(name).counts.astype('float')
+            z = c.model_counts_map(name).counts.astype('float')
             if kernel is not None:
                 shape = (z.shape[0],) + kernel.shape 
                 z = np.apply_over_axes(np.sum,z,axes=[1,2])*np.ones(shape)*kernel[np.newaxis,:,:]
@@ -175,8 +175,8 @@ class ResidMapGenerator(fermipy.config.Configurable):
         
         for i, c in enumerate(self._gta.components):
             
-            mc = c.modelCountsMap().counts.astype('float')
-            cc = c.countsMap().counts.astype('float')
+            mc = c.model_counts_map().counts.astype('float')
+            cc = c.counts_map().counts.astype('float')
             ec = np.ones(mc.shape)
             
             ccs = smooth(cc,sm[i],cpix)
@@ -246,8 +246,8 @@ class ResidMapGenerator(fermipy.config.Configurable):
         sigma = np.zeros((npix,npix))
         
         for i, c in enumerate(self._gta.components):
-            mm = c.modelCountsMap().astype('float')
-            cm = c.countsMap().astype('float')
+            mm = c.model_counts_map().astype('float')
+            cm = c.counts_map().astype('float')
 
             cms = smooth(cm,sm[i])
             mms = smooth(mm,sm[i])

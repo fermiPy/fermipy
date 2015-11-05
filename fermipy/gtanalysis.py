@@ -451,7 +451,7 @@ class GTAnalysis(fermipy.config.Configurable):
             src = self.roi.get_source_by_name(name,True)
             rm['roi']['model_counts'] += src['model_counts']
             rm['roi']['Npred'] += np.sum(src['model_counts'])
-            mc = self.modelCountsSpectrum(name)
+            mc = self.model_counts_spectrum(name)
             
             for i, c in enumerate(self.components):                
                 rm['roi']['components'][i]['model_counts'] += mc[i]
@@ -655,7 +655,7 @@ class GTAnalysis(fermipy.config.Configurable):
         
         cmaps = []
         for i, c in enumerate(self.components):
-            cm = c.countsMap()
+            cm = c.counts_map()
             cmaps += [cm]
             rm['roi']['components'][i]['counts'] = \
                 np.squeeze(np.apply_over_axes(np.sum,cm.counts,axes=[1,2]))
@@ -733,9 +733,11 @@ class GTAnalysis(fermipy.config.Configurable):
         for c in self.components:
             c.setEnergyRange(emin,emax)
 
-    def modelCountsMap(self,name=None):
+    def model_counts_map(self,name=None,exclude=None):
         """Return the model counts map for a single source, a list of
-        sources, or for the sum of all sources in the ROI.
+        sources, or for the sum of all sources in the ROI.  The
+        exclude parameter can be used to exclude one or more
+        components when generating the model map.
         
         Parameters
         ----------
@@ -744,18 +746,28 @@ class GTAnalysis(fermipy.config.Configurable):
            Parameter controlling the set of sources for which the
            model counts map will be calculated.  If name=None the
            model map will be generated for all sources in the ROI. 
-        
+
+        exclude : str or list of str
+
+           List of sources that will be excluded when calculating the
+           model map.
+
+        Returns
+        -------
+
+        map : list of Map objects
+           
         """
 
         maps = []
         for c in self.components:
-            maps += [c.modelCountsMap(name)]
+            maps += [c.model_counts_map(name,exclude)]
 
         shape = (self.enumbins,self.npix,self.npix)
         maps = [utils.make_coadd_map(maps,self._wcs,shape)] + maps
         return maps
             
-    def modelCountsSpectrum(self,name,emin=None,emax=None,summed=False):
+    def model_counts_spectrum(self,name,emin=None,emax=None,summed=False):
         """Return the predicted number of model counts versus energy
         for a given source and energy range.  If summed=True return
         the counts spectrum summed over all components otherwise
@@ -771,7 +783,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
             for c in self.components:
                 ecenter = 0.5*(c.energies[:-1]+c.energies[1:])
-                counts = c.modelCountsSpectrum(name,self.energies[0],
+                counts = c.model_counts_spectrum(name,self.energies[0],
                                                self.energies[-1])
 
                 cs += np.histogram(ecenter,
@@ -782,7 +794,7 @@ class GTAnalysis(fermipy.config.Configurable):
         else:        
             cs = []
             for c in self.components: 
-                cs += [c.modelCountsSpectrum(name,emin,emax)]            
+                cs += [c.model_counts_spectrum(name,emin,emax)]            
             return cs
 
     def get_sources(self,cuts=None,distance=None,
@@ -1635,7 +1647,7 @@ class GTAnalysis(fermipy.config.Configurable):
             o['dfde_err'][i] = dfde_err
             o['e2dfde_err'][i] = dfde_err*10**(2*ecenter)
 
-            cs = self.modelCountsSpectrum(name,emin,emax,summed=True)
+            cs = self.model_counts_spectrum(name,emin,emax,summed=True)
             o['Npred'][i] = np.sum(cs)            
             o['ts'][i] = max(self.like.Ts(name,reoptimize=False),0.0)
             if profile:
@@ -1677,7 +1689,7 @@ class GTAnalysis(fermipy.config.Configurable):
         emin = min(self.energies) if emin is None else emin
         emax = max(self.energies) if emax is None else emax
 
-        cs = self.modelCountsSpectrum(name,emin,emax,summed=True)
+        cs = self.model_counts_spectrum(name,emin,emax,summed=True)
         npred = np.sum(cs)
         
         if xvals is None:
@@ -1716,7 +1728,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         ecenter = 0.5*(emin+emax)
         deltae = 10**emax - 10**emin
-        npred = np.sum(self.modelCountsSpectrum(name,emin,emax,summed=True))
+        npred = np.sum(self.model_counts_spectrum(name,emin,emax,summed=True))
 
         if savestate:
             saved_state = LikelihoodState(self.like)
@@ -1770,7 +1782,7 @@ class GTAnalysis(fermipy.config.Configurable):
             o['flux'][i] = flux
             o['eflux'][i] = eflux
 
-            cs = self.modelCountsSpectrum(name,emin,emax,summed=True)
+            cs = self.model_counts_spectrum(name,emin,emax,summed=True)
             o['Npred'][i] += np.sum(cs)
             
 #        if len(self.like.model.srcs) == 1 and fluxes[0] == 0:
@@ -2109,7 +2121,7 @@ class GTAnalysis(fermipy.config.Configurable):
             erange = (self.energies[0],self.energies[-1])
         esuffix = '_%.3f_%.3f'%(erange[0],erange[1])  
 
-        mcube_diffuse = self.modelCountsMap('diffuse')
+        mcube_diffuse = self.model_counts_map('diffuse')
         
         if len(mcube_maps):
 
@@ -2311,12 +2323,12 @@ class GTAnalysis(fermipy.config.Configurable):
         outfile = os.path.join(self.config['fileio']['workdir'],'tsmap.fits')        
         utils.write_fits_image(data,w,outfile) 
                 
-    def bowtie(self,fd,energies=None):
-        """Generate a bowtie function for the given source.  This will
-        create a band as a function of energy by propagating the
-        errors on the global fit parameters.  Note that this band only
-        reflects the uncertainty for parameters that were left free in
-        the fit."""
+    def _bowtie(self,fd,energies=None):
+        """Generate a spectral uncertainty band for the given source.
+        This will create a band as a function of energy by propagating
+        the errors on the global fit parameters.  Note that this band
+        only reflects the uncertainty for parameters that were left
+        free in the fit."""
         
         if energies is None:
             emin = self.energies[0]
@@ -2400,7 +2412,7 @@ class GTAnalysis(fermipy.config.Configurable):
         src_dict['Npred'] = self.like.NpredValue(name)
         
         # Get Counts Spectrum
-        src_dict['model_counts'] = self.modelCountsSpectrum(name,summed=True)
+        src_dict['model_counts'] = self.model_counts_spectrum(name,summed=True)
 
         # Get the Model Fluxes
         try:
@@ -2476,7 +2488,7 @@ class GTAnalysis(fermipy.config.Configurable):
         # Extract bowtie   
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
             energies = np.linspace(self.energies[0],self.energies[-1],50)
-            src_dict['model_flux'] = self.bowtie(fd,energies)            
+            src_dict['model_flux'] = self._bowtie(fd,energies)            
             src_dict['dfde100'][1] = fd.error(100.)
             src_dict['dfde1000'][1] = fd.error(1000.)
             src_dict['dfde10000'][1] = fd.error(10000.)
@@ -2750,13 +2762,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         
         self.like.selectEbounds(int(imin),int(imax))
 
-    def countsMap(self):
+    def counts_map(self):
         """Return 3-D counts map as a numpy array."""
         z = self.like.logLike.countsMap().data()
         z = np.array(z).reshape(self.enumbins,self.npix,self.npix)
         return Map(z,copy.deepcopy(self.wcs))
     
-    def modelCountsMap(self,name=None):
+    def model_counts_map(self,name=None,exclude=None):
         """Return the model counts map for a single source, a list of
         sources, or for the sum of all sources in the ROI.
         
@@ -2766,39 +2778,65 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
            Parameter controlling the set of sources for which the
            model counts map will be calculated.  If name=None the
-           model map will be generated for all sources in the ROI. 
+           model map will be generated for all sources in the ROI.
+
+        exclude : str or list of str
+
+           List of sources that will be excluded when calculating the
+           model map.
+
+        Returns
+        -------
+
+        map : A Map object containing the counts and WCS projection.
+           
         
         """
         
         v = pyLike.FloatVector(self.npix**2*self.enumbins)
 
+        if exclude is None: exclude = []
+        elif not isinstance(exclude,list):
+            exclude = [exclude]
+
+        excluded_srcnames = []            
+        for i, t in enumerate(exclude):
+            srcs = self.roi.get_source_by_name(t)
+            for s in srcs: excluded_srcnames += [s.name]
+
         self.like.logLike.buildFixedModelWts()
         if not self.like.logLike.fixedModelUpdated():
             self.like.logLike.buildFixedModelWts(True)
-            
-        if name is None:
-            self.like.logLike.computeModelMap(v)
-        elif name == 'all':            
+
+        src_names = []        
+        if (name is None or name == 'all') and not excluded_srcnames:
+            self.like.logLike.computeModelMap(v)            
+        elif ((name is None) or (name == 'all')) and exclude:
             for name in self.like.sourceNames():
-                model = self.like.logLike.sourceMap(name)
-                self.like.logLike.updateModelMap(v,model)
+                if name in excluded_srcnames: continue
+                src_names += [name]
         elif name == 'diffuse':            
-            for s in self.roi.sources:
-                if not s.diffuse: continue
-                model = self.like.logLike.sourceMap(s.name)
-                self.like.logLike.updateModelMap(v,model)                
+            for src in self.roi.sources:
+                if not src.diffuse: continue
+                if src.name in excluded_srcnames: continue
+                src_names += [src.name]
         elif isinstance(name,list):
             for n in name:
-                model = self.like.logLike.sourceMap(n)
-                self.like.logLike.updateModelMap(v,model)
+                src = self.roi.get_source_by_name(n,True)                
+                if src.name in excluded_srcnames: continue
+                src_names += [src.name]
         else:
-            model = self.like.logLike.sourceMap(name)
+            src = self.roi.get_source_by_name(name,True)
+            src_names += [src.name]
+                        
+        for s in src_names:
+            model = self.like.logLike.sourceMap(s)            
             self.like.logLike.updateModelMap(v,model)
             
         z = np.array(v).reshape(self.enumbins,self.npix,self.npix)
         return Map(z,copy.deepcopy(self.wcs))
         
-    def modelCountsSpectrum(self,name,emin,emax):
+    def model_counts_spectrum(self,name,emin,emax):
 
         cs = np.array(self.like.logLike.modelCountsSpectrum(name))
         imin = valToEdge(self.energies,emin)[0]
@@ -3057,7 +3095,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             
         outfile = os.path.join(self.config['fileio']['workdir'],'mcube%s.fits'%(suffix))        
         h = pyfits.open(self._ccube_file)        
-        cmap = self.modelCountsMap(name)
+        cmap = self.model_counts_map(name)
         utils.write_fits_image(cmap.counts,cmap.wcs,outfile)
 
         return cmap
