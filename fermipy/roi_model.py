@@ -116,8 +116,10 @@ default_par_dict = {
     }
     
 catalog_alias = {
-    '3FGL' : {'file' : 'gll_psc_v16.fit', 'extdir' : 'Extended_archive_v15'},
-    '2FGL' : {'file' : 'gll_psc_v08.fit', 'extdir' : 'Extended_archive_v07'}
+    '3FGL' : {'file' : 'gll_psc_v16.fit',
+              'extdir' : os.path.join(fermipy.PACKAGE_ROOT,'catalogs','Extended_archive_v15')},
+    '2FGL' : {'file' : 'gll_psc_v08.fit',
+              'extdir' : os.path.join(fermipy.PACKAGE_ROOT,'catalogs','Extended_archive_v07')},
     }
 
 def make_parameter_dict(pdict,fixed_par=False):
@@ -1108,7 +1110,7 @@ class ROIModel(fermipy.config.Configurable):
         return srcs
     
     def get_sources_by_position(self,skydir,dist,min_dist=None,
-                                square=False):
+                                square=False,coordsys='CEL'):
         """Retrieve sources within a certain angular distance of an
         (ra,dec) coordinate.  This function supports two types of
         geometric selections: circular (square=False) and square
@@ -1128,7 +1130,10 @@ class ROIModel(fermipy.config.Configurable):
 
         square : bool
             Choose whether to apply a circular or square selection.
-        
+
+        coordsys : str
+            Coordinate system to use when applying a selection with square=True.
+            
         """
 
         if dist is None: dist = 180.
