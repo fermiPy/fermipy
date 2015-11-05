@@ -116,8 +116,10 @@ default_par_dict = {
     }
     
 catalog_alias = {
-    '3FGL' : {'file' : 'gll_psc_v16.fit', 'extdir' : 'Extended_archive_v15'},
-    '2FGL' : {'file' : 'gll_psc_v08.fit', 'extdir' : 'Extended_archive_v07'}
+    '3FGL' : {'file' : 'gll_psc_v16.fit',
+              'extdir' : os.path.join(fermipy.PACKAGE_ROOT,'catalogs','Extended_archive_v15')},
+    '2FGL' : {'file' : 'gll_psc_v08.fit',
+              'extdir' : os.path.join(fermipy.PACKAGE_ROOT,'catalogs','Extended_archive_v07')},
     }
 
 def make_parameter_dict(pdict,fixed_par=False):
@@ -146,6 +148,7 @@ def make_parameter_dict(pdict,fixed_par=False):
     
     
 def get_linear_dist(skydir,lon,lat,coordsys='CEL'):
+
     xy = sky_to_offset(skydir,np.degrees(lon),np.degrees(lat),
                        coordsys=coordsys)
 
@@ -986,8 +989,10 @@ class ROIModel(fermipy.config.Configurable):
     @staticmethod
     def create_from_position(skydir,config,**kwargs):
         """Create an ROI centered on the given coordinates."""
-
+        
         roi = kwargs.pop('roi',None)
+        coordsys = kwargs.pop('coordsys','CEL')
+        
         if roi is None:        
             roi = ROIModel(config,**kwargs)
             roi.load()
@@ -1004,11 +1009,12 @@ class ROIModel(fermipy.config.Configurable):
             rsrc, srcs = \
                 roi.get_sources_by_position(skydir,
                                             roi.config['src_roiwidth']/2.,
-                                            square=True)
+                                            square=True,coordsys=coordsys)
                 
             for s,r in zip(srcs,rsrc):
                 srcs_dict[s.name] = (s,r)
 
+                
         srcs = []
         rsrc = []
         
@@ -1025,12 +1031,14 @@ class ROIModel(fermipy.config.Configurable):
     def create_from_source(name,config,**kwargs):
         """Create an ROI centered on the given source."""
 
+        coordsys = kwargs.pop('coordsys','CEL')
+        
         roi = ROIModel(config,**kwargs)
         roi.load()
         src = roi.get_source_by_name(name,True)
 
         return ROIModel.create_from_position(src.skydir,config,
-                                             roi=roi,**kwargs)
+                                             roi=roi,coordsys=coordsys,**kwargs)
         
     @staticmethod
     def create_roi_from_ft1(ft1file,config):
@@ -1108,7 +1116,7 @@ class ROIModel(fermipy.config.Configurable):
         return srcs
     
     def get_sources_by_position(self,skydir,dist,min_dist=None,
-                                square=False):
+                                square=False,coordsys='CEL'):
         """Retrieve sources within a certain angular distance of an
         (ra,dec) coordinate.  This function supports two types of
         geometric selections: circular (square=False) and square
@@ -1128,7 +1136,10 @@ class ROIModel(fermipy.config.Configurable):
 
         square : bool
             Choose whether to apply a circular or square selection.
-        
+
+        coordsys : str
+            Coordinate system to use when applying a selection with square=True.
+            
         """
 
         if dist is None: dist = 180.
@@ -1137,10 +1148,20 @@ class ROIModel(fermipy.config.Configurable):
         
         if not square:                    
             dtheta = radius            
-        else:
+        elif coordsys == 'CEL':
             dtheta = get_linear_dist(skydir,
                                      self._src_skydir.ra.rad,
-                                     self._src_skydir.dec.rad)
+                                     self._src_skydir.dec.rad,
+                                     coordsys=coordsys)
+        elif coordsys == 'GAL':
+            dtheta = get_linear_dist(skydir,
+                                     self._src_skydir.galactic.l.rad,
+                                     self._src_skydir.galactic.b.rad,
+                                     coordsys=coordsys)
+        else:
+            raise Exception('Unrecognized coordinate system: %s'%coordsys)
+
+
         
         if min_dist is not None:
             msk = np.where((dtheta < np.radians(dist)) &
@@ -1151,10 +1172,12 @@ class ROIModel(fermipy.config.Configurable):
         radius = radius[msk]
         dtheta = dtheta[msk]
         srcs = [ self._srcs[i] for i in msk ]
-            
+        
         isort = np.argsort(radius)
 
         radius = radius[isort]
+        dtheta = dtheta[isort]
+        
         srcs = [srcs[i] for i in isort]
         
         return radius, srcs

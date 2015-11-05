@@ -316,7 +316,8 @@ class GTAnalysis(fermipy.config.Configurable):
                                     self.config['model'],
                                     fileio=self.config['fileio'],
                                     logfile=self.config['fileio']['logfile'],
-                                    logging=self.config['logging'])
+                                    logging=self.config['logging'],
+                                    coordsys=self.config['binning']['coordsys'])
                 
         self._like = None
         self._components = []
@@ -2520,7 +2521,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                     self.config['model'],
                                     fileio=self.config['fileio'],
                                     logfile=self.config['fileio']['logfile'],
-                                    logging=self.config['logging'])
+                                    logging=self.config['logging'],
+                                    coordsys=self.config['binning']['coordsys'])
                 
         workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
@@ -2753,10 +2755,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         z = self.like.logLike.countsMap().data()
         z = np.array(z).reshape(self.enumbins,self.npix,self.npix)
         return Map(z,copy.deepcopy(self.wcs))
-
-    def expMap(self):
-        """Return the exposure map."""
-        pass
     
     def modelCountsMap(self,name=None):
         """Return the model counts map for a single source, a list of
@@ -2840,7 +2838,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if not os.path.isfile(self._ft1_file):
             run_gtapp('gtselect',self.logger,kw_gtselect)
-            if self.config['selection']['filter'] is None:
+            if self.config['selection']['roicut'] == 'yes' or self.config['selection']['filter'] is not None:
                 run_gtapp('gtmktime',self.logger,kw_gtmktime)
                 os.system('mv %s %s'%(self._ft1_filtered_file,self._ft1_file))
         else:
