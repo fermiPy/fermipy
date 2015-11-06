@@ -1419,6 +1419,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         # Extract options from kwargs
         config = copy.deepcopy(self.config['extension'])
+        fermipy.config.validate_config(kwargs,config)        
         config.update(kwargs)
 
         spatial_model = config['spatial_model']
@@ -2255,14 +2256,14 @@ class GTAnalysis(fermipy.config.Configurable):
         p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
                cb_label='Significance [$\sigma$]')
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                 '%s_residmap_counts.%s'%(prefix,format)))
+                                 '%s_residmap_sigma.%s'%(prefix,format)))
         plt.close(fig)
 
         fig = plt.figure()
         p = ROIPlotter(maps['data'],self.roi)
         p.plot(cb_label='Smoothed Counts',zscale='pow',gamma=1./3.)
         plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                 '%s_residmap_sigma.%s'%(prefix,format)))
+                                 '%s_residmap_counts.%s'%(prefix,format)))
         plt.close(fig)
         
     def make_plots(self,mcube_maps,prefix,**kwargs):
