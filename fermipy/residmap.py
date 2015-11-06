@@ -87,10 +87,9 @@ class ResidMapGenerator(fermipy.config.Configurable):
                     logging=defaults.logging)
     
     def __init__(self,config,gta,**kwargs):
-        super(ResidMapGenerator,self).__init__(config,**kwargs)        
+#        super(ResidMapGenerator,self).__init__(config,**kwargs)
+        fermipy.config.Configurable.__init__(self,config,**kwargs)
         self._gta = gta
-        self._maps = {}
-        
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
                                  ll(self.config['logging']['verbosity']))
@@ -122,14 +121,22 @@ class ResidMapGenerator(fermipy.config.Configurable):
 
         return sm
 
-    def run(self,prefix):
+    def run(self,prefix,**kwargs):
 
-        for m in self.config['models']:
+        models = kwargs.get('models',self.config['models'])
+        
+        o = []
+        
+        for m in models:
             self.logger.info('Generating Residual map')
             self.logger.info(m)
-            self.make_residual_map(copy.deepcopy(m),prefix)
+            o += [self.make_residual_map(copy.deepcopy(m),prefix,**kwargs)]
+
+        return o
     
-    def make_residual_map(self,src_dict,prefix):
+    def make_residual_map(self,src_dict,prefix,**kwargs):
+
+        exclude = kwargs.get('exclude',None)
         
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((self._gta.npix-1.0)/2.),
@@ -154,7 +161,7 @@ class ResidMapGenerator(fermipy.config.Configurable):
             kernel /= np.sum(kernel)
             cpix = [50,50]
 
-        self._gta.add_source('testsource',src_dict,free=True)        
+        self._gta.add_source('testsource',src_dict,free=True,init_source=False)        
         src = self._gta.roi.get_source_by_name('testsource',True)
         
         modelname = create_model_name(src)
@@ -175,7 +182,7 @@ class ResidMapGenerator(fermipy.config.Configurable):
         
         for i, c in enumerate(self._gta.components):
             
-            mc = c.model_counts_map().counts.astype('float')
+            mc = c.model_counts_map(exclude=exclude).counts.astype('float')
             cc = c.counts_map().counts.astype('float')
             ec = np.ones(mc.shape)
             
@@ -220,18 +227,20 @@ class ResidMapGenerator(fermipy.config.Configurable):
         utils.write_fits_image(mmst/emst,skywcs,model_map_file)
         utils.write_fits_image(excess/emst,skywcs,excess_map_file)
 
-        self._maps[modelname] = {
-            'wcs'    : skywcs,
-            'sigma'  : Map(sigma,skywcs),
-            'model'  : Map(mmst,skywcs),
-            'data'   : Map(cmst,skywcs),
-            'excess' : Map(excess,skywcs) }
+        files = { 'sigma'  : os.path.basename(sigma_map_file),
+                  'model'  : os.path.basename(model_map_file),
+                  'data'   : os.path.basename(data_map_file),
+                  'excess' : os.path.basename(excess_map_file) }
         
-        self._gta._roi_model['roi']['residmap'][modelname] = {
-            'sigma'  : os.path.basename(sigma_map_file),
-            'model'  : os.path.basename(model_map_file),
-            'data'   : os.path.basename(data_map_file),
-            'excess' : os.path.basename(excess_map_file) }
+        o = { 'name'   : '%s_%s'%(prefix,modelname),
+              'files'  : files,
+              'wcs'    : skywcs,
+              'sigma'  : Map(sigma,skywcs),
+              'model'  : Map(mmst/emst,skywcs),
+              'data'   : Map(cmst/emst,skywcs),
+              'excess' : Map(excess/emst,skywcs) }
+
+        return o
             
     def run_lnl(self):
         

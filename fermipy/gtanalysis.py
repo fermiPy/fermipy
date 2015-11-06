@@ -376,10 +376,6 @@ class GTAnalysis(fermipy.config.Configurable):
         self._wcs.wcs.crval[2]=10**self.energies[0]
         self._wcs.wcs.cdelt[2]=10**self.energies[1]-10**self.energies[0]
         self._wcs.wcs.ctype[2]='Energy'
-
-        self._rmg = ResidMapGenerator(self.config['residmap'],self,
-                                      fileio=self.config['fileio'],
-                                      logging=self.config['logging'])
         
         
     def __del__(self):
@@ -1104,11 +1100,40 @@ class GTAnalysis(fermipy.config.Configurable):
             if t: self.like.thaw(i)
             else: self.like.freeze(i)
     
-    def residmap(self,prefix):
-        """Generate data/model residual maps using the current model."""
+    def residmap(self,prefix,**kwargs):
+        """Generate data/model residual maps using the current model.
 
-        self.logger.info('Running residual analysis')
-        self._rmg.run(prefix)
+        Parameters
+        ----------
+
+        prefix : str
+            String that will be prefixed to the output residual map files.
+
+        exclude : str or list of str        
+            Source or sources that will be removed from the model when
+            computing the residual map.
+
+        make_plots : bool            
+        
+        """
+
+        self.logger.info('Generating residual maps')
+
+        make_plots = kwargs.get('make_plots',True)        
+        rmg = ResidMapGenerator(self.config['residmap'],self,
+                                fileio=self.config['fileio'],
+                                logging=self.config['logging'])
+
+        
+        maps = rmg.run(prefix,**kwargs)
+
+        self._roi_model['roi']['residmap'] = {}
+        
+        for m in maps:            
+            self._roi_model['roi']['residmap'][m['name']] = copy.deepcopy(m)
+            if make_plots: self.make_residual_plots(m)
+
+        return maps            
         
     def optimize(self,**kwargs):
         """Iteratively optimize the ROI model."""
@@ -1990,15 +2015,18 @@ class GTAnalysis(fermipy.config.Configurable):
         mcube_maps = self.write_xml(prefix,save_model_map=save_model_map)
         
         if make_residuals:
-            self.residmap(prefix)
-        else:
-            self._roi_model['roi']['residmap'] = {}
+            maps = self.residmap(prefix,make_plots=False)
+#        else:
+#            self._roi_model['roi']['residmap'] = {}
 
         o = self.get_roi_model(update_sources=update_sources)
         o['config'] = copy.deepcopy(self.config)
         o['version'] = fermipy.__version__
         o['sources'] = {}
 
+        for k, v in o['roi']['residmap'].items():
+            o['roi']['residmap'][k] = {'files' : v['files'] }
+        
         for s in self.roi.sources:
             o['sources'][s.name] = copy.deepcopy(s.data)
 
@@ -2212,6 +2240,30 @@ class GTAnalysis(fermipy.config.Configurable):
         
         plt.close(fig)
         
+
+    def make_residual_plots(self,maps,**kwargs):
+
+        format = kwargs.get('format',self.config['plotting']['format'])
+
+        if not 'sigma' in maps: return
+
+        # Reload maps from FITS file
+        
+        prefix = maps['name']        
+        fig = plt.figure()
+        p = ROIPlotter(maps['sigma'],self.roi)
+        p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
+               cb_label='Significance [$\sigma$]')
+        plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                 '%s_residmap_counts.%s'%(prefix,format)))
+        plt.close(fig)
+
+        fig = plt.figure()
+        p = ROIPlotter(maps['data'],self.roi)
+        p.plot(cb_label='Smoothed Counts',zscale='pow',gamma=1./3.)
+        plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                 '%s_residmap_sigma.%s'%(prefix,format)))
+        plt.close(fig)
         
     def make_plots(self,mcube_maps,prefix,**kwargs):
 
@@ -2224,23 +2276,7 @@ class GTAnalysis(fermipy.config.Configurable):
             self.make_extension_plots(prefix,erange=x,format=format)
 
         for k, v in self._roi_model['roi']['residmap'].items():
-
-            if not k in self._rmg._maps: continue
-            
-            fig = plt.figure()
-            p = ROIPlotter(self._rmg._maps[k]['sigma'],self.roi)
-            p.plot(vmin=-5,vmax=5,levels=[-5,-3,3,5],
-                   cb_label='Significance [$\sigma$]')
-            plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_residmap_%s.%s'%(prefix,k,format)))
-            plt.close(fig)
-
-            fig = plt.figure()
-            p = ROIPlotter(self._rmg._maps[k]['data'],self.roi)
-            p.plot(cb_label='Smoothed Counts',zscale='pow',gamma=1./3.)
-            plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_scmap_%s.%s'%(prefix,k,format)))
-            plt.close(fig)
+            self.make_residual_plots(v,**kwargs)
             
         self.make_sed_plots(prefix,format=format)
             
