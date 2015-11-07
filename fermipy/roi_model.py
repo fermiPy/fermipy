@@ -531,7 +531,7 @@ class Source(Model):
         self['ra'] = self._radec[0]
         self['dec'] = self._radec[1]
 
-    def set_spatial_model(self,spatial_model,spatial_width):
+    def set_spatial_model(self,spatial_model,spatial_width=None):
 
         self._data['SpatialModel'] = spatial_model
         self._data['SpatialWidth'] = spatial_width

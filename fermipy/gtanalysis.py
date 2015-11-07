@@ -114,7 +114,9 @@ def interpolate_function_min(x,y):
     return x0
 
 def get_upper_limit(dlogLike,yval,interpolate=False):
-
+    """Compute 95% CL upper limit and 1-sigma errors given a 1-D
+    profile likelihood function."""
+    
     from scipy.optimize import brentq
     
     if interpolate:    
@@ -134,9 +136,7 @@ def get_upper_limit(dlogLike,yval,interpolate=False):
         y0 = yval[imax]
         lnlmax = dlogLike[imax]
         dlnl = dlogLike-lnlmax
-
             
-    ts = -2*dlnl[0]    
     ul95 = np.interp(cl_to_dlnl(0.95),-dlnl[imax:],yval[imax:])
     err_hi = np.interp(0.5,-dlnl[imax:],yval[imax:]) - yval[imax]
     err_lo = np.nan
@@ -157,7 +157,7 @@ def get_upper_limit(dlogLike,yval,interpolate=False):
 #    plt.gca().axhline(-cl_to_dlnl(0.95))
 #    plt.show()
 
-    return y0, ul95, err_lo, err_hi, ts
+    return y0, ul95, err_lo, err_hi, lnlmax
     
 
 def cl_to_dlnl(cl):
@@ -647,7 +647,7 @@ class GTAnalysis(fermipy.config.Configurable):
                                         'ccube.fits')
 
         rm['roi']['counts'] = np.zeros(self.enumbins)
-        rm['roi']['logLike'] = self.like()
+        rm['roi']['logLike'] = -self.like()
         
         cmaps = []
         for i, c in enumerate(self.components):
@@ -1140,7 +1140,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self.logger.info('Running ROI Optimization')
         
-        logLike0 = self.like()
+        logLike0 = -self.like()
         self.logger.info('LogLike: %f'%logLike0)    
 
         # Extract options from kwargs
@@ -1203,9 +1203,9 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self.set_free_params(free)
         
-        logLike1 = self.like()
+        logLike1 = -self.like()
         self.logger.info('Finished ROI Optimization')    
-        self.logger.info('LogLike: %f Delta-LogLike: %f'%(logLike1,logLike0-logLike1))    
+        self.logger.info('LogLike: %f Delta-LogLike: %f'%(logLike1,logLike1-logLike0))    
 
     def run(self):
         """Run extension and sed analysis for the given sources."""
@@ -1283,7 +1283,7 @@ class GTAnalysis(fermipy.config.Configurable):
         self.fit(update=False)
 
         # Save likelihood value for baseline fit
-        logLike0 = self.like()
+        logLike0 = -self.like()
 
         self.zero_source(name)
 
@@ -1314,12 +1314,12 @@ class GTAnalysis(fermipy.config.Configurable):
             self.add_source(model_name,s,free=True)
             self.fit(update=False)
             
-            logLike1 = self.like()
+            logLike1 = -self.like()
             lnlscan['logLike'].flat[i] = logLike1            
 #            sd = self.get_src_model(model_name)
             self.delete_source(model_name)
 
-        lnlscan['dlogLike'] = np.min(lnlscan['logLike']) - lnlscan['logLike']
+        lnlscan['dlogLike'] = np.max(lnlscan['logLike']) - lnlscan['logLike']
         dlogmax = np.max(lnlscan['dlogLike'])-np.min(lnlscan['dlogLike'])
         sigma = (0.5*dtheta_max**2/dlogmax)**0.5
 
@@ -1440,15 +1440,14 @@ class GTAnalysis(fermipy.config.Configurable):
         if fix_background:
             self.free_sources(free=False)
 
-        # Fit baseline (point-source) model
+        # Fit baseline model
         self.free_norm(name)
         self.fit(update=False)
         
         # Save likelihood value for baseline fit
-        logLike0 = self.like()
+        logLike0 = -self.like()
         
-        if save_model_map:
-            self.generate_model_map(model_name=null_model_name,name=name)
+        self.generate_model_map(model_name=null_model_name,name=name)
 
 #        src = self.like.deleteSource(name)
         normPar = self.like.normPar(name).getName()        
@@ -1465,15 +1464,32 @@ class GTAnalysis(fermipy.config.Configurable):
         o = {'width' : width,
              'dlogLike' : np.zeros(len(width)),
              'logLike' : np.zeros(len(width)),
+             'logLike_ptsrc' : 0.0,
+             'logLike_base'  : logLike0,
              'ext' : 0.0,
              'ext_err_hi' : 0.0,
              'ext_err_lo' : 0.0,
+             'ext_err' : 0.0,
              'ext_ul95' : 0.0,
              'ts_ext' : 0.0,
-             'fit' : [],
+             'source_fit' : {},
              'config' : config }
+
+        # Fit a point-source
+        s = self.copy_source(name)
+        model_name = '%s_ptsrc'%(name)            
+        s.set_name(model_name)
+        s.set_spatial_model('PointSource')
         
-        self.logger.info('Width scan vector: %s'%width)
+        self.logger.info('Adding point-source')
+        self.add_source(model_name,s,free=True)
+        self.fit(update=False)
+            
+        o['logLike_ptsrc'] = -self.like()
+        self.delete_source(model_name,save_template=False)
+
+        # Perform scan over width parameter
+        self.logger.info('Width scan vector:\n %s'%width)
 
         for i, w in enumerate(width):
             
@@ -1487,13 +1503,10 @@ class GTAnalysis(fermipy.config.Configurable):
             self.add_source(model_name,s,free=True)
             self.fit(update=False)
             
-            logLike1 = self.like()
-
-            o['dlogLike'][i] = logLike0-logLike1
+            logLike1 = -self.like()
+            o['dlogLike'][i] = logLike1 - o['logLike_ptsrc']
             o['logLike'][i] = logLike1
-            sd = self.get_src_model(model_name)
-            o['fit'].append(sd)
-
+            
             if save_model_map:
                 self.generate_model_map(model_name=model_name + '%02i'%i,
                                         name=model_name)
@@ -1501,19 +1514,46 @@ class GTAnalysis(fermipy.config.Configurable):
             self.delete_source(model_name,save_template=False)
 
         try:
-            o['ext'], o['ext_ul95'], o['ext_err_lo'], o['ext_err_hi'], o['ts_ext'] = \
+            o['ext'], o['ext_ul95'], o['ext_err_lo'], o['ext_err_hi'], dlnl0 = \
                 get_upper_limit(o['dlogLike'],o['width'],interpolate=True)
+            o['ts_ext'] = 2*dlnl0
+            o['ext_err'] = 0.5*(o['ext_err_lo'] + o['ext_err_hi'])
         except Exception, message:
             self.logger.error('Upper limit failed.', exc_info=True)
 
+        self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
+                         %(o['ext'],o['ext_err_lo'],o['ext_err_hi']))
+        self.logger.info('TS_ext: %.3f'%o['ts_ext'])
+        
+        # Fit with the best-fit extension model
+        s = self.copy_source(name)
+        model_name = '%s'%(ext_model_name)            
+        s.set_name(model_name)
+        s.set_spatial_model(spatial_model,o['ext'])
+        
+        self.logger.info('Adding point-source')
+        self.add_source(model_name,s,free=True)
+        self.fit(update=False)
 
+        o['source_fit'] = self.get_src_model(model_name)
+
+        self.generate_model_map(model_name=model_name,
+                                name=model_name)
+        
+        self.delete_source(model_name,save_template=False)
+        
+        # Restore ROI parameters to previous state
         self.scale_parameter(name,normPar,1E10)
         self.like.syncSrcParams(name)        
         saved_state.restore()
         
         src = self.roi.get_source_by_name(name,True)
-        src.update_data({'extension' : copy.deepcopy(o)})
-        
+
+        try:
+            src.update_data({'extension' : copy.deepcopy(o)})
+        except Exception, message:
+            self.logger.error('Update failed.', exc_info=True)
+            
         return o
                 
     def sed(self,name,profile=True,energies=None,**kwargs):
@@ -1699,6 +1739,10 @@ class GTAnalysis(fermipy.config.Configurable):
 #        src_model['sed'] = copy.deepcopy(o)        
         return o
 
+    def _fit_source(self):
+
+        pass
+    
     def profile_norm(self,name, emin=None,emax=None, reoptimize=False,xvals=None,npts=50,
                      savestate=True):
         """
@@ -1760,7 +1804,7 @@ class GTAnalysis(fermipy.config.Configurable):
             saved_state = LikelihoodState(self.like)
 
         self.setEnergyRange(emin,emax)
-        logLike0 = self.like()
+        logLike0 = -self.like()
 
         if xvals is None:
 
@@ -1796,13 +1840,13 @@ class GTAnalysis(fermipy.config.Configurable):
                 self.like.optimize(0, **kwargs)
                 self.like.thaw(idx)
                 
-            logLike1 = self.like()
+            logLike1 = -self.like()
 
             flux = self.like[name].flux(10**emin, 10**emax)
             eflux = self.like[name].energyFlux(10**emin, 10**emax)
             prefactor=self.like[idx]
             
-            o['dlogLike'][i] = logLike0 - logLike1
+            o['dlogLike'][i] = logLike1 - logLike0
             o['logLike'][i] = logLike1
             o['dfde'][i] = prefactor.getTrueValue()
             o['flux'][i] = flux
@@ -1888,7 +1932,7 @@ class GTAnalysis(fermipy.config.Configurable):
 #            saved_state.restore()
 #            return quality
 
-        logLike = self.like()
+        logLike = -self.like()
             
         if quality < self.config['optimizer']['min_fit_quality']:
             self.logger.error("Failed to converge with %s"%self.like.optimizer)
@@ -1908,7 +1952,7 @@ class GTAnalysis(fermipy.config.Configurable):
             self._roi_model['roi']['fit_quality'] = quality
 
             for i,c in enumerate(self.components):
-                self._roi_model['roi']['components'][i]['logLike'] = c.like()
+                self._roi_model['roi']['components'][i]['logLike'] = -c.like()
 
             # Update roi model counts
             self._update_roi()
@@ -2290,7 +2334,7 @@ class GTAnalysis(fermipy.config.Configurable):
         """Loop over ROI, place a test source at each position, and
         evaluated the TS for that source."""
 
-        logLike0 = self.like()
+        logLike0 = -self.like()
         self.logger.info('LogLike: %f'%logLike0)
         
         saved_state = LikelihoodState(self.like)
@@ -2344,8 +2388,8 @@ class GTAnalysis(fermipy.config.Configurable):
             self.set_parameter('tsmap_testsource','Prefactor',0.0)
             self.fit(update=False)
 
-            logLike1 = self.like()
-            ts = max(0,2*(logLike0-logLike1))
+            logLike1 = -self.like()
+            ts = max(0,2*(logLike1-logLike0))
             
             data.flat[i] = ts
             
