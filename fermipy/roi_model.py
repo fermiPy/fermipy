@@ -181,7 +181,14 @@ class Model(object):
                  spectral_pars=None,
                  spatial_pars=None):
 
-        self._data = {} if data is None else data
+        self._data = { 'SpatialModel' : None, 
+                       'SpatialWidth' : None, 
+                       'SpatialType' : None,
+                       'SpectrumType' : None }
+        if data is not None:
+            self._data.update(data)
+
+        #self._data = {} if data is None else data
         self._data['name'] = name
 
         self._data.setdefault('spectral_pars',{})
@@ -278,9 +285,9 @@ class IsoSource(Model):
         super(IsoSource,self).__init__(name,None,spectral_pars,spatial_pars)
         
         self._filefunction = filefunction
-        self['SpectrumType'] = 'FileFunction'
-        self._data.setdefault('SpatialType','ConstantValue')
-        self._data.setdefault('SpatialModel','DiffuseSource')
+        self._data['SpectrumType'] = 'FileFunction'
+        self._data['SpatialType'] = 'ConstantValue'
+        self._data['SpatialModel'] = 'DiffuseSource'
 
         if not self.spectral_pars:
             self['spectral_pars'] = {
@@ -334,9 +341,9 @@ class MapCubeSource(Model):
         super(MapCubeSource,self).__init__(name,None,spectral_pars,spatial_pars)
 
         self._mapcube = mapcube
-        self['SpectrumType'] = 'PowerLaw'
-        self._data.setdefault('SpatialType','MapCubeFunction')
-        self._data.setdefault('SpatialModel','DiffuseSource')
+        self._data['SpectrumType'] = 'PowerLaw'
+        self._data['SpatialType'] = 'MapCubeFunction'
+        self._data['SpatialModel'] = 'DiffuseSource'
         
         if not self.spectral_pars:
             self['spectral_pars'] = {
@@ -407,7 +414,7 @@ class Source(Model):
         elif self._radec is None:
             raise Exception('Failed to infer RADEC for source: %s'%name)
         
-        if not 'SpatialModel' in self.data:
+        if self.data['SpatialModel'] is None:
             self._data['SpatialModel'] = self['SpatialType']
         
         self['RAJ2000'] = self._radec[0]
