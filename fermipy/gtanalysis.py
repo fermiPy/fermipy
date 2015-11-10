@@ -1393,6 +1393,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
         width_nstep : int
             Number of scan points between width_min and width_max.
+            Scan points will be spaced evenly on a logarithmic scale
+            between log(width_min) and log(width_max).
 
         width : array-like        
             Explicit sequence of values in degrees for the spatial extension
