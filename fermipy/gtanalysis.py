@@ -2762,14 +2762,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         
         self.update_srcmap_file([src],True)
         
-        if src['SpatialType'] == 'PointSource':        
-            #pylike_src = pyLike.PointSource(0, 0,
+        if src['SpatialType'] == 'SkyDirFunction': 
 #            pylike_src = pyLike.PointSource(src.skydir.ra.deg,src.skydir.dec.deg,
 #                                            self.like.logLike.observation())
-
             pylike_src = pyLike.PointSource(self.like.logLike.observation())
             pylike_src.setDir(src.skydir.ra.deg,src.skydir.dec.deg,False,False)
-
         elif src['SpatialType'] == 'SpatialMap':        
             sm = pyLike.SpatialMap(src['Spatial_Filename'])
             pylike_src = pyLike.DiffuseSource(sm,self.like.logLike.observation(),False)
