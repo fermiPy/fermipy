@@ -184,6 +184,7 @@ class Model(object):
         self._data = { 'SpatialModel' : None, 
                        'SpatialWidth' : None, 
                        'SpatialType' : None,
+                       'SourceType' : None,
                        'SpectrumType' : None }
         if data is not None:
             self._data.update(data)
@@ -288,6 +289,7 @@ class IsoSource(Model):
         self._data['SpectrumType'] = 'FileFunction'
         self._data['SpatialType'] = 'ConstantValue'
         self._data['SpatialModel'] = 'DiffuseSource'
+        self._data['SourceType'] = 'DiffuseSource'
 
         if not self.spectral_pars:
             self['spectral_pars'] = {
@@ -344,6 +346,7 @@ class MapCubeSource(Model):
         self._data['SpectrumType'] = 'PowerLaw'
         self._data['SpatialType'] = 'MapCubeFunction'
         self._data['SpatialModel'] = 'DiffuseSource'
+        self._data['SourceType'] = 'DiffuseSource'
         
         if not self.spectral_pars:
             self['spectral_pars'] = {
@@ -400,8 +403,7 @@ class Source(Model):
     def __init__(self,name,data=None,
                  radec=None,
                  spectral_pars=None,
-                 spatial_pars=None,
-                 extended=False):
+                 spatial_pars=None):
         super(Source,self).__init__(name,data,spectral_pars,spatial_pars)
                     
         self._radec = radec
@@ -413,9 +415,6 @@ class Source(Model):
             self._radec = [self.data['ra'],self.data['dec']]
         elif self._radec is None:
             raise Exception('Failed to infer RADEC for source: %s'%name)
-        
-        if self.data['SpatialModel'] is None:
-            self._data['SpatialModel'] = self['SpatialType']
         
         self['RAJ2000'] = self._radec[0]
         self['DEJ2000'] = self._radec[1]
@@ -432,7 +431,11 @@ class Source(Model):
                 if k in self['catalog'] and np.isfinite(self['catalog'][k]):
                     self._data['catalog']['TS_value'] += self['catalog'][k]**2
 
-        self._extended=extended
+        if self['SpatialModel'] is None:
+            self._data['SpatialModel'] = self['SpatialType']
+                    
+        self.set_spatial_model(self.data['SpatialModel'],
+                               self.data['SpatialWidth'])
 
         if not self.spectral_pars:
             self._update_spectral_pars()
@@ -545,16 +548,14 @@ class Source(Model):
         
         if self['SpatialModel'] in ['PointSource','Gaussian','PSFSource']:
             self._extended = False
-            self._data['SpatialType'] = 'PointSource'
-        elif self['SpatialModel'] == 'GaussianSource':
+            self._data['SpatialType'] = 'SkyDirFunction'
+            self._data['SourceType'] = 'PointSource'
+        elif self['SpatialModel'] in ['GaussianSource','DiskSource','SpatialMap']:
             self._extended = True
             self._data['SpatialType'] = 'SpatialMap'
-        elif self['SpatialModel'] == 'DiskSource':
-            self._extended = True
-            self._data['SpatialType'] = 'SpatialMap'
+            self._data['SourceType'] = 'DiffuseSource'
         else:
-            raise Exception('Unrecognized SpatialModel: ' + self['SpatialModel'] +
-                            '\n Valid choices are: PointSource, GaussianSource, DiskSource ')
+            raise Exception('Unrecognized SpatialModel: ' + self['SpatialModel'])
         
         self._update_spatial_pars()
         
@@ -643,11 +644,6 @@ class Source(Model):
         
 #        validate_config(src_dict,default_src_dict)
 
-        if src_dict['SpatialModel'] != 'PointSource':
-            extended=True
-        else:
-            extended=False
-        
         if 'name' in src_dict:
             name = src_dict['name']
             src_dict['Source_Name'] = src_dict.pop('name')
@@ -662,7 +658,7 @@ class Source(Model):
         src_dict['DEJ2000'] = skydir.dec.deg
         
         radec = np.array([skydir.ra.deg,skydir.dec.deg])
-        return Source(name,src_dict,radec=radec,extended=extended,
+        return Source(name,src_dict,radec=radec,
                       spectral_pars=src_dict['spectral_pars'])
     
     @staticmethod
@@ -682,22 +678,23 @@ class Source(Model):
         src_dict['Source_Name'] = src_dict['name']
         src_dict['SpectrumType'] = spec['type']
         src_dict['SpatialType'] = spatial_type
+        src_dict['SourceType'] = src_type
         
+        if src_type == 'PointSource':
+            src_dict['SpatialModel'] = 'PointSource'
+        elif spatial_type == 'SpatialMap':
+            src_dict['SpatialModel'] = 'SpatialMap'
+
         if src_type =='PointSource' or spatial_type == 'SpatialMap':
         
-            extflag=False        
             if 'file' in spat: 
                 src_dict['Spatial_Filename'] = spat['file']
-                extflag=True
-
                 if not os.path.isfile(src_dict['Spatial_Filename']) \
                         and extdir is not None:
                     src_dict['Spatial_Filename'] = \
                         os.path.join(extdir,'Templates',
                                      src_dict['Spatial_Filename'])
-
-            
-            
+                        
             if 'RA' in src_dict:
                 src_dict['RAJ2000'] = float(src_dict['RA'])
                 src_dict['DEJ2000'] = float(src_dict['DEC'])
@@ -714,7 +711,7 @@ class Source(Model):
             return Source(src_dict['Source_Name'],
                           src_dict,radec=radec,
                           spectral_pars=spectral_pars,
-                          spatial_pars=spatial_pars,extended=extflag)
+                          spatial_pars=spatial_pars)
 
         elif src_type == 'DiffuseSource' and spatial_type == 'ConstantValue':
             return IsoSource(src_dict['Source_Name'],spec['file'],
@@ -1255,14 +1252,15 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict['SpectrumType'] = 'PLSuperExpCutoff'
 
             if not extflag:
-                src_dict['SpatialType'] = 'PointSource'
+                src_dict['SourceType'] = 'PointSource'
+                src_dict['SpatialType'] = 'SkyDirFunction'
                 src_dict['SpatialModel'] = 'PointSource'
             else:
+                src_dict['SourceType'] = 'DiffuseSource'
                 src_dict['SpatialType'] = 'SpatialMap'
                 src_dict['SpatialModel'] = 'SpatialMap'
                 
-            src = Source(src_dict['Source_Name'],src_dict,
-                         radec=radec[i],extended=extflag)
+            src = Source(src_dict['Source_Name'],src_dict,radec=radec[i])
             self.load_source(src,False)
             
         self.build_src_index()
