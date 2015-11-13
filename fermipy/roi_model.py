@@ -799,27 +799,30 @@ class ROIModel(fermipy.config.Configurable):
         
         self.build_src_index()
 
+    def __getitem__(self,key):
+        return self.get_source_by_name(key,True)
+
     def __iter__(self):
         return iter(self._srcs + self._diffuse_srcs)
 
     def __str__(self):
 
         o = ''
-        o += '%-25s %-15s %-15s %10s %12s %12s\n'%('name','SpatialModel','SpectrumType','offset',
+        o += '%-20s%-15s%-15s%8s%10s%12s\n'%('name','SpatialModel','SpectrumType','offset',
                                                    'ts','Npred')
-        o += '-'*100 + '\n'
+        o += '-'*80 + '\n'
         
         for s in sorted(self.sources,key=lambda t:t['offset']):
 
             if s.diffuse: continue            
-            o += '%-25s %-15s %-15s %10.3f %12.2f %12.2f\n'%(s['name'][:24],s['SpatialModel'],s['SpectrumType'],
-                                                           s['offset'],s['ts'],s['Npred'])
+            o += '%-20.19s%-15.14s%-15.14s%8.3f%10.2f%12.1f\n'%(s['name'],s['SpatialModel'],s['SpectrumType'],
+                                                                 s['offset'],s['ts'],s['Npred'])
         
         for s in sorted(self.sources,key=lambda t:t['offset']):
 
             if not s.diffuse: continue
-            o += '%-25s %-15s %-15s %10s %12.2f %12.2f\n'%(s['name'][:24],s['SpatialModel'],s['SpectrumType'],
-                                                         '-----',s['ts'],s['Npred'])
+            o += '%-20.19s%-15.14s%-15.14s%8s%10.2f%12.2f\n'%(s['name'],s['SpatialModel'],s['SpectrumType'],
+                                                              '-----',s['ts'],s['Npred'])
 
         return o
 

@@ -2099,10 +2099,18 @@ class GTAnalysis(fermipy.config.Configurable):
             self.logger.info('Making SED plot for %s'%s.name)
             
             p = SEDPlotter(s)
-            plt.figure()
+            fig = plt.figure()
             p.plot()            
             plt.savefig(os.path.join(self.config['fileio']['outdir'],
                                      '%s_%s_sed.%s'%(prefix,name,format)))
+            plt.close(fig)
+
+            p = SEDPlotter(s)
+            fig = plt.figure()
+            p.plot(showlnl=True)            
+            plt.savefig(os.path.join(self.config['fileio']['outdir'],
+                                     '%s_%s_sedlnl.%s'%(prefix,name,format)))
+            plt.close(fig)
 
 
     def make_extension_plots(self,prefix,erange=None,**kwargs):

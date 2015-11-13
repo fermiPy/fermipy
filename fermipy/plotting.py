@@ -20,6 +20,11 @@ import fermipy.utils as utils
 from fermipy.utils import merge_dict, wcs_to_axes, Map
 from fermipy.utils import edge_to_center, edge_to_width, valToEdge
 
+def draw_arrows(x,y,color='k'):
+    for t,z in zip(x,y):
+        plt.arrow(t,z,0.0,-z*0.2, fc=color, ec=color,
+                  head_width=t*0.1, head_length=z*0.05 )
+
 def get_xerr(sed):
     delo = 10**sed['ecenter']-10**sed['emin']
     dehi = 10**sed['emax']-10**sed['ecenter']
@@ -65,7 +70,7 @@ def make_counts_spectrum_plot(o,roi,energies,imfile):
                      label='__nolabel__')
 
     ax0.set_yscale('log')
-    ax0.set_ylim(0.5,None)
+    ax0.set_ylim(0.1,None)
     ax0.set_xlim(energies[0],energies[-1])
     ax0.legend(frameon=False,loc='best',prop={'size' : 8},ncol=2)
 
@@ -249,7 +254,7 @@ class ImagePlotter(object):
 
         load_ds9_cmap()
         colormap = mpl.cm.get_cmap(cmap)
-        colormap.set_under('white')
+        colormap.set_under(colormap(0))
 
         data = copy.copy(self._data)
         kwargs_imshow = merge_dict(kwargs_imshow,kwargs)
@@ -474,23 +479,79 @@ class SEDPlotter(object):
         self._sed = self._src['sed']
         
     @staticmethod
+    def plot_lnlscan(sed,**kwargs):
+
+        ax = kwargs.pop('ax',plt.gca())
+        llhCut = kwargs.pop('llhCut',-5)
+        cmap = kwargs.pop('cmap','jet')
+
+        lhProf = sed['lnlprofile']
+
+        fmin = min(-8,np.log10(np.min(sed['e2dfde_ul95']))-0.5)
+        fmax = max(-5,np.log10(np.max(sed['e2dfde_ul95']))+0.5)
+
+        fluxM = np.arange(fmin,fmax,0.01)
+        fbins = len(fluxM)
+        llhMatrix = np.zeros((len(sed['ecenter']),fbins))
+
+        # loop over energy bins
+        for i in range(len(lhProf)):
+
+            m = lhProf[i]['dfde'] > 0
+            flux = np.log10(lhProf[i]['dfde'][m]*(10**sed['ecenter'][i])**2)
+            logl = lhProf[i]['dlogLike'][m]
+            logli = np.interp(fluxM,flux,logl)
+            logli[fluxM>flux[-1]] = logl[-1]
+            logli[fluxM<flux[0]] = logl[0]
+            llhMatrix[i,:] = logli
+
+        xedge = np.logspace(sed['emin'][0],sed['emax'][-1],len(sed['ecenter'])+1)
+        yedge = np.logspace(fmin,fmax,fbins)
+        xedge, yedge = np.meshgrid(xedge,yedge)
+        im = ax.pcolormesh(xedge,yedge,llhMatrix.T,
+                           vmin=llhCut,vmax=0,cmap=cmap)
+        cb = plt.colorbar(im)
+        cb.set_label('Delta LogLikelihood')
+
+        plt.gca().set_ylim(10**fmin,10**fmax)
+        plt.gca().set_yscale('log')
+        plt.gca().set_xscale('log')
+        plt.gca().set_xlim(10**sed['emin'][0],10**sed['emax'][-1])
+
+    @staticmethod
     def plot_sed(sed,**kwargs):
 
-        m = sed['ts'] < 4
+        ts_thresh = kwargs.pop('ts_thresh',4)
+        kwargs.setdefault('marker','o')
+        kwargs.setdefault('linestyle','None')
+        kwargs.setdefault('color','k')
+        color = kwargs.get('color','k')
+
+        m = sed['ts'] < ts_thresh
 
         x = 10**sed['ecenter']
         y = sed['e2dfde']
         yerr = sed['e2dfde_err']
+        yerr_lo = sed['e2dfde_err_lo']
+        yerr_hi = sed['e2dfde_err_hi']
         yul = sed['e2dfde_ul95']
 
         y[m] = yul[m]
         yerr[m] = 0
+        yerr_lo[m] = 0
+        yerr_hi[m] = 0
 
         delo = 10**sed['ecenter']-10**sed['emin']
         dehi = 10**sed['emax']-10**sed['ecenter']
         xerr = np.vstack((delo,dehi))
         
-        plt.errorbar(x,y,xerr=xerr,yerr=yerr,**kwargs)
+        draw_arrows(x[m],y[m],color=color)
+        plt.errorbar(x,y,xerr=xerr,yerr=(yerr_lo,yerr_hi),**kwargs)
+
+        plt.gca().set_yscale('log')
+        plt.gca().set_xscale('log')
+        plt.gca().set_xlim(10**sed['emin'][0],10**sed['emax'][-1])
+
 
     @staticmethod
     def plot_sed_resid(src,model_flux,**kwargs):
@@ -521,18 +582,26 @@ class SEDPlotter(object):
     def plot_model(src,**kwargs):
 
         ax = plt.gca()
+        color = kwargs.pop('color','k')
+        noband = kwargs.pop('noband',False)
 
         e2 = 10**(2*src['model_flux']['ecenter'])
 
         ax.plot(10**src['model_flux']['ecenter'],
-                src['model_flux']['dfde']*e2,**kwargs)
+                src['model_flux']['dfde']*e2,color=color,**kwargs)
+        
+        ax.plot(10**src['model_flux']['ecenter'],
+                src['model_flux']['dfde_lo']*e2,color=color,
+                linestyle='--',**kwargs)
+        ax.plot(10**src['model_flux']['ecenter'],
+                src['model_flux']['dfde_hi']*e2,color=color,
+                linestyle='--',**kwargs)
 
-        color = kwargs.get('color','b')
-
-        ax.fill_between(10**src['model_flux']['ecenter'],
-                        src['model_flux']['dfde_lo']*e2,
-                        src['model_flux']['dfde_hi']*e2,
-                        alpha=0.5,color=color)
+        if not noband:
+            ax.fill_between(10**src['model_flux']['ecenter'],
+                            src['model_flux']['dfde_lo']*e2,
+                            src['model_flux']['dfde_hi']*e2,
+                            alpha=0.5,color=color,zorder=-1)
 
     @staticmethod
     def annotate(src,xy=(0.05,0.93)):
@@ -550,58 +619,30 @@ class SEDPlotter(object):
                     xytext=(-5, 5), textcoords='offset points',
                     ha='left', va='center')
 
-    def plot(self):
+    def plot(self,showlnl=False,**kwargs):
 
         sed = self._sed
         src = self._src
         ax = plt.gca()
         name = src['name']
+        cmap = kwargs.get('cmap','jet')
 
         annotate(src=src,ax=ax)
-        
-        m = sed['ts'] < 4
 
-        x = 10**np.array(sed['ecenter'])
-        y = np.array(sed['e2dfde'])
-        yerr = np.array(sed['e2dfde_err'])
-        yul = np.array(sed['e2dfde_ul95'])
-
-        y[m] = yul[m]
-        yerr[m] = 0
-
-        delo = 10**sed['ecenter']-10**sed['emin']
-        dehi = 10**sed['emax']-10**sed['ecenter']
-        xerr = np.vstack((delo,dehi))
-
-        #xerr = 10**(0.5*(np.array(sed['emax'])-np.array(sed['emin'])))
-
-        plt.errorbar(x,y,xerr=xerr,yerr=yerr,linestyle='None',marker='o',
-                     color='k')
+        SEDPlotter.plot_sed(sed)
 
         if 'model_flux' in src:
-            e2 = 10**(2*src['model_flux']['ecenter'])
-            ax.plot(10**src['model_flux']['ecenter'],
-                    src['model_flux']['dfde']*e2,
-                    color='k')
-            ax.fill_between(10**src['model_flux']['ecenter'],
-                            src['model_flux']['dfde_lo']*e2,
-                            src['model_flux']['dfde_hi']*e2,
-                            color='b',alpha=0.5)
+            SEDPlotter.plot_model(src,noband=showlnl)
 
-        for t,z in zip(x[m],y[m]):
-            plt.arrow( t,z,0.0,-z*0.2, fc="k", ec="k",
-                       head_width=t*0.1, head_length=z*0.05 )
-
-        #plt.arrow( x[m], y[m],
-        #           0.1*np.ones(np.sum(m)), -0.2*np.ones(np.sum(m)), fc="k", ec="k",
-        #           head_width=0.05, head_length=0.1 )
+        if showlnl:
+            SEDPlotter.plot_lnlscan(sed,cmap=cmap)
 
         ax.set_yscale('log')
         ax.set_xscale('log')
         ax.set_xlabel('Energy [MeV]')
-        ax.set_ylabel('E$^{2}$dF/dE [MeV cm$^{-1}$ s$^{-1}$]')
+        ax.set_ylabel('E$^{2}$dF/dE [MeV cm$^{-2}$ s$^{-1}$]')
 
-        ax.set_ylim(min(y)*0.5,max(y)*1.8)
+#        ax.set_ylim(min(y)*0.5,max(y)*1.8)
 
 #        dirname = os.path.dirname(sys.argv[1])
 #        plt.savefig(os.path.join(dirname,name + '_sed.png'))
