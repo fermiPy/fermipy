@@ -99,8 +99,8 @@ class Configurable(object):
     def print_config(self,logger,loglevel=None):
 
         if loglevel is None:
-            logger.info('Configuration:\n'+ yaml.dump(self.config,
-                                                      default_flow_style=False))
+            logger.debug('Configuration:\n'+ yaml.dump(self.config,
+                                                       default_flow_style=False))
         else:
             logger.log(loglevel,'Configuration:\n'+ yaml.dump(self.config,
                                                               default_flow_style=False))
