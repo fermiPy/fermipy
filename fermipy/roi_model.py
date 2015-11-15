@@ -231,6 +231,9 @@ class Model(object):
     def __eq__(self, other): 
         return self.name == other.name
 
+    def __str__(self):
+        return """%(name)"""%self.data
+
     def items(self):
         return self._data.items()
 
@@ -399,6 +402,18 @@ class MapCubeSource(Model):
             create_xml_element(spat_el,'parameter',v)
         
 class Source(Model):
+    """Class representation of a source (non-diffuse) model component.
+    A source object serves as a container for the properties of that
+    source (position, spatial/spectral parameters, TS, etc.) as
+    derived in the current analysis.  Most properties of a source
+    object can be accessed with the bracket operator:
+
+    # Return the TS of this source
+    >>> print src['ts']
+
+    # Get a skycoord representation of the source position
+    >>> print src.skydir
+    """
 
     def __init__(self,name,data=None,
                  radec=None,
@@ -442,6 +457,28 @@ class Source(Model):
 
         if not self.spatial_pars:
             self._update_spatial_pars()
+
+    def __str__(self):
+
+        data = copy.deepcopy(self.data)
+        data['names'] = self.names
+
+        output = []
+        output += ['{:15s}:'.format('Name') + ' {name:s}']
+        output += ['{:15s}:'.format('Associations') +   ' {names:s}']
+        output += ['{:15s}:'.format('RA/DEC') + ' {ra:10.3f}/{dec:10.3f}']
+        output += ['{:15s}:'.format('GLON/GLAT') + ' {glon:10.3f}/{glat:10.3f}']
+        output += ['{:15s}:'.format('TS') + ' {ts:.2f}']
+        output += ['{:15s}:'.format('Npred') + ' {Npred:.2f}']
+        output += ['{:15s}:'.format('SpatialModel') + ' {SpatialModel:s}']
+        output += ['{:15s}:'.format('SpectrumType') + ' {SpectrumType:s}']
+        output += ['Spectral Parameters']
+
+        for k,v in self['params'].items():
+            if isinstance(v,np.ndarray):
+                output += ['{:15s}: {:10.4g} +/- {:10.4g}'.format(k,v[0],v[1])]
+
+        return '\n'.join(output).format(**data)
 
     def _update_spatial_pars(self):
 
@@ -600,6 +637,7 @@ class Source(Model):
 
     @property
     def skydir(self):
+        """Return a SkyCoord representation of the source position."""
         return SkyCoord(self._radec[0]*u.deg,self._radec[1]*u.deg)
     
     @property
@@ -663,7 +701,8 @@ class Source(Model):
     
     @staticmethod
     def create_from_xml(root,extdir=None):
-        
+        """Create a Source object from an XML node."""
+
         spec = load_xml_elements(root,'spectrum')
         spat = load_xml_elements(root,'spatialModel')
         spectral_pars = load_xml_elements(root,'spectrum/parameter')
@@ -723,7 +762,8 @@ class Source(Model):
             raise Exception('Unrecognized type for source: %s'%src_dict['Source_Name'])
         
     def write_xml(self,root):
-        
+        """Write this source to an XML node."""
+
         if not self.extended:
             source_element = create_xml_element(root,'source',
                                                 dict(name=self['Source_Name'],

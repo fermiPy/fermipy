@@ -299,7 +299,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self.logger.info('\n' + '-'*80 + '\n' + "This is fermipy version {}.".
                          format(fermipy.__version__))
-        self.print_config(self.logger)
+        self.print_config(self.logger,loglevel=logging.INFO)
         
         # Working directory (can be the same as savedir)
         if self.config['fileio']['usescratch']:
@@ -1695,7 +1695,7 @@ class GTAnalysis(fermipy.config.Configurable):
             
             self.like.syncSrcParams(name)
             self.free_norm(name)
-            self.logger.info('Fitting %s SED from %.0f MeV to %.0f MeV' %
+            self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
                              (name,10**emin,10**emax))
             self.setEnergyRange(emin,emax)            
             o['fit_quality'][i] = self.fit(update=False)
@@ -1743,10 +1743,6 @@ class GTAnalysis(fermipy.config.Configurable):
 #        src_model = self._roi_model['sources'].get(name,{})
 #        src_model['sed'] = copy.deepcopy(o)        
         return o
-
-    def _fit_source(self):
-
-        pass
     
     def profile_norm(self,name, emin=None,emax=None, reoptimize=False,xvals=None,npts=50,
                      savestate=True):
@@ -1831,7 +1827,7 @@ class GTAnalysis(fermipy.config.Configurable):
              'flux'     : np.zeros(len(xvals)),
              'eflux'    : np.zeros(len(xvals)),
              'dlogLike' : np.zeros(len(xvals)),
-             'logLike' : np.zeros(len(xvals))
+             'logLike'  : np.zeros(len(xvals))
              }
 
         for i, x in enumerate(xvals):
@@ -1903,9 +1899,33 @@ class GTAnalysis(fermipy.config.Configurable):
         return quality
 
     def fit(self,update=True,**kwargs):
-        """Run likelihood optimization.
-
+        """Run the likelihood optimization.  This will execute a fit
+        of all parameters that are currently free in the ROI model and
+        update the charateristics (TS, Npred, etc.) of the
+        corresponding model components.  The fit will be repeated N
+        times (set with the retries parameter) until a fit quality is
+        3 is obtained.
         
+        Parameters
+        ----------
+
+        update : bool
+           Do not update the ROI model.
+
+        tol : float
+           Set the optimizer tolerance.
+
+        verbosity : int
+           Set the optimizer output level.
+
+        retries : int
+           Set the number of times to rerun the fit when the fit quality
+           is < 3.
+
+        min_fit_quality : int
+           Set the minimum fit quality.  If the fit quality is smaller
+           than this parameter then all model parameters will be
+           restored to their values prior to the fit.
 
         """
         
@@ -1917,6 +1937,9 @@ class GTAnalysis(fermipy.config.Configurable):
                                self.config['optimizer']['verbosity'])
         covar = kwargs.get('covar',True)
         tol = kwargs.get('tol',self.config['optimizer']['tol'])
+        retries = kwargs.get('retries',self.config['optimizer']['retries'])
+        min_fit_quality = kwargs.get('min_fit_quality',
+                                     self.config['optimizer']['min_fit_quality'])
 
         saved_state = LikelihoodState(self.like)
         kw = dict(optObject = self.create_optObject(),
@@ -1924,7 +1947,7 @@ class GTAnalysis(fermipy.config.Configurable):
 #                  optimizer='DRMNFB')
 
         quality=0
-        niter = 0; max_niter = self.config['optimizer']['retries']
+        niter = 0; max_niter = retries
         while niter < max_niter:
             self.logger.debug("Fit iteration: %i"%niter)
             niter += 1
@@ -1939,7 +1962,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         logLike = -self.like()
             
-        if quality < self.config['optimizer']['min_fit_quality']:
+        if quality < min_fit_quality:
             self.logger.error("Failed to converge with %s"%self.like.optimizer)
             saved_state.restore()
             return quality
