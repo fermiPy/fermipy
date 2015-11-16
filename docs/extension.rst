@@ -63,27 +63,30 @@ with :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`.
    
    ext = gta.extension('sourceA')
 
-   print ext.keys()
-   ['fit', 'ext_ul95', 'ext_err_lo', 'dlogLike', 'ts_ext', 'ext', 'logLike', 'ext_err_hi', 'width']
+   ext = gta.roi['sourceA']
    
 The contents of the output dictionary are described in the following table:
 
-========== =================================================================
-Key        Description
-========== =================================================================
-dlogLike   Sequence of delta-log-likelihood values for each point
-           in the profile likelihood scan.
-logLike    Sequence of likelihood values for each point in the profile likelihood scan.
-ext        Best-fit extension in degrees.
-ext_err_hi Upper (1 sigma) error on the best-fit extension in degrees.
-ext_err_lo Lower (1 sigma) error on the best-fit extension in degrees.
-ext_ul95   95% CL upper limit on the extension in degrees.
-width      List of width parameters.
-ts_ext     Test statistic for the extension hypothesis.
-fit        Sequence of source dictionaries with best-fit source
-           parameters for each point in the likelihood scan.
-config     Copy of the input parameters to this method.
-========== =================================================================
+============= =================================================================
+Key           Description
+============= =================================================================
+dlogLike      Sequence of delta-log-likelihood values for each point
+              in the profile likelihood scan.
+logLike       Sequence of likelihood values for each point in the scan over the spatial extension.
+logLike_ptsrc Log-Likelihood value of best-fit point-source model.
+logLike_base  Log-Likelihood value of baseline model.
+ext           Best-fit extension in degrees.
+ext_err_hi    Upper (1 sigma) error on the best-fit extension in degrees.
+ext_err_lo    Lower (1 sigma) error on the best-fit extension in degrees.
+ext_err       Symmetric (1 sigma) error on the best-fit extension in degrees.
+ext_ul95      95% CL upper limit on the extension in degrees.
+width         List of width parameters.
+ts_ext        Test statistic for the extension hypothesis.
+source_fit    Sequence of source dictionaries with best-fit source
+              parameters for each point in the likelihood scan.
+source_fit    Dictionary with parameters of the best-fit extended source model.
+config        Copy of the input parameters to this method.
+============= =================================================================
 
 
 Reference/API
