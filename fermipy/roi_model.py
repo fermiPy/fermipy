@@ -946,7 +946,7 @@ class ROIModel(fermipy.config.Configurable):
         src = Source.create_from_dict(src_dict)
         src.set_spatial_model(src['SpatialModel'],src['SpatialWidth'])
         
-        self.logger.info('Creating source ' + src.name)
+        self.logger.debug('Creating source ' + src.name)
         self.logger.debug(src._data)
 
         self.load_source(src,build_index=build_index)
@@ -976,7 +976,7 @@ class ROIModel(fermipy.config.Configurable):
         name = src.name.replace(' ','').lower()
         
         if name in self._src_dict and self._src_dict[name]:
-            self.logger.info('Updating source model for %s'%src.name)
+            self.logger.debug('Updating source model for %s'%src.name)
             list(self._src_dict[name])[0].update(src)
             return
 

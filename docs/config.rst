@@ -20,13 +20,13 @@ int ,float) or dictionaries defining nested blocks of the
 configuration.
 
 The class configuration dictionary is set at the time of object
-creation by passing a dictionary or a YAML file containing a
-dictionary to the class constructor.  Optional kwargs arguments can be
-used to override options in the input dictionary.  For instance in the
+creation by passing a dictionary or a path to YAML configuration file
+to the class constructor.  Optional kwargs arguments can be used to
+override options in the input dictionary.  For instance in the
 following example the *config* dictionary defines values for the
 parameters *emin* and *emax*.  By passing an additional dictionary for
-the selection block, the value of emax in the kwargs argument (1000)
-overrides the value in the config dictionary.
+the selection block, the value of emax in the kwargs argument (10000)
+overrides the value of this parameter in the config dictionary.
 
 .. code-block:: python
    
@@ -37,7 +37,7 @@ overrides the value in the config dictionary.
 
    gta = GTAnalysis(config,selection={'emax' : 10000})
    
-Alternatively the config argument can be set to the path to a YAML
+Alternatively the config argument can be the path to a YAML
 configuration file:
 
 .. code-block:: python
@@ -50,10 +50,10 @@ Configuration File
 ##################################
 
 fermiPy uses YAML-format configuration files which define a structured
-hierarchy of parameters organized in sections that mirrors the layout of
-the configuration dictionary.  Each configuration section groups a set
-of related options.  The following sub-sections describe the options
-that can be set in each section.
+hierarchy of parameters organized in sections that mirrors the layout
+of the configuration dictionary.  Each section of the configuration
+file groups a set of related options.  The following describes the
+options that can be set in each section.
 
 fileio
 ------

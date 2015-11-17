@@ -27,6 +27,9 @@ page.  For a short introduction to using fermiPy see the
 Documentation Contents
 ----------------------
 
+..   extension
+..   sed
+
 .. toctree::
    :maxdepth: 2
 
@@ -34,8 +37,7 @@ Documentation Contents
    quickstart
    config
    model
-   extension
-   sed
+   advanced/index
    fermipy
 
 
