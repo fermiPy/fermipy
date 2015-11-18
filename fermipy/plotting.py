@@ -8,7 +8,7 @@ import matplotlib.gridspec as gridspec
 from astropy import wcs
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
-import pywcsgrid2
+import wcsaxes
 import numpy as np
 from numpy import ma
 import matplotlib.cbook as cbook
@@ -249,8 +249,9 @@ class ImagePlotter(object):
         elif zscale == 'lin': kwargs_imshow['norm'] = Normalize()
         else: kwargs_imshow['norm'] = Normalize()
         
-        ax = pywcsgrid2.subplot(subplot, header=self._wcs.to_header())
-#        ax = pywcsgrid2.axes(header=self._wcs.to_header())
+        fig = plt.gcf()
+        ax = fig.add_subplot(subplot, 
+                             projection=wcsaxes.WCS(self._wcs.to_header()))
 
         load_ds9_cmap()
         colormap = mpl.cm.get_cmap(cmap)
@@ -269,8 +270,6 @@ class ImagePlotter(object):
         
 #        im.set_clim(vmin=np.min(self._counts[~self._roi_msk]),
 #                    vmax=np.max(self._counts[~self._roi_msk]))
-        
-        ax.set_ticklabel_type("d", "d")
 
         coordsys = utils.get_coordsys(self._wcs)
 
