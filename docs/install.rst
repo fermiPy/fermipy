@@ -100,3 +100,13 @@ Finally, check that fermipy imports:
    Type "help", "copyright", "credits" or "license" for more information. 
    >>> from fermipy.gtanalysis import GTAnalysis
    >>> help(GTAnalysis)
+
+Issues
+=======
+
+If you get an error about importing matplotlib (specifically something
+about the macosx backend) you might change your default backend to get
+it working.  The [customizing matplotlib
+page](http://matplotlib.org/users/customizing.html) details the
+instructions to modify your default matplotlibrc file (you can pick
+GTK or WX as an alternative).
