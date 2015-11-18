@@ -189,7 +189,6 @@ class Model(object):
         if data is not None:
             self._data.update(data)
 
-        #self._data = {} if data is None else data
         self._data['name'] = name
 
         self._data.setdefault('spectral_pars',{})
@@ -201,9 +200,6 @@ class Model(object):
             
         if spatial_pars is not None:
             self._data['spatial_pars'] = spatial_pars
-
-#        self._spectral_pars = {} if spectral_pars is None else spectral_pars
-#        self._spatial_pars = {} if spatial_pars is None else spatial_pars
 
         self._names = [name]
         self._names_dict = {}
@@ -323,7 +319,6 @@ class IsoSource(Model):
                                             dict(name=self.name,
                                                  type='DiffuseSource'))
 
-        
         filename = re.sub(r'\$([a-zA-Z\_]+)',r'$(\1)',self.filefunction)        
         spec_el = create_xml_element(source_element,'spectrum',
                                      dict(file=filename,
@@ -894,10 +889,9 @@ class ROIModel(fermipy.config.Configurable):
     def _load_diffuse_src(self,name,src_type='FileFunction'):
 
         if 'FERMI_DIR' in os.environ and not 'FERMI_DIFFUSE_DIR' in os.environ:
-            os.environ['FERMI_DIFFUSE_DIR'] = '$FERMI_DIR/refdata/fermi/galdiffuse'
+            os.environ['FERMI_DIFFUSE_DIR'] = \
+                os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
         
-#        diffuse_dir = os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
-
         srcs = []
         if self.config[name] is not None:
             srcs = self.config[name]
