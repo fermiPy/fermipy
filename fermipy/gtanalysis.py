@@ -113,7 +113,6 @@ def interpolate_function_min(x, y):
 
     return x0
 
-
 def get_upper_limit(dlogLike, yval, interpolate=False):
     """Compute 95% CL upper limit and 1-sigma errors given a 1-D
     profile likelihood function."""
