@@ -10,7 +10,9 @@ Installation
 These instructions assume that you already have a local installation
 of the Fermi STs.  Instructions for downloading and installing the STs
 are provided through the `FSSC
-<http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.
+<http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  If you
+are running at SLAC you can follow the instructions under `Running at
+SLAC`_.
 
 Before starting the installation process, you will need to determine
 whether you have setuptools and pip installed in your local python
@@ -44,28 +46,6 @@ Check if pip is correctly installed:
 Once again, if this isn't the pip in the Science Tools, something went
 wrong.
 
-Next install the ez_setup module with pip (required by pywcsgrid2):
-
-.. code-block:: bash
-
-   >>> pip install ez_setup
-
-Then install several needed packages.  Note that these should be
-installed properly by the setup.py script below but sometimes this
-fails since they might not be setup correctly within the Science Tools.
-
-.. code-block:: bash
-
-   >>> pip install ez_setup
-   >>> pip install --upgrade numpy
-   >>> pip install --upgrade matplotlib	
-   >>> pip install --upgrade scipy
-   >>> pip install --upgrade astropy	
-   >>> pip install --upgrade pyyaml
-   >>> pip install --upgrade healpy
-   >>> pip install --upgrade pywcsgrid2
-   >>> pip install --upgrade ipython
-   >>> pip install --upgrade jupyter
 
 Download the latest version of fermiPy from the github repository:
 
@@ -79,16 +59,13 @@ and its dependencies in your local python environment:
 .. code-block:: bash
 
    >>> cd fermipy
-   >>> python setup.py install
-
-Note that if you are running in an environment in which you do not have write
-access to your python installation, you will need to run both pip and
-setup.py with the *user* flag:
-
-.. code-block:: bash
-
-   >>> pip install ez_setup --user
    >>> python setup.py install --user
+
+Running pip and setup.py with the *user* flag is recommended if you do not
+have write access to your python installation (for instance if you are
+running in a UNIX/Linux environment with a shared python
+installation).  To install fermipy into the common package directory
+of your python installation the *user* flag should be ommitted.
 
 Finally, check that fermipy imports:
 
@@ -102,7 +79,7 @@ Finally, check that fermipy imports:
    >>> help(GTAnalysis)
 
 Issues
-=======
+------
 
 If you get an error about importing matplotlib (specifically something
 about the macosx backend) you might change your default backend to get
@@ -110,3 +87,41 @@ it working.  The [customizing matplotlib
 page](http://matplotlib.org/users/customizing.html) details the
 instructions to modify your default matplotlibrc file (you can pick
 GTK or WX as an alternative).
+
+In some cases the setup.py script will fail to properly install the
+fermipy package dependecies.  If installation fails you can try
+running a forced upgrade of these packages with `pip install --upgrade`:
+
+.. code-block:: bash
+
+   >>> pip install --upgrade numpy
+   >>> pip install --upgrade matplotlib	
+   >>> pip install --upgrade scipy
+   >>> pip install --upgrade astropy	
+   >>> pip install --upgrade pyyaml
+   >>> pip install --upgrade healpy
+   >>> pip install --upgrade wcsaxes
+   >>> pip install --upgrade ipython
+   >>> pip install --upgrade jupyter
+
+Running at SLAC
+---------------
+
+This section provides specific installation instructions for running
+on the SLAC cluster.  First source the `slacsetup.sh` script in the
+fermipy directory:
+
+.. code-block:: bash
+
+   >>> source slacsetup.sh
+
+This will setup your GLAST_EXT path and source the setup script for
+one of the pre-built ST installations (default is 10-01-01).  
+
+Then install fermipy with the package setup script:
+
+.. code-block:: bash
+
+   >>> git clone https://github.com/fermiPy/fermipy.git
+   >>> cd fermipy
+   >>> python setup.py install --user

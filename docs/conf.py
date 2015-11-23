@@ -29,7 +29,7 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'GtApp','pywcsgrid2','astropy',
                 'astropy.coordinates',
                 'astropy.io','astropy.wcs','astropy.io.fits',
-                'numpy','healpy',
+                'numpy','healpy','wcsaxes',
                 'scipy','scipy.special','scipy.interpolate','scipy.optimize',
                 'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
                 'matplotlib.axes','matplotlib.cbook','matplotlib.colors']
