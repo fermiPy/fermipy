@@ -1,6 +1,5 @@
 import os
 import copy
-import yaml
 import numpy as np
 from collections import OrderedDict
 import xml.etree.cElementTree as et

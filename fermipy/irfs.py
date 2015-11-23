@@ -1,5 +1,6 @@
 
 import glob
+import re
 import numpy as np
 import healpy as hp
 

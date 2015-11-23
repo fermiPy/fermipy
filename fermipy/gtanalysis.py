@@ -1,8 +1,5 @@
 import os
-import re
-import sys
 import copy
-import glob
 import shutil
 import yaml
 import numpy as np
@@ -36,7 +33,7 @@ from fermipy.residmap import ResidMapGenerator
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import valToBinBounded, valToEdge, Map
 from fermipy.roi_model import ROIModel, Source
-from fermipy.logger import Logger, StreamLogger
+from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 from fermipy.plotting import ROIPlotter, SEDPlotter, ExtensionPlotter, \
     make_counts_spectrum_plot

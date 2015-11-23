@@ -49,7 +49,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
            tol=None, MaxIterations=10, verbosity=0):
 
         if verbosity > 0:
-            print "*** Start Ts_dl ***"
+            print("*** Start Ts_dl ***")
         source_attributes = self.components[0].getExtraSourceAttributes()
         self.syncSrcParams()
         freeParams = pyLike.DoubleVector()
@@ -66,7 +66,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
             tol = self.tol
         if reoptimize:
             if verbosity > 0:
-                print "** Do reoptimize"
+                print("** Do reoptimize")
             optFactory = pyLike.OptimizerFactory_instance()
             myOpt = optFactory.create(self.optimizer, self.composite)
             Niter = 1
@@ -74,8 +74,8 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
                 try:
                     myOpt.find_min(0, tol)
                     break
-                except RuntimeError,e:
-                    print e
+                except RuntimeError as e:
+                    print(e)
                 if verbosity > 0:
                     print "** Iteration :",Niter
                 Niter += 1

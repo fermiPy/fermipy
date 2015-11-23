@@ -2,15 +2,12 @@
 import copy
 import os
 import numpy as np
-import astropy.io.fits as pyfits
-import matplotlib.pyplot as plt
-from astropy import wcs 
 
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
 from fermipy.utils import Map
-from fermipy.logger import Logger, StreamLogger
+from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 
 def poisson_lnl(nc,mu):
@@ -309,5 +306,3 @@ class ResidMapGenerator(fermipy.config.Configurable):
             sigma[excess<=0] *= -1
             
         return sigma, excess, cms, mms
-
-            
