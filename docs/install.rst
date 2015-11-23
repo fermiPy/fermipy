@@ -83,8 +83,8 @@ Issues
 
 If you get an error about importing matplotlib (specifically something
 about the macosx backend) you might change your default backend to get
-it working.  The [customizing matplotlib
-page](http://matplotlib.org/users/customizing.html) details the
+it working.  The `customizing matplotlib
+page <http://matplotlib.org/users/customizing.html>`_ details the
 instructions to modify your default matplotlibrc file (you can pick
 GTK or WX as an alternative).
 
@@ -94,34 +94,47 @@ running a forced upgrade of these packages with `pip install --upgrade`:
 
 .. code-block:: bash
 
-   >>> pip install --upgrade numpy
-   >>> pip install --upgrade matplotlib	
-   >>> pip install --upgrade scipy
-   >>> pip install --upgrade astropy	
-   >>> pip install --upgrade pyyaml
-   >>> pip install --upgrade healpy
-   >>> pip install --upgrade wcsaxes
-   >>> pip install --upgrade ipython
-   >>> pip install --upgrade jupyter
+   >>> pip install --upgrade --user numpy matplotlib scipy astropy pyyaml healpy wcsaxes ipython jupyter
 
 Running at SLAC
 ---------------
 
 This section provides specific installation instructions for running
 on the SLAC cluster.  First source the `slacsetup.sh` script in the
-fermipy directory:
+fermipy directory and run the `slacsetup` function:
 
 .. code-block:: bash
 
    >>> source slacsetup.sh
+   >>> slacsetup
 
 This will setup your GLAST_EXT path and source the setup script for
-one of the pre-built ST installations (default is 10-01-01).  
+one of the pre-built ST installations (default is 10-01-01).  To
+manually override the ST version you can provide the release tag as a
+function argument:
 
-Then install fermipy with the package setup script:
+.. code-block:: bash
+
+   >>> source slacsetup.sh
+   >>> slacsetup 10-XX-XX
+
+After setting up the STs environment install fermipy with the package
+setup script:
 
 .. code-block:: bash
 
    >>> git clone https://github.com/fermiPy/fermipy.git
    >>> cd fermipy
    >>> python setup.py install --user
+
+Verify that the installation has succeeded by importing fermipy:
+
+.. code-block:: bash
+
+   >>> python
+   Python 2.7.8 |Anaconda 2.1.0 (64-bit)| (default, Aug 21 2014, 18:22:21) 
+   [GCC 4.4.7 20120313 (Red Hat 4.4.7-1)] on linux2
+   Type "help", "copyright", "credits" or "license" for more information.
+   Anaconda is brought to you by Continuum Analytics.
+   Please check out: http://continuum.io/thanks and https://binstar.org
+   >>> from fermipy.gtanalysis import GTAnalysis
