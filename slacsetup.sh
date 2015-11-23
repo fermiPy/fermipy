@@ -12,7 +12,7 @@ fi
 # default ST version
 export FERMI_RELEASE_TAG=10-01-01
 
-function glastsetup
+function slacsetup
 {
     # Setup CVS
     export CVSROOT=/nfs/slac/g/glast/ground/cvs    
@@ -21,6 +21,7 @@ function glastsetup
     export LD_LIBRARY_PATH=$GLAST_EXT/cfitsio/v3290-gl1/lib
 
     unset PFILES 
+    unset PYTHONPATH
 
     if [ -e "${BUILDS}/${BLDARCH}/Optimized/ScienceTools/$1/bin/${BLDARCH}-Optimized/_setup.sh" ]; then
 	export INST_DIR=${BUILDS}/${BLDARCH}/Optimized/ScienceTools/$1
@@ -33,7 +34,6 @@ function glastsetup
 	source ${INST_DIR}/bin/${BLDARCH}-Optimized/_setup.sh
     fi
     
-    export PYTHONPATH=$PYTHONPATH:$PYTHONPATH_DEFAULT
     export PATH=$GLAST_EXT/python/2.7.8/bin:$PATH
     export PYTHONPATH=$GLAST_EXT/python/2.7.8/lib/python2.7/site-packages:$PYTHONPATH
     export LD_LIBRARY_PATH=$GLAST_EXT/python/2.7.8/lib/python2.7/site-packages:$LD_LIBRARY_PATH
