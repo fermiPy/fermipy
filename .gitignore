@@ -59,3 +59,9 @@ target/
 
 # package specific
 fermipy/_version.py
+
+.ipynb_checkpoints
+*.tar.gz
+notebooks/draco
+notebooks/ic443
+notebooks/pg1553

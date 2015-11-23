@@ -1,6 +1,7 @@
+import os
 import fermipy
 import yaml
-from utils import *
+from utils import merge_dict
 import defaults
 
 def create_default_config(defaults):
@@ -28,7 +29,7 @@ def create_default_config(defaults):
                 
             o[key] = value            
         else:
-            print key, item, type(item)            
+            print(key, item, type(item))
             raise Exception('Unrecognized type for default dict element.')
 
     return o

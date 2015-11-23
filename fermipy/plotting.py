@@ -1,18 +1,17 @@
 import copy
-import glob
 import os
+import warnings
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
-from astropy import wcs
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 import wcsaxes
 import numpy as np
 from numpy import ma
 import matplotlib.cbook as cbook
-from matplotlib.colors import NoNorm, LogNorm, Normalize
+from matplotlib.colors import LogNorm, Normalize
 
 import fermipy
 import fermipy.config

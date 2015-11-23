@@ -7,8 +7,8 @@ __version__ = "unknown"
 try:
     from version import get_git_version
     __version__ = get_git_version()
-except Exception, message:
-    print message
+except Exception as message:
+    print(message)
 
 __author__ = "Matthew Wood"
 
