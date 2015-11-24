@@ -1,7 +1,7 @@
 FermiPy
 =======
 
-Fermi Python Analysis Framework
+Fermi-LAT Python Analysis Framework
 
 * Documentation: http://fermipy.readthedocs.org/
 * Installation: http://fermipy.readthedocs.org/en/latest/install.html
