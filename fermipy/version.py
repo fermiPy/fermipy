@@ -64,9 +64,7 @@ def read_release_keywords(keyword):
     TAG = "tag: "
     tags = set([r[len(TAG):] for r in refs if r.startswith(TAG)])
     if not tags: return None
-
-    for ref in sorted(tags):
-        return ref
+    return sorted(tags)[-1]
         
 def read_release_version():
 
