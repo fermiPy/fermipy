@@ -125,6 +125,11 @@ residmap = {
     'models'                   : (None,'',list),
     }
 
+#
+tsmap = {
+    'models'                   : (None,'',list),
+    }
+
 # Options for SED analysis
 sed = {
     'bin_index'                : (2.0,'',float),

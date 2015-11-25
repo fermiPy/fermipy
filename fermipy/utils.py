@@ -23,7 +23,33 @@ class Map(object):
     @property
     def wcs(self):
         return self._wcs
-            
+
+def create_model_name(src):
+    """Generate a name for a source object given its spatial/spectral
+    properties.
+
+    Parameters
+    ----------
+    src : `~fermipy.roi_model.Source`
+          A source object.
+
+    Returns
+    -------
+    name : str
+           A source name.
+    """
+    o = ''
+    spatial_type = src['SpatialModel'].lower()
+    o += spatial_type
+
+    if spatial_type == 'gaussian':
+        o += '_s%04.2f' % src['SpatialWidth']
+
+    if src['SpectrumType'] == 'PowerLaw':
+        o += '_powerlaw_%04.2f' % float(src.spectral_pars['Index']['value'])
+
+    return o
+
 def edge_to_center(edges):
     return 0.5*(edges[1:] + edges[:-1])
 
@@ -413,7 +439,6 @@ def convolve2d_disk(fn,r,sig,nstep=100):
     s = np.sum(v,axis=saxis)
 
     return s
-    
 
 def convolve2d_gauss(fn,r,sig,nstep=100):
     """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
