@@ -773,17 +773,17 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
 
-        if not 'sigma' in maps: return
+        if not 'ts' in maps: return
 
         # Reload maps from FITS file
 
         prefix = maps['name']
         fig = plt.figure()
-        p = ROIPlotter(maps['sigma'], gta.roi)
+        p = ROIPlotter(maps['sqrt_ts'], gta.roi)
         p.plot(vmin=0, vmax=8, levels=[0, 3, 5, 8],
-               cb_label='Significance [$\sigma$]')
+               cb_label='Sqrt(TS) [$\sigma$]')
         plt.savefig(os.path.join(gta.config['fileio']['outdir'],
-                                 '%s_tsmap_sigma.%s' % (prefix, format)))
+                                 '%s_tsmap_sqrt_ts.%s' % (prefix, format)))
         plt.close(fig)
 
     def make_roi_plots(self, gta, mcube_maps, prefix, erange=None, **kwargs):

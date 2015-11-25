@@ -452,12 +452,12 @@ class TSMapGenerator(fermipy.config.Configurable):
                                    '%s_%s_tsmap_ts.fits' % (
                                        prefix, modelname))
 
-        sigma_map_file = os.path.join(self.config['fileio']['workdir'],
-                                   '%s_%s_tsmap_sigma.fits' % (
+        sqrt_ts_map_file = os.path.join(self.config['fileio']['workdir'],
+                                   '%s_%s_tsmap_sqrt_ts.fits' % (
                                        prefix, modelname))
 
         utils.write_fits_image(ts_values, skywcs, ts_map_file)
-        utils.write_fits_image(ts_values**0.5, skywcs, sigma_map_file)
+        utils.write_fits_image(ts_values**0.5, skywcs, sqrt_ts_map_file)
 
         files = {'ts': os.path.basename(ts_map_file)}
 
@@ -466,7 +466,7 @@ class TSMapGenerator(fermipy.config.Configurable):
              'files': files,
              'wcs': skywcs,
              'ts': Map(ts_values, skywcs),
-             'sigma': Map(ts_values**0.5, skywcs),
+             'sqrt_ts': Map(ts_values**0.5, skywcs),
              'amplitude': Map(amp_values, skywcs)}
 
         return o
