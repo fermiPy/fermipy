@@ -1537,7 +1537,7 @@ class GTAnalysis(fermipy.config.Configurable):
         s.set_name(model_name)
         s.set_spatial_model(spatial_model, o['ext'])
 
-        self.logger.info('Adding point-source')
+        self.logger.info('Refitting extended model')
         self.add_source(model_name, s, free=True)
         self.fit(update=False)
 
@@ -2157,6 +2157,36 @@ class GTAnalysis(fermipy.config.Configurable):
 
         return self._tsmap_fast(prefix,**kwargs)
 
+    def tscube(self,prefix,**kwargs):
+
+        OUTFILE = "test_tscube_summed.fits"
+        TMPLFILE = "/afs/slac/u/ek/echarles/glast/Releases/ST-10-01-00_v2/data/Likelihood/TsCubeTemplate"
+
+#        optObject = self.create_optObject()
+#        optObject = self.like.optObject
+#        if optObject is None:
+        optObject = pyLike.OptimizerFactory_instance().create("MINUIT",self.components[0].like.logLike)
+        funcFactory = pyLike.SourceFactory_funcFactory()
+
+        refdir = pyLike.SkyDir(self.roi.skydir.ra.deg,
+                               self.roi.skydir.dec.deg)
+        npix = 10
+        pixsize = 0.1 
+        skyproj = pyLike.FitScanner.buildSkyProj("AIT",refdir,pixsize,npix,False)
+
+        print "Building fit scanner"
+        fitScanner = pyLike.FitScanner(self.like.composite,optObject,skyproj,npix,npix)
+        #fitScanner.set_verbose_bb(2)
+
+        print "Setting test source"
+        ok = fitScanner.setPowerlawPointTestSource(funcFactory)
+
+        print "Running tscube"
+        ok = fitScanner.run_tscube(True,10,5.0,-1,1e-3,30,0,False,1)
+
+        print "Writting output file"
+        ok = fitScanner.writeFitsFile(OUTFILE,"gttscube",TMPLFILE)
+    
     def _tsmap_fast(self, prefix, **kwargs):
         """Evaluate the TS for an additional source component at each point
         in the ROI.  This is a simplified implementation optimized for speed
@@ -2723,7 +2753,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.like.deleteSource(str(src.name))
             self.like.logLike.eraseSourceMap(str(src.name))
 
-        if not save_template and os.path.isfile(src['Spatial_Filename']):
+        if not save_template and 'Spatial_Filename' in src and \
+                os.path.isfile(src['Spatial_Filename']):
             os.remove(src['Spatial_Filename'])
 
         self.roi.delete_sources([src])
@@ -3150,7 +3181,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                      'SpatialMap']: continue
             if s.name.upper() in hdunames and not overwrite: continue
 
-            self.logger.info('Creating source map for %s' % s.name)
+            self.logger.debug('Creating source map for %s' % s.name)
 
             xpix, ypix = utils.skydir_to_pix(s.skydir, self._skywcs)
             xpix0, ypix0 = utils.skydir_to_pix(self.roi.skydir, self._skywcs)
@@ -3167,7 +3198,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             srcmaps[s.name] = k
 
         if srcmaps:
-            self.logger.info(
+            self.logger.debug(
                 'Updating source map file for component %s.' % self.name)
             utils.update_source_maps(self._srcmap_file, srcmaps,
                                      logger=self.logger)
@@ -3256,9 +3287,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         #            xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
 
         return xmlfile
-
-    def tscube(self, xmlfile):
-
+    
+    def _tscube_app(self, xmlfile):
+        """Run gttscube as an application."""
+        
         xmlfile = self.get_model_path(xmlfile)
 
         outfile = os.path.join(self.config['fileio']['workdir'],
