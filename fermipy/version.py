@@ -34,23 +34,33 @@
 __all__ = ("get_git_version")
 
 import os
-from subprocess import Popen, PIPE
+from subprocess import check_output
 
 _refname = '$Format: %D$'
 _tree_hash = '$Format: %t$'
 _commit_info = '$Format:%cd by %aN$'
 _commit_hash = '$Format: %h$'
 
+def render_pep440(vcs):
+
+    if vcs is None: return None
+
+    tags = vcs.split('-')
+
+    # Bare version number
+    if len(tags) == 1:
+        return tags[0]
+    else:
+        return tags[0] + '+' + '.'.join(tags[1:])
+        
 def call_git_describe(abbrev=4):
 
     try:
         dirname = os.path.abspath(os.path.dirname(__file__))
-        p = Popen(['git', 'describe', '--abbrev=%d' % abbrev, '--dirty'],
-                  stdout=PIPE, stderr=PIPE,
-                  cwd=os.path.join('..',dirname))
-        p.stderr.close()
-        line = p.stdout.readlines()[0]
-        return line.strip()
+        line = check_output(['git', 'describe', '--abbrev=%d' % abbrev, '--dirty'],
+                            cwd=os.path.join('..',dirname))
+
+        return line.strip().decode('utf-8')
 
     except:
         return None
@@ -71,21 +81,14 @@ def read_release_version():
     import re
     dirname = os.path.abspath(os.path.dirname(__file__))
 
-
     try:
-
-        f = open(os.path.join(dirname,"_version.py"), "r")
+        f = open(os.path.join(dirname,"_version.py"), "rt")
         for line in f.readlines():
 
             m = re.match("__version__ = '([^']+)'", line)
             if m:
                 ver = m.group(1)
                 return ver
-#        try:
-#            version = f.readlines()[0]
-#            return version.strip()
-#        finally:
-#            f.close()
 
     except:
         return None
@@ -95,7 +98,7 @@ def read_release_version():
 def write_release_version(version):
 
     dirname = os.path.abspath(os.path.dirname(__file__))
-    f = open(os.path.join(dirname,"_version.py"), "w")
+    f = open(os.path.join(dirname,"_version.py"), "wt")
     f.write("__version__ = '%s'\n" % version)
     f.close()
 
@@ -106,9 +109,11 @@ def get_git_version(abbrev=4):
 
     # First try to get the current version using “git describe”.
     git_version = call_git_describe(abbrev)
+    git_version = render_pep440(git_version)
 
     # Try to deduce the version from keyword expansion
     keyword_version = read_release_keywords(_refname)
+    keyword_version = render_pep440(keyword_version)
 
     # If that doesn't work, fall back on the value that's in
     # _version.py.
