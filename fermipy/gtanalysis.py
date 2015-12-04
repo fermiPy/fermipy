@@ -324,6 +324,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 'model_counts': np.zeros(self.enumbins),
                 'energies': np.copy(self.energies),
                 'residmap': {},
+                'tsmap': {},
                 'components': []
             }
         }
@@ -2076,7 +2077,8 @@ class GTAnalysis(fermipy.config.Configurable):
         for c in self.components:
             c.roi.load_source_data(sources)
 
-    def write_roi(self, outfile=None, make_residuals=False, save_model_map=True,
+    def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
+                  save_model_map=True,
                   update_sources=False, **kwargs):
         """Write current model to a file.  This function will write an
         XML model file and an ROI dictionary in both YAML and npy
@@ -2116,9 +2118,10 @@ class GTAnalysis(fermipy.config.Configurable):
         mcube_maps = self.write_xml(prefix, save_model_map=save_model_map)
 
         if make_residuals:
-            maps = self.residmap(prefix, make_plots=False)
-        #        else:
-        #            self._roi_model['roi']['residmap'] = {}
+            resid_maps = self.residmap(prefix, make_plots=False)
+
+        if make_tsmap:
+            ts_maps = self.tsmap(prefix, make_plots=False)
 
         o = self.get_roi_model(update_sources=update_sources)
         o['config'] = copy.deepcopy(self.config)
@@ -2128,6 +2131,9 @@ class GTAnalysis(fermipy.config.Configurable):
         for k, v in o['roi']['residmap'].items():
             o['roi']['residmap'][k] = {'files': v['files']}
 
+        for k, v in o['roi']['tsmap'].items():
+            o['roi']['tsmap'][k] = {'files': v['files']}
+            
         for s in self.roi.sources:
             o['sources'][s.name] = copy.deepcopy(s.data)
 
@@ -2155,8 +2161,29 @@ class GTAnalysis(fermipy.config.Configurable):
         in the ROI.  The resulting maps will be saved to
         FITS files and returned in the output dictionary."""
 
-        return self._tsmap_fast(prefix,**kwargs)
+        self.logger.info('Generating TS maps')
+        
+        make_plots = kwargs.get('make_plots', True)
+        
+        # Clear the internal tsmap data structure
+        self._roi_model['roi']['tsmap'] = {}
+        
+        maps = self._tsmap_fast(prefix,**kwargs)
 
+        for m in maps:
+            self._roi_model['roi']['tsmap'][m['name']] = copy.deepcopy(m)
+            if make_plots:
+                plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                                   fileio=self.config['fileio'],
+                                                   logging=self.config[
+                                                       'logging'])
+
+                plotter.make_tsmap_plots(self, m)
+
+        self.logger.info('Finished TS maps')  
+                
+        return maps
+        
     def tscube(self,prefix='',**kwargs):
         
         OUTFILE = "test_tscube_summed.fits"
@@ -2192,32 +2219,12 @@ class GTAnalysis(fermipy.config.Configurable):
         in the ROI.  This is a simplified implementation optimized for speed
         that only fits for the source normalization (all backgrond components
         are held fixed)."""
-
-        
-            
-        # Create a testsource
-        self.logger.info('Generating TS maps')
-
-        make_plots = kwargs.get('make_plots', True)
+       
         tsg = TSMapGenerator(self.config['tsmap'],
                              fileio=self.config['fileio'],
                              logging=self.config['logging'])
 
         maps = tsg.run(self, prefix, **kwargs)
-
-        self._roi_model['roi']['tsmap'] = {}
-
-        for m in maps:
-            self._roi_model['roi']['tsmap'][m['name']] = copy.deepcopy(m)
-            if make_plots:
-                plotter = plotting.AnalysisPlotter(self.config['plotting'],
-                                                   fileio=self.config['fileio'],
-                                                   logging=self.config[
-                                                       'logging'])
-
-                plotter.make_tsmap_plots(self, m)
-
-        self.logger.info('Finished TS maps')                
         return maps
 
     def _tsmap_pylike(self,prefix,**kwargs):
