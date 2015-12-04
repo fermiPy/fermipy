@@ -34,12 +34,26 @@
 __all__ = ("get_git_version")
 
 import os
+import subprocess
 from subprocess import check_output
 
 _refname = '$Format: %D$'
 _tree_hash = '$Format: %t$'
 _commit_info = '$Format:%cd by %aN$'
 _commit_hash = '$Format: %h$'
+
+def capture_output(cmd,dirname):
+    
+    p = subprocess.Popen(cmd,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         cwd=dirname)
+    p.stderr.close()
+
+    output = p.stdout.readlines()
+    
+    if not output: return None
+    else: return  output[0].strip()
 
 def render_pep440(vcs):
 
@@ -55,10 +69,16 @@ def render_pep440(vcs):
         
 def call_git_describe(abbrev=4):
 
+    dirname = os.path.abspath(os.path.dirname(__file__))
+
+    has_git_tree = capture_output(['git','rev-parse',
+                                   '--is-inside-work-tree'],dirname)
+
+    if not has_git_tree: return None
+
     try:
-        dirname = os.path.abspath(os.path.dirname(__file__))
-        line = check_output(['git', 'describe', '--abbrev=%d' % abbrev, '--dirty'],
-                            cwd=os.path.join('..',dirname))
+        line = check_output(['git', 'describe', '--abbrev=%d' % abbrev,
+                             '--dirty'],cwd=dirname)
 
         return line.strip().decode('utf-8')
 
