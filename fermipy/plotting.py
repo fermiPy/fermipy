@@ -739,8 +739,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         self.make_sed_plots(gta,prefix, format=format)
 
-        imfile = os.path.join(gta.config['fileio']['outdir'],
-                              '%s_counts_spectrum.%s' % (prefix, format))
+        imfile = utils.format_filename(gta.config['fileio']['outdir'],
+                                       'counts_spectrum',prefix=[prefix],
+                                       extension=format)
 
         make_counts_spectrum_plot(gta._roi_model, gta.roi, gta.energies,
                                   imfile)
@@ -758,15 +759,19 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p = ROIPlotter(maps['sigma'], gta.roi)
         p.plot(vmin=-5, vmax=5, levels=[-5, -3, 3, 5],
                cb_label='Significance [$\sigma$]')
-        plt.savefig(os.path.join(gta.config['fileio']['outdir'],
-                                 '%s_residmap_sigma.%s' % (prefix, format)))
+        plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
+                                          'residmap_sigma',
+                                          prefix=[prefix],
+                                          extension=format))
         plt.close(fig)
 
         fig = plt.figure()
         p = ROIPlotter(maps['data'], gta.roi)
         p.plot(cb_label='Smoothed Counts', zscale='pow', gamma=1. / 3.)
-        plt.savefig(os.path.join(gta.config['fileio']['outdir'],
-                                 '%s_residmap_counts.%s' % (prefix, format)))
+        plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
+                                          'residmap_counts',
+                                          prefix=[prefix],
+                                          extension=format))
         plt.close(fig)
 
     def make_tsmap_plots(self, gta, maps, **kwargs):
@@ -782,8 +787,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p = ROIPlotter(maps['sqrt_ts'], gta.roi)
         p.plot(vmin=0, vmax=8, levels=[0, 3, 5, 8],
                cb_label='Sqrt(TS) [$\sigma$]')
-        plt.savefig(os.path.join(gta.config['fileio']['outdir'],
-                                 '%s_tsmap_sqrt_ts.%s' % (prefix, format)))
+        plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
+                                          'tsmap_sqrt_ts',
+                                          prefix=[prefix],
+                                          extension=format))
         plt.close(fig)
 
     def make_roi_plots(self, gta, mcube_maps, prefix, erange=None, **kwargs):

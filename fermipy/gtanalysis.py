@@ -1099,7 +1099,7 @@ class GTAnalysis(fermipy.config.Configurable):
             else:
                 self.like.freeze(i)
 
-    def residmap(self, prefix, **kwargs):
+    def residmap(self, prefix='', **kwargs):
         """Generate data/model residual maps using the current model.
 
         Parameters
@@ -1115,7 +1115,7 @@ class GTAnalysis(fermipy.config.Configurable):
         make_plots : bool            
         
         """
-
+        
         self.logger.info('Generating residual maps')
 
         make_plots = kwargs.get('make_plots', True)
@@ -1320,7 +1320,7 @@ class GTAnalysis(fermipy.config.Configurable):
             #            sd = self.get_src_model(model_name)
             self.delete_source(model_name)
 
-        lnlscan['dlogLike'] = np.max(lnlscan['logLike']) - lnlscan['logLike']
+        lnlscan['dlogLike'] = lnlscan['logLike'] - np.max(lnlscan['logLike']) 
         dlogmax = np.max(lnlscan['dlogLike']) - np.min(lnlscan['dlogLike'])
         sigma = (0.5 * dtheta_max ** 2 / dlogmax) ** 0.5
 
@@ -2150,15 +2150,15 @@ class GTAnalysis(fermipy.config.Configurable):
                                         logging=self.config['logging'])
         plotter.run(self,mcube_maps,prefix=prefix)
 
-    def tsmap(self,prefix,**kwargs):
+    def tsmap(self,prefix='',**kwargs):
         """Evaluate the TS for an additional source component at each point
         in the ROI.  The resulting maps will be saved to
         FITS files and returned in the output dictionary."""
 
         return self._tsmap_fast(prefix,**kwargs)
 
-    def tscube(self,prefix,**kwargs):
-
+    def tscube(self,prefix='',**kwargs):
+        
         OUTFILE = "test_tscube_summed.fits"
         TMPLFILE = "/afs/slac/u/ek/echarles/glast/Releases/ST-10-01-00_v2/data/Likelihood/TsCubeTemplate"
 
@@ -2193,6 +2193,8 @@ class GTAnalysis(fermipy.config.Configurable):
         that only fits for the source normalization (all backgrond components
         are held fixed)."""
 
+        
+            
         # Create a testsource
         self.logger.info('Generating TS maps')
 
@@ -2215,6 +2217,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
                 plotter.make_tsmap_plots(self, m)
 
+        self.logger.info('Finished TS maps')                
         return maps
 
     def _tsmap_pylike(self,prefix,**kwargs):
@@ -2562,7 +2565,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                           'file_suffix'])
         self._srcmdl_file = join(workdir,
                                  'srcmdl%s.xml' % self.config['file_suffix'])
-
+        
         if self.config['binning']['enumbins'] is not None:
             self._enumbins = int(self.config['binning']['enumbins'])
         else:

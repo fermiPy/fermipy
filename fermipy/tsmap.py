@@ -238,7 +238,7 @@ def _root_amplitude_brentq(counts, background, model, root_fn=_f_cash_root):
     # Compute amplitude bounds and assert counts > 0
     amplitude_min, amplitude_max = _amplitude_bounds(counts, background, model)
 
-    if not sum(counts).sum() > 0:
+    if not sum_arrays(counts) > 0:
         return amplitude_min, 0
 
     args = (counts, background, model)
@@ -292,6 +292,9 @@ def f_cash(x, counts, background, model):
     return 2.0 * poisson_log_like(counts, background + x * model)
 
 
+def sum_arrays(x):
+    return sum([t.sum() for t in x])    
+
 def _ts_value(position, counts, background, model, C_0_map, method):
     """
     Compute TS value at a given pixel position using the approach described
@@ -314,10 +317,13 @@ def _ts_value(position, counts, background, model, C_0_map, method):
         TS value at the given pixel position.
     """
 
+    if not isinstance(position,list): position = [position]
+    if not isinstance(counts,list): counts = [counts]
+    if not isinstance(background,list): background = [background]
+    if not isinstance(model,list): model = [model]
+    if not isinstance(C_0_map,list): C_0_map = [C_0_map]
+    
     #    flux = np.ones(shape=counts.shape)
-
-    # extract_fn = _collect_wrapper(extract_array)
-    # truncate_fn = _collect_wrapper(truncate_array)
     extract_fn = _collect_wrapper(extract_large_array)
     truncate_fn = _collect_wrapper(extract_small_array)
 
@@ -337,7 +343,9 @@ def _ts_value(position, counts, background, model, C_0_map, method):
     # interpolation='nearest')
 
 
-    C_0 = sum(C_0_).sum()
+#    C_0 = sum(C_0_).sum()
+#    C_0 = _sum_wrapper(sum)(C_0_).sum()
+    C_0 = sum_arrays(C_0_)    
     if method == 'root brentq':
         amplitude, niter = _root_amplitude_brentq(counts_, background_, model_,
                                                   root_fn=_sum_wrapper(
@@ -434,8 +442,6 @@ class TSMapGenerator(fermipy.config.Configurable):
             print(i)
             for j in range(gta.npix):
 
-                #                print(i,j)
-
                 for k, p in enumerate(positions):
                     positions[k][0] = gta.components[k].enumbins//2
                     positions[k][1] = i
@@ -448,14 +454,14 @@ class TSMapGenerator(fermipy.config.Configurable):
                 ts_values[i, j] = ts
                 amp_values[i, j] = amp
 
-        ts_map_file = os.path.join(self.config['fileio']['workdir'],
-                                   '%s_%s_tsmap_ts.fits' % (
-                                       prefix, modelname))
+        ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                            'tsmap_ts.fits',
+                                            prefix=[prefix,modelname])
 
-        sqrt_ts_map_file = os.path.join(self.config['fileio']['workdir'],
-                                   '%s_%s_tsmap_sqrt_ts.fits' % (
-                                       prefix, modelname))
-
+        sqrt_ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                 'tsmap_sqrt_ts.fits',
+                                                 prefix=[prefix, modelname])
+        
         utils.write_fits_image(ts_values, skywcs, ts_map_file)
         utils.write_fits_image(ts_values**0.5, skywcs, sqrt_ts_map_file)
 

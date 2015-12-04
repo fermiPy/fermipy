@@ -24,6 +24,25 @@ class Map(object):
     def wcs(self):
         return self._wcs
 
+def format_filename(outdir,basename,prefix=None,extension=None):
+
+    filename=''
+    if prefix is not None:
+        for t in prefix:
+            if t: filename += '%s_'%t
+
+    filename += basename
+
+    if extension is not None:
+
+        if extension.startswith('.'):
+            filename += extension
+        else:
+            filename += '.' + extension
+    
+    return os.path.join(outdir,filename)
+
+    
 def create_model_name(src):
     """Generate a name for a source object given its spatial/spectral
     properties.

@@ -187,21 +187,21 @@ class ResidMapGenerator(fermipy.config.Configurable):
         sigma = np.sqrt(ts)
         sigma[excess < 0] *= -1
 
-        sigma_map_file = os.path.join(self.config['fileio']['workdir'],
-                                      '%s_residmap_%s_sigma.fits' % (
-                                      prefix, modelname))
+        sigma_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                               'residmap_sigma.fits',
+                                               prefix=[prefix, modelname])
 
-        data_map_file = os.path.join(self.config['fileio']['workdir'],
-                                     '%s_residmap_%s_data.fits' % (
-                                     prefix, modelname))
+        data_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                              'residmap_data.fits',
+                                              prefix=[prefix, modelname])
 
-        model_map_file = os.path.join(self.config['fileio']['workdir'],
-                                      '%s_residmap_%s_model.fits' % (
-                                      prefix, modelname))
+        model_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                               'residmap_model.fits',
+                                               prefix=[prefix, modelname])
 
-        excess_map_file = os.path.join(self.config['fileio']['workdir'],
-                                       '%s_residmap_%s_excess.fits' % (
-                                       prefix, modelname))
+        excess_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                'residmap_excess.fits',
+                                                prefix=[prefix, modelname])
 
         emst /= np.max(emst)
 
