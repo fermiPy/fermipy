@@ -116,12 +116,15 @@ def fits_recarray_to_dict(table):
             cols[col] = np.array(col_data,dtype=float)
         elif type(col_data[0]) == str: 
             cols[col] = np.array(col_data,dtype=str)
+        elif type(col_data[0]) == np.string_: 
+            cols[col] = np.array(col_data,dtype=str)
         elif type(col_data[0]) == np.int16: 
             cols[col] = np.array(col_data,dtype=int)
         elif type(col_data[0]) == np.ndarray: 
             cols[col] = np.array(col_data)
         else:
-            raise Exception('Unrecognized column type.')
+            print col, col_data
+            raise Exception('Unrecognized column type: %s %s'%(col,str(type(col_data))))
     
     return cols
 

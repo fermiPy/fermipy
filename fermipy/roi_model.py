@@ -13,10 +13,12 @@ import fermipy.config
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 
+
 import xml.etree.cElementTree as ElementTree
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
+from astropy.table import Table, Column
 
 def xyz_to_lonlat(*args):
 
@@ -121,10 +123,197 @@ default_par_dict = {
     
 catalog_alias = {
     '3FGL' : {'file' : 'gll_psc_v16.fit',
-              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v15')},
+              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v15'),
+              'src_hduname' : 'LAT_Point_Source_Catalog',
+              'extsrc_hduname' : 'ExtendedSources' },
     '2FGL' : {'file' : 'gll_psc_v08.fit',
-              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v07')},
+              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v07'),
+              'src_hduname' : 'LAT_Point_Source_Catalog',
+              'extsrc_hduname' : 'ExtendedSources' },
+    '2FHL' : {'file' : 'gll_psch_v08.fit',
+              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v15'),
+              'src_hduname' : '2FHL Source Catalog',
+              'extsrc_hduname' : 'Extended Sources' },
     }
+
+class PowerLaw(object):
+
+    def __init__(self,phi0,x0,index):
+        self._params = np.array([phi0,x0,index])
+
+    @property
+    def params(self):
+        return self._params
+
+    def dfde(self,x):
+        return PowerLaw.eval_dfde(x,*self.params)
+
+    @staticmethod
+    def eval_dfde(x,phi0,x0,index):        
+        return phi0*(x/x0)**index
+    
+    @staticmethod
+    def eval_flux(phi0,x0,index,xmin,xmax):
+
+        if np.allclose(index,-1.0):
+            return phi0*x0**(-index)*(np.log(xmax)-np.log(xmin))
+
+        y0 = x0*phi0*(xmin/x0)**(index+1)/(index+1)
+        y1 = x0*phi0*(xmax/x0)**(index+1)/(index+1)
+        v = y1 - y0
+
+        return y1-y0
+
+    @staticmethod
+    def eval_norm(x0,index,xmin,xmax,flux):
+
+        return flux/PowerLaw.eval_flux(1.0,x0,index,xmin,xmax)
+
+def add_columns(t0,t1):
+    """Add columns of table t1 to table t0."""
+    
+    for colname in t1.colnames:
+        col = t1.columns[colname]
+        if colname in t0.columns: continue
+        new_col = Column(name=col.name,length=len(t0),dtype=col.dtype)#,shape=col.shape)
+        t0.add_column(new_col)
+
+def join_tables(t0,t1,key0,key1):
+    
+    v0, v1 = t0[key0],t1[key1]
+    v0 = np.core.defchararray.strip(v0)
+    v1 = np.core.defchararray.strip(v1)
+    add_columns(t0,t1)
+
+    # Get mask of elements in t0 that are shared with t0
+    m0 = np.in1d(v0,v1)
+    idx1 = np.searchsorted(v1,v0)[m0]    
+
+    for colname in t1.colnames:
+        if colname == 'Source_Name': continue
+        t0[colname][m0] = t1[colname][idx1]
+
+#    for i in np.nonzero(m0)[0]:
+#        print i, t0[i]['Source_Name'], t0[i]['Spatial_Filename'], t0[i]['RAJ2000'], t0[i]['ASSOC1']
+        
+def strip_columns(t):    
+    for colname in t.colnames:
+        if not t[colname].dtype.type is np.string_: continue
+        t[colname] = np.core.defchararray.strip(t[colname])
+
+class Catalog(object):
+
+    def __init__(self,table,extdir=''):
+        self._table = table
+        self._extdir = extdir
+        self._src_skydir = SkyCoord(ra=self.table['RAJ2000']*u.deg,
+                                    dec=self.table['DEJ2000']*u.deg)
+        self._radec = np.vstack((self._src_skydir.ra.deg,
+                                 self._src_skydir.dec.deg)).T
+        
+        m = self.table['Spatial_Filename'] != ''
+        self.table['extended'] = False
+        self.table['extended'][m] = True
+        self.table['extdir'] = extdir
+
+    @property
+    def table(self):
+        return self._table
+
+    @property
+    def skydir(self):
+        return self._src_skydir
+
+    @property
+    def radec(self):
+        return self._radec
+
+    @staticmethod
+    def create(name):
+
+        extname = os.path.splitext(name)[1]
+        if extname == '.fits' or extname == '.fit':
+            fitsfile = name
+            if not os.path.isfile(fitsfile):
+                fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',fitsfile)
+            return Catalog3FGL(fitsfile)
+        elif name == '3FGL': 
+            return Catalog3FGL()
+        elif name == '2FHL': 
+            return Catalog2FHL()
+        else:
+            raise Exception('Unrecognized catalog type.')
+
+class Catalog2FHL(Catalog):
+
+    def __init__(self,fitsfile=None,extdir=''):
+
+        if fitsfile is None:
+            fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs','gll_psch_v08.fit')
+        
+        hdulist = pyfits.open(fitsfile)
+        table = Table(hdulist['2FHL Source Catalog'].data)
+        table_extsrc = Table(hdulist['Extended Sources'].data)
+
+        strip_columns(table)
+        strip_columns(table_extsrc)
+
+        join_tables(table,table_extsrc,'Source_Name','Source_Name')
+
+        super(Catalog2FHL,self).__init__(table)
+
+        self._table['Flux_Density'] = PowerLaw.eval_norm(50E3,-self.table['Spectral_Index'],
+                                                         50E3,2000E3,self.table['Flux50'])
+        self._table['Pivot_Energy'] = 50E3
+        self._table['SpectrumType'] = 'PowerLaw'
+
+        
+
+class Catalog3FGL(Catalog):
+
+    def __init__(self,fitsfile=None,extdir=''):
+        
+        if extdir is None:
+            extdir = os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v15')
+
+        if fitsfile is None:
+            fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs','gll_psc_v16.fit')
+        
+        hdulist = pyfits.open(fitsfile)
+        table = Table(hdulist['LAT_Point_Source_Catalog'].data)
+        table_extsrc = Table(hdulist['ExtendedSources'].data)
+
+        strip_columns(table)
+        strip_columns(table_extsrc)
+
+        self._table_extsrc = table_extsrc
+
+        join_tables(table,table_extsrc,'Extended_Source_Name','Source_Name')
+
+        super(Catalog3FGL,self).__init__(table,extdir)
+
+        m = self.table['SpectrumType'] == 'PLExpCutoff'
+        self.table['SpectrumType'][m] = 'PLSuperExpCutoff'
+
+        self.table['TS_value'] = 0.0
+        self.table['TS'] = 0.0
+
+        ts_keys = ['Sqrt_TS30_100','Sqrt_TS100_300',
+                   'Sqrt_TS300_1000','Sqrt_TS1000_3000',
+                   'Sqrt_TS3000_10000','Sqrt_TS10000_100000']
+
+        for k in ts_keys:
+            m = np.isfinite(self.table[k])
+            self._table['TS_value'][m] += self.table[k][m]**2
+            self._table['TS'][m] += self.table[k][m]**2
+        
+#        if not os.path.isfile(src_dict['Spatial_Filename']) and extdir:
+#            src_dict['Spatial_Filename'] = os.path.join(extdir,'Templates',
+#                                                        src_dict['Spatial_Filename'])
+
+#        m = self.table['extended']
+#       src_dict['Spatial_Filename'] = os.path.join(extdir,'Templates',
+#                                                    src_dict['Spatial_Filename'])
 
 def make_parameter_dict(pdict,fixed_par=False):
 
@@ -151,6 +340,57 @@ def make_parameter_dict(pdict,fixed_par=False):
     return o
     
     
+def get_skydir_distance_mask(src_skydir,skydir,dist,min_dist=None,
+                             square=False,coordsys='CEL'):
+    """Retrieve sources within a certain angular distance of an
+    (ra,dec) coordinate.  This function supports two types of
+    geometric selections: circular (square=False) and square
+    (square=True).  The circular selection finds all sources with a given
+    angular distance of the target position.  The square selection
+    finds sources within an ROI-like region of size R x R where R
+    = 2 x dist.
+
+    Parameters
+    ----------
+    
+    src_skydir : `~astropy.coord.SkyCoord` 
+    Array of sky directions.
+
+    skydir : `~astropy.coord.SkyCoord` 
+    Sky direction with respect to which the selection will be applied.
+
+    dist : float
+    Maximum distance in degrees from the sky coordinate.
+
+    square : bool
+    Choose whether to apply a circular or square selection.
+
+    coordsys : str
+    Coordinate system to use when applying a selection with square=True.
+    
+    """
+
+    if dist is None: dist = 180.
+    
+    if not square:                    
+        dtheta = src_skydir.separation(skydir).rad
+    elif coordsys == 'CEL':
+        dtheta = get_linear_dist(skydir,
+                                 src_skydir.ra.rad,
+                                 src_skydir.dec.rad,
+                                 coordsys=coordsys)
+    elif coordsys == 'GAL':
+        dtheta = get_linear_dist(skydir,
+                                 src_skydir.galactic.l.rad,
+                                 src_skydir.galactic.b.rad,
+                                 coordsys=coordsys)
+    else:
+        raise Exception('Unrecognized coordinate system: %s'%coordsys)
+
+    msk = (dtheta < np.radians(dist))
+    if min_dist is not None: msk &= (dtheta > np.radians(min_dist))
+    return msk
+
 def get_linear_dist(skydir,lon,lat,coordsys='CEL'):
 
     xy = sky_to_offset(skydir,np.degrees(lon),np.degrees(lat),
@@ -806,14 +1046,13 @@ class ROIModel(fermipy.config.Configurable):
                     logging=defaults.logging)
 
     src_name_cols = ['Source_Name',
-                     'ASSOC1','ASSOC2','ASSOC_GAM',
-                     '1FHL_Name','2FGL_Name',
+                     'ASSOC','ASSOC1','ASSOC2','ASSOC_GAM',
+                     '1FHL_Name','2FGL_Name','3FGL_Name',
                      'ASSOC_GAM1','ASSOC_GAM2','ASSOC_TEV']
 
-    def __init__(self,config=None,srcs=None,diffuse_srcs=None,**kwargs):
+    def __init__(self,config=None,**kwargs):
         # Coordinate for ROI center (defaults to 0,0)
         self._skydir = kwargs.pop('skydir',SkyCoord(0.0,0.0,unit=u.deg)) 
-
         super(ROIModel,self).__init__(config,**kwargs)
         
         self.logger = Logger.get(self.__class__.__name__,
@@ -825,18 +1064,16 @@ class ROIModel(fermipy.config.Configurable):
                 os.path.join(fermipy.PACKAGE_ROOT,
                              'catalogs',self.config['extdir'])
         
+        self._src_radius = self.config['src_radius']
+        if self.config['src_roiwidth'] is not None:
+            self._config['src_radius_roi'] = self.config['src_roiwidth']*0.5
+
         self._srcs = []
         self._diffuse_srcs = []
         self._src_dict = collections.defaultdict(set)
         self._src_radius = []
 
-        if srcs is None: srcs = []
-        if diffuse_srcs is None: diffuse_srcs = []
-            
-        for s in srcs + diffuse_srcs:
-            self.load_source(s,False)
-        
-        self.build_src_index()
+        self.load()
 
     def __getitem__(self,key):
         return self.get_source_by_name(key,True)
@@ -972,7 +1209,7 @@ class ROIModel(fermipy.config.Configurable):
 
         src = copy.deepcopy(src)        
         name = src.name.replace(' ','').lower()
-        
+
         if name in self._src_dict and self._src_dict[name]:
             self.logger.debug('Updating source model for %s'%src.name)
             list(self._src_dict[name])[0].update(src)
@@ -990,25 +1227,33 @@ class ROIModel(fermipy.config.Configurable):
 
         if build_index: self.build_src_index()
             
-    def load(self):
+    def load(self,**kwargs):
+        """Load both point source and diffuse components."""
+
+        coordsys = kwargs.get('coordsys','CEL')
+        extdir = kwargs.get('extdir',self.config['extdir'])
 
         self._srcs = []
         self.load_diffuse_srcs()
             
         for c in self.config['catalogs']:
 
-            if c in catalog_alias:
-                catalog_file = catalog_alias[c]['file']
-                extdir = catalog_alias[c]['extdir']
-            else:
-                catalog_file = c
-                extdir = self.config['extdir']
+#            if c in catalog_alias:
+#                catalog_file = catalog_alias[c]['file']
+#                extdir = catalog_alias[c]['extdir']
+#                src_hduname = catalog_alias[c]['src_hduname']
+#                extsrc_hduname = catalog_alias[c]['extsrc_hduname']
+#            else:
+#                catalog_file = c
+#                extdir = self.config['extdir']
+#                src_hduname = 'LAT_Point_Source_Catalog'
+#                extsrc_hduname = 'ExtendedSources'
 
-            extname = os.path.splitext(catalog_file)[1]            
-            if extname == '.fits' or extname == '.fit':
-                self.load_fits(catalog_file,extdir)
+            extname = os.path.splitext(c)[1]            
+            if extname != '.xml':
+                self.load_fits_catalog(c,coordsys=coordsys)
             elif extname == '.xml':
-                self.load_xml(catalog_file,extdir)
+                self.load_xml(c,extdir=extdir,coordsys=coordsys)
             else:
                 raise Exception('Unrecognized catalog file extension: %s'%c)
 
@@ -1044,12 +1289,12 @@ class ROIModel(fermipy.config.Configurable):
     def create_from_position(skydir,config,**kwargs):
         """Create an ROI centered on the given coordinates."""
         
-        roi = kwargs.pop('roi',None)
         coordsys = kwargs.pop('coordsys','CEL')
         
-        if roi is None:        
-            roi = ROIModel(config,**kwargs)
-            roi.load()
+        roi = ROIModel(config,skydir=skydir,**kwargs)
+        roi.load(coordsys=coordsys)
+
+        return roi
 
         srcs_dict = {}
             
@@ -1196,46 +1441,59 @@ class ROIModel(fermipy.config.Configurable):
             
         """
 
-        if dist is None: dist = 180.
-        
+        msk = get_skydir_distance_mask(self._src_skydir,skydir,dist,
+                                       min_dist=min_dist,square=square,
+                                       coordsys=coordsys)
+
         radius = self._src_skydir.separation(skydir).rad
-        
-        if not square:                    
-            dtheta = radius            
-        elif coordsys == 'CEL':
-            dtheta = get_linear_dist(skydir,
-                                     self._src_skydir.ra.rad,
-                                     self._src_skydir.dec.rad,
-                                     coordsys=coordsys)
-        elif coordsys == 'GAL':
-            dtheta = get_linear_dist(skydir,
-                                     self._src_skydir.galactic.l.rad,
-                                     self._src_skydir.galactic.b.rad,
-                                     coordsys=coordsys)
-        else:
-            raise Exception('Unrecognized coordinate system: %s'%coordsys)
-
-
-        
-        if min_dist is not None:
-            msk = np.where((dtheta < np.radians(dist)) &
-                           (dtheta > np.radians(min_dist)))[0]
-        else:
-            msk = np.where(dtheta < np.radians(dist))[0]
-
         radius = radius[msk]
-        dtheta = dtheta[msk]
         srcs = [ self._srcs[i] for i in msk ]
         
         isort = np.argsort(radius)
-
         radius = radius[isort]
-        dtheta = dtheta[isort]
-        
         srcs = [srcs[i] for i in isort]
         
         return radius, srcs
     
+    def load_fits_catalog(self,name,**kwargs):
+        
+        cat = Catalog.create(name)
+        coordsys = kwargs.get('coordsys','CEL')
+
+        m0 = get_skydir_distance_mask(cat.skydir,self.skydir,
+                                      self.config['src_radius'])
+        m1 = get_skydir_distance_mask(cat.skydir,self.skydir,
+                                      self.config['src_radius_roi'],
+                                      square=True,coordsys=coordsys)
+        m = (m0 & m1)
+
+        for i, row in enumerate(cat.table[m]):
+            
+            catalog_dict = {}
+            src_dict = {'catalog' : catalog_dict }
+            
+            for colname in cat.table.colnames:
+                catalog_dict[colname] = row[colname]
+
+            src_dict['Source_Name'] = row['Source_Name']
+            src_dict['SpectrumType'] = row['SpectrumType']
+
+            if row['extended']:
+                src_dict['SourceType'] = 'DiffuseSource'
+                src_dict['SpatialType'] = 'SpatialMap'
+                src_dict['SpatialModel'] = 'SpatialMap'
+                src_dict['Spatial_Filename'] = os.path.join(row['extdir'],
+                                                            row['Spatial_Filename'])
+            else:
+                src_dict['SourceType'] = 'PointSource'
+                src_dict['SpatialType'] = 'SkyDirFunction'
+                src_dict['SpatialModel'] = 'PointSource'                
+
+            src = Source(src_dict['Source_Name'],src_dict,radec=cat.radec[i])
+            self.load_source(src,False)
+
+        self.build_src_index()
+
     def load_fits(self,fitsfile,extdir,
                   src_hduname='LAT_Point_Source_Catalog',
                   extsrc_hduname='ExtendedSources'):
@@ -1270,11 +1528,17 @@ class ROIModel(fermipy.config.Configurable):
                 catalog[col] = cols[col][i]
 
             extflag=False
+            catalog.setdefault('SpectrumType','PowerLaw')
 
             src_dict['Source_Name'] = catalog['Source_Name'].strip()  
-            extsrc_name = catalog['Extended_Source_Name'].strip()
 
-            if len(extsrc_name.strip()) > 0:
+            if 'Extended_Source_Name' in catalog:
+                extsrc_name = catalog['Extended_Source_Name'].strip()
+            else:
+                extsrc_name = src_dict['Source_Name']
+
+#            if len(extsrc_name.strip()) > 0:
+            if extsrc_name in cols_extsrc['Source_Name']:
                 extflag=True
                 extsrc_index = extsrc_names.index(extsrc_name) 
                 
@@ -1301,6 +1565,8 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict['SpatialType'] = 'SpatialMap'
                 src_dict['SpatialModel'] = 'SpatialMap'
                 
+
+
             src = Source(src_dict['Source_Name'],src_dict,radec=radec[i])
             self.load_source(src,False)
             
@@ -1334,12 +1600,11 @@ class ROIModel(fermipy.config.Configurable):
         output_file = open(xmlfile,'w')
         output_file.write(prettify_xml(root))
 
-    def load_xml(self,xmlfile,extdir=None):
+    def load_xml(self,xmlfile,**kwargs):
         """Load sources from an XML file."""
-
-        if extdir is None:
-            extdir=self.config['extdir']
-
+        
+        extdir=kwargs.get('extdir',self.config['extdir'])
+        coordsys=kwargs.get('coordsys','CEL')
         if not os.path.isfile(xmlfile):
             xmlfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',xmlfile)
 
@@ -1347,9 +1612,26 @@ class ROIModel(fermipy.config.Configurable):
             
         root = ElementTree.ElementTree(file=xmlfile).getroot()
 
+        srcs = []
+        ra, dec = [], []
+
         for s in root.findall('source'):
             src = Source.create_from_xml(s,extdir=extdir)
-            self.load_source(src,False)
+            srcs += [src]
+            ra += [src['RAJ2000']]
+            dec += [src['DEJ2000']]
+
+        src_skydir = SkyCoord(ra=np.array(ra)*u.deg,
+                              dec=np.array(dec)*u.deg)
+
+        m0 = get_skydir_distance_mask(src_skydir,self.skydir,
+                                      self.config['src_radius'])
+        m1 = get_skydir_distance_mask(src_skydir,self.skydir,
+                                      self.config['src_radius_roi'],
+                                      square=True,coordsys=coordsys)
+        m = (m0 & m1)
+        srcs = np.array(srcs)[m]
+        for s in srcs: self.load_source(s,False)
 
         self.build_src_index()
 

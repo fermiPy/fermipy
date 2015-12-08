@@ -45,6 +45,9 @@ model = {
     'src_roiwidth'        :
         (None,'Select sources within a box of RxR centered on the ROI.  If '
          'none then no cut is applied.',float),    
+    'src_radius_roi'        :
+        (None,'Half-width of the ROI selection.  This parameter can be used in lieu of src_roiwidth.',
+         float),
     'isodiff'       : (None,'Set the isotropic template.',list),
     'galdiff'       : (None,'Set the galactic IEM mapcube.',list),
     'limbdiff'      : (None,'',list),
