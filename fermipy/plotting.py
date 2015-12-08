@@ -737,6 +737,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
         for k, v in gta._roi_model['roi']['residmap'].items():
             self.make_residual_plots(gta,v, **kwargs)
 
+        for k, v in gta._roi_model['roi']['tsmap'].items():
+            self.make_tsmap_plots(gta,v, **kwargs)
+            
         self.make_sed_plots(gta,prefix, format=format)
 
         imfile = utils.format_filename(gta.config['fileio']['outdir'],

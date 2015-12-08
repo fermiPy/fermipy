@@ -439,7 +439,7 @@ class TSMapGenerator(fermipy.config.Configurable):
         amp_values = np.zeros((gta.npix, gta.npix))
 
         for i in range(gta.npix):
-            print(i)
+#            print(i)
             for j in range(gta.npix):
 
                 for k, p in enumerate(positions):
