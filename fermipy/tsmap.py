@@ -288,9 +288,7 @@ def f_cash(x, counts, background, model):
         Source template (multiplied with exposure).
     """
 
-    #    return _cash_sum_cython(counts, background + x * model)
     return 2.0 * poisson_log_like(counts, background + x * model)
-
 
 def sum_arrays(x):
     return sum([t.sum() for t in x])    
@@ -332,16 +330,6 @@ def _ts_value(position, counts, background, model, C_0_map, method):
     background_ = extract_fn(background, model, position)
     C_0_ = extract_fn(C_0_map, model, position)
     model_ = truncate_fn(model, counts, position)
-
-    #    print(model_[0].shape,counts_[0].shape)
-    #    import matplotlib.pyplot as plt
-    #    plt.figure()
-    #    plt.imshow(np.sum(model_[0],axis=0),origin='lower',
-    # interpolation='nearest')
-    #    plt.figure()
-    #    plt.imshow(np.sum(counts_[0],axis=0),origin='lower',
-    # interpolation='nearest')
-
 
 #    C_0 = sum(C_0_).sum()
 #    C_0 = _sum_wrapper(sum)(C_0_).sum()
@@ -418,28 +406,45 @@ class TSMapGenerator(fermipy.config.Configurable):
         model = []
         c0_map = []
         positions = []
+        model_npred = 0
         for c in gta.components:
             mm = c.model_counts_map('tsmap_testsource').counts.astype('float')
             bm = c.model_counts_map(exclude=['tsmap_testsource']).counts.astype(
                 'float')
             cm = c.counts_map().counts.astype('float')
 
-            xslice = slice(max(xpix-20,0),min(xpix+21,gta.npix))
-            mm = mm[:, xslice, xslice]
-
             model += [mm]
             background += [bm]
             counts += [cm]
             c0_map += [cash(cm, bm)]
             positions += [[0, 0, 0]]
+            model_npred += np.sum(mm)
 
         gta.delete_source('tsmap_testsource')
+
+        for i, mm in enumerate(model):
+
+            nx = 3
+            ny = 3
+            threshold = 1E-2
+
+            for j in range(mm.shape[0]):
+                ix,iy = np.unravel_index(np.argmax(mm[j,...]),mm[j,...].shape)
+
+                mx = mm[j,ix, :] > mm[j,ix,iy] * threshold
+                my = mm[j,:, iy] > mm[j,ix,iy] * threshold
+                nx = max(nx, np.round(np.sum(mx) / 2.))
+                ny = max(ny, np.round(np.sum(my) / 2.))                
+#                print(j, nx, ny, np.round(np.sum(mx) / 2.))
+
+            nmax = max(nx,ny)
+            xslice = slice(max(xpix-nmax,0),min(xpix+nmax+1,gta.npix))
+            model[i] = model[i][:,xslice,xslice]
 
         ts_values = np.zeros((gta.npix, gta.npix))
         amp_values = np.zeros((gta.npix, gta.npix))
 
         for i in range(gta.npix):
-#            print(i)
             for j in range(gta.npix):
 
                 for k, p in enumerate(positions):
@@ -462,10 +467,24 @@ class TSMapGenerator(fermipy.config.Configurable):
                                                  'tsmap_sqrt_ts.fits',
                                                  prefix=[prefix, modelname])
         
+        npred_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                               'tsmap_npred.fits',
+                                               prefix=[prefix, modelname])
+
+        amp_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                             'tsmap_amplitude.fits',
+                                             prefix=[prefix, modelname])
+
         utils.write_fits_image(ts_values, skywcs, ts_map_file)
         utils.write_fits_image(ts_values**0.5, skywcs, sqrt_ts_map_file)
+        utils.write_fits_image(amp_values*model_npred, skywcs, npred_map_file)
+        utils.write_fits_image(amp_values, skywcs, amp_map_file)
 
-        files = {'ts': os.path.basename(ts_map_file)}
+        files = {'ts': os.path.basename(ts_map_file),
+                 'sqrt_ts': os.path.basename(sqrt_ts_map_file),
+                 'npred': os.path.basename(npred_map_file),
+                 'amplitude': os.path.basename(amp_map_file),
+                 }
 
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),
@@ -473,6 +492,8 @@ class TSMapGenerator(fermipy.config.Configurable):
              'wcs': skywcs,
              'ts': Map(ts_values, skywcs),
              'sqrt_ts': Map(ts_values**0.5, skywcs),
-             'amplitude': Map(amp_values, skywcs)}
+             'npred': Map(amp_values*model_npred, skywcs),
+             'amplitude': Map(amp_values, skywcs),
+             }
 
         return o

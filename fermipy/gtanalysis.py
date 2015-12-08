@@ -210,7 +210,6 @@ def load_roi_data(infile, workdir=None):
 def load_yaml(infile):
     return yaml.load(open(infile))
 
-
 def load_npy(infile):
     return np.load(infile).flat[0]
 
@@ -665,31 +664,13 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src = self.roi.get_source_by_name(name, True)
         src.update_data({'sed': None, 'extension': None,
-                         'assoc': None, 'class': None,
-                         'offset': 0.0,
-                         'offset_ra': 0.0, 'offset_dec': 0.0, })
+                         'assoc': None, 'class': None })
 
         if 'ASSOC1' in src['catalog']:
             src['assoc'] = src['catalog']['ASSOC1'].strip()
 
         if 'CLASS1' in src['catalog']:
             src['class'] = src['catalog']['CLASS1'].strip()
-
-        if isinstance(src, Source):
-            src['glon'] = src.skydir.galactic.l.deg
-            src['glat'] = src.skydir.galactic.b.deg
-
-            offset_cel = utils.sky_to_offset(self.roi.skydir,
-                                             src['ra'], src['dec'], 'CEL')
-
-            offset_gal = utils.sky_to_offset(self.roi.skydir,
-                                             src['glon'], src['glat'], 'GAL')
-
-            src['offset_ra'] = offset_cel[0, 0]
-            src['offset_dec'] = offset_cel[0, 1]
-            src['offset_glon'] = offset_gal[0, 0]
-            src['offset_glat'] = offset_gal[0, 1]
-            src['offset'] = self.roi.skydir.separation(src.skydir).deg
 
         src.update_data(self.get_src_model(name, False))
         return src
@@ -848,7 +829,8 @@ class GTAnalysis(fermipy.config.Configurable):
         
         """
         rsrc, srcs = self.roi.get_sources_by_position(self.roi.skydir,
-                                                      distance, square=square)
+                                                      distance, square=square,
+                                                      coordsys=self.config['binning']['coordsys'])
 
         if cuts is None: cuts = []
         for s, r in zip(srcs, rsrc):
@@ -861,6 +843,7 @@ class GTAnalysis(fermipy.config.Configurable):
             if min_npred is not None and (
                 ~np.isfinite(npred) or npred < min_npred):
                 continue
+
             self.free_source(s.name, free=free, pars=pars)
 
         for s in self.roi.diffuse_sources:
@@ -1135,7 +1118,7 @@ class GTAnalysis(fermipy.config.Configurable):
                                         fileio=self.config['fileio'],
                                         logging=self.config['logging'])
 
-                plotter.make_residmap_plots(self,m)
+                plotter.make_residual_plots(self,m)
 
         return maps
 
@@ -2157,9 +2140,9 @@ class GTAnalysis(fermipy.config.Configurable):
         plotter.run(self,mcube_maps,prefix=prefix)
 
     def tsmap(self,prefix='',**kwargs):
-        """Evaluate the TS for an additional source component at each point
-        in the ROI.  The resulting maps will be saved to
-        FITS files and returned in the output dictionary."""
+        """Evaluate the TS for an additional source component as a
+        function of position within the ROI.  The output TS map will
+        be saved to a FITS file and returned in the output dictionary."""
 
         self.logger.info('Generating TS maps')
         

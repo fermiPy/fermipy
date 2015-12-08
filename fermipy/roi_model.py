@@ -10,6 +10,7 @@ from fermipy.utils import (
 )
 import fermipy
 import fermipy.config
+import fermipy.utils as utils
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 
@@ -201,6 +202,18 @@ def strip_columns(t):
         if not t[colname].dtype.type is np.string_: continue
         t[colname] = np.core.defchararray.strip(t[colname])
 
+def row_to_dict(row):
+
+    o = {}
+    for colname in row.colnames:
+
+        if isinstance(row[colname],np.string_):
+            o[colname] = str(row[colname])
+        else:
+            o[colname] = row[colname]
+
+    return o
+
 class Catalog(object):
 
     def __init__(self,table,extdir=''):
@@ -210,7 +223,9 @@ class Catalog(object):
                                     dec=self.table['DEJ2000']*u.deg)
         self._radec = np.vstack((self._src_skydir.ra.deg,
                                  self._src_skydir.dec.deg)).T
-        
+        self._glonlat = np.vstack((self._src_skydir.galactic.l.deg,
+                                    self._src_skydir.galactic.b.deg)).T
+
         m = self.table['Spatial_Filename'] != ''
         self.table['extended'] = False
         self.table['extended'][m] = True
@@ -227,6 +242,10 @@ class Catalog(object):
     @property
     def radec(self):
         return self._radec
+
+    @property
+    def glonlat(self):
+        return self._glonlat
 
     @staticmethod
     def create(name):
@@ -429,7 +448,22 @@ class Model(object):
                        'SpatialWidth' : None, 
                        'SpatialType' : None,
                        'SourceType' : None,
-                       'SpectrumType' : None }
+                       'SpectrumType' : None,
+                       'RAJ2000' : 0.0,
+                       'DEJ2000' : 0.0,
+                       'ra'   : 0.0,
+                       'dec'  : 0.0,
+                       'glon' : 0.0,
+                       'glat' : 0.0,
+                       'offset_ra' : [0.0,0.0],
+                       'offset_dec' : [0.0,0.0],
+                       'offset_glon' : [0.0,0.0],
+                       'offset_glat' : [0.0,0.0],
+                       'offset' : 0.0,
+                       'ts' : np.nan,
+                       'Npred' : 0.0,
+                       'params' : {}
+                       }
         if data is not None:
             self._data.update(data)
 
@@ -472,7 +506,23 @@ class Model(object):
         return self.name == other.name
 
     def __str__(self):
-        return """%(name)"""%self.data
+
+        data = copy.deepcopy(self.data)
+        data['names'] = self.names
+
+        output = []
+        output += ['{:15s}:'.format('Name') + ' {name:s}']
+        output += ['{:15s}:'.format('TS') + ' {ts:.2f}']
+        output += ['{:15s}:'.format('Npred') + ' {Npred:.2f}']
+        output += ['{:15s}:'.format('SpatialModel') + ' {SpatialModel:s}']
+        output += ['{:15s}:'.format('SpectrumType') + ' {SpectrumType:s}']
+        output += ['Spectral Parameters']
+
+        for k,v in self['params'].items():
+            if isinstance(v,np.ndarray):
+                output += ['{:15s}: {:10.4g} +/- {:10.4g}'.format(k,v[0],v[1])]
+
+        return '\n'.join(output).format(**data)
 
     def items(self):
         return self._data.items()
@@ -669,21 +719,13 @@ class Source(Model):
             self._radec = [self.data['ra'],self.data['dec']]
         elif self._radec is None:
             raise Exception('Failed to infer RADEC for source: %s'%name)
-        
+                
         self['RAJ2000'] = self._radec[0]
         self['DEJ2000'] = self._radec[1]
         self['ra'] = self._radec[0]
-        self['dec'] = self._radec[1]
-
-        ts_keys = ['Sqrt_TS30_100','Sqrt_TS100_300',
-                   'Sqrt_TS300_1000','Sqrt_TS1000_3000',
-                   'Sqrt_TS3000_10000','Sqrt_TS10000_100000']
-
-        if ts_keys[0] in self['catalog']:        
-            self._data['catalog']['TS_value'] = 0
-            for k in ts_keys:
-                if k in self['catalog'] and np.isfinite(self['catalog'][k]):
-                    self._data['catalog']['TS_value'] += self['catalog'][k]**2
+        self['dec'] = self._radec[1]        
+        glonlat = utils.eq2gal(self._radec[0],self._radec[1])
+        self['glon'], self['glat'] = glonlat[0][0], glonlat[1][0]
 
         if self['SpatialModel'] is None:
             self._data['SpatialModel'] = self['SpatialType']
@@ -951,9 +993,10 @@ class Source(Model):
         spatial_type = spat['type']
         spectral_type = spec['type']
         
-        src_dict = copy.deepcopy(root.attrib)
+        xml_dict = copy.deepcopy(root.attrib) 
+        src_dict = {'catalog' : xml_dict }
 
-        src_dict['Source_Name'] = src_dict['name']
+        src_dict['Source_Name'] = xml_dict['name']
         src_dict['SpectrumType'] = spec['type']
         src_dict['SpatialType'] = spatial_type
         src_dict['SourceType'] = src_type
@@ -974,8 +1017,8 @@ class Source(Model):
                                      src_dict['Spatial_Filename'])
                         
             if 'RA' in src_dict:
-                src_dict['RAJ2000'] = float(src_dict['RA'])
-                src_dict['DEJ2000'] = float(src_dict['DEC'])
+                src_dict['RAJ2000'] = float(xml_dict['RA'])
+                src_dict['DEJ2000'] = float(xml_dict['DEC'])
             elif 'RA' in spatial_pars:
                 src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
                 src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
@@ -1053,6 +1096,7 @@ class ROIModel(fermipy.config.Configurable):
     def __init__(self,config=None,**kwargs):
         # Coordinate for ROI center (defaults to 0,0)
         self._skydir = kwargs.pop('skydir',SkyCoord(0.0,0.0,unit=u.deg)) 
+        coordsys=kwargs.pop('coordsys','CEL')
         super(ROIModel,self).__init__(config,**kwargs)
         
         self.logger = Logger.get(self.__class__.__name__,
@@ -1073,7 +1117,7 @@ class ROIModel(fermipy.config.Configurable):
         self._src_dict = collections.defaultdict(set)
         self._src_radius = []
 
-        self.load()
+        self.load(coordsys=coordsys)
 
     def __getitem__(self,key):
         return self.get_source_by_name(key,True)
@@ -1091,13 +1135,15 @@ class ROIModel(fermipy.config.Configurable):
         for s in sorted(self.sources,key=lambda t:t['offset']):
 
             if s.diffuse: continue            
-            o += '%-20.19s%-15.14s%-15.14s%8.3f%10.2f%12.1f\n'%(s['name'],s['SpatialModel'],s['SpectrumType'],
-                                                                 s['offset'],s['ts'],s['Npred'])
+            o += '%-20.19s%-15.14s%-15.14s%8.3f%10.2f%12.1f\n'%(s['name'],s['SpatialModel'],
+                                                                s['SpectrumType'],
+                                                                s['offset'],s['ts'],s['Npred'])
         
         for s in sorted(self.sources,key=lambda t:t['offset']):
 
             if not s.diffuse: continue
-            o += '%-20.19s%-15.14s%-15.14s%8s%10.2f%12.2f\n'%(s['name'],s['SpatialModel'],s['SpectrumType'],
+            o += '%-20.19s%-15.14s%-15.14s%8s%10.2f%12.1f\n'%(s['name'],s['SpatialModel'],
+                                                              s['SpectrumType'],
                                                               '-----',s['ts'],s['Npred'])
 
         return o
@@ -1171,7 +1217,10 @@ class ROIModel(fermipy.config.Configurable):
                 altname = re.sub(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',
                                  '', altname)    
                                 
-            src.add_name(altname)            
+            src.add_name(altname)
+
+            
+
             self.load_source(src,False)
 
     def create_source(self,src_dict,build_index=True):
@@ -1181,6 +1230,19 @@ class ROIModel(fermipy.config.Configurable):
         src = Source.create_from_dict(src_dict)
         src.set_spatial_model(src['SpatialModel'],src['SpatialWidth'])
         
+        offset = self.skydir.separation(src.skydir).deg
+        offset_cel = utils.sky_to_offset(self.skydir,
+                                         src['ra'], src['dec'], 'CEL')
+
+        offset_gal = utils.sky_to_offset(self.skydir,
+                                         src['glon'], src['glat'], 'GAL') 
+
+        src['offset'] = offset
+        src['offset_ra'] = offset_cel[0,0]
+        src['offset_dec'] = offset_cel[0,1]
+        src['offset_glon'] = offset_gal[0,0]
+        src['offset_glat'] = offset_gal[0,1]
+
         self.logger.debug('Creating source ' + src.name)
         self.logger.debug(src._data)
 
@@ -1238,20 +1300,9 @@ class ROIModel(fermipy.config.Configurable):
             
         for c in self.config['catalogs']:
 
-#            if c in catalog_alias:
-#                catalog_file = catalog_alias[c]['file']
-#                extdir = catalog_alias[c]['extdir']
-#                src_hduname = catalog_alias[c]['src_hduname']
-#                extsrc_hduname = catalog_alias[c]['extsrc_hduname']
-#            else:
-#                catalog_file = c
-#                extdir = self.config['extdir']
-#                src_hduname = 'LAT_Point_Source_Catalog'
-#                extsrc_hduname = 'ExtendedSources'
-
             extname = os.path.splitext(c)[1]            
             if extname != '.xml':
-                self.load_fits_catalog(c,coordsys=coordsys)
+                self.load_fits_catalog(c,extdir=extdir,coordsys=coordsys)
             elif extname == '.xml':
                 self.load_xml(c,extdir=extdir,coordsys=coordsys)
             else:
@@ -1276,6 +1327,7 @@ class ROIModel(fermipy.config.Configurable):
 
     @staticmethod
     def create(selection,config,**kwargs):
+
         if selection['target'] is not None:            
             return ROIModel.create_from_source(selection['target'],
                                                config,**kwargs)
@@ -1290,10 +1342,7 @@ class ROIModel(fermipy.config.Configurable):
         """Create an ROI centered on the given coordinates."""
         
         coordsys = kwargs.pop('coordsys','CEL')
-        
-        roi = ROIModel(config,skydir=skydir,**kwargs)
-        roi.load(coordsys=coordsys)
-
+        roi = ROIModel(config,skydir=skydir,coordsys=coordsys,**kwargs)
         return roi
 
         srcs_dict = {}
@@ -1332,12 +1381,11 @@ class ROIModel(fermipy.config.Configurable):
 
         coordsys = kwargs.pop('coordsys','CEL')
         
-        roi = ROIModel(config,**kwargs)
-        roi.load()
+        roi = ROIModel(config,src_radius=None,src_roiwidth=None,**kwargs)
         src = roi.get_source_by_name(name,True)
 
         return ROIModel.create_from_position(src.skydir,config,
-                                             roi=roi,coordsys=coordsys,**kwargs)
+                                             coordsys=coordsys,**kwargs)
         
     @staticmethod
     def create_roi_from_ft1(ft1file,config):
@@ -1445,9 +1493,10 @@ class ROIModel(fermipy.config.Configurable):
                                        min_dist=min_dist,square=square,
                                        coordsys=coordsys)
 
-        radius = self._src_skydir.separation(skydir).rad
+        radius = self._src_skydir.separation(skydir).deg
         radius = radius[msk]
-        srcs = [ self._srcs[i] for i in msk ]
+
+        srcs = [self._srcs[i] for i in np.nonzero(msk)[0]]
         
         isort = np.argsort(radius)
         radius = radius[isort]
@@ -1456,9 +1505,11 @@ class ROIModel(fermipy.config.Configurable):
         return radius, srcs
     
     def load_fits_catalog(self,name,**kwargs):
-        
-        cat = Catalog.create(name)
+
         coordsys = kwargs.get('coordsys','CEL')
+        extdir = kwargs.get('extdir',self.config['extdir'])
+
+        cat = Catalog.create(name)
 
         m0 = get_skydir_distance_mask(cat.skydir,self.skydir,
                                       self.config['src_radius'])
@@ -1467,14 +1518,17 @@ class ROIModel(fermipy.config.Configurable):
                                       square=True,coordsys=coordsys)
         m = (m0 & m1)
 
-        for i, row in enumerate(cat.table[m]):
-            
-            catalog_dict = {}
-            src_dict = {'catalog' : catalog_dict }
-            
-            for colname in cat.table.colnames:
-                catalog_dict[colname] = row[colname]
+        offset = self.skydir.separation(cat.skydir).deg
+        offset_cel = utils.sky_to_offset(self.skydir,
+                                         cat.radec[:,0], cat.radec[:,1], 'CEL')
+        offset_gal = utils.sky_to_offset(self.skydir,
+                                         cat.glonlat[:,0], cat.glonlat[:,1], 'GAL')        
 
+        for i, (row,radec) in enumerate(zip(cat.table[m],
+                                            cat.radec[m])):
+            
+            catalog_dict = row_to_dict(row)
+            src_dict = {'catalog' : catalog_dict }
             src_dict['Source_Name'] = row['Source_Name']
             src_dict['SpectrumType'] = row['SpectrumType']
 
@@ -1489,87 +1543,73 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict['SpatialType'] = 'SkyDirFunction'
                 src_dict['SpatialModel'] = 'PointSource'                
 
-            src = Source(src_dict['Source_Name'],src_dict,radec=cat.radec[i])
+            src = Source(src_dict['Source_Name'],src_dict,radec=radec)
+            src.data['offset'] = offset[m][i]
+            src.data['offset_ra'] = offset_cel[:, 0][m][i]
+            src.data['offset_dec'] = offset_cel[:, 1][m][i]
+            src.data['offset_glon'] = offset_gal[:, 0][m][i]
+            src.data['offset_glat'] = offset_gal[:, 1][m][i]            
             self.load_source(src,False)
 
         self.build_src_index()
-
-    def load_fits(self,fitsfile,extdir,
-                  src_hduname='LAT_Point_Source_Catalog',
-                  extsrc_hduname='ExtendedSources'):
-        """Load sources from a FITS catalog file."""
-
-        if not os.path.isfile(fitsfile):
-            fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',fitsfile)
         
-        hdulist = pyfits.open(fitsfile)
-        table_src = hdulist[src_hduname]
-        table_extsrc = hdulist[extsrc_hduname]
+    def load_xml(self,xmlfile,**kwargs):
+        """Load sources from an XML file."""
+        
+        extdir=kwargs.get('extdir',self.config['extdir'])
+        coordsys=kwargs.get('coordsys','CEL')
+        if not os.path.isfile(xmlfile):
+            xmlfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',xmlfile)
 
-        # Rearrange column data in a more convenient format
-        cols = fits_recarray_to_dict(table_src)
-        cols_extsrc = fits_recarray_to_dict(table_extsrc)
+        self.logger.info('Reading XML Model: ' + xmlfile)
+            
+        root = ElementTree.ElementTree(file=xmlfile).getroot()
 
-        extsrc_names = cols_extsrc['Source_Name'].tolist()
-        extsrc_names = [s.strip() for s in extsrc_names]
+        diffuse_srcs = []
+        srcs = []
+        ra, dec = [], []
 
-        src_skydir = SkyCoord(ra=cols['RAJ2000']*u.deg,
-                             dec=cols['DEJ2000']*u.deg)
+        for s in root.findall('source'):
+            src = Source.create_from_xml(s,extdir=extdir)
 
+            if src.diffuse:
+                diffuse_srcs += [src]
+            else:
+                srcs += [src]
+                ra += [src['RAJ2000']]
+                dec += [src['DEJ2000']]
+
+        src_skydir = SkyCoord(ra=np.array(ra)*u.deg,
+                              dec=np.array(dec)*u.deg)
         radec = np.vstack((src_skydir.ra.deg,src_skydir.dec.deg)).T
-        
-        nsrc = len(table_src.data)
-        for i in range(nsrc):
+        glonlat = np.vstack((src_skydir.galactic.l.deg,
+                             src_skydir.galactic.b.deg)).T
 
-            catalog = {}
-            src_dict = {'catalog' : catalog }
-            
-            for icol, col in enumerate(cols):
-                catalog[col] = cols[col][i]
+        offset = self.skydir.separation(src_skydir).deg
+        offset_cel = utils.sky_to_offset(self.skydir,
+                                         radec[:,0], radec[:,1], 'CEL')
+        offset_gal = utils.sky_to_offset(self.skydir,
+                                         glonlat[:,0], glonlat[:,1], 'GAL')  
 
-            extflag=False
-            catalog.setdefault('SpectrumType','PowerLaw')
+        m0 = get_skydir_distance_mask(src_skydir,self.skydir,
+                                      self.config['src_radius'])
+        m1 = get_skydir_distance_mask(src_skydir,self.skydir,
+                                      self.config['src_radius_roi'],
+                                      square=True,coordsys=coordsys)
+        m = (m0 & m1)
+        srcs = np.array(srcs)[m]
+        for i,s in enumerate(srcs):
 
-            src_dict['Source_Name'] = catalog['Source_Name'].strip()  
+            s.data['offset'] = offset[m][i]
+            s.data['offset_ra'] = offset_cel[:, 0][m][i]
+            s.data['offset_dec'] = offset_cel[:, 1][m][i]
+            s.data['offset_glon'] = offset_gal[:, 0][m][i]
+            s.data['offset_glat'] = offset_gal[:, 1][m][i] 
+            self.load_source(s,False)
 
-            if 'Extended_Source_Name' in catalog:
-                extsrc_name = catalog['Extended_Source_Name'].strip()
-            else:
-                extsrc_name = src_dict['Source_Name']
+        for i,s in enumerate(diffuse_srcs):
+            self.load_source(s,False)
 
-#            if len(extsrc_name.strip()) > 0:
-            if extsrc_name in cols_extsrc['Source_Name']:
-                extflag=True
-                extsrc_index = extsrc_names.index(extsrc_name) 
-                
-                for icol, col in enumerate(cols_extsrc):
-                    if col in cols: continue
-                    catalog[col] = cols_extsrc[col][extsrc_index]
-
-                src_dict['Spatial_Filename'] = catalog['Spatial_Filename'].strip()
-
-                if not os.path.isfile(src_dict['Spatial_Filename']) and extdir:
-                    src_dict['Spatial_Filename'] = os.path.join(extdir,'Templates',
-                                                                src_dict['Spatial_Filename'])
-            
-            src_dict['SpectrumType'] = catalog['SpectrumType'].strip()
-            if src_dict['SpectrumType'] == 'PLExpCutoff':
-                src_dict['SpectrumType'] = 'PLSuperExpCutoff'
-
-            if not extflag:
-                src_dict['SourceType'] = 'PointSource'
-                src_dict['SpatialType'] = 'SkyDirFunction'
-                src_dict['SpatialModel'] = 'PointSource'
-            else:
-                src_dict['SourceType'] = 'DiffuseSource'
-                src_dict['SpatialType'] = 'SpatialMap'
-                src_dict['SpatialModel'] = 'SpatialMap'
-                
-
-
-            src = Source(src_dict['Source_Name'],src_dict,radec=radec[i])
-            self.load_source(src,False)
-            
         self.build_src_index()
 
     def build_src_index(self):
@@ -1599,41 +1639,6 @@ class ROIModel(fermipy.config.Configurable):
                 
         output_file = open(xmlfile,'w')
         output_file.write(prettify_xml(root))
-
-    def load_xml(self,xmlfile,**kwargs):
-        """Load sources from an XML file."""
-        
-        extdir=kwargs.get('extdir',self.config['extdir'])
-        coordsys=kwargs.get('coordsys','CEL')
-        if not os.path.isfile(xmlfile):
-            xmlfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',xmlfile)
-
-        self.logger.info('Reading XML Model: ' + xmlfile)
-            
-        root = ElementTree.ElementTree(file=xmlfile).getroot()
-
-        srcs = []
-        ra, dec = [], []
-
-        for s in root.findall('source'):
-            src = Source.create_from_xml(s,extdir=extdir)
-            srcs += [src]
-            ra += [src['RAJ2000']]
-            dec += [src['DEJ2000']]
-
-        src_skydir = SkyCoord(ra=np.array(ra)*u.deg,
-                              dec=np.array(dec)*u.deg)
-
-        m0 = get_skydir_distance_mask(src_skydir,self.skydir,
-                                      self.config['src_radius'])
-        m1 = get_skydir_distance_mask(src_skydir,self.skydir,
-                                      self.config['src_radius_roi'],
-                                      square=True,coordsys=coordsys)
-        m = (m0 & m1)
-        srcs = np.array(srcs)[m]
-        for s in srcs: self.load_source(s,False)
-
-        self.build_src_index()
 
 if __name__ == '__main__':
 

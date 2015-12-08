@@ -42,6 +42,73 @@ def format_filename(outdir,basename,prefix=None,extension=None):
     
     return os.path.join(outdir,filename)
 
+def gal2eq(l, b):
+
+    RA_NGP = np.radians(192.859508333333)
+    DEC_NGP = np.radians(27.1283361111111)
+    L_CP = np.radians(122.932)
+    L_0 = L_CP - np.pi / 2.
+    RA_0 = RA_NGP + np.pi / 2.
+    DEC_0 = np.pi / 2. - DEC_NGP
+
+    l = np.array(l,ndmin=1)
+    b = np.array(b,ndmin=1)
+    
+    l = np.radians(l)
+    b = np.radians(b)
+
+    sind = np.sin(b) * np.sin(DEC_NGP) + np.cos(b) * np.cos(DEC_NGP) * np.sin(l - L_0)
+
+    dec = np.arcsin(sind)
+
+    cosa = np.cos(l - L_0) * np.cos(b) / np.cos(dec)
+    sina = (np.cos(b) * np.sin(DEC_NGP) * np.sin(l - L_0) - np.sin(b) * np.cos(DEC_NGP)) / np.cos(dec)
+
+    dec = np.degrees(dec)
+
+    ra = np.arccos(cosa)
+    ra[np.where(sina < 0.)] = -ra[np.where(sina < 0.)]
+
+    ra = np.degrees(ra + RA_0)
+
+    ra = np.mod(ra, 360.)
+    dec = np.mod(dec + 90., 180.) - 90.
+
+    return ra, dec
+
+
+def eq2gal(ra, dec):
+
+    RA_NGP = np.radians(192.859508333333)
+    DEC_NGP = np.radians(27.1283361111111)
+    L_CP = np.radians(122.932)
+    L_0 = L_CP - np.pi / 2.
+    RA_0 = RA_NGP + np.pi / 2.
+    DEC_0 = np.pi / 2. - DEC_NGP
+
+    ra = np.array(ra,ndmin=1)
+    dec = np.array(dec,ndmin=1)
+    
+    ra, dec = np.radians(ra), np.radians(dec)
+    
+    np.sinb = np.sin(dec) * np.cos(DEC_0) - np.cos(dec) * np.sin(ra - RA_0) * np.sin(DEC_0)
+
+    b = np.arcsin(np.sinb)
+
+    cosl = np.cos(dec) * np.cos(ra - RA_0) / np.cos(b)
+    sinl = (np.sin(dec) * np.sin(DEC_0) + np.cos(dec) * np.sin(ra - RA_0) * np.cos(DEC_0)) / np.cos(b)
+
+    b = np.degrees(b)
+
+    l = np.arccos(cosl)
+    l[np.where(sinl < 0.)] = - l[np.where(sinl < 0.)]
+
+    l = np.degrees(l + L_0)
+
+    l = np.mod(l, 360.)
+    b = np.mod(b + 90., 180.) - 90.
+
+    return l, b
     
 def create_model_name(src):
     """Generate a name for a source object given its spatial/spectral
@@ -250,6 +317,8 @@ def tolist(x):
         return tolist(x.tolist())
     elif isinstance(x,OrderedDict):
         return dict(x)
+    elif isinstance(x,np.bool_):
+        return bool(x)
     elif isinstance(x,basestring) or isinstance(x,np.str):
         x=str(x) # convert unicode & numpy strings 
         try:
