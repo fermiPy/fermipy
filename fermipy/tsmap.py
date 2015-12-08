@@ -370,7 +370,7 @@ class TSMapGenerator(fermipy.config.Configurable):
         o = []
 
         for m in models:
-            self.logger.info('Generating Residual map')
+            self.logger.info('Generating TS map')
             self.logger.info(m)
             o += [self.make_ts_map(gta,prefix,copy.deepcopy(m),
                                    **kwargs)]
