@@ -14,8 +14,10 @@ data = {
 
 # Options for data selection.
 selection = {
-    'emin'    : (None,'Minimum Energy',float),
-    'emax'    : (None,'Maximum Energy',float),
+    'emin'    : (None,'Minimum Energy (MeV)',float),
+    'emax'    : (None,'Maximum Energy (MeV)',float),
+    'logemin' : (None,'Minimum Energy (log10(MeV))',float),
+    'logemax' : (None,'Maximum Energy (log10(MeV))',float),
     'tmin'    : (None,'Minimum time (MET).',int),
     'tmax'    : (None,'Maximum time (MET).',int),
     'zmax'    : (None,'Maximum zenith angle.',float),
@@ -43,6 +45,9 @@ model = {
     'src_roiwidth'        :
         (None,'Select sources within a box of RxR centered on the ROI.  If '
          'none then no cut is applied.',float),    
+    'src_radius_roi'        :
+        (None,'Half-width of the ROI selection.  This parameter can be used in lieu of src_roiwidth.',
+         float),
     'isodiff'       : (None,'Set the isotropic template.',list),
     'galdiff'       : (None,'Set the galactic IEM mapcube.',list),
     'limbdiff'      : (None,'',list),
@@ -126,6 +131,11 @@ roiopt = {
 
 #
 residmap = {
+    'models'                   : (None,'',list),
+    }
+
+#
+tsmap = {
     'models'                   : (None,'',list),
     }
 

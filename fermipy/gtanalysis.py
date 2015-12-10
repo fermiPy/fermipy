@@ -8,24 +8,10 @@ import logging
 import scipy
 import scipy.optimize
 from scipy.interpolate import UnivariateSpline
-import matplotlib
-
-try:
-    def projtype(self):
-        """Return the type of projection to use"""
-        return self._projtype
-    os.environ['DISPLAY']
-except KeyError:
-    matplotlib.use('Agg')
-
-# matplotlib.interactive(False)
-# matplotlib.use('Agg')
-
 
 # pyLikelihood needs to be imported before astropy to avoid CFITSIO
 # header error
 import pyLikelihood as pyLike
-import matplotlib.pyplot as plt
 import astropy.io.fits as pyfits
 import fermipy
 import fermipy.defaults as defaults
@@ -34,14 +20,14 @@ import fermipy.hpx_utils as hpx_utils
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 from fermipy.residmap import ResidMapGenerator
+from fermipy.tsmap import TSMapGenerator
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import valToBinBounded, valToEdge, Map, HpxMap
 from fermipy.utils import create_hpx_disk_region_string, create_hpx
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
-from fermipy.plotting import ROIPlotter, SEDPlotter, ExtensionPlotter, \
-    make_counts_spectrum_plot
+
 # pylikelihood
 
 import GtApp
@@ -147,26 +133,12 @@ def get_upper_limit(dlogLike, yval, interpolate=False):
         err_lo = yval[imax] - np.interp(0.5, -dlnl[:imax][::-1],
                                         yval[:imax][::-1])
 
-    #    import matplotlib.pyplot as plt
-    #    plt.figure()
-    #    plt.plot(yval,dlnl,marker='o',linestyle='None')
-    #    plt.plot(np.linspace(0,0.1,1000),s(np.linspace(0,0.1,1000))-lnlmax)
-    #    plt.plot(np.linspace(0,0.1,1000),s1(np.linspace(0,0.1,1000))-lnlmax)
-    #    plt.gca().set_ylim(-30,1)
-    #    plt.gca().grid(True)
-    #    plt.gca().axvline(ul95)
-    #    plt.gca().axvline(y0+err_hi)
-    #    plt.gca().axhline(-cl_to_dlnl(0.95))
-    #    plt.show()
-
     return y0, ul95, err_lo, err_hi, lnlmax
-
 
 def cl_to_dlnl(cl):
     import scipy.special as spfn
     alpha = 1.0 - cl
     return 0.5 * np.power(np.sqrt(2.) * spfn.erfinv(1 - 2 * alpha), 2.)
-
 
 def run_gtapp(appname, logger, kw):
     logger.info('Running %s' % appname)
@@ -240,7 +212,6 @@ def load_roi_data(infile, workdir=None):
 def load_yaml(infile):
     return yaml.load(open(infile))
 
-
 def load_npy(infile):
     return np.load(infile).flat[0]
 
@@ -264,6 +235,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 'gtlike': defaults.gtlike,
                 'mc': defaults.mc,
                 'residmap': defaults.residmap,
+                'tsmap': defaults.tsmap,
                 'sed': defaults.sed,
                 'extension': defaults.extension,
                 'localize': defaults.localize,
@@ -355,6 +327,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 'model_counts': np.zeros(self.enumbins),
                 'energies': np.copy(self.energies),
                 'residmap': {},
+                'tsmap': {},
                 'components': []
             }
         }
@@ -532,7 +505,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 self.config['gtlike']['edisp_disable']:
             self.set_edisp_flag(src.name, True)
 
-        self.like.syncSrcParams(name)
+        self.like.syncSrcParams(str(name))
         self.like.model = self.like.components[0].model
 
         if init_source:
@@ -548,6 +521,10 @@ class GTAnalysis(fermipy.config.Configurable):
             Source name.
 
         """
+
+        if not self.roi.has_source(name):
+            self.logger.error('No source with name: %s'%name)
+            return
 
         self.logger.info('Deleting source %s' % name)
 
@@ -714,31 +691,13 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src = self.roi.get_source_by_name(name, True)
         src.update_data({'sed': None, 'extension': None,
-                         'assoc': None, 'class': None,
-                         'offset': 0.0,
-                         'offset_ra': 0.0, 'offset_dec': 0.0, })
+                         'assoc': None, 'class': None })
 
         if 'ASSOC1' in src['catalog']:
             src['assoc'] = src['catalog']['ASSOC1'].strip()
 
         if 'CLASS1' in src['catalog']:
             src['class'] = src['catalog']['CLASS1'].strip()
-
-        if isinstance(src, Source):
-            src['glon'] = src.skydir.galactic.l.deg
-            src['glat'] = src.skydir.galactic.b.deg
-
-            offset_cel = utils.sky_to_offset(self.roi.skydir,
-                                             src['ra'], src['dec'], 'CEL')
-
-            offset_gal = utils.sky_to_offset(self.roi.skydir,
-                                             src['glon'], src['glat'], 'GAL')
-
-            src['offset_ra'] = offset_cel[0, 0]
-            src['offset_dec'] = offset_cel[0, 1]
-            src['offset_glon'] = offset_gal[0, 0]
-            src['offset_glat'] = offset_gal[0, 1]
-            src['offset'] = self.roi.skydir.separation(src.skydir).deg
 
         src.update_data(self.get_src_model(name, False))
         return src
@@ -903,7 +862,8 @@ class GTAnalysis(fermipy.config.Configurable):
         
         """
         rsrc, srcs = self.roi.get_sources_by_position(self.roi.skydir,
-                                                      distance, square=square)
+                                                      distance, square=square,
+                                                      coordsys=self.config['binning']['coordsys'])
 
         if cuts is None: cuts = []
         for s, r in zip(srcs, rsrc):
@@ -916,6 +876,7 @@ class GTAnalysis(fermipy.config.Configurable):
             if min_npred is not None and (
                 ~np.isfinite(npred) or npred < min_npred):
                 continue
+
             self.free_source(s.name, free=free, pars=pars)
 
         for s in self.roi.diffuse_sources:
@@ -1059,7 +1020,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         for (idx, par_name) in zip(par_indices, par_names):
             self.like[idx].setFree(free)
-        self.like.syncSrcParams(name)
+        self.like.syncSrcParams(str(name))
 
     #        freePars = self.like.freePars(name)
     #        if not free:
@@ -1071,7 +1032,7 @@ class GTAnalysis(fermipy.config.Configurable):
         name = self.get_source_name(name)
         normPar = self.like.normPar(name)
         normPar.setValue(value)
-        self.like.syncSrcParams(name)
+        self.like.syncSrcParams(str(name))
 
     def free_norm(self, name, free=True):
         """Free/Fix normalization of a source.
@@ -1155,7 +1116,7 @@ class GTAnalysis(fermipy.config.Configurable):
             else:
                 self.like.freeze(i)
 
-    def residmap(self, prefix, **kwargs):
+    def residmap(self, prefix='', **kwargs):
         """Generate data/model residual maps using the current model.
 
         Parameters
@@ -1171,7 +1132,7 @@ class GTAnalysis(fermipy.config.Configurable):
         make_plots : bool            
         
         """
-
+        
         self.logger.info('Generating residual maps')
 
         make_plots = kwargs.get('make_plots', True)
@@ -1185,7 +1146,12 @@ class GTAnalysis(fermipy.config.Configurable):
 
         for m in maps:
             self._roi_model['roi']['residmap'][m['name']] = copy.deepcopy(m)
-            if make_plots: self.make_residual_plots(m)
+            if make_plots:
+                plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                        fileio=self.config['fileio'],
+                                        logging=self.config['logging'])
+
+                plotter.make_residual_plots(self,m)
 
         return maps
 
@@ -1269,25 +1235,16 @@ class GTAnalysis(fermipy.config.Configurable):
         self.logger.info(
             'LogLike: %f Delta-LogLike: %f' % (logLike1, logLike1 - logLike0))
 
-    def run(self):
-        """Run extension and sed analysis for the given sources."""
-
-        for s in self.config['run']['sed']:
-            self.sed(s)
-
-        for s in self.config['run']['extension']:
-            self.extension(s)
-
     def zero_source(self, name):
         normPar = self.like.normPar(name).getName()
         self.scale_parameter(name, normPar, 1E-10)
         self.free_source(name, free=False)
-        self.like.syncSrcParams(name)
+        self.like.syncSrcParams(str(name))
 
     def unzero_source(self, name):
         normPar = self.like.normPar(name).getName()
         self.scale_parameter(name, normPar, 1E10)
-        self.like.syncSrcParams(name)
+        self.like.syncSrcParams(str(name))
 
     def localize(self, name, **kwargs):
         """Perform a fit for the best-fit position of this source.
@@ -1380,7 +1337,7 @@ class GTAnalysis(fermipy.config.Configurable):
             #            sd = self.get_src_model(model_name)
             self.delete_source(model_name)
 
-        lnlscan['dlogLike'] = np.max(lnlscan['logLike']) - lnlscan['logLike']
+        lnlscan['dlogLike'] = lnlscan['logLike'] - np.max(lnlscan['logLike']) 
         dlogmax = np.max(lnlscan['dlogLike']) - np.min(lnlscan['dlogLike'])
         sigma = (0.5 * dtheta_max ** 2 / dlogmax) ** 0.5
 
@@ -1597,7 +1554,7 @@ class GTAnalysis(fermipy.config.Configurable):
         s.set_name(model_name)
         s.set_spatial_model(spatial_model, o['ext'])
 
-        self.logger.info('Adding point-source')
+        self.logger.info('Refitting extended model')
         self.add_source(model_name, s, free=True)
         self.fit(update=False)
 
@@ -1979,7 +1936,7 @@ class GTAnalysis(fermipy.config.Configurable):
         of all parameters that are currently free in the ROI model and
         update the charateristics (TS, Npred, etc.) of the
         corresponding model components.  The fit will be repeated N
-        times (set with the retries parameter) until a fit quality is
+        times (set with the retries parameter) until a fit quality of
         3 is obtained.
         
         Parameters
@@ -2000,7 +1957,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         min_fit_quality : int
            Set the minimum fit quality.  If the fit quality is smaller
-           than this parameter then all model parameters will be
+           than this value then all model parameters will be
            restored to their values prior to the fit.
 
         """
@@ -2099,6 +2056,14 @@ class GTAnalysis(fermipy.config.Configurable):
         if not save_model_map: return []
         return self.generate_model_map(model_name)
 
+    def get_model_map(self,name=None):
+        maps = []
+        for i, c in enumerate(self._components):
+            maps += [c.model_counts_map(name)]
+        shape = (self.enumbins, self.npix, self.npix)
+        model_counts = utils.make_coadd_map(maps, self._wcs, shape)
+        return [model_counts] + maps
+
     def generate_model_map(self, model_name, name=None):
 
         maps = []
@@ -2138,7 +2103,8 @@ class GTAnalysis(fermipy.config.Configurable):
         for c in self.components:
             c.roi.load_source_data(sources)
 
-    def write_roi(self, outfile=None, make_residuals=False, save_model_map=True,
+    def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
+                  save_model_map=True,
                   update_sources=False, **kwargs):
         """Write current model to a file.  This function will write an
         XML model file and an ROI dictionary in both YAML and npy
@@ -2178,9 +2144,10 @@ class GTAnalysis(fermipy.config.Configurable):
         mcube_maps = self.write_xml(prefix, save_model_map=save_model_map)
 
         if make_residuals:
-            maps = self.residmap(prefix, make_plots=False)
-        #        else:
-        #            self._roi_model['roi']['residmap'] = {}
+            resid_maps = self.residmap(prefix, make_plots=False)
+
+        if make_tsmap:
+            ts_maps = self.tsmap(prefix, make_plots=False)
 
         o = self.get_roi_model(update_sources=update_sources)
         o['config'] = copy.deepcopy(self.config)
@@ -2190,6 +2157,9 @@ class GTAnalysis(fermipy.config.Configurable):
         for k, v in o['roi']['residmap'].items():
             o['roi']['residmap'][k] = {'files': v['files']}
 
+        for k, v in o['roi']['tsmap'].items():
+            o['roi']['tsmap'][k] = {'files': v['files']}
+            
         for s in self.roi.sources:
             o['sources'][s.name] = copy.deepcopy(s.data)
 
@@ -2199,281 +2169,96 @@ class GTAnalysis(fermipy.config.Configurable):
         self.logger.info('Writing %s...' % (outfile + '.npy'))
         np.save(outfile + '.npy', o)
 
-        self.make_plots(mcube_maps, prefix, **kwargs)
+        self.make_plots(prefix, mcube_maps=mcube_maps, **kwargs)
 
-    def make_sed_plots(self, prefix, **kwargs):
+    def make_plots(self, prefix, **kwargs):
 
-        format = kwargs.get('format', self.config['plotting']['format'])
+        mcube_maps = kwargs.get('mcube_maps',None)
+        if mcube_maps is None:
+            mcube_maps = self.get_model_map()
 
-        for s in self.roi.sources:
+        plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                        fileio=self.config['fileio'],
+                                        logging=self.config['logging'])
+        plotter.run(self,mcube_maps,prefix=prefix)
 
-            if not 'sed' in s: continue
-            if s['sed'] is None: continue
+    def tsmap(self,prefix='',**kwargs):
+        """Evaluate the TS for an additional source component as a
+        function of position within the ROI.  The output TS map will
+        be saved to a FITS file and returned in the output dictionary."""
 
-            name = s.name.lower().replace(' ', '_')
-
-            self.logger.debug('Making SED plot for %s' % s.name)
-
-            p = SEDPlotter(s)
-            fig = plt.figure()
-            p.plot()
-            plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_%s_sed.%s' % (prefix, name, format)))
-            plt.close(fig)
-
-            p = SEDPlotter(s)
-            fig = plt.figure()
-            p.plot(showlnl=True)
-            plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_%s_sedlnl.%s' % (
-                                     prefix, name, format)))
-            plt.close(fig)
-
-    def make_extension_plots(self, prefix, erange=None, **kwargs):
-
-        format = kwargs.get('format', self.config['plotting']['format'])
-
-        for s in self.roi.sources:
-
-            if not 'extension' in s: continue
-            if s['extension'] is None: continue
-            if not s['extension']['config']['save_model_map']: continue
-
-            self._plot_extension(prefix, s, erange=erange, format=format)
-
-    def _plot_extension(self, prefix, src, erange=None, **kwargs):
-        """Utility function for generating diagnostic plots for the
-        extension analysis."""
-
-        format = kwargs.get('format', self.config['plotting']['format'])
-
-        if erange is None:
-            erange = (self.energies[0], self.energies[-1])
-
-        name = src['name'].lower().replace(' ', '_')
-
-        esuffix = '_%.3f_%.3f' % (erange[0], erange[1])
-
-        p = ExtensionPlotter(src, self.roi, '',
-                             self.config['fileio']['workdir'],
-                             erange=erange)
-
-        fig = plt.figure()
-        p.plot(0)
-        plt.gca().set_xlim(-2, 2)
-        ROIPlotter.setup_projection_axis(0)
-        plotting.annotate(src=src, erange=erange)
-        plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                 '%s_%s_extension_xproj%s.png' % (
-                                 prefix, name, esuffix)))
-        plt.close(fig)
-
-        fig = plt.figure()
-        p.plot(1)
-        plt.gca().set_xlim(-2, 2)
-        ROIPlotter.setup_projection_axis(1)
-        plotting.annotate(src=src, erange=erange)
-        plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                 '%s_%s_extension_yproj%s.png' % (
-                                 prefix, name, esuffix)))
-        plt.close(fig)
-
-        for i, c in enumerate(self.components):
-            suffix = '_%02i' % i
-
-            p = ExtensionPlotter(src, self.roi, suffix,
-                                 self.config['fileio']['workdir'],
-                                 erange=erange)
-
-            fig = plt.figure()
-            p.plot(0)
-            ROIPlotter.setup_projection_axis(0, erange=erange)
-            plotting.annotate(src=src, erange=erange)
-            plt.gca().set_xlim(-2, 2)
-            plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_%s_extension_xproj%s%s.png' % (
-                                     prefix, name, esuffix, suffix)))
-            plt.close(fig)
-
-            fig = plt.figure()
-            p.plot(1)
-            plt.gca().set_xlim(-2, 2)
-            ROIPlotter.setup_projection_axis(1, erange=erange)
-            plotting.annotate(src=src, erange=erange)
-            plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_%s_extension_yproj%s%s.png' % (
-                                     prefix, name, esuffix, suffix)))
-            plt.close(fig)
-
-    def make_roi_plots(self, mcube_maps, prefix, erange=None, **kwargs):
-        """Make various diagnostic plots for the 1D and 2D
-        counts/model distributions.
-
-        Parameters
-        ----------
-
-        prefix : str
-            Prefix that will be appended to all filenames.
+        self.logger.info('Generating TS maps')
         
-        """
-        self.logger.info('Maing roi plots')
-
-        format = kwargs.get('format', self.config['plotting']['format'])
-
-        if erange is None:
-            erange = (self.energies[0], self.energies[-1])
-        esuffix = '_%.3f_%.3f' % (erange[0], erange[1])
-
-        mcube_diffuse = self.model_counts_map('diffuse')
-
-        if len(mcube_maps):
-            fig = plt.figure()
-            p = ROIPlotter(mcube_maps[0], self.roi, erange=erange)
-            p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
-            plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_model_map%s.%s' % (
-                                     prefix, esuffix, format)))
-            plt.close(fig)
-
-        figx = plt.figure('xproj')
-        figy = plt.figure('yproj')
-
-        colors = ['k', 'b', 'g', 'r']
-        data_style = {'marker': 's', 'linestyle': 'None'}
-
-        for i, c in enumerate(self.components):
-            fig = plt.figure()
-            p = ROIPlotter(mcube_maps[i + 1], self.roi, erange=erange)
-            p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
-            plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                     '%s_model_map%s_%02i.%s' % (
-                                     prefix, esuffix, i, format)))
-            plt.close(fig)
-
-            plt.figure(figx.number)
-            p = ROIPlotter.create_from_fits(c._ccube_file, self.roi,
-                                            erange=erange)
-            p.plot_projection(0, color=colors[i % 4], label='Component %i' % i,
-                              **data_style)
-            p.plot_projection(0, data=mcube_maps[i + 1].counts.T,
-                              color=colors[i % 4], noerror=True,
-                              label='__nolegend__')
-
-            plt.figure(figy.number)
-            p.plot_projection(1, color=colors[i % 4], label='Component %i' % i,
-                              **data_style)
-            p.plot_projection(1, data=mcube_maps[i + 1].counts.T,
-                              color=colors[i % 4], noerror=True,
-                              label='__nolegend__')
-
-        plt.figure(figx.number)
-        ROIPlotter.setup_projection_axis(0)
-        plotting.annotate(erange=erange)
-        figx.savefig(os.path.join(self.config['fileio']['outdir'],
-                                  '%s_counts_map_comp_xproj%s.%s' % (
-                                  prefix, esuffix, format)))
-
-        plt.figure(figy.number)
-        ROIPlotter.setup_projection_axis(1)
-        plotting.annotate(erange=erange)
-        figy.savefig(os.path.join(self.config['fileio']['outdir'],
-                                  '%s_counts_map_comp_yproj%s.%s' % (
-                                  prefix, esuffix, format)))
-        plt.close(figx)
-        plt.close(figy)
-
-        fig = plt.figure()
-        p = ROIPlotter.create_from_fits(self._ccube_file, self.roi,
-                                        erange=erange)
-        p.plot(cb_label='Counts', zscale='sqrt')
-        plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                 '%s_counts_map%s.%s' % (
-                                 prefix, esuffix, format)))
-        plt.close(fig)
-
-        fig = plt.figure()
-        p.plot_projection(0, label='Data', color='k', **data_style)
-        p.plot_projection(0, data=mcube_maps[0].counts.T, label='Model',
-                          noerror=True)
-        p.plot_projection(0, data=mcube_diffuse[0].counts.T, label='Diffuse',
-                          noerror=True)
-        plt.gca().set_ylabel('Counts')
-        plt.gca().set_xlabel('LON Offset [deg]')
-        plt.gca().legend(frameon=False)
-        plotting.annotate(erange=erange)
-        #        plt.gca().set_yscale('log')
-        plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                 '%s_counts_map_xproj%s.%s' % (
-                                 prefix, esuffix, format)))
-        plt.close(fig)
-
-        fig = plt.figure()
-        p.plot_projection(1, label='Data', color='k', **data_style)
-        p.plot_projection(1, data=mcube_maps[0].counts.T, label='Model',
-                          noerror=True)
-        p.plot_projection(1, data=mcube_diffuse[0].counts.T, label='Diffuse',
-                          noerror=True)
-        plt.gca().set_ylabel('Counts')
-        plt.gca().set_xlabel('LAT Offset [deg]')
-        plt.gca().legend(frameon=False)
-        plotting.annotate(erange=erange)
-        #        plt.gca().set_yscale('log')
-        plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                 '%s_counts_map_yproj%s.%s' % (
-                                 prefix, esuffix, format)))
-
-        plt.close(fig)
-
-    def make_residual_plots(self, maps, **kwargs):
-
-        format = kwargs.get('format', self.config['plotting']['format'])
-
-        if not 'sigma' in maps: return
-
-        # Reload maps from FITS file
-
-        prefix = maps['name']
-        fig = plt.figure()
-        p = ROIPlotter(maps['sigma'], self.roi)
-        p.plot(vmin=-5, vmax=5, levels=[-5, -3, 3, 5],
-               cb_label='Significance [$\sigma$]')
-        plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                 '%s_residmap_sigma.%s' % (prefix, format)))
-        plt.close(fig)
-
-        fig = plt.figure()
-        p = ROIPlotter(maps['data'], self.roi)
-        p.plot(cb_label='Smoothed Counts', zscale='pow', gamma=1. / 3.)
-        plt.savefig(os.path.join(self.config['fileio']['outdir'],
-                                 '%s_residmap_counts.%s' % (prefix, format)))
-        plt.close(fig)
-
-    def make_plots(self, mcube_maps, prefix, **kwargs):
-
-        format = kwargs.get('format', self.config['plotting']['format'])
-
-        erange = [None] + self.config['plotting']['erange']
+        make_plots = kwargs.get('make_plots', True)
         
-        self.logger.info('Making plots')
+        # Clear the internal tsmap data structure
+        self._roi_model['roi']['tsmap'] = {}
+        
+        maps = self._tsmap_fast(prefix,**kwargs)
 
-        for x in erange:
-            self.make_roi_plots(mcube_maps, prefix, erange=x, format=format)
-            self.make_extension_plots(prefix, erange=x, format=format)
+        for m in maps:
+            self._roi_model['roi']['tsmap'][m['name']] = copy.deepcopy(m)
+            if make_plots:
+                plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                                   fileio=self.config['fileio'],
+                                                   logging=self.config[
+                                                       'logging'])
 
-        for k, v in self._roi_model['roi']['residmap'].items():
-            self.make_residual_plots(v, **kwargs)
+                plotter.make_tsmap_plots(self, m)
 
-        self.make_sed_plots(prefix, format=format)
+        self.logger.info('Finished TS maps')  
+                
+        return maps
+        
+    def tscube(self,prefix='',**kwargs):
+        
+        OUTFILE = "test_tscube_summed.fits"
+        TMPLFILE = "/afs/slac/u/ek/echarles/glast/Releases/ST-10-01-00_v2/data/Likelihood/TsCubeTemplate"
 
-        imfile = os.path.join(self.config['fileio']['outdir'],
-                              '%s_counts_spectrum.%s' % (prefix, format))
+#        optObject = self.create_optObject()
+#        optObject = self.like.optObject
+#        if optObject is None:
+        optObject = pyLike.OptimizerFactory_instance().create("MINUIT",self.components[0].like.logLike)
+        funcFactory = pyLike.SourceFactory_funcFactory()
 
-        make_counts_spectrum_plot(self._roi_model, self.roi, self.energies,
-                                  imfile)
+        refdir = pyLike.SkyDir(self.roi.skydir.ra.deg,
+                               self.roi.skydir.dec.deg)
+        npix = 10
+        pixsize = 0.1 
+        skyproj = pyLike.FitScanner.buildSkyProj("AIT",refdir,pixsize,npix,False)
 
-    def tsmap(self):
-        """Loop over ROI, place a test source at each position, and
-        evaluated the TS for that source."""
+        print "Building fit scanner"
+        fitScanner = pyLike.FitScanner(self.like.composite,optObject,skyproj,npix,npix)
+        #fitScanner.set_verbose_bb(2)
+
+        print "Setting test source"
+        ok = fitScanner.setPowerlawPointTestSource(funcFactory)
+
+        print "Running tscube"
+        ok = fitScanner.run_tscube(True,10,5.0,-1,1e-3,30,0,False,1)
+
+        print "Writting output file"
+        ok = fitScanner.writeFitsFile(OUTFILE,"gttscube",TMPLFILE)
+    
+    def _tsmap_fast(self, prefix, **kwargs):
+        """Evaluate the TS for an additional source component at each point
+        in the ROI.  This is a simplified implementation optimized for speed
+        that only fits for the source normalization (all backgrond components
+        are held fixed)."""
+       
+        tsg = TSMapGenerator(self.config['tsmap'],
+                             fileio=self.config['fileio'],
+                             logging=self.config['logging'])
+
+        maps = tsg.run(self, prefix, **kwargs)
+        return maps
+
+
+    def _tsmap_pylike(self,prefix,**kwargs):
+        """Evaluate the TS for an additional source component at each point
+        in the ROI.  This is the brute force implementation of TS map
+        generation that runs a full pyLikelihood fit
+        at each point in the ROI."""
 
         logLike0 = -self.like()
         self.logger.info('LogLike: %f' % logLike0)
@@ -2839,7 +2624,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                           'file_suffix'])
         self._srcmdl_file = join(workdir,
                                  'srcmdl%s.xml' % self.config['file_suffix'])
-
+        
         if self.config['binning']['enumbins'] is not None:
             self._enumbins = int(self.config['binning']['enumbins'])
         else:
@@ -3038,12 +2823,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             pl.setParam(par)
 
         pylike_src.setSpectrum(pl)
-        pylike_src.setName(src.name)
+        pylike_src.setName(str(src.name))
 
         # Initialize source as free/fixed
         pylike_src.spectrum().normPar().setFree(free)
         self.like.addSource(pylike_src)
-        self.like.syncSrcParams(name)
+        self.like.syncSrcParams(str(name))
 
     def delete_source(self, name, save_template=True):
 
@@ -3052,10 +2837,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Deleting source %s' % (name))
 
         if self.like is not None:
-            self.like.deleteSource(src.name)
-            self.like.logLike.eraseSourceMap(src.name)
+            self.like.deleteSource(str(src.name))
+            self.like.logLike.eraseSourceMap(str(src.name))
 
-        if not save_template and os.path.isfile(src['Spatial_Filename']):
+        if not save_template and 'Spatial_Filename' in src and \
+                os.path.isfile(src['Spatial_Filename']):
             os.remove(src['Spatial_Filename'])
 
         self.roi.delete_sources([src])
@@ -3063,8 +2849,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def delete_sources(self, srcs):
         for s in srcs:
             if self.like:
-                self.like.deleteSource(s.name)
-                self.like.logLike.eraseSourceMap(s.name)
+                self.like.deleteSource(str(s.name))
+                self.like.logLike.eraseSourceMap(str(s.name))
         self._roi.delete_sources(srcs)
 
     def set_edisp_flag(self, name, flag=True):
@@ -3161,7 +2947,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             src_names += [src.name]
 
         for s in src_names:
-            model = self.like.logLike.sourceMap(s)
+            model = self.like.logLike.sourceMap(str(s))
             self.like.logLike.updateModelMap(v, model)
 
         if self.projtype == "WCS":
@@ -3534,7 +3320,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                      'SpatialMap']: continue
             if s.name.upper() in hdunames and not overwrite: continue
 
-            self.logger.info('Creating source map for %s' % s.name)
+            self.logger.debug('Creating source map for %s' % s.name)
 
             xpix, ypix = utils.skydir_to_pix(s.skydir, self._skywcs)
             xpix0, ypix0 = utils.skydir_to_pix(self.roi.skydir, self._skywcs)
@@ -3551,7 +3337,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             srcmaps[s.name] = k
 
         if srcmaps:
-            self.logger.info(
+            self.logger.debug(
                 'Updating source map file for component %s.' % self.name)
             utils.update_source_maps(self._srcmap_file, srcmaps,
                                      logger=self.logger)
@@ -3640,10 +3426,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         #            xmlfile = os.path.join(self.config['fileio']['workdir'],xmlfile)
 
         return xmlfile
-
- 
-    def tscube(self, xmlfile):
-
+    
+    def _tscube_app(self, xmlfile):
+        """Run gttscube as an application."""
+        
         xmlfile = self.get_model_path(xmlfile)
 
         outfile = os.path.join(self.config['fileio']['workdir'],

@@ -57,6 +57,5 @@ setup(name='fermipy',
                         'astropy >= 0.4',
                         'pyyaml',
                         'healpy',
-                        'ez_setup',
                         'wcsaxes',
                         'scipy >= 0.13'])
