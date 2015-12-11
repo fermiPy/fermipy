@@ -6,6 +6,8 @@ import xml.etree.cElementTree as et
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
+import astropy.wcs as pywcs
+
 import scipy.special as specialfn
 from scipy.interpolate import UnivariateSpline
 
@@ -24,6 +26,18 @@ class Map(object):
     def wcs(self):
         return self._wcs
 
+    @staticmethod
+    def create_from_fits(fitsfile, **kwargs):
+
+        hdu = kwargs.get('hdu',0)
+        
+        hdulist = pyfits.open(fitsfile)
+        header = hdulist[hdu].header
+        data = hdulist[hdu].data
+        header = pyfits.Header.fromstring(header.tostring())
+        wcs = pywcs.WCS(header)
+        return Map(data,wcs)
+    
 def format_filename(outdir,basename,prefix=None,extension=None):
 
     filename=''
