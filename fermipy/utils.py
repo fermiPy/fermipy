@@ -2,6 +2,7 @@ import os
 import copy
 import numpy as np
 from collections import OrderedDict
+from hpx_utils import HPX
 import xml.etree.cElementTree as et
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -11,17 +12,24 @@ import astropy.wcs as pywcs
 import scipy.special as specialfn
 from scipy.interpolate import UnivariateSpline
 
-class Map(object):
-    """Representation of a 2D or 3D counts map."""
+class Map_Base(object):
+    """ Abstract representation of a 2D or 3D counts map."""
     
-    def __init__(self,counts,wcs):
+    def __init__(self,counts):
         self._counts = counts
-        self._wcs = wcs
 
     @property
     def counts(self):
         return self._counts
 
+
+class Map(Map_Base):
+    """ Representation of a 2D or 3D counts map using WCS. """
+
+    def __init__(self,counts,wcs):
+        Map_Base.__init__(self,counts)
+        self._wcs = wcs
+        
     @property
     def wcs(self):
         return self._wcs
@@ -38,6 +46,17 @@ class Map(object):
         wcs = pywcs.WCS(header)
         return Map(data,wcs)
     
+class HpxMap(Map_Base):
+    """ Representation of a 2D or 3D counts map using HEALPix. """
+
+    def __init__(self,counts,hpx):
+        Map_Base.__init__(self,counts)
+        self._hpx = hpx
+        
+    @property
+    def hpx(self):
+        return self._hpx
+            
 def format_filename(outdir,basename,prefix=None,extension=None):
 
     filename=''
@@ -386,12 +405,49 @@ def create_wcs(skydir,coordsys='CEL',projection='AIT',
     w = wcs.WCS(w.to_header())    
     return w
 
+
+def create_hpx_disk_region_string(skyDir,coordsys,radius,inclusive=0):
+    """
+    """    
+    if coordsys == "GAL":
+        xref = skyDir.galactic.l.deg
+        yref = skyDir.galactic.b.deg
+    elif coordsys == "CEL":
+        xref = skyDir.ra.deg
+        yref = skyDir.dec.deg
+    else:
+        raise Exception("Unrecognized coordinate system %s"%coordsys)
+
+    if inclusive:
+        val = "DISK_INC(%.3f,%.3f,%.3f,%i)"%(xref,yref,radius,inclusive)
+    else:
+        val = "DISK(%.3f,%.3f,%.3f)"%(xref,yref,radius)
+    return val
+
+
+def create_hpx(nside,nest,coordsys='CEL',order=-1,region=None,ebins=None):
+    """Create a HPX object.
+
+    Parameters
+    ----------
+
+    nside    : HEALPix nside paramter
+    nest     : True for HEALPix "NESTED" indexing scheme, False for "RING" scheme
+    coordsys : "CEL" or "GAL"
+    order    : nside = 2**order  
+    region   : Allows for partial-sky mappings
+    ebins    : Energy bin edges
+    """
+    return HPX(nside,nest,coordsys,order,region,ebins)
+
+
 def get_coordsys(wcs):
 
     if 'RA' in wcs.wcs.ctype[0]: return 'CEL'
     elif 'GLON' in wcs.wcs.ctype[0]: return 'GAL'
     else:
         raise Exception('Unrecognized WCS coordinate system.')
+
 
 def skydir_to_pix(skydir,wcs):
     """Convert skydir object to pixel coordinates."""
@@ -458,6 +514,17 @@ def wcs_to_axes(w,npix):
 
     return x, y, z
 
+
+def hpx_to_axes(h,npix):
+    """ Generate a sequence of bin edge vectors corresponding to the
+    axes of a HPX object."""
+    x = h.ebins
+    z = np.arange(npix[-1]+1)    
+
+    return x, z
+
+
+
 def wcs_to_coords(w,shape):
     """Generate an N x D list of pixel center coordinates where N is
     the number of pixels and D is the dimensionality of the map."""
@@ -473,6 +540,22 @@ def wcs_to_coords(w,shape):
     z = np.ravel(np.ones(shape)*z[np.newaxis,np.newaxis,:])
             
     return np.vstack((x,y,z))    
+
+
+def hpx_to_coords(h,shape):
+    """ Generate an N x D list of pixel center coordinates where N is
+    the number of pixels and D is the dimensionality of the map."""
+
+    x, z = hpx_to_axes(h,shape)
+    
+    x = np.sqrt(x[0:-1]*x[1:])
+    z = z[:-1] + 0.5
+
+    x = np.ravel(np.ones(shape)*x[:,np.newaxis])
+    z = np.ravel(np.ones(shape)*z[np.newaxis,:])
+
+    return np.vstack((x,z))    
+
     
 def get_target_skydir(config):
 
@@ -827,8 +910,20 @@ def make_disk_spatial_map(skydir,sigma,outfile,npix=501,cdelt=0.01):
     hdulist = pyfits.HDUList([hdu_image])
     hdulist.writeto(outfile,clobber=True) 
 
-def make_coadd_map(maps,wcs,shape):
-        
+
+def make_coadd_map(maps,proj,shape):
+
+    from astropy import wcs
+    if isinstance(proj,wcs.WCS):
+        return make_coadd_wcs(maps,proj,shape)
+    elif isinstance(proj,HPX):
+        return make_coadd_hpx(maps,proj,shape)
+    else:
+        raise Exception("Can't co-add map of unknown type %s"%type(proj))
+
+
+def make_coadd_wcs(maps,wcs,shape):
+
     header = wcs.to_header()
     data = np.zeros(shape)
     axes = wcs_to_axes(wcs,shape)
@@ -840,12 +935,31 @@ def make_coadd_map(maps,wcs,shape):
         
     return Map(data,copy.deepcopy(wcs))
 
+
+def make_coadd_hpx(maps,hpx,shape):
+    
+    data = np.zeros(shape)
+    axes = hpx_to_axes(hpx,shape)
+    for m in maps:
+        c = hpx_to_coords(m.hpx,m.counts.shape)
+        o = np.histogramdd(c.T,bins=axes,weights=np.ravel(m.counts))[0]
+        data += o
+    return HpxMap(data,copy.deepcopy(hpx))
+
+
+
 def write_fits_image(data,wcs,outfile):
     
     hdu_image = pyfits.PrimaryHDU(data,header=wcs.to_header())
 #        hdulist = pyfits.HDUList([hdu_image,h['GTI'],h['EBOUNDS']])
     hdulist = pyfits.HDUList([hdu_image])        
     hdulist.writeto(outfile,clobber=True)    
+
+
+def write_hpx_image(data,hpx,outfile,extname="SKYMAP"):
+    
+    hpx.write_fits(data,outfile,extname,clobber=True)
+ 
 
 def update_source_maps(srcmap_file,srcmaps,logger=None):
 
@@ -871,3 +985,4 @@ def update_source_maps(srcmap_file,srcmaps,logger=None):
         hdulist[name].data[...] = data        
     hdulist.writeto(srcmap_file,clobber=True)
 
+    

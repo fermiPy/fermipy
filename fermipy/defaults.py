@@ -76,6 +76,7 @@ gtlike = {
 
 # Options for binning.
 binning = {
+    'projtype'   : ('WCS','',str),
     'proj'       : ('AIT','',str),
     'coordsys'   : ('CEL','',str),        
     'npix'       : 
@@ -86,7 +87,10 @@ binning = {
     'binsz'      : (0.1,'Set the bin size in degrees.',float),
     'binsperdec' : (8,'Set the number of energy bins per decade.',float),
     'enumbins'   : (None,'Number of energy bins.  If none this will be inferred from energy '
-                    'range and binsperdec parameter.',int)
+                    'range and binsperdec parameter.',int),
+    'hpx_ordering_scheme' : ('RING','HEALPix Ordering Scheme',str),
+    'hpx_order'           : (10,'Order of the map (int between 0 and 12, included)',int),
+    'hpx_ebin'            : (True,'Include energy binning',bool)
     }
 
 # Options related to I/O and output file bookkeeping
