@@ -2870,7 +2870,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
     def counts_map(self):
         """Return 3-D counts map as a numpy array."""
-        p_method =  self.like.logLike.countsMap().projection().method()
+        try:
+            p_method =  self.like.logLike.countsMap().projection().method()
+        except Exception, message:
+            p_method = 0
+
         if p_method == 0: # WCS
             z = self.like.logLike.countsMap().data()
             z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
