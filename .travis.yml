@@ -21,8 +21,13 @@ before_install:
 
 # Install packages
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy 
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy 
+  - source activate test-environment
   - pip install healpy
+  - python setup.py install
+
+#  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy 
+#  - pip install healpy
  
 # Run test
 script:
