@@ -13,6 +13,8 @@ from scipy.interpolate import UnivariateSpline
 # header error
 import pyLikelihood as pyLike
 import astropy.io.fits as pyfits
+import astropy.wcs as pywcs
+
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
@@ -246,9 +248,6 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def __init__(self, config, **kwargs):
 
-        #        if not isinstance(config,dict):
-        #            config = self.create(config)
-
         super(GTAnalysis, self).__init__(config, **kwargs)
 
         self._projtype = self.config['binning']['projtype']
@@ -437,6 +436,9 @@ class GTAnalysis(fermipy.config.Configurable):
         gta.load_roi(infile)
         return gta
 
+    def set_log_level(self,level):
+        self.logger.handlers[1].setLevel(level)
+    
     def _update_roi(self):
 
         rm = self._roi_model
@@ -2211,40 +2213,84 @@ class GTAnalysis(fermipy.config.Configurable):
         return maps
         
     def tscube(self,prefix='',**kwargs):
+
+        make_plots = kwargs.get('make_plots', True)
+
+        src_dict = {}
+        src_dict['ra'] = self.roi.skydir.ra.deg
+        src_dict['dec'] = self.roi.skydir.dec.deg
+        src_dict.setdefault('SpatialModel', 'PointSource')
+        src_dict.setdefault('SpatialWidth', 0.3)
+        src_dict.setdefault('Index', 2.0)
+        src_dict.setdefault('Prefactor', 1E-13)
+
+        self.add_source('tscube_testsource', src_dict, free=True,
+                       init_source=False)
+        src = self.roi['tscube_testsource']
+
+        modelname = utils.create_model_name(src)
+
         
-        OUTFILE = "test_tscube_summed.fits"
+        OUTFILE = utils.format_filename(self.config['fileio']['workdir'],
+                                        'tscube.fits',
+                                        prefix=[prefix])
+        
         TMPLFILE = "/afs/slac/u/ek/echarles/glast/Releases/ST-10-01-00_v2/data/Likelihood/TsCubeTemplate"
 
-#        optObject = self.create_optObject()
-#        optObject = self.like.optObject
-#        if optObject is None:
         optObject = pyLike.OptimizerFactory_instance().create("MINUIT",self.components[0].like.logLike)
         funcFactory = pyLike.SourceFactory_funcFactory()
 
         refdir = pyLike.SkyDir(self.roi.skydir.ra.deg,
                                self.roi.skydir.dec.deg)
-        npix = 10
-        pixsize = 0.1 
+        npix = self.npix
+        pixsize = np.abs(self._skywcs.wcs.cdelt[0])
         skyproj = pyLike.FitScanner.buildSkyProj("AIT",refdir,pixsize,npix,False)
 
         print "Building fit scanner"
         fitScanner = pyLike.FitScanner(self.like.composite,optObject,skyproj,npix,npix)
-        #fitScanner.set_verbose_bb(2)
+#        fitScanner.set_verbose_bb(2)
 
         print "Setting test source"
-        ok = fitScanner.setPowerlawPointTestSource(funcFactory)
-
-        print "Running tscube"
+        ok = fitScanner.setTestSourceByName('tscube_testsource')
+#        ok = fitScanner.setPowerlawPointTestSource(funcFactory)
+        
+        self.logger.info("Running tscube")
         ok = fitScanner.run_tscube(True,10,5.0,-1,1e-3,30,0,False,1)
-
+        self.logger.info("Finished tscube")
+        
         print "Writting output file"
         ok = fitScanner.writeFitsFile(OUTFILE,"gttscube",TMPLFILE)
+
+        ts_map = utils.Map.create_from_fits(OUTFILE)
+        
+        o = {'name': '%s_%s' % (prefix, modelname),
+             'src_dict': copy.deepcopy(src_dict),
+             'files': [],
+#             'wcs': skywcs,
+#             'ts': Map(ts_values, skywcs),
+#             'sqrt_ts': Map(ts_values**0.5, skywcs),
+#             'npred': Map(amp_values*model_npred, skywcs),
+#             'amplitude': Map(amp_values, skywcs),
+             }
+
+        
+#        if make_plots:
+#            plotter = plotting.AnalysisPlotter(self.config['plotting'],
+#                                               fileio=self.config['fileio'],
+#                                               logging=self.config['logging'])
+
+#            plotter.make_tsmap_plots(self, m)
+        
+#        p = ROIPlotter(ts_map, self.roi)
+
+        return o
+        
     
     def _tsmap_fast(self, prefix, **kwargs):
         """Evaluate the TS for an additional source component at each point
         in the ROI.  This is a simplified implementation optimized for speed
-        that only fits for the source normalization (all backgrond components
-        are held fixed)."""
+        that only fits for the source normalization (all background components
+        are kept fixed)."""
        
         tsg = TSMapGenerator(self.config['tsmap'],
                              fileio=self.config['fileio'],
