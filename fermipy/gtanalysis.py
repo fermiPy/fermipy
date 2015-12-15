@@ -291,6 +291,9 @@ class GTAnalysis(fermipy.config.Configurable):
         else:
             self._config['fileio']['workdir'] = self._savedir
 
+        if not 'FERMIPY_WORKDIR' in os.environ:
+            os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
+            
         # Setup the ROI definition
         self._roi = ROIModel.create(self.config['selection'],
                                     self.config['model'],

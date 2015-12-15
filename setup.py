@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+from setuptools import setup, find_packages
 import os
 import sys
 
@@ -27,10 +27,11 @@ setup(name='fermipy',
       author_email='fermipy.developers@gmail.com',
       description='A Python package for analysis of Fermi-LAT data',
       license='BSD',
-      packages=['fermipy'],
+      packages=find_packages(exclude='test'),
       package_data = {
         '' : ['*yaml','*xml','*fit'],
-        'fermipy' : ['catalogs/Extended_archive_v14/*fits',
+        'fermipy' : ['data/*',
+                     'catalogs/Extended_archive_v14/*fits',
                      'catalogs/Extended_archive_v14/*xml',
                      'catalogs/Extended_archive_v14/*/*fits',
                      'catalogs/Extended_archive_v14/*/*xml',

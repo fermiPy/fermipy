@@ -74,14 +74,32 @@ def scale_parameter(p):
     else:
         return p, 1.0
 
-def resolve_file_path(path,filename):
+def resolve_file_path(path, **kwargs):
+    
+    if os.path.isabs(os.path.expandvars(path)) and \
+            os.path.isfile(os.path.expandvars(path)):
+        return path
 
-    if filename is None: return None
-    elif os.path.isfile(filename): return filename    
-    elif os.path.isfile(os.path.join(path,filename)):
-        return os.path.join(path,filename)
-    else:
-        return filename
+    dirs = kwargs.get('search_dirs')
+
+    for d in dirs:
+        if not os.path.isdir(os.path.expandvars(d)):
+            continue        
+        p = os.path.join(d,path)
+
+        print os.path.expandvars(p), os.path.isfile(os.path.expandvars(p))
+        
+        if os.path.isfile(os.path.expandvars(p)):
+            return p
+
+    raise Exception('Failed to resolve file path: %s'%path)
+        
+#    if filename is None: return None
+#    elif os.path.isfile(filename): return filename    
+#    elif os.path.isfile(os.path.join(path,filename)):
+#        return os.path.join(path,filename)
+#    else:
+#        return filename
 
 spectrum_type_pars = {
     'PowerLaw' : ['Prefactor','Index','Scale'],
@@ -1178,7 +1196,9 @@ class ROIModel(fermipy.config.Configurable):
         if 'FERMI_DIR' in os.environ and not 'FERMI_DIFFUSE_DIR' in os.environ:
             os.environ['FERMI_DIFFUSE_DIR'] = \
                 os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
-        
+        if not 'FERMIPY_WORKDIR' in os.environ:
+            os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
+            
         srcs = []
         if self.config[name] is not None:
             srcs = self.config[name]
@@ -1189,10 +1209,12 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict = {'file' : t}
             elif isinstance(t,dict):
                 src_dict = copy.deepcopy(t)
-                
-            if not os.path.isfile(os.path.expandvars(src_dict['file'])):
-                src_dict['file'] = os.path.join('$FERMI_DIFFUSE_DIR',
-                                                src_dict['file'])
+
+            src_dict['file'] = \
+                resolve_file_path(src_dict['file'],
+                                  search_dirs=['$FERMIPY_WORKDIR',
+                                               os.path.join('$FERMIPY_ROOT','data'),
+                                               '$FERMI_DIFFUSE_DIR'])
                 
             if not 'name' in src_dict:                
                 if len(srcs) == 1:
@@ -1206,7 +1228,7 @@ class ROIModel(fermipy.config.Configurable):
                 src_type = 'MapCubeFunction'
             else:
                 raise Exception('Unrecognized file format for diffuse model: %s'%src_dict['file'])
-
+            
             # Extract here
 
             
@@ -1221,9 +1243,6 @@ class ROIModel(fermipy.config.Configurable):
                                  '', altname)    
                                 
             src.add_name(altname)
-
-            
-
             self.load_source(src,False)
 
     def create_source(self,src_dict,build_index=True):
