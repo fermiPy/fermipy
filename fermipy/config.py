@@ -1,8 +1,10 @@
 import os
-import fermipy
 import yaml
-from utils import merge_dict
-import defaults
+
+import fermipy
+import fermipy.defaults as defaults
+import fermipy.utils as utils
+
 
 def create_default_config(defaults):
     """Create a configuration dictionary from a defaults dictionary.
@@ -78,10 +80,10 @@ class Configurable(object):
 
     def configure(self,config,**kwargs):
 
-        config = merge_dict(config,kwargs,add_new_keys=True)
+        config = utils.merge_dict(config,kwargs,add_new_keys=True)
         validate_config(config,self.defaults) 
         cast_config(config,self.defaults)
-        self._config = merge_dict(self._config,config)
+        self._config = utils.merge_dict(self._config,config)
         
     @classmethod
     def get_config(cls):
@@ -125,7 +127,7 @@ class ConfigManager(object):
             config['fileio']['outdir'] = os.path.abspath(os.path.dirname(configfile))
         
         user_config = ConfigManager.load(configfile)
-        config = merge_dict(config,user_config,True)
+        config = utils.merge_dict(config,user_config,True)
 
         config['fileio']['outdir'] = os.path.abspath(config['fileio']['outdir'])
         

@@ -27,7 +27,7 @@ setup(name='fermipy',
       author_email='fermipy.developers@gmail.com',
       description='A Python package for analysis of Fermi-LAT data',
       license='BSD',
-      packages=find_packages(exclude='test'),
+      packages=find_packages(exclude='tests'),
       package_data = {
         '' : ['*yaml','*xml','*fit'],
         'fermipy' : ['data/*',

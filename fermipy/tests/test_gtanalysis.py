@@ -1,6 +1,6 @@
 from numpy.testing import assert_allclose
 import astropy.units as u
-#from .. import gtanalysis
+from .. import gtanalysis
 import pytest
 import os
 
@@ -24,29 +24,42 @@ def setup(request):
 def setup2(request,tmpdir_factory):    
     path =  tmpdir_factory.mktemp('data')
 
-    print('download')
-    url = 'https://www.dropbox.com/s/1lpkincrj04c8m2/draco.tar.gz'
+    print('\ndownload')
+    url = 'https://www.dropbox.com/s/b5zln7ku780xvzq/fermipy_test0.tar.gz'
+#    url = 'https://www.dropbox.com/s/1lpkincrj04c8m2/draco.tar.gz'
 #    dirname = os.path.abspath(os.path.dirname(__file__))
 #    dirname = path.dirpath()
  #   outfile = os.path.join(dirname,'draco.tar.gz')
-    outfile = path.join('draco.tar.gz')
+    outfile = path.join('fermipy_test0.tar.gz')
     dirname = path.join()
     os.system('wget -nc %s -O %s'%(url,outfile))
     os.system('cd %s;tar xzf %s'%(dirname,outfile))
 
     os.system('touch %s'%path.join('test.txt'))
     request.addfinalizer(lambda: path.remove(rec=1))
-    return path
-    
-def test_gtanalysis_one(setup2):
-    print('here is test one')
-    cfgfile = setup2.join('draco','config.yaml')
-    os.system('cat %s'%cfgfile)
-    print(os.getcwd())
-    print(setup2)
-    
 
-def test_gtanalysis_two(setup2):
+    cfgfile = path.join('fermipy_test0','config.yaml')
+
+    print(cfgfile)
+
+    gta = gtanalysis.GTAnalysis(str(cfgfile))
+    gta.setup()
+
+    return gta
+    
+@pytest.mark.skipif("True")
+def test_gtanalysis_setup(setup2):
+    print('here is test one')
+    print(os.getcwd())
+
+    gta = setup2
+    gta.print_roi()
+
+@pytest.mark.skipif("True")
+def test_gtanalysis_write_roi(setup2):
     print('here is test two')
     print(os.getcwd())
     print(setup2)
+
+    gta = setup2
+    gta.write_roi('test')

@@ -3,23 +3,19 @@ import copy
 import re
 import collections
 import numpy as np
-import defaults 
-from fermipy.utils import (
-    create_xml_element, merge_dict, sky_to_offset, prettify_xml,
-    get_target_skydir, load_xml_elements, fits_recarray_to_dict
-)
-import fermipy
-import fermipy.config
-import fermipy.utils as utils
-from fermipy.logger import Logger
-from fermipy.logger import logLevel as ll
-
-
 import xml.etree.cElementTree as ElementTree
+
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
 from astropy.table import Table, Column
+
+import fermipy
+import fermipy.config
+import fermipy.utils as utils
+import fermipy.defaults as defaults
+from fermipy.logger import Logger
+from fermipy.logger import logLevel as ll
 
 def xyz_to_lonlat(*args):
 
@@ -80,26 +76,16 @@ def resolve_file_path(path, **kwargs):
             os.path.isfile(os.path.expandvars(path)):
         return path
 
-    dirs = kwargs.get('search_dirs')
+    dirs = kwargs.get('search_dirs',[])
 
     for d in dirs:
         if not os.path.isdir(os.path.expandvars(d)):
             continue        
         p = os.path.join(d,path)
-
-        print os.path.expandvars(p), os.path.isfile(os.path.expandvars(p))
-        
         if os.path.isfile(os.path.expandvars(p)):
             return p
 
     raise Exception('Failed to resolve file path: %s'%path)
-        
-#    if filename is None: return None
-#    elif os.path.isfile(filename): return filename    
-#    elif os.path.isfile(os.path.join(path,filename)):
-#        return os.path.join(path,filename)
-#    else:
-#        return filename
 
 spectrum_type_pars = {
     'PowerLaw' : ['Prefactor','Index','Scale'],
@@ -211,9 +197,6 @@ def join_tables(t0,t1,key0,key1):
     for colname in t1.colnames:
         if colname == 'Source_Name': continue
         t0[colname][m0] = t1[colname][idx1]
-
-#    for i in np.nonzero(m0)[0]:
-#        print i, t0[i]['Source_Name'], t0[i]['Spatial_Filename'], t0[i]['RAJ2000'], t0[i]['ASSOC1']
         
 def strip_columns(t):    
     for colname in t.colnames:
@@ -430,7 +413,7 @@ def get_skydir_distance_mask(src_skydir,skydir,dist,min_dist=None,
 
 def get_linear_dist(skydir,lon,lat,coordsys='CEL'):
 
-    xy = sky_to_offset(skydir,np.degrees(lon),np.degrees(lat),
+    xy = utils.sky_to_offset(skydir,np.degrees(lon),np.degrees(lat),
                        coordsys=coordsys)
 
     x = np.radians(xy[:,0])
@@ -441,7 +424,7 @@ def get_linear_dist(skydir,lon,lat,coordsys='CEL'):
     
 def get_dist_to_edge(skydir,lon,lat,width,coordsys='CEL'):
 
-    xy = sky_to_offset(skydir,np.degrees(lon),np.degrees(lat),
+    xy = utils.sky_to_offset(skydir,np.degrees(lon),np.degrees(lat),
                        coordsys=coordsys)
 
     x = np.radians(xy[:,0])
@@ -576,19 +559,19 @@ class Model(object):
         self._names.append(name)
     
     def update_data(self,d):
-        self._data = merge_dict(self._data,d,add_new_keys=True)
+        self._data = utils.merge_dict(self._data,d,add_new_keys=True)
 
     def update(self,m):
 
         if 'SpectrumType' in m and self['SpectrumType'] != m['SpectrumType']:
             self.spectral_pars = {}
         
-        self._data = merge_dict(self._data,m._data,add_new_keys=True)
+        self._data = utils.merge_dict(self._data,m._data,add_new_keys=True)
         self._name = m.name
         self._names = list(set(self._names + m.names))        
-        self._data['spectral_pars'] = merge_dict(self.spectral_pars,
+        self._data['spectral_pars'] = utils.merge_dict(self.spectral_pars,
                                          m.spectral_pars,add_new_keys=True)
-        self._data['spatial_pars'] = merge_dict(self.spatial_pars,
+        self._data['spatial_pars'] = utils.merge_dict(self.spatial_pars,
                                         m.spatial_pars,add_new_keys=True)
         
 class IsoSource(Model):
@@ -627,25 +610,25 @@ class IsoSource(Model):
 
     def write_xml(self,root):
         
-        source_element = create_xml_element(root,'source',
+        source_element = utils.create_xml_element(root,'source',
                                             dict(name=self.name,
                                                  type='DiffuseSource'))
 
         filename = re.sub(r'\$([a-zA-Z\_]+)',r'$(\1)',self.filefunction)        
-        spec_el = create_xml_element(source_element,'spectrum',
+        spec_el = utils.create_xml_element(source_element,'spectrum',
                                      dict(file=filename,
                                           type='FileFunction',
                                           ctype='-1'))
                         
-        spat_el = create_xml_element(source_element,'spatialModel',
+        spat_el = utils.create_xml_element(source_element,'spatialModel',
                                      dict(type='ConstantValue'))
 
 
         for k,v in self.spectral_pars.items():                
-            create_xml_element(spec_el,'parameter',v)
+            utils.create_xml_element(spec_el,'parameter',v)
 
         for k,v in self.spatial_pars.items():                
-            create_xml_element(spat_el,'parameter',v)
+            utils.create_xml_element(spat_el,'parameter',v)
         
 class MapCubeSource(Model):
 
@@ -689,24 +672,24 @@ class MapCubeSource(Model):
 
     def write_xml(self,root):
         
-        source_element = create_xml_element(root,'source',
+        source_element = utils.create_xml_element(root,'source',
                                             dict(name=self.name,
                                                  type='DiffuseSource'))
 
-        spec_el = create_xml_element(source_element,'spectrum',
+        spec_el = utils.create_xml_element(source_element,'spectrum',
                                      dict(type='PowerLaw'))
 
         filename = re.sub(r'\$([a-zA-Z\_]+)',r'$(\1)',self.mapcube)        
-        spat_el = create_xml_element(source_element,'spatialModel',
+        spat_el = utils.create_xml_element(source_element,'spatialModel',
                                      dict(type='MapCubeFunction',
                                           file=filename))
 
 
         for k,v in self.spectral_pars.items():                
-            create_xml_element(spec_el,'parameter',v)
+            utils.create_xml_element(spec_el,'parameter',v)
 
         for k,v in self.spatial_pars.items():                
-            create_xml_element(spat_el,'parameter',v)
+            utils.create_xml_element(spat_el,'parameter',v)
         
 class Source(Model):
     """Class representation of a source (non-diffuse) model component.
@@ -975,7 +958,7 @@ class Source(Model):
             else:
                 src_dict['spectral_pars'][k] = src_dict.pop(k)
             
-        src_dict = merge_dict(default_src_dict,src_dict)        
+        src_dict = utils.merge_dict(default_src_dict,src_dict)        
         for k, v in src_dict['spectral_pars'].items():
             src_dict['spectral_pars'][k] = make_parameter_dict(v)
         
@@ -989,7 +972,7 @@ class Source(Model):
         else:
             raise Exception('Source name undefined.')
             
-        skydir = get_target_skydir(src_dict)
+        skydir = utils.get_target_skydir(src_dict)
         
         src_dict['RAJ2000'] = skydir.ra.deg
         src_dict['DEJ2000'] = skydir.dec.deg
@@ -1002,10 +985,10 @@ class Source(Model):
     def create_from_xml(root,extdir=None):
         """Create a Source object from an XML node."""
 
-        spec = load_xml_elements(root,'spectrum')
-        spat = load_xml_elements(root,'spatialModel')
-        spectral_pars = load_xml_elements(root,'spectrum/parameter')
-        spatial_pars = load_xml_elements(root,'spatialModel/parameter')
+        spec = utils.load_xml_elements(root,'spectrum')
+        spat = utils.load_xml_elements(root,'spatialModel')
+        spectral_pars = utils.load_xml_elements(root,'spectrum/parameter')
+        spatial_pars = utils.load_xml_elements(root,'spatialModel/parameter')
 
         src_type = root.attrib['type']
         spatial_type = spat['type']
@@ -1065,7 +1048,7 @@ class Source(Model):
         """Write this source to an XML node."""
 
         if not self.extended:
-            source_element = create_xml_element(root,'source',
+            source_element = utils.create_xml_element(root,'source',
                                                 dict(name=self['Source_Name'],
                                                      type='PointSource'))
             
@@ -1073,20 +1056,20 @@ class Source(Model):
             spat_el.set('type','SkyDirFunction')
              
         else:
-            source_element = create_xml_element(root,'source',
+            source_element = utils.create_xml_element(root,'source',
                                                 dict(name=self['Source_Name'],
                                                      type='DiffuseSource'))
 
             filename = self['Spatial_Filename']
             filename = re.sub(r'\$([a-zA-Z\_]+)',r'$(\1)',filename)
             
-            spat_el = create_xml_element(source_element,'spatialModel',
+            spat_el = utils.create_xml_element(source_element,'spatialModel',
                                          dict(map_based_integral='True',
                                               type='SpatialMap',
                                               file=filename))
                     
         for k,v in self.spatial_pars.items():                
-            create_xml_element(spat_el,'parameter',v)
+            utils.create_xml_element(spat_el,'parameter',v)
 
                 
         el = ElementTree.SubElement(source_element,'spectrum')  
@@ -1095,7 +1078,7 @@ class Source(Model):
         el.set('type',stype)
         
         for k,v in self.spectral_pars.items():                
-            create_xml_element(el,'parameter',v)
+            utils.create_xml_element(el,'parameter',v)
     
 class ROIModel(fermipy.config.Configurable):
     """This class is responsible for managing the ROI definition.
@@ -1197,8 +1180,12 @@ class ROIModel(fermipy.config.Configurable):
             os.environ['FERMI_DIFFUSE_DIR'] = \
                 os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
         if not 'FERMIPY_WORKDIR' in os.environ:
-            os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
-            
+
+            if self.config['fileio']['workdir'] is not None:
+                os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
+            else:
+                os.environ['FERMIPY_WORKDIR'] = os.getcwd()
+
         srcs = []
         if self.config[name] is not None:
             srcs = self.config[name]
@@ -1354,7 +1341,7 @@ class ROIModel(fermipy.config.Configurable):
             return ROIModel.create_from_source(selection['target'],
                                                config,**kwargs)
         else:
-            target_skydir = get_target_skydir(selection)
+            target_skydir = utils.get_target_skydir(selection)
             return ROIModel.create_from_position(target_skydir,
                                                  config,**kwargs)
         
@@ -1660,7 +1647,7 @@ class ROIModel(fermipy.config.Configurable):
             s.write_xml(root)
                 
         output_file = open(xmlfile,'w')
-        output_file.write(prettify_xml(root))
+        output_file.write(utils.prettify_xml(root))
 
 if __name__ == '__main__':
 
