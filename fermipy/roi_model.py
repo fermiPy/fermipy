@@ -1207,6 +1207,9 @@ class ROIModel(fermipy.config.Configurable):
             else:
                 raise Exception('Unrecognized file format for diffuse model: %s'%src_dict['file'])
 
+            # Extract here
+
+            
             if src_type == 'FileFunction':                    
                 src = IsoSource(src_dict['name'],src_dict['file'])
                 altname = os.path.basename(src_dict['file'])            

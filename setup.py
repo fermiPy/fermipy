@@ -58,4 +58,5 @@ setup(name='fermipy',
                         'pyyaml',
                         'healpy',
                         'wcsaxes',
-                        'scipy >= 0.13'])
+                        'reproject',
+                        'scipy >= 0.14'])

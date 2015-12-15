@@ -58,6 +58,7 @@ model = {
     'min_ts'        : (None,'',float),
     'min_flux'      : (None,'',float),
     'remove_duplicates' : (False,'Remove duplicate catalog sources.',bool)
+    'extract_diffuse' : (False,'Extract a copy of all mapcube components centered on the ROI.',bool)
     }
 
 # Options for configuring likelihood analysis
