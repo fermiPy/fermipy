@@ -367,6 +367,52 @@ def tolist(x):
         return x
 
 
+def extract_mapcube_region(infile,skydir,outfile,maphdu=0):
+    """Extract a region out of an all-sky mapcube file.
+    
+    Parameters
+    ----------
+
+    infile : str
+        Path to mapcube file.
+    
+    skydir : `~astropy.coord.SkyCoord`
+
+    """
+
+    h = pyfits.open(os.path.expandvars(infile))
+
+    npix = 200
+    shape = list(h[maphdu].data.shape)
+    shape[1] = 200
+    shape[2] = 200
+    
+    wcs = pywcs.WCS(h[maphdu].header)
+    skywcs = pywcs.WCS(h[maphdu].header,naxis=[1,2])
+    coordsys = get_coordsys(skywcs)
+    
+    region_wcs = wcs.deepcopy()
+
+    if coordsys == 'CEL':
+        region_wcs.wcs.crval[0]=skydir.ra.deg
+        region_wcs.wcs.crval[1]=skydir.dec.deg
+    elif coordsys == 'GAL':
+        region_wcs.wcs.crval[0]=skydir.galactic.l.deg
+        region_wcs.wcs.crval[1]=skydir.galactic.b.deg
+    else:
+        raise Exception('Unrecognized coordinate system.')
+
+    region_wcs.wcs.crpix[0]=npix//2+0.5
+    region_wcs.wcs.crpix[1]=npix//2+0.5
+    
+    from reproject import reproject_interp
+    data, footprint = reproject_interp(h, region_wcs.to_header(),hdu_in=maphdu,shape_out=shape)
+
+    hdu_image = pyfits.PrimaryHDU(data,header=region_wcs.to_header())
+    hdulist = pyfits.HDUList([hdu_image,h['ENERGIES']])
+    hdulist.writeto(outfile,clobber=True)
+    
+    
 def create_wcs(skydir,coordsys='CEL',projection='AIT',
                cdelt=1.0,crpix=1.,naxis=2):
     """Create a WCS object.
