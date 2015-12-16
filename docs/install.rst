@@ -96,6 +96,56 @@ running a forced upgrade of these packages with `pip install --upgrade`:
 
    >>> pip install --upgrade --user numpy matplotlib scipy astropy pyyaml healpy wcsaxes ipython jupyter
 
+Installing with Anaconda Python
+-------------------------------
+
+.. note:: 
+
+   The following instructions have only been verified to work with
+   binary Linux distributions of the Fermi STs.  If you are using OSX
+   or you have installed the STs from source you should follow the
+   installation thread above.
+
+These instructions explain how to use fermipy with a new or existing
+conda python installation.  These instructions assume that you have
+already downloaded and installed the Fermi STs from the FSSC and you
+have set the *FERMI_DIR* environment variable to point to the location
+of this installation.
+
+The *condainstall.sh* script can be used to install fermipy into an
+existing conda python installation or to create a minimal conda
+installation from scratch.  In either case clone the fermipy git
+repository and run the *condainstall.sh* installation script from
+within the fermipy directory:
+
+.. code-block:: bash
+
+   >>> git clone https://github.com/fermiPy/fermipy.git; cd fermipy
+   >>> bash condainstall.sh
+
+If you do not already have anaconda python installed on your system
+this script will create an installation under *$HOME/miniconda*.  If
+you already have conda installed (i.e. if the conda command is already
+in your path) it will use your existing installation.  The script will
+create a separate environment for your fermipy installation called
+*fermi-env*.
+
+Once fermipy is installed you can initialize the fermi environment by
+running *condasetup.sh*:
+
+.. code-block:: bash
+
+   >>> bash condasetup.sh
+
+This will both activate the fermi-env environment and set up your
+shell environment to run the Fermi Science Tools.  The fermi-env
+python environment can be exited by running:
+
+.. code-block:: bash
+
+   >>> source deactivate
+
+
 Running at SLAC
 ---------------
 
