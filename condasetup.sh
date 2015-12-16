@@ -1,3 +1,6 @@
+unset LD_LIBRARY_PATH
+unset PYTHONPATH
+
 source $FERMI_DIR/fermi-init.sh
 export PATH=$HOME/miniconda/bin:$PATH
 source activate fermi-env
