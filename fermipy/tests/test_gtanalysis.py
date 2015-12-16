@@ -47,7 +47,7 @@ def setup2(request,tmpdir_factory):
 
     return gta
     
-@pytest.mark.skipif("True")
+#@pytest.mark.skipif("True")
 def test_gtanalysis_setup(setup2):
     print('here is test one')
     print(os.getcwd())
@@ -55,7 +55,7 @@ def test_gtanalysis_setup(setup2):
     gta = setup2
     gta.print_roi()
 
-@pytest.mark.skipif("True")
+#@pytest.mark.skipif("True")
 def test_gtanalysis_write_roi(setup2):
     print('here is test two')
     print(os.getcwd())
