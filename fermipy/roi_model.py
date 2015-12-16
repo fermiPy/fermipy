@@ -71,12 +71,12 @@ def scale_parameter(p):
         return p, 1.0
 
 def resolve_file_path(path, **kwargs):
+
+    dirs = kwargs.get('search_dirs',[])
     
     if os.path.isabs(os.path.expandvars(path)) and \
             os.path.isfile(os.path.expandvars(path)):
         return path
-
-    dirs = kwargs.get('search_dirs',[])
 
     for d in dirs:
         if not os.path.isdir(os.path.expandvars(d)):
@@ -268,6 +268,9 @@ class Catalog2FHL(Catalog):
 
     def __init__(self,fitsfile=None,extdir=None):
 
+        if extdir is None:
+            extdir = os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_2fhl_v00')
+        
         if fitsfile is None:
             fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs','gll_psch_v08.fit')
         
@@ -280,7 +283,7 @@ class Catalog2FHL(Catalog):
 
         join_tables(table,table_extsrc,'Source_Name','Source_Name')
 
-        super(Catalog2FHL,self).__init__(table)
+        super(Catalog2FHL,self).__init__(table,extdir)
 
         self._table['Flux_Density'] = PowerLaw.eval_norm(50E3,-self.table['Spectral_Index'],
                                                          50E3,2000E3,self.table['Flux50'])
@@ -1535,6 +1538,7 @@ class ROIModel(fermipy.config.Configurable):
         offset_gal = utils.sky_to_offset(self.skydir,
                                          cat.glonlat[:,0], cat.glonlat[:,1], 'GAL')        
 
+        
         for i, (row,radec) in enumerate(zip(cat.table[m],
                                             cat.radec[m])):
             
@@ -1547,8 +1551,13 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict['SourceType'] = 'DiffuseSource'
                 src_dict['SpatialType'] = 'SpatialMap'
                 src_dict['SpatialModel'] = 'SpatialMap'
-                src_dict['Spatial_Filename'] = os.path.join(row['extdir'],
-                                                            row['Spatial_Filename'])
+
+                search_dirs = [row['extdir'],
+                               os.path.join(row['extdir'],'Templates')]
+                
+                src_dict['Spatial_Filename'] = resolve_file_path(row['Spatial_Filename'],
+                                                                 search_dirs=search_dirs)
+
             else:
                 src_dict['SourceType'] = 'PointSource'
                 src_dict['SpatialType'] = 'SkyDirFunction'
