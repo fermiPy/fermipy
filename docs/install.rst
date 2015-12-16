@@ -135,7 +135,7 @@ running *condasetup.sh*:
 
 .. code-block:: bash
 
-   >>> bash condasetup.sh
+   >>> source condasetup.sh
 
 This will both activate the fermi-env environment and set up your
 shell environment to run the Fermi Science Tools.  The fermi-env
