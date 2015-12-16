@@ -128,15 +128,15 @@ default_par_dict = {
     
 catalog_alias = {
     '3FGL' : {'file' : 'gll_psc_v16.fit',
-              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v15'),
+              'extdir' : os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_v15'),
               'src_hduname' : 'LAT_Point_Source_Catalog',
               'extsrc_hduname' : 'ExtendedSources' },
     '2FGL' : {'file' : 'gll_psc_v08.fit',
-              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v07'),
+              'extdir' : os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_v07'),
               'src_hduname' : 'LAT_Point_Source_Catalog',
               'extsrc_hduname' : 'ExtendedSources' },
     '2FHL' : {'file' : 'gll_psch_v08.fit',
-              'extdir' : os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v15'),
+              'extdir' : os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_v15'),
               'src_hduname' : '2FHL Source Catalog',
               'extsrc_hduname' : 'Extended Sources' },
     }
@@ -266,7 +266,7 @@ class Catalog(object):
 
 class Catalog2FHL(Catalog):
 
-    def __init__(self,fitsfile=None,extdir=''):
+    def __init__(self,fitsfile=None,extdir=None):
 
         if fitsfile is None:
             fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs','gll_psch_v08.fit')
@@ -291,10 +291,10 @@ class Catalog2FHL(Catalog):
 
 class Catalog3FGL(Catalog):
 
-    def __init__(self,fitsfile=None,extdir=''):
+    def __init__(self,fitsfile=None,extdir=None):
         
         if extdir is None:
-            extdir = os.path.join('$(FERMIPY_ROOT)','catalogs','Extended_archive_v15')
+            extdir = os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_v15')
 
         if fitsfile is None:
             fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs','gll_psc_v16.fit')
@@ -450,6 +450,7 @@ class Model(object):
                        'SpatialType' : None,
                        'SourceType' : None,
                        'SpectrumType' : None,
+                       'Spatial_Filename' : None,
                        'RAJ2000' : 0.0,
                        'DEJ2000' : 0.0,
                        'ra'   : 0.0,
@@ -1008,7 +1009,7 @@ class Source(Model):
             src_dict['SpatialModel'] = 'SpatialMap'
 
         if src_type =='PointSource' or spatial_type == 'SpatialMap':
-        
+
             if 'file' in spat: 
                 src_dict['Spatial_Filename'] = spat['file']
                 if not os.path.isfile(src_dict['Spatial_Filename']) \
@@ -1024,7 +1025,7 @@ class Source(Model):
                 src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
                 src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
             else:
-                hdu = pyfits.open(src_dict['Spatial_Filename'])
+                hdu = pyfits.open(os.path.expandvars(src_dict['Spatial_Filename']))
                 src_dict['RAJ2000'] = float(hdu[0].header['CRVAL1'])
                 src_dict['DEJ2000'] = float(hdu[0].header['CRVAL2'])
 
@@ -1104,9 +1105,10 @@ class ROIModel(fermipy.config.Configurable):
                                  self.config['logfile'],
                                  ll(self.config['logging']['verbosity']))
         
-        if not os.path.isdir(self.config['extdir']):
+        if self.config['extdir'] is not None and \
+                not os.path.isdir(self.config['extdir']):
             self._config['extdir'] = \
-                os.path.join(fermipy.PACKAGE_ROOT,
+                os.path.join('$FERMIPY_ROOT',
                              'catalogs',self.config['extdir'])
         
         self._src_radius = self.config['src_radius']

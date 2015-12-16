@@ -49,17 +49,23 @@ def setup2(request,tmpdir_factory):
     
 #@pytest.mark.skipif("True")
 def test_gtanalysis_setup(setup2):
-    print('here is test one')
-    print(os.getcwd())
 
     gta = setup2
     gta.print_roi()
 
 #@pytest.mark.skipif("True")
 def test_gtanalysis_write_roi(setup2):
-    print('here is test two')
-    print(os.getcwd())
-    print(setup2)
 
     gta = setup2
     gta.write_roi('test')
+
+def test_gtanalysis_load_roi(setup2):
+
+    gta = setup2
+    gta.load_roi('fit0')
+
+def test_gtanalysis_optimize(setup2):
+
+    gta = setup2
+    gta.load_roi('fit0')
+    gta.optimize()
