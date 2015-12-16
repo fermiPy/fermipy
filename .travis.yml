@@ -8,22 +8,25 @@ sudo: false
 notifications:
   email: false
  
-# Setup anaconda
-before_install:
+# Setup anaconda and install packages
+install:
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-
-# Install packages
-install:
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy pytest
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy pytest pyyaml
   - source activate test-environment
   - pip install healpy
   - python setup.py install
+  - bash stinstall.sh # Download and install the ST binaries
+  - source travissetup.sh
+  - source condasetup.sh
 
+#  - source activate test-environment
+#  - pip install healpy
+#  - python setup.py install
 #  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy 
 #  - pip install healpy
  

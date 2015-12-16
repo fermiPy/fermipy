@@ -5,7 +5,7 @@ if [ ! -d "$HOME/miniconda" ]; then
 fi
 
 export PATH="$HOME/miniconda/bin:$PATH"
-conda create -q -n fermi-env -y python=2.7 numpy scipy matplotlib astropy pytest
+conda create -q -n fermi-env -y python=2.7 numpy scipy matplotlib astropy pytest pyyaml
 source activate fermi-env
 pip install healpy
 python setup.py install
