@@ -126,21 +126,6 @@ default_par_dict = {
         {'name' : 'UpperLimit', 'value' : 100000.0, 'scale' : 1.0, 'min' : 20.0, 'max' : 1000000., 'free' : '0'},
     }
     
-catalog_alias = {
-    '3FGL' : {'file' : 'gll_psc_v16.fit',
-              'extdir' : os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_v15'),
-              'src_hduname' : 'LAT_Point_Source_Catalog',
-              'extsrc_hduname' : 'ExtendedSources' },
-    '2FGL' : {'file' : 'gll_psc_v08.fit',
-              'extdir' : os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_v07'),
-              'src_hduname' : 'LAT_Point_Source_Catalog',
-              'extsrc_hduname' : 'ExtendedSources' },
-    '2FHL' : {'file' : 'gll_psch_v08.fit',
-              'extdir' : os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_v15'),
-              'src_hduname' : '2FHL Source Catalog',
-              'extsrc_hduname' : 'Extended Sources' },
-    }
-
 class PowerLaw(object):
 
     def __init__(self,phi0,x0,index):
@@ -255,7 +240,7 @@ class Catalog(object):
         if extname == '.fits' or extname == '.fit':
             fitsfile = name
             if not os.path.isfile(fitsfile):
-                fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',fitsfile)
+                fitsfile = os.path.join(fermipy.PACKAGE_DATA,'catalogs',fitsfile)
             return Catalog3FGL(fitsfile)
         elif name == '3FGL': 
             return Catalog3FGL()
@@ -269,10 +254,10 @@ class Catalog2FHL(Catalog):
     def __init__(self,fitsfile=None,extdir=None):
 
         if extdir is None:
-            extdir = os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_2fhl_v00')
+            extdir = os.path.join('$FERMIPY_DATA_DIR','catalogs','Extended_archive_2fhl_v00')
         
         if fitsfile is None:
-            fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs','gll_psch_v08.fit')
+            fitsfile = os.path.join(fermipy.PACKAGE_DATA,'catalogs','gll_psch_v08.fit')
         
         hdulist = pyfits.open(fitsfile)
         table = Table(hdulist['2FHL Source Catalog'].data)
@@ -297,10 +282,10 @@ class Catalog3FGL(Catalog):
     def __init__(self,fitsfile=None,extdir=None):
         
         if extdir is None:
-            extdir = os.path.join('$FERMIPY_ROOT','catalogs','Extended_archive_v15')
+            extdir = os.path.join('$FERMIPY_DATA_DIR','catalogs','Extended_archive_v15')
 
         if fitsfile is None:
-            fitsfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs','gll_psc_v16.fit')
+            fitsfile = os.path.join(fermipy.PACKAGE_DATA,'catalogs','gll_psc_v16.fit')
         
         hdulist = pyfits.open(fitsfile)
         table = Table(hdulist['LAT_Point_Source_Catalog'].data)
@@ -1111,7 +1096,7 @@ class ROIModel(fermipy.config.Configurable):
         if self.config['extdir'] is not None and \
                 not os.path.isdir(self.config['extdir']):
             self._config['extdir'] = \
-                os.path.join('$FERMIPY_ROOT',
+                os.path.join('$FERMIPY_DATA_DIR',
                              'catalogs',self.config['extdir'])
         
         self._src_radius = self.config['src_radius']
@@ -1579,7 +1564,7 @@ class ROIModel(fermipy.config.Configurable):
         extdir=kwargs.get('extdir',self.config['extdir'])
         coordsys=kwargs.get('coordsys','CEL')
         if not os.path.isfile(xmlfile):
-            xmlfile = os.path.join(fermipy.PACKAGE_ROOT,'catalogs',xmlfile)
+            xmlfile = os.path.join(fermipy.PACKAGE_DATA,'catalogs',xmlfile)
 
         self.logger.info('Reading XML Model: ' + xmlfile)
             
