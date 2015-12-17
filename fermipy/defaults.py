@@ -173,5 +173,5 @@ run = {
 # Options for plotting
 plotting = {
     'erange' : (None,'',list),
-    'format' : ('png','',str)
+    'format' : ('pdf','',str)
     }

@@ -2,23 +2,13 @@ import os
 import copy
 import numpy as np
 from collections import OrderedDict
-from hpx_utils import HPX
+from hpx_utils import HPX, Map_Base, HpxMap
 import xml.etree.cElementTree as et
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
 import scipy.special as specialfn
 from scipy.interpolate import UnivariateSpline
-
-class Map_Base(object):
-    """ Abstract representation of a 2D or 3D counts map."""
-    
-    def __init__(self,counts):
-        self._counts = counts
-
-    @property
-    def counts(self):
-        return self._counts
 
 
 class Map(Map_Base):
@@ -31,17 +21,6 @@ class Map(Map_Base):
     @property
     def wcs(self):
         return self._wcs
-
-class HpxMap(Map_Base):
-    """ Representation of a 2D or 3D counts map using HEALPix. """
-
-    def __init__(self,counts,hpx):
-        Map_Base.__init__(self,counts)
-        self._hpx = hpx
-        
-    @property
-    def hpx(self):
-        return self._hpx
 
             
 def format_filename(outdir,basename,prefix=None,extension=None):
@@ -355,7 +334,7 @@ def tolist(x):
 
 
 def create_wcs(skydir,coordsys='CEL',projection='AIT',
-               cdelt=1.0,crpix=1.,naxis=2):
+               cdelt=1.0,crpix=1.,naxis=2, energies=None):
     """Create a WCS object.
 
     Parameters
@@ -389,7 +368,14 @@ def create_wcs(skydir,coordsys='CEL',projection='AIT',
     w.wcs.cdelt[0] = -cdelt
     w.wcs.cdelt[1] = cdelt
 
-    w = wcs.WCS(w.to_header())    
+    w = wcs.WCS(w.to_header())
+    
+    if naxis == 3 and energies is not None:
+        w.crpix[2] = 1
+        w.crval[2] = 10 ** energies[0]
+        w.cdelt[2] = 10 ** self.energies[1] - 10 ** self.energies[0]
+        w.ctype[2] = 'Energy'
+
     return w
 
 
@@ -429,7 +415,7 @@ def create_hpx(nside,nest,coordsys='CEL',order=-1,region=None,ebins=None):
 
 
 def get_coordsys(wcs):
-
+    
     if 'RA' in wcs.wcs.ctype[0]: return 'CEL'
     elif 'GLON' in wcs.wcs.ctype[0]: return 'GAL'
     else:
@@ -494,6 +480,9 @@ def wcs_to_axes(w,npix):
     y = np.linspace(-(npix[1])/2.,(npix[1])/2.,
                     npix[1]+1)*np.abs(w.wcs.cdelt[1])
 
+    if w.naxis == 2:
+        return x,y
+
     cdelt2 = np.log10((w.wcs.cdelt[2]+w.wcs.crval[2])/w.wcs.crval[2])
     
     z = (np.linspace(0,npix[2],npix[2]+1))*cdelt2
@@ -516,16 +505,26 @@ def wcs_to_coords(w,shape):
     """Generate an N x D list of pixel center coordinates where N is
     the number of pixels and D is the dimensionality of the map."""
     
-    z, y, x = wcs_to_axes(w,shape)
-
+    if w.naxis == 2:
+        y, x = wcs_to_axes(w,shape)
+    elif w.naxis == 3:
+        z, y, x = wcs_to_axes(w,shape)
+    else:
+        raise Exception("Wrong number of WCS axes %i"%w.naxis)
+    
     x = 0.5*(x[1:] + x[:-1])
     y = 0.5*(y[1:] + y[:-1])
-    z = 0.5*(z[1:] + z[:-1])    
 
+    if w.naxis == 2:
+        x = np.ravel(np.ones(shape)*x[:,np.newaxis])
+        y = np.ravel(np.ones(shape)*y[np.newaxis,:])
+        return np.vstack((x,y))    
+
+    z = 0.5*(z[1:] + z[:-1])    
     x = np.ravel(np.ones(shape)*x[:,np.newaxis,np.newaxis])
-    y = np.ravel(np.ones(shape)*y[np.newaxis,:,np.newaxis])
+    y = np.ravel(np.ones(shape)*y[np.newaxis,:,np.newaxis])       
     z = np.ravel(np.ones(shape)*z[np.newaxis,np.newaxis,:])
-            
+         
     return np.vstack((x,y,z))    
 
 

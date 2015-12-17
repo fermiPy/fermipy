@@ -27,6 +27,7 @@ import fermipy.utils as utils
 import fermipy.defaults as defaults
 from fermipy.utils import merge_dict, wcs_to_axes, Map
 from fermipy.utils import edge_to_center, edge_to_width, valToEdge
+from fermipy.hpx_utils import HpxMap
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 
@@ -98,6 +99,8 @@ def make_counts_spectrum_plot(o, roi, energies, imfile):
 
     plt.savefig(imfile)
     plt.close(fig)
+
+
 
 
 def load_ds9_cmap():
@@ -228,16 +231,31 @@ class PowerNorm(mpl.colors.Normalize):
 
 class ImagePlotter(object):
 
-    def __init__(self, data, wcs):
+    def __init__(self, data, proj):
 
-        if data.ndim == 3:
-            data = np.sum(copy.deepcopy(data), axis=2)
-            wcs = pywcs.WCS(wcs.to_header(), naxis=[1, 2])
+        if isinstance(proj,pywcs.WCS):
+            self._projtype = 'WCS'
+            if data.ndim == 3:
+                data = np.sum(copy.deepcopy(data), axis=2)
+                proj = pywcs.WCS(proj.to_header(), naxis=[1, 2])
+            else:
+                data = copy.deepcopy(data)        
+            self._proj = proj
+            self._wcs = proj            
+        elif isinstance(proj,HPX):
+            self._projtype = 'HPX'
+            self._proj = proj
+            self._wcs,data = make_wcs_from_hpx(proj,data)
         else:
-            data = copy.deepcopy(data)
-
+            raise Exception("Can't co-add map of unknown type %s"%type(proj))
+                
         self._data = data
-        self._wcs = wcs
+
+
+    @property
+    def projtype(self):
+        return self._projtype
+
 
     def plot(self, subplot=111, catalog=None, cmap='jet', **kwargs):
 
@@ -265,6 +283,7 @@ class ImagePlotter(object):
             kwargs_imshow['norm'] = Normalize()
 
         fig = plt.gcf()
+        
         ax = fig.add_subplot(subplot,
                              projection=wcsaxes.WCS(self._wcs.to_header()))
 
@@ -281,12 +300,13 @@ class ImagePlotter(object):
 
         if kwargs_contour['levels']:
             cs = ax.contour(data.T, **kwargs_contour)
-            #        plt.clabel(cs, fontsize=5, inline=0)
+      
+        #   plt.clabel(cs, fontsize=5, inline=0)
 
-        #        im.set_clim(vmin=np.min(self._counts[~self._roi_msk]),
-        #                    vmax=np.max(self._counts[~self._roi_msk]))
+        #   im.set_clim(vmin=np.min(self._counts[~self._roi_msk]),
+        #               vmax=np.max(self._counts[~self._roi_msk]))
 
-        coordsys = utils.get_coordsys(self._wcs)
+        coordsys = utils.get_coordsys(self._proj)
 
         if coordsys == 'CEL':
             ax.set_xlabel('RA')
@@ -343,8 +363,23 @@ class ROIPlotter(fermipy.config.Configurable):
         fermipy.config.Configurable.__init__(self, None, **kwargs)
 
         self._roi = roi
-        self._data = cmap.counts.T
-        self._wcs = cmap.wcs
+        self._cmap = cmap        
+
+        if isinstance(cmap,Map):
+            self._projtype = 'WCS'
+            self._data = cmap.counts.T
+            self._proj = cmap.wcs
+            self._wcs = self._proj
+        elif isinstance(cmap,HpxMap):
+            self._projtype = 'HPX'
+            self._proj = cmap.hpx
+            self._wcs,dataT = cmap.make_wcs_from_hpx(sum_ebins=False,
+                                                    proj='CAR',                                                     
+                                                    oversample=2)                                                     
+            self._data = dataT.T
+        else:
+            raise Exception("Can't make ROIPlotter of unknown projection type %s"%type(self._proj))
+    
         self._erange = self.config['erange']
 
         if self._erange:
@@ -354,23 +389,50 @@ class ROIPlotter(fermipy.config.Configurable):
             imdata = self._data[:, :, i0:i1]
         else:
             imdata = self._data
-
+        
         self._implot = ImagePlotter(imdata, self._wcs)
 
     @property
     def data(self):
         return self._data
 
+    @property
+    def cmap(self):
+        return self._cmap
+
+    @property
+    def projtype(self):
+        return self._projtype   
+
+    @property
+    def proj(self):
+        return self._proj
+
     @staticmethod
     def create_from_fits(fitsfile, roi, **kwargs):
 
         hdulist = pyfits.open(fitsfile)
-        header = hdulist[0].header
-        header = pyfits.Header.fromstring(header.tostring())
-        wcs = pywcs.WCS(header)
-        data = copy.deepcopy(hdulist[0].data)
+        try:
+            if hdulist[1].name == "SKYMAP":
+                projtype = "HPX"
+            else:
+                projtype = "WCS"
+        except:
+            projtype = "WCS"
 
-        return ROIPlotter(Map(data, wcs), roi, **kwargs)
+        if projtype == "WCS":
+            header = hdulist[0].header
+            header = pyfits.Header.fromstring(header.tostring())
+            wcs = pywcs.WCS(header)
+            data = copy.deepcopy(hdulist[0].data)
+            themap = Map(data, wcs)
+        elif projtype == "HPX":
+            themap = HpxMap.create_from_hdulist(hdulist,ebounds="EBOUNDS")            
+        else:
+            raise Expection("Unknown projection type %s"%projtype)        
+        
+        return ROIPlotter(themap, roi, **kwargs)
+
 
     def plot_projection(self, iaxis, **kwargs):
 
@@ -378,11 +440,12 @@ class ROIPlotter(fermipy.config.Configurable):
         noerror = kwargs.pop('noerror', False)
 
         axes = wcs_to_axes(self._wcs, self._data.shape[::-1])
+
         x = edge_to_center(axes[iaxis])
         w = edge_to_width(axes[iaxis])
 
         c = self.get_data_projection(data, axes, iaxis, erange=self._erange)
-
+        
         if noerror:
             plt.errorbar(x, c, **kwargs)
         else:
@@ -410,10 +473,9 @@ class ROIPlotter(fermipy.config.Configurable):
             j0 = valToEdge(axes[2], erange[0])
             j1 = valToEdge(axes[2], erange[1])
             s2 = slice(j0, j1)
-
+            
         c = np.apply_over_axes(np.sum, data[s0, s1, s2], axes=saxes)
         c = np.squeeze(c)
-
         return c
 
     @staticmethod
@@ -834,10 +896,13 @@ class AnalysisPlotter(fermipy.config.Configurable):
         for i, c in enumerate(gta.components):
             fig = plt.figure()
             p = ROIPlotter(mcube_maps[i + 1], gta.roi, erange=erange)
+
+            mcube_data = p.data
+
             p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
             plt.savefig(os.path.join(gta.config['fileio']['outdir'],
                                      '%s_model_map%s_%02i.%s' % (
-                                         prefix, esuffix, i, format)))
+                                     prefix, esuffix, i, format)))
             plt.close(fig)
 
             plt.figure(figx.number)
@@ -845,14 +910,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                             erange=erange)
             p.plot_projection(0, color=colors[i % 4], label='Component %i' % i,
                               **data_style)
-            p.plot_projection(0, data=mcube_maps[i + 1].counts.T,
+
+            p.plot_projection(0, data=mcube_data,
                               color=colors[i % 4], noerror=True,
                               label='__nolegend__')
 
             plt.figure(figy.number)
             p.plot_projection(1, color=colors[i % 4], label='Component %i' % i,
                               **data_style)
-            p.plot_projection(1, data=mcube_maps[i + 1].counts.T,
+           
+            p.plot_projection(1, data=mcube_data,
                               color=colors[i % 4], noerror=True,
                               label='__nolegend__')
 
@@ -875,6 +942,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure()
         p = ROIPlotter.create_from_fits(gta._ccube_file, gta.roi,
                                         erange=erange)
+        
+        if p.projtype == "WCS":
+            model_data = mcube_maps[0].counts.T
+            diffuse_data = mcube_diffuse[0].counts.T
+        elif p.projtype == "HPX":
+            dummy,model_dataT = p.cmap.convert_to_cached_wcs(mcube_maps[0].counts,sum_ebins=False)
+            dummy,diffuse_dataT = p.cmap.convert_to_cached_wcs(mcube_diffuse[0].counts,sum_ebins=False)
+            model_data = model_dataT.T
+            diffuse_data = diffuse_dataT.T
+
         p.plot(cb_label='Counts', zscale='sqrt')
         plt.savefig(os.path.join(gta.config['fileio']['outdir'],
                                  '%s_counts_map%s.%s' % (
@@ -883,9 +960,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p.plot_projection(0, label='Data', color='k', **data_style)
-        p.plot_projection(0, data=mcube_maps[0].counts.T, label='Model',
+
+        
+        p.plot_projection(0, data=model_data, label='Model',
                           noerror=True)
-        p.plot_projection(0, data=mcube_diffuse[0].counts.T, label='Diffuse',
+        p.plot_projection(0, data=diffuse_data, label='Diffuse',
                           noerror=True)
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LON Offset [deg]')
@@ -899,9 +978,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p.plot_projection(1, label='Data', color='k', **data_style)
-        p.plot_projection(1, data=mcube_maps[0].counts.T, label='Model',
+        p.plot_projection(1, data=model_data, label='Model',
                           noerror=True)
-        p.plot_projection(1, data=mcube_diffuse[0].counts.T, label='Diffuse',
+        p.plot_projection(1, data=diffuse_data, label='Diffuse',
                           noerror=True)
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LAT Offset [deg]')
@@ -1017,3 +1096,5 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                      '%s_%s_extension_yproj%s%s.png' % (
                                          prefix, name, esuffix, suffix)))
             plt.close(fig)
+            
+            

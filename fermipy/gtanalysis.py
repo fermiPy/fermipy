@@ -22,8 +22,9 @@ import fermipy.irfs as irfs
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import valToBinBounded, valToEdge, Map, HpxMap
+from fermipy.utils import valToBinBounded, valToEdge, Map
 from fermipy.utils import create_hpx_disk_region_string, create_hpx
+from fermipy.hpx_utils import HpxMap
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
@@ -371,11 +372,8 @@ class GTAnalysis(fermipy.config.Configurable):
                                     projection=self.config['binning']['proj'],
                                     cdelt=self._binsz,
                                     crpix=1.0 + 0.5 * (self._npix - 1),
-                                    naxis=3)
-            self._proj.wcs.crpix[2] = 1
-            self._proj.wcs.crval[2] = 10 ** self.energies[0]
-            self._proj.wcs.cdelt[2] = 10 ** self.energies[1] - 10 ** self.energies[0]
-            self._proj.wcs.ctype[2] = 'Energy'
+                                    naxis=3,
+                                    energies=self.energies)
 
 
     def __del__(self):
@@ -758,10 +756,12 @@ class GTAnalysis(fermipy.config.Configurable):
         for c in self.components:
             maps += [c.model_counts_map(name, exclude)]
 
-        shape = (self.enumbins, self.npix, self.npix)
+       
         if self.projtype == "HPX":
+            shape = (self.enumbins, self._proj.npix)
             maps = [utils.make_coadd_map(maps, self._proj, shape)] + maps
         elif self.projtype == "WCS":
+            shape = (self.enumbins, self.npix, self.npix)
             maps = [utils.make_coadd_map(maps, self._proj, shape)] + maps
         else:
             raise Exception("Did not recognize projection type %s"%self.projtype)
@@ -2061,7 +2061,7 @@ class GTAnalysis(fermipy.config.Configurable):
         for i, c in enumerate(self._components):
             maps += [c.model_counts_map(name)]
         shape = (self.enumbins, self.npix, self.npix)
-        model_counts = utils.make_coadd_map(maps, self._wcs, shape)
+        model_counts = utils.make_coadd_map(maps, self._proj, shape)
         return [model_counts] + maps
 
     def generate_model_map(self, model_name, name=None):
@@ -2081,7 +2081,7 @@ class GTAnalysis(fermipy.config.Configurable):
         elif self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
             model_counts = utils.make_coadd_map(maps, self._proj, shape)
-            utils.write_fits_image(model_counts.counts, model_counts.wcs, outfile)
+            utils.write_fits_image(model_counts.counts, self._proj, outfile)
         else:
             raise Exception("Did not recognize projection type %s"%self.projtype)
         return [model_counts] + maps
@@ -2227,17 +2227,13 @@ class GTAnalysis(fermipy.config.Configurable):
         pixsize = 0.1 
         skyproj = pyLike.FitScanner.buildSkyProj("AIT",refdir,pixsize,npix,False)
 
-        print "Building fit scanner"
         fitScanner = pyLike.FitScanner(self.like.composite,optObject,skyproj,npix,npix)
         #fitScanner.set_verbose_bb(2)
 
-        print "Setting test source"
         ok = fitScanner.setPowerlawPointTestSource(funcFactory)
 
-        print "Running tscube"
         ok = fitScanner.run_tscube(True,10,5.0,-1,1e-3,30,0,False,1)
 
-        print "Writting output file"
         ok = fitScanner.writeFitsFile(OUTFILE,"gttscube",TMPLFILE)
     
     def _tsmap_fast(self, prefix, **kwargs):
@@ -2665,37 +2661,35 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                             self.config['binning']['coordsys'])
 
         self._like = None
+        self._coordsys = self.config['binning']['coordsys']
 
         if self.projtype == 'HPX':
             self._hpx_region = create_hpx_disk_region_string(self.roi.skydir,
-                                                             self.config['binning']['coordsys'],
+                                                             self._coordsys,
                                                              0.5*self.config['binning']['roiwidth'])
             self._proj = create_hpx(-1,
                                      self.config['binning']['hpx_ordering_scheme'] == "NESTED",
-                                     self.config['binning']['coordsys'],
+                                     self._coordsys,
                                      self.config['binning']['hpx_order'],
                                      self._hpx_region,
                                      self._ebin_edges)
         elif self.projtype == "WCS":
             self._skywcs = create_wcs(self._roi.skydir,
-                                      coordsys=self.config['binning']['coordsys'],
+                                      coordsys=self._coordsys,
                                       projection=self.config['binning']['proj'],
                                       cdelt=self.binsz,
                                       crpix=1.0 + 0.5 * (self._npix - 1),
                                       naxis=2)
             self._proj = create_wcs(self.roi.skydir,
-                                    coordsys=self.config['binning']['coordsys'],
+                                    coordsys=self._coordsys,
                                     projection=self.config['binning']['proj'],
                                     cdelt=self.binsz,
                                     crpix=1.0 + 0.5 * (self._npix - 1),
-                                    naxis=3)
-            self._proj.wcs.crpix[2] = 1
-            self._proj.wcs.crval[2] = 10 ** self.energies[0]
-            self._proj.wcs.cdelt[2] = 10 ** self.energies[1] - 10 ** self.energies[0]
-            self._proj.wcs.ctype[2] = 'Energy'
-            self._coordsys = self.config['binning']['coordsys']
+                                    naxis=3,
+                                    energies=self.energies)
         else:
             raise Exception("Did not recognize projection type %s"%self.projtype)
+
 
         self.print_config(self.logger, loglevel=logging.DEBUG)
 
@@ -2908,8 +2902,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
            
         
         """
-
-        v = pyLike.FloatVector(self.npix ** 2 * self.enumbins)
+        if self.projtype == "WCS":
+            v = pyLike.FloatVector(self.npix ** 2 * self.enumbins)
+        elif self.projtype == "HPX":
+            v = pyLike.FloatVector(self._proj.npix * self.enumbins)
+        else:
+            raise Expection("Unknown projection type %s"%self.projtype)
 
         if exclude is None:
             exclude = []
@@ -2932,7 +2930,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             for name in self.like.sourceNames():
                 if name in excluded_srcnames: continue
                 src_names += [name]
-        elif name == 'diffuse':
+        elif name == 'diffuse':           
             for src in self.roi.sources:
                 if not src.diffuse: continue
                 if src.name in excluded_srcnames: continue
