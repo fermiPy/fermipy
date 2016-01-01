@@ -1,5 +1,6 @@
 from numpy.testing import assert_allclose
 import astropy.units as u
+import numpy as np
 from .. import gtanalysis
 import pytest
 import os
@@ -69,3 +70,23 @@ def test_gtanalysis_optimize(setup2):
     gta = setup2
     gta.load_roi('fit0')
     gta.optimize()
+
+def test_gtanalysis_extension_gaussian(setup2):
+
+    gta = setup2
+    gta.load_roi('fit0')
+
+    spatial_width = 0.5
+
+    gta.simulate_source({'SpatialModel' : 'GaussianSource',
+                         'SpatialWidth' : spatial_width, 
+                         'Prefactor' : 3E-12})
+
+    o = gta.extension('draco',width=[0.4,0.45,0.5,0.55,0.6],
+                      spatial_model='GaussianSource')
+
+    
+
+    assert(np.abs(o['ext']-spatial_width) < 0.1)
+
+    gta.restore_counts_maps()

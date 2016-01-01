@@ -31,7 +31,6 @@ from fermipy.logger import Logger
 from fermipy.logger import logLevel
 
 
-
 def draw_arrows(x, y, color='k'):
     for t, z in zip(x, y):
         plt.arrow(t, z, 0.0, -z * 0.2, fc=color, ec=color,
@@ -43,6 +42,7 @@ def get_xerr(sed):
     dehi = 10 ** sed['emax'] - 10 ** sed['ecenter']
     xerr = np.vstack((delo, dehi))
     return xerr
+
 
 def make_counts_spectrum_plot(o, roi, energies, imfile):
     fig = plt.figure()
@@ -59,8 +59,8 @@ def make_counts_spectrum_plot(o, roi, energies, imfile):
 
     x = 0.5 * (energies[1:] + energies[:-1])
     xerr = 0.5 * (energies[1:] - energies[:-1])
-    y = o['roi']['counts']
-    ym = o['roi']['model_counts']
+    y = o['counts']
+    ym = o['model_counts']
 
     ax0.errorbar(x, y, yerr=np.sqrt(y), xerr=xerr, color='k',
                  linestyle='None', marker='s',
@@ -227,7 +227,6 @@ class PowerNorm(mpl.colors.Normalize):
 
 
 class ImagePlotter(object):
-
     def __init__(self, data, wcs):
 
         if data.ndim == 3:
@@ -317,19 +316,9 @@ class ImagePlotter(object):
                              beam_size[2], beam_size[3],
                              patch_props={'fc': "none", 'ec': "w"})
 
-        #        self._ax = ax
+        # self._ax = ax
 
         return im, ax
-
-
-def get_image_wcs(header):
-    if header['NAXIS'] == 3:
-        wcs = pywcs.WCS(header, naxis=[1, 2])
-        data = copy.deepcopy(np.sum(hdulist[0].data, axis=0))
-    else:
-        wcs = pywcs.WCS(header)
-        data = copy.deepcopy(hdulist[0].data)
-
 
 class ROIPlotter(fermipy.config.Configurable):
     defaults = {
@@ -678,7 +667,7 @@ class ExtensionPlotter(object):
         self._width = src['extension']['width']
         for i, w in enumerate(src['extension']['width']):
             self._files += [os.path.join(workdir, 'mcube_%s_ext%02i%s.fits' % (
-            name, i, suffix))]
+                name, i, suffix))]
         self._roi = roi
         self._erange = erange
 
@@ -710,12 +699,11 @@ class ExtensionPlotter(object):
 
 
 class AnalysisPlotter(fermipy.config.Configurable):
-
     defaults = dict(defaults.plotting.items(),
-                fileio=defaults.fileio,
-                logging=defaults.logging )
+                    fileio=defaults.fileio,
+                    logging=defaults.logging)
 
-    def __init__(self,config,**kwargs):
+    def __init__(self, config, **kwargs):
         fermipy.config.Configurable.__init__(self, config, **kwargs)
 
         self.logger = Logger.get(self.__class__.__name__,
@@ -731,19 +719,21 @@ class AnalysisPlotter(fermipy.config.Configurable):
         erange = [None] + gta.config['plotting']['erange']
 
         for x in erange:
-            self.make_roi_plots(gta,mcube_maps, prefix, erange=x, format=format)
-#            self.make_extension_plots(gta,prefix, erange=x, format=format)
+            self.make_roi_plots(gta, mcube_maps, prefix, erange=x,
+                                format=format)
+        #            self.make_extension_plots(gta,prefix, erange=x,
+        # format=format)
 
-        for k, v in gta._roi_model['roi']['residmap'].items():
-            self.make_residual_plots(gta,v, **kwargs)
+        for k, v in gta._roi_model['residmap'].items():
+            self.make_residual_plots(gta, v, **kwargs)
 
-        for k, v in gta._roi_model['roi']['tsmap'].items():
-            self.make_tsmap_plots(gta,v, **kwargs)
-            
-        self.make_sed_plots(gta,prefix, format=format)
+        for k, v in gta._roi_model['tsmap'].items():
+            self.make_tsmap_plots(gta, v, **kwargs)
+
+        self.make_sed_plots(gta, prefix, format=format)
 
         imfile = utils.format_filename(gta.config['fileio']['outdir'],
-                                       'counts_spectrum',prefix=[prefix],
+                                       'counts_spectrum', prefix=[prefix],
                                        extension=format)
 
         make_counts_spectrum_plot(gta._roi_model, gta.roi, gta.energies,
@@ -841,8 +831,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
             plt.close(fig)
 
             plt.figure(figx.number)
-            p = ROIPlotter.create_from_fits(c._ccube_file, gta.roi,
-                                            erange=erange)
+            p = ROIPlotter(c.counts_map(), gta.roi, erange=erange)
             p.plot_projection(0, color=colors[i % 4], label='Component %i' % i,
                               **data_style)
             p.plot_projection(0, data=mcube_maps[i + 1].counts.T,
@@ -873,8 +862,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(figy)
 
         fig = plt.figure()
-        p = ROIPlotter.create_from_fits(gta._ccube_file, gta.roi,
-                                        erange=erange)
+        p = ROIPlotter(gta.counts_map(), gta.roi, erange=erange)
         p.plot(cb_label='Counts', zscale='sqrt')
         plt.savefig(os.path.join(gta.config['fileio']['outdir'],
                                  '%s_counts_map%s.%s' % (
