@@ -814,6 +814,17 @@ class GTAnalysis(fermipy.config.Configurable):
         if cuts is None: cuts = []
         for s, r in zip(srcs, rsrc):
             if not s.check_cuts(cuts): continue
+            ts = s['ts']
+            npred = s['Npred']
+
+            if min_ts is not None and (
+                ~np.isfinite(ts) or ts < min_ts): continue
+            if min_npred is not None and (
+                ~np.isfinite(npred) or npred < min_npred):
+                continue
+
+            print 'adding ', s.name, npred
+            
             o.append(s)
 
         return o
@@ -823,7 +834,8 @@ class GTAnalysis(fermipy.config.Configurable):
         """Delete sources in the ROI model satisfying the given
         selection criteria."""
 
-        srcs = self.get_sources(cuts, distance, square)
+        srcs = self.get_sources(cuts, distance, min_ts=min_ts, min_npred=min_npred,
+                                square=square)
         self._roi.delete_sources(srcs)
         for c in self.components:
             c.delete_sources(srcs)
@@ -2975,7 +2987,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             for s in srcs: excluded_srcnames += [s.name]
 
         self.like.logLike.buildFixedModelWts()
-        if not self.like.logLike.fixedModelUpdated():
+        if not self.like.logLike.fixedModelUpdated():        
             self.like.logLike.buildFixedModelWts(True)
 
         src_names = []
@@ -3250,9 +3262,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._like = BinnedAnalysis(binnedData=self._obs, **kw)
 
-        #        print self.like.logLike.use_single_fixed_map()
-        #        self.like.logLike.set_use_single_fixed_map(False)
-        #        print self.like.logLike.use_single_fixed_map()
+#        print self.like.logLike.use_single_fixed_map()
+#        self.like.logLike.set_use_single_fixed_map(False)
+#        print self.like.logLike.use_single_fixed_map()
 
         if self.config['gtlike']['edisp']:
             self.logger.debug('Enabling energy dispersion')
