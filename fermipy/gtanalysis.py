@@ -845,8 +845,6 @@ class GTAnalysis(fermipy.config.Configurable):
             if min_npred is not None and (
                 ~np.isfinite(npred) or npred < min_npred):
                 continue
-
-            print 'adding ', s.name, npred
             
             o.append(s)
 
