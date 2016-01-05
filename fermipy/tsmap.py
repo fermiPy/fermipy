@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, \
 
 import os
 import copy
+import itertools
 
 import numpy as np
 import warnings
@@ -320,6 +321,8 @@ def _ts_value(position, counts, background, model, C_0_map, method):
     if not isinstance(background,list): background = [background]
     if not isinstance(model,list): model = [model]
     if not isinstance(C_0_map,list): C_0_map = [C_0_map]
+
+#    print('ts_value',position)
     
     #    flux = np.ones(shape=counts.shape)
     extract_fn = _collect_wrapper(extract_large_array)
@@ -379,6 +382,10 @@ class TSMapGenerator(fermipy.config.Configurable):
 
     def make_ts_map(self, gta, prefix, src_dict=None,**kwargs):
 
+        multithread = kwargs.get('multithread',self.config['multithread'])
+        threshold = kwargs.get('threshold',1E-2)
+        kernel_radius = kwargs.get('kernel_radius',1.0)
+        
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
                       np.round((gta.npix - 1.0) / 2.))
@@ -395,70 +402,92 @@ class TSMapGenerator(fermipy.config.Configurable):
         src_dict.setdefault('Index', 2.0)
         src_dict.setdefault('Prefactor', 1E-13)
 
-        gta.add_source('tsmap_testsource', src_dict, free=True,
-                       init_source=False)
-        src = gta.roi['tsmap_testsource']
-
-        modelname = utils.create_model_name(src)
-
         counts = []
         background = []
         model = []
         c0_map = []
-        positions = []
         model_npred = 0
         for c in gta.components:
-            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')
-            bm = c.model_counts_map(exclude=['tsmap_testsource']).counts.astype(
-                'float')
-            cm = c.counts_map().counts.astype('float')
 
-            model += [mm]
+            print('fetching source map 1')            
+            bm = c.model_counts_map().counts.astype('float')
+
+            print('fetching counts map 2')
+            cm = c.counts_map().counts.astype('float')
+            
             background += [bm]
             counts += [cm]
             c0_map += [cash(cm, bm)]
-            positions += [[0, 0, 0]]
-            model_npred += np.sum(mm)
 
+        gta.add_source('tsmap_testsource', src_dict, free=True,
+                       init_source=False)
+        src = gta.roi['tsmap_testsource']
+        modelname = utils.create_model_name(src)
+        for c in gta.components:
+            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')
+            model_npred += np.sum(mm)
+            model += [mm]
+            
         gta.delete_source('tsmap_testsource')
 
+        print('reducing model')
+        
         for i, mm in enumerate(model):
 
             nx = 3
             ny = 3
-            threshold = 1E-2
 
             for j in range(mm.shape[0]):
-                ix,iy = np.unravel_index(np.argmax(mm[j,...]),mm[j,...].shape)
 
-                mx = mm[j,ix, :] > mm[j,ix,iy] * threshold
-                my = mm[j,:, iy] > mm[j,ix,iy] * threshold
-                nx = max(nx, np.round(np.sum(mx) / 2.))
-                ny = max(ny, np.round(np.sum(my) / 2.))                
+                if kernel_radius is not None:
+                    nx = max(nx,int(kernel_radius/gta.components[i].binsz))
+                    ny = nx
+                else:
+                    ix,iy = np.unravel_index(np.argmax(mm[j,...]),mm[j,...].shape) 
+                    mx = mm[j,ix, :] > mm[j,ix,iy] * threshold
+                    my = mm[j,:, iy] > mm[j,ix,iy] * threshold
+                    nx = max(nx, np.round(np.sum(mx) / 2.))
+                    ny = max(ny, np.round(np.sum(my) / 2.))
 #                print(j, nx, ny, np.round(np.sum(mx) / 2.))
 
             nmax = max(nx,ny)
             xslice = slice(max(xpix-nmax,0),min(xpix+nmax+1,gta.npix))
             model[i] = model[i][:,xslice,xslice]
 
+            print(nx,ny)
+            
         ts_values = np.zeros((gta.npix, gta.npix))
         amp_values = np.zeros((gta.npix, gta.npix))
 
-        for i in range(gta.npix):
-            for j in range(gta.npix):
+        from functools import partial
+        from multiprocessing import Pool, cpu_count
+        
+        
+        wrap = partial(_ts_value, counts=counts, 
+                       background=background, model=model,
+                       C_0_map=c0_map, method='root brentq')
 
-                for k, p in enumerate(positions):
-                    positions[k][0] = gta.components[k].enumbins//2
-                    positions[k][1] = i
-                    positions[k][2] = j
+        positions = []
+        for i,j in itertools.product(range(gta.npix),range(gta.npix)):
+            p = [[c.enumbins//2,i,j] for c in gta.components]
+            positions += [p]
 
-                ts, amp, niter = _ts_value(positions, counts, background,
-                                           model, c0_map, method='root brentq')
+        if multithread:            
+            pool = Pool()
+            results = pool.map(wrap,positions)
+            pool.close()
+            pool.join()
+        else:
+            results = map(wrap,positions)
+            
+        for i, r in enumerate(results):
+            ix = positions[i][0][1]
+            iy = positions[i][0][2]            
+#            ix, iy = np.unravel_index(i,ts_values.shape)
+            ts_values[ix, iy] = r[0]
+            amp_values[ix, iy] = r[1]
 
-                #                print(ts, amp, niter)
-                ts_values[i, j] = ts
-                amp_values[i, j] = amp
-
+            
         ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
                                             'tsmap_ts.fits',
                                             prefix=[prefix,modelname])

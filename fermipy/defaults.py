@@ -138,6 +138,7 @@ residmap = {
 #
 tsmap = {
     'models'                   : (None,'',list),
+    'multithread'              : (False,'',bool)
     }
 
 # Options for SED analysis

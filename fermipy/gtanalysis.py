@@ -827,7 +827,9 @@ class GTAnalysis(fermipy.config.Configurable):
             return cs
 
     def get_sources(self, cuts=None, distance=None,
-                    min_ts=None, min_npred=None, square=False):
+                    min_ts=None, min_npred=None,
+                    max_ts=None, max_npred=None,
+                    square=False):
         """Retrieve list of sources in the ROI model satisfying the
         given selections."""
         rsrc, srcs = self.roi.get_sources_by_position(self.roi.skydir,
@@ -845,17 +847,26 @@ class GTAnalysis(fermipy.config.Configurable):
             if min_npred is not None and (
                 ~np.isfinite(npred) or npred < min_npred):
                 continue
-            
+            if max_ts is not None and (
+                ~np.isfinite(ts) or ts > max_ts): continue
+            if max_npred is not None and (
+                ~np.isfinite(npred) or npred > max_npred):
+                continue
+                        
             o.append(s)
 
         return o
 
     def delete_sources(self, cuts=None, distance=None,
-                       min_ts=None, min_npred=None, square=False):
+                       min_ts=None, min_npred=None,
+                       max_ts=None, max_npred=None,
+                       square=False):
         """Delete sources in the ROI model satisfying the given
         selection criteria."""
 
-        srcs = self.get_sources(cuts, distance, min_ts=min_ts, min_npred=min_npred,
+        srcs = self.get_sources(cuts, distance,
+                                min_ts=min_ts,min_npred=min_npred,
+                                max_ts=max_ts,max_npred=max_npred,
                                 square=square)
         self._roi.delete_sources(srcs)
         for c in self.components:
