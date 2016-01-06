@@ -4,6 +4,8 @@ from __future__ import absolute_import, division, print_function, \
 import os
 import copy
 import itertools
+import functools
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 import warnings
@@ -322,9 +324,6 @@ def _ts_value(position, counts, background, model, C_0_map, method):
     if not isinstance(model,list): model = [model]
     if not isinstance(C_0_map,list): C_0_map = [C_0_map]
 
-#    print('ts_value',position)
-    
-    #    flux = np.ones(shape=counts.shape)
     extract_fn = _collect_wrapper(extract_large_array)
     truncate_fn = _collect_wrapper(extract_small_array)
 
@@ -381,10 +380,18 @@ class TSMapGenerator(fermipy.config.Configurable):
         return o
 
     def make_ts_map(self, gta, prefix, src_dict=None,**kwargs):
-
+        """
+        Make a TS map from a GTAnalysis instance.  The
+        spectral/spatial characteristics of the test source can be
+        defined with the src_dict argument.  By default the method
+        will generate a TS map for a point source with an index=2.0
+        power-law spectrum.
+        """
+        
         multithread = kwargs.get('multithread',self.config['multithread'])
         threshold = kwargs.get('threshold',1E-2)
-        kernel_radius = kwargs.get('kernel_radius',1.0)
+        max_kernel_radius = kwargs.get('max_kernel_radius',
+                                       self.config['max_kernel_radius'])
         
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
@@ -434,38 +441,30 @@ class TSMapGenerator(fermipy.config.Configurable):
         
         for i, mm in enumerate(model):
 
-            nx = 3
-            ny = 3
-
+            dpix = 3
             for j in range(mm.shape[0]):
 
-                if kernel_radius is not None:
-                    nx = max(nx,int(kernel_radius/gta.components[i].binsz))
-                    ny = nx
-                else:
-                    ix,iy = np.unravel_index(np.argmax(mm[j,...]),mm[j,...].shape) 
-                    mx = mm[j,ix, :] > mm[j,ix,iy] * threshold
-                    my = mm[j,:, iy] > mm[j,ix,iy] * threshold
-                    nx = max(nx, np.round(np.sum(mx) / 2.))
-                    ny = max(ny, np.round(np.sum(my) / 2.))
-#                print(j, nx, ny, np.round(np.sum(mx) / 2.))
+                ix,iy = np.unravel_index(np.argmax(mm[j,...]),mm[j,...].shape) 
+                mx = mm[j,ix, :] > mm[j,ix,iy] * threshold
+                my = mm[j,:, iy] > mm[j,ix,iy] * threshold
+                dpix = max(dpix, np.round(np.sum(mx) / 2.))
+                dpix = max(dpix, np.round(np.sum(my) / 2.))
+                
+            if max_kernel_radius is not None and \
+                    dpix > int(max_kernel_radius/gta.components[i].binsz):
+                dpix = int(max_kernel_radius/gta.components[i].binsz)
 
-            nmax = max(nx,ny)
-            xslice = slice(max(xpix-nmax,0),min(xpix+nmax+1,gta.npix))
+            xslice = slice(max(xpix-dpix,0),min(xpix+dpix+1,gta.npix))
             model[i] = model[i][:,xslice,xslice]
 
-            print(nx,ny)
+            print('kernel dpix',dpix)
             
         ts_values = np.zeros((gta.npix, gta.npix))
         amp_values = np.zeros((gta.npix, gta.npix))
-
-        from functools import partial
-        from multiprocessing import Pool, cpu_count
         
-        
-        wrap = partial(_ts_value, counts=counts, 
-                       background=background, model=model,
-                       C_0_map=c0_map, method='root brentq')
+        wrap = functools.partial(_ts_value, counts=counts, 
+                                 background=background, model=model,
+                                 C_0_map=c0_map, method='root brentq')
 
         positions = []
         for i,j in itertools.product(range(gta.npix),range(gta.npix)):
@@ -479,6 +478,8 @@ class TSMapGenerator(fermipy.config.Configurable):
             pool.join()
         else:
             results = map(wrap,positions)
+
+        print('done')
             
         for i, r in enumerate(results):
             ix = positions[i][0][1]
