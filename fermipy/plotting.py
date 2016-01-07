@@ -432,8 +432,9 @@ class ROIPlotter(fermipy.config.Configurable):
         label_threshold = 10
         src_color = 'w'
         fontweight = 'normal'
-
-        im_kwargs = dict(cmap='ds9_b', vmin=None, vmax=None, levels=None,
+        
+        im_kwargs = dict(cmap=kwargs.get('cmap','ds9_b'),
+                         vmin=None, vmax=None, levels=None,
                          zscale='lin', subplot=111)
 
         plot_kwargs = dict(linestyle='None', marker='+',
@@ -778,7 +779,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sqrt_ts'], gta.roi)
-        p.plot(vmin=0, vmax=8, levels=[0, 3, 5, 8],
+        p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9],
                cb_label='Sqrt(TS) [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'tsmap_sqrt_ts',

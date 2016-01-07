@@ -2348,9 +2348,17 @@ class GTAnalysis(fermipy.config.Configurable):
 
         make_plots = kwargs.get('make_plots', True)
 
+
+        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
+                      np.round((self.npix - 1.0) / 2.))
+        skywcs = self._skywcs
+        skydir = utils.pix_to_skydir(xpix, ypix, skywcs)
+
+        print xpix, ypix
+        
         src_dict = {}
-        src_dict['ra'] = self.roi.skydir.ra.deg
-        src_dict['dec'] = self.roi.skydir.dec.deg
+        src_dict['ra'] = skydir.ra.deg
+        src_dict['dec'] = skydir.dec.deg
         src_dict.setdefault('SpatialModel', 'PointSource')
         src_dict.setdefault('SpatialWidth', 0.3)
         src_dict.setdefault('Index', 2.0)
@@ -2378,8 +2386,18 @@ class GTAnalysis(fermipy.config.Configurable):
                                self.roi.skydir.dec.deg)
         npix = self.npix
         pixsize = np.abs(self._skywcs.wcs.cdelt[0])
+
+        print npix, pixsize
+        if self.config['binning']['coordsys'] == 'CEL':
+            galactic=False
+        elif self.config['binning']['coordsys'] == 'GAL':
+            galactic=True
+        else:
+            raise Exception('Unsupported coordinate system: %s'%
+                            self.config['binning']['coordsys'])
+        
         skyproj = pyLike.FitScanner.buildSkyProj("AIT", refdir, pixsize, npix,
-                                                 False)
+                                                 galactic)
 
         print "Building fit scanner"
         fitScanner = pyLike.FitScanner(self.like.composite, optObject, skyproj,
@@ -2391,19 +2409,49 @@ class GTAnalysis(fermipy.config.Configurable):
         #        ok = fitScanner.setPowerlawPointTestSource(funcFactory)
 
         self.logger.info("Running tscube")
-        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-3, 30, 0, False, 1)
+        # doSED         : Compute the energy bin-by-bin fits
+        # nNorm         : Number of points in the likelihood v. normalization scan
+        # covScale      : Scale factor to apply to broadband fitting cov.
+        #                 matrix in bin-by-bin fits ( < 0 -> fixed )
+        # normSigma     : Number of sigma to use for the scan range 
+        # tol           : Critetia for fit convergence (estimated vertical distance to min < tol )
+        # maxIter       : Maximum number of iterations for the Newton's method fitter
+        # tolType       : Absoulte (0) or relative (1) criteria for convergence
+        # remakeTestSource : If true, recomputes the test source image (otherwise just shifts it)
+        # ST_scan_level : Level to which to do ST-based fitting (for testing)
+        
+        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-5, 30, 1, False, 0)
         self.logger.info("Finished tscube")
 
-        print "Writting output file"
+        print "Writing output file"
         ok = fitScanner.writeFitsFile(OUTFILE, "gttscube", TMPLFILE)
-
+        self.delete_source('tscube_testsource')
+        
         ts_map = utils.Map.create_from_fits(OUTFILE)
+        sqrt_ts_map = copy.deepcopy(ts_map)
+        sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
 
+        import matplotlib.pyplot as plt
+        from plotting import ROIPlotter
+        
+        fig = plt.figure()
+        p = ROIPlotter(sqrt_ts_map, self.roi)
+        p.plot(vmin=0, vmax=15, levels=[3, 5, 8],
+               cb_label='Sqrt(TS) [$\sigma$]')
+        plt.savefig(utils.format_filename(self.config['fileio']['outdir'],
+                                          'tsmap_sqrt_ts',
+                                          prefix=[prefix],
+                                          extension='png'))
+        plt.close(fig)
+        
+
+        
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),
              'files': [],
              #             'wcs': skywcs,
-             #             'ts': Map(ts_values, skywcs),
+             'ts': ts_map,
+             'sqrt_ts': sqrt_ts_map,
              #             'sqrt_ts': Map(ts_values**0.5, skywcs),
              #             'npred': Map(amp_values*model_npred, skywcs),
              #             'amplitude': Map(amp_values, skywcs),
