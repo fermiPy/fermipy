@@ -480,15 +480,13 @@ class TSMapGenerator(fermipy.config.Configurable):
             results = map(wrap,positions)
 
         print('done')
-            
+
         for i, r in enumerate(results):
             ix = positions[i][0][1]
-            iy = positions[i][0][2]            
-#            ix, iy = np.unravel_index(i,ts_values.shape)
+            iy = positions[i][0][2]
             ts_values[ix, iy] = r[0]
             amp_values[ix, iy] = r[1]
 
-            
         ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
                                             'tsmap_ts.fits',
                                             prefix=[prefix,modelname])
@@ -526,4 +524,75 @@ class TSMapGenerator(fermipy.config.Configurable):
              'amplitude': Map(amp_values, skywcs),
              }
 
+        return o
+
+        ts_values2 = np.zeros((gta.npix, gta.npix))
+        ix,iy = np.unravel_index(np.argmax(ts_values),ts_values.shape)
+        ix = 40
+        iy = 60
+        print('ix/iy',ix,iy)
+
+#        xpix = np.linspace(0, gta.npix - 1, gta.npix)[:,np.newaxis] * np.ones(ts_values.shape)
+#        ypix = np.linspace(0, gta.npix - 1, gta.npix)[np.newaxis,:] * np.ones(ts_values.shape)
+
+        xpix = np.ravel(np.linspace(ix-3, ix+3, 7)[:,np.newaxis] * np.ones((7,7)))
+        ypix = np.ravel(np.linspace(iy-3, iy+3, 7)[np.newaxis,:] * np.ones((7,7)))
+
+        radec = utils.pix_to_skydir(xpix, ypix, gta._skywcs)
+        radec = (np.ravel(radec.ra.deg), np.ravel(radec.dec.deg))
+        
+#        ipix = np.random.uniform(0,len(,10).astype(int)
+
+        logLike0 = -gta.like()
+
+        for i, (ra, dec, x, y) in enumerate(zip(radec[0], radec[1],xpix,ypix)):
+
+
+            x = int(x)
+            y = int(y)
+
+            src_dict['ra'] = ra
+            src_dict['dec'] = dec
+            src_dict['Prefactor'] = {'value': 0.0, 'scale': 1e-13}
+            gta.add_source('tsmap_testsource4', src_dict, free=True,
+                           init_source=False,save_source_maps=False)
+
+            gta.fit(update=False)
+            logLike1 = -gta.like()
+            ts = max(0, 2 * (logLike1 - logLike0))
+
+#            print(gta.components[0].like.model['tsmap_testsource2'])
+            gta.delete_source('tsmap_testsource4')
+            print(i,x,y,ra,dec,ts,ts_values.T[x,y])
+
+            ts_values2[y,x] = ts
+
+            continue
+
+            fig = plt.figure()
+            
+            m = gta.get_model_map('tsmap_testsource4')[0]
+            mt = gta.get_model_map()[0]
+            c = gta.counts_map()
+
+            fig.add_subplot(221)
+            plt.imshow(np.sum(m.counts,axis=0),origin='lower',interpolation='nearest')
+            fig.add_subplot(222)
+            plt.imshow(np.sum(c.counts,axis=0),origin='lower',interpolation='nearest')            
+            fig.add_subplot(223)
+            plt.imshow(np.sum(mt.counts,axis=0),origin='lower',interpolation='nearest')
+            fig.add_subplot(224)
+            plt.imshow(ts_values,origin='lower',interpolation='nearest')
+
+        import matplotlib.pyplot as plt
+
+        fig = plt.figure()
+        fig.add_subplot(121)
+        plt.imshow(ts_values,origin='lower',interpolation='nearest')
+        fig.add_subplot(122)
+        plt.imshow(ts_values2,origin='lower',interpolation='nearest')
+
+        o['ts_values'] = ts_values
+        o['ts_values2'] = ts_values2
+        
         return o

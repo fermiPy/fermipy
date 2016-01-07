@@ -282,9 +282,6 @@ class ImagePlotter(object):
             cs = ax.contour(data.T, **kwargs_contour)
             #        plt.clabel(cs, fontsize=5, inline=0)
 
-        #        im.set_clim(vmin=np.min(self._counts[~self._roi_msk]),
-        #                    vmax=np.max(self._counts[~self._roi_msk]))
-
         coordsys = utils.get_coordsys(self._wcs)
 
         if coordsys == 'CEL':
@@ -301,7 +298,8 @@ class ImagePlotter(object):
 
         #        plt.colorbar(im,orientation='horizontal',shrink=0.7,pad=0.15,
         #                     fraction=0.05)
-        ax.grid()
+#        ax.grid()
+        ax.coords.grid(color='white')#, alpha=0.5)
 
         #        ax.add_compass(loc=1)
         #        ax.set_display_coord_system("gal")
@@ -332,6 +330,7 @@ class ROIPlotter(fermipy.config.Configurable):
         fermipy.config.Configurable.__init__(self, None, **kwargs)
 
         self._roi = roi
+        # Switch to Cartesian indexing
         self._data = cmap.counts.T
         self._wcs = cmap.wcs
         self._erange = self.config['erange']
