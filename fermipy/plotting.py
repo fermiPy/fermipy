@@ -411,6 +411,7 @@ class ROIPlotter(fermipy.config.Configurable):
     @staticmethod
     def create_from_fits(fitsfile, roi, **kwargs):
 
+        print "Reading ",fitsfile
         hdulist = pyfits.open(fitsfile)
         try:
             if hdulist[1].name == "SKYMAP":

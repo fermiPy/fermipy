@@ -1,14 +1,21 @@
+#!/usr/bin/env python
+#
 
-import astropy.io.fits as pf
+# Description
+"""
+Utilities for dealing with HEALPix projections and mappings
+"""
+
+import re
 
 import healpy as hp
 import numpy as np
 
-import re
-
+import astropy.io.fits as pf
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Galactic,ICRS,FK5  
 
+from fits_utils import read_energy_bounds
 
 # This is an approximation of the size of HEALPix pixels (in degrees) 
 # for a particular order.   It is used to convert from HEALPix to WCS-based
@@ -166,6 +173,7 @@ class HPX(object):
                 self._rmap[ipixel] = i
                 pass
 
+
     def __getitem__(self,sliced):
         """ This implements the global-to-local lookup
 
@@ -247,7 +255,10 @@ class HPX(object):
         try:
             region = header["HPX_REG"]
         except:
-            region = None
+            try:
+                region = header["HPXREGION"]
+            except:
+                region = None
         return HPX(nside,nest,coordsys,order,region,ebins=ebins)
 
 
@@ -328,17 +339,6 @@ class HPX(object):
         hdulist = pf.HDUList(hl)
         hdulist.writeto(outfile,clobber=clobber)
         
-
-    @staticmethod
-    def read_energy_bounds(hdu):
-        """ Reads and returns the energy bin edges from a FITs HDU
-        """
-        nebins = len(hdu.data)
-        ebin_edges = np.ndarray((nebins+1))
-        ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
-        ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
-        return ebin_edges
-
 
     @staticmethod
     def get_index_list(nside,nest,region):
@@ -532,7 +532,7 @@ class HpxToWcsMapping(object):
 
         hpx_data  : the input HEALPix data
         wcs_data  : the data array being filled
-        normalize : True -> perserve integral by splitting values
+        normalize : True -> perserve integral by splitting HEALPix values between bins
         """
 
         # FIXME, there really ought to be a better way to do this
@@ -591,7 +591,7 @@ class HpxMap(Map_Base):
         """
         if ebounds is not None:
             try:
-                ebins = HPX.read_energy_bounds(hdulist[ebounds])
+                ebins = read_energy_bounds(hdulist[ebounds])
             except:
                 ebins = None
         else:
@@ -603,7 +603,17 @@ class HpxMap(Map_Base):
    
 
     def make_wcs_from_hpx(self,sum_ebins=False,proj='CAR',oversample=2,normalize=True):
-        """
+        """ Make a WCS object and convert HEALPix data into WCS projection
+
+        sum_ebins  : bool, sum energy bins over energy bins before reprojecting
+        proj       : WCS-projection
+        oversample : Oversampling factor for WCS map
+        normalize  : True -> perserve integral by splitting HEALPix values between bins
+
+        returns (WCS object, np.ndarray() with reprojected data)
+
+           NOTE: this re-calculates the mapping, if you have already calculated the 
+        mapping it is much faster to use convert_to_cached_wcs() instead
         """
         self._wcs_proj = proj
         self._wcs_oversample = oversample
@@ -614,7 +624,13 @@ class HpxMap(Map_Base):
            
 
     def convert_to_cached_wcs(self,hpx_in,sum_ebins=False,normalize=True):
-        """
+        """ Make a WCS object and convert HEALPix data into WCS projection
+
+        hpx_in     : HEALPix input data
+        sum_ebins  : bool, sum energy bins over energy bins before reprojecting
+        normalize  : True -> perserve integral by splitting HEALPix values between bins
+
+        returns (WCS object, np.ndarray() with reprojected data)
         """
         if self._hpx2wcs is None:
             raise Exception("HpxMap.convert_to_cached_wcs() called before make_wcs_from_hpx()")
