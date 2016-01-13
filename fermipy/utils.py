@@ -9,6 +9,9 @@ from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
 import scipy.special as specialfn
 from scipy.interpolate import UnivariateSpline
+from astropy import wcs
+
+from fits_utils import read_energy_bounds
 
 
 class Map(Map_Base):
@@ -21,6 +24,11 @@ class Map(Map_Base):
     @property
     def wcs(self):
         return self._wcs
+
+    
+    @staticmethod 
+    def create_from_hdu(hdu,wcs):
+        return Map(hdu.data.T,wcs)
 
             
 def format_filename(outdir,basename,prefix=None,extension=None):
@@ -343,10 +351,7 @@ def create_wcs(skydir,coordsys='CEL',projection='AIT',
     skydir : SkyCoord
         Sky coordinate of the WCS reference point.
 
-    """
-    
-    from astropy import wcs
-
+    """    
     w = wcs.WCS(naxis=naxis)
 #    w = wcs.WCS()
     
@@ -946,6 +951,66 @@ def write_hpx_image(data,hpx,outfile,extname="SKYMAP"):
     
     hpx.write_fits(data,outfile,extname,clobber=True)
  
+
+def read_projection_from_fits(fitsfile,extname=None):
+    
+    f = pyfits.open(fitsfile)
+    nhdu = len(f)
+    # Try and get the energy bounds
+    try:
+        ebins = read_energy_bounds(f['EBOUNDS'])
+    except:
+        ebins = None
+    
+    if extname is None:
+        # If there is an image in the Primary HDU we can return a WCS-based projection
+        if f[0].header['NAXIS'] != 0:
+            proj = wcs.WCS(f[0].header)
+            return proj,f,f[0]
+    else:
+        if f[extname].header['XTENSION'] == 'IMAGE':
+            proj = wcs.WCS(f[extname].header)
+            return proj,f,f[extname]
+        elif f[extname].header['XTENSION'] == 'BINTABLE':
+            try: 
+                if f[extname].header['PIXTYPE'] == 'HEALPIX':
+                    proj = HPX.create_from_header(f[extname].header,ebins)
+                    return proj,f,f[extname]
+            except:
+                pass
+        return None,f,None 
+            
+    # Loop on HDU and look for either an image or a table with HEALPix data
+    for i in range(1,nhdu):
+        # if there is an image we can return a WCS-based projection
+        if f[i].header['XTENSION'] == 'IMAGE':
+            proj = wcs.WCS(f[i].header)
+            return proj,f,f[i]
+        elif f[i].header['XTENSION'] == 'BINTABLE':
+            try: 
+                if f[i].header['PIXTYPE'] == 'HEALPIX':
+                    proj = HPX.create_from_header(f[i].header,ebins)
+                    return proj,f,f[i]
+            except:
+                pass
+        pass
+    return None,f,None
+                
+
+def read_map_from_fits(fitsfile,extname=None):
+    """
+    """
+    proj,f,hdu = read_projection_from_fits(fitsfile,extname)
+    if isinstance(proj,wcs.WCS):
+        m = Map(hdu.data.T,proj)
+        return m,f
+    elif isinstance(proj,HPX):
+        m = HpxMap.create_from_hdu(hdu,proj.ebins)
+    else:
+        raise Exception("Did not recognize projection type %s"%type(proj))
+    return m,f
+    
+
 
 def update_source_maps(srcmap_file,srcmaps,logger=None):
 
