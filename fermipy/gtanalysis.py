@@ -3479,6 +3479,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         # Recompute fixed model weights
         self.like.logLike.buildFixedModelWts()
+        #self.like.logLike.buildFixedModelWts(True)
 
     def make_scaled_srcmap(self):
         """Make an exposure cube with the same binning as the counts map."""
