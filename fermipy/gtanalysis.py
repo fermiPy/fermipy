@@ -2353,7 +2353,8 @@ class GTAnalysis(fermipy.config.Configurable):
                       np.round((self.npix - 1.0) / 2.))
         skywcs = self._skywcs
         skydir = utils.pix_to_skydir(xpix, ypix, skywcs)
-
+        skydir = self.roi.skydir
+        
         print xpix, ypix
         
         src_dict = {}
@@ -2406,7 +2407,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         print "Setting test source"
         ok = fitScanner.setTestSourceByName('tscube_testsource')
-        #        ok = fitScanner.setPowerlawPointTestSource(funcFactory)
+        #ok = fitScanner.setPowerlawPointTestSource(funcFactory)
 
         self.logger.info("Running tscube")
         # doSED         : Compute the energy bin-by-bin fits
@@ -2420,7 +2421,8 @@ class GTAnalysis(fermipy.config.Configurable):
         # remakeTestSource : If true, recomputes the test source image (otherwise just shifts it)
         # ST_scan_level : Level to which to do ST-based fitting (for testing)
         
-        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-5, 30, 1, False, 0)
+#        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-4, 30, 1, False, 0)
+        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-3, 30, 0, False, 1)
         self.logger.info("Finished tscube")
 
         print "Writing output file"
@@ -2436,7 +2438,7 @@ class GTAnalysis(fermipy.config.Configurable):
         
         fig = plt.figure()
         p = ROIPlotter(sqrt_ts_map, self.roi)
-        p.plot(vmin=0, vmax=15, levels=[3, 5, 8],
+        p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9],
                cb_label='Sqrt(TS) [$\sigma$]')
         plt.savefig(utils.format_filename(self.config['fileio']['outdir'],
                                           'tsmap_sqrt_ts',
@@ -3175,8 +3177,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             for s in srcs: excluded_srcnames += [s.name]
 
         self.like.logLike.buildFixedModelWts()
-        if not self.like.logLike.fixedModelUpdated():        
-            self.like.logLike.buildFixedModelWts(True)
+        self.like.logLike.buildFixedModelWts(True)
 
         src_names = []
         if (name is None or name == 'all') and not excluded_srcnames:
@@ -3476,8 +3477,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.logger.debug('Disabling energy dispersion for %s' % s)
             self.set_edisp_flag(s, False)
 
-        if not self.like.logLike.fixedModelUpdated():
-            self.like.logLike.buildFixedModelWts(True)
+        # Recompute fixed model weights
+        self.like.logLike.buildFixedModelWts()
 
     def make_scaled_srcmap(self):
         """Make an exposure cube with the same binning as the counts map."""
