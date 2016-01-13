@@ -369,6 +369,9 @@ class TSMapGenerator(fermipy.config.Configurable):
 
         models = kwargs.get('models', self.config['models'])
 
+        if isinstance(models,dict):
+            models = [models]
+
         o = []
 
         for m in models:
@@ -383,15 +386,37 @@ class TSMapGenerator(fermipy.config.Configurable):
         """
         Make a TS map from a GTAnalysis instance.  The
         spectral/spatial characteristics of the test source can be
-        defined with the src_dict argument.  By default the method
+        defined with the src_dict argument.  By default this method
         will generate a TS map for a point source with an index=2.0
         power-law spectrum.
+
+        Parameters
+        ----------
+
+        gta : `~fermipy.gtanalysis.GTAnalysis`
+            Analysis instance.
+
+        src_dict : dict or `~fermipy.roi_model.Source` object
+            Dictionary or Source object defining the properties of the
+            test source that will be used in the scan.
+
         """
         
         multithread = kwargs.get('multithread',self.config['multithread'])
         threshold = kwargs.get('threshold',1E-2)
         max_kernel_radius = kwargs.get('max_kernel_radius',
                                        self.config['max_kernel_radius'])
+
+        erange = kwargs.get('erange', self.config['erange'])
+        if erange is not None:            
+            if len(erange) == 0: erange = [None,None]
+            elif len(erange) == 1: erange += [None]            
+            erange[0] = (erange[0] if erange[0] is not None 
+                         else gta.energies[0])
+            erange[1] = (erange[1] if erange[1] is not None 
+                         else gta.energies[-1])
+        else:
+            erange = [gta.energies[0],gta.energies[-1]]
         
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
@@ -413,31 +438,39 @@ class TSMapGenerator(fermipy.config.Configurable):
         background = []
         model = []
         c0_map = []
+        eslices = []
+        enumbins = []
         model_npred = 0
         for c in gta.components:
 
+            imin = utils.val_to_edge(c.energies,erange[0])[0]
+            imax = utils.val_to_edge(c.energies,erange[1])[0]
+
+            eslice = slice(imin,imax)
+
             print('fetching source map 1')            
-            bm = c.model_counts_map().counts.astype('float')
+            bm = c.model_counts_map().counts.astype('float')[eslice,...]
 
             print('fetching counts map 2')
-            cm = c.counts_map().counts.astype('float')
-            
+            cm = c.counts_map().counts.astype('float')[eslice,...]
+
             background += [bm]
             counts += [cm]
             c0_map += [cash(cm, bm)]
+            eslices += [eslice]
+            enumbins += [cm.shape[0]]
+
 
         gta.add_source('tsmap_testsource', src_dict, free=True,
                        init_source=False)
         src = gta.roi['tsmap_testsource']
         modelname = utils.create_model_name(src)
-        for c in gta.components:
-            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')
+        for c, eslice in zip(gta.components,eslices):
+            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')[eslice,...]
             model_npred += np.sum(mm)
             model += [mm]
             
         gta.delete_source('tsmap_testsource')
-
-        print('reducing model')
         
         for i, mm in enumerate(model):
 
@@ -468,7 +501,7 @@ class TSMapGenerator(fermipy.config.Configurable):
 
         positions = []
         for i,j in itertools.product(range(gta.npix),range(gta.npix)):
-            p = [[c.enumbins//2,i,j] for c in gta.components]
+            p = [[k//2,i,j] for k in enumbins]
             positions += [p]
 
         if multithread:            

@@ -26,7 +26,6 @@ import fermipy.config
 import fermipy.utils as utils
 import fermipy.defaults as defaults
 from fermipy.utils import merge_dict, wcs_to_axes, Map
-from fermipy.utils import edge_to_center, edge_to_width, valToEdge
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 
@@ -337,8 +336,8 @@ class ROIPlotter(fermipy.config.Configurable):
 
         if self._erange:
             axes = wcs_to_axes(self._wcs, self._data.shape[::-1])
-            i0 = valToEdge(axes[2], self._erange[0])
-            i1 = valToEdge(axes[2], self._erange[1])
+            i0 = utils.val_to_edge(axes[2], self._erange[0])
+            i1 = utils.val_to_edge(axes[2], self._erange[1])
             imdata = self._data[:, :, i0:i1]
         else:
             imdata = self._data
@@ -366,8 +365,8 @@ class ROIPlotter(fermipy.config.Configurable):
         noerror = kwargs.pop('noerror', False)
 
         axes = wcs_to_axes(self._wcs, self._data.shape[::-1])
-        x = edge_to_center(axes[iaxis])
-        w = edge_to_width(axes[iaxis])
+        x = utils.edge_to_center(axes[iaxis])
+        w = utils.edge_to_width(axes[iaxis])
 
         c = self.get_data_projection(data, axes, iaxis, erange=self._erange)
 
@@ -384,19 +383,19 @@ class ROIPlotter(fermipy.config.Configurable):
         s2 = slice(None, None)
 
         if iaxis == 0:
-            i0 = valToEdge(axes[iaxis], xmin)
-            i1 = valToEdge(axes[iaxis], xmax)
+            i0 = utils.val_to_edge(axes[iaxis], xmin)
+            i1 = utils.val_to_edge(axes[iaxis], xmax)
             s1 = slice(i0, i1)
             saxes = [1, 2]
         else:
-            i0 = valToEdge(axes[iaxis], xmin)
-            i1 = valToEdge(axes[iaxis], xmax)
+            i0 = utils.val_to_edge(axes[iaxis], xmin)
+            i1 = utils.val_to_edge(axes[iaxis], xmax)
             s0 = slice(i0, i1)
             saxes = [0, 2]
 
         if erange is not None:
-            j0 = valToEdge(axes[2], erange[0])
-            j1 = valToEdge(axes[2], erange[1])
+            j0 = utils.val_to_edge(axes[2], erange[0])
+            j1 = utils.val_to_edge(axes[2], erange[1])
             s2 = slice(j0, j1)
 
         c = np.apply_over_axes(np.sum, data[s0, s1, s2], axes=saxes)
@@ -785,6 +784,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           prefix=[prefix],
                                           extension=format))
         plt.close(fig)
+
+        fig = plt.figure()
+        p = ROIPlotter(maps['npred'], gta.roi)
+        p.plot(vmin=0, cb_label='NPred [Counts]')
+        plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
+                                          'tsmap_npred',
+                                          prefix=[prefix],
+                                          extension=format))
+        plt.close(fig)
+
 
     def make_roi_plots(self, gta, mcube_maps, prefix, erange=None, **kwargs):
         """Make various diagnostic plots for the 1D and 2D

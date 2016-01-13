@@ -144,6 +144,26 @@ def eq2gal(ra, dec):
 
     return l, b
     
+def apply_minmax_selection(val,val_minmax):
+
+    if val_minmax is None: return True    
+
+    if val_minmax[0] is None:
+        min_cut = True
+    elif np.isfinite(val) and val >= val_minmax[0]:
+        min_cut = True
+    else:
+        min_cut = False
+
+    if val_minmax[1] is None:
+        max_cut = True
+    elif np.isfinite(val) and val <= val_minmax[1]:
+        max_cut = True
+    else:
+        max_cut = False
+
+    return (min_cut and max_cut)
+
 def create_model_name(src):
     """Generate a name for a source object given its spatial/spectral
     properties.
@@ -176,12 +196,12 @@ def edge_to_center(edges):
 def edge_to_width(edges):
     return (edges[1:] - edges[:-1])
             
-def valToBin(edges,x):
+def val_to_bin(edges,x):
     """Convert axis coordinate to bin index."""
     ibin = np.digitize(np.array(x,ndmin=1),edges)-1
     return ibin
 
-def valToEdge(edges,x):
+def val_to_edge(edges,x):
     """Convert axis coordinate to bin index."""
     edges = np.array(edges)
     w = edges[1:] - edges[:-1]
@@ -190,10 +210,10 @@ def valToEdge(edges,x):
     ibin[ibin<0] = 0    
     return ibin
 
-def valToBinBounded(edges,x):
+def val_to_bin_bounded(edges,x):
     """Convert axis coordinate to bin index."""
     nbins = len(edges)-1
-    ibin = valToBin(edges,x)
+    ibin = val_to_bin(edges,x)
     ibin[ibin < 0] = 0
     ibin[ibin > nbins-1] = nbins-1
     return ibin
@@ -1007,6 +1027,16 @@ def write_hpx_image(data,hpx,outfile,extname="SKYMAP"):
     
     hpx.write_fits(data,outfile,extname,clobber=True)
  
+
+def delete_source_map(srcmap_file,name,logger=None):
+
+    hdulist = pyfits.open(srcmap_file)
+    hdunames = [hdu.name.upper() for hdu in hdulist]
+
+    if not name.upper() in hdunames: return
+    del hdulist[name.upper()]
+
+    hdulist.writeto(srcmap_file,clobber=True)
 
 def update_source_maps(srcmap_file,srcmaps,logger=None):
 

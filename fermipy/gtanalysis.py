@@ -22,7 +22,7 @@ import fermipy.irfs as irfs
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import valToBinBounded, valToEdge, Map, HpxMap
+from fermipy.utils import Map, HpxMap
 from fermipy.utils import create_hpx_disk_region_string, create_hpx
 from fermipy.roi_model import ROIModel, Source
 from fermipy.logger import Logger
@@ -217,7 +217,6 @@ def load_yaml(infile):
 
 def load_npy(infile):
     return np.load(infile).flat[0]
-
 
 class GTAnalysis(fermipy.config.Configurable):
     """High-level analysis interface that internally manages a set of
@@ -490,7 +489,7 @@ class GTAnalysis(fermipy.config.Configurable):
         name : str
             Source name.
 
-        src_dict : dict or Source object
+        src_dict : dict or `~fermipy.roi_model.Source` object
             Dictionary or source object defining the source properties
             (coordinates, spectral parameters, etc.).
 
@@ -498,6 +497,11 @@ class GTAnalysis(fermipy.config.Configurable):
             Initialize the source with a free normalization parameter.
 
         """
+
+        if self.roi.has_source(name):
+            msg = 'Source %s already exists.' % name
+            self.logger.error(msg)
+            raise Exception(msg)
 
         self.logger.info('Adding source ' + name)
 
@@ -552,6 +556,8 @@ class GTAnalysis(fermipy.config.Configurable):
         src = self.roi.get_source_by_name(name, True)
         self.roi.delete_sources([src])
         self.like.model = self.like.components[0].model
+
+        return src
 
     def _create_component_configs(self):
         configs = []
@@ -753,6 +759,8 @@ class GTAnalysis(fermipy.config.Configurable):
         Returns
         -------
 
+        map : `~fermipy.utils.Map` 
+
         """
         return self._ccube
 
@@ -778,7 +786,7 @@ class GTAnalysis(fermipy.config.Configurable):
         Returns
         -------
 
-        map : list of Map objects
+        maps : list of `~fermipy.utils.Map` 
            
         """
 
@@ -807,8 +815,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if summed:
             cs = np.zeros(self.enumbins)
-            imin = valToBinBounded(self.energies, emin + 1E-7)[0]
-            imax = valToBinBounded(self.energies, emax - 1E-7)[0] + 1
+            imin = utils.val_to_bin_bounded(self.energies, emin + 1E-7)[0]
+            imax = utils.val_to_bin_bounded(self.energies, emax - 1E-7)[0] + 1
 
             for c in self.components:
                 ecenter = 0.5 * (c.energies[:-1] + c.energies[1:])
@@ -826,58 +834,51 @@ class GTAnalysis(fermipy.config.Configurable):
                 cs += [c.model_counts_spectrum(name, emin, emax)]
             return cs
 
-    def get_sources(self, cuts=None, distance=None,
-                    min_ts=None, min_npred=None,
-                    max_ts=None, max_npred=None,
+    def get_sources(self, cuts=None, distance=None, minmax_ts=None, minmax_npred=None,
                     square=False):
         """Retrieve list of sources in the ROI model satisfying the
-        given selections."""
-        rsrc, srcs = self.roi.get_sources_by_position(self.roi.skydir,
-                                                      distance,
-                                                      square=square)
-        o = []
-        if cuts is None: cuts = []
-        for s, r in zip(srcs, rsrc):
-            if not s.check_cuts(cuts): continue
-            ts = s['ts']
-            npred = s['Npred']
+        given selections.
 
-            if min_ts is not None and (
-                ~np.isfinite(ts) or ts < min_ts): continue
-            if min_npred is not None and (
-                ~np.isfinite(npred) or npred < min_npred):
-                continue
-            if max_ts is not None and (
-                ~np.isfinite(ts) or ts > max_ts): continue
-            if max_npred is not None and (
-                ~np.isfinite(npred) or npred > max_npred):
-                continue
-                        
-            o.append(s)
+        Returns
+        -------
 
-        return o
+        srcs : list of `~fermipy.roi_model.Source` 
+
+        """
+
+        return self.roi.get_sources(cuts,distance,
+                                    minmax_ts,minmax_npred,square)
 
     def delete_sources(self, cuts=None, distance=None,
-                       min_ts=None, min_npred=None,
-                       max_ts=None, max_npred=None,
+                       minmax_ts=None, minmax_npred=None,
                        square=False):
         """Delete sources in the ROI model satisfying the given
-        selection criteria."""
+        selection criteria.
+
+        Returns
+        -------
+
+        srcs : list of `~fermipy.roi_model.Source` 
+
+        """
 
         srcs = self.get_sources(cuts, distance,
-                                min_ts=min_ts,min_npred=min_npred,
-                                max_ts=max_ts,max_npred=max_npred,
+                                minmax_ts,minmax_npred,
                                 square=square)
         self._roi.delete_sources(srcs)
         for c in self.components:
             c.delete_sources(srcs)
 
+        return srcs
+
     def free_sources(self, free=True, pars=None, cuts=None,
-                     distance=None, min_ts=None, min_npred=None, square=False):
+                     distance=None, minmax_ts=None, minmax_npred=None, 
+                     square=False):
         """Free/Fix sources in the ROI model satisfying the given
-        selection.  When multiple parameter selections are defined,
-        the selected sources will be those satisfying the logical AND
-        of all selections (e.g. distance < X && ts > min_ts && ...).
+        selection.  When multiple selections are defined, the selected
+        sources will be those satisfying the logical AND of all
+        selections (e.g. distance < X && minmax_ts[0] < ts <
+        minmax_ts[1] && ...).
 
         Parameters
         ----------
@@ -892,55 +893,47 @@ class GTAnalysis(fermipy.config.Configurable):
             freed/fixed.  If pars='norm' then only normalization
             parameters will be freed.
 
+       cuts : dict
+            Dictionary of [min,max] selections on source properties.
+
         distance : float        
             Distance out to which sources should be freed or fixed.
             If this parameter is none no selection will be applied.
 
-        min_ts : float        
-            Free sources that have TS larger than this value.  If this
-            parameter is none no selection will be applied.
+        minmax_ts : list
+            Free sources that have TS in the range [min,max].  If
+            either min or max are None then only a lower (upper) bound
+            will be applied.  If this parameter is none no selection
+            will be applied.
 
-        min_npred : float        
-            Free sources that have Npred larger than this value.  If this
-            parameter is none no selection will be applied.
-            
+        minmax_npred : list        
+            Free sources that have Npred in the range [min,max].  If
+            either min or max are None then only a lower (upper) bound
+            will be applied.  If this parameter is none no selection
+            will be applied.
+                    
         square : bool
             Switch between applying a circular or square (ROI-like)
             selection on the maximum projected distance from the ROI
             center.
+
+        Returns
+        -------
+
+        srcs : list of `~fermipy.roi_model.Source` 
+
         
         """
-        rsrc, srcs = self.roi.get_sources_by_position(self.roi.skydir,
-                                                      distance, square=square,
-                                                      coordsys=
-                                                      self.config['binning'][
-                                                          'coordsys'])
 
-        if cuts is None: cuts = []
-        for s, r in zip(srcs, rsrc):
-            if not s.check_cuts(cuts): continue
-            ts = s['ts']
-            npred = s['Npred']
+        srcs = self.roi.get_sources(cuts, distance,
+                                    minmax_ts,minmax_npred,
+                                    square=square,
+                                    coordsys=self.config['binning']['coordsys'])
 
-            if min_ts is not None and (
-                        ~np.isfinite(ts) or ts < min_ts): continue
-            if min_npred is not None and (
-                        ~np.isfinite(npred) or npred < min_npred):
-                continue
-
+        for s in srcs:
             self.free_source(s.name, free=free, pars=pars)
 
-        for s in self.roi.diffuse_sources:
-            #            if not s.check_cuts(cuts): continue
-            ts = s['ts']
-            npred = s['Npred']
-
-            if min_ts is not None and (
-                        ~np.isfinite(ts) or ts < min_ts): continue
-            if min_npred is not None and (
-                        ~np.isfinite(npred) or npred < min_npred):
-                continue
-            self.free_source(s.name, free=free, pars=pars)
+        return srcs
 
     def free_sources_by_position(self, free=True, pars=None,
                                  distance=None, square=False):
@@ -969,8 +962,8 @@ class GTAnalysis(fermipy.config.Configurable):
             either X or Y in projected cartesian coordinates.        
         """
 
-        self.free_sources(free, pars, cuts=None, distance=distance,
-                          square=square)
+        return self.free_sources(free, pars, cuts=None, distance=distance,
+                                 square=square)
 
     def set_edisp_flag(self, name, flag=True):
 
@@ -1198,11 +1191,11 @@ class GTAnalysis(fermipy.config.Configurable):
         self.logger.info('Generating residual maps')
 
         make_plots = kwargs.get('make_plots', True)
-        rmg = ResidMapGenerator(self.config['residmap'], self,
+        rmg = ResidMapGenerator(self.config['residmap'], 
                                 fileio=self.config['fileio'],
                                 logging=self.config['logging'])
 
-        maps = rmg.run(prefix, **kwargs)
+        maps = rmg.run(self,prefix, **kwargs)
 
         self._roi_model['residmap'] = {}
 
@@ -2993,8 +2986,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         return self._coordsys
 
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
-        """Add a new source to the model with the properties defined
-        in the input dictionary.
+        """Add a new source to the model.  Source properties
+        (spectrum, spatial model) are set with the src_dict argument.
+
 
         Parameters
         ----------
@@ -3002,11 +2996,21 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         name : str
             Source name.
 
-        src_dict : dict or Source object
+        src_dict : dict or `~fermipy.roi_model.Source` object
             Dictionary or Source object defining the properties of the
-            source to be added.
+            source.
+
+        free : bool
+            Initialize the source with the normalization parameter free.
 
         """
+
+        if self.roi.has_source(name):
+            msg = 'Source %s already exists.' % name
+            self.logger.error(msg)
+            raise Exception(msg)
+
+        utils.delete_source_map(self._srcmap_file,name)
 
         if isinstance(src_dict, dict):
             src_dict['name'] = name
@@ -3030,12 +3034,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             pylike_src.setDir(src.skydir.ra.deg, src.skydir.dec.deg, False,
                               False)
         elif src['SpatialType'] == 'SpatialMap':
-            sm = pyLike.SpatialMap(src['Spatial_Filename'])
+            sm = pyLike.SpatialMap(str(src['Spatial_Filename']))
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
         elif src['SpatialType'] == 'MapCubeFunction':
-            mcf = pyLike.MapCubeFunction2(src['Spatial_Filename'])
+            mcf = pyLike.MapCubeFunction2(str(src['Spatial_Filename']))
             pylike_src = pyLike.DiffuseSource(mcf,
                                               self.like.logLike.observation(),
                                               False)
@@ -3104,8 +3108,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like[name].src.set_edisp_flag(flag)
 
     def setEnergyRange(self, emin, emax):
-        imin = int(valToEdge(self.energies, emin)[0])
-        imax = int(valToEdge(self.energies, emax)[0])
+        imin = int(utils.val_to_edge(self.energies, emin)[0])
+        imax = int(utils.val_to_edge(self.energies, emax)[0])
 
         if imin - imax == 0:
             imin = len(self.energies) - 1
@@ -3217,8 +3221,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def model_counts_spectrum(self, name, emin, emax):
 
         cs = np.array(self.like.logLike.modelCountsSpectrum(name))
-        imin = valToEdge(self.energies, emin)[0]
-        imax = valToEdge(self.energies, emax)[0]
+        imin = utils.val_to_edge(self.energies, emin)[0]
+        imax = utils.val_to_edge(self.energies, emax)[0]
         if imax <= imin: raise Exception('Invalid energy range.')
         return cs[imin:imax]
 
