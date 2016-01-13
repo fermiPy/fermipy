@@ -537,6 +537,31 @@ class Model(object):
     def names(self):
         return self._names
 
+    def check_cuts(self,cuts):
+
+        if cuts is None: return True
+
+        if isinstance(cuts,tuple): 
+            cuts = {cuts[0] : (cuts[1],cuts[2])}
+        elif isinstance(cuts,list):
+            cuts = {c[0] : (c[1],c[2]) for c in cuts}
+
+        for k, v in cuts.items():
+
+            #if not isinstance(c,tuple) or len(c) != 3:
+            #    raise Exception('Wrong format for cuts tuple.')
+
+            if k in self._data: 
+                if not utils.apply_minmax_selection(self[k],v):
+                    return False
+            elif 'catalog' in self._data and k in self._data['catalog']:
+                if not utils.apply_minmax_selection(self['catalog'][k],v):
+                    return False
+            else:
+                return False
+
+        return True
+
     def set_name(self,name,names=None):
         self._data['name'] = name
         if names is None:
@@ -867,21 +892,7 @@ class Source(Model):
         
         self._update_spatial_pars()
         
-    def check_cuts(self,cuts):
 
-        if isinstance(cuts,tuple): cuts = [cuts]
-        
-        for c in cuts:
-
-            if not isinstance(c,tuple) or len(c) != 3:
-                raise Exception('Wrong format for cuts tuple.')
-            
-            (pname,pmin,pmax) = c
-            if not pname in self._data: return False
-            if pmin is not None and self[pname] < pmin: return False
-            if pmax is not None and self[pname] > pmax: return False
-
-        return True
                                
     def separation(self,src):
 
@@ -1438,15 +1449,37 @@ class ROIModel(fermipy.config.Configurable):
                                             dist,min_dist,
                                             square)
 
-    def get_sources(self,cuts=None,distance=None,square=False):
+    def get_sources(self,cuts=None,distance=None,
+                    minmax_ts=None, minmax_npred=None,square=False,
+                    coordsys='CEL'):
         """Retrieve list of sources satisfying the given selections."""
         rsrc, srcs = self.get_sources_by_position(self.skydir,
                                                   distance,
-                                                  square=square)
+                                                  square=square,
+                                                  coordsys=coordsys)
         o = []
-        if cuts is None: cuts = []        
         for s,r in zip(srcs,rsrc):
-            if not s.check_cuts(cuts): continue            
+            if not s.check_cuts(cuts): continue        
+            ts = s['ts']
+            npred = s['Npred']
+
+            if not utils.apply_minmax_selection(ts,minmax_ts):
+                continue
+            if not utils.apply_minmax_selection(npred,minmax_npred):
+                continue
+    
+            o.append(s)
+
+        for s in self.diffuse_sources:
+            if not s.check_cuts(cuts): continue 
+            ts = s['ts']
+            npred = s['Npred']
+
+            if not utils.apply_minmax_selection(ts,minmax_ts):
+                continue
+            if not utils.apply_minmax_selection(npred,minmax_npred):
+                continue
+
             o.append(s)
 
         return o

@@ -133,13 +133,15 @@ roiopt = {
 #
 residmap = {
     'models'                   : (None,'',list),
+    'erange'                   : (None,'',list),
     }
 
 #
 tsmap = {
     'models'                   : (None,'',list),
     'multithread'              : (False,'',bool),
-    'max_kernel_radius'        : (3.0,'',float)
+    'max_kernel_radius'        : (3.0,'',float),
+    'erange'                   : (None,'',list),
     }
 
 # Options for SED analysis
