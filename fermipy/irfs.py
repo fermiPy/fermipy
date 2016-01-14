@@ -3,9 +3,6 @@ import glob
 import re
 import numpy as np
 import healpy as hp
-
-import pyLikelihood as pyLike
-
 import astropy.io.fits as pyfits
 
 import pyIrfLoader

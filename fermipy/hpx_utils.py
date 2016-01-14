@@ -160,7 +160,6 @@ class HPX(object):
 
 if __name__ == "__main__":
     
-    import numpy as np
     import fermipy.hpx_utils           
     n = np.ones((10,192),'d')
     hpx = fermipy.hpx_utils.HPX(4,False,"GAL")

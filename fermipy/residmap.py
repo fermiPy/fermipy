@@ -55,8 +55,6 @@ def convolve_map(m, k, cpix, threshold=0.001,imin=0,imax=None):
        Maximum index in energy dimension.
 
     """
-    from scipy import ndimage
-
     islice = slice(imin,imax)
 
     o = np.zeros(m[islice,...].shape)
@@ -201,8 +199,6 @@ class ResidMapGenerator(fermipy.config.Configurable):
         src = gta.roi.get_source_by_name('residmap_testsource', True)
 
         modelname = utils.create_model_name(src)
-
-        enumbins = gta.enumbins
         npix = gta.components[0].npix
 
         mmst = np.zeros((npix, npix))
@@ -237,7 +233,7 @@ class ResidMapGenerator(fermipy.config.Configurable):
             mmst += mms
             emst += ems
 
-            cts = 2.0 * (poisson_lnl(cms, cms) - poisson_lnl(cms, mms))
+            # cts = 2.0 * (poisson_lnl(cms, cms) - poisson_lnl(cms, mms))
             excess += cms - mms
 
         ts = 2.0 * (poisson_lnl(cmst, cmst) - poisson_lnl(cmst, mmst))

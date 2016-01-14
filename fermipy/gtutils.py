@@ -1,16 +1,9 @@
 # pylikelihood
 
-import glob
 import numpy as np
-import healpy as hp
-
 import pyLikelihood as pyLike
-
-import astropy.io.fits as pyfits
-
 from SrcModel import SourceModel
-from AnalysisBase import AnalysisBase, _quotefn, _null_file, num
-import pyLikelihood as pyLike
+from AnalysisBase import AnalysisBase
 from LikelihoodState import LikelihoodState
 import pyIrfLoader
 
@@ -19,11 +12,7 @@ pyIrfLoader.Loader_go()
 _funcFactory = pyLike.SourceFactory_funcFactory()
 
 import BinnedAnalysis 
-import UnbinnedAnalysis 
 import SummedLikelihood
-
-from fermipy.utils import edge_to_center
-from fermipy.utils import edge_to_width
 
 evtype_string = {
     4 : 'PSF0',
@@ -39,9 +28,6 @@ def bitmask_to_bits(mask):
         if mask&(2**i): bits += [2**i]
 
     return bits
-
-
-    
     
 class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 
@@ -58,7 +44,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
         for comp in self.components:            
             comp.scaleSource(srcName,1E-10)
             comp._ts_src = comp.logLike.getSource(srcName)
-            free_flag = comp._ts_src.spectrum().normPar().isFree()
+            #free_flag = comp._ts_src.spectrum().normPar().isFree()
             #comp._ts_src.spectrum().normPar().setFree(False)
             
         logLike0 = -self()
@@ -159,8 +145,8 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         self.logLike.initOutputStreams()
         self.logLike.readXml(srcModel, _funcFactory, False, True, False)
         self.model = SourceModel(self.logLike, srcModel)
-        self.energies = num.array(self.logLike.energies())
-        self.e_vals = num.sqrt(self.energies[:-1]*self.energies[1:])
+        self.energies = np.array(self.logLike.energies())
+        self.e_vals = np.sqrt(self.energies[:-1]*self.energies[1:])
         self.nobs = self.logLike.countsSpectrum()
         self.sourceFitPlots = []
         self.sourceFitResids  = []

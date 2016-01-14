@@ -12,11 +12,9 @@ from scipy.interpolate import UnivariateSpline
 # header error
 import pyLikelihood as pyLike
 import astropy.io.fits as pyfits
-import astropy.wcs as pywcs
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
-import fermipy.hpx_utils as hpx_utils
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 from fermipy.residmap import ResidMapGenerator
@@ -24,14 +22,13 @@ from fermipy.tsmap import TSMapGenerator
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import Map, HpxMap
 from fermipy.utils import create_hpx_disk_region_string, create_hpx
-from fermipy.roi_model import ROIModel, Source
+from fermipy.roi_model import ROIModel
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 # pylikelihood
 
 import GtApp
 import FluxDensity
-from BinnedAnalysis import BinnedObs
 from LikelihoodState import LikelihoodState
 from gtutils import BinnedAnalysis, SummedLikelihood
 import BinnedAnalysis as ba
@@ -1351,7 +1348,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self.zero_source(name)
 
-        o = {'config': config}
+        o = {'config': config,
+             'logLike_base' : logLike0 }
 
         deltax = np.linspace(-dtheta_max, dtheta_max, nstep)[:, np.newaxis]
         deltay = np.linspace(-dtheta_max, dtheta_max, nstep)[np.newaxis, :]
@@ -1392,7 +1390,7 @@ class GTAnalysis(fermipy.config.Configurable):
             popt, pcov = scipy.optimize.curve_fit(parabola, (
                 lnlscan['deltax'], lnlscan['deltay']),
                                                   lnlscan['dlogLike'].flat, p0)
-        except Exception, message:
+        except Exception:
             popt = p0
             self.logger.error('Localization failed.', exc_info=True)
 
@@ -1586,7 +1584,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 get_upper_limit(o['dlogLike'], o['width'], interpolate=True)
             o['ts_ext'] = 2 * dlnl0
             o['ext_err'] = 0.5 * (o['ext_err_lo'] + o['ext_err_hi'])
-        except Exception, message:
+        except Exception:
             self.logger.error('Upper limit failed.', exc_info=True)
 
         if np.isfinite(o['ext']):
@@ -1621,7 +1619,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         try:
             src.update_data({'extension': copy.deepcopy(o)})
-        except Exception, message:
+        except Exception:
             self.logger.error('Update failed.', exc_info=True)
 
         self.logger.info('Finished extension analysis.')
@@ -1749,7 +1747,7 @@ class GTAnalysis(fermipy.config.Configurable):
             #            saved_state.restore()
 
             ecenter = 0.5 * (emin + emax)
-            deltae = 10 ** emax - 10 ** emin
+            #deltae = 10 ** emax - 10 ** emin
             self.set_parameter(name, 'Scale', 10 ** ecenter, scale=1.0)
 
             if use_local_index:
@@ -1832,8 +1830,6 @@ class GTAnalysis(fermipy.config.Configurable):
 
         par = self.like.normPar(name)
         parName = self.like.normPar(name).getName()
-        idx = self.like.par_index(name, parName)
-        bounds = self.like.model[idx].getBounds()
         emin = min(self.energies) if emin is None else emin
         emax = max(self.energies) if emax is None else emax
 
@@ -1842,9 +1838,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if xvals is None:
 
-            err = par.error()
             val = par.getValue()
-
             if npred < 10:
                 val *= 1. / min(1.0, npred)
                 xvals = val * 10 ** np.linspace(-2.0, 2.0, 2 * npts + 1)
@@ -1869,16 +1863,11 @@ class GTAnalysis(fermipy.config.Configurable):
         par = self.like.normPar(name)
         parName = self.like.normPar(name).getName()
         idx = self.like.par_index(name, parName)
-        scale = float(self.like.model[idx].getScale())
+        #scale = float(self.like.model[idx].getScale())
         bounds = self.like.model[idx].getBounds()
 
         emin = min(self.energies) if emin is None else emin
         emax = max(self.energies) if emax is None else emax
-
-        ecenter = 0.5 * (emin + emax)
-        deltae = 10 ** emax - 10 ** emin
-        npred = np.sum(
-            self.model_counts_spectrum(name, emin, emax, summed=True))
 
         if savestate:
             saved_state = LikelihoodState(self.like)
@@ -1995,7 +1984,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         try:
             self.like.fit(**kwargs)
-        except Exception, message:
+        except Exception:
             self.logger.error('Likelihood optimization failed.', exc_info=True)
 
         if isinstance(self.like.optObject, pyLike.Minuit) or \
@@ -2364,17 +2353,17 @@ class GTAnalysis(fermipy.config.Configurable):
 
         modelname = utils.create_model_name(src)
 
-        OUTFILE = utils.format_filename(self.config['fileio']['workdir'],
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'tscube.fits',
                                         prefix=[prefix])
 
-        TMPLFILE = "/afs/slac/u/ek/echarles/glast/Releases/ST-10-01-00_v2" \
+        tmplfile = "/afs/slac/u/ek/echarles/glast/Releases/ST-10-01-00_v2" \
                    "/data/Likelihood/TsCubeTemplate"
 
         optObject = pyLike.OptimizerFactory_instance().create("MINUIT",
                                                               self.components[
                                                                   0].like.logLike)
-        funcFactory = pyLike.SourceFactory_funcFactory()
+
 
         refdir = pyLike.SkyDir(self.roi.skydir.ra.deg,
                                self.roi.skydir.dec.deg)
@@ -2400,6 +2389,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         print "Setting test source"
         ok = fitScanner.setTestSourceByName('tscube_testsource')
+        #funcFactory = pyLike.SourceFactory_funcFactory()
         #ok = fitScanner.setPowerlawPointTestSource(funcFactory)
 
         self.logger.info("Running tscube")
@@ -2419,25 +2409,27 @@ class GTAnalysis(fermipy.config.Configurable):
         self.logger.info("Finished tscube")
 
         print "Writing output file"
-        ok = fitScanner.writeFitsFile(OUTFILE, "gttscube", TMPLFILE)
+        ok = fitScanner.writeFitsFile(outfile, "gttscube", tmplfile)
         self.delete_source('tscube_testsource')
         
-        ts_map = utils.Map.create_from_fits(OUTFILE)
+        ts_map = utils.Map.create_from_fits(outfile)
         sqrt_ts_map = copy.deepcopy(ts_map)
         sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
 
-        import matplotlib.pyplot as plt
-        from plotting import ROIPlotter
+
+        if make_plots:
+            import matplotlib.pyplot as plt
+            from plotting import ROIPlotter
         
-        fig = plt.figure()
-        p = ROIPlotter(sqrt_ts_map, self.roi)
-        p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9],
-               cb_label='Sqrt(TS) [$\sigma$]')
-        plt.savefig(utils.format_filename(self.config['fileio']['outdir'],
-                                          'tsmap_sqrt_ts',
-                                          prefix=[prefix],
-                                          extension='png'))
-        plt.close(fig)
+            fig = plt.figure()
+            p = ROIPlotter(sqrt_ts_map, self.roi)
+            p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9],
+                   cb_label='Sqrt(TS) [$\sigma$]')
+            plt.savefig(utils.format_filename(self.config['fileio']['outdir'],
+                                              'tsmap_sqrt_ts',
+                                              prefix=[prefix],
+                                              extension='png'))
+            plt.close(fig)
         
 
         
@@ -2530,7 +2522,7 @@ class GTAnalysis(fermipy.config.Configurable):
             testsource_dict['dec'] = dec
             #                        src.set_position([ra,dec])
             self.add_source('tsmap_testsource', testsource_dict, free=True,
-                            init_source=False)
+                            init_source=False,save_source_maps=False)
 
             #            for c in self.components:
             #                c.update_srcmap_file([src],True)
@@ -2576,29 +2568,6 @@ class GTAnalysis(fermipy.config.Configurable):
 
         return {'ecenter': energies, 'dfde': dfde,
                 'dfde_lo': flo, 'dfde_hi': fhi}
-
-    def _get_roi_model(self, update_sources=False):
-        """Populate a dictionary with the current parameters of the
-        ROI model as extracted from the pylikelihood object."""
-
-        # Should we skip extracting fit results for sources that
-        # weren't free in the last fit?
-
-        # Determine what sources had at least one free parameter?
-
-#        if update_sources:
-#            sources = self.roi.sources + self.roi.diffuse_sources
-
-        # gf = {}
-        #            for name in self.like.sourceNames():
-        #                gf[name] = self.get_src_model(name)
-
-        #            self._roi_model['sources'] = merge_dict(self._roi_model[
-        # 'sources'],
-        #                                                    gf,
-        # add_new_keys=True)
-
-        return copy.deepcopy(self._roi_model)
 
     def _coadd_maps(self, cmaps, shape, rm):
         """
@@ -2691,11 +2660,11 @@ class GTAnalysis(fermipy.config.Configurable):
                 pyLike.dArg(1000.))
             src_dict['dfde10000'][0] = self.like[name].spectrum()(
                 pyLike.dArg(10000.))
-        except Exception, ex:
+        except Exception:
             self.logger.error('Failed to update source parameters.',
                               exc_info=True)
 
-        # Only try to compute TS, errors, and ULs if the source was free in
+        # Only compute TS, errors, and ULs if the source was free in
         # the fit
         if not self.get_free_source_params(name) or paramsonly:
             return src_dict
@@ -2720,7 +2689,7 @@ class GTAnalysis(fermipy.config.Configurable):
             src_dict['eflux10000'][1] = self.like.energyFluxError(name, 10000.,
                                                                   10 ** 5.5)
 
-        except Exception, ex:
+        except Exception:
             pass
         # self.logger.error('Failed to update source parameters.',
         #  exc_info=True)
@@ -2757,13 +2726,10 @@ class GTAnalysis(fermipy.config.Configurable):
         try:
             fd = FluxDensity.FluxDensity(self.like, name)
             src_dict['covar'] = fd.covar
-        except RuntimeError, ex:
+        except RuntimeError:
             pass
         # if ex.message == 'Covariance matrix has not been
         # computed.':
-        #                      pass
-        #                 elif
-        #                      raise ex
 
         # Extract bowtie
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
@@ -2781,7 +2747,7 @@ class GTAnalysis(fermipy.config.Configurable):
             try:
                 src_dict['pivot_energy'] = interpolate_function_min(energies,
                                                                     ferr)
-            except Exception, ex:
+            except Exception:
                 self.logger.error('Failed to compute pivot energy',
                                   exc_info=True)
 
@@ -3126,7 +3092,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         """
         try:
             p_method = self.like.logLike.countsMap().projection().method()
-        except Exception, message:
+        except Exception:
             p_method = 0
 
         if p_method == 0:  # WCS
@@ -3546,7 +3512,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'mcube%s.fits' % (suffix))
-        h = pyfits.open(self._ccube_file)
+        
         cmap = self.model_counts_map(name)
 
         if self.projtype == "HPX":
