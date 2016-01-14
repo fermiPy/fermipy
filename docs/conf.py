@@ -15,6 +15,7 @@
 import sys
 import os
 import shlex
+from os import path
 
 from mock import Mock as MagicMock
 
@@ -32,6 +33,7 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'astropy.table',
                 'numpy','healpy','wcsaxes',
                 'scipy','scipy.special','scipy.interpolate','scipy.optimize',
+                'scipy.signal',
                 'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
                 'matplotlib.axes','matplotlib.cbook','matplotlib.colors']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
@@ -54,9 +56,29 @@ import fermipy
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.mathjax', 'sphinx.ext.autodoc', 'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon']
+    'sphinx.ext.mathjax', 
+    'sphinx.ext.autodoc', 
+    'sphinx.ext.viewcode',
+    'sphinx.ext.napoleon', 
+    'sphinx.ext.intersphinx']
 #    'numpydoc'
+
+autosummary_generate = True
+
+intersphinx_mapping = {
+    'python': ('http://docs.python.org/', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'scipy': ('http://docs.scipy.org/doc/scipy/reference/', None),
+    'matplotlib': ('http://matplotlib.org/', None),
+    'astropy': ('http://docs.astropy.org/en/stable/', None),
+    'h5py': ('http://docs.h5py.org/en/latest/', None)
+    }
+
+intersphinx_cache_limit = 10
+
+
+#intersphinx_mapping = {}
+#intersphinx_mapping['astropy'] = ('http://docs.astropy.org/en/latest/', None)
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -105,7 +127,7 @@ exclude_patterns = ['_build']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
-#default_role = None
+default_role = 'obj'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #add_function_parentheses = True

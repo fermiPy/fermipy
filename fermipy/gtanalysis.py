@@ -424,10 +424,11 @@ class GTAnalysis(fermipy.config.Configurable):
     @staticmethod
     def create(infile, config=None):
         """Create a new instance of GTAnalysis from an analysis output
-        file generated with write_roi().  By default the new instance
-        will inherit the configuration of the previously saved
-        analysis.  The configuration may be overriden by providing an
-        alternate config file with the config argument."""
+        file generated with `~fermipy.GTAnalysis.write_roi`.  By
+        default the new instance will inherit the configuration of the
+        previously saved analysis.  The configuration may be overriden
+        by providing an alternate config file with the config
+        argument."""
 
         infile = os.path.abspath(infile)
         roi_data = load_roi_data(infile)
@@ -783,7 +784,7 @@ class GTAnalysis(fermipy.config.Configurable):
         Returns
         -------
 
-        maps : list of `~fermipy.utils.Map` 
+        maps : list of :py:class:`~fermipy.utils.Map` 
            
         """
 
@@ -871,7 +872,7 @@ class GTAnalysis(fermipy.config.Configurable):
     def free_sources(self, free=True, pars=None, cuts=None,
                      distance=None, minmax_ts=None, minmax_npred=None, 
                      square=False):
-        """Free/Fix sources in the ROI model satisfying the given
+        """Free or fix sources in the ROI model satisfying the given
         selection.  When multiple selections are defined, the selected
         sources will be those satisfying the logical AND of all
         selections (e.g. distance < X && minmax_ts[0] < ts <
@@ -890,7 +891,7 @@ class GTAnalysis(fermipy.config.Configurable):
             freed/fixed.  If pars='norm' then only normalization
             parameters will be freed.
 
-       cuts : dict
+        cuts : dict
             Dictionary of [min,max] selections on source properties.
 
         distance : float        
@@ -1169,7 +1170,8 @@ class GTAnalysis(fermipy.config.Configurable):
         self.like.syncSrcParams(str(name))
 
     def residmap(self, prefix='', **kwargs):
-        """Generate data/model residual maps using the current model.
+        """Generate 2-D residual maps using the current ROI model and
+        the given convolution kernel.
 
         Parameters
         ----------
@@ -1209,7 +1211,30 @@ class GTAnalysis(fermipy.config.Configurable):
         return maps
 
     def optimize(self, **kwargs):
-        """Iteratively optimize the ROI model."""
+        """Iteratively optimize the ROI model.  The optimization is
+        performed in three sequential steps:
+        
+        * Free the normalization of the N largest components (as
+          determined from NPred) that contain a fraction *npred_frac*
+          of the total predicted counts in the model and perform a
+          simultaneous fit of the normalization parameters of these
+          components.
+
+        * Individually fit the normalizations of all remaining sources
+          that were not included in the first step.  Skip any sources
+          that have NPred < *npred_threshold*.
+
+        * Individually fit the shape and normalization parameters of
+          all sources with TS > shape_ts_threshold where TS is
+          determined from the first two steps of the ROI optimization.
+
+        Parameters
+        ----------
+
+        npred_frac : float
+        npred_threshold : float
+        shape_ts_threshold : float
+        """
 
         self.logger.info('Running ROI Optimization')
 
@@ -1639,7 +1664,7 @@ class GTAnalysis(fermipy.config.Configurable):
         profile : bool        
             Profile the likelihood in each energy bin.
 
-        energies : array        
+        energies : `~numpy.ndarray`
             Sequence of energies in log10(E/MeV) defining the edges of
             the energy bins.  If this argument is None then the
             analysis energy bins will be used.  The energies in this
@@ -3088,6 +3113,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         Returns
         -------
+        map : `~fermipy.utils.MapBase`
 
         """
         try:

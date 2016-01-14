@@ -27,6 +27,15 @@ class Map(Map_Base):
     """ Representation of a 2D or 3D counts map using WCS. """
 
     def __init__(self, counts, wcs):
+        """
+        Parameters
+        ----------
+        counts : `~numpy.ndarray`
+          Counts array.
+
+          
+
+        """
         Map_Base.__init__(self, counts)
         self._wcs = wcs
 
@@ -417,7 +426,7 @@ def extract_mapcube_region(infile, skydir, outfile, maphdu=0):
     infile : str
         Path to mapcube file.
     
-    skydir : `~astropy.coord.SkyCoord`
+    skydir : `~astropy.coordinates.SkyCoord`
 
     """
 
@@ -462,7 +471,7 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
     Parameters
     ----------
 
-    skydir : SkyCoord
+    skydir : `~astropy.coordinates.SkyCoord`
         Sky coordinate of the WCS reference point.
 
     """
@@ -519,11 +528,14 @@ def create_hpx(nside, nest, coordsys='CEL', order=-1, region=None, ebins=None):
     Parameters
     ----------
 
-    nside    : HEALPix nside paramter
-    nest     : True for HEALPix "NESTED" indexing scheme, False for "RING"
-    scheme
-    coordsys : "CEL" or "GAL"
-    order    : nside = 2**order  
+    nside    : int
+      HEALPix nside paramter
+    nest     : bool
+      True for HEALPix "NESTED" indexing scheme, False for "RING" scheme.
+    coordsys : str
+      "CEL" or "GAL"
+    order    : int
+      nside = 2**order  
     region   : Allows for partial-sky mappings
     ebins    : Energy bin edges
     """
@@ -685,13 +697,17 @@ def convolve2d_disk(fn, r, sig, nstep=100):
     Parameters
     ----------
 
-    fn : Input function that takes a single radial coordinate parameter.
+    fn : function
+      Input function that takes a single radial coordinate parameter.
 
-    r :  Array of points at which the convolution is to be evaluated.
+    r :  `~numpy.ndarray`
+      Array of points at which the convolution is to be evaluated.
 
-    sig : Radius parameter of the step function.
+    sig : float
+      Radius parameter of the step function.
 
-    nstep : Number of sampling point for numeric integration.
+    nstep : int
+      Number of sampling point for numeric integration.
     """
 
     r = np.array(r, ndmin=1)
@@ -735,13 +751,17 @@ def convolve2d_gauss(fn, r, sig, nstep=100):
     Parameters
     ----------
 
-    fn : Input function that takes a single radial coordinate parameter.
+    fn : function 
+      Input function that takes a single radial coordinate parameter.
 
-    r :  Array of points at which the convolution is to be evaluated.
+    r :  `~numpy.ndarray`
+      Array of points at which the convolution is to be evaluated.
 
-    sig : Width parameter of the gaussian.
+    sig : float
+      Width parameter of the gaussian.
 
-    nstep : Number of sampling point for numeric integration.
+    nstep : int
+      Number of sampling point for numeric integration.
 
     """
     r = np.array(r, ndmin=1)
@@ -800,7 +820,8 @@ def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     Parameters
     ----------
 
-    sigma : 68% containment radius in degrees.
+    sigma : float
+      68% containment radius in degrees.
     """
 
     sigma /= 1.5095921854516636
@@ -821,7 +842,8 @@ def make_disk_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     Parameters
     ----------
 
-    sigma : Disk radius in deg.
+    sigma : float
+      Disk radius in deg.
     """
 
     sigma /= cdelt
@@ -840,7 +862,8 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix):
     Parameters
     ----------
 
-    sigma : 68% containment radius in degrees.
+    sigma : float
+      68% containment radius in degrees.
     """
 
     dtheta = psf.dtheta
@@ -865,7 +888,8 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix):
     Parameters
     ----------
 
-    sigma : 68% containment radius in degrees.
+    sigma : float
+      68% containment radius in degrees.
     """
 
     sigma /= 1.5095921854516636

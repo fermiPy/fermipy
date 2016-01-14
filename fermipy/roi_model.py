@@ -381,20 +381,20 @@ def get_skydir_distance_mask(src_skydir, skydir, dist, min_dist=None,
     Parameters
     ----------
     
-    src_skydir : `~astropy.coord.SkyCoord` 
-    Array of sky directions.
+    src_skydir : `~astropy.coordinates.SkyCoord` 
+      Array of sky directions.
 
-    skydir : `~astropy.coord.SkyCoord` 
-    Sky direction with respect to which the selection will be applied.
+    skydir : `~astropy.coordinates.SkyCoord` 
+      Sky direction with respect to which the selection will be applied.
 
     dist : float
-    Maximum distance in degrees from the sky coordinate.
+      Maximum distance in degrees from the sky coordinate.
 
     square : bool
-    Choose whether to apply a circular or square selection.
+      Choose whether to apply a circular or square selection.
 
     coordsys : str
-    Coordinate system to use when applying a selection with square=True.
+      Coordinate system to use when applying a selection with square=True.
     
     """
 
@@ -890,6 +890,13 @@ class Source(Model):
             raise Exception('Unsupported spectral type:' + self['SpectrumType'])
 
     def set_position(self, skydir):
+        """
+        
+        Parameters
+        ----------
+        skydir : `~astropy.coordinates.SkyCoord` 
+
+        """
 
         if not isinstance(skydir, SkyCoord):
             skydir = SkyCoord(ra=skydir[0], dec=skydir[1], unit=u.deg)
@@ -945,7 +952,12 @@ class Source(Model):
 
     @property
     def skydir(self):
-        """Return a SkyCoord representation of the source position."""
+        """Return a SkyCoord representation of the source position.
+
+        Returns
+        -------
+        skydir : `~astropy.coordinates.SkyCoord` 
+        """
         return SkyCoord(self._radec[0] * u.deg, self._radec[1] * u.deg)
 
     @property
@@ -1544,7 +1556,7 @@ class ROIModel(fermipy.config.Configurable):
         Parameters
         ----------
 
-        skydir : SkyCoord object
+        skydir : `~astropy.coordinates.SkyCoord` 
             Sky direction with respect to which the selection will be applied.
 
         dist : float
