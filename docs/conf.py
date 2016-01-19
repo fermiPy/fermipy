@@ -33,7 +33,7 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'astropy.table',
                 'numpy','healpy','wcsaxes',
                 'scipy','scipy.special','scipy.interpolate','scipy.optimize',
-                'scipy.signal',
+                'scipy.signal','scipy.ndimage',
                 'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
                 'matplotlib.axes','matplotlib.cbook','matplotlib.colors']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)

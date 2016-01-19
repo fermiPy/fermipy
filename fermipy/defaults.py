@@ -147,12 +147,13 @@ roiopt = {
 #
 residmap = {
     'models': (None, '', list),
+    'model': (None, '', dict),
     'erange': (None, '', list),
 }
 
 #
 tsmap = {
-    'models': (None, '', list),
+    'model': (None, '', dict),
     'multithread': (False, '', bool),
     'max_kernel_radius': (3.0, '', float),
     'erange': (None, '', list),

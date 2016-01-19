@@ -403,6 +403,8 @@ class TSMapGenerator(fermipy.config.Configurable):
 
         """
         
+        make_fits = kwargs.get('make_fits', True)
+        exclude = kwargs.get('exclude', None)
         multithread = kwargs.get('multithread',self.config['multithread'])
         threshold = kwargs.get('threshold',1E-2)
         max_kernel_radius = kwargs.get('max_kernel_radius',
@@ -450,7 +452,7 @@ class TSMapGenerator(fermipy.config.Configurable):
             eslice = slice(imin,imax)
 
             print('fetching source map 1')            
-            bm = c.model_counts_map().counts.astype('float')[eslice,...]
+            bm = c.model_counts_map(exclude=exclude).counts.astype('float')[eslice,...]
 
             print('fetching counts map 2')
             cm = c.counts_map().counts.astype('float')[eslice,...]
@@ -461,7 +463,7 @@ class TSMapGenerator(fermipy.config.Configurable):
             eslices += [eslice]
             enumbins += [cm.shape[0]]
 
-
+        self.logger.info(src_dict)
         gta.add_source('tsmap_testsource', src_dict, free=True,
                        init_source=False)
         src = gta.roi['tsmap_testsource']
@@ -498,8 +500,8 @@ class TSMapGenerator(fermipy.config.Configurable):
         
         wrap = functools.partial(_ts_value, counts=counts, 
                                  background=background, model=model,
-                                 C_0_map=c0_map, method='root brentq',
-                                 logger=self.logger)
+                                 C_0_map=c0_map, method='root brentq')
+#                                 logger=self.logger)
 
         positions = []
         for i,j in itertools.product(range(gta.npix),range(gta.npix)):
@@ -522,37 +524,40 @@ class TSMapGenerator(fermipy.config.Configurable):
             ts_values[ix, iy] = r[0]
             amp_values[ix, iy] = r[1]
 
-        ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                            'tsmap_ts.fits',
-                                            prefix=[prefix,modelname])
+        files = {}
 
-        sqrt_ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                                 'tsmap_sqrt_ts.fits',
+        if make_fits:
+
+            ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                'tsmap_ts.fits',
+                                                prefix=[prefix,modelname])
+
+            sqrt_ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                     'tsmap_sqrt_ts.fits',
+                                                     prefix=[prefix, modelname])
+
+            npred_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                   'tsmap_npred.fits',
+                                                   prefix=[prefix, modelname])
+
+            amp_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                 'tsmap_amplitude.fits',
                                                  prefix=[prefix, modelname])
-        
-        npred_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                               'tsmap_npred.fits',
-                                               prefix=[prefix, modelname])
 
-        amp_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                             'tsmap_amplitude.fits',
-                                             prefix=[prefix, modelname])
+            utils.write_fits_image(ts_values, skywcs, ts_map_file)
+            utils.write_fits_image(ts_values**0.5, skywcs, sqrt_ts_map_file)
+            utils.write_fits_image(amp_values*model_npred, skywcs, npred_map_file)
+            utils.write_fits_image(amp_values, skywcs, amp_map_file)
 
-        utils.write_fits_image(ts_values, skywcs, ts_map_file)
-        utils.write_fits_image(ts_values**0.5, skywcs, sqrt_ts_map_file)
-        utils.write_fits_image(amp_values*model_npred, skywcs, npred_map_file)
-        utils.write_fits_image(amp_values, skywcs, amp_map_file)
-
-        files = {'ts': os.path.basename(ts_map_file),
-                 'sqrt_ts': os.path.basename(sqrt_ts_map_file),
-                 'npred': os.path.basename(npred_map_file),
-                 'amplitude': os.path.basename(amp_map_file),
-                 }
+            files = {'ts': os.path.basename(ts_map_file),
+                     'sqrt_ts': os.path.basename(sqrt_ts_map_file),
+                     'npred': os.path.basename(npred_map_file),
+                     'amplitude': os.path.basename(amp_map_file),
+                     }
 
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),
              'files': files,
-             'wcs': skywcs,
              'ts': Map(ts_values, skywcs),
              'sqrt_ts': Map(ts_values**0.5, skywcs),
              'npred': Map(amp_values*model_npred, skywcs),

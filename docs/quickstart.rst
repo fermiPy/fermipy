@@ -112,7 +112,8 @@ the model, and perform a fit to the ROI.
 
 In the following example we lay out the sequence of python calls that
 could be run interactively or in a script to setup and run an
-analysis.  First we instantiate :py:class:`~fermipy.gtanalysis.GTAnalysis` with the chosen
+analysis.  First we instantiate
+:py:class:`~fermipy.gtanalysis.GTAnalysis` with the chosen
 configuration.
 
 .. code-block:: python
@@ -166,8 +167,7 @@ free.
    gta.fit()
 
 After the fitting is complete we can write the current state of the
-model with the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`
-method:
+model with `~fermipy.gtanalysis.GTAnalysis.write_roi`:
 
 .. code-block:: python
 

@@ -676,9 +676,18 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['data'], gta.roi)
-        p.plot(cb_label='Smoothed Counts', zscale='pow', gamma=1. / 3.)
+        p.plot(cb_label='Counts')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'residmap_counts',
+                                          prefix=[prefix],
+                                          extension=format))
+        plt.close(fig)
+
+        fig = plt.figure()
+        p = ROIPlotter(maps['excess'], gta.roi)
+        p.plot(cb_label='Counts')
+        plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
+                                          'residmap_excess',
                                           prefix=[prefix],
                                           extension=format))
         plt.close(fig)
