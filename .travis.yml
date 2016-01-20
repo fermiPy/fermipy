@@ -34,3 +34,6 @@ install:
 script:
   - py.test
  
+cache:
+  directories:
+  - $HOME/ScienceTools
