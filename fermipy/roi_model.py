@@ -1311,12 +1311,14 @@ class ROIModel(fermipy.config.Configurable):
             src.add_name(altname)
             self.load_source(src, False)
 
-    def create_source(self, src_dict, build_index=True):
+    def create_source(self, name, src_dict, build_index=True):
         """Add a new source to the ROI model from a dictionary or an
         existing source object.
 
         Parameters
         ----------
+
+        name : str
 
         src_dict : dict or `~fermipy.roi_model.Source`
 
@@ -1326,7 +1328,10 @@ class ROIModel(fermipy.config.Configurable):
         src : `~fermipy.roi_model.Source`
         """
 
+        src_dict = copy.deepcopy(src_dict)
+
         if isinstance(src_dict,dict):
+            src_dict['name'] = name
             src = Source.create_from_dict(src_dict)
         else:
             src = src_dict
@@ -1401,7 +1406,11 @@ class ROIModel(fermipy.config.Configurable):
                 raise Exception('Unrecognized catalog file extension: %s' % c)
 
         for c in self.config['sources']:
-            self.create_source(c, build_index=False)
+
+            if 'name' not in c:
+                raise Exception('No name field in source dictionary:\n ' + str(c))
+
+            self.create_source(c['name'],c, build_index=False)
 
         self.build_src_index()
 

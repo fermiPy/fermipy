@@ -640,11 +640,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
         # self.make_extension_plots(gta,prefix, erange=x,
         # format=format)
 
-        for k, v in gta._roi_model['residmap'].items():
-            self.make_residual_plots(gta, v, **kwargs)
-
-        for k, v in gta._roi_model['tsmap'].items():
-            self.make_tsmap_plots(gta, v, **kwargs)
+#        for k, v in gta._roi_model['residmap'].items():
+#            self.make_residual_plots(gta, v, **kwargs)
+#        for k, v in gta._roi_model['tsmap'].items():
+#            self.make_tsmap_plots(gta, v, **kwargs)
 
         self.make_sed_plots(gta, prefix, format=format)
 

@@ -71,6 +71,18 @@ def test_gtanalysis_optimize(setup2):
     gta.load_roi('fit0')
     gta.optimize()
 
+def test_gtanalysis_tsmap(setup2):
+
+    gta = setup2
+    gta.load_roi('fit0')
+    gta.tsmap(model={})
+
+def test_gtanalysis_residmap(setup2):
+
+    gta = setup2
+    gta.load_roi('fit0')
+    gta.residmap(model={})
+
 def test_gtanalysis_extension_gaussian(setup2):
 
     gta = setup2
@@ -88,5 +100,33 @@ def test_gtanalysis_extension_gaussian(setup2):
     
 
     assert(np.abs(o['ext']-spatial_width) < 0.1)
+
+    gta.restore_counts_maps()
+
+def test_gtanalysis_localization(setup2):
+
+    gta = setup2
+    gta.load_roi('fit0')
+
+    spatial_width = 0.5
+
+    src_dict = {'SpatialModel' : 'PointSource',
+                'Prefactor' : 2E-12,
+                'glat' : 36.0, 'glon' : 86.0}
+
+    gta.simulate_source(src_dict)
+
+    src_dict['glat'] = 36.05
+    src_dict['glon'] = 86.05
+
+    gta.add_source('testloc',src_dict,free=True)
+
+    o = gta.localize('testloc',nstep=5,dtheta_max=0.1,
+                     update=True)
+
+    assert(np.abs(o['glon']-86.0) < 0.025)
+    assert(np.abs(o['glat']-36.0) < 0.025)
+
+    gta.delete_source('testloc')
 
     gta.restore_counts_maps()

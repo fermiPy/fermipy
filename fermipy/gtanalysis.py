@@ -507,10 +507,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self.logger.info('Adding source ' + name)
 
-        if isinstance(src_dict, dict):
-            src_dict['name'] = name
-
-        src = self.roi.create_source(src_dict)
+        src = self.roi.create_source(name,src_dict)
 
         for c in self.components:
             c.add_source(name, src_dict, free=free,
@@ -1233,12 +1230,14 @@ class GTAnalysis(fermipy.config.Configurable):
 
         maps = []
 
-        if models is not None:            
+        if model is not None:
+            maps += [rmg.make_residual_map(self,prefix,copy.deepcopy(model),**kwargs)]
+
+        if models is not None and 'model' not in kwargs:            
             for m in models:
                 maps += [rmg.make_residual_map(self,prefix,copy.deepcopy(m),**kwargs)]
 
-        if model is not None:
-            maps += [rmg.make_residual_map(self,prefix,copy.deepcopy(model),**kwargs)]
+        
 
         for m in maps if isinstance(maps,list) else [maps]:
             if make_plots:
@@ -2087,7 +2086,6 @@ class GTAnalysis(fermipy.config.Configurable):
         maps = self._tsmap_fast(prefix, **kwargs)
 
         for m in maps if isinstance(maps,list) else [maps]:
-            self._roi_model['tsmap'][m['name']] = copy.deepcopy(m)
             if make_plots:
                 plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                    fileio=self.config['fileio'],
@@ -2328,6 +2326,7 @@ class GTAnalysis(fermipy.config.Configurable):
         """
 
         if src_dict is None: src_dict = {}
+        else: src_dict = copy.deepcopy(src_dict)
 
         skydir = utils.get_target_skydir(src_dict,self.roi.skydir)
 
@@ -2456,6 +2455,8 @@ class GTAnalysis(fermipy.config.Configurable):
         """
         # extract the results in a convenient format
 
+        make_plots = kwargs.get('make_plots',True)
+
         if outfile is None:
             outfile = os.path.join(self._savedir, 'results')
             prefix = ''
@@ -2472,10 +2473,10 @@ class GTAnalysis(fermipy.config.Configurable):
             mcube_maps = self.generate_model_map(prefix)
 
         if make_residuals:
-            resid_maps = self.residmap(prefix, make_plots=False)
+            resid_maps = self.residmap(prefix, make_plots=make_plots)
 
         if make_tsmap:
-            ts_maps = self.tsmap(prefix, make_plots=False)
+            ts_maps = self.tsmap(prefix, make_plots=make_plots)
 
         o = {}
         o['roi'] = copy.deepcopy(self._roi_model)
@@ -2497,7 +2498,8 @@ class GTAnalysis(fermipy.config.Configurable):
         self.logger.info('Writing %s...' % (outfile + '.npy'))
         np.save(outfile + '.npy', o)
 
-        self.make_plots(prefix, mcube_maps=mcube_maps, **kwargs)
+        if make_plots:
+            self.make_plots(prefix, mcube_maps=mcube_maps, **kwargs)
 
     def make_plots(self, prefix, **kwargs):
 
@@ -3165,12 +3167,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         utils.delete_source_map(self._srcmap_file,name)
 
-        if isinstance(src_dict, dict):
-            src_dict['name'] = name
-
-        self.roi.create_source(src_dict)
-        
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.create_source(name,src_dict)
         self.make_template(src, self.config['file_suffix'])
 
         if self._like is None: return
@@ -3222,6 +3219,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(str(name))
         if save_source_maps:
+            print 'saving source maps ', self._srcmap_file
             self.like.logLike.saveSourceMaps(self._srcmap_file)
 
     def delete_source(self, name, save_template=True):
