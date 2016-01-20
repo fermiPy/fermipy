@@ -80,6 +80,7 @@ def parabola((x, y), amplitude, x0, y0, sx, sy, theta):
     c = (sth ** 2) / (2 * sx ** 2) + (cth ** 2) / (2 * sy ** 2)
     v = amplitude - (
         a * ((x - x0) ** 2) + 2 * b * (x - x0) * (y - y0) + c * ((y - y0) ** 2))
+
     return np.ravel(v)
 
 
@@ -330,8 +331,6 @@ class GTAnalysis(fermipy.config.Configurable):
             'counts': np.zeros(self.enumbins),
             'model_counts': np.zeros(self.enumbins),
             'energies': np.copy(self.energies),
-            'residmap': {},
-            'tsmap': {},
             'components': []
         }
 
@@ -340,8 +339,7 @@ class GTAnalysis(fermipy.config.Configurable):
                            'Npred': 0.0,
                            'counts': np.zeros(c.enumbins),
                            'model_counts': np.zeros(c.enumbins),
-                           'energies': np.copy(c.energies),
-                           'residmap': {}}]
+                           'energies': np.copy(c.energies)}]
 
             self._roi_model['components'] += comp_model
 
@@ -511,10 +509,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if isinstance(src_dict, dict):
             src_dict['name'] = name
-            src = self.roi.create_source(src_dict)
-        else:
-            src = src_dict
-            self.roi.load_source(src)
+
+        src = self.roi.create_source(src_dict)
 
         for c in self.components:
             c.add_source(name, src_dict, free=free,
@@ -1003,6 +999,11 @@ class GTAnalysis(fermipy.config.Configurable):
         if bounds is not None:
             self.like[idx].setBounds(*bounds)
 
+    def set_parameter_bounds(self,name,par,bounds):
+        
+        idx = self.like.par_index(name, par)
+        self.like[idx].setBounds(*bounds)
+
     def free_parameter(self, name, par, free=True):
         idx = self.like.par_index(name, par)
         self.like[idx].setFree(free)
@@ -1432,14 +1433,15 @@ class GTAnalysis(fermipy.config.Configurable):
         deltax = np.ones((nstep, nstep)) * deltax
         deltay = np.ones((nstep, nstep)) * deltay
 
-        scan_radec = utils.offset_to_sky(skydir, deltax.flat, deltay.flat)
+        scan_skydir = utils.offset_to_skydir(skydir, deltax.flat, deltay.flat,
+                                             coordsys=self.config['binning']['coordsys'])
 
         lnlscan = dict(deltax=deltax,
                        deltay=deltay,
                        logLike=np.zeros((nstep, nstep)),
                        dlogLike=np.zeros((nstep, nstep)))
 
-        for i, t in enumerate(scan_radec):
+        for i, t in enumerate(scan_skydir):
             # make a copy
             s = self.copy_source(name)
 
@@ -1448,7 +1450,8 @@ class GTAnalysis(fermipy.config.Configurable):
             s.set_position(t)
             #            s.set_spatial_model(spatial_model,w)
 
-            self.add_source(model_name, s, free=True)
+            self.add_source(model_name, s, free=True,
+                            save_source_maps=False)
             self.fit(update=False)
 
             logLike1 = -self.like()
@@ -1478,9 +1481,13 @@ class GTAnalysis(fermipy.config.Configurable):
         o['sigmay'] = popt[4]
         o['theta'] = popt[5]
 
-        radec = utils.offset_to_sky(skydir, popt[1], popt[2])
-        o['ra'] = radec[0, 0]
-        o['dec'] = radec[0, 1]
+        new_skydir = utils.offset_to_skydir(skydir, popt[1], popt[2],
+                                            coordsys=self.config['binning']['coordsys'])
+
+        o['ra'] = new_skydir.icrs.ra.deg[0]
+        o['dec'] = new_skydir.icrs.dec.deg[0]
+        o['glon'] = new_skydir.galactic.l.deg[0]
+        o['glat'] = new_skydir.galactic.b.deg[0]
 
         saved_state.restore()
 
@@ -1492,11 +1499,12 @@ class GTAnalysis(fermipy.config.Configurable):
 #                                'source name.')
 
             self.logger.info(
-                'Updating source position: %.3f %.3f' % (o['ra'], o['dec']))
+                'Updating position: %.3f %.3f' % (o['ra'], o['dec']))
             s = self.copy_source(name)
             self.delete_source(name)
-            s.set_position([o['ra'], o['dec']])
+            s.set_position(new_skydir)
             s.set_name(newname, names=s.names)
+
             self.add_source(newname, s, free=True)
             self.fit()
             src = self.roi.get_source_by_name(newname, True)
@@ -1504,6 +1512,8 @@ class GTAnalysis(fermipy.config.Configurable):
             src = self.roi.get_source_by_name(name, True)
 
         src.update_data({'localize': copy.deepcopy(o)})
+
+        self.logger.info('Finished localization.')
         return o
 
     def extension(self, name, **kwargs):
@@ -2306,10 +2316,11 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def simulate_source(self, src_dict=None):
         """
+        Inject a simulated source into the ROI.
 
         Parameters
         ----------
-        src_dict
+        src_dict : dict
 
         Returns
         -------
@@ -2317,8 +2328,11 @@ class GTAnalysis(fermipy.config.Configurable):
         """
 
         if src_dict is None: src_dict = {}
-        src_dict.setdefault('ra', self.roi.skydir.ra.deg)
-        src_dict.setdefault('dec', self.roi.skydir.dec.deg)
+
+        skydir = utils.get_target_skydir(src_dict,self.roi.skydir)
+
+        src_dict.setdefault('ra', skydir.ra.deg)
+        src_dict.setdefault('dec', skydir.dec.deg)
         src_dict.setdefault('SpatialModel', 'PointSource')
         src_dict.setdefault('SpatialWidth', 0.3)
         src_dict.setdefault('Index', 2.0)
@@ -2398,7 +2412,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def load_roi(self, infile):
         """This function reloads the analysis state from a previously
-        saved instance generated with write_roi()."""
+        saved instance generated with
+        `~fermipy.gtanalysis.GTAnalysis.write_roi`."""
 
         infile = resolve_path(infile, workdir=self.config['fileio']['workdir'])
         self.load_xml(infile)
@@ -2412,6 +2427,8 @@ class GTAnalysis(fermipy.config.Configurable):
         self.roi.load_source_data(sources)
         for c in self.components:
             c.roi.load_source_data(sources)
+
+        self._init_roi_model()
 
     def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
                   save_model_map=True, **kwargs):
@@ -2466,11 +2483,10 @@ class GTAnalysis(fermipy.config.Configurable):
         o['version'] = fermipy.__version__
         o['sources'] = {}
 
-        for k, v in o['roi']['residmap'].items():
-            o['roi']['residmap'][k] = {'files': v['files']}
-
-        for k, v in o['roi']['tsmap'].items():
-            o['roi']['tsmap'][k] = {'files': v['files']}
+#        for k, v in o['roi']['residmap'].items():
+#            o['roi']['residmap'][k] = {'files': v['files']}
+#        for k, v in o['roi']['tsmap'].items():
+#            o['roi']['tsmap'][k] = {'files': v['files']}
 
         for s in self.roi.sources:
             o['sources'][s.name] = copy.deepcopy(s.data)
@@ -3137,6 +3153,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         free : bool
             Initialize the source with the normalization parameter free.
 
+        save_source_maps : bool
+            Write the source map for this source to the source maps file.
+
         """
 
         if self.roi.has_source(name):
@@ -3148,10 +3167,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if isinstance(src_dict, dict):
             src_dict['name'] = name
-            self.roi.create_source(src_dict)
-        else:
-            self.roi.load_source(src_dict)
 
+        self.roi.create_source(src_dict)
+        
         src = self.roi.get_source_by_name(name, True)
         self.make_template(src, self.config['file_suffix'])
 
@@ -3160,10 +3178,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.update_srcmap_file([src], True)
 
         if src['SpatialType'] == 'SkyDirFunction':
-            #            pylike_src = pyLike.PointSource(src.skydir.ra.deg,
-            # src.skydir.dec.deg,
-            #
-            # self.like.logLike.observation())
             pylike_src = pyLike.PointSource(self.like.logLike.observation())
             pylike_src.setDir(src.skydir.ra.deg, src.skydir.dec.deg, False,
                               False)
@@ -3228,6 +3242,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             os.remove(src['Spatial_Filename'])
 
         self.roi.delete_sources([src])
+
+        return src
 
     def delete_sources(self, srcs):
         for s in srcs:
@@ -3722,6 +3738,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 'Unrecognized SpatialModel: ' + src['SpatialModel'] +
                 '\n Valid models: PointSource, GaussianSource, DiskSource, '
                 'PSFSource ')
+
+    def update_srcmap(self,names):
+        
+        for name in names:
+            print name
+            src = self.delete_source(name)
+            self.add_source(name,src,free=True)
+
+        self.like.logLike.saveSourceMaps(self._srcmap_file)
 
     def update_srcmap_file(self, sources=None, overwrite=False):
         """Check the contents of the source map file and generate

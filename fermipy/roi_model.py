@@ -901,11 +901,28 @@ class Source(Model):
         if not isinstance(skydir, SkyCoord):
             skydir = SkyCoord(ra=skydir[0], dec=skydir[1], unit=u.deg)
 
-        self._radec = np.array([skydir.ra.deg, skydir.dec.deg])
+        if not skydir.isscalar:
+            skydir = np.ravel(skydir)[0]
+
+        self._radec = np.array([skydir.icrs.ra.deg, skydir.icrs.dec.deg])
         self['RAJ2000'] = self._radec[0]
         self['DEJ2000'] = self._radec[1]
         self['ra'] = self._radec[0]
         self['dec'] = self._radec[1]
+        self['glon'] = skydir.galactic.l.deg
+        self['glat'] = skydir.galactic.b.deg
+
+    def set_roi_direction(self,roidir):
+
+        offset = roidir.separation(self.skydir).deg
+        offset_cel = utils.sky_to_offset(roidir,self['ra'], self['dec'], 'CEL')
+        offset_gal = utils.sky_to_offset(roidir,self['glon'], self['glat'], 'GAL')
+
+        self['offset'] = offset
+        self['offset_ra'] = offset_cel[0, 0]
+        self['offset_dec'] = offset_cel[0, 1]
+        self['offset_glon'] = offset_gal[0, 0]
+        self['offset_glat'] = offset_gal[0, 1]
 
     def set_spatial_model(self, spatial_model, spatial_width=None):
 
@@ -1125,8 +1142,18 @@ class Source(Model):
 
 
 class ROIModel(fermipy.config.Configurable):
-    """This class is responsible for managing the ROI definition.
-    Catalogs can be read from either FITS or XML files."""
+    """This class is responsible for managing the contents of the ROI
+    model (both sources and diffuse emission).  Source catalogs can be
+    read from either FITS or XML files.  Individual components of the
+    ROI can be accessed by name using the bracket operator:
+
+    # Print a summary of SourceA
+    >>> print src['SourceA']
+
+    # Get the SkyCoord for SourceA
+    >>> dir = src['SourceA'].skydir
+
+    """
 
     defaults = dict(defaults.model.items(),
                     logfile=(None, '', str),
@@ -1285,24 +1312,28 @@ class ROIModel(fermipy.config.Configurable):
             self.load_source(src, False)
 
     def create_source(self, src_dict, build_index=True):
-        """Create a new source object from a source dictionary and
-        load it in the ROI."""
+        """Add a new source to the ROI model from a dictionary or an
+        existing source object.
 
-        src = Source.create_from_dict(src_dict)
+        Parameters
+        ----------
+
+        src_dict : dict or `~fermipy.roi_model.Source`
+
+        Returns
+        -------
+
+        src : `~fermipy.roi_model.Source`
+        """
+
+        if isinstance(src_dict,dict):
+            src = Source.create_from_dict(src_dict)
+        else:
+            src = src_dict
+
         src.set_spatial_model(src['SpatialModel'], src['SpatialWidth'])
 
-        offset = self.skydir.separation(src.skydir).deg
-        offset_cel = utils.sky_to_offset(self.skydir,
-                                         src['ra'], src['dec'], 'CEL')
-
-        offset_gal = utils.sky_to_offset(self.skydir,
-                                         src['glon'], src['glat'], 'GAL')
-
-        src['offset'] = offset
-        src['offset_ra'] = offset_cel[0, 0]
-        src['offset_dec'] = offset_cel[0, 1]
-        src['offset_glon'] = offset_gal[0, 0]
-        src['offset_glat'] = offset_gal[0, 1]
+        src.set_roi_direction(self.skydir)
 
         self.logger.debug('Creating source ' + src.name)
         self.logger.debug(src._data)

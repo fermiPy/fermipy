@@ -703,7 +703,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sqrt_ts'], gta.roi)
-        p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9],
+        p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9, 11, 13, 15, 20, 25],
                cb_label='Sqrt(TS) [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'tsmap_sqrt_ts',

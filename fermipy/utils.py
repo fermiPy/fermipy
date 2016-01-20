@@ -581,8 +581,8 @@ def pix_to_skydir(xpix, ypix, wcs):
 
 def offset_to_sky(skydir, offset_lon, offset_lat,
                   coordsys='CEL', projection='AIT'):
-    """Convert a coordinate offset (X,Y) in the given projection into
-    a pair of spherical coordinates."""
+    """Convert a cartesian offset (X,Y) in the given projection into
+    a spherical coordinate."""
 
     offset_lon = np.array(offset_lon, ndmin=1)
     offset_lat = np.array(offset_lat, ndmin=1)
@@ -592,6 +592,16 @@ def offset_to_sky(skydir, offset_lon, offset_lat,
 
     return w.wcs_pix2world(pixcrd, 0)
 
+def offset_to_skydir(skydir, offset_lon, offset_lat,
+                     coordsys='CEL', projection='AIT'):
+    """Convert a cartesian offset (X,Y) in the given projection into
+    a spherical coordinate."""
+
+    offset_lon = np.array(offset_lon, ndmin=1)
+    offset_lat = np.array(offset_lat, ndmin=1)
+
+    w = create_wcs(skydir, coordsys, projection)
+    return SkyCoord.from_pixel(offset_lon,offset_lat,w,0)
 
 def sky_to_offset(skydir, lon, lat, coordsys='CEL', projection='AIT'):
     """Convert sky coordinates to a projected offset.  This function
@@ -663,7 +673,7 @@ def hpx_to_coords(h, shape):
     return np.vstack((x, z))
 
 
-def get_target_skydir(config):
+def get_target_skydir(config,default=None):
     radec = config.get('radec', None)
 
     if isinstance(radec, str):
@@ -684,7 +694,7 @@ def get_target_skydir(config):
         return SkyCoord(glon, glat, unit=u.deg,
                         frame='galactic').transform_to('icrs')
 
-    return None
+    return default
 
 
 def convolve2d_disk(fn, r, sig, nstep=100):
