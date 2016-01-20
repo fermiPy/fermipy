@@ -1900,7 +1900,7 @@ class GTAnalysis(fermipy.config.Configurable):
         #        src_model = self._roi_model['sources'].get(name,{})
         #        src_model['sed'] = copy.deepcopy(o)
 
-        self.logger.debug('Finished SED')
+        self.logger.info('Finished SED')
         return o
 
     def profile_norm(self, name, emin=None, emax=None, reoptimize=False,
@@ -3219,7 +3219,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(str(name))
         if save_source_maps:
-            print 'saving source maps ', self._srcmap_file
             self.like.logLike.saveSourceMaps(self._srcmap_file)
 
     def delete_source(self, name, save_template=True):

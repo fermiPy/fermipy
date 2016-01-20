@@ -4,11 +4,12 @@ Quickstart Guide
 ================
 
 This page walks through the steps to setup and perform a basic
-spectral analysis of a source.
+spectral analysis of a source.  For additional fermipy tutorials see
+the section on `IPython Notebook Tutorials`_.
 
 
 Creating a Configuration File
--------------------------------
+-----------------------------
 
 The first step is to compose a configuration file that defines the
 basic analysis parameters.  Complete documentation for the configuration
@@ -178,6 +179,24 @@ an ROI dictionary file.  The names of all output files will be
 prepended with the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`
 function argument.
 
+Once we have optimized our model for the ROI we can use the
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap` and
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` methods to assess the
+fit quality and look for new sources.
+
+.. code-block:: python
+
+   # Dictionary defining the spatial/spectral template
+   model = {'SpatialModel' : 'PointSource', 'Index' : 2.0,
+            'SpectrumType' ; 'PowerLaw'}
+
+   # Both methods return a dictionary with the maps
+   m0 = gta.residmap('fit_model',model=model)
+   m1 = gta.tsmap('fit_model',model=model)
+
+More documentation about these methods is available in
+the :ref:`detection` page.
+
 By default, calls to :py:meth:`~fermipy.gtanalysis.GTAnalysis.fit` will
 execute a global spectral fit over the entire energy range of the
 analysis.  To extract a bin-by-bin flux spectrum (i.e. a SED) you can
@@ -305,6 +324,21 @@ instance of :py:class:`~fermipy.gtanalysis.GTAnalysis`.
    # was executed
    gta.load_roi('prefit_model')
    
-Note that using :py:meth:`~fermipy.gtanalysis.GTAnalysis.load_roi` is
-generally faster than :py:meth:`~fermipy.gtanalysis.GTAnalysis.create`
-when an analysis instance already exists.
+Using :py:meth:`~fermipy.gtanalysis.GTAnalysis.load_roi` is generally
+faster than :py:meth:`~fermipy.gtanalysis.GTAnalysis.create` when an
+analysis instance already exists.
+
+IPython Notebook Tutorials
+--------------------------
+
+Additional tutorials with more detailed examples of using fermipy are
+available as a set of IPython notebooks.  These are located in the
+`notebooks
+<https://github.com/fermiPy/fermipy/tree/master/notebooks/>`_
+directory of the fermipy respository.  To run any of the notebooks
+simply run `ipython notebook` followed by the notebook name:
+
+.. code-block:: bash
+
+   cd <path to fermipy repository>/notebooks
+   ipython notebook PG\ 1553+113.ipynb

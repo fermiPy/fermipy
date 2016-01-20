@@ -450,11 +450,7 @@ class TSMapGenerator(fermipy.config.Configurable):
             imax = utils.val_to_edge(c.energies,erange[1])[0]
 
             eslice = slice(imin,imax)
-
-            print('fetching source map 1')            
             bm = c.model_counts_map(exclude=exclude).counts.astype('float')[eslice,...]
-
-            print('fetching counts map 2')
             cm = c.counts_map().counts.astype('float')[eslice,...]
 
             background += [bm]
@@ -492,8 +488,6 @@ class TSMapGenerator(fermipy.config.Configurable):
 
             xslice = slice(max(xpix-dpix,0),min(xpix+dpix+1,gta.npix))
             model[i] = model[i][:,xslice,xslice]
-
-            print('kernel dpix',dpix)
             
         ts_values = np.zeros((gta.npix, gta.npix))
         amp_values = np.zeros((gta.npix, gta.npix))
