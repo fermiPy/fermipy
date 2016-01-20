@@ -20,7 +20,7 @@ install:
   - source activate fermi-env
   - pip install healpy
   - python setup.py install
-  - bash stinstall.sh # Download and install the ST binaries
+  - bash stinstall.sh force # Download and install the ST binaries
   - source travissetup.sh
   - source condasetup.sh
 
