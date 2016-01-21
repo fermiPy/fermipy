@@ -640,11 +640,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
         # self.make_extension_plots(gta,prefix, erange=x,
         # format=format)
 
-        for k, v in gta._roi_model['residmap'].items():
-            self.make_residual_plots(gta, v, **kwargs)
-
-        for k, v in gta._roi_model['tsmap'].items():
-            self.make_tsmap_plots(gta, v, **kwargs)
+#        for k, v in gta._roi_model['residmap'].items():
+#            self.make_residual_plots(gta, v, **kwargs)
+#        for k, v in gta._roi_model['tsmap'].items():
+#            self.make_tsmap_plots(gta, v, **kwargs)
 
         self.make_sed_plots(gta, prefix, format=format)
 
@@ -659,7 +658,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
 
-        if not 'sigma' in maps: return
+        if 'sigma' not in maps: 
+            return
 
         # Reload maps from FITS file
 
@@ -676,9 +676,18 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['data'], gta.roi)
-        p.plot(cb_label='Smoothed Counts', zscale='pow', gamma=1. / 3.)
+        p.plot(cb_label='Counts')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'residmap_counts',
+                                          prefix=[prefix],
+                                          extension=format))
+        plt.close(fig)
+
+        fig = plt.figure()
+        p = ROIPlotter(maps['excess'], gta.roi)
+        p.plot(cb_label='Counts')
+        plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
+                                          'residmap_excess',
                                           prefix=[prefix],
                                           extension=format))
         plt.close(fig)
@@ -687,14 +696,15 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
 
-        if not 'ts' in maps: return
+        if 'ts' not in maps: 
+            return
 
         # Reload maps from FITS file
 
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sqrt_ts'], gta.roi)
-        p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9],
+        p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9, 11, 13, 15, 20, 25],
                cb_label='Sqrt(TS) [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'tsmap_sqrt_ts',
@@ -833,9 +843,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         for s in self.roi.sources:
 
-            if not 'extension' in s: continue
-            if s['extension'] is None: continue
-            if not s['extension']['config']['save_model_map']: continue
+            if 'extension' not in s: 
+                continue
+            if s['extension'] is None: 
+                continue
+            if not s['extension']['config']['save_model_map']: 
+                continue
 
             self._plot_extension(prefix, s, erange=erange, format=format)
 
@@ -845,8 +858,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         for s in gta.roi.sources:
 
-            if not 'sed' in s: continue
-            if s['sed'] is None: continue
+            if 'sed' not in s: 
+                continue
+            if s['sed'] is None: 
+                continue
 
             name = s.name.lower().replace(' ', '_')
 

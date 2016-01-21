@@ -347,7 +347,7 @@ class Catalog3FGL(Catalog):
 def make_parameter_dict(pdict, fixed_par=False):
     o = copy.deepcopy(pdict)
 
-    if not 'scale' in o or o['scale'] is None:
+    if 'scale' not in o or o['scale'] is None:
         value, scale = scale_parameter(o['value'])
         o['value'] = value
         o['scale'] = scale
@@ -497,9 +497,10 @@ class Model(object):
 
         for k in ROIModel.src_name_cols:
 
-            if not k in catalog: continue
+            if k not in catalog: 
+                continue
             name = catalog[k].strip()
-            if name != '' and not name in self._names:
+            if name != '' and name not in self._names:
                 self._names.append(name)
 
             self._names_dict[k] = name
@@ -901,11 +902,28 @@ class Source(Model):
         if not isinstance(skydir, SkyCoord):
             skydir = SkyCoord(ra=skydir[0], dec=skydir[1], unit=u.deg)
 
-        self._radec = np.array([skydir.ra.deg, skydir.dec.deg])
+        if not skydir.isscalar:
+            skydir = np.ravel(skydir)[0]
+
+        self._radec = np.array([skydir.icrs.ra.deg, skydir.icrs.dec.deg])
         self['RAJ2000'] = self._radec[0]
         self['DEJ2000'] = self._radec[1]
         self['ra'] = self._radec[0]
         self['dec'] = self._radec[1]
+        self['glon'] = skydir.galactic.l.deg
+        self['glat'] = skydir.galactic.b.deg
+
+    def set_roi_direction(self,roidir):
+
+        offset = roidir.separation(self.skydir).deg
+        offset_cel = utils.sky_to_offset(roidir,self['ra'], self['dec'], 'CEL')
+        offset_gal = utils.sky_to_offset(roidir,self['glon'], self['glat'], 'GAL')
+
+        self['offset'] = offset
+        self['offset_ra'] = offset_cel[0, 0]
+        self['offset_dec'] = offset_cel[0, 1]
+        self['offset_glon'] = offset_gal[0, 0]
+        self['offset_glat'] = offset_gal[0, 1]
 
     def set_spatial_model(self, spatial_model, spatial_width=None):
 
@@ -988,7 +1006,8 @@ class Source(Model):
 
         for k, v in default_par_dict.items():
 
-            if not k in src_dict: continue
+            if k not in src_dict: 
+                continue
             src_dict.setdefault('spectral_pars', {})
             src_dict['spectral_pars'].setdefault(k, {})
 
@@ -1125,8 +1144,18 @@ class Source(Model):
 
 
 class ROIModel(fermipy.config.Configurable):
-    """This class is responsible for managing the ROI definition.
-    Catalogs can be read from either FITS or XML files."""
+    """This class is responsible for managing the contents of the ROI
+    model (both sources and diffuse emission).  Source catalogs can be
+    read from either FITS or XML files.  Individual components of the
+    ROI can be accessed by name using the bracket operator:
+
+    # Print a summary of SourceA
+    >>> print src['SourceA']
+
+    # Get the SkyCoord for SourceA
+    >>> dir = src['SourceA'].skydir
+
+    """
 
     defaults = dict(defaults.model.items(),
                     logfile=(None, '', str),
@@ -1224,10 +1253,10 @@ class ROIModel(fermipy.config.Configurable):
 
     def _load_diffuse_src(self, name, src_type='FileFunction'):
 
-        if 'FERMI_DIR' in os.environ and not 'FERMI_DIFFUSE_DIR' in os.environ:
+        if 'FERMI_DIR' in os.environ and 'FERMI_DIFFUSE_DIR' not in os.environ:
             os.environ['FERMI_DIFFUSE_DIR'] = \
                 os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
-        if not 'FERMIPY_WORKDIR' in os.environ:
+        if 'FERMIPY_WORKDIR' not in os.environ:
 
             if self.config['fileio']['workdir'] is not None:
                 os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
@@ -1252,7 +1281,7 @@ class ROIModel(fermipy.config.Configurable):
                                                             'data'),
                                                '$FERMI_DIFFUSE_DIR'])
 
-            if not 'name' in src_dict:
+            if 'name' not in src_dict:
                 if len(srcs) == 1:
                     src_dict['name'] = name
                 else:
@@ -1284,25 +1313,34 @@ class ROIModel(fermipy.config.Configurable):
             src.add_name(altname)
             self.load_source(src, False)
 
-    def create_source(self, src_dict, build_index=True):
-        """Create a new source object from a source dictionary and
-        load it in the ROI."""
+    def create_source(self, name, src_dict, build_index=True):
+        """Add a new source to the ROI model from a dictionary or an
+        existing source object.
 
-        src = Source.create_from_dict(src_dict)
+        Parameters
+        ----------
+
+        name : str
+
+        src_dict : dict or `~fermipy.roi_model.Source`
+
+        Returns
+        -------
+
+        src : `~fermipy.roi_model.Source`
+        """
+
+        src_dict = copy.deepcopy(src_dict)
+
+        if isinstance(src_dict,dict):
+            src_dict['name'] = name
+            src = Source.create_from_dict(src_dict)
+        else:
+            src = src_dict
+
         src.set_spatial_model(src['SpatialModel'], src['SpatialWidth'])
 
-        offset = self.skydir.separation(src.skydir).deg
-        offset_cel = utils.sky_to_offset(self.skydir,
-                                         src['ra'], src['dec'], 'CEL')
-
-        offset_gal = utils.sky_to_offset(self.skydir,
-                                         src['glon'], src['glat'], 'GAL')
-
-        src['offset'] = offset
-        src['offset_ra'] = offset_cel[0, 0]
-        src['offset_dec'] = offset_cel[0, 1]
-        src['offset_glon'] = offset_gal[0, 0]
-        src['offset_glat'] = offset_gal[0, 1]
+        src.set_roi_direction(self.skydir)
 
         self.logger.debug('Creating source ' + src.name)
         self.logger.debug(src._data)
@@ -1323,7 +1361,7 @@ class ROIModel(fermipy.config.Configurable):
 
         # Prune sources not present in the sources dict
         for s in self.sources:
-            if not s.name in sources.keys():
+            if s.name not in sources.keys():
                 self.delete_sources([s])
 
         self.build_src_index()
@@ -1370,7 +1408,11 @@ class ROIModel(fermipy.config.Configurable):
                 raise Exception('Unrecognized catalog file extension: %s' % c)
 
         for c in self.config['sources']:
-            self.create_source(c, build_index=False)
+
+            if 'name' not in c:
+                raise Exception('No name field in source dictionary:\n ' + str(c))
+
+            self.create_source(c['name'],c, build_index=False)
 
         self.build_src_index()
 
@@ -1382,8 +1424,8 @@ class ROIModel(fermipy.config.Configurable):
                     self._src_dict[k].remove(s)
             if not v: del self._src_dict[k]
 
-        self._srcs = [s for s in self._srcs if not s in srcs]
-        self._diffuse_srcs = [s for s in self._diffuse_srcs if not s in srcs]
+        self._srcs = [s for s in self._srcs if s not in srcs]
+        self._diffuse_srcs = [s for s in self._diffuse_srcs if s not in srcs]
         self.build_src_index()
 
     @staticmethod
@@ -1537,9 +1579,12 @@ class ROIModel(fermipy.config.Configurable):
 
         srcs = []
         for i, s in enumerate(self._srcs):
-            if not pname in s: continue
-            if pmin is not None and s[pname] < pmin: continue
-            if pmax is not None and s[pname] > pmax: continue
+            if pname not in s: 
+                continue
+            if pmin is not None and s[pname] < pmin: 
+                continue
+            if pmax is not None and s[pname] > pmax: 
+                continue
             srcs.append(s)
         return srcs
 
