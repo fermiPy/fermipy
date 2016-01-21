@@ -32,9 +32,6 @@ class Map(Map_Base):
         ----------
         counts : `~numpy.ndarray`
           Counts array.
-
-          
-
         """
         Map_Base.__init__(self, counts)
         self._wcs = wcs
@@ -155,7 +152,8 @@ def eq2gal(ra, dec):
 
 
 def apply_minmax_selection(val, val_minmax):
-    if val_minmax is None: return True
+    if val_minmax is None:
+        return True
 
     if val_minmax[0] is None:
         min_cut = True
@@ -235,7 +233,8 @@ def val_to_bin_bounded(edges, x):
 
 
 def mkdir(dir):
-    if not os.path.exists(dir):  os.makedirs(dir)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
     return dir
 
 
@@ -323,7 +322,7 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
         if k in d0: t0 = type(d0[k])
         if k in d1: t1 = type(d1[k])
 
-        if not k in d1:
+        if k not in d1:
             od[k] = copy.deepcopy(d0[k])
         elif isinstance(v, dict) and isinstance(d1[k], dict):
             od[k] = merge_dict(d0[k], d1[k], add_new_keys, append_arrays)
@@ -342,13 +341,14 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
 
     if add_new_keys:
         for k, v in d1.iteritems():
-            if not k in d0: od[k] = copy.deepcopy(d1[k])
+            if k not in d0:
+                od[k] = copy.deepcopy(d1[k])
 
     return od
 
 
 def tolist(x):
-    """ convenience function that takes in a 
+    """ convenience function that takes in a
         nested structure of lists and dictionaries
         and converts everything to its base objects.
         This is useful for dupming a file to yaml.
@@ -419,7 +419,7 @@ def tolist(x):
 
 def extract_mapcube_region(infile, skydir, outfile, maphdu=0):
     """Extract a region out of an all-sky mapcube file.
-    
+
     Parameters
     ----------
 
@@ -592,6 +592,7 @@ def offset_to_sky(skydir, offset_lon, offset_lat,
 
     return w.wcs_pix2world(pixcrd, 0)
 
+
 def offset_to_skydir(skydir, offset_lon, offset_lat,
                      coordsys='CEL', projection='AIT'):
     """Convert a cartesian offset (X,Y) in the given projection into
@@ -601,7 +602,8 @@ def offset_to_skydir(skydir, offset_lon, offset_lat,
     offset_lat = np.array(offset_lat, ndmin=1)
 
     w = create_wcs(skydir, coordsys, projection)
-    return SkyCoord.from_pixel(offset_lon,offset_lat,w,0)
+    return SkyCoord.from_pixel(offset_lon, offset_lat, w, 0)
+
 
 def sky_to_offset(skydir, lon, lat, coordsys='CEL', projection='AIT'):
     """Convert sky coordinates to a projected offset.  This function
@@ -684,13 +686,13 @@ def get_target_skydir(config,default=None):
     ra = config.get('ra', None)
     dec = config.get('dec', None)
 
-    if not ra is None and not dec is None:
+    if ra is not None and dec is not None:
         return SkyCoord(ra, dec, unit=u.deg)
 
     glon = config.get('glon', None)
     glat = config.get('glat', None)
 
-    if not glon is None and not glat is None:
+    if glon is not None and glat is not None:
         return SkyCoord(glon, glat, unit=u.deg,
                         frame='galactic').transform_to('icrs')
 
@@ -761,7 +763,7 @@ def convolve2d_gauss(fn, r, sig, nstep=100):
     Parameters
     ----------
 
-    fn : function 
+    fn : function
       Input function that takes a single radial coordinate parameter.
 
     r :  `~numpy.ndarray`
@@ -782,9 +784,10 @@ def convolve2d_gauss(fn, r, sig, nstep=100):
     rmin[rmin < 0] = 0
     delta = (rmax - rmin) / nstep
 
-    redge = rmin[:, np.newaxis] + delta[:, np.newaxis] * np.linspace(0, nstep,
-                                                                     nstep + 1)[
-                                                         np.newaxis, :]
+    redge = (rmin[:, np.newaxis] +
+             delta[:, np.newaxis] *
+             np.linspace(0, nstep, nstep + 1)[np.newaxis, :])
+
     rp = 0.5 * (redge[:, 1:] + redge[:, :-1])
     dr = redge[:, 1:] - redge[:, :-1]
     fnv = fn(rp)
@@ -795,7 +798,7 @@ def convolve2d_gauss(fn, r, sig, nstep=100):
     sig2 = sig * sig
     x = r * rp / (sig2)
 
-    if not 'je_fn' in convolve2d_gauss.__dict__:
+    if 'je_fn' not in convolve2d_gauss.__dict__:
         t = 10 ** np.linspace(-8, 8, 1000)
         t = np.insert(t, 0, [0])
         je = specialfn.ive(0, t)
@@ -826,7 +829,7 @@ def make_pixel_offset(npix, xpix=0.0, ypix=0.0):
 
 def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     """Make kernel for a 2D gaussian.
-    
+
     Parameters
     ----------
 
@@ -966,7 +969,8 @@ def make_srcmap(skydir, psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
     else:
         raise Exception('Unrecognized spatial model: %s' % spatial_model)
 
-    if rebin > 1: k = rebin_map(k, nebin, npix, rebin)
+    if rebin > 1:
+        k = rebin_map(k, nebin, npix, rebin)
 
     k *= psf.exp[:, np.newaxis, np.newaxis] * np.radians(cdelt) ** 2
 
@@ -980,7 +984,8 @@ def make_cgauss_mapcube(skydir, psf, sigma, outfile, npix=500, cdelt=0.01,
 
     k = make_cgauss_kernel(psf, sigma, npix * rebin, cdelt / rebin)
 
-    if rebin > 1: k = rebin_map(k, nebin, npix, rebin)
+    if rebin > 1:
+        k = rebin_map(k, nebin, npix, rebin)
     w = create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5, naxis=3)
 
     w.wcs.crpix[2] = 1
@@ -1008,7 +1013,8 @@ def make_psf_mapcube(skydir, psf, outfile, npix=500, cdelt=0.01, rebin=1):
 
     k = make_psf_kernel(psf, npix * rebin, cdelt / rebin)
 
-    if rebin > 1: k = rebin_map(k, nebin, npix, rebin)
+    if rebin > 1:
+        k = rebin_map(k, nebin, npix, rebin)
     w = create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5, naxis=3)
 
     w.wcs.crpix[2] = 1
@@ -1098,7 +1104,9 @@ def delete_source_map(srcmap_file, name, logger=None):
     hdulist = pyfits.open(srcmap_file)
     hdunames = [hdu.name.upper() for hdu in hdulist]
 
-    if not name.upper() in hdunames: return
+    if not name.upper() in hdunames:
+        return
+
     del hdulist[name.upper()]
 
     hdulist.writeto(srcmap_file, clobber=True)

@@ -347,7 +347,7 @@ class Catalog3FGL(Catalog):
 def make_parameter_dict(pdict, fixed_par=False):
     o = copy.deepcopy(pdict)
 
-    if not 'scale' in o or o['scale'] is None:
+    if 'scale' not in o or o['scale'] is None:
         value, scale = scale_parameter(o['value'])
         o['value'] = value
         o['scale'] = scale
@@ -497,9 +497,10 @@ class Model(object):
 
         for k in ROIModel.src_name_cols:
 
-            if not k in catalog: continue
+            if k not in catalog: 
+                continue
             name = catalog[k].strip()
-            if name != '' and not name in self._names:
+            if name != '' and name not in self._names:
                 self._names.append(name)
 
             self._names_dict[k] = name
@@ -1005,7 +1006,8 @@ class Source(Model):
 
         for k, v in default_par_dict.items():
 
-            if not k in src_dict: continue
+            if k not in src_dict: 
+                continue
             src_dict.setdefault('spectral_pars', {})
             src_dict['spectral_pars'].setdefault(k, {})
 
@@ -1251,10 +1253,10 @@ class ROIModel(fermipy.config.Configurable):
 
     def _load_diffuse_src(self, name, src_type='FileFunction'):
 
-        if 'FERMI_DIR' in os.environ and not 'FERMI_DIFFUSE_DIR' in os.environ:
+        if 'FERMI_DIR' in os.environ and 'FERMI_DIFFUSE_DIR' not in os.environ:
             os.environ['FERMI_DIFFUSE_DIR'] = \
                 os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
-        if not 'FERMIPY_WORKDIR' in os.environ:
+        if 'FERMIPY_WORKDIR' not in os.environ:
 
             if self.config['fileio']['workdir'] is not None:
                 os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
@@ -1279,7 +1281,7 @@ class ROIModel(fermipy.config.Configurable):
                                                             'data'),
                                                '$FERMI_DIFFUSE_DIR'])
 
-            if not 'name' in src_dict:
+            if 'name' not in src_dict:
                 if len(srcs) == 1:
                     src_dict['name'] = name
                 else:
@@ -1359,7 +1361,7 @@ class ROIModel(fermipy.config.Configurable):
 
         # Prune sources not present in the sources dict
         for s in self.sources:
-            if not s.name in sources.keys():
+            if s.name not in sources.keys():
                 self.delete_sources([s])
 
         self.build_src_index()
@@ -1422,8 +1424,8 @@ class ROIModel(fermipy.config.Configurable):
                     self._src_dict[k].remove(s)
             if not v: del self._src_dict[k]
 
-        self._srcs = [s for s in self._srcs if not s in srcs]
-        self._diffuse_srcs = [s for s in self._diffuse_srcs if not s in srcs]
+        self._srcs = [s for s in self._srcs if s not in srcs]
+        self._diffuse_srcs = [s for s in self._diffuse_srcs if s not in srcs]
         self.build_src_index()
 
     @staticmethod
@@ -1577,9 +1579,12 @@ class ROIModel(fermipy.config.Configurable):
 
         srcs = []
         for i, s in enumerate(self._srcs):
-            if not pname in s: continue
-            if pmin is not None and s[pname] < pmin: continue
-            if pmax is not None and s[pname] > pmax: continue
+            if pname not in s: 
+                continue
+            if pmin is not None and s[pname] < pmin: 
+                continue
+            if pmax is not None and s[pname] > pmax: 
+                continue
             srcs.append(s)
         return srcs
 

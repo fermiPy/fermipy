@@ -658,7 +658,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
 
-        if not 'sigma' in maps: return
+        if 'sigma' not in maps: 
+            return
 
         # Reload maps from FITS file
 
@@ -695,7 +696,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
 
-        if not 'ts' in maps: return
+        if 'ts' not in maps: 
+            return
 
         # Reload maps from FITS file
 
@@ -841,9 +843,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         for s in self.roi.sources:
 
-            if not 'extension' in s: continue
-            if s['extension'] is None: continue
-            if not s['extension']['config']['save_model_map']: continue
+            if 'extension' not in s: 
+                continue
+            if s['extension'] is None: 
+                continue
+            if not s['extension']['config']['save_model_map']: 
+                continue
 
             self._plot_extension(prefix, s, erange=erange, format=format)
 
@@ -853,8 +858,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         for s in gta.roi.sources:
 
-            if not 'sed' in s: continue
-            if s['sed'] is None: continue
+            if 'sed' not in s: 
+                continue
+            if s['sed'] is None: 
+                continue
 
             name = s.name.lower().replace(' ', '_')
 

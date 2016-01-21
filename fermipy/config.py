@@ -56,7 +56,7 @@ def cast_config(config, defaults):
 def validate_config(config, defaults, block='root'):
     for key, item in config.items():
 
-        if not key in defaults:
+        if key not in defaults:
             raise Exception('Invalid key in \'%s\' block of configuration: %s' %
                             (block, key))
 

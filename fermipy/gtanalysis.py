@@ -78,15 +78,19 @@ def parabola((x, y), amplitude, x0, y0, sx, sy, theta):
     b = -(np.sin(2 * theta)) / (4 * sx ** 2) + (np.sin(2 * theta)) / (
         4 * sy ** 2)
     c = (sth ** 2) / (2 * sx ** 2) + (cth ** 2) / (2 * sy ** 2)
-    v = amplitude - (
-        a * ((x - x0) ** 2) + 2 * b * (x - x0) * (y - y0) + c * ((y - y0) ** 2))
+    v = amplitude - (a * ((x - x0) ** 2) +
+                     2 * b * (x - x0) * (y - y0) +
+                     c * ((y - y0) ** 2))
 
     return np.ravel(v)
 
 
 def interpolate_function_min(x, y):
     sp = scipy.interpolate.splrep(x, y, k=2, s=0)
-    fn = lambda t: scipy.interpolate.splev(t, sp, der=1)
+
+    def fn(t):
+        return scipy.interpolate.splev(t, sp, der=1)
+
     if np.sign(fn(x[0])) == np.sign(fn(x[-1])):
 
         if np.sign(fn(x[0])) == -1:
@@ -147,7 +151,9 @@ def run_gtapp(appname, logger, kw):
     filter_dict(kw, None)
     gtapp = GtApp.GtApp(appname)
 
-    for k, v in kw.items(): gtapp[k] = v
+    for k, v in kw.items():
+        gtapp[k] = v
+
     logger.info(gtapp.command())
     stdin, stdout = gtapp.runWithOutput(print_command=False)
 
@@ -159,16 +165,21 @@ def run_gtapp(appname, logger, kw):
 
 def filter_dict(d, val):
     for k, v in d.items():
-        if v == val: del d[k]
+        if v == val: 
+            del d[k]
+
 
 def create_source_name(skydir):
     hms = skydir.icrs.ra.hms
     dms = skydir.icrs.dec.dms
-    return 'PS J%02.f%03.1f%+03.f%2.f'%(hms.h,hms.m+hms.s/60.,dms.d,dms.m+dms.s/60.)
+    return 'PS J%02.f%03.1f%+03.f%2.f'%(hms.h,
+                                        hms.m+hms.s/60.,
+                                        dms.d, dms.m+dms.s/60.)
+
 
 def gtlike_spectrum_to_dict(spectrum):
-    """ Convert a pyLikelihood object to a python 
-        dictionary which can be easily saved to a file. """
+    """ Convert a pyLikelihood object to a python dictionary which can
+        be easily saved to a file."""
     parameters = pyLike.ParameterVector()
     spectrum.getParams(parameters)
     d = dict(spectrum_type=spectrum.genericName())
@@ -221,6 +232,7 @@ def load_yaml(infile):
 
 def load_npy(infile):
     return np.load(infile).flat[0]
+
 
 class GTAnalysis(fermipy.config.Configurable):
     """High-level analysis interface that internally manages a set of
@@ -295,7 +307,7 @@ class GTAnalysis(fermipy.config.Configurable):
         else:
             self._config['fileio']['workdir'] = self._savedir
 
-        if not 'FERMIPY_WORKDIR' in os.environ:
+        if 'FERMIPY_WORKDIR' not in os.environ:
             os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
 
         # Setup the ROI definition
@@ -515,7 +527,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if self._like is None: return
 
-        if self.config['gtlike']['edisp'] and not src.name in \
+        if self.config['gtlike']['edisp'] and src.name not in \
                 self.config['gtlike']['edisp_disable']:
             self.set_edisp_flag(src.name, True)
 
@@ -1053,15 +1065,18 @@ class GTAnalysis(fermipy.config.Configurable):
         par_indices = []
         par_names = []
         for p in src_par_names:
-            if pars is not None and not p in pars: continue
+            if pars is not None and p not in pars: 
+                continue
 
             idx = self.like.par_index(name, p)
-            if free == free_pars[idx]: continue
+            if free == free_pars[idx]: 
+                continue
 
             par_indices.append(idx)
             par_names.append(p)
 
-        if len(par_names) == 0: return
+        if len(par_names) == 0: 
+            return
 
         if free:
             self.logger.debug('Freeing parameters for %-22s: %s'
@@ -1164,7 +1179,7 @@ class GTAnalysis(fermipy.config.Configurable):
     def get_source_name(self, name):
         """Return the name of a source as it is defined in the
         pyLikelihood model object."""
-        if not name in self.like.sourceNames():
+        if name not in self.like.sourceNames():
             name = self.roi.get_source_by_name(name, True).name
         return name
 
@@ -2121,7 +2136,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         names = []
         for s in slices:
-            skydir = SkyCoord.from_pixel(s[1].start,s[0].start,wcs)
+            skydir = SkyCoord.from_pixel(s[1].start, s[0].start,wcs)
             print skydir, create_source_name(skydir)
             print data[s[0],s[1]], amp[s[0],s[1]]
 
@@ -2616,9 +2631,7 @@ class GTAnalysis(fermipy.config.Configurable):
                                               prefix=[prefix],
                                               extension='png'))
             plt.close(fig)
-        
-
-        
+                
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),
              'files': [],
@@ -3044,13 +3057,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._like = None
 
         if self.projtype == 'HPX':
-            self._hpx_region = create_hpx_disk_region_string(self.roi.skydir,
-                                                             self.config[
-                                                                 'binning'][
-                                                                 'coordsys'],
-                                                             0.5 * self.config[
-                                                                 'binning'][
-                                                                 'roiwidth'])
+            self._hpx_region = \
+                create_hpx_disk_region_string(self.roi.skydir,
+                                              self.config['binning']['coordsys'],
+                                              0.5 * self.config['binning']['roiwidth'])
             self._proj = create_hpx(-1,
                                     self.config['binning'][
                                         'hpx_ordering_scheme'] == "NESTED",
@@ -3059,19 +3069,20 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                     self._hpx_region,
                                     self._ebin_edges)
         elif self.projtype == "WCS":
-            self._skywcs = create_wcs(self._roi.skydir,
-                                      coordsys=self.config['binning'][
-                                          'coordsys'],
-                                      projection=self.config['binning']['proj'],
-                                      cdelt=self.binsz,
-                                      crpix=1.0 + 0.5 * (self._npix - 1),
-                                      naxis=2)
-            self._proj = create_wcs(self.roi.skydir,
-                                    coordsys=self.config['binning']['coordsys'],
-                                    projection=self.config['binning']['proj'],
-                                    cdelt=self.binsz,
-                                    crpix=1.0 + 0.5 * (self._npix - 1),
-                                    naxis=3)
+            self._skywcs = \
+                create_wcs(self._roi.skydir,
+                           coordsys=self.config['binning']['coordsys'],
+                           projection=self.config['binning']['proj'],
+                           cdelt=self.binsz,
+                           crpix=1.0 + 0.5 * (self._npix - 1),
+                           naxis=2)
+            self._proj = \
+                create_wcs(self.roi.skydir,
+                           coordsys=self.config['binning']['coordsys'],
+                           projection=self.config['binning']['proj'],
+                           cdelt=self.binsz,
+                           crpix=1.0 + 0.5 * (self._npix - 1),
+                           naxis=3)
             self._proj.wcs.crpix[2] = 1
             self._proj.wcs.crval[2] = 10 ** self.energies[0]
             self._proj.wcs.cdelt[2] = 10 ** self.energies[1] - 10 ** \
@@ -3708,7 +3719,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
     def make_template(self, src, suffix):
 
-        if not 'SpatialModel' in src:
+        if 'SpatialModel' not in src:
             return
         elif src['SpatialModel'] in ['PointSource', 'Gaussian', 'PSFSource',
                                      'SpatialMap']:
@@ -3736,12 +3747,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 '\n Valid models: PointSource, GaussianSource, DiskSource, '
                 'PSFSource ')
 
-    def update_srcmap(self,names):
-        
+    def update_srcmap(self, names):
+
         for name in names:
             print name
             src = self.delete_source(name)
-            self.add_source(name,src,free=True)
+            self.add_source(name, src, free=True)
 
         self.like.logLike.saveSourceMaps(self._srcmap_file)
 
@@ -3762,11 +3773,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         for s in sources:
 
-            if s.diffuse: continue
-            if not 'SpatialModel' in s: continue
+            if s.diffuse:
+                continue
+            if 'SpatialModel' not in s:
+                continue
             if s['SpatialModel'] in ['PointSource', 'Gaussian',
-                                     'SpatialMap']: continue
-            if s.name.upper() in hdunames and not overwrite: continue
+                                     'SpatialMap']:
+                continue
+            if s.name.upper() in hdunames and not overwrite:
+                continue
 
             self.logger.debug('Creating source map for %s' % s.name)
 
@@ -3798,14 +3813,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         ----------
 
         model_name : str
-        
-            Name of the model.  If no name is given it will use 
-            the baseline model.
+            Name of the model.  If no name is given it will use the
+            baseline model.
 
         outfile : str
-
             Override the name of the output model file.
-            
         """
 
         if model_name is not None:
