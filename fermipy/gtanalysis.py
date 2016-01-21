@@ -68,6 +68,29 @@ index_parameters = {
     'FileFunction': [],
 }
 
+def make_testsrc(name,skydir,obs):
+
+    testsrc = pyLike.PointSource(obs)
+    testsrc.setDir(skydir.ra.deg, skydir.dec.deg, False,False)
+
+    pl = pyLike.SourceFactory_funcFactory().create('PowerLaw')
+    pl.getParam('Prefactor').setValue(1.0)
+    pl.getParam('Prefactor').setBounds(0.0,10000.)
+    pl.getParam('Prefactor').setScale(1E-13)
+    
+    pl.getParam('Index').setValue(2.0)
+    pl.getParam('Index').setBounds(0.0,6.0)
+    pl.getParam('Index').setScale(-1.0)
+    pl.getParam('Index').setFree(False)
+
+    pl.getParam('Scale').setValue(1000.0)
+    pl.getParam('Scale').setBounds(1000.0,1000.0)
+    pl.getParam('Scale').setScale(1.0)
+    
+    testsrc.setSpectrum(pl)
+    testsrc.setName(name)
+    
+    return testsrc
 
 def parabola((x, y), amplitude, x0, y0, sx, sy, theta):
     cth = np.cos(theta)
@@ -2358,11 +2381,23 @@ class GTAnalysis(fermipy.config.Configurable):
 
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
                       np.round((self.npix - 1.0) / 2.))
+
+        xpix = kwargs.get('xpix',xpix)
+        ypix = kwargs.get('ypix',ypix)
+        add_source = kwargs.get('add_source',True)
+
+        print xpix, ypix, add_source
+        
         skywcs = self._skywcs
         skydir = utils.pix_to_skydir(xpix, ypix, skywcs)
-        skydir = self.roi.skydir
-        
-        print xpix, ypix
+
+        print skydir
+        print self.roi.skydir
+
+        testsrc = make_testsrc('tscube_testsource',skydir,
+                              self.components[0].like.logLike.observation())
+#        skydir = self.roi.skydir
+#        print xpix, ypix
         
         src_dict = {}
         src_dict['ra'] = skydir.ra.deg
@@ -2372,18 +2407,19 @@ class GTAnalysis(fermipy.config.Configurable):
         src_dict.setdefault('Index', 2.0)
         src_dict.setdefault('Prefactor', 1E-13)
 
-        self.add_source('tscube_testsource', src_dict, free=True,
-                        init_source=False)
-        src = self.roi['tscube_testsource']
-
-        modelname = utils.create_model_name(src)
-
+        if add_source:
+            self.add_source('tscube_testsource', src_dict, free=True,
+                            init_source=False,save_source_maps=False)
+            src = self.roi['tscube_testsource']
+            
+            modelname = utils.create_model_name(src)
+        #
+        else:
+            modelname='powerlaw_2.00'
+            
         outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'tscube.fits',
                                         prefix=[prefix])
-
-        tmplfile = "/afs/slac/u/ek/echarles/glast/Releases/ST-10-01-00_v2" \
-                   "/data/Likelihood/TsCubeTemplate"
 
         optObject = pyLike.OptimizerFactory_instance().create("MINUIT",
                                                               self.components[
@@ -2413,7 +2449,11 @@ class GTAnalysis(fermipy.config.Configurable):
         #        fitScanner.set_verbose_bb(2)
 
         print "Setting test source"
-        ok = fitScanner.setTestSourceByName('tscube_testsource')
+        if add_source:
+            ok = fitScanner.setTestSourceByName('tscube_testsource')
+        else:
+            ok = fitScanner.setTestSource(testsrc)
+            
         #funcFactory = pyLike.SourceFactory_funcFactory()
         #ok = fitScanner.setPowerlawPointTestSource(funcFactory)
 
@@ -2430,12 +2470,14 @@ class GTAnalysis(fermipy.config.Configurable):
         # ST_scan_level : Level to which to do ST-based fitting (for testing)
         
 #        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-4, 30, 1, False, 0)
-        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-3, 30, 0, False, 1)
+        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-3, 30, 0, False, 0)
         self.logger.info("Finished tscube")
 
         print "Writing output file"
-        ok = fitScanner.writeFitsFile(outfile, "gttscube", tmplfile)
-        self.delete_source('tscube_testsource')
+        ok = fitScanner.writeFitsFile(outfile, "gttscube")
+
+        if add_source:
+            self.delete_source('tscube_testsource')
         
         ts_map = utils.Map.create_from_fits(outfile)
         sqrt_ts_map = copy.deepcopy(ts_map)
@@ -2480,6 +2522,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         #        p = ROIPlotter(ts_map, self.roi)
 
+        self.logger.info("Done")
         return o
 
     def _tsmap_fast(self, prefix, **kwargs):
