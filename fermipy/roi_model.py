@@ -1807,6 +1807,7 @@ class ROIModel(fermipy.config.Configurable):
         """Build an indices for fast lookup of a source given its name
         or coordinates."""
 
+        self._srcs = sorted(self._srcs, key=lambda t: t['offset'])
         nsrc = len(self._srcs)
         radec = np.zeros((2, nsrc))
 
@@ -1815,7 +1816,6 @@ class ROIModel(fermipy.config.Configurable):
 
         self._src_skydir = SkyCoord(ra=radec[0], dec=radec[1], unit=u.deg)
         self._src_radius = self._src_skydir.separation(self.skydir)
-        self._srcs = sorted(self._srcs, key=lambda t: t['offset'])
 
     def write_xml(self, xmlfile):
         """Save this ROI model as an XML file."""
