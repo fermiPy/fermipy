@@ -480,7 +480,8 @@ class Model(object):
             self._data.update(data)
 
         self._data['name'] = name
-
+        self._data['assoc'] = {}
+        
         self._data.setdefault('spectral_pars', {})
         self._data.setdefault('spatial_pars', {})
         self._data.setdefault('catalog', {})
@@ -492,7 +493,6 @@ class Model(object):
             self._data['spatial_pars'] = spatial_pars
 
         self._names = [name]
-        self._names_dict = {}
         catalog = self._data['catalog']
 
         for k in ROIModel.src_name_cols:
@@ -503,7 +503,7 @@ class Model(object):
             if name != '' and name not in self._names:
                 self._names.append(name)
 
-            self._names_dict[k] = name
+            self._data['assoc'][k] = name
 
     def __contains__(self, key):
         return key in self._data
@@ -560,6 +560,10 @@ class Model(object):
     def names(self):
         return self._names
 
+    @property
+    def assoc(self):
+        return self._data['assoc']
+    
     def check_cuts(self, cuts):
 
         if cuts is None: return True
@@ -593,7 +597,8 @@ class Model(object):
             self._names = names
 
     def add_name(self, name):
-        self._names.append(name)
+        if name not in self._names:
+            self._names.append(name)
 
     def update_data(self, d):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
@@ -601,18 +606,11 @@ class Model(object):
     def update(self, m):
 
         if 'SpectrumType' in m and self['SpectrumType'] != m['SpectrumType']:
-            self.spectral_pars = {}
+            self._data['spectral_pars'] = {}
 
-        self._data = utils.merge_dict(self._data, m._data, add_new_keys=True)
+        self._data = utils.merge_dict(self.data, m.data, add_new_keys=True)
         self._name = m.name
         self._names = list(set(self._names + m.names))
-        self._data['spectral_pars'] = utils.merge_dict(self.spectral_pars,
-                                                       m.spectral_pars,
-                                                       add_new_keys=True)
-        self._data['spatial_pars'] = utils.merge_dict(self.spatial_pars,
-                                                      m.spatial_pars,
-                                                      add_new_keys=True)
-
 
 class IsoSource(Model):
     def __init__(self, name, filefunction, spectral_pars=None,
@@ -749,23 +747,16 @@ class Source(Model):
                  spatial_pars=None):
         super(Source, self).__init__(name, data, spectral_pars, spatial_pars)
 
-        self._radec = radec
         catalog = self.data.get('catalog', {})
 
-        if self._radec is None and 'RAJ2000' in catalog and 'DEJ2000' in \
-                catalog:
-            self._radec = [catalog['RAJ2000'], catalog['DEJ2000']]
-        elif self._radec is None and 'ra' in self.data and 'dec' in self.data:
-            self._radec = [self.data['ra'], self.data['dec']]
-        elif self._radec is None:
+        if radec is not None:
+            self._set_radec(radec)        
+        elif 'ra' in self.data and 'dec' in self.data:
+            self._set_radec([self.data['ra'], self.data['dec']])
+        elif 'RAJ2000' in catalog and 'DEJ2000' in catalog:
+            self._set_radec([catalog['RAJ2000'], catalog['DEJ2000']])
+        else:
             raise Exception('Failed to infer RADEC for source: %s' % name)
-
-        self['RAJ2000'] = self._radec[0]
-        self['DEJ2000'] = self._radec[1]
-        self['ra'] = self._radec[0]
-        self['dec'] = self._radec[1]
-        glonlat = utils.eq2gal(self._radec[0], self._radec[1])
-        self['glon'], self['glat'] = glonlat[0][0], glonlat[1][0]
 
         if self['SpatialModel'] is None:
             self._data['SpatialModel'] = self['SpatialType']
@@ -802,6 +793,16 @@ class Source(Model):
 
         return '\n'.join(output).format(**data)
 
+    def _set_radec(self,radec):
+
+        self['radec'] = np.array(radec,ndmin=1)
+        self['RAJ2000'] = radec[0]
+        self['DEJ2000'] = radec[1]
+        self['ra'] = radec[0]
+        self['dec'] = radec[1]        
+        glonlat = utils.eq2gal(radec[0], radec[1])
+        self['glon'], self['glat'] = glonlat[0][0], glonlat[1][0]
+    
     def _update_spatial_pars(self):
 
         if self['SpatialModel'] == 'SpatialMap':
@@ -886,10 +887,13 @@ class Source(Model):
             sp['Cutoff'] = make_parameter_dict(sp['Cutoff'])
 
         else:
-            import pprint
-            pprint.pprint(self._data)
             raise Exception('Unsupported spectral type:' + self['SpectrumType'])
 
+    def update_data(self, d):
+        self._data = utils.merge_dict(self._data, d, add_new_keys=True)
+        if 'ra' in d and 'dec' in d:
+            self._set_radec([d['ra'],d['dec']])        
+              
     def set_position(self, skydir):
         """
         
@@ -905,11 +909,11 @@ class Source(Model):
         if not skydir.isscalar:
             skydir = np.ravel(skydir)[0]
 
-        self._radec = np.array([skydir.icrs.ra.deg, skydir.icrs.dec.deg])
-        self['RAJ2000'] = self._radec[0]
-        self['DEJ2000'] = self._radec[1]
-        self['ra'] = self._radec[0]
-        self['dec'] = self._radec[1]
+        self['radec'] = np.array([skydir.icrs.ra.deg, skydir.icrs.dec.deg])
+        self['RAJ2000'] = self.radec[0]
+        self['DEJ2000'] = self.radec[1]
+        self['ra'] = self.radec[0]
+        self['dec'] = self.radec[1]
         self['glon'] = skydir.galactic.l.deg
         self['glat'] = skydir.galactic.b.deg
 
@@ -966,7 +970,7 @@ class Source(Model):
 
     @property
     def radec(self):
-        return self._radec
+        return self['radec']
 
     @property
     def skydir(self):
@@ -976,7 +980,7 @@ class Source(Model):
         -------
         skydir : `~astropy.coordinates.SkyCoord` 
         """
-        return SkyCoord(self._radec[0] * u.deg, self._radec[1] * u.deg)
+        return SkyCoord(self.radec[0] * u.deg, self.radec[1] * u.deg)
 
     @property
     def data(self):
@@ -1311,9 +1315,10 @@ class ROIModel(fermipy.config.Configurable):
                                  '', altname)
 
             src.add_name(altname)
-            self.load_source(src, False)
+            self.load_source(src, False, self.config['merge_sources'])
 
-    def create_source(self, name, src_dict, build_index=True):
+    def create_source(self, name, src_dict, build_index=True,
+                      merge_sources=True):
         """Add a new source to the ROI model from a dictionary or an
         existing source object.
 
@@ -1343,10 +1348,12 @@ class ROIModel(fermipy.config.Configurable):
         src.set_roi_direction(self.skydir)
 
         self.logger.debug('Creating source ' + src.name)
-        self.logger.debug(src._data)
+        #self.logger.debug(src._data)
 
-        self.load_source(src, build_index=build_index)
-        return src
+        self.load_source(src, build_index=build_index,
+                         merge_sources=merge_sources)
+        
+        return self.get_source_by_name(name, True)
 
     def load_source_data(self, sources):
 
@@ -1366,16 +1373,43 @@ class ROIModel(fermipy.config.Configurable):
 
         self.build_src_index()
 
-    def load_source(self, src, build_index=True):
+    def load_source(self, src, build_index=True, merge_sources=True):
+        """
+        Parameters
+        ----------
 
+        src : `~fermipy.roi_model.Source`
+        
+        merge_sources : bool        
+           When a source matches an existing source in the model
+           update that source with the properties of the new source.
+        
+        """
         src = copy.deepcopy(src)
         name = src.name.replace(' ', '').lower()
 
-        if name in self._src_dict and self._src_dict[name]:
-            self.logger.debug('Updating source model for %s' % src.name)
-            list(self._src_dict[name])[0].update(src)
-            return
+        match_srcs = self.match_source(src)
+        
+        #if name in self._src_dict and self._src_dict[name]:
+        if len(match_srcs) == 1:
 
+            self.logger.debug('Found matching source for %s : %s'
+                              %( src.name, match_srcs[0].name ) )
+            
+            if merge_sources:
+                self.logger.debug('Updating source model for %s' % src.name)
+                match_srcs[0].update(src)
+            else:
+                match_srcs[0].add_name(src.name)
+                self.logger.debug('Skipping source model for %s' % src.name)
+
+            self._src_dict[src.name.replace(' ', '').lower()].add(match_srcs[0])
+                
+            return
+        elif len(match_srcs) > 2:
+            self.logger.warning('Multiple sources matching %s' % name)
+            return
+            
         self._src_dict[src.name].add(src)
 
         for name in src.names:
@@ -1388,6 +1422,26 @@ class ROIModel(fermipy.config.Configurable):
 
         if build_index: self.build_src_index()
 
+    def match_source(self,src):
+        """Look for source or sources in the model that match the
+        given source.  Sources are matched by name and any association
+        columns defined in the assoc_xmatch_columns parameter.
+        """
+        
+        srcs = set()
+
+        names = [src.name]
+        for col in self.config['assoc_xmatch_columns']:
+            if col in src.assoc and src.assoc[col]:
+                names += [src.assoc[col]]
+
+        for name in names:
+            name = name.replace(' ', '').lower()
+            if name in self._src_dict and self._src_dict[name]:
+                srcs.update(self._src_dict[name])
+                
+        return list(srcs)
+        
     def load(self, **kwargs):
         """Load both point source and diffuse components."""
 
@@ -1395,6 +1449,7 @@ class ROIModel(fermipy.config.Configurable):
         extdir = kwargs.get('extdir', self.config['extdir'])
 
         self._srcs = []
+        self._src_dict = collections.defaultdict(set)
         self.load_diffuse_srcs()
 
         for c in self.config['catalogs']:
@@ -1643,7 +1698,7 @@ class ROIModel(fermipy.config.Configurable):
                                       self.config['src_radius_roi'],
                                       square=True, coordsys=coordsys)
         m = (m0 & m1)
-
+        
         offset = self.skydir.separation(cat.skydir).deg
         offset_cel = utils.sky_to_offset(self.skydir,
                                          cat.radec[:, 0], cat.radec[:, 1],
@@ -1654,7 +1709,7 @@ class ROIModel(fermipy.config.Configurable):
 
         for i, (row, radec) in enumerate(zip(cat.table[m],
                                              cat.radec[m])):
-
+            
             catalog_dict = row_to_dict(row)
             src_dict = {'catalog': catalog_dict}
             src_dict['Source_Name'] = row['Source_Name']
@@ -1683,7 +1738,8 @@ class ROIModel(fermipy.config.Configurable):
             src.data['offset_dec'] = offset_cel[:, 1][m][i]
             src.data['offset_glon'] = offset_gal[:, 0][m][i]
             src.data['offset_glat'] = offset_gal[:, 1][m][i]
-            self.load_source(src, False)
+            self.load_source(src, False,
+                             merge_sources=self.config['merge_sources'])
 
         self.build_src_index()
 
@@ -1738,10 +1794,12 @@ class ROIModel(fermipy.config.Configurable):
             s.data['offset_dec'] = offset_cel[:, 1][m][i]
             s.data['offset_glon'] = offset_gal[:, 0][m][i]
             s.data['offset_glat'] = offset_gal[:, 1][m][i]
-            self.load_source(s, False)
+            self.load_source(s, False,
+                             merge_sources=self.config['merge_sources'])
 
         for i, s in enumerate(diffuse_srcs):
-            self.load_source(s, False)
+            self.load_source(s, False,
+                             merge_sources=self.config['merge_sources'])
 
         self.build_src_index()
 
@@ -1757,6 +1815,7 @@ class ROIModel(fermipy.config.Configurable):
 
         self._src_skydir = SkyCoord(ra=radec[0], dec=radec[1], unit=u.deg)
         self._src_radius = self._src_skydir.separation(self.skydir)
+        self._srcs = sorted(self._srcs, key=lambda t: t['offset'])
 
     def write_xml(self, xmlfile):
         """Save this ROI model as an XML file."""

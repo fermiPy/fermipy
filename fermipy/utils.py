@@ -105,6 +105,9 @@ def gal2eq(l, b):
 
     dec = np.degrees(dec)
 
+    cosa[cosa<-1.0] = -1.0
+    cosa[cosa>1.0] = 1.0
+    
     ra = np.arccos(cosa)
     ra[np.where(sina < 0.)] = -ra[np.where(sina < 0.)]
 
@@ -140,6 +143,9 @@ def eq2gal(ra, dec):
 
     b = np.degrees(b)
 
+    cosl[cosl<-1.0] = -1.0
+    cosl[cosl>1.0] = 1.0
+    
     l = np.arccos(cosl)
     l[np.where(sinl < 0.)] = - l[np.where(sinl < 0.)]
 
@@ -929,7 +935,7 @@ def make_psf_kernel(psf, npix, cdelt, xpix, ypix):
 
     x = make_pixel_offset(npix, xpix, ypix)
     x *= cdelt
-
+    
     k = np.zeros((len(egy), npix, npix))
     for i in range(len(egy)):
         k[i] = 10 ** np.interp(np.ravel(x), dtheta,
@@ -959,13 +965,14 @@ def make_srcmap(skydir, psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
     nebin = len(energies)
 
     if spatial_model == 'GaussianSource':
-        k = make_cgauss_kernel(psf, sigma, npix * rebin, cdelt / rebin, xpix,
-                               ypix)
+        k = make_cgauss_kernel(psf, sigma, npix * rebin, cdelt / rebin,
+                               xpix * rebin, ypix * rebin)
     elif spatial_model == 'DiskSource':
-        k = make_cdisk_kernel(psf, sigma, npix * rebin, cdelt / rebin, xpix,
-                              ypix)
+        k = make_cdisk_kernel(psf, sigma, npix * rebin, cdelt / rebin,
+                              xpix * rebin, ypix * rebin)
     elif spatial_model == 'PSFSource':
-        k = make_psf_kernel(psf, npix * rebin, cdelt / rebin, xpix, ypix)
+        k = make_psf_kernel(psf, npix * rebin, cdelt / rebin,
+                            xpix * rebin, ypix * rebin)
     else:
         raise Exception('Unrecognized spatial model: %s' % spatial_model)
 

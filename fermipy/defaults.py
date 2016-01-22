@@ -59,7 +59,14 @@ model = {
     'catalogs': (None, '', list),
     'min_ts': (None, '', float),
     'min_flux': (None, '', float),
-    'remove_duplicates': (False, 'Remove duplicate catalog sources.', bool),
+    'merge_sources' :
+        (True, 'Merge properties of sources that appear in multiple '
+         'source catalogs.  If merge_sources=false then subsequent sources with '
+         'the same name will be ignored.', bool),
+    'assoc_xmatch_columns' :
+        (['3FGL_Name'],'Choose a set of association columns on which to '
+         'cross-match catalogs.',list),
+#    'remove_duplicates': (False, 'Remove duplicate catalog sources.', bool),
     'extract_diffuse': (
         False, 'Extract a copy of all mapcube components centered on the ROI.',
         bool)

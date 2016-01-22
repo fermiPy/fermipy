@@ -316,7 +316,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self.logger.info('\n' + '-' * 80 + '\n' + "This is fermipy version {}.".
                          format(fermipy.__version__))
-        self.print_config(self.logger, loglevel=logging.INFO)
+        self.print_config(self.logger, loglevel=logging.DEBUG)
 
         # Working directory (can be the same as savedir)
         if self.config['fileio']['usescratch']:
@@ -754,10 +754,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src = self.roi.get_source_by_name(name, True)
         src.update_data({'sed': None, 'extension': None,
-                         'assoc': None, 'class': None})
-
-        if 'ASSOC1' in src['catalog']:
-            src['assoc'] = src['catalog']['ASSOC1'].strip()
+                         'class': None})
 
         if 'CLASS1' in src['catalog']:
             src['class'] = src['catalog']['CLASS1'].strip()
@@ -1599,8 +1596,7 @@ class GTAnalysis(fermipy.config.Configurable):
         extension : dict
             Dictionary containing results of the extension analysis.  The same
             dictionary is also saved to the dictionary of this source under
-            'extension'.  
-
+            'extension'.
         """
 
         name = self.roi.get_source_by_name(name, True).name
@@ -1668,12 +1664,12 @@ class GTAnalysis(fermipy.config.Configurable):
         s = self.copy_source(name)
         model_name = '%s_ptsrc' % (name)
         s.set_name(model_name)
-        s.set_spatial_model('PointSource')
+        s.set_spatial_model('PSFSource')
+        #s.set_spatial_model('PointSource')
 
         self.logger.debug('Testing point-source model.')
         self.add_source(model_name, s, free=True)
-        self.fit(update=False)
-
+        self.fit(update=False)        
         o['logLike_ptsrc'] = -self.like()
         self.delete_source(model_name, save_template=False)
 
@@ -1699,7 +1695,7 @@ class GTAnalysis(fermipy.config.Configurable):
             if save_model_map:
                 self.generate_model_map(model_name=model_name + '%02i' % i,
                                         name=model_name)
-
+                
             self.delete_source(model_name, save_template=False)
 
         try:
@@ -3223,12 +3219,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         src = self.roi.create_source(name,src_dict)
         self.make_template(src, self.config['file_suffix'])
-
+        
         if self._like is None: return
 
         self.update_srcmap_file([src], True)
 
         if src['SpatialType'] == 'SkyDirFunction':
+
             pylike_src = pyLike.PointSource(self.like.logLike.observation())
             pylike_src.setDir(src.skydir.ra.deg, src.skydir.dec.deg, False,
                               False)

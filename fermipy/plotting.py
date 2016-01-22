@@ -128,8 +128,9 @@ def annotate(**kwargs):
     text = []
 
     if src:
-        if src['assoc']:
-            text += ['%s (%s)' % (src['name'], src['assoc'])]
+        
+        if 'ASSOC1' in src['assoc'] and src['assoc']['ASSOC1']:
+            text += ['%s (%s)' % (src['name'], src['assoc']['ASSOC1'])]
         else:
             text += [src['name']]
 
@@ -628,7 +629,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
     def run(self, gta, mcube_maps, **kwargs):
         """Make all plots."""
-
+        
         prefix = kwargs.get('prefix', 'test')
         format = kwargs.get('format', gta.config['plotting']['format'])
 
