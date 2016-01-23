@@ -667,7 +667,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sigma'], gta.roi)
-        p.plot(vmin=-5, vmax=5, levels=[-5, -3, 3, 5],
+        p.plot(vmin=-5, vmax=5, levels=[-5, -3, 3, 5, 7, 9, 11, 13, 15, 20, 25],
                cb_label='Significance [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'residmap_sigma',
