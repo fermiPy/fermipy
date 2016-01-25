@@ -2137,7 +2137,9 @@ class GTAnalysis(fermipy.config.Configurable):
         Parameters
         ----------
         sqrt_ts_threshold : float
-           Source threshold in sqrt(TS).
+           Source threshold in sqrt(TS).  Only peaks with sqrt(TS)
+           exceeding this threshold will be used as seeds for new
+           sources.
 
         min_separation : float
            Minimum separation in degrees of sources detected in each
@@ -2149,6 +2151,13 @@ class GTAnalysis(fermipy.config.Configurable):
            finder will continue adding sources until no additional
            peaks are found or the number of iterations exceeds this
            number.
+
+        sources_per_iter : int
+           Maximum number of sources that will be added in each
+           iteration.  If the number of detected peaks in a given
+           iteration is larger than this number, only the N peaks with
+           the largest TS will be used as seeds for the current
+           iteration.
 
         """
 
