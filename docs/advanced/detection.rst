@@ -14,8 +14,9 @@ the model.  These methods are
 
 * :ref:`tscube`: :py:meth:`~fermipy.gtanalysis.GTAnalysis.tscube`
   generates a TS map using the `gttscube` ST application.  In addition
-  to generating a TS map this method can also extract the likelihood
-  profile as a function of energy and position over the whole ROI.
+  to generating a TS map this method can also extract a test source
+  likelihood profile as a function of energy and position over the
+  whole ROI.
 
 * :ref:`residmap`: :py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap`
   generates a residual map by evaluating the difference between
@@ -37,9 +38,10 @@ TS Map
 
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` performs a likelihood
 ratio test for an additional source at the center of each spatial bin
-of the ROI.  The basic approach is similar to that of the `gttsmap` ST
-application.  For each spatial bin the method calculates the maximum
-likelihood test statistic given by
+of the ROI.  The methodology is similar to that of the `gttsmap` ST
+application but with a simplified source fitting implementation that
+significantly speeds up the calculation.  For each spatial bin the
+method calculates the maximum likelihood test statistic given by
 
 .. math::
 
@@ -76,6 +78,14 @@ the following examples.
        model['Index'] = index
        maps += [gta.tsmap('fit1',model=model)]
 
+If running interactively, the `multithread` option can be enabled to
+split the calculation across all available cores.  However it is not
+recommended to use this option when running in a cluster environment.
+       
+.. code-block:: python
+                
+   maps = gta.tsmap('fit1',model=model,multithread=True)
+       
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` returns a `maps`
 dictionary containing `~fermipy.utils.Map` representations of the TS
 and NPred of the best-fit test source at each position.
@@ -151,7 +161,7 @@ data/model residual at map position (*i*, *j*) is given by
 
    \mathrm{with} \quad
    \tilde{m}_{ij} = (m \ast k)_{ij} \quad \tilde{n}_{ij} = (n \ast k)_{ij}
-   \ln L_{P}(n,m) = n\ln(m) - m
+   \quad \ln L_{P}(n,m) = n\ln(m) - m
 
 where *n* and *m* are the data and model maps and *k* is the
 convolution kernel.  The spatial and spectral properties of the
@@ -252,7 +262,7 @@ Source Finding
    changes are likely to occur in future releases.
    
 
-`~fermipy.GTAnalysis.find_sources` is an iterative source-finding
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.find_sources` is an iterative source-finding
 algorithm that uses peak detection on the TS map to find the locations
 of new sources.  
 

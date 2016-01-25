@@ -108,7 +108,7 @@ class SourceFinder(fermipy.config.Configurable):
                                       self.config['sources_per_iter'])
         
         m = gta.tsmap('sourcefind_%02i'%iiter, model=src_dict, make_fits=False,
-                      multithread=True)
+                      **kwargs)
         amp = m['amplitude']
         peaks = find_peaks(m['sqrt_ts'], threshold, min_separation)
 
