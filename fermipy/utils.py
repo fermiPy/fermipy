@@ -1,7 +1,8 @@
 import os
 import copy
-import numpy as np
 from collections import OrderedDict
+
+import numpy as np
 from hpx_utils import HPX
 import xml.etree.cElementTree as et
 from astropy import units as u
@@ -176,6 +177,15 @@ def apply_minmax_selection(val, val_minmax):
         max_cut = False
 
     return (min_cut and max_cut)
+
+
+def create_source_name(skydir):
+    hms = skydir.icrs.ra.hms
+    dms = skydir.icrs.dec.dms
+    
+    return 'PS J%02.f%04.1f%+03.f%02.f' % (hms.h,
+                                           hms.m+hms.s/60.,
+                                           dms.d, dms.m+dms.s/60.)
 
 
 def create_model_name(src):

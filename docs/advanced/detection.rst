@@ -5,20 +5,31 @@ Source Detection
 ##################################
 
 fermipy provides several methods for source detection that can be used
-to look for unmodeled sources in the ROI as well as evaluate the
-general fit quality of the model.  These methods are
+to look for unmodeled sources as well as evaluate the fit quality of
+the model.  These methods are
 
-* :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap`: Evaluates the test
-  statistic (TS) for a new source centered at each spatial bin in the
-  ROI.  
+* :ref:`tsmap`: :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` generates a test
+  statistic (TS) map for a new source centered at each spatial bin in
+  the ROI.
 
-* :py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap`: Evaluates the
-  difference between smoothed data and model maps
-  (residual) at each spatial bin in the ROI.
+* :ref:`tscube`: :py:meth:`~fermipy.gtanalysis.GTAnalysis.tscube` generates a TS map
+  using the `gttscube` ST application.  In addition to the TS map this
+  method can also extract the likelihood profile as a function of
+  energy and position over the whole ROI.
 
-The function signatures and outputs of these two methods are similar
-and they provide complementary information about how well the model
-fits the data.  
+* :ref:`residmap`: :py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap` generates a
+  residual map by evaluating the difference between smoothed data and
+  model maps (residual) at each spatial bin in the ROI.
+
+* :ref:`findsources`:
+  :py:meth:`~fermipy.gtanalysis.GTAnalysis.find_sources` is an iterative
+  source-finding algorithim that adds new sources to the ROI by
+  looking for peaks in the TS map.
+
+Additional information about using each of these method is provided in
+the sections below.
+
+.. _tsmap:
 
 TS Map
 ======
@@ -31,7 +42,7 @@ likelihood test statistic given by
 
 .. math::
 
-   \mathrm{TS} = 2 \sum_{k} \ln L(0,\theta|n_{k}) - \ln L(\mu,\theta|n_{k})
+   \mathrm{TS} = 2 \sum_{k} \ln L(\mu,\theta|n_{k}) - \ln L(0,\theta|n_{k})
 
 where the summation index *k* runs over both spatial and energy bins,
 μ is the test source normalization parameter, and θ represents the
@@ -50,8 +61,8 @@ argument which follows the conventions as
    model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
    maps = gta.tsmap('fit1',model=model)
 
-   # Generate TS map for a power-law point source with Index=2.0 for
-   # E > 3.16 GeV
+   # Generate TS map for a power-law point source with Index=2.0 and
+   # restricting the analysis to E > 3.16 GeV
    model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
    maps = gta.tsmap('fit1_emin35',model=model,erange=[3.5,None])
 
@@ -128,6 +139,8 @@ Reference/API
 
 .. automethod:: fermipy.gtanalysis.GTAnalysis.tsmap
    :noindex:
+
+.. _residmap:
 
 Residual Map
 ============
@@ -210,4 +223,27 @@ Reference/API
 -------------
 
 .. automethod:: fermipy.gtanalysis.GTAnalysis.residmap
+   :noindex:
+
+.. _tscube:
+
+TS Cube
+=======
+
+.. warning:: 
+
+   The TS cube method is experimental and is not supported
+   by the current public release of the Fermi STs.  
+
+
+.. automethod:: fermipy.gtanalysis.GTAnalysis.tscube
+   :noindex:
+
+
+.. _findsources:
+
+Source Finding
+==============
+
+.. automethod:: fermipy.gtanalysis.GTAnalysis.find_sources
    :noindex:

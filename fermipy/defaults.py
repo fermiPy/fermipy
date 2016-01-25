@@ -166,6 +166,15 @@ tsmap = {
     'erange': (None, '', list),
 }
 
+#
+sourcefind = {
+    'model': (None, '', dict),
+    'min_separation': (1.0, '', float),
+    'sqrt_ts_threshold': (5.0, '', float),
+    'max_iter': (3, '', int),
+    'sources_per_iter': (3, '', int),
+}
+
 # Options for SED analysis
 sed = {
     'bin_index': (2.0, '', float),

@@ -21,6 +21,7 @@ import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator
+from fermipy.sourcefind import SourceFinder
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import Map, HpxMap
 from fermipy.utils import create_hpx_disk_region_string, create_hpx
@@ -107,7 +108,6 @@ def parabola((x, y), amplitude, x0, y0, sx, sy, theta):
 
     return np.ravel(v)
 
-
 def interpolate_function_min(x, y):
     sp = scipy.interpolate.splrep(x, y, k=2, s=0)
 
@@ -188,16 +188,11 @@ def run_gtapp(appname, logger, kw):
 
 def filter_dict(d, val):
     for k, v in d.items():
-        if v == val: 
+        if v == val:
             del d[k]
 
 
-def create_source_name(skydir):
-    hms = skydir.icrs.ra.hms
-    dms = skydir.icrs.dec.dms
-    return 'PS J%02.f%03.1f%+03.f%2.f'%(hms.h,
-                                        hms.m+hms.s/60.,
-                                        dms.d, dms.m+dms.s/60.)
+
 
 
 def gtlike_spectrum_to_dict(spectrum):
@@ -277,6 +272,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 'mc': defaults.mc,
                 'residmap': defaults.residmap,
                 'tsmap': defaults.tsmap,
+                'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
                 'extension': defaults.extension,
                 'localize': defaults.localize,
@@ -571,7 +567,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         Returns
         -------    
-        src : `~fermipy.roi_model.Source` 
+        src : `~fermipy.roi_model.Source`
             The deleted source object.
 
         """
@@ -701,7 +697,6 @@ class GTAnalysis(fermipy.config.Configurable):
 
         # Run data selection step
 
-
         self._like = SummedLikelihood()
         for i, c in enumerate(self._components):
             c.setup(xmlfile=xmlfile)
@@ -712,7 +707,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._init_roi_model()
 
-        if not init_sources: return
+        if not init_sources:
+            return
 
         for name in self.like.sourceNames():
             self._init_source(name)
@@ -1215,8 +1211,9 @@ class GTAnalysis(fermipy.config.Configurable):
         self.like.syncSrcParams(str(name))
 
     def residmap(self, prefix='', **kwargs):
-        """Generate 2-D residual maps using the current ROI model and
-        the given convolution kernel.
+        """Generate 2-D spatial residual maps using the current ROI
+        model and the convolution kernel defined with the `model`
+        argument.
 
         Parameters
         ----------
@@ -1555,7 +1552,7 @@ class GTAnalysis(fermipy.config.Configurable):
         will substitute an extended spatial template for the given
         source and perform a one-dimensional scan of the spatial
         extension parameter over the range specified with the width
-        parameters.  The resulting profile likelihood is used to
+        parameters.  The 1-D profile likelihood is used to
         compute the best-fit value, upper limit, and TS for extension.
 
         Parameters
@@ -1588,7 +1585,7 @@ class GTAnalysis(fermipy.config.Configurable):
             Fix all background sources when performing the extension fit.
 
         save_model_map : bool
-            Generate model maps for all steps in the likelihood scan.
+            Save model maps for all steps in the likelihood scan.
             
         Returns
         -------
@@ -2056,12 +2053,13 @@ class GTAnalysis(fermipy.config.Configurable):
         return o
 
     def tsmap(self, prefix='', **kwargs):
-        """Evaluate the TS for an additional source component as a
-        function of position within the ROI.  The output of this
-        method is a dictionary containing `~fermipy.utils.Map` objects
-        with the TS and amplitude of the best-fit test source.  By
-        default this method will also save maps to FITS files and
-        render them as image files.
+        """Generate a spatial TS map for a source component with
+        properties defined by the `model` argument.  The TS map will
+        have the same geometry as the ROI.  The output of this method
+        is a dictionary containing `~fermipy.utils.Map` objects with
+        the TS and amplitude of the best-fit test source.  By default
+        this method will also save maps to FITS files and render them
+        as image files.
 
         This method uses a simplified likelihood fitting
         implementation that only fits for the normalization of the
@@ -2132,49 +2130,40 @@ class GTAnalysis(fermipy.config.Configurable):
 
         return maps
 
-    def findsources(self): 
-        """An iterative source-finding algorithm."""
+
+    def find_sources(self, prefix='', **kwargs):
+        """An iterative source-finding algorithm.
+
+        Parameters
+        ----------
+        sqrt_ts_threshold : float
+           Source threshold in sqrt(TS).
+
+        min_separation : float
+           Minimum separation in degrees of sources detected in each
+           iteration. The source finder will look for the maximum peak
+           in the TS map within a circular region of this radius.
+
+        max_iter : int
+           Maximum number of source finding iterations.  The source
+           finder will continue adding sources until no additional
+           peaks are found or the number of iterations exceeds this
+           number.
+
+        """
+
+        self.logger.info('Running source finding.')
+
+        sf = SourceFinder(self.config['sourcefind'],
+                          fileio=self.config['fileio'],
+                          logging=self.config['logging'])
         
-        region_size = 10
-        sqrt_ts_threshold = 5.0
+        maps = sf.find_sources(self, prefix, **kwargs)
 
-        src_dict = {'Index' : 2.0, 
-                    'SpatialModel' : 'PointSource'}
-
-        m = self.tsmap(model=src_dict,make_fits=False,make_plots=False,multithread=True)
-        data = m['sqrt_ts'].counts
-        amp = m['amplitude'].counts
-        wcs = m['sqrt_ts'].wcs
-
-        local_max = scipy.ndimage.filters.maximum_filter(data, region_size)==data
-        local_max[data<sqrt_ts_threshold] = False
-#        peaks = scipy.ndimage.measurements.label(detected_peaks)
-
-        labeled, num_objects = scipy.ndimage.label(local_max)
-        slices = scipy.ndimage.find_objects(labeled)
-
-        names = []
-        for s in slices:
-            skydir = SkyCoord.from_pixel(s[1].start, s[0].start,wcs)
-            print skydir, create_source_name(skydir)
-            print data[s[0],s[1]], amp[s[0],s[1]]
-
-            name = create_source_name(skydir)
-            src_dict = {'Index' : 2.0, 
-                        'Prefactor' : 1E-13*amp[s[0],s[1]][0][0],
-                        'SpatialModel' : 'PointSource',
-                        'ra' : skydir.icrs.ra.deg, 
-                        'dec' : skydir.icrs.dec.deg}
-
-            names += [name]
-            self.add_source(name,src_dict,free=True)
-
-        self.fit()
-
-        o = {'sources' : []}
-
-
-
+        self.logger.info('Finished source finding.')
+        
+        return maps
+        
     def _init_optimizer(self):
         pass
 
@@ -2547,6 +2536,41 @@ class GTAnalysis(fermipy.config.Configurable):
         plotter.run(self, mcube_maps, prefix=prefix)
 
     def tscube(self, prefix='', **kwargs):
+        """Generate a spatial TS map for a source component with
+        properties defined by the `model` argument.  This method uses
+        the `gttscube` ST application for source fitting and will
+        simultaneously fit the test source normalization as well as
+        the normalizations of any background components that are
+        currently free.  The output of this method is a dictionary
+        containing `~fermipy.utils.Map` objects with the TS and
+        amplitude of the best-fit test source.  By default this method
+        will also save maps to FITS files and render them as image
+        files.
+
+        Parameters
+        ----------
+
+        prefix : str
+           Optional string that will be prepended to all output files
+           (FITS and rendered images).
+
+        model : dict
+           Dictionary defining the properties of the test source.
+
+        make_plots : bool
+           Write image files.
+
+        make_fits : bool
+           Write FITS files.
+
+        Returns
+        -------
+        
+        maps : dict
+           A dictionary containing the `~fermipy.utils.Map` objects
+           for TS and source amplitude.
+
+        """
 
         make_plots = kwargs.get('make_plots', True)
 
@@ -2680,17 +2704,6 @@ class GTAnalysis(fermipy.config.Configurable):
              #             'npred': Map(amp_values*model_npred, skywcs),
              #             'amplitude': Map(amp_values, skywcs),
              }
-
-        #        if make_plots:
-        #            plotter = plotting.AnalysisPlotter(self.config['plotting'],
-        #                                               fileio=self.config[
-        # 'fileio'],
-        #                                               logging=self.config[
-        # 'logging'])
-
-        #            plotter.make_tsmap_plots(self, m)
-
-        #        p = ROIPlotter(ts_map, self.roi)
 
         self.logger.info("Done")
         return o

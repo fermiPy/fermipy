@@ -510,8 +510,6 @@ class TSMapGenerator(fermipy.config.Configurable):
         else:
             results = map(wrap,positions)
 
-        print('done')
-
         for i, r in enumerate(results):
             ix = positions[i][0][1]
             iy = positions[i][0][2]
