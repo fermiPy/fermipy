@@ -22,7 +22,7 @@ import fermipy.config
 import fermipy.utils as utils
 import fermipy.defaults as defaults
 from fermipy.utils import merge_dict, wcs_to_axes, Map
-from fermipy.utils import edge_to_center, edge_to_width, valToEdge
+from fermipy.utils import edge_to_center, edge_to_width, val_to_edge
 from fermipy.hpx_utils import HpxMap
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
@@ -168,7 +168,7 @@ class ImagePlotter(object):
             self._projtype = 'HPX'
             self._proj = proj
             self._wcs,data = make_wcs_from_hpx(proj,data)
-       else:
+        else:
             raise Exception("Can't co-add map of unknown type %s"%type(proj))
                 
         self._data = data

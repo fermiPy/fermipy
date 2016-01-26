@@ -439,10 +439,6 @@ def tolist(x):
         return x
 
 
-<<<<<<< HEAD
-def create_wcs(skydir,coordsys='CEL',projection='AIT',
-               cdelt=1.0,crpix=1.,naxis=2, energies=None):
-=======
 def extract_mapcube_region(infile, skydir, outfile, maphdu=0):
     """Extract a region out of an all-sky mapcube file.
 

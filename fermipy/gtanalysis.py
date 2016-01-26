@@ -23,7 +23,7 @@ from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator
 from fermipy.sourcefind import SourceFinder
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import valToBinBounded, valToEdge, Map
+from fermipy.utils import val_to_bin_bounded, val_to_edge, Map
 from fermipy.utils import create_hpx_disk_region_string, create_hpx
 from fermipy.hpx_utils import HpxMap
 from fermipy.roi_model import ROIModel, Source
@@ -2656,17 +2656,6 @@ class GTAnalysis(fermipy.config.Configurable):
         skyproj = pyLike.FitScanner.buildSkyProj("AIT", refdir, pixsize, npix,
                                                  galactic)
 
-<<<<<<< HEAD
-        fitScanner = pyLike.FitScanner(self.like.composite,optObject,skyproj,npix,npix)
-        #fitScanner.set_verbose_bb(2)
-
-        ok = fitScanner.setPowerlawPointTestSource(funcFactory)
-
-        ok = fitScanner.run_tscube(True,10,5.0,-1,1e-3,30,0,False,1)
-
-        ok = fitScanner.writeFitsFile(OUTFILE,"gttscube",TMPLFILE)
-    
-=======
         print "Building fit scanner"
         fitScanner = pyLike.FitScanner(self.like.composite, optObject, skyproj,
                                        npix, npix)
