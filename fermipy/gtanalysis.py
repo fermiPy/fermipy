@@ -17,16 +17,17 @@ from astropy.coordinates import SkyCoord
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator
 from fermipy.sourcefind import SourceFinder
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import val_to_bin_bounded, val_to_edge, Map
-from fermipy.utils import create_hpx_disk_region_string, create_hpx
-from fermipy.hpx_utils import HpxMap
-from fermipy.roi_model import ROIModel, Source
+from fermipy.utils import Map
+from fermipy.utils import create_hpx_disk_region_string
+from fermipy.hpx_utils import HpxMap, HPX
+from fermipy.roi_model import ROIModel
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 # pylikelihood
@@ -389,7 +390,7 @@ class GTAnalysis(fermipy.config.Configurable):
                                                                     self.config[
                                                                         'binning'][
                                                                         'roiwidth'])
-            self._proj = create_hpx(-1,
+            self._proj = HPX.create_hpx(-1,
                                     self.config['binning'][
                                         'hpx_ordering_scheme'] == "NESTED",
                                     self.config['binning']['coordsys'],
@@ -831,10 +832,10 @@ class GTAnalysis(fermipy.config.Configurable):
        
         if self.projtype == "HPX":
             shape = (self.enumbins, self._proj.npix)
-            maps = [utils.make_coadd_map(maps, self._proj, shape)] + maps
+            maps = [fits_utils.make_coadd_map(maps, self._proj, shape)] + maps
         elif self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            maps = [utils.make_coadd_map(maps, self._proj, shape)] + maps
+            maps = [fits_utils.make_coadd_map(maps, self._proj, shape)] + maps
         else:
             raise Exception(
                 "Did not recognize projection type %s" % self.projtype)
@@ -1396,7 +1397,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def localize(self, name, **kwargs):
         """Perform a fit for the best-fit position of this source.
-        
+
         Parameters
         ----------
 
@@ -1418,10 +1419,10 @@ class GTAnalysis(fermipy.config.Configurable):
             existing source map of this source with one corresponding
             to its new location.
 
-        newname : str        
+        newname : str
             Name that will be assigned to the relocalized source model
             when update=True.  If newname is None then the existing
-            source name will be used.            
+            source name will be used.
 
         Returns
         -------
@@ -1438,8 +1439,7 @@ class GTAnalysis(fermipy.config.Configurable):
         # Extract options from kwargs
         config = copy.deepcopy(self.config['localize'])
         config.update(kwargs)
-        config.setdefault('newname',name)
-#                          name.replace(' ', '').lower() + '_reloc')
+        config.setdefault('newname', name)
 
         nstep = config['nstep']
         dtheta_max = config['dtheta_max']
@@ -1463,7 +1463,8 @@ class GTAnalysis(fermipy.config.Configurable):
         self.zero_source(name)
 
         o = {'config': config,
-             'logLike_base' : logLike0 }
+             'fit_success': True,
+             'logLike_base': logLike0 }
 
         deltax = np.linspace(-dtheta_max, dtheta_max, nstep)[:, np.newaxis]
         deltay = np.linspace(-dtheta_max, dtheta_max, nstep)[np.newaxis, :]
@@ -1476,7 +1477,8 @@ class GTAnalysis(fermipy.config.Configurable):
         lnlscan = dict(deltax=deltax,
                        deltay=deltay,
                        logLike=np.zeros((nstep, nstep)),
-                       dlogLike=np.zeros((nstep, nstep)))
+                       dlogLike=np.zeros((nstep, nstep)),
+                       dlogLike_fit=np.zeros((nstep, nstep)))
 
         for i, t in enumerate(scan_skydir):
             # make a copy
@@ -1488,7 +1490,7 @@ class GTAnalysis(fermipy.config.Configurable):
             #            s.set_spatial_model(spatial_model,w)
 
             self.add_source(model_name, s, free=True,
-                            save_source_maps=False)
+                            init_source=False, save_source_maps=False)
             self.fit(update=False)
 
             logLike1 = -self.like()
@@ -1500,23 +1502,34 @@ class GTAnalysis(fermipy.config.Configurable):
         dlogmax = np.max(lnlscan['dlogLike']) - np.min(lnlscan['dlogLike'])
         sigma = (0.5 * dtheta_max ** 2 / dlogmax) ** 0.5
 
-        p0 = (0.0, 0.0, 0.0, sigma, sigma, 0.0)
+        ix, iy = np.unravel_index(np.argmax(lnlscan['dlogLike']),(nstep,nstep))
+        p0 = (0.0, deltax[ix,iy], deltay[ix,iy], sigma, sigma, 0.0)
 
         try:
             popt, pcov = scipy.optimize.curve_fit(parabola, (
                 lnlscan['deltax'], lnlscan['deltay']),
-                                                  lnlscan['dlogLike'].flat, p0)
+                lnlscan['dlogLike'].flat, p0)
         except Exception:
             popt = p0
+            o['fit_success'] = False
             self.logger.error('Localization failed.', exc_info=True)
 
+        offset = (popt[1]**2 + popt[2]**2)**0.5
+        if o['fit_success'] and offset > dtheta_max:
+            o['fit_success'] = False
+            self.logger.error('Position offset larger than scan region:\n '
+                              'offset = %.3f dtheta_max = %.3f' % (offset,dtheta_max))
+            
+        lnlscan['dlogLike_fit'] = parabola((lnlscan['deltax'], lnlscan['deltay']),
+                                           *popt)
+            
         o['lnlscan'] = lnlscan
-
         o['deltax'] = popt[1]
         o['deltay'] = popt[2]
         o['sigmax'] = popt[3]
         o['sigmay'] = popt[4]
         o['theta'] = popt[5]
+        o['offset'] = offset
 
         new_skydir = utils.offset_to_skydir(skydir, popt[1], popt[2],
                                             coordsys=self.config['binning']['coordsys'])
@@ -1528,7 +1541,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         saved_state.restore()
 
-        if update:
+        if update and o['fit_success']:
 
 #            if newname == name:
 #                raise Exception('Error setting name for new source model.  '
@@ -1536,7 +1549,7 @@ class GTAnalysis(fermipy.config.Configurable):
 #                                'source name.')
 
             self.logger.info(
-                'Updating position: %.3f %.3f' % (o['ra'], o['dec']))
+                'Updating position to: RA %8.3f DEC %8.3f' % (o['ra'], o['dec']))
             s = self.copy_source(name)
             self.delete_source(name)
             s.set_position(new_skydir)
@@ -2397,7 +2410,7 @@ class GTAnalysis(fermipy.config.Configurable):
         for i, c in enumerate(self._components):
             maps += [c.model_counts_map(name)]
         shape = (self.enumbins, self.npix, self.npix)
-        model_counts = utils.make_coadd_map(maps, self._proj, shape)
+        model_counts = fits_utils.make_coadd_map(maps, self._proj, shape)
 
         """
         if self.projtype == "HPX":
@@ -2435,11 +2448,11 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if self.projtype == "HPX":
             shape = (self.enumbins, self._proj.npix)
-            model_counts = utils.make_coadd_map(maps, self._proj, shape)
+            model_counts = fits_utils.make_coadd_map(maps, self._proj, shape)
             utils.write_hpx_image(model_counts.counts, self._proj, outfile)
         elif self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            model_counts = utils.make_coadd_map(maps, self._proj, shape)
+            model_counts = fits_utils.make_coadd_map(maps, self._proj, shape)
             utils.write_fits_image(model_counts.counts, self._proj, outfile)
         else:
             raise Exception(
@@ -2735,8 +2748,8 @@ class GTAnalysis(fermipy.config.Configurable):
                              fileio=self.config['fileio'],
                              logging=self.config['logging'])
 
-        model = kwargs.get('model', self.config['model'])
-        return tsg.make_ts_map(self, prefix, model,**kwargs)
+        model = kwargs.get('model', self.config['tsmap']['model'])
+        return tsg.make_ts_map(self, prefix, copy.deepcopy(model), **kwargs)
 
     def _tsmap_pylike(self, prefix, **kwargs):
         """Evaluate the TS for an additional source component at each point
@@ -2842,14 +2855,14 @@ class GTAnalysis(fermipy.config.Configurable):
         """
         if self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            self._ccube = utils.make_coadd_map(cmaps, self._proj, shape)
+            self._ccube = fits_utils.make_coadd_map(cmaps, self._proj, shape)
             utils.write_fits_image(self._ccube.counts, self._ccube.wcs,
                                    self._ccube_file)
             rm['counts'] += np.squeeze(
                 np.apply_over_axes(np.sum, self._ccube.counts,
                                    axes=[1, 2]))
         elif self.projtype == "HPX":
-            self._ccube = utils.make_coadd_map(cmaps, self._proj, shape)
+            self._ccube = fits_utils.make_coadd_map(cmaps, self._proj, shape)
             utils.write_hpx_image(self._ccube.counts, self._ccube.hpx,
                                   self._ccube_file)
             rm['counts'] += np.squeeze(
@@ -3130,7 +3143,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self._hpx_region = create_hpx_disk_region_string(self.roi.skydir,
                                                              self._coordsys,
                                                              0.5*self.config['binning']['roiwidth'])
-            self._proj = create_hpx(-1,
+            self._proj = HPX.create_hpx(-1,
                                      self.config['binning']['hpx_ordering_scheme'] == "NESTED",
                                      self._coordsys,
                                      self.config['binning']['hpx_order'],
@@ -3749,12 +3762,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                  logger=self.logger)
 
     def simulate_source(self, name):
-
+        
         data = self.counts_map().counts
         m = self.model_counts_map(name)
-        data += np.random.poisson(m.counts).astype(float)
-
-        # saveSourceMaps?
+        
+        src_data = np.random.poisson(m.counts).astype(float)
+        data += src_data
 
         utils.update_source_maps(self._srcmap_file, {'PRIMARY': data},
                                  logger=self.logger)
