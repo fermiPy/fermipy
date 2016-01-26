@@ -17,11 +17,7 @@ import astropy.wcs as pywcs
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Galactic, ICRS
 
-<<<<<<< HEAD
-from utils import read_energy_bounds
-=======
 import fermipy.utils as utils
->>>>>>> e56baa7b7e9f8097c7c154bec127a9b1e76c464f
 
 # This is an approximation of the size of HEALPix pixels (in degrees) 
 # for a particular order.   It is used to convert from HEALPix to WCS-based

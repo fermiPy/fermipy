@@ -94,6 +94,10 @@ def plotCastro(castroData,ylims,nstep=25,zlims=None):
                    origin='lower', aspect='auto',interpolation='nearest',
                    vmin=zmin, vmax=zmax,cmap=matplotlib.cm.jet_r)
     
+    #limits = castroData.getLimits(0.05)
+    #ebin_centers = np.sqrt(castroData.ebins[0:-1]*castroData.ebins[1:])
+    #ax.errorbar(ebin_centers,limits)
+
     return fig,ax,im
 
 

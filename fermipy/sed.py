@@ -22,6 +22,15 @@ from fermipy import utils
 from utils import read_energy_bounds
 
 
+# Some useful functions
+
+
+def alphaToDeltaLogLike_1DOF(alpha):
+    """ return the delta log-likelihood corresponding to a particular C.L. of (1-alpha)%
+    """
+    dlnl = pow(np.sqrt(2.)*spf.erfinv(1-2*alpha),2.)/2.  
+    return dlnl
+
 
 class Interpolator(object):
     """ Helper class for interpolating a 1-D function from a
@@ -163,6 +172,50 @@ class LnLFn(object):
         """ return the function value at the maximum likelihood estimate """
         return self._interp(self.mle())
 
+    
+    def getLimit(self,alpha,upper=True):
+        """ Evaluate the limits corresponding to a C.L. of (1-alpha)%.
+
+        Parameters
+        ----------
+        alpha :  limit confidence level.
+        upper :  upper or lower limits.
+        """
+        dlnl = alphaToDeltaLogLike_1DOF(alpha)
+        lnl_max = self.fn_mle()
+
+        # This ultra-safe code to find an absolute maximum
+        #fmax = self.fn_mle()
+        #m = (fmax-self.interp.y > 0.1+dlnl) & (self.interp.x>self._mle)
+
+        #if sum(m) == 0:
+        #    xmax = self.interp.x[-1]*10
+        #else:
+        #    xmax = self.interp.x[m][0]
+
+        # Matt has found that this is use an interpolator than an actual root-finder to 
+        # find the root probably b/c of python overhead       
+        #rf = lambda x: self._interp(x)+dlnl-lnl_max
+        if upper:
+            x = np.linspace(self._mle,self._interp.xmax,100)   
+            #return opt.brentq(rf,self._mle,self._interp.xmax,xtol=1e-10*np.abs(self._mle))
+        else:
+            x = np.linspace(self._interp.xmin,self._mle,100)   
+            #return opt.brentq(rf,self._interp.xmin,self._mle,xtol=1e-10*np.abs(self._mle))
+            
+        return np.interp(dlnl,lnl_max-self.interp(x),x)
+
+
+    def getInterval(self,alpha):
+        """ Evaluate the interval corresponding to a C.L. of (1-alpha)%.
+
+        Parameters
+        ----------
+        alpha : limit confidence level.
+        """
+        lo_lim = self.getLimit(alpha,upper=False)
+        hi_lim = self.getLimit(alpha,upper=True)
+        return (lo_err,hi_err)
 
 
 
@@ -254,6 +307,25 @@ class CastroData(object):
         """
         mle_vals = self.mles()
         return self(mle_vals)
+
+    
+    def getLimits(self,alpha,upper=True):
+        """ Evaluate the limits corresponding to a C.L. of (1-alpha)%.
+
+        Parameters
+        ----------
+        alpha :  limit confidence level.
+        upper :  upper or lower limits.
+
+        returns an array of values, one for each energy bin
+        """
+        limit_vals = np.ndarray((self._ne))
+        
+        for i in range(self._ne):
+            limit_vals[i] = self._loglikes[i].getLimit(alpha,upper)
+            pass
+        return limit_vals
+
 
     
 
