@@ -276,6 +276,7 @@ class ROIPlotter(fermipy.config.Configurable):
         self._roi = roi
         self._cmap = cmap        
 
+        print cmap
         if isinstance(cmap,Map):
             self._projtype = 'WCS'
             self._data = cmap.counts.T
@@ -289,7 +290,7 @@ class ROIPlotter(fermipy.config.Configurable):
                                                     oversample=2)                                                     
             self._data = dataT.T
         else:
-            raise Exception("Can't make ROIPlotter of unknown projection type %s"%type(self._proj))
+            raise Exception("Can't make ROIPlotter of unknown projection type %s"%type(cmap))
     
         self._erange = self.config['erange']
 

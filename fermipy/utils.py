@@ -3,7 +3,7 @@ import copy
 from collections import OrderedDict
 
 import numpy as np
-from hpx_utils import HPX
+from hpx_utils import HPX, HpxMap
 import xml.etree.cElementTree as et
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -57,18 +57,6 @@ class Map(Map_Base):
         header = pyfits.Header.fromstring(header.tostring())
         wcs = pywcs.WCS(header)
         return Map(data, wcs)
-
-
-class HpxMap(Map_Base):
-    """ Representation of a 2D or 3D counts map using HEALPix. """
-
-    def __init__(self, counts, hpx):
-        Map_Base.__init__(self, counts)
-        self._hpx = hpx
-
-    @property
-    def hpx(self):
-        return self._hpx
 
 
 def format_filename(outdir, basename, prefix=None, extension=None):
