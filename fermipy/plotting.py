@@ -276,7 +276,6 @@ class ROIPlotter(fermipy.config.Configurable):
         self._roi = roi
         self._cmap = cmap        
 
-        print cmap
         if isinstance(cmap,Map):
             self._projtype = 'WCS'
             self._data = cmap.counts.T
