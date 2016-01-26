@@ -52,7 +52,22 @@ fermipy.utils module
     :undoc-members:
     :show-inheritance:
 
+fermipy.tsmap module
+--------------------
 
+.. automodule:: fermipy.tsmap
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+fermipy.residmap module
+-----------------------
+
+.. automodule:: fermipy.residmap
+    :members:
+    :undoc-members:
+    :show-inheritance:       
+       
 Module contents
 ---------------
 

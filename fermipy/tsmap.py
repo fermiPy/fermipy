@@ -3,13 +3,15 @@ from __future__ import absolute_import, division, print_function, \
 
 import os
 import copy
+import itertools
+import functools
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
 import warnings
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
-import fermipy.config as config
 from fermipy.utils import Map
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
@@ -293,7 +295,7 @@ def f_cash(x, counts, background, model):
 def sum_arrays(x):
     return sum([t.sum() for t in x])    
 
-def _ts_value(position, counts, background, model, C_0_map, method):
+def _ts_value(position, counts, background, model, C_0_map, method,logger=None):
     """
     Compute TS value at a given pixel position using the approach described
     in Stewart (2009).
@@ -320,8 +322,7 @@ def _ts_value(position, counts, background, model, C_0_map, method):
     if not isinstance(background,list): background = [background]
     if not isinstance(model,list): model = [model]
     if not isinstance(C_0_map,list): C_0_map = [C_0_map]
-    
-    #    flux = np.ones(shape=counts.shape)
+
     extract_fn = _collect_wrapper(extract_large_array)
     truncate_fn = _collect_wrapper(extract_small_array)
 
@@ -342,7 +343,9 @@ def _ts_value(position, counts, background, model, C_0_map, method):
         raise ValueError('Invalid fitting method.')
 
     if niter > MAX_NITER:
-        log.warning('Exceeded maximum number of function evaluations!')
+        #log.warning('Exceeded maximum number of function evaluations!')
+        if logger is not None:
+            logger.warning('Exceeded maximum number of function evaluations!')
         return np.nan, amplitude, niter
 
     with np.errstate(invalid='ignore', divide='ignore'):
@@ -367,6 +370,9 @@ class TSMapGenerator(fermipy.config.Configurable):
 
         models = kwargs.get('models', self.config['models'])
 
+        if isinstance(models,dict):
+            models = [models]
+
         o = []
 
         for m in models:
@@ -378,7 +384,43 @@ class TSMapGenerator(fermipy.config.Configurable):
         return o
 
     def make_ts_map(self, gta, prefix, src_dict=None,**kwargs):
+        """
+        Make a TS map from a GTAnalysis instance.  The
+        spectral/spatial characteristics of the test source can be
+        defined with the src_dict argument.  By default this method
+        will generate a TS map for a point source with an index=2.0
+        power-law spectrum.
 
+        Parameters
+        ----------
+
+        gta : `~fermipy.gtanalysis.GTAnalysis`
+            Analysis instance.
+
+        src_dict : dict or `~fermipy.roi_model.Source` object
+            Dictionary or Source object defining the properties of the
+            test source that will be used in the scan.
+
+        """
+        
+        make_fits = kwargs.get('make_fits', True)
+        exclude = kwargs.get('exclude', None)
+        multithread = kwargs.get('multithread',self.config['multithread'])
+        threshold = kwargs.get('threshold',1E-2)
+        max_kernel_radius = kwargs.get('max_kernel_radius',
+                                       self.config['max_kernel_radius'])
+
+        erange = kwargs.get('erange', self.config['erange'])
+        if erange is not None:            
+            if len(erange) == 0: erange = [None,None]
+            elif len(erange) == 1: erange += [None]            
+            erange[0] = (erange[0] if erange[0] is not None 
+                         else gta.energies[0])
+            erange[1] = (erange[1] if erange[1] is not None 
+                         else gta.energies[-1])
+        else:
+            erange = [gta.energies[0],gta.energies[-1]]
+        
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
                       np.round((gta.npix - 1.0) / 2.))
@@ -395,101 +437,119 @@ class TSMapGenerator(fermipy.config.Configurable):
         src_dict.setdefault('Index', 2.0)
         src_dict.setdefault('Prefactor', 1E-13)
 
-        gta.add_source('tsmap_testsource', src_dict, free=True,
-                       init_source=False)
-        src = gta.roi['tsmap_testsource']
-
-        modelname = utils.create_model_name(src)
-
         counts = []
         background = []
         model = []
         c0_map = []
-        positions = []
+        eslices = []
+        enumbins = []
         model_npred = 0
         for c in gta.components:
-            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')
-            bm = c.model_counts_map(exclude=['tsmap_testsource']).counts.astype(
-                'float')
-            cm = c.counts_map().counts.astype('float')
 
-            model += [mm]
+            imin = utils.val_to_edge(c.energies,erange[0])[0]
+            imax = utils.val_to_edge(c.energies,erange[1])[0]
+
+            eslice = slice(imin,imax)
+            bm = c.model_counts_map(exclude=exclude).counts.astype('float')[eslice,...]
+            cm = c.counts_map().counts.astype('float')[eslice,...]
+
             background += [bm]
             counts += [cm]
             c0_map += [cash(cm, bm)]
-            positions += [[0, 0, 0]]
+            eslices += [eslice]
+            enumbins += [cm.shape[0]]
+
+        self.logger.info(src_dict)
+        gta.add_source('tsmap_testsource', src_dict, free=True,
+                       init_source=False)
+        src = gta.roi['tsmap_testsource']
+        modelname = utils.create_model_name(src)
+        for c, eslice in zip(gta.components,eslices):
+            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')[eslice,...]
             model_npred += np.sum(mm)
-
+            model += [mm]
+            
         gta.delete_source('tsmap_testsource')
-
+        
         for i, mm in enumerate(model):
 
-            nx = 3
-            ny = 3
-            threshold = 1E-2
-
+            dpix = 3
             for j in range(mm.shape[0]):
-                ix,iy = np.unravel_index(np.argmax(mm[j,...]),mm[j,...].shape)
 
+                ix,iy = np.unravel_index(np.argmax(mm[j,...]),mm[j,...].shape) 
                 mx = mm[j,ix, :] > mm[j,ix,iy] * threshold
                 my = mm[j,:, iy] > mm[j,ix,iy] * threshold
-                nx = max(nx, np.round(np.sum(mx) / 2.))
-                ny = max(ny, np.round(np.sum(my) / 2.))                
-#                print(j, nx, ny, np.round(np.sum(mx) / 2.))
+                dpix = max(dpix, np.round(np.sum(mx) / 2.))
+                dpix = max(dpix, np.round(np.sum(my) / 2.))
+                
+            if max_kernel_radius is not None and \
+                    dpix > int(max_kernel_radius/gta.components[i].binsz):
+                dpix = int(max_kernel_radius/gta.components[i].binsz)
 
-            nmax = max(nx,ny)
-            xslice = slice(max(xpix-nmax,0),min(xpix+nmax+1,gta.npix))
+            xslice = slice(max(xpix-dpix,0),min(xpix+dpix+1,gta.npix))
             model[i] = model[i][:,xslice,xslice]
-
+            
         ts_values = np.zeros((gta.npix, gta.npix))
         amp_values = np.zeros((gta.npix, gta.npix))
-
-        for i in range(gta.npix):
-            for j in range(gta.npix):
-
-                for k, p in enumerate(positions):
-                    positions[k][0] = gta.components[k].enumbins//2
-                    positions[k][1] = i
-                    positions[k][2] = j
-
-                ts, amp, niter = _ts_value(positions, counts, background,
-                                           model, c0_map, method='root brentq')
-
-                #                print(ts, amp, niter)
-                ts_values[i, j] = ts
-                amp_values[i, j] = amp
-
-        ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                            'tsmap_ts.fits',
-                                            prefix=[prefix,modelname])
-
-        sqrt_ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                                 'tsmap_sqrt_ts.fits',
-                                                 prefix=[prefix, modelname])
         
-        npred_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                               'tsmap_npred.fits',
-                                               prefix=[prefix, modelname])
+        wrap = functools.partial(_ts_value, counts=counts, 
+                                 background=background, model=model,
+                                 C_0_map=c0_map, method='root brentq')
+#                                 logger=self.logger)
 
-        amp_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                             'tsmap_amplitude.fits',
-                                             prefix=[prefix, modelname])
+        positions = []
+        for i,j in itertools.product(range(gta.npix),range(gta.npix)):
+            p = [[k//2,i,j] for k in enumbins]
+            positions += [p]
 
-        utils.write_fits_image(ts_values, skywcs, ts_map_file)
-        utils.write_fits_image(ts_values**0.5, skywcs, sqrt_ts_map_file)
-        utils.write_fits_image(amp_values*model_npred, skywcs, npred_map_file)
-        utils.write_fits_image(amp_values, skywcs, amp_map_file)
+        if multithread:            
+            pool = Pool()
+            results = pool.map(wrap,positions)
+            pool.close()
+            pool.join()
+        else:
+            results = map(wrap,positions)
 
-        files = {'ts': os.path.basename(ts_map_file),
-                 'sqrt_ts': os.path.basename(sqrt_ts_map_file),
-                 'npred': os.path.basename(npred_map_file),
-                 'amplitude': os.path.basename(amp_map_file),
-                 }
+        for i, r in enumerate(results):
+            ix = positions[i][0][1]
+            iy = positions[i][0][2]
+            ts_values[ix, iy] = r[0]
+            amp_values[ix, iy] = r[1]
+
+        files = {}
+
+        if make_fits:
+
+            ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                'tsmap_ts.fits',
+                                                prefix=[prefix,modelname])
+
+            sqrt_ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                     'tsmap_sqrt_ts.fits',
+                                                     prefix=[prefix, modelname])
+
+            npred_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                   'tsmap_npred.fits',
+                                                   prefix=[prefix, modelname])
+
+            amp_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                 'tsmap_amplitude.fits',
+                                                 prefix=[prefix, modelname])
+
+            utils.write_fits_image(ts_values, skywcs, ts_map_file)
+            utils.write_fits_image(ts_values**0.5, skywcs, sqrt_ts_map_file)
+            utils.write_fits_image(amp_values*model_npred, skywcs, npred_map_file)
+            utils.write_fits_image(amp_values, skywcs, amp_map_file)
+
+            files = {'ts': os.path.basename(ts_map_file),
+                     'sqrt_ts': os.path.basename(sqrt_ts_map_file),
+                     'npred': os.path.basename(npred_map_file),
+                     'amplitude': os.path.basename(amp_map_file),
+                     }
 
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),
              'files': files,
-             'wcs': skywcs,
              'ts': Map(ts_values, skywcs),
              'sqrt_ts': Map(ts_values**0.5, skywcs),
              'npred': Map(amp_values*model_npred, skywcs),
@@ -497,3 +557,4 @@ class TSMapGenerator(fermipy.config.Configurable):
              }
 
         return o
+

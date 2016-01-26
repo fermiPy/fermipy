@@ -1,6 +1,7 @@
 import copy
 import os
 import numpy as np
+import scipy.signal
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
@@ -26,13 +27,43 @@ def poisson_lnl(nc, mu):
     return lnl
 
 
-def smooth(m, k, cpix, mode='constant', threshold=0.01):
-    from scipy import ndimage
+def convolve_map(m, k, cpix, threshold=0.001,imin=0,imax=None):
+    """
+    Perform an energy-dependent convolution on a sequence of 2-D spatial maps.
 
-    o = np.zeros(m.shape)
-    for i in range(m.shape[0]):
+    Parameters
+    ----------
+    
+    m : `~numpy.ndarray`
+       3-D map containing a sequence of 2-D spatial maps.  First
+       dimension should be energy.
+    
+    k : `~numpy.ndarray`
+       3-D map containing a sequence of convolution kernels (PSF) for
+       each slice in m.  This map should have the same dimension as m.
 
-        ks = k[i, :, :]
+    cpix : list
+       Indices of kernel reference pixel in the two spatial dimensions.
+
+    threshold : float
+       Kernel amplitude 
+
+    imin : int
+       Minimum index in energy dimension.
+
+    imax : int
+       Maximum index in energy dimension.
+
+    """
+    islice = slice(imin,imax)
+
+    o = np.zeros(m[islice,...].shape)
+
+    # Loop over energy
+    for i in range(m[islice,...].shape[0]):
+
+        ks = k[islice,...][i,...]
+        ms = m[islice,...][i,...]
 
         mx = ks[cpix[0], :] > ks[cpix[0], cpix[1]] * threshold
         my = ks[:, cpix[1]] > ks[cpix[0], cpix[1]] * threshold
@@ -40,20 +71,53 @@ def smooth(m, k, cpix, mode='constant', threshold=0.01):
         nx = max(3, np.round(np.sum(mx) / 2.))
         ny = max(3, np.round(np.sum(my) / 2.))
 
+        # Ensure that there is an odd number of pixels in the kernel
+        # array
+        if cpix[0] + nx + 1 >= ms.shape[0] or cpix[0]-nx < 0:
+            nx -= 1        
+            ny -= 1
+
         sx = slice(cpix[0] - nx, cpix[0] + nx + 1)
         sy = slice(cpix[1] - ny, cpix[1] + ny + 1)
 
         ks = ks[sx, sy]
 
-        origin = [0, 0]
-        if ks.shape[0] % 2 == 0: origin[0] += 1
-        if ks.shape[1] % 2 == 0: origin[1] += 1
+#        origin = [0, 0]
+#        if ks.shape[0] % 2 == 0: origin[0] += 1
+#        if ks.shape[1] % 2 == 0: origin[1] += 1
+#        o[i,...] = ndimage.convolve(ms, ks, mode='constant',
+#                                     origin=origin, cval=0.0)
 
-        o[i, :, :] = ndimage.convolve(m[i, :, :], ks, mode=mode,
-                                      origin=origin, cval=0.0)
+        o[i,...] = scipy.signal.fftconvolve(ms, ks, mode='same')
 
-    #    o /= np.sum(k**2)
     return o
+
+def get_source_kernel(gta, name, kernel=None):
+    """Get the PDF for the given source."""
+
+    sm = []
+    zs = 0
+    for c in gta.components:
+        z = c.model_counts_map(name).counts.astype('float')
+        if kernel is not None:
+            shape = (z.shape[0],) + kernel.shape
+            z = np.apply_over_axes(np.sum, z, axes=[1, 2]) * np.ones(
+                shape) * kernel[np.newaxis, :, :]
+            zs += np.sum(z)
+        else:
+            zs += np.sum(z)
+
+        sm.append(z)
+
+    sm2 = 0
+    for i, m in enumerate(sm):
+        sm[i] /= zs
+        sm2 += np.sum(sm[i] ** 2)
+
+    for i, m in enumerate(sm):
+        sm[i] /= sm2
+
+    return sm
 
 class ResidMapGenerator(fermipy.config.Configurable):
     """This class generates spatial residual maps from the difference
@@ -68,65 +132,53 @@ class ResidMapGenerator(fermipy.config.Configurable):
                     fileio=defaults.fileio,
                     logging=defaults.logging)
 
-    def __init__(self, config, gta, **kwargs):
+    def __init__(self, config=None, **kwargs):
         #        super(ResidMapGenerator,self).__init__(config,**kwargs)
         fermipy.config.Configurable.__init__(self, config, **kwargs)
-        self._gta = gta
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
                                  ll(self.config['logging']['verbosity']))
 
-    def get_source_mask(self, name, kernel=None):
-
-        sm = []
-        zs = 0
-        for c in self._gta.components:
-            z = c.model_counts_map(name).counts.astype('float')
-            if kernel is not None:
-                shape = (z.shape[0],) + kernel.shape
-                z = np.apply_over_axes(np.sum, z, axes=[1, 2]) * np.ones(
-                    shape) * kernel[np.newaxis, :, :]
-                zs += np.sum(z)
-            else:
-                zs += np.sum(z)
-
-            sm.append(z)
-
-        sm2 = 0
-        for i, m in enumerate(sm):
-            sm[i] /= zs
-            sm2 += np.sum(sm[i] ** 2)
-
-        for i, m in enumerate(sm):
-            sm[i] /= sm2
-
-        return sm
-
-    def run(self, prefix, **kwargs):
+    def run(self, gta, prefix, **kwargs):
 
         models = kwargs.get('models', self.config['models'])
+
+        if isinstance(models,dict):
+            models = [models]
 
         o = []
 
         for m in models:
             self.logger.info('Generating Residual map')
             self.logger.info(m)
-            o += [self.make_residual_map(copy.deepcopy(m), prefix, **kwargs)]
+            o += [self.make_residual_map(gta,prefix,copy.deepcopy(m),**kwargs)]
 
         return o
 
-    def make_residual_map(self, src_dict, prefix, exclude=None, **kwargs):
+    def make_residual_map(self, gta, prefix, src_dict=None, **kwargs):
 
-        exclude = exclude
+        exclude = kwargs.get('exclude', None)
+        erange = kwargs.get('erange', self.config['erange'])
+
+        if erange is not None:            
+            if len(erange) == 0: erange = [None,None]
+            elif len(erange) == 1: erange += [None]            
+            erange[0] = (erange[0] if erange[0] is not None 
+                         else gta.energies[0])
+            erange[1] = (erange[1] if erange[1] is not None 
+                         else gta.energies[-1])
+        else:
+            erange = [gta.energies[0],gta.energies[-1]]
 
         # Put the test source at the pixel closest to the ROI center
-        xpix, ypix = (np.round((self._gta.npix - 1.0) / 2.),
-                      np.round((self._gta.npix - 1.0) / 2.))
+        xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
+                      np.round((gta.npix - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        skywcs = self._gta._skywcs
+        skywcs = gta._skywcs
         skydir = utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
+        if src_dict is None: src_dict = {}
         src_dict['ra'] = skydir.ra.deg
         src_dict['dec'] = skydir.dec.deg
         src_dict.setdefault('SpatialModel', 'PointSource')
@@ -137,40 +189,41 @@ class ResidMapGenerator(fermipy.config.Configurable):
 
         if src_dict['SpatialModel'] == 'Gaussian':
             kernel = utils.make_gaussian_kernel(src_dict['SpatialWidth'],
-                                                cdelt=self._gta.components[
-                                                    0].binsz,
+                                                cdelt=gta.components[0].binsz,
                                                 npix=101)
             kernel /= np.sum(kernel)
             cpix = [50, 50]
 
-        self._gta.add_source('testsource', src_dict, free=True,
-                             init_source=False)
-        src = self._gta.roi.get_source_by_name('testsource', True)
+        gta.add_source('residmap_testsource', src_dict, free=True,
+                       init_source=False,save_source_maps=False)
+        src = gta.roi.get_source_by_name('residmap_testsource', True)
 
         modelname = utils.create_model_name(src)
-
-        enumbins = self._gta.enumbins
-        npix = self._gta.components[0].npix
+        npix = gta.components[0].npix
 
         mmst = np.zeros((npix, npix))
         cmst = np.zeros((npix, npix))
         emst = np.zeros((npix, npix))
 
-        sm = self.get_source_mask('testsource', kernel)
+        sm = get_source_kernel(gta,'residmap_testsource', kernel)
         ts = np.zeros((npix, npix))
         sigma = np.zeros((npix, npix))
         excess = np.zeros((npix, npix))
 
-        self._gta.delete_source('testsource')
+        gta.delete_source('residmap_testsource')
 
-        for i, c in enumerate(self._gta.components):
+        for i, c in enumerate(gta.components):
+
+            imin = utils.val_to_edge(c.energies,erange[0])[0]
+            imax = utils.val_to_edge(c.energies,erange[1])[0]
+
             mc = c.model_counts_map(exclude=exclude).counts.astype('float')
             cc = c.counts_map().counts.astype('float')
             ec = np.ones(mc.shape)
 
-            ccs = smooth(cc, sm[i], cpix)
-            mcs = smooth(mc, sm[i], cpix)
-            ecs = smooth(ec, sm[i], cpix)
+            ccs = convolve_map(cc, sm[i], cpix,imin=imin,imax=imax)
+            mcs = convolve_map(mc, sm[i], cpix,imin=imin,imax=imax)
+            ecs = convolve_map(ec, sm[i], cpix,imin=imin,imax=imax)
 
             cms = np.sum(ccs, axis=0)
             mms = np.sum(mcs, axis=0)
@@ -180,7 +233,7 @@ class ResidMapGenerator(fermipy.config.Configurable):
             mmst += mms
             emst += ems
 
-            cts = 2.0 * (poisson_lnl(cms, cms) - poisson_lnl(cms, mms))
+            # cts = 2.0 * (poisson_lnl(cms, cms) - poisson_lnl(cms, mms))
             excess += cms - mms
 
         ts = 2.0 * (poisson_lnl(cmst, cmst) - poisson_lnl(cmst, mmst))

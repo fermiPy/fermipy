@@ -1,0 +1,270 @@
+.. _detection:
+
+##################################
+Source Detection
+##################################
+
+fermipy provides several methods for source detection that can be used
+to look for unmodeled sources as well as evaluate the fit quality of
+the model.  These methods are
+
+* :ref:`tsmap`: :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` generates a test
+  statistic (TS) map for a new source centered at each spatial bin in
+  the ROI.
+
+* :ref:`tscube`: :py:meth:`~fermipy.gtanalysis.GTAnalysis.tscube`
+  generates a TS map using the `gttscube` ST application.  In addition
+  to generating a TS map this method can also extract a test source
+  likelihood profile as a function of energy and position over the
+  whole ROI.
+
+* :ref:`residmap`: :py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap`
+  generates a residual map by evaluating the difference between
+  smoothed data and model maps (residual) at each spatial bin in the
+  ROI.
+
+* :ref:`findsources`:
+  :py:meth:`~fermipy.gtanalysis.GTAnalysis.find_sources` is an iterative
+  source-finding algorithim that adds new sources to the ROI by
+  looking for peaks in the TS map.
+
+Additional information about using each of these methods is provided in
+the sections below.
+
+.. _tsmap:
+
+TS Map
+======
+
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` performs a likelihood
+ratio test for an additional source at the center of each spatial bin
+of the ROI.  The methodology is similar to that of the `gttsmap` ST
+application but with a simplified source fitting implementation that
+significantly speeds up the calculation.  For each spatial bin the
+method calculates the maximum likelihood test statistic given by
+
+.. math::
+
+   \mathrm{TS} = 2 \sum_{k} \ln L(\mu,\theta|n_{k}) - \ln L(0,\theta|n_{k})
+
+where the summation index *k* runs over both spatial and energy bins,
+μ is the test source normalization parameter, and θ represents the
+parameters of the background model.  Unlike `gttsmap`, the likelihood
+fitting implementation used by
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` only fits for the
+normalization of the test source and does not re-fit parameters of the
+background model.  The properties of the test source (spectrum and
+spatial morphology) are controlled with the `model` dictionary
+argument.  The syntax for defining the test source properties follows
+the same conventions as
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.add_source` as illustrated in
+the following examples.
+
+.. code-block:: python
+   
+   # Generate TS map for a power-law point source with Index=2.0
+   model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
+   maps = gta.tsmap('fit1',model=model)
+
+   # Generate TS map for a power-law point source with Index=2.0 and
+   # restricting the analysis to E > 3.16 GeV
+   model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
+   maps = gta.tsmap('fit1_emin35',model=model,erange=[3.5,None])
+
+   # Generate TS maps for a power-law point source with Index=1.5, 2.0, and 2.5
+   model={'SpatialModel' : 'PointSource'}
+   maps = []
+   for index in [1.5,2.0,2.5]:
+       model['Index'] = index
+       maps += [gta.tsmap('fit1',model=model)]
+
+If running interactively, the `multithread` option can be enabled to
+split the calculation across all available cores.  However it is not
+recommended to use this option when running in a cluster environment.
+       
+.. code-block:: python
+                
+   maps = gta.tsmap('fit1',model=model,multithread=True)
+       
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` returns a `maps`
+dictionary containing `~fermipy.utils.Map` representations of the TS
+and NPred of the best-fit test source at each position.
+
+.. code-block:: python
+   
+   >>> model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
+   >>> maps = gta.tsmap('fit1',model=model)
+   >>> print(maps.keys())
+   [u'files', u'name', u'sqrt_ts', u'ts', u'src_dict', u'npred', u'amplitude']
+
+The contents of the output dictionary are described in the following table.
+
+============= ====================== =================================================================
+Key           Type                   Description
+============= ====================== =================================================================
+amplitude     `~fermipy.utils.Map`   Best-fit test source amplitude
+                                     expressed in terms of the spectral prefactor.
+npred         `~fermipy.utils.Map`   Best-fit test source amplitude
+                                     expressed in terms of the total model counts (Npred).
+ts            `~fermipy.utils.Map`   Test source TS (twice the logLike difference between null and
+	                             alternate hypothese).
+sqrt_ts       `~fermipy.utils.Map`   Square-root of the test source TS.
+files         dict                   Dictionary containing the file path of the FITS
+                                     image files generated by this method. 
+src_dict      dict                   Dictionary defining the properties of the test source.
+============= ====================== =================================================================
+
+Maps are also written as both FITS and rendered image files to the
+analysis working directory.  All output files are prepended with the
+`prefix` argument.  Sample images for `sqrt_ts` and `npred` generated
+by :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` are shown below.  A
+colormap threshold for the `sqrt_ts` image is applied at 5 sigma with
+iscontours at 2 sigma intervals (3,5,7,9, ...) indicating values above
+this threshold.
+
+.. |image0| image:: tsmap_sqrt_ts.png
+   :width: 100%
+   
+.. |image1| image:: tsmap_npred.png
+   :width: 100%
+
++---------------------------------+---------------------------------+
+| Sqrt(TS)                        | NPred                           |
++=================================+=================================+
+| |image0|                        | |image1|                        |
++---------------------------------+---------------------------------+
+
+Reference/API
+-------------
+
+.. automethod:: fermipy.gtanalysis.GTAnalysis.tsmap
+   :noindex:
+
+.. _residmap:
+
+Residual Map
+============
+
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap` calculates the
+residual between smoothed data and model maps.  Whereas
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` fits for positive
+excesses with respect to the current model,
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap` is sensitive to
+both positive and negative residuals and therefore can be useful for
+assessing the model goodness-of-fit.  The significance of the
+data/model residual at map position (*i*, *j*) is given by
+
+.. math::
+
+   \sigma_{ij}^2 = 2 \mathrm{sgn}(\tilde{n}_{ij} - \tilde{m}_{ij}) 
+   \left(\ln L_{P}(\tilde{n}_{ij},\tilde{n}_{ij}) - \ln L_{P}(\tilde{n}_{ij},\tilde{m}_{ij})\right)
+
+   \mathrm{with} \quad
+   \tilde{m}_{ij} = (m \ast k)_{ij} \quad \tilde{n}_{ij} = (n \ast k)_{ij}
+   \quad \ln L_{P}(n,m) = n\ln(m) - m
+
+where *n* and *m* are the data and model maps and *k* is the
+convolution kernel.  The spatial and spectral properties of the
+convolution kernel are defined with the `model` argument.  All source
+models are supported as well as a gaussian kernel (defined by setting
+*SpatialModel* to *Gaussian*).  The following examples illustrate how
+to run the method with different spatial kernels.
+
+.. code-block:: python
+   
+   # Generate residual map for a Gaussian kernel with Index=2.0 and
+   # radius (R_68) of 0.3 degrees   
+   model = {'Index' : 2.0, 
+            'SpatialModel' : 'Gaussian', 'SpatialWidth' : 0.3 }
+   maps = gta.residmap('fit1',model=model)
+
+   # Generate residual map for a power-law point source with Index=2.0 for
+   # E > 3.16 GeV
+   model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
+   maps = gta.residmap('fit1_emin35',model=model,erange=[3.5,None])
+
+   # Generate residual maps for a power-law point source with Index=1.5, 2.0, and 2.5
+   model={'SpatialModel' : 'PointSource'}
+   maps = []
+   for index in [1.5,2.0,2.5]:
+       model['Index'] = index
+       maps += [gta.residmap('fit1',model=model)]
+
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap` returns a `maps`
+dictionary containing `~fermipy.utils.Map` representations of the
+residual significance and amplitude as well as the smoothed data and
+model maps.  The contents of the output dictionary are described in
+the following table.
+
+============= ====================== ======================================
+Key           Type                   Description
+============= ====================== ======================================
+sigma         `~fermipy.utils.Map`   Residual significance in sigma.
+excess        `~fermipy.utils.Map`   Residual amplitude in counts.
+data          `~fermipy.utils.Map`   Smoothed counts map.
+model         `~fermipy.utils.Map`   Smoothed model map.
+files         dict                   File paths of the FITS image
+                                     files generated by this method. 
+src_dict      dict                   Source dictionary with the
+                                     properties of the convolution kernel. 
+============= ====================== ======================================
+
+Maps are also written as both FITS and rendered image files to the
+analysis working directory.  All output files are prepended with the
+`prefix` argument.  Sample images for `sigma` and `excess` generated
+by :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` are shown below.  A
+colormap threshold for the `sigma` image is applied at both -5 and 5
+sigma with iscontours at 2 sigma intervals (-5, -3, 3, 5, 7, 9, ...)
+indicating values above and below this threshold.
+
+.. |image2| image:: residmap_gaussian_sigma.png
+   :width: 100%
+   
+.. |image3| image:: residmap_gaussian_excess.png
+   :width: 100%
+
++------------------------+------------------------+
+| Sigma                  | Excess Counts          |
++========================+========================+
+| |image2|               + |image3|               |
++------------------------+------------------------+
+
+
+Reference/API
+-------------
+
+.. automethod:: fermipy.gtanalysis.GTAnalysis.residmap
+   :noindex:
+
+.. _tscube:
+
+TS Cube
+=======
+
+.. warning:: 
+
+   This method is experimental and is not supported by the current
+   public release of the Fermi STs.
+
+
+.. automethod:: fermipy.gtanalysis.GTAnalysis.tscube
+   :noindex:
+
+
+.. _findsources:
+
+Source Finding
+==============
+
+.. warning:: 
+
+   This method is experimental and still under development.  API
+   changes are likely to occur in future releases.
+   
+
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.find_sources` is an iterative source-finding
+algorithm that uses peak detection on the TS map to find the locations
+of new sources.  
+
+.. automethod:: fermipy.gtanalysis.GTAnalysis.find_sources
+   :noindex:

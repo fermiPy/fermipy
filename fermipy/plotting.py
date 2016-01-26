@@ -1,6 +1,5 @@
 import copy
 import os
-import warnings
 import matplotlib
 
 try:
@@ -11,16 +10,13 @@ except KeyError:
 # matplotlib.interactive(False)
 # matplotlib.use('Agg')
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 import wcsaxes
 import numpy as np
-from numpy import ma
-import matplotlib.cbook as cbook
-from matplotlib.colors import LogNorm, Normalize
+from matplotlib.colors import LogNorm, Normalize, PowerNorm
 import fermipy
 import fermipy.config
 import fermipy.utils as utils
@@ -30,7 +26,6 @@ from fermipy.utils import edge_to_center, edge_to_width, valToEdge
 from fermipy.hpx_utils import HpxMap
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
-
 
 
 def draw_arrows(x, y, color='k'):
@@ -44,6 +39,7 @@ def get_xerr(sed):
     dehi = 10 ** sed['emax'] - 10 ** sed['ecenter']
     xerr = np.vstack((delo, dehi))
     return xerr
+
 
 def make_counts_spectrum_plot(o, roi, energies, imfile):
     fig = plt.figure()
@@ -60,8 +56,8 @@ def make_counts_spectrum_plot(o, roi, energies, imfile):
 
     x = 0.5 * (energies[1:] + energies[:-1])
     xerr = 0.5 * (energies[1:] - energies[:-1])
-    y = o['roi']['counts']
-    ym = o['roi']['model_counts']
+    y = o['counts']
+    ym = o['model_counts']
 
     ax0.errorbar(x, y, yerr=np.sqrt(y), xerr=xerr, color='k',
                  linestyle='None', marker='s',
@@ -136,8 +132,9 @@ def annotate(**kwargs):
     text = []
 
     if src:
-        if src['assoc']:
-            text += ['%s (%s)' % (src['name'], src['assoc'])]
+        
+        if 'ASSOC1' in src['assoc'] and src['assoc']['ASSOC1']:
+            text += ['%s (%s)' % (src['name'], src['assoc']['ASSOC1'])]
         else:
             text += [src['name']]
 
@@ -152,81 +149,6 @@ def annotate(**kwargs):
                 xycoords='axes fraction', fontsize=12,
                 xytext=(-5, 5), textcoords='offset points',
                 ha='left', va='top')
-
-
-class PowerNorm(mpl.colors.Normalize):
-    """
-    Normalize a given value to the ``[0, 1]`` interval with a power-law
-    scaling. This will clip any negative data points to 0.
-    """
-
-    def __init__(self, gamma, vmin=None, vmax=None, clip=True):
-        mpl.colors.Normalize.__init__(self, vmin, vmax, clip)
-        self.gamma = gamma
-
-    def __call__(self, value, clip=None):
-        if clip is None:
-            clip = self.clip
-
-        result, is_scalar = self.process_value(value)
-
-        self.autoscale_None(result)
-        gamma = self.gamma
-        vmin, vmax = self.vmin, self.vmax
-        if vmin > vmax:
-            raise ValueError("minvalue must be less than or equal to maxvalue")
-        elif vmin == vmax:
-            result.fill(0)
-        else:
-            if clip:
-                mask = ma.getmask(result)
-                val = ma.array(np.clip(result.filled(vmax), vmin, vmax),
-                               mask=mask)
-            resdat = result.data
-            resdat -= vmin
-            np.power(resdat, gamma, resdat)
-            resdat /= (vmax - vmin) ** gamma
-            result = np.ma.array(resdat, mask=result.mask, copy=False)
-            result[(value < 0) & ~result.mask] = 0
-        if is_scalar:
-            result = result[0]
-        return result
-
-    def inverse(self, value):
-        if not self.scaled():
-            raise ValueError("Not invertible until scaled")
-        gamma = self.gamma
-        vmin, vmax = self.vmin, self.vmax
-
-        if cbook.iterable(value):
-            val = ma.asarray(value)
-            return ma.power(value, 1. / gamma) * (vmax - vmin) + vmin
-        else:
-            return pow(value, 1. / gamma) * (vmax - vmin) + vmin
-
-    def autoscale(self, A):
-        """
-        Set *vmin*, *vmax* to min, max of *A*.
-        """
-        self.vmin = ma.min(A)
-        if self.vmin < 0:
-            self.vmin = 0
-            warnings.warn("Power-law scaling on negative values is "
-                          "ill-defined, clamping to 0.")
-
-        self.vmax = ma.max(A)
-
-    def autoscale_None(self, A):
-        """ autoscale only None-valued vmin or vmax"""
-        if self.vmin is None and np.size(A) > 0:
-            self.vmin = ma.min(A)
-            if self.vmin < 0:
-                self.vmin = 0
-                warnings.warn("Power-law scaling on negative values is "
-                              "ill-defined, clamping to 0.")
-
-        if self.vmax is None and np.size(A) > 0:
-            self.vmax = ma.max(A)
 
 
 class ImagePlotter(object):
@@ -246,7 +168,7 @@ class ImagePlotter(object):
             self._projtype = 'HPX'
             self._proj = proj
             self._wcs,data = make_wcs_from_hpx(proj,data)
-        else:
+       else:
             raise Exception("Can't co-add map of unknown type %s"%type(proj))
                 
         self._data = data
@@ -288,7 +210,7 @@ class ImagePlotter(object):
                              projection=wcsaxes.WCS(self._wcs.to_header()))
 
         load_ds9_cmap()
-        colormap = mpl.cm.get_cmap(cmap)
+        colormap = matplotlib.cm.get_cmap(cmap)
         colormap.set_under(colormap(0))
 
         data = copy.copy(self._data)
@@ -322,7 +244,8 @@ class ImagePlotter(object):
 
         #        plt.colorbar(im,orientation='horizontal',shrink=0.7,pad=0.15,
         #                     fraction=0.05)
-        ax.grid()
+        #        ax.grid()
+        ax.coords.grid(color='white')  # , alpha=0.5)
 
         #        ax.add_compass(loc=1)
         #        ax.set_display_coord_system("gal")
@@ -336,19 +259,7 @@ class ImagePlotter(object):
                              2.0 * beam_size[1] / self._axes[1]._delta,
                              beam_size[2], beam_size[3],
                              patch_props={'fc': "none", 'ec': "w"})
-
-        #        self._ax = ax
-
         return im, ax
-
-
-def get_image_wcs(header):
-    if header['NAXIS'] == 3:
-        wcs = pywcs.WCS(header, naxis=[1, 2])
-        data = copy.deepcopy(np.sum(hdulist[0].data, axis=0))
-    else:
-        wcs = pywcs.WCS(header)
-        data = copy.deepcopy(hdulist[0].data)
 
 
 class ROIPlotter(fermipy.config.Configurable):
@@ -384,8 +295,8 @@ class ROIPlotter(fermipy.config.Configurable):
 
         if self._erange:
             axes = wcs_to_axes(self._wcs, self._data.shape[::-1])
-            i0 = valToEdge(axes[2], self._erange[0])
-            i1 = valToEdge(axes[2], self._erange[1])
+            i0 = utils.val_to_edge(axes[2], self._erange[0])
+            i1 = utils.val_to_edge(axes[2], self._erange[1])
             imdata = self._data[:, :, i0:i1]
         else:
             imdata = self._data
@@ -441,7 +352,6 @@ class ROIPlotter(fermipy.config.Configurable):
         noerror = kwargs.pop('noerror', False)
 
         axes = wcs_to_axes(self._wcs, self._data.shape[::-1])
-
         x = edge_to_center(axes[iaxis])
         w = edge_to_width(axes[iaxis])
 
@@ -460,19 +370,19 @@ class ROIPlotter(fermipy.config.Configurable):
         s2 = slice(None, None)
 
         if iaxis == 0:
-            i0 = valToEdge(axes[iaxis], xmin)
-            i1 = valToEdge(axes[iaxis], xmax)
+            i0 = utils.val_to_edge(axes[iaxis], xmin)
+            i1 = utils.val_to_edge(axes[iaxis], xmax)
             s1 = slice(i0, i1)
             saxes = [1, 2]
         else:
-            i0 = valToEdge(axes[iaxis], xmin)
-            i1 = valToEdge(axes[iaxis], xmax)
+            i0 = utils.val_to_edge(axes[iaxis], xmin)
+            i1 = utils.val_to_edge(axes[iaxis], xmax)
             s0 = slice(i0, i1)
             saxes = [0, 2]
 
         if erange is not None:
-            j0 = valToEdge(axes[2], erange[0])
-            j1 = valToEdge(axes[2], erange[1])
+            j0 = utils.val_to_edge(axes[2], erange[0])
+            j1 = utils.val_to_edge(axes[2], erange[1])
             s2 = slice(j0, j1)
             
         c = np.apply_over_axes(np.sum, data[s0, s1, s2], axes=saxes)
@@ -507,7 +417,8 @@ class ROIPlotter(fermipy.config.Configurable):
         src_color = 'w'
         fontweight = 'normal'
 
-        im_kwargs = dict(cmap='ds9_b', vmin=None, vmax=None, levels=None,
+        im_kwargs = dict(cmap=kwargs.get('cmap', 'ds9_b'),
+                         vmin=None, vmax=None, levels=None,
                          zscale='lin', subplot=111)
 
         plot_kwargs = dict(linestyle='None', marker='+',
@@ -741,7 +652,7 @@ class ExtensionPlotter(object):
         self._width = src['extension']['width']
         for i, w in enumerate(src['extension']['width']):
             self._files += [os.path.join(workdir, 'mcube_%s_ext%02i%s.fits' % (
-            name, i, suffix))]
+                name, i, suffix))]
         self._roi = roi
         self._erange = erange
 
@@ -754,8 +665,6 @@ class ExtensionPlotter(object):
         p0.plot_projection(iaxis, color='k', label='Data', marker='s',
                            linestyle='None')
         p1.plot_projection(iaxis, color='b', noerror=True, label='Background')
-
-        import matplotlib
 
         n = len(self._width)
         step = max(1, int(n / 5.))
@@ -773,12 +682,11 @@ class ExtensionPlotter(object):
 
 
 class AnalysisPlotter(fermipy.config.Configurable):
-
     defaults = dict(defaults.plotting.items(),
-                fileio=defaults.fileio,
-                logging=defaults.logging )
+                    fileio=defaults.fileio,
+                    logging=defaults.logging)
 
-    def __init__(self,config,**kwargs):
+    def __init__(self, config, **kwargs):
         fermipy.config.Configurable.__init__(self, config, **kwargs)
 
         self.logger = Logger.get(self.__class__.__name__,
@@ -787,26 +695,27 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
     def run(self, gta, mcube_maps, **kwargs):
         """Make all plots."""
-
+        
         prefix = kwargs.get('prefix', 'test')
         format = kwargs.get('format', gta.config['plotting']['format'])
 
         erange = [None] + gta.config['plotting']['erange']
 
         for x in erange:
-            self.make_roi_plots(gta,mcube_maps, prefix, erange=x, format=format)
-#            self.make_extension_plots(gta,prefix, erange=x, format=format)
+            self.make_roi_plots(gta, mcube_maps, prefix, erange=x,
+                                format=format)
+        # self.make_extension_plots(gta,prefix, erange=x,
+        # format=format)
 
-        for k, v in gta._roi_model['roi']['residmap'].items():
-            self.make_residual_plots(gta,v, **kwargs)
+#        for k, v in gta._roi_model['residmap'].items():
+#            self.make_residual_plots(gta, v, **kwargs)
+#        for k, v in gta._roi_model['tsmap'].items():
+#            self.make_tsmap_plots(gta, v, **kwargs)
 
-        for k, v in gta._roi_model['roi']['tsmap'].items():
-            self.make_tsmap_plots(gta,v, **kwargs)
-            
-        self.make_sed_plots(gta,prefix, format=format)
+        self.make_sed_plots(gta, prefix, format=format)
 
         imfile = utils.format_filename(gta.config['fileio']['outdir'],
-                                       'counts_spectrum',prefix=[prefix],
+                                       'counts_spectrum', prefix=[prefix],
                                        extension=format)
 
         make_counts_spectrum_plot(gta._roi_model, gta.roi, gta.energies,
@@ -816,14 +725,15 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
 
-        if not 'sigma' in maps: return
+        if 'sigma' not in maps: 
+            return
 
         # Reload maps from FITS file
 
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sigma'], gta.roi)
-        p.plot(vmin=-5, vmax=5, levels=[-5, -3, 3, 5],
+        p.plot(vmin=-5, vmax=5, levels=[-5, -3, 3, 5, 7, 9, 11, 13, 15, 20, 25],
                cb_label='Significance [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'residmap_sigma',
@@ -833,9 +743,18 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['data'], gta.roi)
-        p.plot(cb_label='Smoothed Counts', zscale='pow', gamma=1. / 3.)
+        p.plot(cb_label='Counts')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'residmap_counts',
+                                          prefix=[prefix],
+                                          extension=format))
+        plt.close(fig)
+
+        fig = plt.figure()
+        p = ROIPlotter(maps['excess'], gta.roi)
+        p.plot(cb_label='Counts')
+        plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
+                                          'residmap_excess',
                                           prefix=[prefix],
                                           extension=format))
         plt.close(fig)
@@ -844,17 +763,27 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
 
-        if not 'ts' in maps: return
+        if 'ts' not in maps: 
+            return
 
         # Reload maps from FITS file
 
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sqrt_ts'], gta.roi)
-        p.plot(vmin=0, vmax=8, levels=[0, 3, 5, 8],
+        p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9, 11, 13, 15, 20, 25],
                cb_label='Sqrt(TS) [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'tsmap_sqrt_ts',
+                                          prefix=[prefix],
+                                          extension=format))
+        plt.close(fig)
+
+        fig = plt.figure()
+        p = ROIPlotter(maps['npred'], gta.roi)
+        p.plot(vmin=0, cb_label='NPred [Counts]')
+        plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
+                                          'tsmap_npred',
                                           prefix=[prefix],
                                           extension=format))
         plt.close(fig)
@@ -907,8 +836,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
             plt.close(fig)
 
             plt.figure(figx.number)
-            p = ROIPlotter.create_from_fits(c._ccube_file, gta.roi,
-                                            erange=erange)
+            p = ROIPlotter(c.counts_map(), gta.roi, erange=erange)
             p.plot_projection(0, color=colors[i % 4], label='Component %i' % i,
                               **data_style)
 
@@ -1000,9 +928,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         for s in self.roi.sources:
 
-            if not 'extension' in s: continue
-            if s['extension'] is None: continue
-            if not s['extension']['config']['save_model_map']: continue
+            if 'extension' not in s: 
+                continue
+            if s['extension'] is None: 
+                continue
+            if not s['extension']['config']['save_model_map']: 
+                continue
 
             self._plot_extension(prefix, s, erange=erange, format=format)
 
@@ -1012,8 +943,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         for s in gta.roi.sources:
 
-            if not 'sed' in s: continue
-            if s['sed'] is None: continue
+            if 'sed' not in s: 
+                continue
+            if s['sed'] is None: 
+                continue
 
             name = s.name.lower().replace(' ', '_')
 
