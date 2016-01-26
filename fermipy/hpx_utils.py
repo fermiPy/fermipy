@@ -15,7 +15,7 @@ import astropy.io.fits as pf
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Galactic,ICRS,FK5  
 
-from fits_utils import read_energy_bounds
+from utils import read_energy_bounds
 
 # This is an approximation of the size of HEALPix pixels (in degrees) 
 # for a particular order.   It is used to convert from HEALPix to WCS-based

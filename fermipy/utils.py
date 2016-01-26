@@ -3,7 +3,6 @@ import copy
 from collections import OrderedDict
 
 import numpy as np
-from hpx_utils import HPX, HpxMap
 import xml.etree.cElementTree as et
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -563,6 +562,8 @@ def create_hpx(nside, nest, coordsys='CEL', order=-1, region=None, ebins=None):
     region   : Allows for partial-sky mappings
     ebins    : Energy bin edges
     """
+    from hpx_utils import HPX, HpxMap
+
     return HPX(nside, nest, coordsys, order, region, ebins)
 
 
