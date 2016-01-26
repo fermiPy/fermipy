@@ -2871,6 +2871,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             return Map(z, copy.deepcopy(self.wcs))
         elif p_method == 1: # HPX
             z = self.like.logLike.countsMap().data()
+            print self.hpx
             nhpix = self.hpx.npix
             z = np.array(z).reshape(self.enumbins, nhpix)
             return HpxMap(z, self.hpx)

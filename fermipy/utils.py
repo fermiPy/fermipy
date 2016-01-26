@@ -30,6 +30,13 @@ class Map(Map_Base):
     def create_from_hdu(hdu,wcs):
         return Map(hdu.data.T,wcs)
 
+    @staticmethod 
+    def create_from_fits(fitsfile):
+        f = pyfits.open(fitsfile)
+        hdu = f[0]
+        wcs_obj = wcs.WCS(hdu.header)
+        return Map(hdu.data,wcs_obj)
+
             
 def format_filename(outdir,basename,prefix=None,extension=None):
 
@@ -376,10 +383,10 @@ def create_wcs(skydir,coordsys='CEL',projection='AIT',
     w = wcs.WCS(w.to_header())
     
     if naxis == 3 and energies is not None:
-        w.crpix[2] = 1
-        w.crval[2] = 10 ** energies[0]
-        w.cdelt[2] = 10 ** self.energies[1] - 10 ** self.energies[0]
-        w.ctype[2] = 'Energy'
+        w.wcs.crpix[2] = 1
+        w.wcs.crval[2] = 10 ** energies[0]
+        w.wcs.cdelt[2] = 10 ** energies[1] - 10 ** energies[0]
+        w.wcs.ctype[2] = 'Energy'
 
     return w
 
