@@ -1016,6 +1016,18 @@ def write_hpx_image(data, hpx, outfile, extname="SKYMAP"):
 
 
 def delete_source_map(srcmap_file, name, logger=None):
+    """Delete a map from a binned analysis source map file if it exists.
+    
+    Parameters
+    ----------
+
+    srcmap_file : str
+       Path to the source map file.
+
+    name : str
+       HDU key of source map.
+
+    """
     hdulist = pyfits.open(srcmap_file)
     hdunames = [hdu.name.upper() for hdu in hdulist]
 
@@ -1023,6 +1035,8 @@ def delete_source_map(srcmap_file, name, logger=None):
         return
 
     del hdulist[name.upper()]
+
+    hdulist.writeto(srcmap_file, clobber=True)
 
 
 def update_source_maps(srcmap_file, srcmaps, logger=None):
@@ -1045,4 +1059,5 @@ def update_source_maps(srcmap_file, srcmaps, logger=None):
             logger.info('Updating source map for %s' % name)
 
         hdulist[name].data[...] = data
+
     hdulist.writeto(srcmap_file, clobber=True)
