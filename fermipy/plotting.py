@@ -20,9 +20,9 @@ from matplotlib.colors import LogNorm, Normalize, PowerNorm
 import fermipy
 import fermipy.config
 import fermipy.utils as utils
+import fermipy.fits_utils as fits_utils
 import fermipy.defaults as defaults
-from fermipy.utils import merge_dict, wcs_to_axes, Map
-from fermipy.utils import edge_to_center, edge_to_width, val_to_edge
+from fermipy.utils import merge_dict, Map
 from fermipy.hpx_utils import HpxMap
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
@@ -294,7 +294,7 @@ class ROIPlotter(fermipy.config.Configurable):
         self._erange = self.config['erange']
 
         if self._erange:
-            axes = wcs_to_axes(self._wcs, self._data.shape[::-1])
+            axes = fits_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
             i0 = utils.val_to_edge(axes[2], self._erange[0])
             i1 = utils.val_to_edge(axes[2], self._erange[1])
             imdata = self._data[:, :, i0:i1]
@@ -341,22 +341,21 @@ class ROIPlotter(fermipy.config.Configurable):
         elif projtype == "HPX":
             themap = HpxMap.create_from_hdulist(hdulist,ebounds="EBOUNDS")            
         else:
-            raise Expection("Unknown projection type %s"%projtype)        
+            raise Exception("Unknown projection type %s"%projtype)        
         
         return ROIPlotter(themap, roi, **kwargs)
-
 
     def plot_projection(self, iaxis, **kwargs):
 
         data = kwargs.pop('data', self._data)
         noerror = kwargs.pop('noerror', False)
 
-        axes = wcs_to_axes(self._wcs, self._data.shape[::-1])
-        x = edge_to_center(axes[iaxis])
-        w = edge_to_width(axes[iaxis])
+        axes = fits_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
+        x = utils.edge_to_center(axes[iaxis])
+        w = utils.edge_to_width(axes[iaxis])
 
         c = self.get_data_projection(data, axes, iaxis, erange=self._erange)
-        
+
         if noerror:
             plt.errorbar(x, c, **kwargs)
         else:

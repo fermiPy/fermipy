@@ -17,16 +17,17 @@ from astropy.coordinates import SkyCoord
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator
 from fermipy.sourcefind import SourceFinder
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
-from fermipy.utils import val_to_bin_bounded, val_to_edge, Map
-from fermipy.utils import create_hpx_disk_region_string, create_hpx
-from fermipy.hpx_utils import HpxMap
-from fermipy.roi_model import ROIModel, Source
+from fermipy.utils import Map
+from fermipy.utils import create_hpx_disk_region_string
+from fermipy.hpx_utils import HpxMap, HPX
+from fermipy.roi_model import ROIModel
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 # pylikelihood
@@ -389,7 +390,7 @@ class GTAnalysis(fermipy.config.Configurable):
                                                                     self.config[
                                                                         'binning'][
                                                                         'roiwidth'])
-            self._proj = create_hpx(-1,
+            self._proj = HPX.create_hpx(-1,
                                     self.config['binning'][
                                         'hpx_ordering_scheme'] == "NESTED",
                                     self.config['binning']['coordsys'],
@@ -831,10 +832,10 @@ class GTAnalysis(fermipy.config.Configurable):
        
         if self.projtype == "HPX":
             shape = (self.enumbins, self._proj.npix)
-            maps = [utils.make_coadd_map(maps, self._proj, shape)] + maps
+            maps = [fits_utils.make_coadd_map(maps, self._proj, shape)] + maps
         elif self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            maps = [utils.make_coadd_map(maps, self._proj, shape)] + maps
+            maps = [fits_utils.make_coadd_map(maps, self._proj, shape)] + maps
         else:
             raise Exception(
                 "Did not recognize projection type %s" % self.projtype)
@@ -2397,7 +2398,7 @@ class GTAnalysis(fermipy.config.Configurable):
         for i, c in enumerate(self._components):
             maps += [c.model_counts_map(name)]
         shape = (self.enumbins, self.npix, self.npix)
-        model_counts = utils.make_coadd_map(maps, self._proj, shape)
+        model_counts = fits_utils.make_coadd_map(maps, self._proj, shape)
 
         """
         if self.projtype == "HPX":
@@ -2435,11 +2436,11 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if self.projtype == "HPX":
             shape = (self.enumbins, self._proj.npix)
-            model_counts = utils.make_coadd_map(maps, self._proj, shape)
+            model_counts = fits_utils.make_coadd_map(maps, self._proj, shape)
             utils.write_hpx_image(model_counts.counts, self._proj, outfile)
         elif self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            model_counts = utils.make_coadd_map(maps, self._proj, shape)
+            model_counts = fits_utils.make_coadd_map(maps, self._proj, shape)
             utils.write_fits_image(model_counts.counts, self._proj, outfile)
         else:
             raise Exception(
@@ -2842,14 +2843,14 @@ class GTAnalysis(fermipy.config.Configurable):
         """
         if self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            self._ccube = utils.make_coadd_map(cmaps, self._proj, shape)
+            self._ccube = fits_utils.make_coadd_map(cmaps, self._proj, shape)
             utils.write_fits_image(self._ccube.counts, self._ccube.wcs,
                                    self._ccube_file)
             rm['counts'] += np.squeeze(
                 np.apply_over_axes(np.sum, self._ccube.counts,
                                    axes=[1, 2]))
         elif self.projtype == "HPX":
-            self._ccube = utils.make_coadd_map(cmaps, self._proj, shape)
+            self._ccube = fits_utils.make_coadd_map(cmaps, self._proj, shape)
             utils.write_hpx_image(self._ccube.counts, self._ccube.hpx,
                                   self._ccube_file)
             rm['counts'] += np.squeeze(
@@ -3130,7 +3131,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self._hpx_region = create_hpx_disk_region_string(self.roi.skydir,
                                                              self._coordsys,
                                                              0.5*self.config['binning']['roiwidth'])
-            self._proj = create_hpx(-1,
+            self._proj = HPX.create_hpx(-1,
                                      self.config['binning']['hpx_ordering_scheme'] == "NESTED",
                                      self._coordsys,
                                      self.config['binning']['hpx_order'],
