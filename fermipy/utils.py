@@ -13,7 +13,15 @@ import scipy.special as specialfn
 from scipy.interpolate import UnivariateSpline
 from astropy import wcs
 
-from fits_utils import read_energy_bounds
+def read_energy_bounds(hdu):
+    """ Reads and returns the energy bin edges from a FITs HDU
+    """
+    nebins = len(hdu.data)
+    ebin_edges = np.ndarray((nebins+1))
+    ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
+    ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
+    return ebin_edges
+
 
 class Map_Base(object):
     """ Abstract representation of a 2D or 3D counts map."""
