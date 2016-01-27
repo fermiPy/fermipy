@@ -616,12 +616,6 @@ def sky_to_offset(skydir, lon, lat, coordsys='CEL', projection='AIT'):
     return w.wcs_world2pix(skycrd, 0)
 
 
-
-
-
-
-
-
 def get_target_skydir(config,default=None):
     radec = config.get('radec', None)
 

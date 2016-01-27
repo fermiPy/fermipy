@@ -21,7 +21,7 @@ import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 from fermipy.residmap import ResidMapGenerator
-from fermipy.tsmap import TSMapGenerator
+from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
 from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import Map
@@ -73,29 +73,6 @@ index_parameters = {
     'FileFunction': [],
 }
 
-def make_testsrc(name,skydir,obs):
-
-    testsrc = pyLike.PointSource(obs)
-    testsrc.setDir(skydir.ra.deg, skydir.dec.deg, False,False)
-
-    pl = pyLike.SourceFactory_funcFactory().create('PowerLaw')
-    pl.getParam('Prefactor').setValue(1.0)
-    pl.getParam('Prefactor').setBounds(0.0,10000.)
-    pl.getParam('Prefactor').setScale(1E-13)
-    
-    pl.getParam('Index').setValue(2.0)
-    pl.getParam('Index').setBounds(0.0,6.0)
-    pl.getParam('Index').setScale(-1.0)
-    pl.getParam('Index').setFree(False)
-
-    pl.getParam('Scale').setValue(1000.0)
-    pl.getParam('Scale').setBounds(1000.0,1000.0)
-    pl.getParam('Scale').setScale(1.0)
-    
-    testsrc.setSpectrum(pl)
-    testsrc.setName(name)
-    
-    return testsrc
 
 def parabola((x, y), amplitude, x0, y0, sx, sy, theta):
     cth = np.cos(theta)
@@ -274,6 +251,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 'mc': defaults.mc,
                 'residmap': defaults.residmap,
                 'tsmap': defaults.tsmap,
+                'tscube': defaults.tscube,
                 'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
                 'extension': defaults.extension,
@@ -2565,6 +2543,26 @@ class GTAnalysis(fermipy.config.Configurable):
                                            logging=self.config['logging'])
         plotter.run(self, mcube_maps, prefix=prefix)
 
+    def tscube2(self,  prefix='', **kwargs):
+
+        make_plots = kwargs.get('make_plots', True)
+        
+        tsg = TSCubeGenerator(self.config['tscube'],
+                              fileio=self.config['fileio'],
+                              logging=self.config['logging'])
+
+        model = kwargs.get('model', self.config['tscube']['model'])
+        maps = tsg.make_ts_cube(self, prefix, copy.deepcopy(model), **kwargs)
+
+        if make_plots:
+            plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                               fileio=self.config['fileio'],
+                                               logging=self.config['logging'])
+            
+            plotter.make_tsmap_plots(self, maps)
+
+        return maps            
+        
     def tscube(self, prefix='', **kwargs):
         """Generate a spatial TS map for a source component with
         properties defined by the `model` argument.  This method uses
@@ -3309,6 +3307,54 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if save_source_maps:
             self.like.logLike.saveSourceMaps(self._srcmap_file)
 
+    def _create_source(self, src, free=False):
+        
+        if src['SpatialType'] == 'SkyDirFunction':
+            pylike_src = pyLike.PointSource(self.like.logLike.observation())
+            pylike_src.setDir(src.skydir.ra.deg, src.skydir.dec.deg, False,
+                              False)
+        elif src['SpatialType'] == 'SpatialMap':
+            sm = pyLike.SpatialMap(str(src['Spatial_Filename']))
+            pylike_src = pyLike.DiffuseSource(sm,
+                                              self.like.logLike.observation(),
+                                              False)
+        elif src['SpatialType'] == 'MapCubeFunction':
+            mcf = pyLike.MapCubeFunction2(str(src['Spatial_Filename']))
+            pylike_src = pyLike.DiffuseSource(mcf,
+                                              self.like.logLike.observation(),
+                                              False)
+        else:
+            raise Exception(
+                'Unrecognized spatial type: %s' % src['SpatialType'])
+
+        pl = pyLike.SourceFactory_funcFactory().create(src['SpectrumType'])
+
+        for k, v in src.spectral_pars.items():
+
+            par = pl.getParam(k)
+
+            vmin = min(float(v['value']), float(v['min']))
+            vmax = max(float(v['value']), float(v['max']))
+
+            par.setValue(float(v['value']))
+            par.setBounds(vmin, vmax)
+            par.setScale(float(v['scale']))
+
+            if 'free' in v and int(v['free']) != 0:
+                par.setFree(True)
+            else:
+                par.setFree(False)
+            pl.setParam(par)
+
+        pylike_src.setSpectrum(pl)
+        pylike_src.setName(str(src.name))
+
+        # Initialize source as free/fixed
+        pylike_src.spectrum().normPar().setFree(free)
+
+        return pylike_src
+        
+            
     def delete_source(self, name, save_template=True):
 
         src = self.roi.get_source_by_name(name, True)
@@ -3409,7 +3455,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         elif self.projtype == "HPX":
             v = pyLike.FloatVector(self._proj.npix * self.enumbins)
         else:
-            raise Expection("Unknown projection type %s"%self.projtype)
+            raise Exception("Unknown projection type %s"%self.projtype)
 
         if exclude is None:
             exclude = []

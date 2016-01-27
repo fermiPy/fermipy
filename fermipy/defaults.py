@@ -167,6 +167,11 @@ tsmap = {
 }
 
 #
+tscube = {
+    'model': (None, '', dict),
+}
+
+#
 sourcefind = {
     'model': (None, '', dict),
     'min_separation': (1.0, '', float),

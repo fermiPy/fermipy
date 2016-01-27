@@ -599,7 +599,7 @@ class HpxMap(utils.Map_Base):
 
     def __init__(self,counts,hpx):
         """ C'tor, fill with a counts vector and a HPX object """
-        Map_Base.__init__(self,counts)
+        utils.Map_Base.__init__(self,counts)
         self._hpx = hpx
         self._wcs2d = None
         self._hpx2wcs = None

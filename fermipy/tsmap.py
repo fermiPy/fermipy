@@ -9,10 +9,14 @@ from multiprocessing import Pool, cpu_count
 
 import numpy as np
 import warnings
+
+import pyLikelihood as pyLike
+
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
 from fermipy.utils import Map
+from fermipy.roi_model import Source
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 
@@ -150,8 +154,7 @@ def _sum_wrapper(fn):
 
 def _collect_wrapper(fn):
     """
-
-
+    Wrapper for element-wise dispatch of list arguments to a function.
     """
 
     def wrapper(*args, **kwargs):
@@ -366,23 +369,6 @@ class TSMapGenerator(fermipy.config.Configurable):
                                  self.config['fileio']['logfile'],
                                  logLevel(self.config['logging']['verbosity']))
 
-    def run(self, gta, prefix, **kwargs):
-
-        models = kwargs.get('models', self.config['models'])
-
-        if isinstance(models,dict):
-            models = [models]
-
-        o = []
-
-        for m in models:
-            self.logger.info('Generating TS map')
-            self.logger.info(m)
-            o += [self.make_ts_map(gta,prefix,copy.deepcopy(m),
-                                   **kwargs)]
-
-        return o
-
     def make_ts_map(self, gta, prefix, src_dict=None,**kwargs):
         """
         Make a TS map from a GTAnalysis instance.  The
@@ -395,11 +381,11 @@ class TSMapGenerator(fermipy.config.Configurable):
         ----------
 
         gta : `~fermipy.gtanalysis.GTAnalysis`
-            Analysis instance.
+        Analysis instance.
 
         src_dict : dict or `~fermipy.roi_model.Source` object
-            Dictionary or Source object defining the properties of the
-            test source that will be used in the scan.
+        Dictionary or Source object defining the properties of the
+        test source that will be used in the scan.
 
         """
         
@@ -558,3 +544,115 @@ class TSMapGenerator(fermipy.config.Configurable):
 
         return o
 
+class TSCubeGenerator(fermipy.config.Configurable):
+    defaults = dict(defaults.tscube.items(),
+                    fileio=defaults.fileio,
+                    logging=defaults.logging)
+
+
+    def __init__(self, config=None, **kwargs):
+        fermipy.config.Configurable.__init__(self, config, **kwargs)
+        self.logger = Logger.get(self.__class__.__name__,
+                                 self.config['fileio']['logfile'],
+                                 logLevel(self.config['logging']['verbosity']))
+
+
+    def make_ts_cube(self, gta, prefix, src_dict=None, **kwargs):
+
+        make_fits = kwargs.get('make_fits', True)
+        exclude = kwargs.get('exclude', None)
+
+
+        xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
+                      np.round((gta.npix - 1.0) / 2.))
+
+        xpix = kwargs.get('xpix',xpix)
+        ypix = kwargs.get('ypix',ypix)
+        #add_source = kwargs.get('add_source',True)
+        
+        skywcs = gta._skywcs
+        skydir = utils.pix_to_skydir(xpix, ypix, skywcs)
+
+#        print skydir
+#        print self.roi.skydir
+        
+        if gta.config['binning']['coordsys'] == 'CEL':
+            galactic=False
+        elif gta.config['binning']['coordsys'] == 'GAL':
+            galactic=True
+        else:
+            raise Exception('Unsupported coordinate system: %s'%
+                            gta.config['binning']['coordsys'])
+
+        refdir = pyLike.SkyDir(gta.roi.skydir.ra.deg,
+                               gta.roi.skydir.dec.deg)
+        npix = gta.npix
+        pixsize = np.abs(gta._skywcs.wcs.cdelt[0])
+        
+        skyproj = pyLike.FitScanner.buildSkyProj(str("AIT"),
+                                                 refdir, pixsize, npix,
+                                                 galactic)
+
+        
+        if src_dict is None: src_dict = {}
+        src_dict['ra'] = skydir.ra.deg
+        src_dict['dec'] = skydir.dec.deg
+        src_dict.setdefault('SpatialModel', 'PointSource')
+        src_dict.setdefault('SpatialWidth', 0.3)
+        src_dict.setdefault('Index', 2.0)
+        src_dict.setdefault('Prefactor', 1E-13)
+        src_dict['name'] = 'tscube_testsource'
+        
+        src = Source.create_from_dict(src_dict)
+        
+        modelname = utils.create_model_name(src)
+
+        optFactory = pyLike.OptimizerFactory_instance()        
+        optObject = optFactory.create(str("MINUIT"),
+                                      gta.components[0].like.logLike)
+
+        
+
+        pylike_src = gta.components[0]._create_source(src)
+        fitScanner = pyLike.FitScanner(gta.like.composite, optObject, skyproj,
+                                       npix, npix)
+        
+        fitScanner.setTestSource(pylike_src)
+        
+        self.logger.info("Running tscube")
+        # doSED         : Compute the energy bin-by-bin fits
+        # nNorm         : Number of points in the likelihood v. normalization scan
+        # covScale      : Scale factor to apply to broadband fitting cov.
+        #                 matrix in bin-by-bin fits ( < 0 -> fixed )
+        # normSigma     : Number of sigma to use for the scan range 
+        # tol           : Critetia for fit convergence (estimated vertical distance to min < tol )
+        # maxIter       : Maximum number of iterations for the Newton's method fitter
+        # tolType       : Absoulte (0) or relative (1) criteria for convergence
+        # remakeTestSource : If true, recomputes the test source image (otherwise just shifts it)
+        # ST_scan_level : Level to which to do ST-based fitting (for testing)
+        fitScanner.run_tscube(True, 10, 5.0, -1, 1e-3, 30, 0, False, 0)
+        self.logger.info("Finished tscube")
+
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
+                                        'tscube.fits',
+                                        prefix=[prefix])
+        
+        
+        fitScanner.writeFitsFile(str(outfile), str("gttscube"))
+        
+        ts_map = utils.Map.create_from_fits(outfile)
+        npred_map = utils.Map.create_from_fits(outfile,hdu='N_MAP')
+        sqrt_ts_map = copy.deepcopy(ts_map)
+        sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
+
+        o = {'name': '%s_%s' % (prefix, modelname),
+             'src_dict': copy.deepcopy(src_dict),
+             'files': [],
+             'ts': ts_map,
+             'sqrt_ts': sqrt_ts_map,
+             'npred': npred_map,
+             'amplitude': ts_map
+             }
+
+        self.logger.info("Done")
+        return o
