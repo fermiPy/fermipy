@@ -169,6 +169,16 @@ tsmap = {
 #
 tscube = {
     'model': (None, '', dict),
+    'do_sed': (True, 'Compute the energy bin-by-bin fits', bool),
+    'nnorm': (10, 'Number of points in the likelihood v. normalization scan', int),
+    'norm_sigma': (5.0, 'Number of sigma to use for the scan range ', float),
+    'cov_scale': (-1.0, 'Scale factor to apply to broadband fitting cov. '
+                   'matrix in bin-by-bin fits ( < 0 -> fixed ) ', float),
+    'tol': (1E-3, 'Critetia for fit convergence (estimated vertical distance to min < tol )', float),
+    'max_iter': (30, 'Maximum number of iterations for the Newtons method fitter.', int),
+    'tol_type': (0, 'Absoulte (0) or relative (1) criteria for convergence.', int),
+    'remake_test_source': (False, 'If true, recomputes the test source image (otherwise just shifts it)', bool),
+    'st_scan_level': (0, 'Level to which to do ST-based fitting (for testing)', int),
 }
 
 #
@@ -178,6 +188,7 @@ sourcefind = {
     'sqrt_ts_threshold': (5.0, '', float),
     'max_iter': (3, '', int),
     'sources_per_iter': (3, '', int),
+    'tsmap_fitter' : ('tsmap','',str)
 }
 
 # Options for SED analysis

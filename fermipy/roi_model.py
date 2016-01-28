@@ -99,6 +99,17 @@ spectrum_type_pars = {
     'FileFunction': ['Normalization'],
 }
 
+spectrum_type_norm_par = {
+    'PowerLaw': 'Prefactor',
+    'PowerLaw2': 'Integral',
+    'ConstantValue': 'Value',
+    'BrokenPowerLaw': 'Prefactor',
+    'LogParabola': 'norm',
+    'PLSuperExpCutoff': 'Prefactor',
+    'ExpCutoff': 'Prefactor',
+    'FileFunction': 'Normalization'
+}
+
 default_par_dict = {
     'Prefactor':
         {'name': 'Prefactor', 'value': 1.0, 'scale': None, 'min': 0.01,
@@ -563,6 +574,13 @@ class Model(object):
     @property
     def assoc(self):
         return self._data['assoc']
+
+    def get_norm(self):
+
+        par_name = spectrum_type_norm_par[self['SpectrumType']]        
+        val = self.spectral_pars[par_name]['value']
+        scale = self.spectral_pars[par_name]['scale']
+        return float(val)*float(scale)
     
     def check_cuts(self, cuts):
 

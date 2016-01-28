@@ -65,7 +65,14 @@ class Map(Map_Base):
         wcs = pywcs.WCS(header)
         return Map(data, wcs)
 
-
+    def create_image_hdu(self,name=None):
+        return pyfits.ImageHDU(self.counts,header=self.wcs.to_header(),
+                               name=name)
+    
+    def create_primary_hdu(self):
+        return pyfits.PrimaryHDU(self.counts,header=self.wcs.to_header())
+    
+    
 def format_filename(outdir, basename, prefix=None, extension=None):
     filename = ''
     if prefix is not None:
@@ -999,6 +1006,16 @@ def make_disk_spatial_map(skydir, sigma, outfile, npix=501, cdelt=0.01):
     hdulist.writeto(outfile, clobber=True)
 
 
+def write_maps(primary_map, maps, outfile):
+    
+    hdu_images = [primary_map.create_primary_hdu()]
+    for k, v in sorted(maps.items()):
+        hdu_images += [v.create_image_hdu(k)]
+
+    hdulist = pyfits.HDUList(hdu_images)
+    hdulist.writeto(outfile, clobber=True)
+        
+    
 def write_fits_image(data, wcs, outfile):
     hdu_image = pyfits.PrimaryHDU(data, header=wcs.to_header())
     hdulist = pyfits.HDUList([hdu_image])

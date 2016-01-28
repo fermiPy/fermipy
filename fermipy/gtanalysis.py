@@ -2133,6 +2133,11 @@ class GTAnalysis(fermipy.config.Configurable):
 
         Parameters
         ----------
+
+        model : dict        
+           Dictionary defining the properties of the test source.
+           This is the model that will be used for generating TS maps.
+        
         sqrt_ts_threshold : float
            Source threshold in sqrt(TS).  Only peaks with sqrt(TS)
            exceeding this threshold will be used as seeds for new
@@ -2156,6 +2161,20 @@ class GTAnalysis(fermipy.config.Configurable):
            the largest TS will be used as seeds for the current
            iteration.
 
+        tsmap_fitter : str        
+           Set the method used internally for generating TS maps.
+           Valid options:
+
+           * tsmap 
+           * tscube
+
+        tsmap : dict
+           Keyword arguments dictionary for tsmap method.
+
+        tscube : dict
+           Keyword arguments dictionary for tscube method.
+           
+           
         """
 
         self.logger.info('Running source finding.')
@@ -2543,27 +2562,7 @@ class GTAnalysis(fermipy.config.Configurable):
                                            logging=self.config['logging'])
         plotter.run(self, mcube_maps, prefix=prefix)
 
-    def tscube2(self,  prefix='', **kwargs):
-
-        make_plots = kwargs.get('make_plots', True)
-        
-        tsg = TSCubeGenerator(self.config['tscube'],
-                              fileio=self.config['fileio'],
-                              logging=self.config['logging'])
-
-        model = kwargs.get('model', self.config['tscube']['model'])
-        maps = tsg.make_ts_cube(self, prefix, copy.deepcopy(model), **kwargs)
-
-        if make_plots:
-            plotter = plotting.AnalysisPlotter(self.config['plotting'],
-                                               fileio=self.config['fileio'],
-                                               logging=self.config['logging'])
-            
-            plotter.make_tsmap_plots(self, maps)
-
-        return maps            
-        
-    def tscube(self, prefix='', **kwargs):
+    def tscube(self,  prefix='', **kwargs):
         """Generate a spatial TS map for a source component with
         properties defined by the `model` argument.  This method uses
         the `gttscube` ST application for source fitting and will
@@ -2585,11 +2584,35 @@ class GTAnalysis(fermipy.config.Configurable):
         model : dict
            Dictionary defining the properties of the test source.
 
+        do_sed : bool
+           Compute the energy bin-by-bin fits.
+        
+        nnorm : int
+           Number of points in the likelihood v. normalization scan.
+
+        norm_sigma : float
+           Number of sigma to use for the scan range.
+        
+        tol : float        
+           Critetia for fit convergence (estimated vertical distance
+           to min < tol ).
+        
+        tol_type : int
+           Absoulte (0) or relative (1) criteria for convergence.
+        
+        max_iter : int
+           Maximum number of iterations for the Newton's method fitter
+        
+        remake_test_source : bool
+           If true, recomputes the test source image (otherwise just shifts it)
+        
+        st_scan_level : int
+           
         make_plots : bool
            Write image files.
 
         make_fits : bool
-           Write FITS files.
+           Write FITS files.       
 
         Returns
         -------
@@ -2599,142 +2622,25 @@ class GTAnalysis(fermipy.config.Configurable):
            for TS and source amplitude.
 
         """
-
+        
         make_plots = kwargs.get('make_plots', True)
-
-
-        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
-                      np.round((self.npix - 1.0) / 2.))
-
-        xpix = kwargs.get('xpix',xpix)
-        ypix = kwargs.get('ypix',ypix)
-        add_source = kwargs.get('add_source',True)
-
-        print xpix, ypix, add_source
         
-        skywcs = self._skywcs
-        skydir = utils.pix_to_skydir(xpix, ypix, skywcs)
+        tsg = TSCubeGenerator(self.config['tscube'],
+                              fileio=self.config['fileio'],
+                              logging=self.config['logging'])
 
-        print skydir
-        print self.roi.skydir
-
-        testsrc = make_testsrc('tscube_testsource',skydir,
-                              self.components[0].like.logLike.observation())
-#        skydir = self.roi.skydir
-#        print xpix, ypix
-        
-        src_dict = {}
-        src_dict['ra'] = skydir.ra.deg
-        src_dict['dec'] = skydir.dec.deg
-        src_dict.setdefault('SpatialModel', 'PointSource')
-        src_dict.setdefault('SpatialWidth', 0.3)
-        src_dict.setdefault('Index', 2.0)
-        src_dict.setdefault('Prefactor', 1E-13)
-
-        if add_source:
-            self.add_source('tscube_testsource', src_dict, free=True,
-                            init_source=False,save_source_maps=False)
-            src = self.roi['tscube_testsource']
-            
-            modelname = utils.create_model_name(src)
-        #
-        else:
-            modelname='powerlaw_2.00'
-            
-        outfile = utils.format_filename(self.config['fileio']['workdir'],
-                                        'tscube.fits',
-                                        prefix=[prefix])
-
-        optObject = pyLike.OptimizerFactory_instance().create("MINUIT",
-                                                              self.components[
-                                                                  0].like.logLike)
-
-
-        refdir = pyLike.SkyDir(self.roi.skydir.ra.deg,
-                               self.roi.skydir.dec.deg)
-        npix = self.npix
-        pixsize = np.abs(self._skywcs.wcs.cdelt[0])
-
-        print npix, pixsize
-        if self.config['binning']['coordsys'] == 'CEL':
-            galactic=False
-        elif self.config['binning']['coordsys'] == 'GAL':
-            galactic=True
-        else:
-            raise Exception('Unsupported coordinate system: %s'%
-                            self.config['binning']['coordsys'])
-        
-        skyproj = pyLike.FitScanner.buildSkyProj("AIT", refdir, pixsize, npix,
-                                                 galactic)
-
-        print "Building fit scanner"
-        fitScanner = pyLike.FitScanner(self.like.composite, optObject, skyproj,
-                                       npix, npix)
-        #        fitScanner.set_verbose_bb(2)
-
-        print "Setting test source"
-        if add_source:
-            ok = fitScanner.setTestSourceByName('tscube_testsource')
-        else:
-            ok = fitScanner.setTestSource(testsrc)
-            
-        #funcFactory = pyLike.SourceFactory_funcFactory()
-        #ok = fitScanner.setPowerlawPointTestSource(funcFactory)
-
-        self.logger.info("Running tscube")
-        # doSED         : Compute the energy bin-by-bin fits
-        # nNorm         : Number of points in the likelihood v. normalization scan
-        # covScale      : Scale factor to apply to broadband fitting cov.
-        #                 matrix in bin-by-bin fits ( < 0 -> fixed )
-        # normSigma     : Number of sigma to use for the scan range 
-        # tol           : Critetia for fit convergence (estimated vertical distance to min < tol )
-        # maxIter       : Maximum number of iterations for the Newton's method fitter
-        # tolType       : Absoulte (0) or relative (1) criteria for convergence
-        # remakeTestSource : If true, recomputes the test source image (otherwise just shifts it)
-        # ST_scan_level : Level to which to do ST-based fitting (for testing)
-        
-#        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-4, 30, 1, False, 0)
-        ok = fitScanner.run_tscube(True, 10, 5.0, -1, 1e-3, 30, 0, False, 0)
-        self.logger.info("Finished tscube")
-
-        print "Writing output file"
-        ok = fitScanner.writeFitsFile(outfile, "gttscube")
-
-        if add_source:
-            self.delete_source('tscube_testsource')
-        
-        ts_map = utils.Map.create_from_fits(outfile)
-        sqrt_ts_map = copy.deepcopy(ts_map)
-        sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
-
+        model = kwargs.get('model', self.config['tscube']['model'])
+        maps = tsg.make_ts_cube(self, prefix, copy.deepcopy(model), **kwargs)
 
         if make_plots:
-            import matplotlib.pyplot as plt
-            from plotting import ROIPlotter
-        
-            fig = plt.figure()
-            p = ROIPlotter(sqrt_ts_map, self.roi)
-            p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9],
-                   cb_label='Sqrt(TS) [$\sigma$]')
-            plt.savefig(utils.format_filename(self.config['fileio']['outdir'],
-                                              'tsmap_sqrt_ts',
-                                              prefix=[prefix],
-                                              extension='png'))
-            plt.close(fig)
-                
-        o = {'name': '%s_%s' % (prefix, modelname),
-             'src_dict': copy.deepcopy(src_dict),
-             'files': [],
-             #             'wcs': skywcs,
-             'ts': ts_map,
-             'sqrt_ts': sqrt_ts_map,
-             #             'sqrt_ts': Map(ts_values**0.5, skywcs),
-             #             'npred': Map(amp_values*model_npred, skywcs),
-             #             'amplitude': Map(amp_values, skywcs),
-             }
+            plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                               fileio=self.config['fileio'],
+                                               logging=self.config['logging'])
+            
+            plotter.make_tsmap_plots(self, maps)
 
-        self.logger.info("Done")
-        return o
+        self.logger.info("Finished running TSCube.")
+        return maps            
 
     def _tsmap_fast(self, prefix, **kwargs):
         """Evaluate the TS for an additional source component at each point

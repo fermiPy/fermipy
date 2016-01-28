@@ -502,45 +502,31 @@ class TSMapGenerator(fermipy.config.Configurable):
             ts_values[ix, iy] = r[0]
             amp_values[ix, iy] = r[1]
 
-        files = {}
-
-        if make_fits:
-
-            ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                                'tsmap_ts.fits',
-                                                prefix=[prefix,modelname])
-
-            sqrt_ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                                     'tsmap_sqrt_ts.fits',
-                                                     prefix=[prefix, modelname])
-
-            npred_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                                   'tsmap_npred.fits',
-                                                   prefix=[prefix, modelname])
-
-            amp_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                                 'tsmap_amplitude.fits',
-                                                 prefix=[prefix, modelname])
-
-            utils.write_fits_image(ts_values, skywcs, ts_map_file)
-            utils.write_fits_image(ts_values**0.5, skywcs, sqrt_ts_map_file)
-            utils.write_fits_image(amp_values*model_npred, skywcs, npred_map_file)
-            utils.write_fits_image(amp_values, skywcs, amp_map_file)
-
-            files = {'ts': os.path.basename(ts_map_file),
-                     'sqrt_ts': os.path.basename(sqrt_ts_map_file),
-                     'npred': os.path.basename(npred_map_file),
-                     'amplitude': os.path.basename(amp_map_file),
-                     }
+        ts_map = Map(ts_values, skywcs)
+        sqrt_ts_map = Map(ts_values**0.5, skywcs)
+        npred_map = Map(amp_values*model_npred, skywcs)
+        amp_map = Map(amp_values*src.get_norm(), skywcs)
 
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),
-             'files': files,
-             'ts': Map(ts_values, skywcs),
-             'sqrt_ts': Map(ts_values**0.5, skywcs),
-             'npred': Map(amp_values*model_npred, skywcs),
-             'amplitude': Map(amp_values, skywcs),
+             'file': None,
+             'ts': ts_map,
+             'sqrt_ts': sqrt_ts_map,
+             'npred': npred_map,
+             'amplitude': amp_map,
              }
+        
+        if make_fits:
+
+            ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
+                                                'tsmap.fits',
+                                                prefix=[prefix,modelname])            
+            utils.write_maps(ts_map,
+                             {'SQRT_TS_MAP': sqrt_ts_map,'NPRED_MAP': npred_map,
+                              'N_MAP': amp_map },
+                             ts_map_file)
+            o['file'] = os.path.basename(ts_map_file)
+            
 
         return o
 
@@ -560,21 +546,19 @@ class TSCubeGenerator(fermipy.config.Configurable):
     def make_ts_cube(self, gta, prefix, src_dict=None, **kwargs):
 
         make_fits = kwargs.get('make_fits', True)
-        exclude = kwargs.get('exclude', None)
 
-
+        # Extract options from kwargs
+        config = copy.deepcopy(self.config)
+        config.update(kwargs)        
+        
         xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
                       np.round((gta.npix - 1.0) / 2.))
 
-        xpix = kwargs.get('xpix',xpix)
-        ypix = kwargs.get('ypix',ypix)
-        #add_source = kwargs.get('add_source',True)
-        
+        #xpix = kwargs.get('xpix',xpix)
+        #ypix = kwargs.get('ypix',ypix)
+        #add_source = kwargs.get('add_source',True)        
         skywcs = gta._skywcs
         skydir = utils.pix_to_skydir(xpix, ypix, skywcs)
-
-#        print skydir
-#        print self.roi.skydir
         
         if gta.config['binning']['coordsys'] == 'CEL':
             galactic=False
@@ -630,8 +614,12 @@ class TSCubeGenerator(fermipy.config.Configurable):
         # tolType       : Absoulte (0) or relative (1) criteria for convergence
         # remakeTestSource : If true, recomputes the test source image (otherwise just shifts it)
         # ST_scan_level : Level to which to do ST-based fitting (for testing)
-        fitScanner.run_tscube(True, 10, 5.0, -1, 1e-3, 30, 0, False, 0)
-        self.logger.info("Finished tscube")
+        fitScanner.run_tscube(config['do_sed'], config['nnorm'],
+                              config['norm_sigma'], config['cov_scale'],
+                              config['tol'], config['max_iter'],
+                              config['tol_type'], config['remake_test_source'],
+                              config['st_scan_level'])
+        self.logger.info("Writing FITS output")
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'tscube.fits',
@@ -642,16 +630,20 @@ class TSCubeGenerator(fermipy.config.Configurable):
         
         ts_map = utils.Map.create_from_fits(outfile)
         npred_map = utils.Map.create_from_fits(outfile,hdu='N_MAP')
+        amp_map = utils.Map.create_from_fits(outfile,hdu='N_MAP')
         sqrt_ts_map = copy.deepcopy(ts_map)
         sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
 
+        amp_map._counts *= src_dict['Prefactor']
+        
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),
-             'files': [],
+             'file': os.path.basename(outfile),
              'ts': ts_map,
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
-             'amplitude': ts_map
+             'amplitude': amp_map,
+             'config' : config
              }
 
         self.logger.info("Done")
