@@ -53,7 +53,7 @@ Download the latest version of fermiPy from the github repository:
 
    >>> git clone https://github.com/fermiPy/fermipy.git
 
-Run the setup.py script.  This will install the fermiPy package itself
+Run the ``setup.py script``.  This will install the fermiPy package itself
 and its dependencies in your local python environment:
 
 .. code-block:: bash
@@ -150,38 +150,36 @@ Running at SLAC
 ---------------
 
 This section provides specific installation instructions for running
-on the SLAC cluster.  First checkout the fermipy git repository:
+on the SLAC cluster.  First download and source the ``slacsetup.sh`` script:
 
 .. code-block:: bash
 
-   >>> git clone https://github.com/fermiPy/fermipy.git
-   >>> Cd fermipy
-
-Then source the ``slacsetup.sh`` script in the fermipy directory and run
-the ``slacsetup`` function:
-
-.. code-block:: bash
-
+   >>> wget https://raw.githubusercontent.com/fermiPy/fermipy/master/slacsetup.sh -O slacsetup.sh
    >>> source slacsetup.sh
+   
+To initialize the ST environment run the ``slacsetup`` function:
+
+.. code-block:: bash
+
    >>> slacsetup
 
-This will setup your GLAST_EXT path and source the setup script for
-one of the pre-built ST installations (default is 10-01-01).  To
-manually override the ST version you can optionally provide the
-release tag as an argument to the ``slacsetup`` function:
+This will setup your ``GLAST_EXT`` path and source the setup script
+for one of the pre-built ST installations (the current default is
+10-01-01).  To manually override the ST version you can optionally
+provide the release tag as an argument to ``slacsetup``:
 
 .. code-block:: bash
 
    >>> slacsetup 10-XX-XX
 
-After setting up the STs environment, install fermipy with pip:
+After initializing the STs environment, install fermipy with pip:
 
 .. code-block:: bash
 
    >>> pip install fermipy --user
 
-This will install fermipy under the ``$HOME/.local`` directory.  You
-can verify that the installation has succeeded by importing
+This will install fermipy in ``$HOME/.local``.  You can verify that
+the installation has succeeded by importing
 `~fermipy.gtanalysis.GTAnalysis`:
 
 .. code-block:: bash
@@ -194,15 +192,47 @@ can verify that the installation has succeeded by importing
    Please check out: http://continuum.io/thanks and https://binstar.org
    >>> from fermipy.gtanalysis import GTAnalysis
 
-For Developers
---------------
+.. _gitinstall:
+   
+Building from Source
+--------------------
 
-You have the option of either installing a tagged release
-(recommended) or the latest commit on the master branch:
+These instructions describe how to install fermipy from its git source
+code repository.  This is necessary if you want to locally develop
+fermipy or you want to use the latest development version of the
+fermipy code.  Note that for most users installing fermipy with pip
+should be sufficient.  First clone the fermipy repository:
 
 .. code-block:: bash
 
-   # See the list of tags
+   >>> git clone https://github.com/fermiPy/fermipy.git
+   >>> cd fermipy
+
+You then have the option of either installing a tagged release or the
+head of the master branch.  To install the head of the master branch
+run ``setup.py install`` from the root of the source tree:
+
+.. code-block:: bash
+
+   # Install the latest version
+   >>> git checkout master
+   >>> python setup.py install --user 
+
+To use your current copy of the code as the working installation run
+``setup.py develop``:
+
+.. code-block:: bash
+
+   # Install a link to your source code installation
+   >>> python setup.py develop --user 
+
+This is particularly useful if you are doing active code development.
+   
+From the git source code repository you can also install any tagged
+release.  To see the list of release tags use ``git tag``:
+
+.. code-block:: bash
+
    >>> git tag
    0.4.0
    0.5.0
@@ -212,20 +242,13 @@ You have the option of either installing a tagged release
    0.5.4
    0.6.0
    0.6.1
+
+To install a specific release tag, run ``git checkout`` with the tag
+name followed by ``setup.py install``:
    
-   # Checkout a specific release tag (usually the latest one)
+.. code-block:: bash
+   
+   # Checkout a specific release tag
    >>> git checkout X.X.X 
    >>> python setup.py install --user 
 
-.. code-block:: bash
-
-   # Install the HEAD of the master branch
-   >>> python setup.py install --user 
-
-.. code-block:: bash
-
-   # See the list of tags
-   >>> git tag
-   # Checkout a specific release tag (usually the latest one)
-   >>> git checkout X.X.X 
-   >>> python setup.py install --user 
