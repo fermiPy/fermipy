@@ -155,7 +155,7 @@ on the SLAC cluster.  First checkout the fermipy git repository:
 .. code-block:: bash
 
    >>> git clone https://github.com/fermiPy/fermipy.git
-   >>> cd fermipy
+   >>> Cd fermipy
 
 Then source the ``slacsetup.sh`` script in the fermipy directory and run
 the ``slacsetup`` function:
@@ -168,15 +168,37 @@ the ``slacsetup`` function:
 This will setup your GLAST_EXT path and source the setup script for
 one of the pre-built ST installations (default is 10-01-01).  To
 manually override the ST version you can optionally provide the
-release tag as a function argument:
+release tag as an argument to the ``slacsetup`` function:
 
 .. code-block:: bash
 
    >>> slacsetup 10-XX-XX
 
-After setting up the STs environment, install fermipy with the package
-setup script.  You have the option of either installing a tagged
-release (recommended) or the latest commit on the master branch:
+After setting up the STs environment, install fermipy with pip:
+
+.. code-block:: bash
+
+   >>> pip install fermipy --user
+
+This will install fermipy under the ``$HOME/.local`` directory.  You
+can verify that the installation has succeeded by importing
+`~fermipy.gtanalysis.GTAnalysis`:
+
+.. code-block:: bash
+
+   >>> python
+   Python 2.7.8 |Anaconda 2.1.0 (64-bit)| (default, Aug 21 2014, 18:22:21) 
+   [GCC 4.4.7 20120313 (Red Hat 4.4.7-1)] on linux2
+   Type "help", "copyright", "credits" or "license" for more information.
+   Anaconda is brought to you by Continuum Analytics.
+   Please check out: http://continuum.io/thanks and https://binstar.org
+   >>> from fermipy.gtanalysis import GTAnalysis
+
+For Developers
+--------------
+
+You have the option of either installing a tagged release
+(recommended) or the latest commit on the master branch:
 
 .. code-block:: bash
 
@@ -207,17 +229,3 @@ release (recommended) or the latest commit on the master branch:
    # Checkout a specific release tag (usually the latest one)
    >>> git checkout X.X.X 
    >>> python setup.py install --user 
-     
-This will install fermipy under ``$HOME/.local`` directory.  You can
-verify that the installation has succeeded by importing `~fermipy.gtanalysis.GTAnalysis`:
-
-.. code-block:: bash
-
-   >>> python
-   Python 2.7.8 |Anaconda 2.1.0 (64-bit)| (default, Aug 21 2014, 18:22:21) 
-   [GCC 4.4.7 20120313 (Red Hat 4.4.7-1)] on linux2
-   Type "help", "copyright", "credits" or "license" for more information.
-   Anaconda is brought to you by Continuum Analytics.
-   Please check out: http://continuum.io/thanks and https://binstar.org
-   >>> from fermipy.gtanalysis import GTAnalysis
-
