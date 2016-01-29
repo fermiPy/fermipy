@@ -178,8 +178,14 @@ After initializing the STs environment, install fermipy with pip:
 
    >>> pip install fermipy --user
 
-This will install fermipy in ``$HOME/.local``.  You can verify that
-the installation has succeeded by importing
+This will install fermipy in ``$HOME/.local``.  To upgrade an existing
+fermipy installation run the same command with ``--upgrade --no-deps`` :
+
+.. code-block:: bash
+
+   >>> pip install fermipy --user --upgrade --no-deps
+
+You can verify that the installation has succeeded by importing
 `~fermipy.gtanalysis.GTAnalysis`:
 
 .. code-block:: bash
