@@ -12,6 +12,7 @@ except KeyError:
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.patheffects as PathEffects
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 import wcsaxes
@@ -222,6 +223,8 @@ class ImagePlotter(object):
 
         if kwargs_contour['levels']:
             cs = ax.contour(data.T, **kwargs_contour)
+            cs.levels = ['%.0f'%val for val in cs.levels]
+            plt.clabel(cs,inline=1,fontsize=8)
       
         #   plt.clabel(cs, fontsize=5, inline=0)
 
@@ -322,7 +325,6 @@ class ROIPlotter(fermipy.config.Configurable):
     @staticmethod
     def create_from_fits(fitsfile, roi, **kwargs):
 
-        print "Reading ",fitsfile
         hdulist = pyfits.open(fitsfile)
         try:
             if hdulist[1].name == "SKYMAP":
@@ -411,8 +413,6 @@ class ROIPlotter(fermipy.config.Configurable):
 
     def plot(self, **kwargs):
 
-        marker_threshold = 10
-        label_threshold = 10
         src_color = 'w'
         fontweight = 'normal'
 
@@ -421,7 +421,8 @@ class ROIPlotter(fermipy.config.Configurable):
                          zscale='lin', subplot=111)
 
         plot_kwargs = dict(linestyle='None', marker='+',
-                           markerfacecolor='None',
+                           markerfacecolor='None',mew=0.66,ms=8,
+#                           markersize=8,
                            markeredgecolor=src_color, clip_on=True)
 
         text_kwargs = dict(color=src_color, size=8, clip_on=True,
@@ -438,15 +439,15 @@ class ROIPlotter(fermipy.config.Configurable):
         im, ax = self._implot.plot(**im_kwargs)
 
         pixcrd = utils.skydir_to_pix(self._roi._src_skydir, self._implot._wcs)
-
+        
         for i, s in enumerate(self._roi.point_sources):
             label = s.name
-            ax.text(pixcrd[0][i] + 2.0, pixcrd[1][i] + 2.0, label,
+            t = ax.text(pixcrd[0][i] + 2.0, pixcrd[1][i] + 2.0, label,
                     **text_kwargs)
-
-            #        if marker_threshold is not None and s['Signif_Avg'] >
-            # marker_threshold:
-            ax.plot(pixcrd[0][i], pixcrd[1][i], **plot_kwargs)
+            plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
+            
+            t = ax.plot(pixcrd[0][i], pixcrd[1][i], **plot_kwargs)
+            plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
 
         extent = im.get_extent()
         ax.set_xlim(extent[0], extent[1])
@@ -729,10 +730,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         # Reload maps from FITS file
 
+        sigma_levels = [-5,-3,3,5,7] + list(np.logspace(1,3,17))
+        
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sigma'], gta.roi)
-        p.plot(vmin=-5, vmax=5, levels=[-5, -3, 3, 5, 7, 9, 11, 13, 15, 20, 25],
+        p.plot(vmin=-5, vmax=5, levels=sigma_levels,
                cb_label='Significance [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'residmap_sigma',
@@ -744,7 +747,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p = ROIPlotter(maps['data'], gta.roi)
         p.plot(cb_label='Counts')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
-                                          'residmap_counts',
+                                          'residmap_data',
+                                          prefix=[prefix],
+                                          extension=format))
+        plt.close(fig)
+
+        fig = plt.figure()
+        p = ROIPlotter(maps['model'], gta.roi)
+        p.plot(cb_label='Counts')
+        plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
+                                          'residmap_model',
                                           prefix=[prefix],
                                           extension=format))
         plt.close(fig)
@@ -765,12 +777,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
         if 'ts' not in maps: 
             return
 
-        # Reload maps from FITS file
-
+        sigma_levels = [3,5,7] + list(np.logspace(1,3,17))
+        
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sqrt_ts'], gta.roi)
-        p.plot(vmin=0, vmax=5, levels=[3, 5, 7, 9, 11, 13, 15, 20, 25],
+        p.plot(vmin=0, vmax=5, levels=sigma_levels,
                cb_label='Sqrt(TS) [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['outdir'],
                                           'tsmap_sqrt_ts',
