@@ -159,7 +159,8 @@ class ResidMapGenerator(fermipy.config.Configurable):
 
         exclude = kwargs.get('exclude', None)
         erange = kwargs.get('erange', self.config['erange'])
-
+        make_fits = kwargs.get('make_fits', True)
+        
         if erange is not None:            
             if len(erange) == 0: erange = [None,None]
             elif len(erange) == 1: erange += [None]            
@@ -258,22 +259,29 @@ class ResidMapGenerator(fermipy.config.Configurable):
 
         emst /= np.max(emst)
 
-        utils.write_fits_image(sigma, skywcs, sigma_map_file)
-        utils.write_fits_image(cmst / emst, skywcs, data_map_file)
-        utils.write_fits_image(mmst / emst, skywcs, model_map_file)
-        utils.write_fits_image(excess / emst, skywcs, excess_map_file)
-
-        files = {'sigma': os.path.basename(sigma_map_file),
-                 'model': os.path.basename(model_map_file),
-                 'data': os.path.basename(data_map_file),
-                 'excess': os.path.basename(excess_map_file)}
+        sigma_map = Map(sigma, skywcs)
+        model_map = Map(mmst / emst, skywcs)
+        data_map = Map(cmst / emst, skywcs)
+        excess_map = Map(excess / emst, skywcs)
 
         o = {'name': '%s_%s' % (prefix, modelname),
-             'files': files,
+             'file': None,
              'wcs': skywcs,
-             'sigma': Map(sigma, skywcs),
-             'model': Map(mmst / emst, skywcs),
-             'data': Map(cmst / emst, skywcs),
-             'excess': Map(excess / emst, skywcs)}
+             'sigma': sigma_map,
+             'model': model_map,
+             'data': data_map,
+             'excess': excess_map }
+        
+        if make_fits:
+
+            fits_file = utils.format_filename(self.config['fileio']['workdir'],
+                                              'residmap.fits',
+                                              prefix=[prefix,modelname])            
+            utils.write_maps(sigma_map,
+                             {'DATA_MAP': data_map,
+                              'MODEL_MAP': model_map,
+                              'EXCESS_MAP': excess_map },
+                             fits_file)
+            o['file'] = os.path.basename(fits_file)
 
         return o

@@ -518,15 +518,15 @@ class TSMapGenerator(fermipy.config.Configurable):
         
         if make_fits:
 
-            ts_map_file = utils.format_filename(self.config['fileio']['workdir'],
+            fits_file = utils.format_filename(self.config['fileio']['workdir'],
                                                 'tsmap.fits',
                                                 prefix=[prefix,modelname])            
             utils.write_maps(ts_map,
-                             {'SQRT_TS_MAP': sqrt_ts_map,'NPRED_MAP': npred_map,
+                             {'SQRT_TS_MAP': sqrt_ts_map,
+                              'NPRED_MAP': npred_map,
                               'N_MAP': amp_map },
-                             ts_map_file)
-            o['file'] = os.path.basename(ts_map_file)
-            
+                             fits_file)
+            o['file'] = os.path.basename(fits_file)            
 
         return o
 

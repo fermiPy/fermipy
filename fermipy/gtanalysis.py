@@ -997,6 +997,11 @@ class GTAnalysis(fermipy.config.Configurable):
     def set_parameter(self, name, par, value, true_value=True, scale=None,
                       bounds=None):
         idx = self.like.par_index(name, par)
+        current_bounds = list(self.like.model[idx].getBounds())
+        current_bounds[0] = min(current_bounds[0],value)
+        current_bounds[1] = max(current_bounds[1],value)
+        self.like[idx].setBounds(*current_bounds)
+        
         if true_value:
             for p in self.like[idx].pars:
                 p.setTrueValue(value)
@@ -1857,17 +1862,16 @@ class GTAnalysis(fermipy.config.Configurable):
                            bounds=[1E-10, 1E10])
 
         for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
-            #            saved_state.restore()
-
+            
             ecenter = 0.5 * (emin + emax)
-            #deltae = 10 ** emax - 10 ** emin
-            self.set_parameter(name, 'Scale', 10 ** ecenter, scale=1.0)
+            self.set_parameter(name, 'Scale', 10 ** ecenter, scale=1.0,
+                               bounds=[1,1E6])
 
             if use_local_index:
                 o['index'][i] = -min(gf_bin_index[i], max_index)
             else:
                 o['index'][i] = -bin_index
-
+                
             self.set_parameter(name, 'Index', o['index'][i], scale=1.0)
 
             normVal = self.like.normPar(name).getValue()
@@ -1903,7 +1907,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
             cs = self.model_counts_spectrum(name, emin, emax, summed=True)
             o['Npred'][i] = np.sum(cs)
-            o['ts'][i] = max(self.like.Ts(name, reoptimize=False), 0.0)
+            o['ts'][i] = max(self.like.Ts2(name, reoptimize=False), 0.0)
+            
             if profile:
                 lnlp = self.profile_norm(name, emin=emin, emax=emax,
                                          savestate=False)
@@ -1925,8 +1930,6 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src = self.roi.get_source_by_name(name, True)
         src.update_data({'sed': copy.deepcopy(o)})
-        #        src_model = self._roi_model['sources'].get(name,{})
-        #        src_model['sed'] = copy.deepcopy(o)
 
         self.logger.info('Finished SED')
         return o
@@ -3784,7 +3787,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def update_srcmap(self, names):
 
         for name in names:
-            print name
             src = self.delete_source(name)
             self.add_source(name, src, free=True)
 
