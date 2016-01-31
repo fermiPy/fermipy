@@ -498,7 +498,9 @@ class GTAnalysis(fermipy.config.Configurable):
 
         for c in self.components:
             c.update_source_map(name)
-    
+
+        self.like.model = self.like.components[0].model
+            
     def add_source(self, name, src_dict, free=False, init_source=True,
                    save_source_maps=True):
         """Add a source to the ROI model.  This function may be called
