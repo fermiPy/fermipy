@@ -107,6 +107,16 @@ def interpolate_function_min(x, y):
     return x0
 
 
+def get_spectral_index(src,egy):
+    """Compute the local spectral index of a source."""
+    delta = 1E-5
+    f0 = src.spectrum()(pyLike.dArg(egy*(1-delta)))
+    f1 = src.spectrum()(pyLike.dArg(egy*(1+delta)))    
+    gamma = np.log10(f0 / f1) / np.log10((1-delta)/(1+delta))
+
+    return gamma
+
+
 def cl_to_dlnl(cl):
     import scipy.special as spfn
     alpha = 1.0 - cl
@@ -2886,6 +2896,9 @@ class GTAnalysis(fermipy.config.Configurable):
                     'dfde100': np.ones(2) * np.nan,
                     'dfde1000': np.ones(2) * np.nan,
                     'dfde10000': np.ones(2) * np.nan,
+                    'dfde100_index': np.ones(2) * np.nan,
+                    'dfde1000_index': np.ones(2) * np.nan,
+                    'dfde10000_index': np.ones(2) * np.nan,
                     'flux_ul95': np.nan,
                     'flux100_ul95': np.nan,
                     'flux1000_ul95': np.nan,
@@ -2932,6 +2945,14 @@ class GTAnalysis(fermipy.config.Configurable):
                 pyLike.dArg(1000.))
             src_dict['dfde10000'][0] = self.like[name].spectrum()(
                 pyLike.dArg(10000.))
+
+            src_dict['dfde100_index'][0] = -get_spectral_index(self.like[name],
+                                                              100.)
+            src_dict['dfde1000_index'][0] = -get_spectral_index(self.like[name],
+                                                               1000.)
+            src_dict['dfde10000_index'][0] = -get_spectral_index(self.like[name],
+                                                                10000.)
+            
         except Exception:
             self.logger.error('Failed to update source parameters.',
                               exc_info=True)
