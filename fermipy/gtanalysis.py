@@ -2520,7 +2520,7 @@ class GTAnalysis(fermipy.config.Configurable):
         self._init_roi_model()
 
     def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
-                  save_model_map=True, **kwargs):
+                  save_model_map=True, format=None, **kwargs):
         """Write current model to a file.  This function will write an
         XML model file and an ROI dictionary in both YAML and npy
         formats.
@@ -2540,7 +2540,7 @@ class GTAnalysis(fermipy.config.Configurable):
             Save the current counts model as a FITS file.
 
         format : str
-            Set the file format for plots (png, pdf, etc.).
+            Set the output file format (yaml or npy).
 
         """
         # extract the results in a convenient format
@@ -2548,17 +2548,19 @@ class GTAnalysis(fermipy.config.Configurable):
         make_plots = kwargs.get('make_plots',True)
 
         if outfile is None:
-            outfile = os.path.join(self._savedir, 'results')
+            outfile = os.path.join(self.config['fileio']['workdir'],
+                                   'results')
             prefix = ''
         else:
             outfile, ext = os.path.splitext(outfile)
             prefix = outfile
             if not os.path.isabs(outfile):
-                outfile = os.path.join(self._savedir, outfile)
+                outfile = os.path.join(self.config['fileio']['workdir'],
+                                       outfile)
 
         self.write_xml(prefix)
 
-        mcube_maps = []
+        mcube_maps = None
         if save_model_map:
             mcube_maps = self.generate_model_map(prefix)
 
@@ -2574,33 +2576,39 @@ class GTAnalysis(fermipy.config.Configurable):
         o['version'] = fermipy.__version__
         o['sources'] = {}
 
-#        for k, v in o['roi']['residmap'].items():
-#            o['roi']['residmap'][k] = {'files': v['files']}
-#        for k, v in o['roi']['tsmap'].items():
-#            o['roi']['tsmap'][k] = {'files': v['files']}
-
         for s in self.roi.sources:
             o['sources'][s.name] = copy.deepcopy(s.data)
 
-        self.logger.info('Writing %s...' % (outfile + '.yaml'))
-        yaml.dump(tolist(o), open(outfile + '.yaml', 'w'))
+        if format is None:
+            format = ['npy','yaml']
+        elif not isinstance(format,list):
+            format = [format]
+            
+        for fmt in format:
 
-        self.logger.info('Writing %s...' % (outfile + '.npy'))
-        np.save(outfile + '.npy', o)
+            if fmt == 'yaml':
+                self.logger.info('Writing %s...' % (outfile + '.yaml'))
+                yaml.dump(tolist(o), open(outfile + '.yaml', 'w'))
+            elif fmt == 'npy':                
+                self.logger.info('Writing %s...' % (outfile + '.npy'))
+                np.save(outfile + '.npy', o)
+            else:
+                raise Exception('Unrecognized format.')
 
         if make_plots:
-            self.make_plots(prefix, mcube_maps=mcube_maps, **kwargs)
+            self.make_plots(prefix, mcube_maps,
+                            **kwargs.get('plotting',{}))
 
-    def make_plots(self, prefix, **kwargs):
+    def make_plots(self, prefix, mcube_maps, **kwargs):
 
-        mcube_maps = kwargs.get('mcube_maps', None)
+        #mcube_maps = kwargs.pop('mcube_maps', None)
         if mcube_maps is None:
             mcube_maps = self.get_model_map()
 
         plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                            fileio=self.config['fileio'],
                                            logging=self.config['logging'])
-        plotter.run(self, mcube_maps, prefix=prefix)
+        plotter.run(self, mcube_maps, prefix=prefix, **kwargs)
 
     def tscube(self,  prefix='', **kwargs):
         """Generate a spatial TS map for a source component with
