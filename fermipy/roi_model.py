@@ -793,6 +793,10 @@ class Source(Model):
         data = copy.deepcopy(self.data)
         data['names'] = self.names
 
+        data['flux'], data['flux_err'] = data['flux'][0], data['flux'][1]
+        data['eflux'], data['eflux_err'] = data['eflux'][0], data['eflux'][1]
+
+        
         output = []
         output += ['{:15s}:'.format('Name') + ' {name:s}']
         output += ['{:15s}:'.format('Associations') + ' {names:s}']
@@ -800,6 +804,8 @@ class Source(Model):
         output += ['{:15s}:'.format('GLON/GLAT') + ' {glon:10.3f}/{glat:10.3f}']
         output += ['{:15s}:'.format('TS') + ' {ts:.2f}']
         output += ['{:15s}:'.format('Npred') + ' {Npred:.2f}']
+        output += ['{:15s}:'.format('Flux') + ' {flux:6.3g} +/- {flux_err:6.3g}']
+        output += ['{:15s}:'.format('EnergyFlux') + ' {eflux:6.3g} +/- {eflux_err:6.3g}']
         output += ['{:15s}:'.format('SpatialModel') + ' {SpatialModel:s}']
         output += ['{:15s}:'.format('SpectrumType') + ' {SpectrumType:s}']
         output += ['Spectral Parameters']

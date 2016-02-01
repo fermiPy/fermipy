@@ -111,9 +111,13 @@ def get_spectral_index(src,egy):
     """Compute the local spectral index of a source."""
     delta = 1E-5
     f0 = src.spectrum()(pyLike.dArg(egy*(1-delta)))
-    f1 = src.spectrum()(pyLike.dArg(egy*(1+delta)))    
-    gamma = np.log10(f0 / f1) / np.log10((1-delta)/(1+delta))
+    f1 = src.spectrum()(pyLike.dArg(egy*(1+delta)))
 
+    if f0 > 0 and f1 > 0:    
+        gamma = np.log10(f0 / f1) / np.log10((1-delta)/(1+delta))
+    else:
+        gamma = np.nan
+        
     return gamma
 
 
@@ -1014,11 +1018,21 @@ class GTAnalysis(fermipy.config.Configurable):
         self.like[idx].setScale(self.like[idx].getScale() * scale)
 
     def set_parameter(self, name, par, value, true_value=True, scale=None,
-                      bounds=None):
+                      bounds=None, update_source=True):
+
+        name = self.roi.get_source_by_name(name, True).name
         idx = self.like.par_index(name, par)
         current_bounds = list(self.like.model[idx].getBounds())
-        current_bounds[0] = min(current_bounds[0],value)
-        current_bounds[1] = max(current_bounds[1],value)
+        current_scale = self.like.model[idx].getScale()
+        
+        if true_value:
+            current_bounds[0] = min(current_bounds[0],value/current_scale)
+            current_bounds[1] = max(current_bounds[1],value/current_scale)
+        else:
+            current_bounds[0] = min(current_bounds[0],value)
+            current_bounds[1] = max(current_bounds[1],value)
+
+        # update current bounds to encompass new value
         self.like[idx].setBounds(*current_bounds)
         
         if true_value:
@@ -1032,6 +1046,9 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if bounds is not None:
             self.like[idx].setBounds(*bounds)
+
+        if update_source:
+            self.update_source(name)
 
     def set_parameter_bounds(self,name,par,bounds):
         
@@ -1892,27 +1909,29 @@ class GTAnalysis(fermipy.config.Configurable):
         self.free_parameter(name, 'Index', False)
         self.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
                            true_value=False,
-                           bounds=[1E-10, 1E10])
-
+                           bounds=[1E-10, 1E10],
+                           update_source=False)
+        
         for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
             
             ecenter = 0.5 * (emin + emax)
             self.set_parameter(name, 'Scale', 10 ** ecenter, scale=1.0,
-                               bounds=[1,1E6])
+                               bounds=[1,1E6], update_source=False)
 
             if use_local_index:
                 o['index'][i] = -min(gf_bin_index[i], max_index)
             else:
                 o['index'][i] = -bin_index
                 
-            self.set_parameter(name, 'Index', o['index'][i], scale=1.0)
+            self.set_parameter(name, 'Index', o['index'][i], scale=1.0,
+                               update_source=False)
 
             normVal = self.like.normPar(name).getValue()
             flux_ratio = gf_bin_flux[i] / self.like[name].flux(10 ** emin,
                                                                10 ** emax)
             newVal = max(normVal * flux_ratio, 1E-10)
             self.set_norm(name, newVal)
-
+            
             self.like.syncSrcParams(name)
             self.free_norm(name)
             self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
@@ -1982,12 +2001,22 @@ class GTAnalysis(fermipy.config.Configurable):
         emin = min(self.energies) if emin is None else emin
         emax = max(self.energies) if emax is None else emax
 
-        cs = self.model_counts_spectrum(name, emin, emax, summed=True)
-        npred = np.sum(cs)
-
         if xvals is None:
 
             val = par.getValue()
+            if val == 0:
+                par.setValue(1.0)
+                self.like.syncSrcParams(name)
+                cs = self.model_counts_spectrum(name, emin, emax, summed=True)
+                npred = np.sum(cs)
+                val = 1./npred
+                npred = 1.0
+                par.setValue(0.0)
+                self.like.syncSrcParams(name)
+            else:
+                cs = self.model_counts_spectrum(name, emin, emax, summed=True)
+                npred = np.sum(cs)
+                
             if npred < 10:
                 val *= 1. / min(1.0, npred)
                 xvals = val * 10 ** np.linspace(-2.0, 2.0, 2 * npts + 1)
@@ -2013,7 +2042,7 @@ class GTAnalysis(fermipy.config.Configurable):
         parName = self.like.normPar(name).getName()
         idx = self.like.par_index(name, parName)
         #scale = float(self.like.model[idx].getScale())
-        #bounds = self.like.model[idx].getBounds()
+        bounds = self.like.model[idx].getBounds()
         value = self.like.model[idx].getValue()
 
         emin = min(self.energies) if emin is None else emin
@@ -2037,8 +2066,9 @@ class GTAnalysis(fermipy.config.Configurable):
                 xvals = np.concatenate((-1.0 * xvals[1:][::-1], xvals))
                 xvals = val * 10 ** xvals
 
-        bounds = [min(xvals[0],value),max(xvals[-1],value)]
-        self.like[idx].setBounds(*bounds)
+        # Update parameter bounds to encompass scan range
+        self.like[idx].setBounds(min(xvals[0],value),
+                                 max(xvals[-1],value))
 
         o = {'xvals': xvals,
              'Npred': np.zeros(len(xvals)),
@@ -2078,6 +2108,8 @@ class GTAnalysis(fermipy.config.Configurable):
         # Restore model parameters to original values
         if savestate:
             saved_state.restore()
+
+        self.like[idx].setBounds(*bounds)
 
         return o
 
@@ -2772,7 +2804,8 @@ class GTAnalysis(fermipy.config.Configurable):
             #            for c in self.components:
             #                c.update_srcmap_file([src],True)
 
-            self.set_parameter('tsmap_testsource', 'Prefactor', 0.0)
+            self.set_parameter('tsmap_testsource', 'Prefactor', 0.0,
+                               update_source=False)
             self.fit(update=False)
 
             logLike1 = -self.like()
