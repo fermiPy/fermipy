@@ -2019,7 +2019,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 
             if npred < 10:
                 val *= 1. / min(1.0, npred)
-                xvals = val * 10 ** np.linspace(-2.0, 2.0, 2 * npts + 1)
+                xvals = val * 10 ** np.linspace(-1.0, 3.0, 2 * npts + 1)
                 xvals = np.insert(xvals, 0, 0.0)
             else:
                 xvals = np.linspace(0, 1, 1 + npts)
