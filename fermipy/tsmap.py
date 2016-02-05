@@ -614,7 +614,8 @@ class TSCubeGenerator(fermipy.config.Configurable):
         # tolType       : Absoulte (0) or relative (1) criteria for convergence
         # remakeTestSource : If true, recomputes the test source image (otherwise just shifts it)
         # ST_scan_level : Level to which to do ST-based fitting (for testing)
-        fitScanner.run_tscube(config['do_sed'], config['nnorm'],
+        fitScanner.run_tscube(True,
+                              config['do_sed'], config['nnorm'],
                               config['norm_sigma'], config['cov_scale'],
                               config['tol'], config['max_iter'],
                               config['tol_type'], config['remake_test_source'],
