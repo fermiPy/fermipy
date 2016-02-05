@@ -266,8 +266,8 @@ def fit_parabola(z,ix,iy,dpix=2,zmin=None):
     x = x[:,np.newaxis]*np.ones((nx,ny))
     y = y[np.newaxis,:]*np.ones((nx,ny))
         
-    coeffx = poly_to_parabola(np.polyfit(np.arange(sx.start,sx.stop),z[ix,sy],2))
-    coeffy = poly_to_parabola(np.polyfit(np.arange(sy.start,sy.stop),z[sx,iy],2))
+    coeffx = poly_to_parabola(np.polyfit(np.arange(sx.start,sx.stop),z[sx,iy],2))
+    coeffy = poly_to_parabola(np.polyfit(np.arange(sy.start,sy.stop),z[ix,sy],2))
     p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
     m = np.isfinite(z[sx,sy])
     if zmin is not None:
