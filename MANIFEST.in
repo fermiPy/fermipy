@@ -1,1 +1,1 @@
-recursive-include fermipy *.yaml *.fits *.xml *.fit
+recursive-include fermipy *.yaml *.fits *.xml *.fit *txt
