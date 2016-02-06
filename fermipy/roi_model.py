@@ -783,10 +783,10 @@ class Source(Model):
                                self.data['SpatialWidth'])
 
         if not self.spectral_pars:
-            self._update_spectral_pars()
+            self._init_spectral_pars()
 
         if not self.spatial_pars:
-            self._update_spatial_pars()
+            self._init_spatial_pars()
 
     def __str__(self):
 
@@ -827,7 +827,7 @@ class Source(Model):
         glonlat = utils.eq2gal(radec[0], radec[1])
         self['glon'], self['glat'] = glonlat[0][0], glonlat[1][0]
     
-    def _update_spatial_pars(self):
+    def _init_spatial_pars(self):
 
         if self['SpatialModel'] == 'SpatialMap':
             self._data['spatial_pars'] = {
@@ -845,7 +845,7 @@ class Source(Model):
                         'min': '-90.0', 'max': '90.0', 'scale': '1.0'}
             }
 
-    def _update_spectral_pars(self):
+    def _init_spectral_pars(self):
 
         self._data['spectral_pars'] = {}
         sp = self['spectral_pars']
@@ -941,6 +941,14 @@ class Source(Model):
         self['glon'] = skydir.galactic.l.deg
         self['glat'] = skydir.galactic.b.deg
 
+    def update_spectral_pars(self):
+
+        sp = self['spectral_pars']        
+        for p in spectrum_type_pars[self['SpectrumType']]:        
+            sp[p]['value'] = self['params'][p][0]/float(sp[p]['scale'])
+            sp[p] = make_parameter_dict(sp[p])
+
+        
     def set_roi_direction(self,roidir):
 
         offset = roidir.separation(self.skydir).deg
@@ -971,7 +979,7 @@ class Source(Model):
             raise Exception(
                 'Unrecognized SpatialModel: ' + self['SpatialModel'])
 
-        self._update_spatial_pars()
+        self._init_spatial_pars()
 
     def separation(self, src):
 
@@ -1379,25 +1387,33 @@ class ROIModel(fermipy.config.Configurable):
         
         return self.get_source_by_name(name, True)
 
-    def load_source_data(self, sources):
+    def load_source_data(self, sources, prune_sources=True):
 
         # Sync source data
         for k, v in sources.items():
             if self.has_source(k):
                 src = self.get_source_by_name(k, True)
                 src.update_data(v)
-            else:
+            elif v['SpatialModel'] != 'DiffuseSource':
                 src = Source(k, data=v)
-                self.load_source(src)
-
+                self.load_source(src,build_index=False)
+            else:
+                raise Exception('Failed to load source: %s'%k)
+                
+        if not prune_sources:
+            self.build_src_index()
+            return
+                
         # Prune sources not present in the sources dict
         for s in self.sources:
+            
             if s.name not in sources.keys():
                 self.delete_sources([s])
 
         self.build_src_index()
 
-    def load_source(self, src, build_index=True, merge_sources=True):
+    def load_source(self, src, build_index=True, merge_sources=True,
+                    **kwargs):
         """
         Parameters
         ----------
@@ -1412,6 +1428,15 @@ class ROIModel(fermipy.config.Configurable):
         src = copy.deepcopy(src)
         name = src.name.replace(' ', '').lower()
 
+        min_sep = kwargs.get('min_separation',None)
+
+
+        if min_sep is not None:
+        
+            sep = src.skydir.separation(self._src_skydir).deg            
+            if len(sep) > 0 and np.min(sep) < min_sep:
+                return        
+        
         match_srcs = self.match_source(src)
         
         #if name in self._src_dict and self._src_dict[name]:
@@ -1444,7 +1469,8 @@ class ROIModel(fermipy.config.Configurable):
         else:
             self._diffuse_srcs.append(src)
 
-        if build_index: self.build_src_index()
+        if build_index:
+            self.build_src_index()
 
     def match_source(self,src):
         """Look for source or sources in the model that match the

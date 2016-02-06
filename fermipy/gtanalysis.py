@@ -74,19 +74,6 @@ index_parameters = {
 }
 
 
-def parabola((x, y), amplitude, x0, y0, sx, sy, theta):
-    cth = np.cos(theta)
-    sth = np.sin(theta)
-    a = (cth ** 2) / (2 * sx ** 2) + (sth ** 2) / (2 * sy ** 2)
-    b = -(np.sin(2 * theta)) / (4 * sx ** 2) + (np.sin(2 * theta)) / (
-        4 * sy ** 2)
-    c = (sth ** 2) / (2 * sx ** 2) + (cth ** 2) / (2 * sy ** 2)
-    v = amplitude - (a * ((x - x0) ** 2) +
-                     2 * b * (x - x0) * (y - y0) +
-                     c * ((y - y0) ** 2))
-
-    return np.ravel(v)
-
 def interpolate_function_min(x, y):
     sp = scipy.interpolate.splrep(x, y, k=2, s=0)
 
@@ -664,7 +651,7 @@ class GTAnalysis(fermipy.config.Configurable):
     def stage_input(self):
         """Copy data products to intermediate working directory."""
 
-        extensions = ['.fits', '.fit']
+        extensions = ['.fits', '.fit', '.xml', '.npy']
 
         if self.config['fileio']['workdir'] == self._savedir:
             return
@@ -1533,7 +1520,7 @@ class GTAnalysis(fermipy.config.Configurable):
         sy = slice(max(iy - dpix, 0), iy+dpix+1)
         
         try:
-            popt, pcov = scipy.optimize.curve_fit(parabola, (
+            popt, pcov = scipy.optimize.curve_fit(utils.parabola, (
                 lnlscan['deltax'][sx,sy],
                 lnlscan['deltay'][sx,sy]),
                 lnlscan['dlogLike'][sx,sy].flat, p0)
@@ -1543,7 +1530,7 @@ class GTAnalysis(fermipy.config.Configurable):
             self.logger.error('Localization failed.', exc_info=True)
 
         offset = (popt[1]**2 + popt[2]**2)**0.5
-        lnlscan['dlogLike_fit'] = parabola((lnlscan['deltax'], lnlscan['deltay']),
+        lnlscan['dlogLike_fit'] = utils.parabola((lnlscan['deltax'], lnlscan['deltay']),
                                            *popt).reshape((nstep,nstep))
             
         o['lnlscan'] = lnlscan
@@ -1554,8 +1541,8 @@ class GTAnalysis(fermipy.config.Configurable):
         o['theta'] = popt[5]
         o['offset'] = offset
         
-        if o['fit_success'] and (o['deltax'] > dtheta_max or
-                                 o['deltay'] > dtheta_max):
+        if o['fit_success'] and (np.abs(o['deltax']) > dtheta_max or
+                                 np.abs(o['deltay']) > dtheta_max):
             o['fit_success'] = False
             self.logger.error('Position offset larger than scan region:\n '
                               'offset = %.3f dtheta_max = %.3f' % (offset,dtheta_max))
@@ -2019,7 +2006,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 
             if npred < 10:
                 val *= 1. / min(1.0, npred)
-                xvals = val * 10 ** np.linspace(-2.0, 2.0, 2 * npts + 1)
+                xvals = val * 10 ** np.linspace(-1.0, 3.0, 2 * npts + 1)
                 xvals = np.insert(xvals, 0, 0.0)
             else:
                 xvals = np.linspace(0, 1, 1 + npts)
@@ -2729,7 +2716,7 @@ class GTAnalysis(fermipy.config.Configurable):
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
             
-            plotter.make_tsmap_plots(self, maps)
+            plotter.make_tsmap_plots(self, maps, suffix='tscube')
 
         self.logger.info("Finished running TSCube.")
         return maps            

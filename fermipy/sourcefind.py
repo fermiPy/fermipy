@@ -37,7 +37,13 @@ def find_peaks(input_map, threshold, min_separation=1.0):
 
     data = input_map.counts
 
-    region_size_pix = int(min_separation/max(input_map.wcs.wcs.cdelt))
+    cdelt = max(input_map.wcs.wcs.cdelt) 
+    min_separation = max(min_separation,2*cdelt)
+    
+    region_size_pix = int(min_separation/cdelt)
+    region_size_pix = max(3,region_size_pix)
+
+    
     deltaxy = utils.make_pixel_offset(region_size_pix*2+3)
     deltaxy *= max(input_map.wcs.wcs.cdelt)
     region = deltaxy < min_separation
@@ -82,6 +88,8 @@ class SourceFinder(fermipy.config.Configurable):
         Find new sources.
         """
 
+        self.logger.info('Starting.')
+        
         # Extract options from kwargs
         config = copy.deepcopy(self.config)
         config.update(kwargs) 
@@ -91,18 +99,21 @@ class SourceFinder(fermipy.config.Configurable):
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
         
-        o = {'sources': []}
+        o = {'sources': [], 'peaks' : []}
         
         max_iter = kwargs.get('max_iter', self.config['max_iter'])
         for i in range(max_iter):
-            srcs = self._iterate(gta, prefix, i, **config)
+            srcs, peaks = self._iterate(gta, prefix, i, **config)
 
             self.logger.info('Found %i sources in iteration %i.'%(len(srcs),i))
             
             o['sources'] += srcs
+            o['peaks'] += peaks
             if len(srcs) == 0:
                 break
 
+        self.logger.info('Done.')
+            
         return o
 
     def _iterate(self, gta, prefix, iiter, **kwargs):
@@ -131,12 +142,22 @@ class SourceFinder(fermipy.config.Configurable):
         peaks = find_peaks(m['sqrt_ts'], threshold, min_separation)
 
         names = []
-        for p in peaks[:sources_per_iter]:
+        for i, p in enumerate(peaks[:sources_per_iter]):
+
+            o = utils.fit_parabola(m['ts'].counts,p['iy'],p['ix'],dpix=2)
+            peaks[i]['fit_loc'] = o
+            peaks[i]['fit_skydir'] = SkyCoord.from_pixel(o['y0'],o['x0'],m['ts'].wcs)
             
-            name = utils.create_source_name(p['skydir'])
+            
+            if o['fit_success']:            
+                skydir = peaks[i]['fit_skydir']
+            else:
+                skydir = p['skydir']
+                
+            name = utils.create_source_name(skydir)
             src_dict.update({'Prefactor': amp.counts[p['iy'], p['ix']],                        
-                             'ra': p['skydir'].icrs.ra.deg,
-                             'dec': p['skydir'].icrs.dec.deg})
+                             'ra': skydir.icrs.ra.deg,
+                             'dec': skydir.icrs.dec.deg})
             
             self.logger.info('Found source\n' +
                              'name: %s\n'%name +
@@ -158,7 +179,7 @@ class SourceFinder(fermipy.config.Configurable):
         for name in names:
             srcs.append(gta.roi[name])
 
-        return srcs
+        return srcs, peaks
             
     def _fit_source(self, gta, **kwargs):
 
