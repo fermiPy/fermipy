@@ -17,7 +17,7 @@ if ! type "conda" > /dev/null; then
     export PATH="$CONDA_PATH/bin:$PATH"
 fi
 
-conda create -q -n fermi-env -y python=2.7 numpy scipy matplotlib astropy pytest pyyaml
+conda create -q -n fermi-env -y python=2.7 numpy scipy matplotlib astropy pytest pyyaml ipython
 source activate fermi-env
 pip install healpy
-python setup.py install
+pip install fermipy
