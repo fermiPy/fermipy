@@ -55,7 +55,7 @@ shape_parameters = {
     'ConstantValue': [],
     'PowerLaw': ['Index'],
     'PowerLaw2': ['Index'],
-    'BrokenPowerLaw': ['Index1', 'Index2'],
+    'BrokenPowerLaw': ['Index1', 'Index2', 'BreakValue'],
     'LogParabola': ['alpha', 'beta'],
     'PLSuperExpCutoff': ['Index1', 'Cutoff'],
     'ExpCutoff': ['Index1', 'Cutoff'],
@@ -3412,7 +3412,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if delete_source_map:
             utils.delete_source_map(self._srcmap_file,name)
-        
+
+        self.like.logLike.buildFixedModelWts()
+            
         return src
 
     def delete_sources(self, srcs):

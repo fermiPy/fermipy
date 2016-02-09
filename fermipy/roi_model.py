@@ -11,6 +11,7 @@ from astropy.table import Table, Column
 import fermipy
 import fermipy.config
 import fermipy.utils as utils
+import fermipy.gtutils as gtutils
 import fermipy.defaults as defaults
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
@@ -88,28 +89,6 @@ def resolve_file_path(path, **kwargs):
     raise Exception('Failed to resolve file path: %s' % path)
 
 
-spectrum_type_pars = {
-    'PowerLaw': ['Prefactor', 'Index', 'Scale'],
-    'PowerLaw2': ['Integral', 'Index', 'LowerLimit', 'UpperLimit'],
-    'ConstantValue': ['Value'],
-    'BrokenPowerLaw': ['Prefactor', 'Index1', 'Index2'],
-    'LogParabola': ['norm', 'alpha', 'beta', 'Eb'],
-    'PLSuperExpCutoff': ['Prefactor', 'Index1', 'Index2', 'Cutoff', 'Scale'],
-    'ExpCutoff': ['Prefactor', 'Index1', 'Cutoff'],
-    'FileFunction': ['Normalization'],
-}
-
-spectrum_type_norm_par = {
-    'PowerLaw': 'Prefactor',
-    'PowerLaw2': 'Integral',
-    'ConstantValue': 'Value',
-    'BrokenPowerLaw': 'Prefactor',
-    'LogParabola': 'norm',
-    'PLSuperExpCutoff': 'Prefactor',
-    'ExpCutoff': 'Prefactor',
-    'FileFunction': 'Normalization'
-}
-
 default_par_dict = {
     'Prefactor':
         {'name': 'Prefactor', 'value': 1.0, 'scale': None, 'min': 0.01,
@@ -126,6 +105,9 @@ default_par_dict = {
     'Cutoff':
         {'name': 'Cutoff', 'value': 1.0, 'scale': None, 'min': 0.01,
          'max': 10.0, 'free': '0'},
+    'BreakValue':
+        {'name': 'BreakValue', 'value': 1000.0, 'scale': 1.0, 'min': 20.,
+         'max': 1000000.0, 'free': '0'},
     'Index':
         {'name': 'Index', 'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0,
          'free': '0'},
@@ -135,11 +117,14 @@ default_par_dict = {
     'beta':
         {'name': 'beta', 'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0,
          'free': '0'},
+    'Beta':
+        {'name': 'Beta', 'value': 0.2, 'scale': 1.0, 'min': 0.01, 'max': 10.0,
+         'free': '0'},
     'Index1':
         {'name': 'Index1', 'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0,
          'free': '0'},
     'Index2':
-        {'name': 'Index2', 'value': 1.0, 'scale': 1.0, 'min': 0.0, 'max': 2.0,
+        {'name': 'Index2', 'value': 1.0, 'scale': -1.0, 'min': 0.0, 'max': 2.0,
          'free': '0'},
     'LowerLimit':
         {'name': 'LowerLimit', 'value': 100.0, 'scale': 1.0, 'min': 20.0,
@@ -363,6 +348,12 @@ def make_parameter_dict(pdict, fixed_par=False):
         o['value'] = value
         o['scale'] = scale
 
+    if 'min' not in o:
+        o['min'] = o['value']*1E-3
+
+    if 'max' not in o:
+        o['max'] = o['value']*1E3
+        
     if fixed_par:
         o['min'] = o['value']
         o['max'] = o['value']
@@ -497,9 +488,13 @@ class Model(object):
         self._data.setdefault('spatial_pars', {})
         self._data.setdefault('catalog', {})
 
+
         if spectral_pars is not None:
             self._data['spectral_pars'] = spectral_pars
-
+        else:
+            pdict = gtutils.get_function_pars_dict(self['SpectrumType'])
+            self._data['spectral_pars'] = pdict
+            
         if spatial_pars is not None:
             self._data['spatial_pars'] = spatial_pars
 
@@ -577,7 +572,7 @@ class Model(object):
 
     def get_norm(self):
 
-        par_name = spectrum_type_norm_par[self['SpectrumType']]        
+        par_name = gtutils.get_function_norm_par(self['SpectrumType'])
         val = self.spectral_pars[par_name]['value']
         scale = self.spectral_pars[par_name]['scale']
         return float(val)*float(scale)
@@ -633,22 +628,26 @@ class Model(object):
 class IsoSource(Model):
     def __init__(self, name, filefunction, spectral_pars=None,
                  spatial_pars=None):
-        super(IsoSource, self).__init__(name, None, spectral_pars, spatial_pars)
 
         self._filefunction = filefunction
-        self._data['SpectrumType'] = 'FileFunction'
-        self._data['SpatialType'] = 'ConstantValue'
-        self._data['SpatialModel'] = 'DiffuseSource'
-        self._data['SourceType'] = 'DiffuseSource'
+        data = {}
+        data['SpectrumType'] = 'FileFunction'
+        data['SpatialType'] = 'ConstantValue'
+        data['SpatialModel'] = 'DiffuseSource'
+        data['SourceType'] = 'DiffuseSource'
+        
+        super(IsoSource, self).__init__(name, data, spectral_pars, spatial_pars)
 
-        if not self.spectral_pars:
+        
+
+        if not spectral_pars:
             self['spectral_pars'] = {
                 'Normalization': {'name': 'Normalization', 'scale': '1.0',
                                   'value': '1.0',
                                   'min': '0.001', 'max': '1000.0',
                                   'free': '0'}}
 
-        if not self.spatial_pars:
+        if not spatial_pars:
             self['spatial_pars'] = {
                 'Value': {'name': 'Value', 'scale': '1',
                           'value': '1', 'min': '0', 'max': '10',
@@ -686,16 +685,20 @@ class IsoSource(Model):
 
 class MapCubeSource(Model):
     def __init__(self, name, mapcube, spectral_pars=None, spatial_pars=None):
-        super(MapCubeSource, self).__init__(name, None, spectral_pars,
-                                            spatial_pars)
 
         self._mapcube = mapcube
-        self._data['SpectrumType'] = 'PowerLaw'
-        self._data['SpatialType'] = 'MapCubeFunction'
-        self._data['SpatialModel'] = 'DiffuseSource'
-        self._data['SourceType'] = 'DiffuseSource'
+        data = {}
+        data['SpectrumType'] = 'PowerLaw'
+        data['SpatialType'] = 'MapCubeFunction'
+        data['SpatialModel'] = 'DiffuseSource'
+        data['SourceType'] = 'DiffuseSource'        
+        
+        super(MapCubeSource, self).__init__(name, data, spectral_pars,
+                                            spatial_pars)
 
-        if not self.spectral_pars:
+        
+
+        if not spectral_pars:
             self['spectral_pars'] = {
                 'Prefactor': {'name': 'Prefactor', 'scale': '1',
                               'value': '1.0', 'min': '0.1', 'max': '10.0',
@@ -709,7 +712,7 @@ class MapCubeSource(Model):
                           'free': '0'},
             }
 
-        if not self.spatial_pars:
+        if not spatial_pars:
             self['spatial_pars'] = {
                 'Normalization':
                     {'name': 'Normalization', 'scale': '1',
@@ -782,10 +785,10 @@ class Source(Model):
         self.set_spatial_model(self.data['SpatialModel'],
                                self.data['SpatialWidth'])
 
-        if not self.spectral_pars:
-            self._init_spectral_pars()
+        if not spectral_pars:
+            self._load_from_catalog()
 
-        if not self.spatial_pars:
+        if not spatial_pars:
             self._init_spatial_pars()
 
     def __str__(self):
@@ -845,37 +848,34 @@ class Source(Model):
                         'min': '-90.0', 'max': '90.0', 'scale': '1.0'}
             }
 
-    def _init_spectral_pars(self):
-
-        self._data['spectral_pars'] = {}
+    def _load_from_catalog(self):
+        """Load spectral parameters from catalog values."""
+        
+        self._data['spectral_pars'] = \
+            gtutils.get_function_pars_dict(self['SpectrumType'])
         sp = self['spectral_pars']
 
         catalog = self.data.get('catalog', {})
 
         if self['SpectrumType'] == 'PowerLaw':
 
-            sp['Prefactor'] = copy.copy(default_par_dict['Prefactor'])
-            sp['Scale'] = copy.copy(default_par_dict['Scale'])
-            sp['Index'] = copy.copy(default_par_dict['Index'])
-
             sp['Prefactor']['value'] = catalog['Flux_Density']
+            sp['Prefactor']['scale'] = None
             sp['Scale']['value'] = catalog['Pivot_Energy']
+            sp['Scale']['scale'] = 1.0
             sp['Index']['value'] = catalog['Spectral_Index']
             sp['Index']['max'] = max(5.0, sp['Index']['value'] + 1.0)
             sp['Index']['min'] = min(0.0, sp['Index']['value'] - 1.0)
-
+            sp['Index']['scale'] = -1.0
+            
             sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
             sp['Scale'] = make_parameter_dict(sp['Scale'], True)
             sp['Index'] = make_parameter_dict(sp['Index'])
 
         elif self['SpectrumType'] == 'LogParabola':
 
-            sp['norm'] = copy.copy(default_par_dict['norm'])
-            sp['Eb'] = copy.copy(default_par_dict['Eb'])
-            sp['alpha'] = copy.copy(default_par_dict['alpha'])
-            sp['beta'] = copy.copy(default_par_dict['beta'])
-
             sp['norm']['value'] = catalog['Flux_Density']
+            sp['norm']['scale'] = None
             sp['Eb']['value'] = catalog['Pivot_Energy']
             sp['alpha']['value'] = catalog['Spectral_Index']
             sp['beta']['value'] = catalog['beta']
@@ -892,15 +892,12 @@ class Source(Model):
                 (catalog['Pivot_Energy'] / catalog['Cutoff']) ** catalog[
                     'Exp_Index'])
 
-            sp['Prefactor'] = copy.copy(default_par_dict['Prefactor'])
-            sp['Index1'] = copy.copy(default_par_dict['Index1'])
-            sp['Index2'] = copy.copy(default_par_dict['Index2'])
-            sp['Scale'] = copy.copy(default_par_dict['Scale'])
-            sp['Cutoff'] = copy.copy(default_par_dict['Cutoff'])
-
             sp['Prefactor']['value'] = flux_density
+            sp['Prefactor']['scale'] = None
             sp['Index1']['value'] = catalog['Spectral_Index']
+            sp['Index1']['scale'] = -1.0
             sp['Index2']['value'] = catalog['Exp_Index']
+            sp['Index2']['scale'] = 1.0
             sp['Scale']['value'] = catalog['Pivot_Energy']
             sp['Cutoff']['value'] = catalog['Cutoff']
 
@@ -944,10 +941,9 @@ class Source(Model):
     def update_spectral_pars(self):
 
         sp = self['spectral_pars']        
-        for p in spectrum_type_pars[self['SpectrumType']]:        
+        for k, p in sp.items():
             sp[p]['value'] = self['params'][p][0]/float(sp[p]['scale'])
             sp[p] = make_parameter_dict(sp[p])
-
         
     def set_roi_direction(self,roidir):
 
@@ -1023,40 +1019,24 @@ class Source(Model):
         """Create a source object from a python dictionary."""
 
         src_dict = copy.deepcopy(src_dict)
-        spectrum_type = src_dict.get('SpectrumType', 'PowerLaw')
-
-        default_src_dict = dict(name=None,
-                                Source_Name=None,
-                                SpatialModel='PointSource',
-                                SpatialWidth=0.5,
-                                SpectrumType='PowerLaw',
-                                ra=None,
-                                dec=None,
-                                glon=None,
-                                glat=None,
-                                spectral_pars={})
-
-        for p in spectrum_type_pars[spectrum_type]:
-            default_src_dict['spectral_pars'][p] = copy.copy(
-                default_par_dict[p])
-
-        for k, v in default_par_dict.items():
+        src_dict.setdefault('SpatialModel','PointSource')
+        src_dict.setdefault('SpatialWidth',0.5)
+        spectrum_type = src_dict.setdefault('SpectrumType','PowerLaw')
+        spectral_pars = gtutils.get_function_pars_dict(spectrum_type)
+        
+        for k, v in spectral_pars.items():
 
             if k not in src_dict: 
                 continue
-            src_dict.setdefault('spectral_pars', {})
-            src_dict['spectral_pars'].setdefault(k, {})
 
             if not isinstance(src_dict[k], dict):
-                src_dict['spectral_pars'][k] = {'name': k,
-                                                'value': src_dict.pop(k)}
+                spectral_pars[k].update({'name': k,
+                                         'value': src_dict.pop(k)})
             else:
-                src_dict['spectral_pars'][k] = src_dict.pop(k)
+                spectral_pars[k].update(src_dict.pop(k))
 
-        src_dict = utils.merge_dict(default_src_dict, src_dict)
-        for k, v in src_dict['spectral_pars'].items():
-            src_dict['spectral_pars'][k] = make_parameter_dict(v)
-
+        for k, v in spectral_pars.items():
+            spectral_pars[k] = make_parameter_dict(spectral_pars[k])
         #        validate_config(src_dict,default_src_dict)
 
         if 'name' in src_dict:
@@ -1074,7 +1054,7 @@ class Source(Model):
 
         radec = np.array([skydir.ra.deg, skydir.dec.deg])
         return Source(name, src_dict, radec=radec,
-                      spectral_pars=src_dict['spectral_pars'])
+                      spectral_pars=spectral_pars)
 
     @staticmethod
     def create_from_xml(root, extdir=None):
@@ -1429,7 +1409,6 @@ class ROIModel(fermipy.config.Configurable):
         name = src.name.replace(' ', '').lower()
 
         min_sep = kwargs.get('min_separation',None)
-
 
         if min_sep is not None:
         
