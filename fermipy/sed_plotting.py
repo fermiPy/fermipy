@@ -240,6 +240,7 @@ if __name__ == "__main__":
     fig3,ax3 = plotSED(castro,ylims=ylims,TS_thresh=4.0,specVals=[spec_pl,spec_lp,spec_pc])
 
     print "TS for PL index = 2:  %.1f"%max_ts
+    print "Cumulative TS:        %.1f"%castro.ts_vals().sum()
     print "TS for PL index free: %.1f (Index = %.2f)"%(ts_pl[0],idx_off-result_pl[1])
     print "TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)"%(ts_lp[0],idx_off-result_lp[1],result_lp[2])
     print "TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)"%(ts_pc[0],idx_off-result_pc[1],result_pc[2])

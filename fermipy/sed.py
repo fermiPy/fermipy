@@ -343,7 +343,7 @@ class CastroData(object):
         for ie in range(self._specData.nE):            
             nvv = factors[ie]*self._norm_vals[ie]
             nllfunc = LnLFn(nvv,self._nll_vals[ie],self._fluxType)
-            self._nll_null += self._nll_vals[ie][0]
+            self._nll_null -= self._nll_vals[ie][0]
             self._loglikes.append(nllfunc)
             pass
 
@@ -357,6 +357,12 @@ class CastroData(object):
     def fluxType(self):
         """ Return the Flux type flag """ 
         return self._fluxType
+    
+
+    @property
+    def nll_null(self):
+        """ Return the negative log-likelihood for the null-hypothesis """ 
+        return self._nll_null
     
 
     def __getitem__(self,i):
@@ -511,7 +517,7 @@ class CastroData(object):
     def TS_spectrum(self,spec_vals):
         """ Calculate and the TS for a given set of spectral values
         """        
-        return 2. * (self.__call__(spec_vals) - self._nll_null)
+        return 2. * (self._nll_null - self.__call__(spec_vals))
 
 
 
