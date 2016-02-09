@@ -21,6 +21,21 @@ def read_energy_bounds(hdu):
     ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
     return ebin_edges
 
+def read_spectral_data(hdu):
+    """ Reads and returns the energy bin edges, fluxes and npreds from a FITs HDU
+    """
+    ebins = read_energy_bounds(hdu)
+    fluxes = np.ndarray((len(ebins)))
+    try:
+        fluxes[0:-1] = hdu.data.field("E_MIN_FL")
+        fluxes[-1] = hdu.data.field("E_MAX_FL")[-1]
+        npreds = hdu.data.field("NPRED")
+    except:
+        fluxes =  np.ones((len(ebins)))
+        npreds =  np.ones((len(ebins)))
+    return ebins,fluxes,npreds
+    
+
 
 class Map_Base(object):
     """ Abstract representation of a 2D or 3D counts map."""
