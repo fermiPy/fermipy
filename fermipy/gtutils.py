@@ -44,9 +44,12 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
         for comp in self.components:            
             comp.scaleSource(srcName,1E-10)
             comp._ts_src = comp.logLike.getSource(srcName)
-            #free_flag = comp._ts_src.spectrum().normPar().isFree()
-            #comp._ts_src.spectrum().normPar().setFree(False)
-            
+            free_flag = comp._ts_src.spectrum().normPar().isFree()
+
+            if reoptimize:
+                comp._ts_src.spectrum().normPar().setFree(False)
+                self.syncSrcParams()
+
         logLike0 = -self()
         if tol is None:
             tol = self.tol
@@ -75,8 +78,9 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
         logLike0 = max(-self(), logLike0)
         Ts_value = 2*(logLike1 - logLike0)
         for comp in self.components:
-            comp.scaleSource(srcName,1E10)
-            #comp._ts_src.spectrum().normPar().setFree(free_flag)
+            comp.scaleSource(srcName, 1E10)
+            if reoptimize:
+                comp._ts_src.spectrum().normPar().setFree(free_flag)
             self.syncSrcParams(srcName)
             comp.logLike.setFreeParamValues(freeParams)
             comp.model = SourceModel(comp.logLike)
@@ -155,6 +159,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         src = self.logLike.getSource(srcName)
         old_scale = src.spectrum().normPar().getScale()
         src.spectrum().normPar().setScale(old_scale*scale)
+        self.logLike.syncParams()
         
     def Ts2(self, srcName, reoptimize=False, approx=True,
             tol=None, MaxIterations=10, verbosity=0):

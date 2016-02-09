@@ -81,10 +81,6 @@ class PSFModel(object):
 
         ltw = ltc.get_src_lthist(skydir,cth_edge)
 
-#        print cth_edge
-#        print ltw
-        #ltw = np.ones(len(cth))
-
         for et in event_types:
             psf = create_psf(event_class,et,dtheta,egy,cth)
             aeff = create_exposure(event_class,et,egy,cth)

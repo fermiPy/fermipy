@@ -42,9 +42,10 @@ setup(name='fermipy',
       ],
       scripts = [],
       install_requires=['numpy >= 1.6.1',
-                        'matplotlib >= 1.1.0',
+                        'matplotlib >= 1.4.0',
+                        'scipy >= 0.14',
                         'astropy >= 0.4',
                         'pyyaml',
                         'healpy',
-                        'wcsaxes',
-                        'scipy >= 0.14'])
+                        'wcsaxes'])
+

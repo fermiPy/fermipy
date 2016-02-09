@@ -80,7 +80,14 @@ class Map(Map_Base):
         wcs = pywcs.WCS(header)
         return Map(data, wcs)
 
-
+    def create_image_hdu(self,name=None):
+        return pyfits.ImageHDU(self.counts,header=self.wcs.to_header(),
+                               name=name)
+    
+    def create_primary_hdu(self):
+        return pyfits.PrimaryHDU(self.counts,header=self.wcs.to_header())
+    
+    
 def format_filename(outdir, basename, prefix=None, extension=None):
     filename = ''
     if prefix is not None:
@@ -199,7 +206,8 @@ def create_source_name(skydir):
     dms = skydir.icrs.dec.dms
     return 'PS J%02.f%04.1f%+03.f%02.f' % (hms.h,
                                            hms.m+hms.s/60.,
-                                           dms.d, dms.m+dms.s/60.)
+                                           dms.d,
+                                           np.abs(dms.m+dms.s/60.))
 
 
 def create_model_name(src):
@@ -226,6 +234,91 @@ def create_model_name(src):
     if src['SpectrumType'] == 'PowerLaw':
         o += '_powerlaw_%04.2f' % float(src.spectral_pars['Index']['value'])
 
+    return o
+
+
+def poly_to_parabola(coeff):
+
+    sigma = np.sqrt(1./np.abs(2.0*coeff[0]))
+    x0 = -coeff[1]/(2*coeff[0])
+    y0 = (1.-(coeff[1]**2-4*coeff[0]*coeff[2]))/(4*coeff[0])
+
+    return x0, sigma, y0
+
+
+def parabola((x, y), amplitude, x0, y0, sx, sy, theta):
+    cth = np.cos(theta)
+    sth = np.sin(theta)
+    a = (cth ** 2) / (2 * sx ** 2) + (sth ** 2) / (2 * sy ** 2)
+    b = -(np.sin(2 * theta)) / (4 * sx ** 2) + (np.sin(2 * theta)) / (
+        4 * sy ** 2)
+    c = (sth ** 2) / (2 * sx ** 2) + (cth ** 2) / (2 * sy ** 2)
+    v = amplitude - (a * ((x - x0) ** 2) +
+                     2 * b * (x - x0) * (y - y0) +
+                     c * ((y - y0) ** 2))
+
+    return np.ravel(v)
+
+
+def fit_parabola(z,ix,iy,dpix=2,zmin=None):
+
+    import scipy.optimize
+    xmin = max(0,ix-dpix)
+    xmax = min(z.shape[0],ix+dpix+1)
+
+    ymin = max(0,iy-dpix)
+    ymax = min(z.shape[1],iy+dpix+1)
+    
+    sx = slice(xmin,xmax)
+    sy = slice(ymin,ymax)
+
+    nx = sx.stop-sx.start
+    ny = sy.stop-sy.start
+    
+    x = np.arange(sx.start,sx.stop)
+    y = np.arange(sy.start,sy.stop)
+
+    x = x[:,np.newaxis]*np.ones((nx,ny))
+    y = y[np.newaxis,:]*np.ones((nx,ny))
+        
+    coeffx = poly_to_parabola(np.polyfit(np.arange(sx.start,sx.stop),z[sx,iy],2))
+    coeffy = poly_to_parabola(np.polyfit(np.arange(sy.start,sy.stop),z[ix,sy],2))
+    p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
+    m = np.isfinite(z[sx,sy])
+    if zmin is not None:
+        m = z[sx,sy] > zmin
+
+    o = { 'fit_success': True, 'p0' : p0 }
+    
+    try:
+        popt, pcov = scipy.optimize.curve_fit(parabola,
+                                              (np.ravel(x[m]),np.ravel(y[m])),
+                                              np.ravel(z[sx,sy][m]), p0)
+    except Exception:
+        popt = copy.deepcopy(p0)
+        o['fit_success'] = False
+#        self.logger.error('Localization failed.', exc_info=True)
+        
+    fm = parabola((x[m],y[m]),*popt)
+    df = fm - z[sx,sy][m].flat
+    rchi2 = np.sum(df**2)/len(fm)
+        
+    o['rchi2'] = rchi2
+    o['x0'] = popt[1]
+    o['y0'] = popt[2]
+    o['sigmax'] = popt[3]
+    o['sigmay'] = popt[4]
+    o['sigma'] = np.sqrt(o['sigmax']**2 + o['sigmay']**2)
+    o['z0'] = popt[0]
+    o['theta'] = popt[5]
+    o['popt'] = popt
+
+    a = max(o['sigmax'],o['sigmay'])
+    b = min(o['sigmax'],o['sigmay'])
+    
+    o['eccentricity'] = np.sqrt(1-b**2/a**2)
+    o['eccentricity2'] = np.sqrt(a**2/b**2-1)
+    
     return o
 
 
@@ -631,12 +724,6 @@ def sky_to_offset(skydir, lon, lat, coordsys='CEL', projection='AIT'):
     return w.wcs_world2pix(skycrd, 0)
 
 
-
-
-
-
-
-
 def get_target_skydir(config,default=None):
     radec = config.get('radec', None)
 
@@ -1020,6 +1107,16 @@ def make_disk_spatial_map(skydir, sigma, outfile, npix=501, cdelt=0.01):
     hdulist.writeto(outfile, clobber=True)
 
 
+def write_maps(primary_map, maps, outfile):
+    
+    hdu_images = [primary_map.create_primary_hdu()]
+    for k, v in sorted(maps.items()):
+        hdu_images += [v.create_image_hdu(k)]
+
+    hdulist = pyfits.HDUList(hdu_images)
+    hdulist.writeto(outfile, clobber=True)
+        
+    
 def write_fits_image(data, wcs, outfile):
     hdu_image = pyfits.PrimaryHDU(data, header=wcs.to_header())
     hdulist = pyfits.HDUList([hdu_image])

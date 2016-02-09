@@ -5,33 +5,42 @@ Installation
 
 .. note:: 
 
-   It is recommended to use fermiPy with ST v10r0p5 or later.
+   fermiPy is only compatible with ST v10r0p5 or later.
 
 These instructions assume that you already have a local installation
 of the Fermi STs.  Instructions for downloading and installing the STs
 are provided through the `FSSC
 <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  If you
 are running at SLAC you can follow the instructions under `Running at
-SLAC`_.
+SLAC`_.  For Unix/Linux users we currently recommend following the
+:ref:`condainstall` instructions.  For OSX users we recommend
+following the :ref:`pipinstall` instructions.
 
-Before starting the installation process, you will need to determine
-whether you have setuptools and pip installed in your local python
-environment.  You may need to install these packages if you are
-running with the binary version of the Fermi Science Tools distributed
-by the FSSC.  
+.. _pipinstall:
 
-Verify that you're running the python from the Science Tools
+Installing with pip
+-------------------
+
+These instructions cover installation with the ``pip`` package
+management tool.  This method will install fermipy and its
+dependencies into the python distribution that comes with the Fermi
+Science Tools.  First verify that you're running the python from the
+Science Tools
 
 .. code-block:: bash
 
    >>> which python
 
 If this doesn't point to the python in your Science Tools install
-(i.e. it returnes /usr/bin/python or /usr/local/bin/python) then the
+(i.e. it returns /usr/bin/python or /usr/local/bin/python) then the
 Science Tools are not properly setup.
 
-Then, install pip. The following command will install both packages in
-your local environment:
+Before starting the installation process, you will need to determine
+whether you have setuptools and pip installed in your local python
+environment.  You may need to install these packages if you are
+running with the binary version of the Fermi Science Tools distributed
+by the FSSC.  The following command will install both packages in your
+local environment:
 
 .. code-block:: bash
 
@@ -44,28 +53,24 @@ Check if pip is correctly installed:
    >>> which pip
 
 Once again, if this isn't the pip in the Science Tools, something went
-wrong.
-
-
-Download the latest version of fermiPy from the github repository:
+wrong.  Now install fermipy by running
 
 .. code-block:: bash
 
-   >>> git clone https://github.com/fermiPy/fermipy.git
+   >>> pip install fermipy
 
-Run the setup.py script.  This will install the fermiPy package itself
-and its dependencies in your local python environment:
-
+To run the ipython notebook examples you will also need to install
+jupyter notebook:
+   
 .. code-block:: bash
 
-   >>> cd fermipy
-   >>> python setup.py install --user
+   >>> pip install jupyter
 
-Running pip and setup.py with the *user* flag is recommended if you do not
-have write access to your python installation (for instance if you are
-running in a UNIX/Linux environment with a shared python
-installation).  To install fermipy into the common package directory
-of your python installation the *user* flag should be ommitted.
+.. Running pip and setup.py with the ``user`` flag is recommended if you do not
+.. have write access to your python installation (for instance if you are
+.. running in a UNIX/Linux environment with a shared python
+.. installation).  To install fermipy into the common package directory
+.. of your python installation the ``user`` flag should be ommitted.
 
 Finally, check that fermipy imports:
 
@@ -77,6 +82,173 @@ Finally, check that fermipy imports:
    Type "help", "copyright", "credits" or "license" for more information. 
    >>> from fermipy.gtanalysis import GTAnalysis
    >>> help(GTAnalysis)
+
+.. _condainstall:
+   
+Installing with Anaconda Python
+-------------------------------
+
+.. note:: 
+
+   The following instructions have only been verified to work with
+   binary Linux distributions of the Fermi STs.  If you are using OSX
+   or you have installed the STs from source you should follow the
+   :ref:`pipinstall` thread above.
+
+These instructions cover how to use fermipy with a new or existing
+conda python installation.  These instructions assume that you have
+already downloaded and installed the Fermi STs from the FSSC and you
+have set the ``FERMI_DIR`` environment variable to point to the location
+of this installation.
+
+The ``condainstall.sh`` script can be used to install fermipy into an
+existing conda python installation or to create a minimal conda
+installation from scratch.  In either case download and run the
+``condainstall.sh`` installation script from the fermipy repository:
+
+.. code-block:: bash
+
+   >>> curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condainstall.sh
+   >>> bash condainstall.sh
+   
+..   >>> git clone https://github.com/fermiPy/fermipy.git; cd fermipy
+..   >>> bash condainstall.sh
+
+If you do not already have anaconda python installed on your system
+this script will create a new installation under ``$HOME/miniconda``.
+If you already have conda installed (i.e. if the conda command is
+already in your path) the script will use your existing installation.
+The script will create a separate environment for your fermipy
+installation called *fermi-env*.
+
+Once fermipy is installed you can initialize the fermi environment by
+running ``condasetup.sh``:
+
+.. code-block:: bash
+
+   >>> curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condasetup.sh 
+   >>> source condasetup.sh
+
+This will both activate the *fermi-env* environment and set up your
+shell environment to run the Fermi Science Tools.  The *fermi-env*
+python environment can be exited by running:
+
+.. code-block:: bash
+
+   >>> source deactivate
+
+
+Running at SLAC
+---------------
+
+This section provides specific installation instructions for running
+on the SLAC cluster.  First download and source the ``slacsetup.sh`` script:
+
+.. code-block:: bash
+
+   >>> wget https://raw.githubusercontent.com/fermiPy/fermipy/master/slacsetup.sh -O slacsetup.sh
+   >>> source slacsetup.sh
+   
+To initialize the ST environment run the ``slacsetup`` function:
+
+.. code-block:: bash
+
+   >>> slacsetup
+
+This will setup your ``GLAST_EXT`` path and source the setup script
+for one of the pre-built ST installations (the current default is
+10-01-01).  To manually override the ST version you can optionally
+provide the release tag as an argument to ``slacsetup``:
+
+.. code-block:: bash
+
+   >>> slacsetup 10-XX-XX
+
+After initializing the STs environment, install fermipy with pip:
+
+.. code-block:: bash
+
+   >>> pip install fermipy --user
+
+This will install fermipy in ``$HOME/.local``.  To upgrade an existing
+fermipy installation run the same command with ``--upgrade --no-deps`` :
+
+.. code-block:: bash
+
+   >>> pip install fermipy --user --upgrade --no-deps
+
+You can verify that the installation has succeeded by importing
+`~fermipy.gtanalysis.GTAnalysis`:
+
+.. code-block:: bash
+
+   >>> python
+   Python 2.7.8 |Anaconda 2.1.0 (64-bit)| (default, Aug 21 2014, 18:22:21) 
+   [GCC 4.4.7 20120313 (Red Hat 4.4.7-1)] on linux2
+   Type "help", "copyright", "credits" or "license" for more information.
+   Anaconda is brought to you by Continuum Analytics.
+   Please check out: http://continuum.io/thanks and https://binstar.org
+   >>> from fermipy.gtanalysis import GTAnalysis
+
+.. _gitinstall:
+   
+Building from Source
+--------------------
+
+These instructions describe how to install fermipy from its git source
+code repository.  This is necessary if you want to locally develop
+fermipy or you want to use the latest development version of the
+fermipy code.  Note that for most users installing fermipy with pip
+should be sufficient.  First clone the fermipy repository:
+
+.. code-block:: bash
+
+   >>> git clone https://github.com/fermiPy/fermipy.git
+   >>> cd fermipy
+
+You then have the option of either installing a tagged release or the
+head of the master branch.  To install the head of the master branch
+run ``setup.py install`` from the root of the source tree:
+
+.. code-block:: bash
+
+   # Install the latest version
+   >>> git checkout master
+   >>> python setup.py install --user 
+
+To use your current copy of the code as the working installation run
+``setup.py develop``:
+
+.. code-block:: bash
+
+   # Install a link to your source code installation
+   >>> python setup.py develop --user 
+
+This is particularly useful if you are doing active code development.
+   
+From the git source code repository you can also install any tagged
+release.  To see the list of release tags use ``git tag``:
+
+.. code-block:: bash
+
+   >>> git tag
+   0.4.0
+   0.5.0
+   0.5.1
+   0.5.2
+   0.5.3
+   0.5.4
+   0.6.0
+   0.6.1
+
+To install a specific release tag, run ``git checkout`` with the tag
+name followed by ``setup.py install``:
+   
+.. code-block:: bash
+   
+   # Checkout a specific release tag
+   >>> git checkout X.X.X 
+   >>> python setup.py install --user 
 
 Issues
 ------
@@ -90,101 +262,8 @@ GTK or WX as an alternative).
 
 In some cases the setup.py script will fail to properly install the
 fermipy package dependecies.  If installation fails you can try
-running a forced upgrade of these packages with `pip install --upgrade`:
+running a forced upgrade of these packages with ``pip install --upgrade``:
 
 .. code-block:: bash
 
    >>> pip install --upgrade --user numpy matplotlib scipy astropy pyyaml healpy wcsaxes ipython jupyter
-
-Installing with Anaconda Python
--------------------------------
-
-.. note:: 
-
-   The following instructions have only been verified to work with
-   binary Linux distributions of the Fermi STs.  If you are using OSX
-   or you have installed the STs from source you should follow the
-   installation thread above.
-
-These instructions explain how to use fermipy with a new or existing
-conda python installation.  These instructions assume that you have
-already downloaded and installed the Fermi STs from the FSSC and you
-have set the *FERMI_DIR* environment variable to point to the location
-of this installation.
-
-The *condainstall.sh* script can be used to install fermipy into an
-existing conda python installation or to create a minimal conda
-installation from scratch.  In either case clone the fermipy git
-repository and run the *condainstall.sh* installation script from
-within the fermipy directory:
-
-.. code-block:: bash
-
-   >>> git clone https://github.com/fermiPy/fermipy.git; cd fermipy
-   >>> bash condainstall.sh
-
-If you do not already have anaconda python installed on your system
-this script will create an installation under *$HOME/miniconda*.  If
-you already have conda installed (i.e. if the conda command is already
-in your path) it will use your existing installation.  The script will
-create a separate environment for your fermipy installation called
-*fermi-env*.
-
-Once fermipy is installed you can initialize the fermi environment by
-running *condasetup.sh*:
-
-.. code-block:: bash
-
-   >>> source condasetup.sh
-
-This will both activate the fermi-env environment and set up your
-shell environment to run the Fermi Science Tools.  The fermi-env
-python environment can be exited by running:
-
-.. code-block:: bash
-
-   >>> source deactivate
-
-
-Running at SLAC
----------------
-
-This section provides specific installation instructions for running
-on the SLAC cluster.  First source the `slacsetup.sh` script in the
-fermipy directory and run the `slacsetup` function:
-
-.. code-block:: bash
-
-   >>> source slacsetup.sh
-   >>> slacsetup
-
-This will setup your GLAST_EXT path and source the setup script for
-one of the pre-built ST installations (default is 10-01-01).  To
-manually override the ST version you can provide the release tag as a
-function argument:
-
-.. code-block:: bash
-
-   >>> source slacsetup.sh
-   >>> slacsetup 10-XX-XX
-
-After setting up the STs environment install fermipy with the package
-setup script:
-
-.. code-block:: bash
-
-   >>> git clone https://github.com/fermiPy/fermipy.git
-   >>> cd fermipy
-   >>> python setup.py install --user
-
-Verify that the installation has succeeded by importing fermipy:
-
-.. code-block:: bash
-
-   >>> python
-   Python 2.7.8 |Anaconda 2.1.0 (64-bit)| (default, Aug 21 2014, 18:22:21) 
-   [GCC 4.4.7 20120313 (Red Hat 4.4.7-1)] on linux2
-   Type "help", "copyright", "credits" or "license" for more information.
-   Anaconda is brought to you by Continuum Analytics.
-   Please check out: http://continuum.io/thanks and https://binstar.org
-   >>> from fermipy.gtanalysis import GTAnalysis
