@@ -63,6 +63,61 @@ def find_peaks(input_map, threshold, min_separation=1.0):
     return sorted(peaks, key=lambda t: t['amp'], reverse=True)
 
 
+def estimate_pos_and_err_parabolic(tsvals):
+    """  Solve for the position and uncertainty of source in one dimension
+         assuming that you are near the maximum and the errors are parabolic
+
+    Parameters
+    ----------
+    tsvals  : The TS values at the maximum TS, and for each pixel on either side
+    
+    Returns
+    -------
+    The position and uncertainty of the source, in pixel units w.r.t. the center of the maximum pixel         
+    """
+    a = tsvals[2] - tsvals[0]
+    bc =  2.*tsvals[1] - tsvals[0] - tsvals[2]
+    s = a / (2*bc)
+    err = np.sqrt( 2 / bc )
+    return s,err
+
+
+def refine_peak(tsmap,pix):
+    """  Solve for the position and uncertainty of source
+         assuming that you are near the maximum and the errors are parabolic
+
+    Parameters
+    ----------
+    tsmap : `numpy.ndarray with the TS data`
+    
+    Returns
+    -------
+    The position and uncertainty of the source, in pixel units w.r.t. the center of the maximum pixel         
+        
+    """
+    # Note the annoying WCS convention
+    nx = tsmap.shape[1]
+    ny = tsmap.shape[0]
+    
+    if pix[0] == 0 or pix[0] == (nx-1):
+        xval = float(pix[0])
+        xerr = -1
+    else:
+        x_arr = tsmap[pix[1],pix[0]-1:pix[0]+2]
+        xval,xerr = estimate_pos_and_err_parabolic(x_arr)
+        xval += float(pix[0])
+
+    if pix[1] == 0 or pix[1] == (ny-1):
+        yval = float(pix[1])
+        yerr = -1        
+    else:
+        y_arr = tsmap[pix[1]-1:pix[1]+2,pix[0]]
+        yval,yerr = estimate_pos_and_err_parabolic(y_arr)
+        yval += float(pix[1])
+
+    return (xval,yval),(xerr,yerr)
+
+
 class SourceFinder(fermipy.config.Configurable):
 
     defaults = dict(defaults.sourcefind.items(),
