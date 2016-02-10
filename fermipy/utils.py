@@ -36,7 +36,6 @@ def read_spectral_data(hdu):
     return ebins,fluxes,npreds
     
 
-
 class Map_Base(object):
     """ Abstract representation of a 2D or 3D counts map."""
 
@@ -263,9 +262,14 @@ def get_upper_limit(dlogLike, xval, interpolate=False, ul_confidence=0.95):
         lnlmax = float(s(x0))
 
         fn = lambda t: s(t)+min(2*deltalnl,-(dlogLike[-1]-lnlmax))
-        
-        xlim = brentq(lambda t: s(t)+min(2*deltalnl,-(dlogLike[-1]-lnlmax)),
-                      x0, xval[-1], xtol=1e-10*np.median(xval))
+
+        # Ensure that upper bound encompasses delta-lnl threshold
+        xub = xval[-1]        
+        while np.abs(s(xub) - lnlmax) < 2*deltalnl:
+            xub *= 2
+
+        xlim = brentq(lambda t: s(t)-lnlmax+2*deltalnl,
+                      x0, xub, xtol=1e-10*np.median(xval))
         
         xhi = np.linspace(x0, xlim, 100)
         xlo = np.linspace(xval[0], x0, 100)
@@ -279,7 +283,6 @@ def get_upper_limit(dlogLike, xval, interpolate=False, ul_confidence=0.95):
         lnlmax = dlogLike[imax]
         dlnllo = dlogLike[:imax+1] - lnlmax
         dlnlhi = dlogLike[imax:] - lnlmax
-
     
     ul = np.interp(deltalnl, -dlnlhi, xhi)
     err_hi = np.interp(0.5, -dlnlhi, xhi) - x0

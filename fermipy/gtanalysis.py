@@ -1684,8 +1684,9 @@ class GTAnalysis(fermipy.config.Configurable):
 
             self.logger.debug('Adding test source with width: %10.3f deg' % w)
             self.add_source(model_name, s, free=True)
-            self.fit(update=False)
-
+            #self.fit(update=False)
+            self.like.optimize(0)
+            
             logLike1 = -self.like()
             o['dlogLike'][i] = logLike1 - o['logLike_ptsrc']
             o['logLike'][i] = logLike1
