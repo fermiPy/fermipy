@@ -66,7 +66,15 @@ fermipy.residmap module
 .. automodule:: fermipy.residmap
     :members:
     :undoc-members:
-    :show-inheritance:       
+    :show-inheritance:
+
+fermipy.sed module
+------------------
+
+.. automodule:: fermipy.sed
+    :members:
+    :undoc-members:
+    :show-inheritance:
        
 Module contents
 ---------------

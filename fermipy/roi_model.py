@@ -572,14 +572,15 @@ class Model(object):
 
     def get_norm(self):
 
-        par_name = gtutils.get_function_norm_par(self['SpectrumType'])
+        par_name = gtutils.get_function_norm_par_name(self['SpectrumType'])
         val = self.spectral_pars[par_name]['value']
         scale = self.spectral_pars[par_name]['scale']
         return float(val)*float(scale)
-    
+
     def check_cuts(self, cuts):
 
-        if cuts is None: return True
+        if cuts is None:
+            return True
 
         if isinstance(cuts, tuple):
             cuts = {cuts[0]: (cuts[1], cuts[2])}
@@ -625,6 +626,7 @@ class Model(object):
         self._name = m.name
         self._names = list(set(self._names + m.names))
 
+
 class IsoSource(Model):
     def __init__(self, name, filefunction, spectral_pars=None,
                  spatial_pars=None):
@@ -635,10 +637,9 @@ class IsoSource(Model):
         data['SpatialType'] = 'ConstantValue'
         data['SpatialModel'] = 'DiffuseSource'
         data['SourceType'] = 'DiffuseSource'
-        
-        super(IsoSource, self).__init__(name, data, spectral_pars, spatial_pars)
 
-        
+        super(IsoSource, self).__init__(name, data, spectral_pars,
+                                        spatial_pars)
 
         if not spectral_pars:
             self['spectral_pars'] = {
@@ -691,12 +692,10 @@ class MapCubeSource(Model):
         data['SpectrumType'] = 'PowerLaw'
         data['SpatialType'] = 'MapCubeFunction'
         data['SpatialModel'] = 'DiffuseSource'
-        data['SourceType'] = 'DiffuseSource'        
-        
+        data['SourceType'] = 'DiffuseSource'
+
         super(MapCubeSource, self).__init__(name, data, spectral_pars,
                                             spatial_pars)
-
-        
 
         if not spectral_pars:
             self['spectral_pars'] = {
@@ -771,7 +770,7 @@ class Source(Model):
         catalog = self.data.get('catalog', {})
 
         if radec is not None:
-            self._set_radec(radec)        
+            self._set_radec(radec)
         elif 'ra' in self.data and 'dec' in self.data:
             self._set_radec([self.data['ra'], self.data['dec']])
         elif 'RAJ2000' in catalog and 'DEJ2000' in catalog:

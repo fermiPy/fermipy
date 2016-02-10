@@ -10,7 +10,7 @@ import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 import scipy.special as specialfn
 from scipy.interpolate import UnivariateSpline
-
+from scipy.optimize import brentq
 
 def read_energy_bounds(hdu):
     """ Reads and returns the energy bin edges from a FITs HDU
@@ -236,6 +236,68 @@ def create_model_name(src):
 
     return o
 
+
+def cl_to_dlnl(cl):
+    """Compute the delta-log-likehood corresponding to an upper limit of
+    the given confidence level."""
+    import scipy.special as spfn
+    alpha = 1.0 - cl
+    return 0.5 * np.power(np.sqrt(2.) * spfn.erfinv(1 - 2 * alpha), 2.)
+
+
+def get_upper_limit(dlogLike, xval, interpolate=False, ul_confidence=0.95):
+    """Compute 95% CL upper limit and 1-sigma errors given a 1-D
+    profile likelihood function."""
+
+    deltalnl = cl_to_dlnl(ul_confidence)
+    
+    if interpolate:
+        s = UnivariateSpline(xval, dlogLike, k=2, s=0)
+        sd = s.derivative()
+        if np.sign(sd(xval[0])) == -1:
+            x0 = xval[0]
+        else:
+            x0 = brentq(sd, xval[0], xval[-1],
+                        xtol=1e-10*np.median(xval))
+            
+        lnlmax = float(s(x0))
+
+        fn = lambda t: s(t)+min(2*deltalnl,-(dlogLike[-1]-lnlmax))
+        
+        xlim = brentq(lambda t: s(t)+min(2*deltalnl,-(dlogLike[-1]-lnlmax)),
+                      x0, xval[-1], xtol=1e-10*np.median(xval))
+        
+        xhi = np.linspace(x0, xlim, 100)
+        xlo = np.linspace(xval[0], x0, 100)
+        dlnllo = s(xlo) - lnlmax
+        dlnlhi = s(xhi) - lnlmax
+    else:
+        imax = np.argmax(dlogLike)
+        x0 = xval[imax]
+        xlo = xval[:imax+1]
+        xhi = xval[imax:]
+        lnlmax = dlogLike[imax]
+        dlnllo = dlogLike[:imax+1] - lnlmax
+        dlnlhi = dlogLike[imax:] - lnlmax
+
+    
+    ul = np.interp(deltalnl, -dlnlhi, xhi)
+    err_hi = np.interp(0.5, -dlnlhi, xhi) - x0
+    err_lo = np.nan
+
+    if dlnllo[0] < -0.5:
+        err_lo = x0 - np.interp(0.5, -dlnllo[::-1], xlo[::-1])
+
+    if np.isfinite(err_lo):
+        err = 0.5*(err_lo+err_hi)
+    else:
+        err = err_hi
+        
+    o = {'x0' : x0, 'ul' : ul,
+            'err_lo' : err_lo, 'err_hi' : err_hi, 'err' : err,
+            'lnlmax' : lnlmax }
+    return o
+    
 
 def poly_to_parabola(coeff):
 

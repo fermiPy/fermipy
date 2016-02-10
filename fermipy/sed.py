@@ -10,6 +10,8 @@ Many parts of this code are taken from dsphs/like/lnlfn.py by
   Alex Drlica-Wagner <kadrlica@slac.stanford.edu>
 """
 
+import copy
+
 import numpy as np
 from scipy.interpolate import UnivariateSpline, splrep, splev
 import scipy.optimize as opt
@@ -18,10 +20,15 @@ from scipy.integrate import quad
 import scipy
 import astropy.io.fits as pf
 
-from fermipy import utils
-from utils import read_energy_bounds, read_spectral_data
+import fermipy.config
+import fermipy.defaults as defaults
+import fermipy.utils as utils
+from fermipy.utils import read_energy_bounds, read_spectral_data
 from fermipy.fits_utils import read_map_from_fits
+from fermipy.logger import Logger
+from fermipy.logger import logLevel
 
+from LikelihoodState import LikelihoodState
 
 # Some useful functions
 
@@ -35,7 +42,238 @@ def alphaToDeltaLogLike_1DOF(alpha):
 
 FluxTypes = ['NORM','FLUX','EFLUX','NPRED']
 
+class SEDGenerator(fermipy.config.Configurable):
 
+    defaults = dict(defaults.sed.items(),
+                    fileio=defaults.fileio,
+                    logging=defaults.logging)
+
+    def __init__(self, config=None, **kwargs):
+        fermipy.config.Configurable.__init__(self, config, **kwargs)
+        self.logger = Logger.get(self.__class__.__name__,
+                                 self.config['fileio']['logfile'],
+                                 logLevel(self.config['logging']['verbosity']))
+
+    def make_sed(self, gta, name, profile=True, energies=None, **kwargs):
+        """Generate an SED for a source.  This function will fit the
+        normalization of a given source in each energy bin.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        profile : bool
+            Profile the likelihood in each energy bin.
+
+        energies : `~numpy.ndarray`
+            Sequence of energies in log10(E/MeV) defining the edges of
+            the energy bins.  If this argument is None then the
+            analysis energy bins will be used.  The energies in this
+            sequence must align with the bin edges of the underyling
+            analysis instance.
+
+        bin_index : float
+            Spectral index that will be use when fitting the energy
+            distribution within an energy bin.
+
+        use_local_index : bool
+            Use a power-law approximation to the shape of the global
+            spectrum in each bin.  If this is false then a constant
+            index set to `bin_index` will be used.
+
+        fix_background : bool
+            Fix background components when fitting the flux
+            normalization in each energy bin.  If fix_background=False
+            then all background parameters that are currently free in
+            the fit will be profiled.  By default fix_background=True.
+
+        Returns
+        -------
+
+        sed : dict
+            Dictionary containing results of the SED analysis.  The same
+            dictionary is also saved to the source dictionary under
+            'sed'.
+
+        """
+
+        # Find the source
+        name = gta.roi.get_source_by_name(name, True).name
+
+        # Extract options from kwargs
+        config = copy.deepcopy(self.config)
+        config.update(kwargs)
+
+        bin_index = config['bin_index']
+        use_local_index = config['use_local_index']
+        fix_background = config['fix_background']
+        ul_confidence = config['ul_confidence']
+
+        self.logger.info('Computing SED for %s' % name)
+        saved_state = LikelihoodState(gta.like)
+
+        if fix_background:
+            gta.free_sources(free=False)
+
+        if energies is None:
+            energies = gta.energies
+        else:
+            energies = np.array(energies)
+
+        nbins = len(energies) - 1
+
+        o = {'emin': energies[:-1],
+             'emax': energies[1:],
+             'ecenter': 0.5 * (energies[:-1] + energies[1:]),
+             'flux': np.zeros(nbins),
+             'eflux': np.zeros(nbins),
+             'dfde': np.zeros(nbins),
+             'e2dfde': np.zeros(nbins),
+             'flux_err': np.zeros(nbins),
+             'eflux_err': np.zeros(nbins),
+             'dfde_err': np.zeros(nbins),
+             'e2dfde_err': np.zeros(nbins),
+             'flux_ul95': np.zeros(nbins) * np.nan,
+             'eflux_ul95': np.zeros(nbins) * np.nan,
+             'dfde_ul95': np.zeros(nbins) * np.nan,
+             'e2dfde_ul95': np.zeros(nbins) * np.nan,
+             'flux_ul': np.zeros(nbins) * np.nan,
+             'eflux_ul': np.zeros(nbins) * np.nan,
+             'dfde_ul': np.zeros(nbins) * np.nan,
+             'e2dfde_ul': np.zeros(nbins) * np.nan,
+             'dfde_err_lo': np.zeros(nbins) * np.nan,
+             'e2dfde_err_lo': np.zeros(nbins) * np.nan,
+             'dfde_err_hi': np.zeros(nbins) * np.nan,
+             'e2dfde_err_hi': np.zeros(nbins) * np.nan,
+             'index': np.zeros(nbins),
+             'Npred': np.zeros(nbins),
+             'ts': np.zeros(nbins),
+             'fit_quality': np.zeros(nbins),
+             'lnlprofile': [],
+             'config': config
+             }
+
+        max_index = 5.0
+        min_flux = 1E-30
+
+        # Precompute fluxes in each bin from global fit
+        gf_bin_flux = []
+        gf_bin_index = []
+        for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
+
+            delta = 1E-5
+            f = gta.like[name].flux(10 ** emin, 10 ** emax)
+            f0 = gta.like[name].flux(10 ** emin * (1 - delta),
+                                      10 ** emin * (1 + delta))
+            f1 = gta.like[name].flux(10 ** emax * (1 - delta),
+                                      10 ** emax * (1 + delta))
+
+            if f0 > min_flux:
+                g = 1 - np.log10(f0 / f1) / np.log10(10 ** emin / 10 ** emax)
+                gf_bin_index += [g]
+                gf_bin_flux += [f]
+            else:
+                gf_bin_index += [max_index]
+                gf_bin_flux += [min_flux]
+
+        source = gta.components[0].like.logLike.getSource(name)
+        old_spectrum = source.spectrum()
+        gta.like.setSpectrum(name, 'PowerLaw')
+        gta.free_parameter(name, 'Index', False)
+        gta.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
+                           true_value=False,
+                           bounds=[1E-10, 1E10],
+                           update_source=False)
+        
+        for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
+
+            ecenter = 0.5 * (emin + emax)
+            gta.set_parameter(name, 'Scale', 10 ** ecenter, scale=1.0,
+                               bounds=[1, 1E6], update_source=False)
+
+            if use_local_index:
+                o['index'][i] = -min(gf_bin_index[i], max_index)
+            else:
+                o['index'][i] = -bin_index
+                
+            gta.set_parameter(name, 'Index', o['index'][i], scale=1.0,
+                               update_source=False)
+
+            normVal = gta.like.normPar(name).getValue()
+            flux_ratio = gf_bin_flux[i] / gta.like[name].flux(10 ** emin,
+                                                               10 ** emax)
+            newVal = max(normVal * flux_ratio, 1E-10)
+            gta.set_norm(name, newVal)
+            
+            gta.like.syncSrcParams(name)
+            gta.free_norm(name)
+            self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
+                              (name, 10 ** emin, 10 ** emax))
+            gta.setEnergyRange(emin, emax)
+            o['fit_quality'][i] = gta.fit(update=False)['fit_quality']
+
+            prefactor = gta.like[gta.like.par_index(name, 'Prefactor')]
+
+            flux = gta.like[name].flux(10 ** emin, 10 ** emax)
+            flux_err = gta.like.fluxError(name, 10 ** emin, 10 ** emax)
+            eflux = gta.like[name].energyFlux(10 ** emin, 10 ** emax)
+            eflux_err = gta.like.energyFluxError(name, 10 ** emin, 10 ** emax)
+            dfde = prefactor.getTrueValue()
+            dfde_err = dfde * flux_err / flux
+            e2dfde = dfde * 10 ** (2 * ecenter)
+            
+            o['flux'][i] = flux
+            o['eflux'][i] = eflux
+            o['dfde'][i] = dfde
+            o['e2dfde'][i] = e2dfde
+            o['flux_err'][i] = flux_err
+            o['eflux_err'][i] = eflux_err
+            o['dfde_err'][i] = dfde_err
+            o['e2dfde_err'][i] = dfde_err * 10 ** (2 * ecenter)
+
+            cs = gta.model_counts_spectrum(name, emin, emax, summed=True)
+            o['Npred'][i] = np.sum(cs)
+            o['ts'][i] = max(gta.like.Ts2(name, reoptimize=False), 0.0)
+
+            if profile:
+                lnlp = gta.profile_norm(name, emin=emin, emax=emax,
+                                        savestate=False, reoptimize=True,
+                                        npts=20)
+                o['lnlprofile'] += [lnlp]
+
+                ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'],True)
+                
+                o['flux_ul95'][i] = ul_data['ul']
+                o['eflux_ul95'][i] = ul_data['ul']*(lnlp['eflux'][-1]/lnlp['flux'][-1])
+                o['dfde_ul95'][i] = ul_data['ul']*(lnlp['dfde'][-1]/lnlp['flux'][-1])
+                o['e2dfde_ul95'][i] = o['dfde_ul95'][i] * 10 ** (2 * ecenter)
+                o['dfde_err_hi'][i] = ul_data['err_hi']*(lnlp['dfde'][-1]/lnlp['flux'][-1])
+                o['e2dfde_err_hi'][i] = o['dfde_err_hi'][i] * 10 ** (2 * ecenter)
+                o['dfde_err_lo'][i] = ul_data['err_lo']*(lnlp['dfde'][-1]/lnlp['flux'][-1])
+                o['e2dfde_err_lo'][i] = o['dfde_err_lo'][i] * 10 ** (2 * ecenter)
+                
+                ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'],
+                                                True,
+                                                ul_confidence=ul_confidence)
+
+                o['flux_ul'][i] = ul_data['ul']
+                o['eflux_ul'][i] = ul_data['ul']*(lnlp['eflux'][-1]/lnlp['flux'][-1])
+                o['dfde_ul'][i] = ul_data['ul']*(lnlp['dfde'][-1]/lnlp['flux'][-1])
+                o['e2dfde_ul'][i] = o['dfde_ul'][i] * 10 ** (2 * ecenter)
+
+
+        gta.setEnergyRange(gta.energies[0], gta.energies[-1])
+        gta.like.setSpectrum(name, old_spectrum)
+        saved_state.restore()
+
+        src = gta.roi.get_source_by_name(name, True)
+        src.update_data({'sed': copy.deepcopy(o)})
+
+        self.logger.info('Finished SED')
+        return o
+        
 class Interpolator(object):
     """ Helper class for interpolating a 1-D function from a
     set of tabulated values.  
