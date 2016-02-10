@@ -1785,6 +1785,10 @@ class GTAnalysis(fermipy.config.Configurable):
             then all background parameters that are currently free in
             the fit will be profiled.  By default fix_background=True.
 
+        ul_confidence : float
+            Set the confidence level that will be used for the
+            calculation of flux upper limits in each energy bin.
+
         Returns
         -------
 
