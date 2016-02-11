@@ -3159,7 +3159,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             else:
                 self.roi.load_source(s,build_index=False)
 
-        self.roi.build_src_index()
+        self.roi._build_src_index()
     
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
         """Add a new source to the model.  Source properties
