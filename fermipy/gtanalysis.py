@@ -215,7 +215,6 @@ class GTAnalysis(fermipy.config.Configurable):
                 'extension': defaults.extension,
                 'localize': defaults.localize,
                 'roiopt': defaults.roiopt,
-                'run': defaults.run,
                 'plotting': defaults.plotting,
                 'components': (None, '', list)}
 
@@ -409,7 +408,15 @@ class GTAnalysis(fermipy.config.Configurable):
         default the new instance will inherit the configuration of the
         previously saved analysis.  The configuration may be overriden
         by providing an alternate config file with the config
-        argument."""
+        argument.
+
+        Parameters
+        ----------
+
+        infile : str
+            Path to the ROI results file.
+        
+        """
 
         infile = os.path.abspath(infile)
         roi_data = load_roi_data(infile)
@@ -740,11 +747,12 @@ class GTAnalysis(fermipy.config.Configurable):
             c.setEnergyRange(emin, emax)
 
     def counts_map(self):
-        """
+        """Return a `~fermipy.utils.Map` representation of the counts map.
+
         Returns
         -------
 
-        map : `~fermipy.utils.Map` 
+        map : `~fermipy.utils.Map`
 
         """
         return self._ccube
@@ -771,8 +779,8 @@ class GTAnalysis(fermipy.config.Configurable):
         Returns
         -------
 
-        maps : list of :py:class:`~fermipy.utils.Map` 
-           
+        maps : list 
+           A list of :py:class:`~fermipy.utils.Map` objects.
         """
 
         maps = []
@@ -829,8 +837,8 @@ class GTAnalysis(fermipy.config.Configurable):
         Returns
         -------
 
-        srcs : list of `~fermipy.roi_model.Source` 
-
+        srcs : list 
+            A list of `~fermipy.roi_model.Source` objects.
         """
 
         return self.roi.get_sources(cuts,distance,
@@ -845,7 +853,8 @@ class GTAnalysis(fermipy.config.Configurable):
         Returns
         -------
 
-        srcs : list of `~fermipy.roi_model.Source` 
+        srcs : list 
+            A list of `~fermipy.roi_model.Source` objects.
 
         """
 
@@ -907,7 +916,8 @@ class GTAnalysis(fermipy.config.Configurable):
         Returns
         -------
 
-        srcs : list of `~fermipy.roi_model.Source` 
+        srcs : list 
+            A list of `~fermipy.roi_model.Source` objects.
 
         
         """
@@ -946,7 +956,14 @@ class GTAnalysis(fermipy.config.Configurable):
 
         square : bool        
             Apply a square (ROI-like) selection on the maximum distance in
-            either X or Y in projected cartesian coordinates.        
+            either X or Y in projected cartesian coordinates.   
+
+        Returns
+        -------
+
+        srcs : list 
+            A list of `~fermipy.roi_model.Source` objects.
+     
         """
 
         return self.free_sources(free, pars, cuts=None, distance=distance,
@@ -1000,7 +1017,21 @@ class GTAnalysis(fermipy.config.Configurable):
             self.update_source(name)
 
     def set_parameter_bounds(self,name,par,bounds):
-        
+        """Set the bounds of a parameter.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        par : str
+            Parameter name.
+
+        bounds : list
+            Upper and lower bound.
+
+        """
         idx = self.like.par_index(name, par)
         self.like[idx].setBounds(*bounds)
 
@@ -1115,10 +1146,6 @@ class GTAnalysis(fermipy.config.Configurable):
         name = self.get_source_name(name)
         normPar = self.like.normPar(name).getName()
         self.free_source(name, pars=[normPar], free=free)
-
-    #        par_index = self.like.par_index(name,normPar)
-    #        self.like[par_index].setFree(free)
-    #        self.like.syncSrcParams(name)
 
     def free_index(self, name, free=True):
         """Free/Fix index of a source.
@@ -1269,27 +1296,41 @@ class GTAnalysis(fermipy.config.Configurable):
         performed in three sequential steps:
         
         * Free the normalization of the N largest components (as
-          determined from NPred) that contain a fraction *npred_frac*
+          determined from NPred) that contain a fraction ``npred_frac``
           of the total predicted counts in the model and perform a
           simultaneous fit of the normalization parameters of these
           components.
 
-        * Individually fit the normalizations of all remaining sources
-          that were not included in the first step.  Skip any sources
-          that have NPred < *npred_threshold*.
+        * Individually fit the normalizations of all sources that were
+          not included in the first step in order of their Npred
+          values.  Skip any sources that have NPred <
+          ``npred_threshold``.
 
         * Individually fit the shape and normalization parameters of
-          all sources with TS > shape_ts_threshold where TS is
+          all sources with TS > ``shape_ts_threshold`` where TS is
           determined from the first two steps of the ROI optimization.
+
+        To ensure that the model is fully optimized this method can be
+        run multiple times.
 
         Parameters
         ----------
 
         npred_frac : float
+            Threshold on the fractional number of counts in the N
+            largest components in the ROI.  This parameter determines
+            the set of sources that are fit in the first optimization
+            step.
 
         npred_threshold : float
+            Threshold on the minimum number of counts of individual
+            sources.  This parameter determines the sources that are
+            fit in the second optimization step.
 
         shape_ts_threshold : float
+            Threshold on source TS used for determining the sources
+            that will be fit in the third optimization step.
+
         """
 
         self.logger.info('Running ROI Optimization')
@@ -3118,7 +3159,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             else:
                 self.roi.load_source(s,build_index=False)
 
-        self.roi.build_src_index()
+        self.roi._build_src_index()
     
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
         """Add a new source to the model.  Source properties
