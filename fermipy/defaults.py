@@ -181,20 +181,24 @@ tscube = {
     'st_scan_level': (0, 'Level to which to do ST-based fitting (for testing)', int),
 }
 
-#
+# Options for Source Finder
 sourcefind = {
     'model': (None, '', dict),
     'min_separation': (1.0, '', float),
     'sqrt_ts_threshold': (5.0, '', float),
     'max_iter': (3, '', int),
     'sources_per_iter': (3, '', int),
-    'tsmap_fitter' : ('tsmap','',str)
+    'tsmap_fitter': ('tsmap', '', str)
 }
 
 # Options for SED analysis
 sed = {
     'bin_index': (2.0, '', float),
-    'use_local_index': (False, '', bool)
+    'use_local_index': (False, '', bool),
+    'fix_background': (True, 'Fix background parameters when fitting the '
+                       'source flux in each energy bin.', bool),
+    'ul_confidence': (0.95, 'Confidence level for upper limit calculation.',
+                      float)
 }
 
 # Options for extension analysis

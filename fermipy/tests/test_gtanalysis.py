@@ -78,6 +78,7 @@ def test_gtanalysis_residmap(setup):
 def test_gtanalysis_extension_gaussian(setup):
 
     gta = setup
+    gta.restore_counts_maps()
     gta.load_roi('fit1')
     np.random.seed(1)
     spatial_width = 0.5
@@ -98,6 +99,7 @@ def test_gtanalysis_extension_gaussian(setup):
 def test_gtanalysis_localization(setup):
 
     gta = setup
+    gta.restore_counts_maps()
     gta.load_roi('fit1')
     np.random.seed(1)
 
@@ -122,4 +124,5 @@ def test_gtanalysis_localization(setup):
     assert(np.abs(o['glon']-86.0) < 0.025)
     assert(np.abs(o['glat']-36.0) < 0.025)
     gta.delete_source('testloc')
+
     gta.restore_counts_maps()

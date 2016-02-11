@@ -606,6 +606,10 @@ class TSCubeGenerator(fermipy.config.Configurable):
         fitScanner.setTestSource(pylike_src)
         
         self.logger.info("Running tscube")
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
+                                        'tscube.fits',
+                                        prefix=[prefix])
+
         # doSED         : Compute the energy bin-by-bin fits
         # nNorm         : Number of points in the likelihood v. normalization scan
         # covScale      : Scale factor to apply to broadband fitting cov.
@@ -616,6 +620,7 @@ class TSCubeGenerator(fermipy.config.Configurable):
         # tolType       : Absoulte (0) or relative (1) criteria for convergence
         # remakeTestSource : If true, recomputes the test source image (otherwise just shifts it)
         # ST_scan_level : Level to which to do ST-based fitting (for testing)
+        """
         fitScanner.run_tscube(True,
                               config['do_sed'], config['nnorm'],
                               config['norm_sigma'], config['cov_scale'],
@@ -623,21 +628,17 @@ class TSCubeGenerator(fermipy.config.Configurable):
                               config['tol_type'], config['remake_test_source'],
                               config['st_scan_level'])
         self.logger.info("Writing FITS output")
-
-        outfile = utils.format_filename(self.config['fileio']['workdir'],
-                                        'tscube.fits',
-                                        prefix=[prefix])
-        
-        
+                                        
         fitScanner.writeFitsFile(str(outfile), str("gttscube"))
-        
+        """
+
         tscube = sed.TSCube.create_from_fits(outfile,fluxType=2)
         ts_map = tscube.tsmap        
-        norm_map = tscube.nmap
+        norm_map = tscube.normmap
         npred_map = copy.deepcopy(norm_map)
-        npred_map.counts *= tscube.specData.npreds.sum()
+        npred_map._counts *= tscube.specData.npreds.sum()
         amp_map = copy.deepcopy(norm_map) 
-        amp_map.counts *= src_dict['Prefactor']
+        amp_map._counts *= src_dict['Prefactor']
 
         sqrt_ts_map = copy.deepcopy(ts_map)
         sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5

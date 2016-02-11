@@ -213,7 +213,7 @@ if __name__ == "__main__":
 
         
     tscube = sed.TSCube.create_from_fits("tscube_test.fits",flux_type)
-    peaks = tscube.find_peaks(10.0,1.0,use_cumul=True)
+    peaks = tscube.find_and_refine_peaks(10.0,1.0,use_cumul=True)
 
     max_ts = tscube.tsmap.counts.max()
     (castro,test_dict) = tscube.test_spectra_of_peak(peaks[0])

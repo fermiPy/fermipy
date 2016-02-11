@@ -114,8 +114,8 @@ the model, and perform a fit to the ROI.
 In the following example we lay out the sequence of python calls that
 could be run interactively or in a script to setup and run an
 analysis.  First we instantiate
-:py:class:`~fermipy.gtanalysis.GTAnalysis` with the chosen
-configuration.
+:py:class:`~fermipy.gtanalysis.GTAnalysis` with the
+configuration and run :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup`.
 
 .. code-block:: python
 
@@ -124,16 +124,41 @@ configuration.
    gta = GTAnalysis('config.yaml',logging={'verbosity' : 3})
    gta.setup()
 
-The :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup`. method performs
+The :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` method performs
 all the prepratory steps for the analysis (selecting the data,
-creating counts and exposure maps, etc.).  It should be noted that
-depending on the parameters of the analysis this will often be the
-slowest step in the analysis sequence.
+creating counts and exposure maps, etc.).  Depending on the data
+selection and binning of the analysis this will often be the slowest
+step in the analysis sequence.  The output of
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` is cached in the
+analysis working directory so subsequent calls to
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` will run much faster.
 
-Once the *GTAnalysis* object is initialized we can define which
-source parameters will be free in the fit.  By default all
-models parameters are initially fixed.  In the following example we
-free the normalization of catalog sources within 3 deg of the ROI
+Before running any other analysis methods it is recommended to first
+run :py:meth:`~fermipy.gtanalysis.GTAnalysis.optimize`:
+
+.. code-block:: python
+
+   gta.optimize()
+
+This will loop over all model components in the ROI and fit their
+normalization and spectral shape parameters.  This method also
+computes the TS of all sources which can be useful for identifying
+weak sources that could be fixed or removed from the model.  We can
+check the results of the optimization step by calling
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.print_roi`:
+
+.. code-block:: python
+
+   gta.print_roi()
+    
+.. Once the *GTAnalysis* object is initialized we can define which
+.. source parameters will be free in the fit.
+
+By default all models parameters are initially fixed.  The
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.free_source` and
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.free_sources` methods can be
+use to free or fix parameters of the model.  In the following example
+we free the normalization of catalog sources within 3 deg of the ROI
 center and free the galactic and isotropic components by name.
 
 .. code-block:: python
@@ -145,10 +170,26 @@ center and free the galactic and isotropic components by name.
    gta.free_source('galdiff')
    gta.free_source('isodiff')
 
-Note that when passing a source name argument both case and whitespace
-are ignored.  When using a FITS catalog file a source can also be
-referred to by any of its associations.  Thus the following calls are
-equivalent ways of freeing the parameters of Mkn 421:
+The ``minmax_ts`` and ``minmax_npred`` arguments to
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.free_sources` can be used to
+free or fixed sources on the basis of their current TS or Npred
+values:
+
+.. code-block:: python
+
+   # Free sources with TS > 10
+   gta.free_sources(minmax_ts=[10,None],pars='norm')
+
+   # Fix sources with TS < 10
+   gta.free_sources(minmax_ts=[None,10],free=False,pars='norm')
+
+   # Fix sources with 10 < Npred < 100
+   gta.free_sources(minmax_npred=[10,100],free=False,pars='norm')
+   
+When passing a source name argument both case and whitespace are
+ignored.  When using a FITS catalog file a source can also be referred
+to by any of its associations.  The following calls are equivalent
+ways of freeing the parameters of Mkn 421:
 
 .. code-block:: python
 
@@ -176,8 +217,8 @@ model with `~fermipy.gtanalysis.GTAnalysis.write_roi`:
 
 This will write several output files including an XML model file and
 an ROI dictionary file.  The names of all output files will be
-prepended with the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`
-function argument.
+prepended with the ``prefix`` argument to
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`.
 
 Once we have optimized our model for the ROI we can use the
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap` and
@@ -331,14 +372,27 @@ analysis instance already exists.
 IPython Notebook Tutorials
 --------------------------
 
-Additional tutorials with more detailed examples of using fermipy are
-available as a set of IPython notebooks.  These are located in the
-`notebooks
+Additional tutorials with more detailed fermipy examples are available
+as a set of IPython notebooks.  These are located in the `notebooks
 <https://github.com/fermiPy/fermipy/tree/master/notebooks/>`_
-directory of the fermipy respository.  To run any of the notebooks
-simply run `ipython notebook` followed by the notebook name:
+directory of the fermipy respository.  To run any of the notebooks,
+download the fermipy repository and run ``jupyter notebook`` followed
+by the notebook name:
 
 .. code-block:: bash
 
-   cd <path to fermipy repository>/notebooks
-   ipython notebook PG\ 1553+113.ipynb
+   git clone https://github.com/fermiPy/fermipy.git
+   cd fermipy/notebooks
+   jupyter notebook PG\ 1553+113.ipynb
+
+Note that this will require you to have both ipython and jupyter
+installed in your python environment.  These can be installed in a
+conda- or pip-based installation as follows:
+
+.. code-block:: bash
+
+   # Install with conda
+   conda install ipython jupyter
+
+   # Install with pip
+   pip install ipython jupyter

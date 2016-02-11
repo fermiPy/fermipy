@@ -462,14 +462,14 @@ class SEDPlotter(object):
     def __init__(self, src):
 
         self._src = copy.deepcopy(src)
-        self._sed = self._src['sed']
+        self._sed = copy.deepcopy(self._src['sed'])
 
     @staticmethod
     def plot_lnlscan(sed, **kwargs):
 
         ax = kwargs.pop('ax', plt.gca())
         llhCut = kwargs.pop('llhCut', -5)
-        cmap = kwargs.pop('cmap', 'jet')
+        cmap = kwargs.pop('cmap', 'BuGn')
 
         lhProf = sed['lnlprofile']
 
@@ -611,7 +611,7 @@ class SEDPlotter(object):
         src = self._src
         ax = plt.gca()
         name = src['name']
-        cmap = kwargs.get('cmap', 'jet')
+        cmap = kwargs.get('cmap', 'BuGn')
 
         annotate(src=src, ax=ax)
 
@@ -627,12 +627,6 @@ class SEDPlotter(object):
         ax.set_xscale('log')
         ax.set_xlabel('Energy [MeV]')
         ax.set_ylabel('E$^{2}$dF/dE [MeV cm$^{-2}$ s$^{-1}$]')
-
-
-# ax.set_ylim(min(y)*0.5,max(y)*1.8)
-
-#        dirname = os.path.dirname(sys.argv[1])
-#        plt.savefig(os.path.join(dirname,name + '_sed.png'))
 
 
 class ExtensionPlotter(object):
@@ -949,7 +943,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
             self._plot_extension(prefix, s, erange=erange, format=format)
 
-    def make_sed_plots(self, gta, prefix, **kwargs):
+    def make_sed_plots(self, gta, prefix='', **kwargs):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
 
@@ -978,6 +972,34 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                      '%s_%s_sedlnl.%s' % (
                                          prefix, name, format)))
             plt.close(fig)
+
+    def make_sed_plot(self,gta,name,**kwargs):
+
+        prefix = kwargs.get('prefix','')
+        src = gta.roi[name]
+
+        name = src.name.lower().replace(' ', '_')
+        format = kwargs.get('format', gta.config['plotting']['format'])
+        p = SEDPlotter(src)
+        fig = plt.figure()
+        p.plot()
+
+        outfile = utils.format_filename(gta.config['fileio']['workdir'],
+                                        'sed', prefix=[prefix, name],
+                                        extension=format)
+
+        plt.savefig(outfile)
+        plt.close(fig)
+
+        p = SEDPlotter(src)
+        fig = plt.figure()
+        p.plot(showlnl=True)
+
+        outfile = utils.format_filename(gta.config['fileio']['workdir'],
+                                        'sedlnl', prefix=[prefix, name],
+                                        extension=format)
+        plt.savefig(outfile)
+        plt.close(fig)
 
     def _plot_extension(self, gta, prefix, src, erange=None, **kwargs):
         """Utility function for generating diagnostic plots for the

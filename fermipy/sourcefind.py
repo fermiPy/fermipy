@@ -61,10 +61,8 @@ def find_peaks(input_map, threshold, min_separation=1.0):
 
     peaks = []
     for s in slices:
-        #skydir = SkyCoord.from_pixel(s[1].start, s[0].start,
-        #                             input_map.wcs)
-        world_coords = input_map.wcs.wcs_pix2world(s[1].start, s[0].start, 0)
-        skydir = SkyCoord(world_coords[0],world_coords[1],unit="deg")
+        skydir = SkyCoord.from_pixel(s[0].start, s[1].start,
+                                     input_map.wcs)
         peaks.append({'ix': s[1].start,
                       'iy': s[0].start,
                       'skydir': skydir,
@@ -173,9 +171,44 @@ class SourceFinder(fermipy.config.Configurable):
             
         return o
 
+
+    def _build_src_dicts_from_peaks(self,peaks,maps,src_dict_template):
+
+        tsmap = maps['ts']
+        amp = maps['amplitude']
+
+        src_dicts = []
+        names = []
+
+        for p in peaks:
+            o = utils.fit_parabola(tsmap.counts,p['iy'],p['ix'],dpix=2)
+            p['fit_loc'] = o
+            p['fit_skydir'] = SkyCoord.from_pixel(o['y0'],o['x0'],tsmap.wcs)
+            if o['fit_success']:            
+                skydir = p['fit_skydir']
+            else:
+                skydir = p['skydir']
+                
+            name = utils.create_source_name(skydir)
+            src_dict = copy.deepcopy(src_dict_template)
+            src_dict.update({'Prefactor': amp.counts[p['iy'], p['ix']],                        
+                             'ra': skydir.icrs.ra.deg,
+                             'dec': skydir.icrs.dec.deg})
+
+            self.logger.info('Found source\n' +
+                             'name: %s\n'%name +
+                             'ts: %f'%p['amp']**2)
+           
+            names.append(name)
+            src_dicts.append(src_dict)
+            pass
+
+        return names,src_dicts
+
+
     def _iterate(self, gta, prefix, iiter, **kwargs):
 
-        src_dict = kwargs.pop('model')
+        src_dict_template = kwargs.pop('model')
         
         threshold = kwargs.get('sqrt_ts_threshold')
         min_separation = kwargs.get('min_separation')
@@ -186,44 +219,32 @@ class SourceFinder(fermipy.config.Configurable):
         
         if tsmap_fitter == 'tsmap':
             m = gta.tsmap('%s_sourcefind_%02i'%(prefix,iiter),
-                          model=src_dict, 
+                          model=src_dict_template, 
                           **tsmap_kwargs)
         elif tsmap_fitter == 'tscube':
             m = gta.tscube('%s_sourcefind_%02i'%(prefix,iiter),
-                           model=src_dict, 
+                           model=src_dict_template, 
                           **tscube_kwargs)            
         else:
             raise Exception('Unrecognized option for fitter: %s.'%tsmap_fitter)
             
         amp = m['amplitude']
-        peaks = find_peaks(m['sqrt_ts'], threshold, min_separation)
+ 
+        if tsmap_fitter == 'tsmap':
+            peaks = find_peaks(m['sqrt_ts'], threshold, min_separation)
+            (names,src_dicts) = self._build_src_dicts_from_peaks(peaks[:sources_per_iter],
+                                                                 m,src_dict_template)
+        elif tsmap_fitter == 'tscube':
+            sd = m['tscube'].find_sources(threshold**2, min_separation,
+                                          use_cumul=True,output_src_dicts=True,
+                                          output_peaks=True)
+            peaks = sd['Peaks']
+            names = sd['Names']
+            src_dicts = sd['SrcDicts']
 
-        names = []
-        for i, p in enumerate(peaks[:sources_per_iter]):
-
-            o = utils.fit_parabola(m['ts'].counts,p['iy'],p['ix'],dpix=2)
-            peaks[i]['fit_loc'] = o
-            peaks[i]['fit_skydir'] = SkyCoord.from_pixel(o['y0'],o['x0'],m['ts'].wcs)
-            
-            
-            if o['fit_success']:            
-                skydir = peaks[i]['fit_skydir']
-            else:
-                skydir = p['skydir']
-                
-            name = utils.create_source_name(skydir)
-            src_dict.update({'Prefactor': amp.counts[p['iy'], p['ix']],                        
-                             'ra': skydir.icrs.ra.deg,
-                             'dec': skydir.icrs.dec.deg})
-            
-            self.logger.info('Found source\n' +
-                             'name: %s\n'%name +
-                             'ts: %f'%p['amp']**2)
-            
-            names += [name]
+        # Loop over the seeds and add them to the model
+        for name,src_dict in zip(names,src_dicts):            
             gta.add_source(name, src_dict, free=True)
-
-        for name in names:
             gta.free_source(name,False)
 
         # Re-fit spectral parameters of each source individually
@@ -231,7 +252,7 @@ class SourceFinder(fermipy.config.Configurable):
             gta.free_source(name,True)
             gta.fit()
             gta.free_source(name,False)
-            
+                    
         srcs = []
         for name in names:
             srcs.append(gta.roi[name])

@@ -20,6 +20,7 @@ import fermipy.utils as utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
+import fermipy.sed as sed
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
@@ -27,7 +28,7 @@ from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import Map
 from fermipy.utils import create_hpx_disk_region_string
 from fermipy.hpx_utils import HpxMap, HPX
-from fermipy.roi_model import ROIModel
+from fermipy.roi_model import ROIModel, Model
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 # pylikelihood
@@ -55,7 +56,7 @@ shape_parameters = {
     'ConstantValue': [],
     'PowerLaw': ['Index'],
     'PowerLaw2': ['Index'],
-    'BrokenPowerLaw': ['Index1', 'Index2'],
+    'BrokenPowerLaw': ['Index1', 'Index2', 'BreakValue'],
     'LogParabola': ['alpha', 'beta'],
     'PLSuperExpCutoff': ['Index1', 'Cutoff'],
     'ExpCutoff': ['Index1', 'Cutoff'],
@@ -104,49 +105,8 @@ def get_spectral_index(src,egy):
         gamma = np.log10(f0 / f1) / np.log10((1-delta)/(1+delta))
     else:
         gamma = np.nan
-        
+
     return gamma
-
-
-def cl_to_dlnl(cl):
-    import scipy.special as spfn
-    alpha = 1.0 - cl
-    return 0.5 * np.power(np.sqrt(2.) * spfn.erfinv(1 - 2 * alpha), 2.)
-
-
-def get_upper_limit(dlogLike, yval, interpolate=False):
-    """Compute 95% CL upper limit and 1-sigma errors given a 1-D
-    profile likelihood function."""
-
-    from scipy.optimize import brentq
-
-    if interpolate:
-        s = UnivariateSpline(yval, dlogLike, k=2, s=0)
-        sd = s.derivative()
-        if np.sign(sd(yval[0])) == -1:
-            y0 = yval[0]
-        else:
-            y0 = brentq(sd, yval[0], yval[-1])
-
-        lnlmax = s(y0)
-        yval = np.linspace(yval[0], yval[-1], 100)
-        dlnl = s(yval) - lnlmax
-        imax = np.argmax(dlnl)
-    else:
-        imax = np.argmax(dlogLike)
-        y0 = yval[imax]
-        lnlmax = dlogLike[imax]
-        dlnl = dlogLike - lnlmax
-
-    ul95 = np.interp(cl_to_dlnl(0.95), -dlnl[imax:], yval[imax:])
-    err_hi = np.interp(0.5, -dlnl[imax:], yval[imax:]) - yval[imax]
-    err_lo = np.nan
-
-    if dlnl[0] < -0.5:
-        err_lo = yval[imax] - np.interp(0.5, -dlnl[:imax][::-1],
-                                        yval[:imax][::-1])
-
-    return y0, ul95, err_lo, err_hi, lnlmax
 
 
 def run_gtapp(appname, logger, kw):
@@ -170,9 +130,6 @@ def filter_dict(d, val):
     for k, v in d.items():
         if v == val:
             del d[k]
-
-
-
 
 
 def gtlike_spectrum_to_dict(spectrum):
@@ -310,6 +267,11 @@ class GTAnalysis(fermipy.config.Configurable):
         if 'FERMIPY_WORKDIR' not in os.environ:
             os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
 
+        # Create Plotter
+        self._plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                                 fileio=self.config['fileio'],
+                                                 logging=self.config['logging'])
+            
         # Setup the ROI definition
         self._roi = ROIModel.create(self.config['selection'],
                                     self.config['model'],
@@ -1722,8 +1684,9 @@ class GTAnalysis(fermipy.config.Configurable):
 
             self.logger.debug('Adding test source with width: %10.3f deg' % w)
             self.add_source(model_name, s, free=True)
-            self.fit(update=False)
-
+            #self.fit(update=False)
+            self.like.optimize(0)
+            
             logLike1 = -self.like()
             o['dlogLike'][i] = logLike1 - o['logLike_ptsrc']
             o['logLike'][i] = logLike1
@@ -1735,10 +1698,17 @@ class GTAnalysis(fermipy.config.Configurable):
             self.delete_source(model_name, save_template=False)
 
         try:
-            o['ext'], o['ext_ul95'], o['ext_err_lo'], o['ext_err_hi'], dlnl0 = \
-                get_upper_limit(o['dlogLike'], o['width'], interpolate=True)
-            o['ts_ext'] = 2 * dlnl0
-            o['ext_err'] = 0.5 * (o['ext_err_lo'] + o['ext_err_hi'])
+
+            ul_data = utils.get_upper_limit(o['dlogLike'], o['width'], interpolate=True)
+#            o['ext'], o['ext_ul95'], o['ext_err_lo'], o['ext_err_hi'], dlnl0 = \
+#                utils.get_upper_limit(o['dlogLike'], o['width'], interpolate=True)
+
+            o['ext'] = ul_data['x0']
+            o['ext_ul95'] = ul_data['ul']
+            o['ext_err_lo'] = ul_data['err_lo']
+            o['ext_err_hi'] = ul_data['err_hi']
+            o['ts_ext'] = 2 * ul_data['lnlmax']
+            o['ext_err'] = ul_data['err']
         except Exception:
             self.logger.error('Upper limit failed.', exc_info=True)
 
@@ -1791,7 +1761,7 @@ class GTAnalysis(fermipy.config.Configurable):
         name : str
             Source name.
 
-        profile : bool        
+        profile : bool
             Profile the likelihood in each energy bin.
 
         energies : `~numpy.ndarray`
@@ -1801,14 +1771,24 @@ class GTAnalysis(fermipy.config.Configurable):
             sequence must align with the bin edges of the underyling
             analysis instance.
 
-        bin_index : float        
+        bin_index : float
             Spectral index that will be use when fitting the energy
             distribution within an energy bin.
 
         use_local_index : bool
             Use a power-law approximation to the shape of the global
             spectrum in each bin.  If this is false then a constant
-            index set to `bin_index` will be used.  
+            index set to `bin_index` will be used.
+
+        fix_background : bool
+            Fix background components when fitting the flux
+            normalization in each energy bin.  If fix_background=False
+            then all background parameters that are currently free in
+            the fit will be profiled.  By default fix_background=True.
+
+        ul_confidence : float
+            Set the confidence level that will be used for the
+            calculation of flux upper limits in each energy bin.
 
         Returns
         -------
@@ -1817,160 +1797,19 @@ class GTAnalysis(fermipy.config.Configurable):
             Dictionary containing results of the SED analysis.  The same
             dictionary is also saved to the source dictionary under
             'sed'.
-            
+
         """
 
-        # Find the source
         name = self.roi.get_source_by_name(name, True).name
 
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['sed'])
-        config.update(kwargs)
+        sg = sed.SEDGenerator(self.config['sed'],
+                              fileio=self.config['fileio'],
+                              logging=self.config['logging'])
 
-        self.logger.info('Computing SED for %s' % name)
-        saved_state = LikelihoodState(self.like)
+        o = sg.make_sed(self, name, profile, energies, **kwargs)
 
-        self.free_sources(free=False)
+        self._plotter.make_sed_plot(self, name, **kwargs)
 
-        if energies is None:
-            energies = self.energies
-        else:
-            energies = np.array(energies)
-
-        nbins = len(energies) - 1
-
-        o = {'emin': energies[:-1],
-             'emax': energies[1:],
-             'ecenter': 0.5 * (energies[:-1] + energies[1:]),
-             'flux': np.zeros(nbins),
-             'eflux': np.zeros(nbins),
-             'dfde': np.zeros(nbins),
-             'e2dfde': np.zeros(nbins),
-             'flux_err': np.zeros(nbins),
-             'eflux_err': np.zeros(nbins),
-             'dfde_err': np.zeros(nbins),
-             'e2dfde_err': np.zeros(nbins),
-             'dfde_ul95': np.zeros(nbins) * np.nan,
-             'e2dfde_ul95': np.zeros(nbins) * np.nan,
-             'dfde_err_lo': np.zeros(nbins) * np.nan,
-             'e2dfde_err_lo': np.zeros(nbins) * np.nan,
-             'dfde_err_hi': np.zeros(nbins) * np.nan,
-             'e2dfde_err_hi': np.zeros(nbins) * np.nan,
-             'index': np.zeros(nbins),
-             'Npred': np.zeros(nbins),
-             'ts': np.zeros(nbins),
-             'fit_quality': np.zeros(nbins),
-             'lnlprofile': [],
-             'config': config
-             }
-
-        max_index = 5.0
-        min_flux = 1E-30
-
-        # Precompute fluxes in each bin from global fit
-        gf_bin_flux = []
-        gf_bin_index = []
-        for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
-
-            delta = 1E-5
-            f = self.like[name].flux(10 ** emin, 10 ** emax)
-            f0 = self.like[name].flux(10 ** emin * (1 - delta),
-                                      10 ** emin * (1 + delta))
-            f1 = self.like[name].flux(10 ** emax * (1 - delta),
-                                      10 ** emax * (1 + delta))
-
-            if f0 > min_flux:
-                g = 1 - np.log10(f0 / f1) / np.log10(10 ** emin / 10 ** emax)
-                gf_bin_index += [g]
-                gf_bin_flux += [f]
-            else:
-                gf_bin_index += [max_index]
-                gf_bin_flux += [min_flux]
-
-        bin_index = config['bin_index']
-        use_local_index = config['use_local_index']
-
-        source = self.components[0].like.logLike.getSource(name)
-        old_spectrum = source.spectrum()
-        self.like.setSpectrum(name, 'PowerLaw')
-        self.free_parameter(name, 'Index', False)
-        self.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
-                           true_value=False,
-                           bounds=[1E-10, 1E10],
-                           update_source=False)
-        
-        for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
-            
-            ecenter = 0.5 * (emin + emax)
-            self.set_parameter(name, 'Scale', 10 ** ecenter, scale=1.0,
-                               bounds=[1,1E6], update_source=False)
-
-            if use_local_index:
-                o['index'][i] = -min(gf_bin_index[i], max_index)
-            else:
-                o['index'][i] = -bin_index
-                
-            self.set_parameter(name, 'Index', o['index'][i], scale=1.0,
-                               update_source=False)
-
-            normVal = self.like.normPar(name).getValue()
-            flux_ratio = gf_bin_flux[i] / self.like[name].flux(10 ** emin,
-                                                               10 ** emax)
-            newVal = max(normVal * flux_ratio, 1E-10)
-            self.set_norm(name, newVal)
-            
-            self.like.syncSrcParams(name)
-            self.free_norm(name)
-            self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
-                              (name, 10 ** emin, 10 ** emax))
-            self.setEnergyRange(emin, emax)
-            o['fit_quality'][i] = self.fit(update=False)['fit_quality']
-
-            prefactor = self.like[self.like.par_index(name, 'Prefactor')]
-
-            flux = self.like[name].flux(10 ** emin, 10 ** emax)
-            flux_err = self.like.fluxError(name, 10 ** emin, 10 ** emax)
-            eflux = self.like[name].energyFlux(10 ** emin, 10 ** emax)
-            eflux_err = self.like.energyFluxError(name, 10 ** emin, 10 ** emax)
-            dfde = prefactor.getTrueValue()
-            dfde_err = dfde * flux_err / flux
-
-            o['flux'][i] = flux
-            o['eflux'][i] = eflux
-            o['dfde'][i] = dfde
-            o['e2dfde'][i] = dfde * 10 ** (2 * ecenter)
-            o['flux_err'][i] = flux_err
-            o['eflux_err'][i] = eflux_err
-            o['dfde_err'][i] = dfde_err
-            o['e2dfde_err'][i] = dfde_err * 10 ** (2 * ecenter)
-
-            cs = self.model_counts_spectrum(name, emin, emax, summed=True)
-            o['Npred'][i] = np.sum(cs)
-            o['ts'][i] = max(self.like.Ts2(name, reoptimize=False), 0.0)
-            
-            if profile:
-                lnlp = self.profile_norm(name, emin=emin, emax=emax,
-                                         savestate=False)
-                o['lnlprofile'] += [lnlp]
-                dfde, dfde_ul95, dfde_err_lo, dfde_err_hi, dlnl0 = \
-                    get_upper_limit(
-                        lnlp['dlogLike'], lnlp['dfde'])
-
-                o['dfde_ul95'][i] = dfde_ul95
-                o['e2dfde_ul95'][i] = dfde_ul95 * 10 ** (2 * ecenter)
-                o['dfde_err_hi'][i] = dfde_err_hi
-                o['e2dfde_err_hi'][i] = dfde_err_hi * 10 ** (2 * ecenter)
-                o['dfde_err_lo'][i] = dfde_err_lo
-                o['e2dfde_err_lo'][i] = dfde_err_lo * 10 ** (2 * ecenter)
-
-        self.setEnergyRange(self.energies[0], self.energies[-1])
-        self.like.setSpectrum(name, old_spectrum)
-        saved_state.restore()
-
-        src = self.roi.get_source_by_name(name, True)
-        src.update_data({'sed': copy.deepcopy(o)})
-
-        self.logger.info('Finished SED')
         return o
 
     def profile_norm(self, name, emin=None, emax=None, reoptimize=False,
@@ -2003,7 +1842,7 @@ class GTAnalysis(fermipy.config.Configurable):
             else:
                 cs = self.model_counts_spectrum(name, emin, emax, summed=True)
                 npred = np.sum(cs)
-                
+
             if npred < 10:
                 val *= 1. / min(1.0, npred)
                 xvals = val * 10 ** np.linspace(-1.0, 3.0, 2 * npts + 1)
@@ -2019,7 +1858,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def profile(self, name, parName, emin=None, emax=None, reoptimize=False,
                 xvals=None, npts=None, savestate=True):
-        """ Profile the likelihood for the given source and parameter.  
+        """ Profile the likelihood for the given source and parameter.
         """
 
         # Find the source
@@ -2153,7 +1992,7 @@ class GTAnalysis(fermipy.config.Configurable):
         maps : dict
            A dictionary containing the `~fermipy.utils.Map` objects
            for TS and source amplitude.
-        
+
         """
 
         self.logger.info('Generating TS maps')
@@ -2165,7 +2004,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         maps = self._tsmap_fast(prefix, **kwargs)
 
-        for m in maps if isinstance(maps,list) else [maps]:
+        for m in maps if isinstance(maps, list) else [maps]:
             if make_plots:
                 plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                    fileio=self.config['fileio'],
@@ -2536,7 +2375,6 @@ class GTAnalysis(fermipy.config.Configurable):
         `~fermipy.gtanalysis.GTAnalysis.write_roi`."""
 
         infile = resolve_path(infile, workdir=self.config['fileio']['workdir'])
-        self.load_xml(infile)
 
         roi_data = load_roi_data(infile,
                                  workdir=self.config['fileio']['workdir'])
@@ -2544,10 +2382,16 @@ class GTAnalysis(fermipy.config.Configurable):
         self._roi_model = roi_data['roi']
 
         sources = roi_data.pop('sources')
-        self.roi.load_source_data(sources)
+        
+        self.roi.load_sources(sources.values())
         for c in self.components:
-            c.roi.load_source_data(sources)
+            c.load_sources(sources.values())
 
+        self.like.model = self.like.components[0].model
+            
+        # Load XML
+        self.load_xml(infile)
+            
         self._init_roi_model()
 
     def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
@@ -3012,28 +2856,31 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src_dict['lnlprofile'] = lnlp
 
-        flux, flux_ul95, flux_err_lo, flux_err_hi, dlnl0 = get_upper_limit(
-            lnlp['dlogLike'],
-            lnlp['flux'])
-        eflux, eflux_ul95, eflux_err_lo, eflux_err_hi, dlnl0 = get_upper_limit(
-            lnlp['dlogLike'],
-            lnlp['eflux'])
+        flux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'])
+        eflux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['eflux'])
+        
+#        flux, flux_ul95, flux_err_lo, flux_err_hi, dlnl0 = utils.get_upper_limit(
+#            lnlp['dlogLike'],
+#            lnlp['flux'])
+#        eflux, eflux_ul95, eflux_err_lo, eflux_err_hi, dlnl0 = utils.get_upper_limit(
+#            lnlp['dlogLike'],
+#            lnlp['eflux'])
 
-        src_dict['flux_ul95'] = flux_ul95
+        src_dict['flux_ul95'] = flux_ul_data['ul']
         src_dict['flux100_ul95'] = src_dict['flux100'][0] * (
-            flux_ul95 / src_dict['flux'][0])
+            flux_ul_data['ul'] / src_dict['flux'][0])
         src_dict['flux1000_ul95'] = src_dict['flux1000'][0] * (
-            flux_ul95 / src_dict['flux'][0])
+            flux_ul_data['ul'] / src_dict['flux'][0])
         src_dict['flux10000_ul95'] = src_dict['flux10000'][0] * (
-            flux_ul95 / src_dict['flux'][0])
+            flux_ul_data['ul'] / src_dict['flux'][0])
 
-        src_dict['eflux_ul95'] = eflux_ul95
+        src_dict['eflux_ul95'] = eflux_ul_data['ul']
         src_dict['eflux100_ul95'] = src_dict['eflux100'][0] * (
-            eflux_ul95 / src_dict['eflux'][0])
+            eflux_ul_data['ul'] / src_dict['eflux'][0])
         src_dict['eflux1000_ul95'] = src_dict['eflux1000'][0] * (
-            eflux_ul95 / src_dict['eflux'][0])
+            eflux_ul_data['ul'] / src_dict['eflux'][0])
         src_dict['eflux10000_ul95'] = src_dict['eflux10000'][0] * (
-            eflux_ul95 / src_dict['eflux'][0])
+            eflux_ul_data['ul'] / src_dict['eflux'][0])
 
         # Extract covariance matrix
         fd = None
@@ -3258,6 +3105,21 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def coordsys(self):
         return self._coordsys
 
+    def load_sources(self,sources):
+
+        self.roi.clear()        
+        for s in sources:
+
+            if isinstance(s,dict):
+                s = Model.create_from_dict(s)
+            
+            if not str(s.name) in self.like.sourceNames():
+                self.add_source(s.name,s)
+            else:
+                self.roi.load_source(s,build_index=False)
+
+        self.roi.build_src_index()
+    
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
         """Add a new source to the model.  Source properties
         (spectrum, spatial model) are set with the src_dict argument.
@@ -3412,7 +3274,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if delete_source_map:
             utils.delete_source_map(self._srcmap_file,name)
-        
+
+        self.like.logLike.buildFixedModelWts()
+            
         return src
 
     def delete_sources(self, srcs):
