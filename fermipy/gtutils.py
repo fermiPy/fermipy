@@ -73,7 +73,8 @@ FUNCTION_DEFAULT_PARS = {
     'LogParabola' : {'norm' : DEFAULT_NORM_DICT,
                      'alpha': {'value': 0.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
                      'beta' : {'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0},
-                     'Eb' : DEFAULT_SCALE_DICT }
+                     'Eb' : DEFAULT_SCALE_DICT },
+    'ConstantValue' : {'norm' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 100.0} }
 
     }
 

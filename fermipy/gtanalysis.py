@@ -28,7 +28,7 @@ from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
 from fermipy.utils import Map
 from fermipy.utils import create_hpx_disk_region_string
 from fermipy.hpx_utils import HpxMap, HPX
-from fermipy.roi_model import ROIModel
+from fermipy.roi_model import ROIModel, Model
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 # pylikelihood
@@ -2375,7 +2375,6 @@ class GTAnalysis(fermipy.config.Configurable):
         `~fermipy.gtanalysis.GTAnalysis.write_roi`."""
 
         infile = resolve_path(infile, workdir=self.config['fileio']['workdir'])
-        self.load_xml(infile)
 
         roi_data = load_roi_data(infile,
                                  workdir=self.config['fileio']['workdir'])
@@ -2383,10 +2382,16 @@ class GTAnalysis(fermipy.config.Configurable):
         self._roi_model = roi_data['roi']
 
         sources = roi_data.pop('sources')
-        self.roi.load_source_data(sources)
+        
+        self.roi.load_sources(sources.values())
         for c in self.components:
-            c.roi.load_source_data(sources)
+            c.load_sources(sources.values())
 
+        self.like.model = self.like.components[0].model
+            
+        # Load XML
+        self.load_xml(infile)
+            
         self._init_roi_model()
 
     def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
@@ -3100,6 +3105,21 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def coordsys(self):
         return self._coordsys
 
+    def load_sources(self,sources):
+
+        self.roi.clear()        
+        for s in sources:
+
+            if isinstance(s,dict):
+                s = Model.create_from_dict(s)
+            
+            if not str(s.name) in self.like.sourceNames():
+                self.add_source(s.name,s)
+            else:
+                self.roi.load_source(s,build_index=False)
+
+        self.roi.build_src_index()
+    
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
         """Add a new source to the model.  Source properties
         (spectrum, spatial model) are set with the src_dict argument.

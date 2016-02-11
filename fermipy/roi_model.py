@@ -491,9 +491,11 @@ class Model(object):
 
         if spectral_pars is not None:
             self._data['spectral_pars'] = spectral_pars
-        else:
+        elif not self.spectral_pars:
             pdict = gtutils.get_function_pars_dict(self['SpectrumType'])
             self._data['spectral_pars'] = pdict
+            for k, v in self.spectral_pars.items():
+                self._data['spectral_pars'][k] = make_parameter_dict(v)
             
         if spatial_pars is not None:
             self._data['spatial_pars'] = spatial_pars
@@ -510,6 +512,9 @@ class Model(object):
                 self._names.append(name)
 
             self._data['assoc'][k] = name
+
+        if self.params:
+            self.update_spectral_pars()
 
     def __contains__(self, key):
         return key in self._data
@@ -551,6 +556,10 @@ class Model(object):
         return self._data
 
     @property
+    def params(self):
+        return self._data['params']
+
+    @property
     def spectral_pars(self):
         return self._data['spectral_pars']
 
@@ -570,6 +579,23 @@ class Model(object):
     def assoc(self):
         return self._data['assoc']
 
+    @staticmethod
+    def create_from_dict(src_dict):
+        
+        if src_dict['SpatialModel'] == 'DiffuseSource' and src_dict['SpatialType'] == 'ConstantValue':
+            return IsoSource(src_dict['name'],src_dict)
+        elif src_dict['SpatialModel'] == 'DiffuseSource' and src_dict['SpatialType'] == 'MapCubeFunction':
+            return MapCubeSource(src_dict['name'],src_dict)
+        else:
+            return Source.create_from_dict(src_dict)
+
+    def update_spectral_pars(self):
+
+        sp = self['spectral_pars']        
+        for k, p in sp.items():
+            sp[k]['value'] = self['params'][k][0]/float(sp[k]['scale'])
+            sp[k] = make_parameter_dict(sp[k])
+        
     def get_norm(self):
 
         par_name = gtutils.get_function_norm_par_name(self['SpectrumType'])
@@ -616,6 +642,8 @@ class Model(object):
 
     def update_data(self, d):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
+        if self.params:
+            self.update_spectral_pars()
 
     def update(self, m):
 
@@ -628,11 +656,9 @@ class Model(object):
 
 
 class IsoSource(Model):
-    def __init__(self, name, filefunction, spectral_pars=None,
+    def __init__(self, name, data, spectral_pars=None,
                  spatial_pars=None):
 
-        self._filefunction = filefunction
-        data = {}
         data['SpectrumType'] = 'FileFunction'
         data['SpatialType'] = 'ConstantValue'
         data['SpatialModel'] = 'DiffuseSource'
@@ -640,15 +666,15 @@ class IsoSource(Model):
 
         super(IsoSource, self).__init__(name, data, spectral_pars,
                                         spatial_pars)
-
-        if not spectral_pars:
+        
+        if not self.spectral_pars:
             self['spectral_pars'] = {
                 'Normalization': {'name': 'Normalization', 'scale': '1.0',
                                   'value': '1.0',
                                   'min': '0.001', 'max': '1000.0',
                                   'free': '0'}}
 
-        if not spatial_pars:
+        if not self.spatial_pars:
             self['spatial_pars'] = {
                 'Value': {'name': 'Value', 'scale': '1',
                           'value': '1', 'min': '0', 'max': '10',
@@ -656,7 +682,7 @@ class IsoSource(Model):
 
     @property
     def filefunction(self):
-        return self._filefunction
+        return self._data['filefunction']
 
     @property
     def diffuse(self):
@@ -685,10 +711,8 @@ class IsoSource(Model):
 
 
 class MapCubeSource(Model):
-    def __init__(self, name, mapcube, spectral_pars=None, spatial_pars=None):
+    def __init__(self, name, data, spectral_pars=None, spatial_pars=None):
 
-        self._mapcube = mapcube
-        data = {}
         data['SpectrumType'] = 'PowerLaw'
         data['SpatialType'] = 'MapCubeFunction'
         data['SpatialModel'] = 'DiffuseSource'
@@ -697,7 +721,7 @@ class MapCubeSource(Model):
         super(MapCubeSource, self).__init__(name, data, spectral_pars,
                                             spatial_pars)
 
-        if not spectral_pars:
+        if not self.spectral_pars:
             self['spectral_pars'] = {
                 'Prefactor': {'name': 'Prefactor', 'scale': '1',
                               'value': '1.0', 'min': '0.1', 'max': '10.0',
@@ -711,7 +735,7 @@ class MapCubeSource(Model):
                           'free': '0'},
             }
 
-        if not spatial_pars:
+        if not self.spatial_pars:
             self['spatial_pars'] = {
                 'Normalization':
                     {'name': 'Normalization', 'scale': '1',
@@ -720,7 +744,7 @@ class MapCubeSource(Model):
 
     @property
     def mapcube(self):
-        return self._mapcube
+        return self._data['mapcube']
 
     @property
     def diffuse(self):
@@ -784,10 +808,7 @@ class Source(Model):
         self.set_spatial_model(self.data['SpatialModel'],
                                self.data['SpatialWidth'])
 
-        if not spectral_pars:
-            self._load_from_catalog()
-
-        if not spatial_pars:
+        if not self.spatial_pars:
             self._init_spatial_pars()
 
     def __str__(self):
@@ -847,7 +868,7 @@ class Source(Model):
                         'min': '-90.0', 'max': '90.0', 'scale': '1.0'}
             }
 
-    def _load_from_catalog(self):
+    def load_from_catalog(self):
         """Load spectral parameters from catalog values."""
         
         self._data['spectral_pars'] = \
@@ -937,12 +958,7 @@ class Source(Model):
         self['glon'] = skydir.galactic.l.deg
         self['glat'] = skydir.galactic.b.deg
 
-    def update_spectral_pars(self):
-
-        sp = self['spectral_pars']        
-        for k, p in sp.items():
-            sp[p]['value'] = self['params'][p][0]/float(sp[p]['scale'])
-            sp[p] = make_parameter_dict(sp[p])
+    
         
     def set_roi_direction(self,roidir):
 
@@ -1111,10 +1127,10 @@ class Source(Model):
                           spatial_pars=spatial_pars)
 
         elif src_type == 'DiffuseSource' and spatial_type == 'ConstantValue':
-            return IsoSource(src_dict['Source_Name'], spec['file'],
+            return IsoSource(src_dict['Source_Name'], {'filefunction' : spec['file']},
                              spectral_pars, spatial_pars)
         elif src_type == 'DiffuseSource' and spatial_type == 'MapCubeFunction':
-            return MapCubeSource(src_dict['Source_Name'], spat['file'],
+            return MapCubeSource(src_dict['Source_Name'], {'mapcube' : spat['file']},
                                  spectral_pars, spatial_pars)
         else:
             raise Exception(
@@ -1259,6 +1275,12 @@ class ROIModel(fermipy.config.Configurable):
     def diffuse_sources(self):
         return self._diffuse_srcs
 
+    def clear(self):
+        self._srcs = []
+        self._diffuse_srcs = []
+        self._src_dict = collections.defaultdict(set)
+        self._src_radius = []
+    
     def load_diffuse_srcs(self):
 
         self._load_diffuse_src('isodiff')
@@ -1316,11 +1338,11 @@ class ROIModel(fermipy.config.Configurable):
 
 
             if src_type == 'FileFunction':
-                src = IsoSource(src_dict['name'], src_dict['file'])
+                src = IsoSource(src_dict['name'], {'filefunction' : src_dict['file']})
                 altname = os.path.basename(src_dict['file'])
                 altname = re.sub(r'(\.txt$)', '', altname)
             else:
-                src = MapCubeSource(src_dict['name'], src_dict['file'])
+                src = MapCubeSource(src_dict['name'], {'mapcube' : src_dict['file']})
                 altname = os.path.basename(src_dict['file'])
                 altname = re.sub(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',
                                  '', altname)
@@ -1366,31 +1388,17 @@ class ROIModel(fermipy.config.Configurable):
         
         return self.get_source_by_name(name, True)
 
-    def load_source_data(self, sources, prune_sources=True):
+    def load_sources(self, sources):
 
-        # Sync source data
-        for k, v in sources.items():
-            if self.has_source(k):
-                src = self.get_source_by_name(k, True)
-                src.update_data(v)
-            elif v['SpatialModel'] != 'DiffuseSource':
-                src = Source(k, data=v)
-                self.load_source(src,build_index=False)
-            else:
-                raise Exception('Failed to load source: %s'%k)
-                
-        if not prune_sources:
-            self.build_src_index()
-            return
-                
-        # Prune sources not present in the sources dict
-        for s in self.sources:
+        self.clear()
+        for s in sources:
+
+            if isinstance(s,dict):
+                s = Model.create_from_dict(s)
             
-            if s.name not in sources.keys():
-                self.delete_sources([s])
-
+            self.load_source(s,build_index=False)
         self.build_src_index()
-
+            
     def load_source(self, src, build_index=True, merge_sources=True,
                     **kwargs):
         """
@@ -1761,6 +1769,7 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict['SpatialModel'] = 'PointSource'
 
             src = Source(src_dict['Source_Name'], src_dict, radec=radec)
+            src.load_from_catalog()
             src.data['offset'] = offset[m][i]
             src.data['offset_ra'] = offset_cel[:, 0][m][i]
             src.data['offset_dec'] = offset_cel[:, 1][m][i]
