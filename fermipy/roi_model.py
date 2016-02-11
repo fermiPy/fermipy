@@ -4,10 +4,14 @@ import re
 import collections
 import numpy as np
 import xml.etree.cElementTree as ElementTree
+
+import pyLikelihood as pyLike
+
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
 from astropy.table import Table, Column
+
 import fermipy
 import fermipy.config
 import fermipy.utils as utils
@@ -211,6 +215,9 @@ def row_to_dict(row):
 
 
 class Catalog(object):
+    """Source catalog object.  This class provides a simple wrapper around
+    FITS catalog tables."""
+    
     def __init__(self, table, extdir=''):
         self._table = table
         self._extdir = extdir
@@ -228,6 +235,8 @@ class Catalog(object):
 
     @property
     def table(self):
+        """Return the `~astropy.table.Table` representation of this
+        catalog."""
         return self._table
 
     @property
@@ -451,7 +460,10 @@ def create_model_name(src):
 
 
 class Model(object):
-    """Base class for source objects."""
+    """Base class for source objects.  This class is a container for both
+    spectral and spatial parameters as well as other source properties
+    such as TS, Npred, and location within the ROI.
+    """
 
     def __init__(self, name, data=None,
                  spectral_pars=None,
@@ -937,6 +949,7 @@ class Source(Model):
               
     def set_position(self, skydir):
         """
+        Set the position of the source.
         
         Parameters
         ----------
@@ -957,8 +970,6 @@ class Source(Model):
         self['dec'] = self.radec[1]
         self['glon'] = skydir.galactic.l.deg
         self['glat'] = skydir.galactic.b.deg
-
-    
         
     def set_roi_direction(self,roidir):
 
@@ -1175,16 +1186,35 @@ class Source(Model):
 
 
 class ROIModel(fermipy.config.Configurable):
-    """This class is responsible for managing the contents of the ROI
-    model (both sources and diffuse emission).  Source catalogs can be
-    read from either FITS or XML files.  Individual components of the
-    ROI can be accessed by name using the bracket operator:
+    """This class is responsible for managing the ROI model (both sources
+    and diffuse emission components).  Source catalogs can be read
+    from either FITS or XML files.  Individual components are
+    represented by instances of `~fermipy.roi_model.Model` and can be
+    accessed by name using the bracket operator.
 
-    # Print a summary of SourceA
-    >>> print src['SourceA']
+        * Create an ROI with all 3FGL sources and print a summary of its contents:
 
-    # Get the SkyCoord for SourceA
-    >>> dir = src['SourceA'].skydir
+        >>> skydir = astropy.coordinates.SkyCoord(0.0,0.0,unit='deg')
+        >>> roi = ROIModel({'catalogs' : ['3FGL'],'src_roiwidth' : 10.0},skydir=skydir)
+        >>> print roi
+        name                SpatialModel   SpectrumType     offset        ts       Npred
+        --------------------------------------------------------------------------------
+        3FGL J2357.3-0150   PointSource    PowerLaw          1.956       nan         0.0
+        3FGL J0006.2+0135   PointSource    PowerLaw          2.232       nan         0.0
+        3FGL J0016.3-0013   PointSource    PowerLaw          4.084       nan         0.0
+        3FGL J0014.3-0455   PointSource    PowerLaw          6.085       nan         0.0
+
+        * Print a summary of an individual source
+
+        >>> print roi['3FGL J0006.2+0135']
+
+        * Get the SkyCoord for a source
+
+        >>> dir = roi['SourceA'].skydir
+
+        * Loop over all sources and print their names
+
+        >>> for s in roi.sources: print s.name
 
     """
 
@@ -1276,6 +1306,7 @@ class ROIModel(fermipy.config.Configurable):
         return self._diffuse_srcs
 
     def clear(self):
+        """Clear the contents of the ROI."""
         self._srcs = []
         self._diffuse_srcs = []
         self._src_dict = collections.defaultdict(set)
@@ -1381,15 +1412,14 @@ class ROIModel(fermipy.config.Configurable):
         src.set_roi_direction(self.skydir)
 
         self.logger.debug('Creating source ' + src.name)
-        #self.logger.debug(src._data)
-
         self.load_source(src, build_index=build_index,
                          merge_sources=merge_sources)
         
         return self.get_source_by_name(name, True)
 
     def load_sources(self, sources):
-
+        """Clear the ROI and load a list of sources."""
+        
         self.clear()
         for s in sources:
 
@@ -1397,19 +1427,25 @@ class ROIModel(fermipy.config.Configurable):
                 s = Model.create_from_dict(s)
             
             self.load_source(s,build_index=False)
-        self.build_src_index()
+        self._build_src_index()
             
     def load_source(self, src, build_index=True, merge_sources=True,
                     **kwargs):
         """
+        Load a single source.
+
         Parameters
         ----------
 
         src : `~fermipy.roi_model.Source`
-        
+           Source object that will be added to the ROI.
+
         merge_sources : bool        
            When a source matches an existing source in the model
            update that source with the properties of the new source.
+
+        build_index : bool 
+           Re-make the source index after loading this source.
         
         """
         src = copy.deepcopy(src)
@@ -1456,7 +1492,7 @@ class ROIModel(fermipy.config.Configurable):
             self._diffuse_srcs.append(src)
 
         if build_index:
-            self.build_src_index()
+            self._build_src_index()
 
     def match_source(self,src):
         """Look for source or sources in the model that match the
@@ -1484,8 +1520,7 @@ class ROIModel(fermipy.config.Configurable):
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
 
-        self._srcs = []
-        self._src_dict = collections.defaultdict(set)
+        self.clear()
         self.load_diffuse_srcs()
 
         for c in self.config['catalogs']:
@@ -1505,7 +1540,7 @@ class ROIModel(fermipy.config.Configurable):
 
             self.create_source(c['name'],c, build_index=False)
 
-        self.build_src_index()
+        self._build_src_index()
 
     def delete_sources(self, srcs):
 
@@ -1513,15 +1548,17 @@ class ROIModel(fermipy.config.Configurable):
             for s in srcs:
                 if s in v:
                     self._src_dict[k].remove(s)
-            if not v: del self._src_dict[k]
+            if not v:
+                del self._src_dict[k]
 
         self._srcs = [s for s in self._srcs if s not in srcs]
         self._diffuse_srcs = [s for s in self._diffuse_srcs if s not in srcs]
-        self.build_src_index()
+        self._build_src_index()
 
     @staticmethod
     def create(selection, config, **kwargs):
-
+        """Create an ROIModel instance."""
+        
         if selection['target'] is not None:
             return ROIModel.create_from_source(selection['target'],
                                                config, **kwargs)
@@ -1530,10 +1567,17 @@ class ROIModel(fermipy.config.Configurable):
             return ROIModel.create_from_position(target_skydir,
                                                  config, **kwargs)
 
-    # Creation Methods           
+
     @staticmethod
     def create_from_position(skydir, config, **kwargs):
-        """Create an ROI centered on the given coordinates."""
+        """Create an ROIModel instance centered on a sky direction.
+
+        skydir : `~astropy.coordinates.SkyCoord` 
+            Sky direction on which the ROI will be centered.
+
+        config : dict
+            Model configuration dictionary.
+        """
 
         coordsys = kwargs.pop('coordsys', 'CEL')
         roi = ROIModel(config, skydir=skydir, coordsys=coordsys, **kwargs)
@@ -1634,7 +1678,15 @@ class ROIModel(fermipy.config.Configurable):
     def get_sources(self, cuts=None, distance=None,
                     minmax_ts=None, minmax_npred=None, square=False,
                     coordsys='CEL'):
-        """Retrieve list of sources satisfying the given selections."""
+        """Retrieve list of sources satisfying the given selections.
+
+
+        Returns
+        -------
+
+        srcs : list
+            List of source objects.
+        """
         rsrc, srcs = self.get_sources_by_position(self.skydir,
                                                   distance,
                                                   square=square,
@@ -1681,13 +1733,13 @@ class ROIModel(fermipy.config.Configurable):
 
     def get_sources_by_position(self, skydir, dist, min_dist=None,
                                 square=False, coordsys='CEL'):
-        """Retrieve sources within a certain angular distance of an
-        (ra,dec) coordinate.  This function supports two types of
-        geometric selections: circular (square=False) and square
-        (square=True).  The circular selection finds all sources with a given
-        angular distance of the target position.  The square selection
-        finds sources within an ROI-like region of size R x R where R
-        = 2 x dist.
+        """Retrieve sources within a certain angular distance of a sky
+        coordinate.  This function supports two types of geometric
+        selections: circular (square=False) and square (square=True).
+        The circular selection finds all sources with a given angular
+        distance of the target position.  The square selection finds
+        sources within an ROI-like region of size R x R where R = 2 x
+        dist.
 
         Parameters
         ----------
@@ -1703,7 +1755,7 @@ class ROIModel(fermipy.config.Configurable):
 
         coordsys : str
             Coordinate system to use when applying a selection with square=True.
-            
+
         """
 
         msk = get_skydir_distance_mask(self._src_skydir, skydir, dist,
@@ -1722,7 +1774,15 @@ class ROIModel(fermipy.config.Configurable):
         return radius, srcs
 
     def load_fits_catalog(self, name, **kwargs):
+        """Load sources from a FITS catalog file.
 
+        Parameters
+        ----------
+
+        name : str
+            Catalog name or path to a catalog FITS file.
+        """
+        
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
 
@@ -1778,7 +1838,7 @@ class ROIModel(fermipy.config.Configurable):
             self.load_source(src, False,
                              merge_sources=self.config['merge_sources'])
 
-        self.build_src_index()
+        self._build_src_index()
 
     def load_xml(self, xmlfile, **kwargs):
         """Load sources from an XML file."""
@@ -1838,9 +1898,9 @@ class ROIModel(fermipy.config.Configurable):
             self.load_source(s, False,
                              merge_sources=self.config['merge_sources'])
 
-        self.build_src_index()
+        self._build_src_index()
 
-    def build_src_index(self):
+    def _build_src_index(self):
         """Build an indices for fast lookup of a source given its name
         or coordinates."""
 

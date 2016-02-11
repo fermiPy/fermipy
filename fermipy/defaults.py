@@ -220,12 +220,6 @@ localize = {
     'update': (False, '', bool)
 }
 
-# Options for anlaysis
-run = {
-    'sed': (None, '', list),
-    'extension': (None, '', list)
-}
-
 # Options for plotting
 plotting = {
     'erange': (None, '', list),
