@@ -61,8 +61,10 @@ def find_peaks(input_map, threshold, min_separation=1.0):
 
     peaks = []
     for s in slices:
-        skydir = SkyCoord.from_pixel(s[1].start, s[0].start,
-                                     input_map.wcs)
+        #skydir = SkyCoord.from_pixel(s[1].start, s[0].start,
+        #                             input_map.wcs)
+        world_coords = input_map.wcs.wcs_pix2world(s[1].start, s[0].start, 0)
+        skydir = SkyCoord(world_coords[0],world_coords[1],unit="deg")
         peaks.append({'ix': s[1].start,
                       'iy': s[0].start,
                       'skydir': skydir,

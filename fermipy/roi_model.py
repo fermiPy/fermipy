@@ -793,9 +793,15 @@ class Source(Model):
         data = copy.deepcopy(self.data)
         data['names'] = self.names
 
-        data['flux'], data['flux_err'] = data['flux'][0], data['flux'][1]
-        data['eflux'], data['eflux_err'] = data['eflux'][0], data['eflux'][1]
+        try:
+            data['flux'], data['flux_err'] = data['flux'][0], data['flux'][1]
+        except:
+            data['flux'], data['flux_err'] = 0., 0.
 
+        try:
+            data['eflux'], data['eflux_err'] = data['eflux'][0], data['eflux'][1]
+        except:           
+            data['eflux'], data['eflux_err'] = 0., 0.
         
         output = []
         output += ['{:15s}:'.format('Name') + ' {name:s}']
@@ -1030,6 +1036,9 @@ class Source(Model):
                                 SpatialModel='PointSource',
                                 SpatialWidth=0.5,
                                 SpectrumType='PowerLaw',
+                                ts=None,
+                                flux=None,
+                                eflux=None,
                                 ra=None,
                                 dec=None,
                                 glon=None,
@@ -1073,6 +1082,7 @@ class Source(Model):
         src_dict['DEJ2000'] = skydir.dec.deg
 
         radec = np.array([skydir.ra.deg, skydir.dec.deg])
+
         return Source(name, src_dict, radec=radec,
                       spectral_pars=src_dict['spectral_pars'])
 

@@ -65,6 +65,8 @@ class Map(Map_Base):
     def wcs(self):
         return self._wcs
 
+
+
     @staticmethod
     def create_from_hdu(hdu, wcs):
         return Map(hdu.data.T, wcs)
@@ -87,6 +89,40 @@ class Map(Map_Base):
     def create_primary_hdu(self):
         return pyfits.PrimaryHDU(self.counts,header=self.wcs.to_header())
     
+
+    def sum_over_energy(self):
+        """ Reduce a 3D counts cube to a 2D counts map
+        """
+        return Map(self.counts.sum(2),self.wcs.dropaxis(2))
+
+    def xy_pix_to_ipix(self,xypix,colwise=True):
+        """ Return the pixel index from the pixel xy coordinates 
+
+        if colwise is True (False) this uses columnwise (rowwise) indexing
+        """
+        if colwise:
+            return xypix[0]*self._wcs._naxis2 + xypix[1]
+        else:
+            return xypix[1]*self._wcs._naxis1 + xypix[0]
+    
+    def ipix_to_xypix(self,ipix,colwise=True):
+        """ Return the pixel xy coordinates from the pixel index
+
+        if colwise is True (False) this uses columnwise (rowwise) indexing
+        """
+        if colwise:
+            return (ipix / self._wcs._naxis2, ipix % self._wcs._naxis2)
+        else:
+            return (ipix % self._wcs._naxis1, ipix / self._wcs._naxis1)
+    
+    def ipix_swap_axes(self,ipix,colwise=True):
+        """ Return the transposed pixel index from the pixel xy coordinates 
+
+        if colwise is True (False) this assumes the original index was in column wise scheme
+        """        
+        xy = self.ipix_to_xypix(ipix,colwise)
+        return self.xy_pix_to_ipix(xy,not colwise)
+
     
 def format_filename(outdir, basename, prefix=None, extension=None):
     filename = ''

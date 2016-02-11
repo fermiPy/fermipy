@@ -20,6 +20,8 @@ from fermipy.roi_model import Source
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 
+import fermipy.sed as sed
+
 MAX_NITER = 100
 
 
@@ -629,13 +631,17 @@ class TSCubeGenerator(fermipy.config.Configurable):
         
         fitScanner.writeFitsFile(str(outfile), str("gttscube"))
         
-        ts_map = utils.Map.create_from_fits(outfile)
-        npred_map = utils.Map.create_from_fits(outfile,hdu='N_MAP')
-        amp_map = utils.Map.create_from_fits(outfile,hdu='N_MAP')
+        tscube = sed.TSCube.create_from_fits(outfile,fluxType=2)
+        ts_map = tscube.tsmap        
+        norm_map = tscube.nmap
+        npred_map = copy.deepcopy(norm_map)
+        npred_map.counts *= tscube.specData.npreds.sum()
+        amp_map = copy.deepcopy(norm_map) 
+        amp_map.counts *= src_dict['Prefactor']
+
         sqrt_ts_map = copy.deepcopy(ts_map)
         sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
 
-        amp_map._counts *= src_dict['Prefactor']
         
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),
@@ -644,7 +650,8 @@ class TSCubeGenerator(fermipy.config.Configurable):
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
              'amplitude': amp_map,
-             'config' : config
+             'config' : config,
+             'tscube' : tscube
              }
 
         self.logger.info("Done")

@@ -16,8 +16,11 @@ import matplotlib
 
 NORM_LABEL = [r'Flux Normalization [a.u.]',
               r'E dN/dE [ph $cm^{-2} s^{-1}$]',
-              r'$E^2$ dN/dE [ph $cm^{-2} s^{-1}$]',
-              r'$n_{\rm pred}$ [ph]']
+              r'$E^2$ dN/dE [MeV $cm^{-2} s^{-1}]$',
+              r'$n_{\rm pred}$ [ph]',
+              r'dN/dE [ph $cm^{-2} s^{-1} MeV^{-1}$]',
+              r'E dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]']
+              
 
 def plotNLL_v_Flux(nll,nstep=25,xlims=None):
     """ Plot the (negative) log-likelihood as a function of normalization
@@ -169,6 +172,7 @@ if __name__ == "__main__":
 
     
     from fermipy import sed
+    from fermipy import roi_model
     import sys
 
     if len(sys.argv) == 1:
@@ -181,69 +185,61 @@ if __name__ == "__main__":
         flux_type = 2
     elif sys.argv[1] == "npred":
         flux_type = 3
+    elif sys.argv[1] == "d_flux":
+        flux_type = 4
+    elif sys.argv[1] == "d_eflux":
+        flux_type = 5
     else:
         print "Didn't reconginize flux type %s, choose from norm | flux | eflux | npred"%sys.argv[1]
 
-    idx_off = 2.
     if flux_type == 0:
         xlims = (0.,1.)
         ylims = (1e-5,1e-1)
-        initPars = np.array([1e-3,0.0,0.0])
-        initPars_pc = np.array([1e-3,0.0,1000.0])    
     elif flux_type == 1:
         xlims = (0.,1.)
-        ylims = (1e-13,1.e-9)
-        idx_off = 1.
-        initPars = np.array([1e-12,-2.0,0.0])
-        initPars_pc = np.array([1e-12,-2.0,1000.0])
+        ylims = (1e-13,1e-9)
     elif flux_type == 2:
         xlims = (0.,1.)
-        ylims = (1e-8,1.e-4)
-        initPars = np.array([1e-7,-2.0,0.0])
-        initPars_pc = np.array([1e-7,-2.0,1000.0])       
+        ylims = (1e-8,1e-4)
     elif flux_type == 3:
         xlims = (0.,1.)
-        ylims = (1e-1,1.e3)
-        idx_off = 1.
-        initPars = np.array([1.0,-2.0,0.0])
-        initPars_pc = np.array([1.0,-2.0,1000.0])       
+        ylims = (1e-1,1e3)
+    elif flux_type == 4:
+        xlims = (0.,1.)
+        ylims = (1e-18,1e-11)
+    elif flux_type == 5:
+        xlims = (0.,1.)
+        ylims = (1e-13,1e-9)
+
         
     tscube = sed.TSCube.create_from_fits("tscube_test.fits",flux_type)
+    peaks = tscube.find_peaks(10.0,1.0,use_cumul=True)
 
-    ts_map = tscube.tsmap.counts
-    max_ts_pix = np.argmax(ts_map)
-    max_ts = ts_map.flat[max_ts_pix]
-    xpix = max_ts_pix/80
-    ypix = max_ts_pix%80
-    ipix = 80*ypix + xpix
-    
-    castro = tscube.castroData_from_ipix(ipix)
+    max_ts = tscube.tsmap.counts.max()
+    (castro,test_dict) = tscube.test_spectra_of_peak(peaks[0])
 
     nll = castro[2]
     fig,ax = plotNLL_v_Flux(nll)
 
     fig2,ax2,im2 = plotCastro(castro,ylims=ylims,nstep=100)
         
-    specVals = np.ones((castro.specData.nE))
+    spec_pl = test_dict["PowerLaw"]["Spectrum"]
+    spec_lp = test_dict["LogParabola"]["Spectrum"]
+    spec_pc = test_dict["PLExpCutoff"]["Spectrum"]
 
-    result = castro.fitNormalization(specVals,xlims)
-    result2 = castro.fitNorm_v2(specVals)
+    fig3,ax3 = plotSED(castro,ylims=ylims,TS_thresh=4.0,specVals=[spec_pl])        
 
-    pl = sed.Powerlaw(castro.specData.evals,1000)
-    lp = sed.LogParabola(castro.specData.evals,1000)
-    pc = sed.PlExpCutoff(castro.specData.evals,1000)
-
-    result_pl,spec_pl,ts_pl = castro.fit_spectrum(pl,initPars[0:2])    
-    result_lp,spec_lp,ts_lp = castro.fit_spectrum(lp,initPars)
-    result_pc,spec_pc,ts_pc = castro.fit_spectrum(pc,initPars_pc)
-     
-    fig3,ax3 = plotSED(castro,ylims=ylims,TS_thresh=4.0,specVals=[spec_pl,spec_lp,spec_pc])
+    result_pl = test_dict["PowerLaw"]["Result"]
+    result_lp = test_dict["LogParabola"]["Result"]
+    result_pc = test_dict["PLExpCutoff"]["Result"]
+    ts_pl = test_dict["PowerLaw"]["TS"]
+    ts_lp = test_dict["LogParabola"]["TS"]
+    ts_pc = test_dict["PLExpCutoff"]["TS"]
 
     print "TS for PL index = 2:  %.1f"%max_ts
     print "Cumulative TS:        %.1f"%castro.ts_vals().sum()
-    print "TS for PL index free: %.1f (Index = %.2f)"%(ts_pl[0],idx_off-result_pl[1])
-    print "TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)"%(ts_lp[0],idx_off-result_lp[1],result_lp[2])
-    print "TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)"%(ts_pc[0],idx_off-result_pc[1],result_pc[2])
+    print "TS for PL index free: %.1f (Index = %.2f)"%(ts_pl,result_pl[1])
+    print "TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)"%(ts_lp,result_lp[1],result_lp[2])
+    print "TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)"%(ts_pc,result_pc[1],result_pc[2])
 
-    fig2.show()
-    fig3.show()
+     

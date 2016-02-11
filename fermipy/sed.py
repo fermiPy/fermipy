@@ -17,8 +17,11 @@ import scipy.special as spf
 from scipy.integrate import quad
 import scipy
 import astropy.io.fits as pf
+from astropy.coordinates import SkyCoord
 
 from fermipy import utils
+from fermipy import sourcefind
+from fermipy import roi_model
 from utils import read_energy_bounds, read_spectral_data
 from fermipy.fits_utils import read_map_from_fits
 
@@ -33,7 +36,11 @@ def alphaToDeltaLogLike_1DOF(alpha):
     return dlnl
 
 
-FluxTypes = ['NORM','FLUX','EFLUX','NPRED']
+FluxTypes = ['NORM','FLUX','EFLUX','NPRED','DIF_FLUX','DIF_EFLUX']
+
+PAR_NAMES = {"PowerLaw":["Prefactor","Index"],
+             "LogParabola":["norm","alpha","beta"],
+             "PLExpCutoff":["Prefactor","Index1","Cutoff"]}
 
 
 class Interpolator(object):
@@ -138,6 +145,8 @@ class LnLFn(object):
            1: Flux of the test source ( ph cm^-2 s^-1 )
            2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
            3: Number of predicted photons
+           4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
+           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
         """
         self._interp = Interpolator(x,y)
         self._mle = None
@@ -157,6 +166,8 @@ class LnLFn(object):
            1: Flux of the test source ( ph cm^-2 s^-1 )
            2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
            3: Number of predicted photons
+           4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
+           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
         """
         return self._fluxType        
 
@@ -322,6 +333,8 @@ class CastroData(object):
            1: Flux of the test source ( ph cm^-2 s^-1 )
            2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
            3: Number of predicted photons
+           4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
+           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
         """
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
@@ -339,7 +352,13 @@ class CastroData(object):
             factors = np.sqrt(self._specData.efluxes[0:-1]*self._specData.efluxes[1:]) * self._specData.bin_widths
         elif fluxType == 3:
             factors = self._specData.npreds
-        
+        elif fluxType == 4:
+            factors = np.sqrt(self._specData.fluxes[0:-1]*self._specData.fluxes[1:]) 
+        elif fluxType == 5:
+            factors = np.sqrt(self._specData.efluxes[0:-1]*self._specData.efluxes[1:]) 
+        else:
+            raise Exception('Unknown flux type: %s.  Options are 0-5'%fluxType)
+         
         for ie in range(self._specData.nE):            
             nvv = factors[ie]*self._norm_vals[ie]
             nllfunc = LnLFn(nvv,self._nll_vals[ie],self._fluxType)
@@ -521,13 +540,88 @@ class CastroData(object):
 
 
 
+    def test_spectra(self,spec_types=["PowerLaw","LogParabola","PLExpCutoff"]):
+        """
+        """
+        retDict = {}
+        for specType in spec_types:            
+            spec_func,init_pars = self.buildTestSpectrumFunction(specType)
+            fit_result,fit_spec,fit_ts = self.fit_spectrum(spec_func,init_pars)
+            # tweak the fit result to account for the flux type
+            if self._fluxType == 0:
+                fit_result[0] *= self._specData.fluxes[0] * self._specData.bin_widths[0]
+                fit_result[1] -= 2.
+            elif self._fluxType == 1:
+                #fit_result[0] *= 1.
+                fit_result[1] -= 1.
+            elif self._fluxType == 2:
+                fit_result[0] /= self._specData.ebins[0]
+                fit_result[1] -= 2.
+            elif self._fluxType == 3:
+                fit_result[0] *= self._specData.fluxes[0] * self._specData.bin_widths[0] / self._specData.npreds[0]
+                fit_result[1] -= 1.
+            elif self._fluxType == 4:
+                fit_result[0] *= self._specData.bin_widths[0]
+            elif self._fluxType == 5:
+                fit_result[0] *= self._specData.bin_widths[0] / self._specData.ebins[0]
+                fit_result[1] -= 1.
+       
+            specDict = {"Function":spec_func,
+                        "Result":fit_result,
+                        "Spectrum":fit_spec,
+                        "TS":fit_ts}
+
+            retDict[specType] = specDict
+            pass
+        return retDict
+
+
+    def buildTestSpectrumFunction(self,specType):
+        """
+        """
+        scaleEnergy = self._specData.ebins[0]
+        cutoffEnergy = 10.*scaleEnergy
+
+        # The initial parameters depend how the flux is expressed        
+        if self._fluxType == 0:
+            initPars = np.array([1e-3,0.0,0.0])
+            initPars_pc = np.array([1e-3,0.0,cutoffEnergy])    
+        elif self._fluxType == 1:
+            initPars = np.array([1e-12,-1.0,0.0])
+            initPars_pc = np.array([1e-12,-1.0,cutoffEnergy])
+        elif self._fluxType == 2:
+            initPars = np.array([1e-7,0.0,0.0])
+            initPars_pc = np.array([1e-7,0.0,cutoffEnergy])       
+        elif self._fluxType == 3:
+            initPars = np.array([1.0,-2.0,0.0])
+            initPars_pc = np.array([1.0,-2.0,cutoffEnergy])
+        elif self._fluxType == 4:
+            initPars = np.array([1e-17,-2.0,0.0])
+            initPars_pc = np.array([1e-17,-2.0,cutoffEnergy])     
+        elif self._fluxType == 5:
+            initPars = np.array([1e-12,-1.0,0.0])
+            initPars_pc = np.array([1e-12,-1.0,cutoffEnergy])
+
+        # Build a function, and return it and the correct initial parameters
+        if specType == "PowerLaw":
+            return (PowerLaw(self._specData.evals,scaleEnergy),initPars[0:2])
+        elif specType == "LogParabola":
+            return (LogParabola(self._specData.evals,scaleEnergy),initPars)
+        elif specType == "PLExpCutoff":
+            return (PLExpCutoff(self._specData.evals,scaleEnergy),initPars_pc)
+        else:
+            print "Did not recognize test specturm type %s"%specType
+        return None
+
+    
 class TSCube(object):
     """ 
     """
-    def __init__(self,tsmap,norm_vals,nll_vals,specData,fluxType):
+    def __init__(self,tsmap,normmap,tscube,norm_vals,nll_vals,specData,fluxType):
         """ C'tor
 
         tsmap       : A Map object with the TestStatistic values in each pixel
+        tscube      : A Map object with the TestStatistic values in each pixel & energy bin        
         norm_vals   : The normalization values ( nEBins X N array, where N is the number of sampled values for each bin )
         nll_vals    : The log-likelihood values ( nEBins X N array, where N is the number of sampled values for each bin )
         specData    : The specData object
@@ -536,8 +630,13 @@ class TSCube(object):
            1: Flux of the test source ( ph cm^-2 s^-1 )
            2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
            3: Number of predicted photons
+           4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
+           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
        """
         self._tsmap = tsmap
+        self._normMap = normmap
+        self._tscube = tscube
+        self._ts_cumul = tscube.sum_over_energy()
         self._specData = specData
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
@@ -550,6 +649,26 @@ class TSCube(object):
     def tsmap(self):
         """ return the Map of the TestStatistic value """
         return self._tsmap
+    
+    @property
+    def normmap(self):
+        """ return the Map of the Best-fit normalization value """
+        return self._normmap
+
+    @property
+    def tscube(self):
+        """ return the Cube of the TestStatistic value per pixel / energy bin """
+        return self._tscube
+
+    @property
+    def ts_cumul(self):
+        """ return the Map of the cumulative TestStatistic value per pixel (summed over energy bin) """
+        return self._ts_cumul   
+
+    @property
+    def specData(self):
+        """ Return the Spectral Data object """
+        return self._specData  
 
     @property
     def nE(self):
@@ -565,27 +684,94 @@ class TSCube(object):
     def create_from_fits(fitsfile,fluxType):
         """ Build a TSCube object from a fits file created by gttscube """
         m,f = read_map_from_fits(fitsfile)
+        n,f = read_map_from_fits(fitsfile,"N_MAP")
+        c,f = read_map_from_fits(fitsfile,"TSCUBE")
         log_ebins,fluxes,npreds = read_spectral_data(f["EBOUNDS"])
         ebins = np.power(10.,log_ebins)
         specData = SpecData(ebins,fluxes,npreds)
         cube_data_hdu = f["SCANDATA"]
         nll_vals = cube_data_hdu.data.field("NLL_SCAN")
         norm_vals = cube_data_hdu.data.field("NORMSCAN")
+        return TSCube(m,n,c,norm_vals,nll_vals,specData,fluxType)
 
-        return TSCube(m,norm_vals,nll_vals,specData,fluxType)
 
-
-    def castroData_from_ipix(self,ipix):
+    def castroData_from_ipix(self,ipix,colwise=True):
         """ Build a CastroData object for a particular pixel """
         # pix = utils.skydir_to_pix
+        if colwise:
+            ipix = self._tsmap.ipix_swap_axes(ipix,colwise)
         norm_d = self._norm_vals[ipix].reshape(self._castro_shape).swapaxes(0,1)
         nll_d = self._nll_vals[ipix].reshape(self._castro_shape).swapaxes(0,1)
         return CastroData(norm_d,nll_d,self._specData,self._fluxType)
      
 
+    def castroData_from_pix_xy(self,xy,colwise=True):
+        """ Build a CastroData object for a particular pixel """
+        ipix = self._tsmap.xy_pix_to_ipix(xy,colwise)
+        return self.castroData_from_ipix(ipix)
 
 
-def Powerlaw(evals,scale):
+    def find_peaks(self,threshold,min_separation=1.0,use_cumul=False):
+        """
+        """
+        if use_cumul: 
+            theMap = self._ts_cumul
+        else:
+            theMap = self._tsmap
+                    
+        peaks = sourcefind.find_peaks(theMap,threshold,min_separation)
+        for peak in peaks:
+            fit_loc = sourcefind.refine_peak(theMap.counts,(peak['ix'],peak['iy']))
+            peak['fit_loc'] = fit_loc
+            world_coords = theMap.wcs.wcs_pix2world(fit_loc[0][0], fit_loc[0][1], 0)
+            peak['fit_skydir'] = SkyCoord(world_coords[0],world_coords[1],unit="deg")
+            pass
+        return peaks
+
+
+    def test_spectra_of_peak(self,peak,spec_types=["PowerLaw","LogParabola","PLExpCutoff"]):
+        """
+        """
+        castro = self.castroData_from_pix_xy(xy=(peak['ix'],peak['iy']),colwise=False)
+        test_dict = castro.test_spectra(spec_types)
+        return (castro,test_dict)
+
+
+    def find_sources(self,threshold,
+                     min_separation=1.0,
+                     use_cumul=False,
+                     output_peaks=False,
+                     output_castro=False,
+                     output_specInfo=False,
+                     src_prefix="tscube_"):
+        """
+        """
+        srcs = []
+        castros = []
+        specInfo = []
+        peaks = self.find_peaks(threshold,min_separation,use_cumul=True)
+        for i,peak in enumerate(peaks):
+            (castro,test_dict) = self.test_spectra_of_peak(peak,["PowerLaw"])
+            src_dict = build_source_dict("%s%i"%(src_prefix,i),peak,test_dict,"PowerLaw")
+            src = roi_model.Source.create_from_dict(src_dict)
+            srcs.append(src)
+            if output_castro:
+                castros.append(castro)
+            if output_specInfo:
+                specInfo.append(test_dict)
+            pass
+        retDict = {"Sources":srcs}
+        if output_peaks:
+            retDict["Peaks"]=peaks
+        if output_castro:
+            retDict["Castro"]=castros
+        if output_specInfo:
+            retDict["Spectral"]=specInfo
+        return retDict
+
+
+
+def PowerLaw(evals,scale):
     """
     """
     evals_scaled = evals/scale
@@ -600,7 +786,7 @@ def LogParabola(evals,scale):
     return lambda x : x[0] * np.power(evals_scaled,x[1]-x[2]*log_evals_scaled);
 
 
-def PlExpCutoff(evals,scale):
+def PLExpCutoff(evals,scale):
     """
     """
     evals_scaled = evals/scale
@@ -608,39 +794,102 @@ def PlExpCutoff(evals,scale):
     return lambda x : x[0] * np.power(evals_scaled,x[1]) * np.exp(evals_diff/x[2])
 
 
+def convert_pars_to_spec_dict(spec_dict,spec_type):
+        """
+        """
+        specPars_dict = {}
+        specPars_vect = spec_dict[spec_type]["Result"]
+        par_names = PAR_NAMES[spec_type]
+        for par_name,spec_par in zip(par_names,specPars_vect):
+            specPars_dict[par_name] = {'name':par_name,
+                                       'value':spec_par}
+            pass
+        spec_dict = {'SpectrumType':spec_type,
+                     'spectral_pars':specPars_dict}
+        return spec_dict
+
+
+def build_source_dict(src_name,peak_dict,spec_dict,spec_type):
+    """
+    """
+    spec_par_dict = convert_pars_to_spec_dict(spec_dict,spec_type)
+    spec_results = spec_dict[spec_type]
+    src_dir = peak_dict['skydir']
+
+    src_dict = dict(name=src_name,
+                    Source_Name=src_name,
+                    SpatialModel='PointSource',
+                    SpectrumType=spec_type,
+                    ts=spec_results["TS"][0],
+                    ra=src_dir.ra,                    
+                    dec=src_dir.dec,
+                    Prefactor=spec_results[0],
+                    Index=spec_results[1],
+                    Scale=FIXME)
+    return src_dict
+                    
+
 
         
 if __name__ == "__main__":
 
-    fluxType = 0
-    xlims = (0.,1.)
 
-    tscube = TSCube.create_from_fits("tscube_test.fits",fluxType)
-    ts_map = tscube.tsmap.counts
-    max_ts_pix = np.argmax(ts_map)
-    max_ts = ts_map.flat[max_ts_pix]
-    xpix = max_ts_pix/80
-    ypix = max_ts_pix%80
-    ipix = 80*ypix + xpix
- 
-    castro = tscube.castroData_from_ipix(ipix)    
-    nll = castro[0]
+    from fermipy import sed
+    from fermipy import roi_model
+    import fermipy.utils as utils
+    import xml.etree.cElementTree as ElementTree
+    import sys
 
-    specVals = np.ones((castro.specData.nE))
+    if len(sys.argv) == 1:
+        flux_type = 0
+    elif sys.argv[1] == "norm":
+        flux_type = 0
+    elif sys.argv[1] == "flux":
+        flux_type = 1
+    elif sys.argv[1] == "eflux":
+        flux_type = 2
+    elif sys.argv[1] == "npred":
+        flux_type = 3
+    elif sys.argv[1] == "d_flux":
+        flux_type = 4
+    elif sys.argv[1] == "d_eflux":
+        flux_type = 5
+    else:
+        print "Didn't reconginize flux type %s, choose from norm | flux | eflux | npred"%sys.argv[1]
 
-    result = castro.fitNormalization(specVals,xlims)
-    result2 = castro.fitNorm_v2(specVals)
- 
-    initPars = np.array([1e-3,0.0,0.0])
-    initPars_pc = np.array([1e-3,0.0,1000.0])
 
-    pl = Powerlaw(castro.specData.evals,1000)
-    lp = LogParabola(castro.specData.evals,1000)
-    pc = PlExpCutoff(castro.specData.evals,1000)
+    tscube = sed.TSCube.create_from_fits("tscube_test.fits",flux_type)
 
-    fx_1 = pl(initPars[0:2])
-    fx_2 = pl(initPars)
-    fx_3 = pl(initPars_pc)
+    resultDict = tscube.find_sources(10.0,1.0,use_cumul=True,
+                                     output_peaks=True,
+                                     output_castro=False,
+                                     output_specInfo=True)
+    figList = []
+    peaks = resultDict["Peaks"]
+    specInfos = resultDict["Spectral"]
+    sources = resultDict["Sources"]
     
-        
-    
+    root = ElementTree.Element('source_library')
+    root.set('title', 'source_library')
+      
+    for src in sources:
+        src.write_xml(root)
+
+        """
+        result_pl = test_dict["PowerLaw"]["Result"]
+        result_lp = test_dict["LogParabola"]["Result"]
+        result_pc = test_dict["PLExpCutoff"]["Result"]
+        ts_pl = test_dict["PowerLaw"]["TS"]
+        ts_lp = test_dict["LogParabola"]["TS"]
+        ts_pc = test_dict["PLExpCutoff"]["TS"]
+
+        print "TS for PL index = 2:  %.1f"%max_ts
+        print "Cumulative TS:        %.1f"%castro.ts_vals().sum()
+        print "TS for PL index free: %.1f (Index = %.2f)"%(ts_pl[0],idx_off-result_pl[1])
+        print "TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)"%(ts_lp[0],idx_off-result_lp[1],result_lp[2])
+        print "TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)"%(ts_pc[0],idx_off-result_pc[1],result_pc[2])
+        """
+
+    output_file = open("sed_sources.xml", 'w!')
+    output_file.write(utils.prettify_xml(root))
+
