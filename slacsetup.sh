@@ -34,8 +34,10 @@ function slacsetup
 	source ${INST_DIR}/bin/${BLDARCH}-Optimized/_setup.sh
     fi
     
-    export PATH=$GLAST_EXT/python/2.7.8/bin:$PATH
-    export PYTHONPATH=$GLAST_EXT/python/2.7.8/lib/python2.7/site-packages:$PYTHONPATH
-    export LD_LIBRARY_PATH=$GLAST_EXT/python/2.7.8/lib/python2.7/site-packages:$LD_LIBRARY_PATH
+    export PYTHONROOT=$GLAST_EXT/python/2.7.10
+
+    export PATH=$PYTHONROOT/bin:$PATH
+    export PYTHONPATH=$PYTHONROOT/lib/python2.7/site-packages:$PYTHONPATH
+    export LD_LIBRARY_PATH=$PYTHONROOT/lib/python2.7/site-packages:$LD_LIBRARY_PATH
     export GLASTSETUP=1
 }
