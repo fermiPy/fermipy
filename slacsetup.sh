@@ -37,7 +37,5 @@ function slacsetup
     export PYTHONROOT=$GLAST_EXT/python/2.7.10
 
     export PATH=$PYTHONROOT/bin:$PATH
-    export PYTHONPATH=$PYTHONROOT/lib/python2.7/site-packages:$PYTHONPATH
-    export LD_LIBRARY_PATH=$PYTHONROOT/lib/python2.7/site-packages:$LD_LIBRARY_PATH
     export GLASTSETUP=1
 }
