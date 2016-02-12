@@ -61,7 +61,7 @@ def find_peaks(input_map, threshold, min_separation=1.0):
 
     peaks = []
     for s in slices:
-        skydir = SkyCoord.from_pixel(s[0].start, s[1].start,
+        skydir = SkyCoord.from_pixel(s[1].start, s[0].start,
                                      input_map.wcs)
         peaks.append({'ix': s[1].start,
                       'iy': s[0].start,
@@ -243,9 +243,16 @@ class SourceFinder(fermipy.config.Configurable):
             src_dicts = sd['SrcDicts']
 
         # Loop over the seeds and add them to the model
-        for name,src_dict in zip(names,src_dicts):            
-            gta.add_source(name, src_dict, free=True)
-            gta.free_source(name,False)
+        new_src_names = []
+        for name,src_dict in zip(names,src_dicts):    
+            # Protect against finding the same source twice
+            if gta.roi.has_source(name):
+                self.logger.info('Source %s found again.  Ignoring it.'%name)
+                pass
+            else:                
+                gta.add_source(name, src_dict, free=True)
+                gta.free_source(name,False)
+                new_src_names.append(name)
 
         # Re-fit spectral parameters of each source individually
         for name in names:
@@ -254,7 +261,7 @@ class SourceFinder(fermipy.config.Configurable):
             gta.free_source(name,False)
                     
         srcs = []
-        for name in names:
+        for name in new_src_names:
             srcs.append(gta.roi[name])
 
         return srcs, peaks
