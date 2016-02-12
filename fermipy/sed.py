@@ -782,7 +782,7 @@ class CastroData(object):
         """
         retDict = {}
         for specType in spec_types:            
-            spec_func,init_pars = self.buildTestSpectrumFunction(specType)
+            spec_func,init_pars,scaleEnergy = self.buildTestSpectrumFunction(specType)
             fit_result,fit_spec,fit_ts = self.fit_spectrum(spec_func,init_pars)
             # tweak the fit result to account for the flux type
             if self._fluxType == 0:
@@ -806,6 +806,7 @@ class CastroData(object):
             specDict = {"Function":spec_func,
                         "Result":fit_result,
                         "Spectrum":fit_spec,
+                        "ScaleEnergy":scaleEnergy,
                         "TS":fit_ts}
 
             retDict[specType] = specDict
@@ -841,11 +842,11 @@ class CastroData(object):
 
         # Build a function, and return it and the correct initial parameters
         if specType == "PowerLaw":
-            return (PowerLaw(self._specData.evals,scaleEnergy),initPars[0:2])
+            return (PowerLaw(self._specData.evals,scaleEnergy),initPars[0:2],scaleEnergy)
         elif specType == "LogParabola":
-            return (LogParabola(self._specData.evals,scaleEnergy),initPars)
+            return (LogParabola(self._specData.evals,scaleEnergy),initPars,scaleEnergy)
         elif specType == "PLExpCutoff":
-            return (PLExpCutoff(self._specData.evals,scaleEnergy),initPars_pc)
+            return (PLExpCutoff(self._specData.evals,scaleEnergy),initPars_pc,scaleEnergy)
         else:
             print "Did not recognize test specturm type %s"%specType
         return None
@@ -980,8 +981,7 @@ class TSCube(object):
                      output_castro=False,
                      output_specInfo=False,
                      output_src_dicts=False,
-                     output_srcs=False,
-                     src_prefix="tscube_"):
+                     output_srcs=False):
         """
         """        
         srcs = []
@@ -992,7 +992,8 @@ class TSCube(object):
         peaks = self.find_and_refine_peaks(threshold,min_separation,use_cumul=True)
         for i,peak in enumerate(peaks):
             (castro,test_dict) = self.test_spectra_of_peak(peak,["PowerLaw"])
-            src_dict = build_source_dict("%s%i"%(src_prefix,i),peak,test_dict,"PowerLaw")
+            src_name = utils.create_source_name(peak['fit_skydir'])
+            src_dict = build_source_dict(src_name,peak,test_dict,"PowerLaw")
             names.append(src_dict["name"])
             if output_castro:
                 castros.append(castro)
@@ -1042,25 +1043,9 @@ def PLExpCutoff(evals,scale):
     return lambda x : x[0] * np.power(evals_scaled,x[1]) * np.exp(evals_diff/x[2])
 
 
-def convert_pars_to_spec_dict(spec_dict,spec_type):
-        """
-        """
-        specPars_dict = {}
-        specPars_vect = spec_dict[spec_type]["Result"]
-        par_names = PAR_NAMES[spec_type]
-        for par_name,spec_par in zip(par_names,specPars_vect):
-            specPars_dict[par_name] = {'name':par_name,
-                                       'value':spec_par}
-            pass
-        spec_dict = {'SpectrumType':spec_type,
-                     'spectral_pars':specPars_dict}
-        return spec_dict
-
-
 def build_source_dict(src_name,peak_dict,spec_dict,spec_type):
     """
     """
-    spec_par_dict = convert_pars_to_spec_dict(spec_dict,spec_type)
     spec_results = spec_dict[spec_type]
     src_dir = peak_dict['fit_skydir']
 
@@ -1072,8 +1057,8 @@ def build_source_dict(src_name,peak_dict,spec_dict,spec_type):
                     ra=src_dir.icrs.ra.deg,               
                     dec=src_dir.icrs.dec.deg,
                     Prefactor=spec_results["Result"][0],
-                    Index=spec_results["Result"][1])
-                    #Scale=FIXME)
+                    Index=-1.*spec_results["Result"][1],
+                    Scale=spec_results["ScaleEnergy"])
     return src_dict
                     
 

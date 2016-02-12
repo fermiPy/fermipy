@@ -620,7 +620,6 @@ class TSCubeGenerator(fermipy.config.Configurable):
         # tolType       : Absoulte (0) or relative (1) criteria for convergence
         # remakeTestSource : If true, recomputes the test source image (otherwise just shifts it)
         # ST_scan_level : Level to which to do ST-based fitting (for testing)
-        """
         fitScanner.run_tscube(True,
                               config['do_sed'], config['nnorm'],
                               config['norm_sigma'], config['cov_scale'],
@@ -630,7 +629,6 @@ class TSCubeGenerator(fermipy.config.Configurable):
         self.logger.info("Writing FITS output")
                                         
         fitScanner.writeFitsFile(str(outfile), str("gttscube"))
-        """
 
         tscube = sed.TSCube.create_from_fits(outfile,fluxType=2)
         ts_map = tscube.tsmap        
