@@ -870,7 +870,7 @@ class Source(Model):
     
     def _init_spatial_pars(self):
 
-        if self['SpatialModel'] == 'SpatialMap':
+        if self['SpatialType'] == 'SpatialMap':
             self._data['spatial_pars'] = {
                 'Prefactor': {'name': 'Prefactor', 'value': '1',
                               'free': '0', 'min': '0.001', 'max': '1000',

@@ -2324,10 +2324,12 @@ class GTAnalysis(fermipy.config.Configurable):
 
         """
 
-        if src_dict is None: src_dict = {}
-        else: src_dict = copy.deepcopy(src_dict)
+        if src_dict is None:
+            src_dict = {}
+        else:
+            src_dict = copy.deepcopy(src_dict)
 
-        skydir = utils.get_target_skydir(src_dict,self.roi.skydir)
+        skydir = utils.get_target_skydir(src_dict, self.roi.skydir)
 
         src_dict.setdefault('ra', skydir.ra.deg)
         src_dict.setdefault('dec', skydir.dec.deg)
@@ -2342,6 +2344,23 @@ class GTAnalysis(fermipy.config.Configurable):
             c.simulate_source('mcsource')
 
         self.delete_source('mcsource')
+
+        self.write_xml('tmp')
+
+        self._like = SummedLikelihood()
+        for i, c in enumerate(self._components):
+            c._create_binned_analysis()
+            self._like.addComponent(c.like)
+        self._init_roi_model()
+
+        self.load_xml('tmp')
+
+    def simulate_roi(self):
+        """
+        Perform a simulation of the whole ROI.
+        """
+        for c in self.components:
+            c.simulate_roi()
 
         self.write_xml('tmp')
 
@@ -2722,6 +2741,8 @@ class GTAnalysis(fermipy.config.Configurable):
     def _coadd_maps(self, cmaps, shape, rm):
         """
         """
+        print 'calling coadd'
+        
         if self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
             self._ccube = fits_utils.make_coadd_map(cmaps, self._proj, shape)
@@ -3633,8 +3654,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         # Make spatial templates for extended sources
         for s in self.roi.sources:
-            if s.diffuse: continue
-            if not s.extended: continue
+            if s.diffuse:
+                continue
+            if not s.extended:
+                continue
             self.make_template(s, self.config['file_suffix'])
 
         # Write ROI XML
@@ -3657,8 +3680,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   emapbnds='no')
 
         if not os.path.isfile(self._srcmap_file):
-            if self.config['gtlike']['srcmap'] and self.config['gtlike'][
-                'bexpmap']:
+            if self.config['gtlike']['srcmap'] and self.config['gtlike']['bexpmap']:
                 self.make_scaled_srcmap()
             else:
                 run_gtapp('gtsrcmaps', self.logger, kw)
@@ -3669,7 +3691,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.update_srcmap_file(None, True)
 
         self._create_binned_analysis(xmlfile=xmlfile)
-
+        
         self.logger.info(
             'Finished setup for Analysis Component: %s' % self.name)
 
@@ -3714,7 +3736,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         # Recompute fixed model weights
         self.like.logLike.buildFixedModelWts()
-        #self.like.logLike.buildFixedModelWts(True)
+        self.like.logLike.buildFixedModelWts(True)
+
+        self.like.logLike.saveSourceMaps(self._srcmap_file)
 
     def make_scaled_srcmap(self):
         """Make an exposure cube with the same binning as the counts map."""
@@ -3752,10 +3776,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                  logger=self.logger)
 
     def simulate_source(self, name):
-        
+        """Inject photon counts for a single simulated source."""
+
         data = self.counts_map().counts
         m = self.model_counts_map(name)
-        
+
         src_data = np.random.poisson(m.counts).astype(float)
         data += src_data
 
@@ -3764,6 +3789,20 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         utils.write_fits_image(data, self.wcs, self._ccubemc_file)
 
+    def simulate_roi(self):
+        """Inject a simulation of the whole ROI."""
+
+        data = self.counts_map().counts
+        m = self.model_counts_map()
+
+        data.fill(0.0)
+        data += np.random.poisson(m.counts).astype(float)
+
+        utils.update_source_maps(self._srcmap_file, {'PRIMARY': data},
+                                 logger=self.logger)
+
+        utils.write_fits_image(data, self.wcs, self._ccubemc_file)
+        
     def generate_model_map(self, model_name=None, name=None):
         """Generate a counts model map from the in-memory source map
         data structures."""
@@ -3821,10 +3860,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
     def update_source_map(self, name):
         
-        self.write_xml('tmp')        
+        self.write_xml('tmp')
         src = self.delete_source(name)
         self.add_source(name, src, free=True)
-        
+
 #        utils.delete_source_map(self._srcmap_file,name)
 #        self.like.logLike.eraseSourceMap(name)
         self.load_xml('tmp')
