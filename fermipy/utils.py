@@ -92,9 +92,11 @@ class Map(Map_Base):
     def sum_over_energy(self):
         """ Reduce a 3D counts cube to a 2D counts map
         """
-        return Map(self.counts.sum(2),self.wcs.dropaxis(2))
+        # Note that the array is using the opposite convention from WCS
+        # so we sum over axis 0 in the array, but drop axis 2 in the WCS object
+        return Map(self.counts.sum(0),self.wcs.dropaxis(2))
 
-    def xy_pix_to_ipix(self,xypix,colwise=True):
+    def xy_pix_to_ipix(self,xypix,colwise=False):
         """ Return the pixel index from the pixel xy coordinates 
 
         if colwise is True (False) this uses columnwise (rowwise) indexing
@@ -104,7 +106,7 @@ class Map(Map_Base):
         else:
             return xypix[1]*self._wcs._naxis1 + xypix[0]
     
-    def ipix_to_xypix(self,ipix,colwise=True):
+    def ipix_to_xypix(self,ipix,colwise=False):
         """ Return the pixel xy coordinates from the pixel index
 
         if colwise is True (False) this uses columnwise (rowwise) indexing
@@ -114,7 +116,7 @@ class Map(Map_Base):
         else:
             return (ipix % self._wcs._naxis1, ipix / self._wcs._naxis1)
     
-    def ipix_swap_axes(self,ipix,colwise=True):
+    def ipix_swap_axes(self,ipix,colwise=False):
         """ Return the transposed pixel index from the pixel xy coordinates 
 
         if colwise is True (False) this assumes the original index was in column wise scheme
