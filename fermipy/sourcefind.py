@@ -244,9 +244,6 @@ class SourceFinder(fermipy.config.Configurable):
 
         # Loop over the seeds and add them to the model
         for name,src_dict in zip(names,src_dicts):            
-            self.logger.info('Found source\n' +
-                             'name: %s\n'%name +
-                             str(src_dict))
             gta.add_source(name, src_dict, free=True)
             gta.free_source(name,False)
 
