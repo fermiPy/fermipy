@@ -13,8 +13,7 @@ def read_map_from_fits(fitsfile, extname=None):
     """
     proj, f, hdu = read_projection_from_fits(fitsfile, extname)
     if isinstance(proj, pywcs.WCS):
-        m = Map(hdu.data.T, proj)
-        return m, f
+        m = Map(hdu.data, proj)
     elif isinstance(proj, HPX):
         m = HpxMap.create_from_hdu(hdu,proj.ebins)
     else:
