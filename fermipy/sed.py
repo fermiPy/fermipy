@@ -933,7 +933,7 @@ class TSCube(object):
         return TSCube(m,n,c,norm_vals,nll_vals,specData,fluxType)
 
 
-    def castroData_from_ipix(self,ipix,colwise=True):
+    def castroData_from_ipix(self,ipix,colwise=False):
         """ Build a CastroData object for a particular pixel """
         # pix = utils.skydir_to_pix
         if colwise:
@@ -943,7 +943,7 @@ class TSCube(object):
         return CastroData(norm_d,nll_d,self._specData,self._fluxType)
      
 
-    def castroData_from_pix_xy(self,xy,colwise=True):
+    def castroData_from_pix_xy(self,xy,colwise=False):
         """ Build a CastroData object for a particular pixel """
         ipix = self._tsmap.xy_pix_to_ipix(xy,colwise)
         return self.castroData_from_ipix(ipix)
@@ -959,9 +959,13 @@ class TSCube(object):
                     
         peaks = find_peaks(theMap,threshold,min_separation)
         for peak in peaks:
-            fit_loc = refine_peak(theMap.counts,(peak['ix'],peak['iy']))
-            peak['fit_loc'] = fit_loc
-            peak['fit_skydir'] = SkyCoord.from_pixel(fit_loc[0][1], fit_loc[0][0],theMap.wcs)
+            o =  utils.fit_parabola(theMap.counts,peak['iy'],peak['ix'],dpix=2)
+            peak['fit_loc'] = o
+            peak['fit_skydir'] = SkyCoord.from_pixel(o['y0'],o['x0'],theMap.wcs)
+            if o['fit_success']:            
+                skydir = peak['fit_skydir']
+            else:
+                skydir = peak['skydir']
             pass
         return peaks
 
