@@ -465,9 +465,7 @@ class Model(object):
     such as TS, Npred, and location within the ROI.
     """
 
-    def __init__(self, name, data=None,
-                 spectral_pars=None,
-                 spatial_pars=None):
+    def __init__(self, name, data=None):
 
         self._data = {'SpatialModel': None,
                       'SpatialWidth': None,
@@ -500,18 +498,12 @@ class Model(object):
         self._data.setdefault('spatial_pars', {})
         self._data.setdefault('catalog', {})
 
-
-        if spectral_pars is not None:
-            self._data['spectral_pars'] = spectral_pars
-        elif not self.spectral_pars:
+        if not self.spectral_pars:
             pdict = gtutils.get_function_pars_dict(self['SpectrumType'])
             self._data['spectral_pars'] = pdict
             for k, v in self.spectral_pars.items():
                 self._data['spectral_pars'][k] = make_parameter_dict(v)
             
-        if spatial_pars is not None:
-            self._data['spatial_pars'] = spatial_pars
-
         self._names = [name]
         catalog = self._data['catalog']
 
@@ -668,29 +660,27 @@ class Model(object):
 
 
 class IsoSource(Model):
-    def __init__(self, name, data, spectral_pars=None,
-                 spatial_pars=None):
+    def __init__(self, name, data):
 
         data['SpectrumType'] = 'FileFunction'
         data['SpatialType'] = 'ConstantValue'
         data['SpatialModel'] = 'DiffuseSource'
         data['SourceType'] = 'DiffuseSource'
 
-        super(IsoSource, self).__init__(name, data, spectral_pars,
-                                        spatial_pars)
-        
-        if not self.spectral_pars:
-            self['spectral_pars'] = {
+        if not 'spectral_pars' in data:        
+            data['spectral_pars'] = {
                 'Normalization': {'name': 'Normalization', 'scale': '1.0',
                                   'value': '1.0',
                                   'min': '0.001', 'max': '1000.0',
                                   'free': '0'}}
+        
+        super(IsoSource, self).__init__(name, data)
+            
 
-        if not self.spatial_pars:
-            self['spatial_pars'] = {
-                'Value': {'name': 'Value', 'scale': '1',
-                          'value': '1', 'min': '0', 'max': '10',
-                          'free': '0'}}
+        self['spatial_pars'] = {
+            'Value': {'name': 'Value', 'scale': '1',
+                      'value': '1', 'min': '0', 'max': '10',
+                      'free': '0'}}
 
     @property
     def filefunction(self):
@@ -723,18 +713,15 @@ class IsoSource(Model):
 
 
 class MapCubeSource(Model):
-    def __init__(self, name, data, spectral_pars=None, spatial_pars=None):
+    def __init__(self, name, data):
 
         data['SpectrumType'] = 'PowerLaw'
         data['SpatialType'] = 'MapCubeFunction'
         data['SpatialModel'] = 'DiffuseSource'
         data['SourceType'] = 'DiffuseSource'
 
-        super(MapCubeSource, self).__init__(name, data, spectral_pars,
-                                            spatial_pars)
-
-        if not self.spectral_pars:
-            self['spectral_pars'] = {
+        if not 'spectral_pars' in data:
+            data['spectral_pars'] = {
                 'Prefactor': {'name': 'Prefactor', 'scale': '1',
                               'value': '1.0', 'min': '0.1', 'max': '10.0',
                               'free': '0'},
@@ -746,13 +733,14 @@ class MapCubeSource(Model):
                           'min': '1000.0', 'max': '1000.0',
                           'free': '0'},
             }
+        
+        super(MapCubeSource, self).__init__(name, data)
 
-        if not self.spatial_pars:
-            self['spatial_pars'] = {
-                'Normalization':
-                    {'name': 'Normalization', 'scale': '1',
-                     'value': '1', 'min': '0', 'max': '10',
-                     'free': '0'}}
+        self['spatial_pars'] = {
+            'Normalization':
+                {'name': 'Normalization', 'scale': '1',
+                 'value': '1', 'min': '0', 'max': '10',
+                 'free': '0'}}
 
     @property
     def mapcube(self):
@@ -797,11 +785,8 @@ class Source(Model):
     >>> print src.skydir
     """
 
-    def __init__(self, name, data=None,
-                 radec=None,
-                 spectral_pars=None,
-                 spatial_pars=None):
-        super(Source, self).__init__(name, data, spectral_pars, spatial_pars)
+    def __init__(self, name, data=None, radec=None):
+        super(Source, self).__init__(name, data)
 
         catalog = self.data.get('catalog', {})
 
@@ -1086,8 +1071,9 @@ class Source(Model):
 
         radec = np.array([skydir.ra.deg, skydir.dec.deg])
 
-        return Source(name, src_dict, radec=radec,
-                      spectral_pars=spectral_pars)
+        src_dict['spectral_pars'] = spectral_pars
+        
+        return Source(name, src_dict, radec=radec)
 
     @staticmethod
     def create_from_xml(root, extdir=None):
@@ -1139,17 +1125,21 @@ class Source(Model):
 
             radec = np.array([src_dict['RAJ2000'], src_dict['DEJ2000']])
 
+            src_dict['spectral_pars'] = spectral_pars
+            src_dict['spatial_pars'] = spatial_pars            
             return Source(src_dict['Source_Name'],
-                          src_dict, radec=radec,
-                          spectral_pars=spectral_pars,
-                          spatial_pars=spatial_pars)
+                          src_dict, radec=radec)
 
         elif src_type == 'DiffuseSource' and spatial_type == 'ConstantValue':
-            return IsoSource(src_dict['Source_Name'], {'filefunction' : spec['file']},
-                             spectral_pars, spatial_pars)
+            return IsoSource(src_dict['Source_Name'],
+                             {'filefunction' : spec['file'],
+                              'spectral_pars' : spectral_pars,
+                              'spatial_pars' : spatial_pars})
         elif src_type == 'DiffuseSource' and spatial_type == 'MapCubeFunction':
-            return MapCubeSource(src_dict['Source_Name'], {'mapcube' : spat['file']},
-                                 spectral_pars, spatial_pars)
+            return MapCubeSource(src_dict['Source_Name'],
+                                 {'mapcube' : spat['file'],
+                                  'spectral_pars' : spectral_pars,
+                                  'spatial_pars' : spatial_pars})
         else:
             raise Exception(
                 'Unrecognized type for source: %s' % src_dict['Source_Name'])
@@ -1423,7 +1413,7 @@ class ROIModel(fermipy.config.Configurable):
                          merge_sources=merge_sources)
         
         return self.get_source_by_name(name, True)
-
+    
     def load_sources(self, sources):
         """Clear the ROI and load a list of sources."""
         
@@ -1562,6 +1552,16 @@ class ROIModel(fermipy.config.Configurable):
         self._diffuse_srcs = [s for s in self._diffuse_srcs if s not in srcs]
         self._build_src_index()
 
+    @staticmethod
+    def create_from_roi_data(datafile):
+        """Create an ROI model."""
+        data = np.load(datafile).flat[0]
+
+        roi = ROIModel()
+        roi.load_sources(data['sources'].values())
+
+        return roi
+        
     @staticmethod
     def create(selection, config, **kwargs):
         """Create an ROIModel instance."""

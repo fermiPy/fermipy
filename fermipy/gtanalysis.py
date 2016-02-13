@@ -2741,7 +2741,6 @@ class GTAnalysis(fermipy.config.Configurable):
     def _coadd_maps(self, cmaps, shape, rm):
         """
         """
-        print 'calling coadd'
         
         if self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
