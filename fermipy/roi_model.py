@@ -518,8 +518,10 @@ class Model(object):
             self._data['assoc'][k] = name
 
         if self.params:
-            self.update_spectral_pars()
-
+            self._update_spectral_pars()
+        else:
+            self._update_params()
+            
     def __contains__(self, key):
         return key in self._data
 
@@ -593,13 +595,20 @@ class Model(object):
         else:
             return Source.create_from_dict(src_dict)
 
-    def update_spectral_pars(self):
-
-        sp = self['spectral_pars']        
+    def _update_spectral_pars(self):
+        """Update spectral parameters dictionary."""
+        sp = self['spectral_pars']
         for k, p in sp.items():
             sp[k]['value'] = self['params'][k][0]/float(sp[k]['scale'])
             sp[k] = make_parameter_dict(sp[k])
-        
+
+    def _update_params(self):
+
+        sp = self['spectral_pars']
+        for k, p in sp.items():
+            val = float(p['value'])*float(p['scale'])
+            self._data['params'][k]=np.array([val,np.nan])
+
     def get_norm(self):
 
         par_name = gtutils.get_function_norm_par_name(self['SpectrumType'])
@@ -647,7 +656,7 @@ class Model(object):
     def update_data(self, d):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
         if self.params:
-            self.update_spectral_pars()
+            self._update_spectral_pars()
 
     def update(self, m):
 
