@@ -403,19 +403,22 @@ class GTAnalysis(fermipy.config.Configurable):
 
     @staticmethod
     def create(infile, config=None):
-        """Create a new instance of GTAnalysis from an analysis output
-        file generated with `~fermipy.GTAnalysis.write_roi`.  By
-        default the new instance will inherit the configuration of the
-        previously saved analysis.  The configuration may be overriden
-        by providing an alternate config file with the config
-        argument.
+        """Create a new instance of GTAnalysis from an analysis output file
+        generated with `~fermipy.GTAnalysis.write_roi`.  By default
+        the new instance will inherit the configuration of the
+        saved analysis instance.  The configuration may be overriden
+        by passing a config file path with the ``config`` argument.
 
         Parameters
         ----------
 
         infile : str
             Path to the ROI results file.
-        
+
+        config : str
+            Path to a configuration file.  This will override the
+            configuration in the ROI results file.
+
         """
 
         infile = os.path.abspath(infile)
@@ -425,8 +428,7 @@ class GTAnalysis(fermipy.config.Configurable):
             config = roi_data['config']
 
         gta = GTAnalysis(config)
-
-        gta.setup(xmlfile=infile, init_sources=False)
+        gta.setup(init_sources=False)
         gta.load_roi(infile)
         return gta
 
@@ -636,7 +638,7 @@ class GTAnalysis(fermipy.config.Configurable):
         else:
             self.logger.error('Working directory does not exist.')
 
-    def setup(self, xmlfile=None, init_sources=True):
+    def setup(self, init_sources=True):
         """Run pre-processing step for each analysis component and
         construct a joint likelihood object.  This will run everything
         except the likelihood optimization: data selection (gtselect,
@@ -647,10 +649,8 @@ class GTAnalysis(fermipy.config.Configurable):
         ----------
 
         init_sources : bool
-           Choose whether to initialize the ROI model for individual sources.
-
-        xmlfile : str
-           Override the XML model file.
+           Choose whether to compute properties (flux, TS, etc.) for
+           individual sources.
 
         """
 
@@ -660,7 +660,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._like = SummedLikelihood()
         for i, c in enumerate(self._components):
-            c.setup(xmlfile=xmlfile)
+            c.setup()
             self._like.addComponent(c.like)
 
         self._ccube_file = os.path.join(self.config['fileio']['workdir'],
@@ -668,16 +668,25 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._init_roi_model()
 
-        if not init_sources:
-            return
+        if init_sources:
 
-        for name in self.like.sourceNames():
-            self._init_source(name)
+            self.logger.info('Initializing source properties')
+            for name in self.like.sourceNames():
+                self._init_source(name)
 
-        self._update_roi()
+            self._update_roi()
 
         self.logger.info('Finished setup')
 
+    def _create_likelihood(self, srcmdl):
+        self._like = SummedLikelihood()
+        for c in self.components:
+            c._create_binned_analysis(srcmdl)
+            self._like.addComponent(c.like)
+            
+        self.like.model = self.like.components[0].model
+        self._init_roi_model()
+        
     def _init_roi_model(self):
 
         rm = self._roi_model
@@ -708,7 +717,7 @@ class GTAnalysis(fermipy.config.Configurable):
         self._coadd_maps(cmaps, shape, rm)
 
     def _init_source(self, name):
-
+        
         src = self.roi.get_source_by_name(name, True)
         src.update_data({'sed': None, 'extension': None,
                          'localize': None,
@@ -2434,6 +2443,8 @@ class GTAnalysis(fermipy.config.Configurable):
         saved instance generated with
         `~fermipy.gtanalysis.GTAnalysis.write_roi`."""
 
+        self.logger.info('Loading ROI')
+        
         infile = resolve_path(infile, workdir=self.config['fileio']['workdir'])
 
         roi_data = load_roi_data(infile,
@@ -2442,17 +2453,16 @@ class GTAnalysis(fermipy.config.Configurable):
         self._roi_model = roi_data['roi']
 
         sources = roi_data.pop('sources')
-        
+
         self.roi.load_sources(sources.values())
         for c in self.components:
-            c.load_sources(sources.values())
+            c.roi.load_sources(sources.values())
 
-        self.like.model = self.like.components[0].model
-            
+        self._create_likelihood(infile)
         # Load XML
-        self.load_xml(infile)
-            
-        self._init_roi_model()
+#        self.load_xml(infile)
+
+        self.logger.info('Finished Loading ROI')
 
     def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
                   save_model_map=True, format=None, **kwargs):
@@ -3166,21 +3176,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def coordsys(self):
         return self._coordsys
 
-    def load_sources(self,sources):
-
-        self.roi.clear()        
-        for s in sources:
-
-            if isinstance(s,dict):
-                s = Model.create_from_dict(s)
-            
-            if not str(s.name) in self.like.sourceNames():
-                self.add_source(s.name,s)
-            else:
-                self.roi.load_source(s,build_index=False)
-
-        self.roi._build_src_index()
-    
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
         """Add a new source to the model.  Source properties
         (spectrum, spatial model) are set with the src_dict argument.
@@ -3218,49 +3213,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self.update_srcmap_file([src], True)
 
-        if src['SpatialType'] == 'SkyDirFunction':
-
-            pylike_src = pyLike.PointSource(self.like.logLike.observation())
-            pylike_src.setDir(src.skydir.ra.deg, src.skydir.dec.deg, False,
-                              False)
-        elif src['SpatialType'] == 'SpatialMap':
-            sm = pyLike.SpatialMap(str(src['Spatial_Filename']))
-            pylike_src = pyLike.DiffuseSource(sm,
-                                              self.like.logLike.observation(),
-                                              False)
-        elif src['SpatialType'] == 'MapCubeFunction':
-            mcf = pyLike.MapCubeFunction2(str(src['Spatial_Filename']))
-            pylike_src = pyLike.DiffuseSource(mcf,
-                                              self.like.logLike.observation(),
-                                              False)
-        else:
-            raise Exception(
-                'Unrecognized spatial type: %s' % src['SpatialType'])
-
-        pl = pyLike.SourceFactory_funcFactory().create(src['SpectrumType'])
-
-        for k, v in src.spectral_pars.items():
-
-            par = pl.getParam(k)
-
-            vmin = min(float(v['value']), float(v['min']))
-            vmax = max(float(v['value']), float(v['max']))
-
-            par.setValue(float(v['value']))
-            par.setBounds(vmin, vmax)
-            par.setScale(float(v['scale']))
-
-            if 'free' in v and int(v['free']) != 0:
-                par.setFree(True)
-            else:
-                par.setFree(False)
-            pl.setParam(par)
-
-        pylike_src.setSpectrum(pl)
-        pylike_src.setName(str(src.name))
-
-        # Initialize source as free/fixed
-        pylike_src.spectrum().normPar().setFree(free)
+        pylike_src = self._create_source(src,free=free)        
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(str(name))
         if save_source_maps:
@@ -3477,16 +3430,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if imax <= imin: raise Exception('Invalid energy range.')
         return cs[imin:imax]
 
-    def setup(self, xmlfile=None):
+    def setup(self):
         """Run pre-processing step."""
 
         self.logger.info("Running setup for Analysis Component: " +
                          self.name)
 
         srcmdl_file = self._srcmdl_file
-        if xmlfile is not None:
-            srcmdl_file = self.get_model_path(xmlfile)
-
         roi_center = self.roi.skydir
 
         # Run gtselect and gtmktime
@@ -3660,8 +3610,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.make_template(s, self.config['file_suffix'])
 
         # Write ROI XML
-        if not os.path.isfile(srcmdl_file):
-            self.roi.write_xml(srcmdl_file)
+        #if not os.path.isfile(srcmdl_file):
+        self.roi.write_xml(srcmdl_file)
 
         # Run gtsrcmaps
         kw = dict(scfile=self.config['data']['scfile'],
@@ -3689,7 +3639,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Create templates for extended sources
         self.update_srcmap_file(None, True)
 
-        self._create_binned_analysis(xmlfile=xmlfile)
+        self._create_binned_analysis()
         
         self.logger.info(
             'Finished setup for Analysis Component: %s' % self.name)
@@ -3699,7 +3649,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         srcmdl_file = self._srcmdl_file
         if xmlfile is not None:
             srcmdl_file = self.get_model_path(xmlfile)
-
+            
         # Create BinnedObs
         self.logger.debug('Creating BinnedObs')
         kw = dict(srcMaps=self._srcmap_file, expCube=self._ltcube,
@@ -3730,6 +3680,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.like.logLike.set_edisp_flag(True)
 
         for s in self.config['gtlike']['edisp_disable']:
+
+            if not self.roi.has_source(s):
+                continue
+            
             self.logger.debug('Disabling energy dispersion for %s' % s)
             self.set_edisp_flag(s, False)
 
@@ -3832,7 +3786,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if 'SpatialModel' not in src:
             return
         elif src['SpatialModel'] in ['PointSource', 'Gaussian', 'PSFSource',
-                                     'SpatialMap']:
+                                     'SpatialMap','DiffuseSource']:
             return
 
         if src['SpatialModel'] == 'GaussianSource':

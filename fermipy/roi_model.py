@@ -587,6 +587,9 @@ class Model(object):
 
     @staticmethod
     def create_from_dict(src_dict):
+
+        src_dict.setdefault('SpatialModel','PointSource')
+        src_dict.setdefault('SpatialType','SkyDirFunction')
         
         if src_dict['SpatialModel'] == 'DiffuseSource' and src_dict['SpatialType'] == 'ConstantValue':
             return IsoSource(src_dict['name'],src_dict)
@@ -1409,13 +1412,12 @@ class ROIModel(fermipy.config.Configurable):
 
         if isinstance(src_dict,dict):
             src_dict['name'] = name
-            src = Source.create_from_dict(src_dict)
+            src = Model.create_from_dict(src_dict)
         else:
             src = src_dict
 
-        src.set_spatial_model(src['SpatialModel'], src['SpatialWidth'])
-
-        src.set_roi_direction(self.skydir)
+        if isinstance(src,Source):
+            src.set_roi_direction(self.skydir)
 
         self.logger.debug('Creating source ' + src.name)
         self.load_source(src, build_index=build_index,
@@ -1424,17 +1426,17 @@ class ROIModel(fermipy.config.Configurable):
         return self.get_source_by_name(name, True)
     
     def load_sources(self, sources):
-        """Clear the ROI and load a list of sources."""
-        
+        """Delete all sources in the ROI and load the input source list."""
+
         self.clear()
         for s in sources:
 
-            if isinstance(s,dict):
+            if isinstance(s, dict):
                 s = Model.create_from_dict(s)
             
-            self.load_source(s,build_index=False)
+            self.load_source(s, build_index=False)
         self._build_src_index()
-            
+
     def load_source(self, src, build_index=True, merge_sources=True,
                     **kwargs):
         """
