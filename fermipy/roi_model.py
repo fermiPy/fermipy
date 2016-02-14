@@ -518,8 +518,10 @@ class Model(object):
             self._data['assoc'][k] = name
 
         if self.params:
-            self.update_spectral_pars()
-
+            self._update_spectral_pars()
+        else:
+            self._update_params()
+            
     def __contains__(self, key):
         return key in self._data
 
@@ -585,6 +587,9 @@ class Model(object):
 
     @staticmethod
     def create_from_dict(src_dict):
+
+        src_dict.setdefault('SpatialModel','PointSource')
+        src_dict.setdefault('SpatialType','SkyDirFunction')
         
         if src_dict['SpatialModel'] == 'DiffuseSource' and src_dict['SpatialType'] == 'ConstantValue':
             return IsoSource(src_dict['name'],src_dict)
@@ -593,13 +598,20 @@ class Model(object):
         else:
             return Source.create_from_dict(src_dict)
 
-    def update_spectral_pars(self):
-
-        sp = self['spectral_pars']        
+    def _update_spectral_pars(self):
+        """Update spectral parameters dictionary."""
+        sp = self['spectral_pars']
         for k, p in sp.items():
             sp[k]['value'] = self['params'][k][0]/float(sp[k]['scale'])
             sp[k] = make_parameter_dict(sp[k])
-        
+
+    def _update_params(self):
+
+        sp = self['spectral_pars']
+        for k, p in sp.items():
+            val = float(p['value'])*float(p['scale'])
+            self._data['params'][k]=np.array([val,np.nan])
+
     def get_norm(self):
 
         par_name = gtutils.get_function_norm_par_name(self['SpectrumType'])
@@ -647,7 +659,7 @@ class Model(object):
     def update_data(self, d):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
         if self.params:
-            self.update_spectral_pars()
+            self._update_spectral_pars()
 
     def update(self, m):
 
@@ -1400,13 +1412,12 @@ class ROIModel(fermipy.config.Configurable):
 
         if isinstance(src_dict,dict):
             src_dict['name'] = name
-            src = Source.create_from_dict(src_dict)
+            src = Model.create_from_dict(src_dict)
         else:
             src = src_dict
 
-        src.set_spatial_model(src['SpatialModel'], src['SpatialWidth'])
-
-        src.set_roi_direction(self.skydir)
+        if isinstance(src,Source):
+            src.set_roi_direction(self.skydir)
 
         self.logger.debug('Creating source ' + src.name)
         self.load_source(src, build_index=build_index,
@@ -1415,17 +1426,17 @@ class ROIModel(fermipy.config.Configurable):
         return self.get_source_by_name(name, True)
     
     def load_sources(self, sources):
-        """Clear the ROI and load a list of sources."""
-        
+        """Delete all sources in the ROI and load the input source list."""
+
         self.clear()
         for s in sources:
 
-            if isinstance(s,dict):
+            if isinstance(s, dict):
                 s = Model.create_from_dict(s)
             
-            self.load_source(s,build_index=False)
+            self.load_source(s, build_index=False)
         self._build_src_index()
-            
+
     def load_source(self, src, build_index=True, merge_sources=True,
                     **kwargs):
         """
