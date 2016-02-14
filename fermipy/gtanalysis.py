@@ -2349,7 +2349,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._like = SummedLikelihood()
         for i, c in enumerate(self._components):
-            c._create_binned_analysis()
+            c._create_binned_analysis('tmp.xml')
             self._like.addComponent(c.like)
         self._init_roi_model()
 
@@ -2366,7 +2366,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._like = SummedLikelihood()
         for i, c in enumerate(self._components):
-            c._create_binned_analysis()
+            c._create_binned_analysis('tmp.xml')
             self._like.addComponent(c.like)
         self._init_roi_model()
 
