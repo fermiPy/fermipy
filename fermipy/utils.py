@@ -851,7 +851,7 @@ def get_target_skydir(config,default=None):
     return default
 
 
-def convolve2d_disk(fn, r, sig, nstep=100):
+def convolve2d_disk(fn, r, sig, nstep=200):
     """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
     azimuthally symmetric function in two dimensions and g is a
     step function given by:
@@ -905,7 +905,7 @@ def convolve2d_disk(fn, r, sig, nstep=100):
     return s
 
 
-def convolve2d_gauss(fn, r, sig, nstep=100):
+def convolve2d_gauss(fn, r, sig, nstep=200):
     """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
     azimuthally symmetric function in two dimensions and g is a
     gaussian given by:

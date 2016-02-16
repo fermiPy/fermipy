@@ -224,6 +224,9 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._projtype = self.config['binning']['projtype']
 
+        # Set random seed
+        np.random.seed(self.config['mc']['seed'])
+        
         # Setup directories
         self._rootdir = os.getcwd()
 
@@ -434,6 +437,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def set_log_level(self, level):
         self.logger.handlers[1].setLevel(level)
+        for c in self.components:
+            c.logger.handlers[1].setLevel(level)
 
     def _update_roi(self):
 
@@ -455,16 +460,6 @@ class GTAnalysis(fermipy.config.Configurable):
             for i, c in enumerate(self.components):
                 rm['components'][i]['model_counts'] += mc[i]
                 rm['components'][i]['Npred'] += np.sum(mc[i])
-
-    def copy_source(self, name):
-        """Create a duplicate of an existing source."""
-
-        s = copy.deepcopy(self.roi.get_source_by_name(name, True))
-        for k, v in s.spectral_pars.items():
-            s.spectral_pars[k]['value'] = \
-                str(self.like[name].src.spectrum().getParamValue(k))
-
-        return s
 
     def update_source_map(self, name):
 
@@ -1506,7 +1501,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         for i, t in enumerate(scan_skydir):
             # make a copy
-            s = self.copy_source(name)
+            s = self.roi.copy_source(name)
 
             model_name = '%s_localize' % (name.replace(' ', '').lower())
             s.set_name(model_name)
@@ -1582,7 +1577,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 'Updating position to: '
                 'RA %8.3f DEC %8.3f (offset = %8.3f)' % (o['ra'], o['dec'],
                                                          o['offset']))
-            s = self.copy_source(name)
+            s = self.roi.copy_source(name)
             self.delete_source(name)
             s.set_position(new_skydir)
             s.set_name(newname, names=s.names)
@@ -1709,7 +1704,7 @@ class GTAnalysis(fermipy.config.Configurable):
              'config': config}
 
         # Fit a point-source
-        s = self.copy_source(name)
+        s = self.roi.copy_source(name)
         model_name = '%s_ptsrc' % (name)
         s.set_name(model_name)
         s.set_spatial_model('PSFSource')
@@ -1727,13 +1722,15 @@ class GTAnalysis(fermipy.config.Configurable):
         for i, w in enumerate(width):
 
             # make a copy
-            s = self.copy_source(name)
+            s = self.roi.copy_source(name)
+            
             model_name = '%s' % (ext_model_name)
             s.set_name(model_name)
             s.set_spatial_model(spatial_model, w)
-
+            
             self.logger.debug('Adding test source with width: %10.3f deg' % w)
             self.add_source(model_name, s, free=True)
+
             #self.fit(update=False)
             self.like.optimize(0)
             
@@ -1749,9 +1746,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
         try:
 
-            ul_data = utils.get_upper_limit(o['dlogLike'], o['width'], interpolate=True)
-#            o['ext'], o['ext_ul95'], o['ext_err_lo'], o['ext_err_hi'], dlnl0 = \
-#                utils.get_upper_limit(o['dlogLike'], o['width'], interpolate=True)
+            ul_data = utils.get_upper_limit(o['dlogLike'], o['width'],
+                                            interpolate=True)
 
             o['ext'] = ul_data['x0']
             o['ext_ul95'] = ul_data['ul']
@@ -1769,7 +1765,7 @@ class GTAnalysis(fermipy.config.Configurable):
             self.logger.info('TS_ext: %.3f' % o['ts_ext'])
 
             # Fit with the best-fit extension model
-            s = self.copy_source(name)
+            s = self.roi.copy_source(name)
             model_name = '%s' % (ext_model_name)
             s.set_name(model_name)
             s.set_spatial_model(spatial_model, o['ext'])
@@ -2255,7 +2251,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if update:
             for name in self.like.sourceNames():
-                freePars = self.get_free_source_params(name)
+                freePars = self.get_free_source_params(name)                
                 if len(freePars) == 0:
                     continue
                 self.update_source(name, reoptimize=reoptimize)
@@ -2792,6 +2788,11 @@ class GTAnalysis(fermipy.config.Configurable):
         sd = self.get_src_model(name, paramsonly, reoptimize, npts)
         src = self.roi.get_source_by_name(name, True)
         src.update_data(sd)
+
+        for c in self.components:
+            src = c.roi.get_source_by_name(name, True)            
+            src.update_data(sd)
+            
 
     def get_src_model(self, name, paramsonly=False, reoptimize=False,
                       npts=50):

@@ -661,14 +661,14 @@ class Model(object):
         if self.params:
             self._update_spectral_pars()
 
-    def update(self, m):
+    def update_from_source(self, src):
 
-        if 'SpectrumType' in m and self['SpectrumType'] != m['SpectrumType']:
+        if 'SpectrumType' in src and self['SpectrumType'] != src['SpectrumType']:
             self._data['spectral_pars'] = {}
 
-        self._data = utils.merge_dict(self.data, m.data, add_new_keys=True)
-        self._name = m.name
-        self._names = list(set(self._names + m.names))
+        self._data = utils.merge_dict(self.data, src.data, add_new_keys=True)
+        self._name = src.name
+        self._names = list(set(self._names + src.names))
 
 
 class IsoSource(Model):
@@ -948,8 +948,10 @@ class Source(Model):
     def update_data(self, d):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
         if 'ra' in d and 'dec' in d:
-            self._set_radec([d['ra'],d['dec']])        
-              
+            self._set_radec([d['ra'],d['dec']])
+        if self.params:
+            self._update_spectral_pars()
+                          
     def set_position(self, skydir):
         """
         Set the position of the source.
@@ -1424,6 +1426,10 @@ class ROIModel(fermipy.config.Configurable):
                          merge_sources=merge_sources)
         
         return self.get_source_by_name(name, True)
+
+    def copy_source(self, name):
+        src = self.get_source_by_name(name, True)
+        return copy.deepcopy(src)
     
     def load_sources(self, sources):
         """Delete all sources in the ROI and load the input source list."""
@@ -1477,7 +1483,7 @@ class ROIModel(fermipy.config.Configurable):
             
             if merge_sources:
                 self.logger.debug('Updating source model for %s' % src.name)
-                match_srcs[0].update(src)
+                match_srcs[0].update_from_src(src)
             else:
                 match_srcs[0].add_name(src.name)
                 self.logger.debug('Skipping source model for %s' % src.name)
