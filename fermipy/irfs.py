@@ -31,20 +31,21 @@ def bitmask_to_bits(mask):
 
 class PSFModel(object):
 
-    def __init__(self,skydir,ltc,event_class,event_types,egy):
+    def __init__(self,skydir,ltc,event_class,event_types,egy,cth_min=0.2):
 
         if isinstance(event_types,int):
             event_types = bitmask_to_bits(event_types)
         
-        self._dtheta = np.logspace(-4,1.5,1000)
+        self._dtheta = np.logspace(-4,1.75,1000)
         self._dtheta = np.insert(self._dtheta,0,[0])
+#        self._dtheta = np.linspace(0.0,20.0,1001)
         self._egy = egy
 
         self._exp = np.zeros(len(egy))
         self._psf = self.create_average_psf(skydir,ltc,event_class,event_types,
-                                            self._dtheta,egy)
+                                            self._dtheta,egy,cth_min)
 
-        cth_edge = np.linspace(0.0,1.0,51)
+        cth_edge = np.linspace(cth_min,1.0,41)
         cth = edge_to_center(cth_edge)
         ltw = ltc.get_src_lthist(skydir,cth_edge)
         for et in event_types:
@@ -68,12 +69,13 @@ class PSFModel(object):
         return self._exp
     
     @staticmethod
-    def create_average_psf(skydir,ltc,event_class,event_types,dtheta,egy):
+    def create_average_psf(skydir,ltc,event_class,event_types,dtheta,egy,
+                           cth_min=0.2):
 
         if isinstance(event_types,int):
             event_types = bitmask_to_bits(event_types)
 
-        cth_edge = np.linspace(0.0,1.0,51)
+        cth_edge = np.linspace(cth_min,1.0,41)
         cth = edge_to_center(cth_edge)
 
         wpsf = np.zeros((len(dtheta),len(egy)))

@@ -486,6 +486,8 @@ class Model(object):
                       'offset': 0.0,
                       'ts': np.nan,
                       'Npred': 0.0,
+                      'flux' : np.array([np.nan,np.nan]),
+                      'eflux' : np.array([np.nan,np.nan]),
                       'params': {}
                       }
         if data is not None:
@@ -872,7 +874,7 @@ class Source(Model):
                 'Prefactor': {'name': 'Prefactor', 'value': '1',
                               'free': '0', 'min': '0.001', 'max': '1000',
                               'scale': '1.0'}
-            }
+                }
         else:
             self._data['spatial_pars'] = {
                 'RA': {'name': 'RA', 'value': str(self['RAJ2000']),
@@ -881,7 +883,19 @@ class Source(Model):
                 'DEC': {'name': 'DEC', 'value': str(self['DEJ2000']),
                         'free': '0',
                         'min': '-90.0', 'max': '90.0', 'scale': '1.0'}
-            }
+                }
+            
+        if self['SpatialType'] == 'SpatialGaussian':
+            self._data['spatial_pars']['Sigma'] = {
+                'name': 'Sigma', 'value': str(self['SpatialWidth']),
+                'free': '0', 'min': '0.001', 'max': '10',
+                'scale': '1.0'}
+        elif self['SpatialType'] == 'SpatialDisk':
+            self._data['spatial_pars']['Radius'] = {
+                'name': 'Radius', 'value': str(self['SpatialWidth']),
+                'free': '0', 'min': '0.001', 'max': '10',
+                'scale': '1.0'}
+       
 
     def load_from_catalog(self):
         """Load spectral parameters from catalog values."""
@@ -997,10 +1011,13 @@ class Source(Model):
             self._extended = False
             self._data['SpatialType'] = 'SkyDirFunction'
             self._data['SourceType'] = 'PointSource'
-        elif self['SpatialModel'] in ['GaussianSource', 'DiskSource',
-                                      'SpatialMap']:
+        elif self['SpatialModel'] in ['GaussianSource', 'DiskSource','SpatialMap']:
             self._extended = True
             self._data['SpatialType'] = 'SpatialMap'
+            self._data['SourceType'] = 'DiffuseSource'
+        elif self['SpatialModel'] in ['SpatialGaussian','SpatialDisk']:
+            self._extended = True
+            self._data['SpatialType'] = self['SpatialModel']
             self._data['SourceType'] = 'DiffuseSource'
         else:
             raise Exception(

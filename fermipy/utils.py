@@ -144,10 +144,14 @@ def format_filename(outdir, basename, prefix=None, extension=None):
     return os.path.join(outdir, filename)
 
 
+RA_NGP = np.radians(192.8594812065348)
+DEC_NGP = np.radians(27.12825118085622)
+L_CP = np.radians(122.9319185680026)
+
 def gal2eq(l, b):
-    RA_NGP = np.radians(192.859508333333)
-    DEC_NGP = np.radians(27.1283361111111)
-    L_CP = np.radians(122.932)
+    
+    global RA_NGP, DEC_NGP, L_CP
+    
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.
 
@@ -181,9 +185,9 @@ def gal2eq(l, b):
 
 
 def eq2gal(ra, dec):
-    RA_NGP = np.radians(192.859508333333)
-    DEC_NGP = np.radians(27.1283361111111)
-    L_CP = np.radians(122.932)
+
+    global RA_NGP, DEC_NGP, L_CP
+    
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.
     DEC_0 = np.pi / 2. - DEC_NGP
@@ -1021,12 +1025,14 @@ def make_disk_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     return k
 
 
-def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix):
+def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     """Make a kernel for a PSF-convolved 2D disk.
 
     Parameters
     ----------
 
+    psf : `~fermipy.irfs.PSFModel`
+    
     sigma : float
       68% containment radius in degrees.
     """
@@ -1042,17 +1048,21 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix):
         fn = lambda t: 10 ** np.interp(t, dtheta, np.log10(psf.val[:, i]))
         psfc = convolve2d_disk(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
-        k[i] /= (np.sum(k[i]) * np.radians(cdelt) ** 2)
 
+    if normalize:
+        k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
+        
     return k
 
 
-def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix):
+def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     """Make a kernel for a PSF-convolved 2D gaussian.
 
     Parameters
     ----------
 
+    psf : `~fermipy.irfs.PSFModel`
+    
     sigma : float
       68% containment radius in degrees.
     """
@@ -1066,16 +1076,37 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix):
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
+
+    logpsf = np.log10(psf.val)
+    
     for i in range(len(egy)):
-        fn = lambda t: 10 ** np.interp(t, dtheta, np.log10(psf.val[:, i]))
+        fn = lambda t: 10 ** np.interp(t, dtheta, logpsf[:, i])
         psfc = convolve2d_gauss(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
-        k[i] /= (np.sum(k[i]) * np.radians(cdelt) ** 2)
+
+    if normalize:
+        k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
 
     return k
 
 
-def make_psf_kernel(psf, npix, cdelt, xpix, ypix):
+def make_psf_kernel(psf, npix, cdelt, xpix, ypix, normalize=False):
+    """
+    Generate a kernel for a point-source.
+
+    Parameters
+    ----------
+
+    psf : `~fermipy.irfs.PSFModel`
+
+    npix : int
+        Number of pixels in X and Y dimensions.
+    
+    cdelt : float
+        Pixel size in degrees.
+    
+    """
+     
     dtheta = psf.dtheta
     egy = psf.energies
 
@@ -1086,8 +1117,10 @@ def make_psf_kernel(psf, npix, cdelt, xpix, ypix):
     for i in range(len(egy)):
         k[i] = 10 ** np.interp(np.ravel(x), dtheta,
                                np.log10(psf.val[:, i])).reshape(x.shape)
-        k[i] /= (np.sum(k[i]) * np.radians(cdelt) ** 2)
 
+    if normalize:
+        k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
+         
     return k
 
 

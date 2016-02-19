@@ -3221,6 +3221,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.like.logLike.saveSourceMaps(self._srcmap_file)
 
     def _create_source(self, src, free=False):
+        """Create a pyLikelihood Source object from a
+        `~fermipy.roi_model.Model` object."""
         
         if src['SpatialType'] == 'SkyDirFunction':
             pylike_src = pyLike.PointSource(self.like.logLike.observation())
@@ -3231,6 +3233,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
+        elif src['SpatialType'] == 'SpatialGaussian':
+            sm = pyLike.SpatialGaussian(src.skydir.ra.deg, src.skydir.dec.deg,
+                                        src['SpatialWidth'])
+            pylike_src = pyLike.DiffuseSource(sm,
+                                              self.like.logLike.observation(),
+                                              False)
+            
         elif src['SpatialType'] == 'MapCubeFunction':
             mcf = pyLike.MapCubeFunction2(str(src['Spatial_Filename']))
             pylike_src = pyLike.DiffuseSource(mcf,
@@ -3786,11 +3795,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if 'SpatialModel' not in src:
             return
-        elif src['SpatialModel'] in ['PointSource', 'Gaussian', 'PSFSource',
-                                     'SpatialMap','DiffuseSource']:
-            return
-
-        if src['SpatialModel'] == 'GaussianSource':
+        elif src['SpatialModel'] == 'GaussianSource':
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_gauss_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
@@ -3805,12 +3810,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                              suffix))
             utils.make_disk_spatial_map(src.skydir, src['SpatialWidth'],
                                         template_file, npix=500)
-            src['Spatial_Filename'] = template_file
-        else:
-            raise Exception(
-                'Unrecognized SpatialModel: ' + src['SpatialModel'] +
-                '\n Valid models: PointSource, GaussianSource, DiskSource, '
-                'PSFSource ')
+            src['Spatial_Filename'] = template_file        
 
     def update_source_map(self, name):
         
@@ -3845,7 +3845,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if 'SpatialModel' not in s:
                 continue
             if s['SpatialModel'] in ['PointSource', 'Gaussian',
-                                     'SpatialMap']:
+                                     'SpatialMap','SpatialGaussian',
+                                     'SpatialDisk']:
                 continue
             if s.name.upper() in hdunames and not overwrite:
                 continue
@@ -3862,7 +3863,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                   s['SpatialWidth'],
                                   npix=self.npix, xpix=xpix, ypix=ypix,
                                   cdelt=self.config['binning']['binsz'],
-                                  rebin=4)
+                                  rebin=8)
 
             srcmaps[s.name] = k
 

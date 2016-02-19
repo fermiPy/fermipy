@@ -26,6 +26,15 @@ function slacsetup
     if [ -e "${BUILDS}/${BLDARCH}/Optimized/ScienceTools/$1/bin/${BLDARCH}-Optimized/_setup.sh" ]; then
 	export INST_DIR=${BUILDS}/${BLDARCH}/Optimized/ScienceTools/$1
 	source ${INST_DIR}/bin/${BLDARCH}-Optimized/_setup.sh
+    elif [ -e "$1/bin/${BLDARCH}-Optimized/_setup.sh" ]; then
+	export INST_DIR=$1
+	source ${INST_DIR}/bin/${BLDARCH}-Optimized/_setup.sh
+    elif [ -e "$1/bin/${BLDARCH}-Debug-Optimized/_setup.sh" ]; then
+	export INST_DIR=$1
+	source ${INST_DIR}/bin/${BLDARCH}-Debug-Optimized/_setup.sh
+    elif [ -e "$1/bin/${BLDARCH}-Debug/_setup.sh" ]; then
+	export INST_DIR=$1
+	source ${INST_DIR}/bin/${BLDARCH}-Debug/_setup.sh
     elif [ -n "$1" ]; then
 	export INST_DIR=${BUILDS}/${BLDARCH}/Optimized/ScienceTools/$1
 	source ${INST_DIR}/bin/${BLDARCH}-Optimized/_setup.sh
