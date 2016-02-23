@@ -183,8 +183,7 @@ class ImagePlotter(object):
     def plot(self, subplot=111, catalog=None, cmap='jet', **kwargs):
 
         kwargs_contour = {'levels': None, 'colors': ['k'],
-                          'linewidths': None,
-                          'origin': 'lower'}
+                          'linewidths': None}
 
         kwargs_imshow = {'interpolation': 'nearest',
                          'origin': 'lower', 'norm': None,
@@ -192,7 +191,6 @@ class ImagePlotter(object):
 
         zscale = kwargs.get('zscale', 'lin')
         gamma = kwargs.get('gamma', 0.5)
-        beam_size = kwargs.get('beam_size', None)
 
         if zscale == 'pow':
             kwargs_imshow['norm'] = PowerNorm(gamma=gamma)
@@ -225,12 +223,7 @@ class ImagePlotter(object):
             cs = ax.contour(data.T, **kwargs_contour)
             cs.levels = ['%.0f'%val for val in cs.levels]
             plt.clabel(cs,inline=1,fontsize=8)
-      
-        #   plt.clabel(cs, fontsize=5, inline=0)
-
-        #   im.set_clim(vmin=np.min(self._counts[~self._roi_msk]),
-        #               vmax=np.max(self._counts[~self._roi_msk]))
-
+            
         coordsys = utils.get_coordsys(self._proj)
 
         if coordsys == 'CEL':
@@ -242,26 +235,16 @@ class ImagePlotter(object):
 
         xlabel = kwargs.get('xlabel', None)
         ylabel = kwargs.get('ylabel', None)
-        if xlabel is not None: ax.set_xlabel(xlabel)
-        if ylabel is not None: ax.set_ylabel(ylabel)
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
 
         #        plt.colorbar(im,orientation='horizontal',shrink=0.7,pad=0.15,
         #                     fraction=0.05)
-        #        ax.grid()
         ax.coords.grid(color='white')  # , alpha=0.5)
-
-        #        ax.add_compass(loc=1)
-        #        ax.set_display_coord_system("gal")
         #       ax.locator_params(axis="x", nbins=12)
 
-        #        ax.add_size_bar(1./self._axes[0]._delta, # 30' in in pixel
-        #                        r"$1^{\circ}$",loc=3,color='w')
-
-        if beam_size is not None:
-            ax.add_beam_size(2.0 * beam_size[0] / self._axes[0]._delta,
-                             2.0 * beam_size[1] / self._axes[1]._delta,
-                             beam_size[2], beam_size[3],
-                             patch_props={'fc': "none", 'ec': "w"})
         return im, ax
 
 
@@ -437,7 +420,7 @@ class ROIPlotter(fermipy.config.Configurable):
         cb_kwargs = merge_dict(cb_kwargs, kwargs)
 
         im, ax = self._implot.plot(**im_kwargs)
-
+        
         pixcrd = utils.skydir_to_pix(self._roi._src_skydir, self._implot._wcs)
         
         for i, s in enumerate(self._roi.point_sources):
@@ -455,7 +438,8 @@ class ROIPlotter(fermipy.config.Configurable):
 
         cb_label = cb_kwargs.pop('cb_label', None)
         cb = plt.colorbar(im, **cb_kwargs)
-        if cb_label: cb.set_label(cb_label)
+        if cb_label:
+            cb.set_label(cb_label)
 
 
 class SEDPlotter(object):

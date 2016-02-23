@@ -142,16 +142,18 @@ optimizer = {
 }
 
 # MC options
-mc = {}
+mc = {
+    'seed' : (None, '', int)
+}
 
-#
+# ROI Optimization
 roiopt = {
     'npred_threshold': (1.0, '', float),
     'npred_frac': (0.95, '', float),
     'shape_ts_threshold': (100.0, '', float)
 }
 
-#
+# Residual Maps
 residmap = {
     'models': (None, '', list),
     'model': (None, '', dict),

@@ -224,6 +224,9 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._projtype = self.config['binning']['projtype']
 
+        # Set random seed
+        np.random.seed(self.config['mc']['seed'])
+        
         # Setup directories
         self._rootdir = os.getcwd()
 
@@ -403,19 +406,22 @@ class GTAnalysis(fermipy.config.Configurable):
 
     @staticmethod
     def create(infile, config=None):
-        """Create a new instance of GTAnalysis from an analysis output
-        file generated with `~fermipy.GTAnalysis.write_roi`.  By
-        default the new instance will inherit the configuration of the
-        previously saved analysis.  The configuration may be overriden
-        by providing an alternate config file with the config
-        argument.
+        """Create a new instance of GTAnalysis from an analysis output file
+        generated with `~fermipy.GTAnalysis.write_roi`.  By default
+        the new instance will inherit the configuration of the
+        saved analysis instance.  The configuration may be overriden
+        by passing a config file path with the ``config`` argument.
 
         Parameters
         ----------
 
         infile : str
             Path to the ROI results file.
-        
+
+        config : str
+            Path to a configuration file.  This will override the
+            configuration in the ROI results file.
+
         """
 
         infile = os.path.abspath(infile)
@@ -425,13 +431,14 @@ class GTAnalysis(fermipy.config.Configurable):
             config = roi_data['config']
 
         gta = GTAnalysis(config)
-
-        gta.setup(xmlfile=infile, init_sources=False)
+        gta.setup(init_sources=False)
         gta.load_roi(infile)
         return gta
 
     def set_log_level(self, level):
         self.logger.handlers[1].setLevel(level)
+        for c in self.components:
+            c.logger.handlers[1].setLevel(level)
 
     def _update_roi(self):
 
@@ -453,16 +460,6 @@ class GTAnalysis(fermipy.config.Configurable):
             for i, c in enumerate(self.components):
                 rm['components'][i]['model_counts'] += mc[i]
                 rm['components'][i]['Npred'] += np.sum(mc[i])
-
-    def copy_source(self, name):
-        """Create a duplicate of an existing source."""
-
-        s = copy.deepcopy(self.roi.get_source_by_name(name, True))
-        for k, v in s.spectral_pars.items():
-            s.spectral_pars[k]['value'] = \
-                str(self.like[name].src.spectrum().getParamValue(k))
-
-        return s
 
     def update_source_map(self, name):
 
@@ -636,7 +633,7 @@ class GTAnalysis(fermipy.config.Configurable):
         else:
             self.logger.error('Working directory does not exist.')
 
-    def setup(self, xmlfile=None, init_sources=True):
+    def setup(self, init_sources=True):
         """Run pre-processing step for each analysis component and
         construct a joint likelihood object.  This will run everything
         except the likelihood optimization: data selection (gtselect,
@@ -647,10 +644,8 @@ class GTAnalysis(fermipy.config.Configurable):
         ----------
 
         init_sources : bool
-           Choose whether to initialize the ROI model for individual sources.
-
-        xmlfile : str
-           Override the XML model file.
+           Choose whether to compute properties (flux, TS, etc.) for
+           individual sources.
 
         """
 
@@ -660,7 +655,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._like = SummedLikelihood()
         for i, c in enumerate(self._components):
-            c.setup(xmlfile=xmlfile)
+            c.setup()
             self._like.addComponent(c.like)
 
         self._ccube_file = os.path.join(self.config['fileio']['workdir'],
@@ -668,16 +663,25 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._init_roi_model()
 
-        if not init_sources:
-            return
+        if init_sources:
 
-        for name in self.like.sourceNames():
-            self._init_source(name)
+            self.logger.info('Initializing source properties')
+            for name in self.like.sourceNames():
+                self._init_source(name)
 
-        self._update_roi()
+            self._update_roi()
 
         self.logger.info('Finished setup')
 
+    def _create_likelihood(self, srcmdl):
+        self._like = SummedLikelihood()
+        for c in self.components:
+            c._create_binned_analysis(srcmdl)
+            self._like.addComponent(c.like)
+            
+        self.like.model = self.like.components[0].model
+        self._init_roi_model()
+        
     def _init_roi_model(self):
 
         rm = self._roi_model
@@ -708,7 +712,7 @@ class GTAnalysis(fermipy.config.Configurable):
         self._coadd_maps(cmaps, shape, rm)
 
     def _init_source(self, name):
-
+        
         src = self.roi.get_source_by_name(name, True)
         src.update_data({'sed': None, 'extension': None,
                          'localize': None,
@@ -1497,7 +1501,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         for i, t in enumerate(scan_skydir):
             # make a copy
-            s = self.copy_source(name)
+            s = self.roi.copy_source(name)
 
             model_name = '%s_localize' % (name.replace(' ', '').lower())
             s.set_name(model_name)
@@ -1573,7 +1577,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 'Updating position to: '
                 'RA %8.3f DEC %8.3f (offset = %8.3f)' % (o['ra'], o['dec'],
                                                          o['offset']))
-            s = self.copy_source(name)
+            s = self.roi.copy_source(name)
             self.delete_source(name)
             s.set_position(new_skydir)
             s.set_name(newname, names=s.names)
@@ -1700,15 +1704,15 @@ class GTAnalysis(fermipy.config.Configurable):
              'config': config}
 
         # Fit a point-source
-        s = self.copy_source(name)
+        s = self.roi.copy_source(name)
         model_name = '%s_ptsrc' % (name)
         s.set_name(model_name)
         s.set_spatial_model('PSFSource')
         #s.set_spatial_model('PointSource')
 
         self.logger.debug('Testing point-source model.')
-        self.add_source(model_name, s, free=True)
-        self.fit(update=False)        
+        self.add_source(model_name, s, free=True, init_source=False)
+        self.fit(update=False)
         o['logLike_ptsrc'] = -self.like()
         self.delete_source(model_name, save_template=False)
 
@@ -1718,13 +1722,15 @@ class GTAnalysis(fermipy.config.Configurable):
         for i, w in enumerate(width):
 
             # make a copy
-            s = self.copy_source(name)
+            s = self.roi.copy_source(name)
+            
             model_name = '%s' % (ext_model_name)
             s.set_name(model_name)
             s.set_spatial_model(spatial_model, w)
-
+            
             self.logger.debug('Adding test source with width: %10.3f deg' % w)
-            self.add_source(model_name, s, free=True)
+            self.add_source(model_name, s, free=True, init_source=False)
+
             #self.fit(update=False)
             self.like.optimize(0)
             
@@ -1740,9 +1746,9 @@ class GTAnalysis(fermipy.config.Configurable):
 
         try:
 
-            ul_data = utils.get_upper_limit(o['dlogLike'], o['width'], interpolate=True)
-#            o['ext'], o['ext_ul95'], o['ext_err_lo'], o['ext_err_hi'], dlnl0 = \
-#                utils.get_upper_limit(o['dlogLike'], o['width'], interpolate=True)
+            ul_data = utils.get_upper_limit(o['dlogLike'], o['width'],
+                                            interpolate=True,
+                                            logger=self.logger)
 
             o['ext'] = ul_data['x0']
             o['ext_ul95'] = ul_data['ul']
@@ -1760,7 +1766,7 @@ class GTAnalysis(fermipy.config.Configurable):
             self.logger.info('TS_ext: %.3f' % o['ts_ext'])
 
             # Fit with the best-fit extension model
-            s = self.copy_source(name)
+            s = self.roi.copy_source(name)
             model_name = '%s' % (ext_model_name)
             s.set_name(model_name)
             s.set_spatial_model(spatial_model, o['ext'])
@@ -2246,7 +2252,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if update:
             for name in self.like.sourceNames():
-                freePars = self.get_free_source_params(name)
+                freePars = self.get_free_source_params(name)                
                 if len(freePars) == 0:
                     continue
                 self.update_source(name, reoptimize=reoptimize)
@@ -2349,7 +2355,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._like = SummedLikelihood()
         for i, c in enumerate(self._components):
-            c._create_binned_analysis()
+            c._create_binned_analysis('tmp.xml')
             self._like.addComponent(c.like)
         self._init_roi_model()
 
@@ -2366,7 +2372,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._like = SummedLikelihood()
         for i, c in enumerate(self._components):
-            c._create_binned_analysis()
+            c._create_binned_analysis('tmp.xml')
             self._like.addComponent(c.like)
         self._init_roi_model()
 
@@ -2434,6 +2440,8 @@ class GTAnalysis(fermipy.config.Configurable):
         saved instance generated with
         `~fermipy.gtanalysis.GTAnalysis.write_roi`."""
 
+        self.logger.info('Loading ROI')
+        
         infile = resolve_path(infile, workdir=self.config['fileio']['workdir'])
 
         roi_data = load_roi_data(infile,
@@ -2442,17 +2450,16 @@ class GTAnalysis(fermipy.config.Configurable):
         self._roi_model = roi_data['roi']
 
         sources = roi_data.pop('sources')
-        
+
         self.roi.load_sources(sources.values())
         for c in self.components:
-            c.load_sources(sources.values())
+            c.roi.load_sources(sources.values())
 
-        self.like.model = self.like.components[0].model
-            
+        self._create_likelihood(infile)
         # Load XML
-        self.load_xml(infile)
-            
-        self._init_roi_model()
+#        self.load_xml(infile)
+
+        self.logger.info('Finished Loading ROI')
 
     def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
                   save_model_map=True, format=None, **kwargs):
@@ -2741,7 +2748,6 @@ class GTAnalysis(fermipy.config.Configurable):
     def _coadd_maps(self, cmaps, shape, rm):
         """
         """
-        print 'calling coadd'
         
         if self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
@@ -2783,6 +2789,11 @@ class GTAnalysis(fermipy.config.Configurable):
         sd = self.get_src_model(name, paramsonly, reoptimize, npts)
         src = self.roi.get_source_by_name(name, True)
         src.update_data(sd)
+
+        for c in self.components:
+            src = c.roi.get_source_by_name(name, True)            
+            src.update_data(sd)
+            
 
     def get_src_model(self, name, paramsonly=False, reoptimize=False,
                       npts=50):
@@ -2918,16 +2929,13 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src_dict['lnlprofile'] = lnlp
 
-        flux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'])
-        eflux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['eflux'])
+        flux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'],
+                                             interpolate=True,
+                                             logger=self.logger)
+        eflux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['eflux'],
+                                              interpolate=True,
+                                              logger=self.logger)
         
-#        flux, flux_ul95, flux_err_lo, flux_err_hi, dlnl0 = utils.get_upper_limit(
-#            lnlp['dlogLike'],
-#            lnlp['flux'])
-#        eflux, eflux_ul95, eflux_err_lo, eflux_err_hi, dlnl0 = utils.get_upper_limit(
-#            lnlp['dlogLike'],
-#            lnlp['eflux'])
-
         src_dict['flux_ul95'] = flux_ul_data['ul']
         src_dict['flux100_ul95'] = src_dict['flux100'][0] * (
             flux_ul_data['ul'] / src_dict['flux'][0])
@@ -3167,21 +3175,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def coordsys(self):
         return self._coordsys
 
-    def load_sources(self,sources):
-
-        self.roi.clear()        
-        for s in sources:
-
-            if isinstance(s,dict):
-                s = Model.create_from_dict(s)
-            
-            if not str(s.name) in self.like.sourceNames():
-                self.add_source(s.name,s)
-            else:
-                self.roi.load_source(s,build_index=False)
-
-        self.roi._build_src_index()
-    
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
         """Add a new source to the model.  Source properties
         (spectrum, spatial model) are set with the src_dict argument.
@@ -3219,55 +3212,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self.update_srcmap_file([src], True)
 
-        if src['SpatialType'] == 'SkyDirFunction':
-
-            pylike_src = pyLike.PointSource(self.like.logLike.observation())
-            pylike_src.setDir(src.skydir.ra.deg, src.skydir.dec.deg, False,
-                              False)
-        elif src['SpatialType'] == 'SpatialMap':
-            sm = pyLike.SpatialMap(str(src['Spatial_Filename']))
-            pylike_src = pyLike.DiffuseSource(sm,
-                                              self.like.logLike.observation(),
-                                              False)
-        elif src['SpatialType'] == 'MapCubeFunction':
-            mcf = pyLike.MapCubeFunction2(str(src['Spatial_Filename']))
-            pylike_src = pyLike.DiffuseSource(mcf,
-                                              self.like.logLike.observation(),
-                                              False)
-        else:
-            raise Exception(
-                'Unrecognized spatial type: %s' % src['SpatialType'])
-
-        pl = pyLike.SourceFactory_funcFactory().create(src['SpectrumType'])
-
-        for k, v in src.spectral_pars.items():
-
-            par = pl.getParam(k)
-
-            vmin = min(float(v['value']), float(v['min']))
-            vmax = max(float(v['value']), float(v['max']))
-
-            par.setValue(float(v['value']))
-            par.setBounds(vmin, vmax)
-            par.setScale(float(v['scale']))
-
-            if 'free' in v and int(v['free']) != 0:
-                par.setFree(True)
-            else:
-                par.setFree(False)
-            pl.setParam(par)
-
-        pylike_src.setSpectrum(pl)
-        pylike_src.setName(str(src.name))
-
-        # Initialize source as free/fixed
-        pylike_src.spectrum().normPar().setFree(free)
+        pylike_src = self._create_source(src,free=free)        
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(str(name))
         if save_source_maps:
             self.like.logLike.saveSourceMaps(self._srcmap_file)
 
     def _create_source(self, src, free=False):
+        """Create a pyLikelihood Source object from a
+        `~fermipy.roi_model.Model` object."""
         
         if src['SpatialType'] == 'SkyDirFunction':
             pylike_src = pyLike.PointSource(self.like.logLike.observation())
@@ -3278,6 +3231,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
+        elif src['SpatialType'] == 'SpatialGaussian':
+            sm = pyLike.SpatialGaussian(src.skydir.ra.deg, src.skydir.dec.deg,
+                                        src['SpatialWidth'])
+            pylike_src = pyLike.DiffuseSource(sm,
+                                              self.like.logLike.observation(),
+                                              False)
+            
         elif src['SpatialType'] == 'MapCubeFunction':
             mcf = pyLike.MapCubeFunction2(str(src['Spatial_Filename']))
             pylike_src = pyLike.DiffuseSource(mcf,
@@ -3478,16 +3438,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if imax <= imin: raise Exception('Invalid energy range.')
         return cs[imin:imax]
 
-    def setup(self, xmlfile=None):
+    def setup(self):
         """Run pre-processing step."""
 
         self.logger.info("Running setup for Analysis Component: " +
                          self.name)
 
         srcmdl_file = self._srcmdl_file
-        if xmlfile is not None:
-            srcmdl_file = self.get_model_path(xmlfile)
-
         roi_center = self.roi.skydir
 
         # Run gtselect and gtmktime
@@ -3661,8 +3618,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.make_template(s, self.config['file_suffix'])
 
         # Write ROI XML
-        if not os.path.isfile(srcmdl_file):
-            self.roi.write_xml(srcmdl_file)
+        #if not os.path.isfile(srcmdl_file):
+        self.roi.write_xml(srcmdl_file)
 
         # Run gtsrcmaps
         kw = dict(scfile=self.config['data']['scfile'],
@@ -3690,7 +3647,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Create templates for extended sources
         self.update_srcmap_file(None, True)
 
-        self._create_binned_analysis(xmlfile=xmlfile)
+        self._create_binned_analysis()
         
         self.logger.info(
             'Finished setup for Analysis Component: %s' % self.name)
@@ -3700,7 +3657,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         srcmdl_file = self._srcmdl_file
         if xmlfile is not None:
             srcmdl_file = self.get_model_path(xmlfile)
-
+            
         # Create BinnedObs
         self.logger.debug('Creating BinnedObs')
         kw = dict(srcMaps=self._srcmap_file, expCube=self._ltcube,
@@ -3731,6 +3688,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.like.logLike.set_edisp_flag(True)
 
         for s in self.config['gtlike']['edisp_disable']:
+
+            if not self.roi.has_source(s):
+                continue
+            
             self.logger.debug('Disabling energy dispersion for %s' % s)
             self.set_edisp_flag(s, False)
 
@@ -3832,11 +3793,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if 'SpatialModel' not in src:
             return
-        elif src['SpatialModel'] in ['PointSource', 'Gaussian', 'PSFSource',
-                                     'SpatialMap']:
-            return
-
-        if src['SpatialModel'] == 'GaussianSource':
+        elif src['SpatialModel'] == 'GaussianSource':
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_gauss_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
@@ -3851,12 +3808,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                              suffix))
             utils.make_disk_spatial_map(src.skydir, src['SpatialWidth'],
                                         template_file, npix=500)
-            src['Spatial_Filename'] = template_file
-        else:
-            raise Exception(
-                'Unrecognized SpatialModel: ' + src['SpatialModel'] +
-                '\n Valid models: PointSource, GaussianSource, DiskSource, '
-                'PSFSource ')
+            src['Spatial_Filename'] = template_file        
 
     def update_source_map(self, name):
         
@@ -3891,7 +3843,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if 'SpatialModel' not in s:
                 continue
             if s['SpatialModel'] in ['PointSource', 'Gaussian',
-                                     'SpatialMap']:
+                                     'SpatialMap','SpatialGaussian',
+                                     'SpatialDisk']:
                 continue
             if s.name.upper() in hdunames and not overwrite:
                 continue
@@ -3908,7 +3861,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                   s['SpatialWidth'],
                                   npix=self.npix, xpix=xpix, ypix=ypix,
                                   cdelt=self.config['binning']['binsz'],
-                                  rebin=4)
+                                  rebin=8)
 
             srcmaps[s.name] = k
 

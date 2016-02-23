@@ -144,10 +144,14 @@ def format_filename(outdir, basename, prefix=None, extension=None):
     return os.path.join(outdir, filename)
 
 
+RA_NGP = np.radians(192.8594812065348)
+DEC_NGP = np.radians(27.12825118085622)
+L_CP = np.radians(122.9319185680026)
+
 def gal2eq(l, b):
-    RA_NGP = np.radians(192.859508333333)
-    DEC_NGP = np.radians(27.1283361111111)
-    L_CP = np.radians(122.932)
+    
+    global RA_NGP, DEC_NGP, L_CP
+    
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.
 
@@ -181,9 +185,9 @@ def gal2eq(l, b):
 
 
 def eq2gal(ra, dec):
-    RA_NGP = np.radians(192.859508333333)
-    DEC_NGP = np.radians(27.1283361111111)
-    L_CP = np.radians(122.932)
+
+    global RA_NGP, DEC_NGP, L_CP
+    
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.
     DEC_0 = np.pi / 2. - DEC_NGP
@@ -282,21 +286,34 @@ def cl_to_dlnl(cl):
     return 0.5 * np.power(np.sqrt(2.) * spfn.erfinv(1 - 2 * alpha), 2.)
 
 
-def get_upper_limit(dlogLike, xval, interpolate=False, ul_confidence=0.95):
-    """Compute 95% CL upper limit and 1-sigma errors given a 1-D
-    profile likelihood function."""
+def get_upper_limit(dlogLike, xval, interpolate=False, ul_confidence=0.95,
+                    logger=None):
+    """Compute upper limit, peak position, and 1-sigma errors from a
+    1-D likelihood function."""
 
     deltalnl = cl_to_dlnl(ul_confidence)
     
     if interpolate:
         s = UnivariateSpline(xval, dlogLike, k=2, s=0)
         sd = s.derivative()
-        if np.sign(sd(xval[0])) == -1:
-            x0 = xval[0]
-        else:
-            x0 = brentq(sd, xval[0], xval[-1],
-                        xtol=1e-10*np.median(xval))
+        
+        imax = np.argmax(dlogLike)
+        ilo = max(imax-2,0)
+        ihi = min(imax+2,len(xval)-1)
+
+        # Attempt to find a peak
+        x0 = xval[imax]        
+
+        # Refine the peak position
+        try:        
+            if np.sign(sd(xval[imax])) == 1:
+                x0 = brentq(sd, xval[ilo], xval[ihi],
+                            xtol=1e-10*np.median(xval[ilo:ihi+1]))
+        except Exception:
+            if logger is not None:
+                logger.error('Peak fit failed.',exc_info=True)
             
+                
         lnlmax = float(s(x0))
 
         fn = lambda t: s(t)+min(2*deltalnl,-(dlogLike[-1]-lnlmax))
@@ -851,7 +868,7 @@ def get_target_skydir(config,default=None):
     return default
 
 
-def convolve2d_disk(fn, r, sig, nstep=100):
+def convolve2d_disk(fn, r, sig, nstep=200):
     """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
     azimuthally symmetric function in two dimensions and g is a
     step function given by:
@@ -905,7 +922,7 @@ def convolve2d_disk(fn, r, sig, nstep=100):
     return s
 
 
-def convolve2d_gauss(fn, r, sig, nstep=100):
+def convolve2d_gauss(fn, r, sig, nstep=200):
     """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
     azimuthally symmetric function in two dimensions and g is a
     gaussian given by:
@@ -1021,12 +1038,14 @@ def make_disk_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     return k
 
 
-def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix):
+def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     """Make a kernel for a PSF-convolved 2D disk.
 
     Parameters
     ----------
 
+    psf : `~fermipy.irfs.PSFModel`
+    
     sigma : float
       68% containment radius in degrees.
     """
@@ -1042,17 +1061,21 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix):
         fn = lambda t: 10 ** np.interp(t, dtheta, np.log10(psf.val[:, i]))
         psfc = convolve2d_disk(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
-        k[i] /= (np.sum(k[i]) * np.radians(cdelt) ** 2)
 
+    if normalize:
+        k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
+        
     return k
 
 
-def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix):
+def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     """Make a kernel for a PSF-convolved 2D gaussian.
 
     Parameters
     ----------
 
+    psf : `~fermipy.irfs.PSFModel`
+    
     sigma : float
       68% containment radius in degrees.
     """
@@ -1066,16 +1089,37 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix):
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
+
+    logpsf = np.log10(psf.val)
+    
     for i in range(len(egy)):
-        fn = lambda t: 10 ** np.interp(t, dtheta, np.log10(psf.val[:, i]))
+        fn = lambda t: 10 ** np.interp(t, dtheta, logpsf[:, i])
         psfc = convolve2d_gauss(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
-        k[i] /= (np.sum(k[i]) * np.radians(cdelt) ** 2)
+
+    if normalize:
+        k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
 
     return k
 
 
-def make_psf_kernel(psf, npix, cdelt, xpix, ypix):
+def make_psf_kernel(psf, npix, cdelt, xpix, ypix, normalize=False):
+    """
+    Generate a kernel for a point-source.
+
+    Parameters
+    ----------
+
+    psf : `~fermipy.irfs.PSFModel`
+
+    npix : int
+        Number of pixels in X and Y dimensions.
+    
+    cdelt : float
+        Pixel size in degrees.
+    
+    """
+     
     dtheta = psf.dtheta
     egy = psf.energies
 
@@ -1086,8 +1130,10 @@ def make_psf_kernel(psf, npix, cdelt, xpix, ypix):
     for i in range(len(egy)):
         k[i] = 10 ** np.interp(np.ravel(x), dtheta,
                                np.log10(psf.val[:, i])).reshape(x.shape)
-        k[i] /= (np.sum(k[i]) * np.radians(cdelt) ** 2)
 
+    if normalize:
+        k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
+         
     return k
 
 

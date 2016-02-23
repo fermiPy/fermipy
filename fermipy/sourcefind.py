@@ -178,7 +178,7 @@ class SourceFinder(fermipy.config.Configurable):
         amp = maps['amplitude']
 
         src_dicts = []
-        names = []
+        names = []        
 
         for p in peaks:
             o = utils.fit_parabola(tsmap.counts,p['iy'],p['ix'],dpix=2)
@@ -213,6 +213,9 @@ class SourceFinder(fermipy.config.Configurable):
         threshold = kwargs.get('sqrt_ts_threshold')
         min_separation = kwargs.get('min_separation')
         sources_per_iter = kwargs.get('sources_per_iter')
+        search_skydir = kwargs.get('search_skydir',None)
+        search_minmax_radius = kwargs.get('search_minmax_radius',[None,1.0])
+        
         tsmap_fitter = kwargs.get('tsmap_fitter')
         tsmap_kwargs = kwargs.get('tsmap',{})
         tscube_kwargs = kwargs.get('tscube',{})
@@ -241,21 +244,30 @@ class SourceFinder(fermipy.config.Configurable):
             peaks = sd['Peaks']
             names = sd['Names']
             src_dicts = sd['SrcDicts']
-
+            
         # Loop over the seeds and add them to the model
         new_src_names = []
         for name,src_dict in zip(names,src_dicts):    
             # Protect against finding the same source twice
             if gta.roi.has_source(name):
                 self.logger.info('Source %s found again.  Ignoring it.'%name)
-                pass
-            else:                
-                gta.add_source(name, src_dict, free=True)
-                gta.free_source(name,False)
-                new_src_names.append(name)
+                continue
+            # Skip the source if it's outside the search region
+            if search_skydir is not None:
+
+                skydir = SkyCoord(src_dict['ra'],src_dict['dec'],unit='deg')                
+                separation = search_skydir.separation(skydir).deg
+                
+                if not utils.apply_minmax_selection(separation,search_minmax_radius):
+                    self.logger.info('Source %s outside of search region.  Ignoring it.'%name)
+                    continue
+                
+            gta.add_source(name, src_dict, free=True)
+            gta.free_source(name,False)
+            new_src_names.append(name)
 
         # Re-fit spectral parameters of each source individually
-        for name in names:
+        for name in new_src_names:
             gta.free_source(name,True)
             gta.fit()
             gta.free_source(name,False)
