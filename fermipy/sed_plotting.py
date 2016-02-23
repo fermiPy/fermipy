@@ -52,7 +52,7 @@ def plotNLL_v_Flux(nll,nstep=25,xlims=None):
     ax.set_xlim((xmin,xmax))
     ax.set_ylim((ymin,ymax))
     
-    ax.set_xlabel("Flux Normalization [a.u.]")
+    ax.set_xlabel(NORM_LABEL[nll.fluxType])
     ax.set_ylabel(r'$\Delta \log\mathcal{L}$')
     ax.plot(xvals,yvals)
     return fig,ax
