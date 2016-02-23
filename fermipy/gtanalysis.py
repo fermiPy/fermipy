@@ -1711,8 +1711,8 @@ class GTAnalysis(fermipy.config.Configurable):
         #s.set_spatial_model('PointSource')
 
         self.logger.debug('Testing point-source model.')
-        self.add_source(model_name, s, free=True)
-        self.fit(update=False)        
+        self.add_source(model_name, s, free=True, init_source=False)
+        self.fit(update=False)
         o['logLike_ptsrc'] = -self.like()
         self.delete_source(model_name, save_template=False)
 
@@ -1729,7 +1729,7 @@ class GTAnalysis(fermipy.config.Configurable):
             s.set_spatial_model(spatial_model, w)
             
             self.logger.debug('Adding test source with width: %10.3f deg' % w)
-            self.add_source(model_name, s, free=True)
+            self.add_source(model_name, s, free=True, init_source=False)
 
             #self.fit(update=False)
             self.like.optimize(0)
