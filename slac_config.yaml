@@ -1,0 +1,56 @@
+
+# Define input data files (FT1, FT2, LTCube)
+data:
+
+  # Event list file
+  evfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V6/P8_SOURCE_V6_239557414_428903014_z90_r180_ft1.lst
+
+  # Spacecraft file
+  scfile : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_P302_BASE/P8_P302_SOURCE_239557414_476239414_ft2.fits
+
+  # Livetime Cube
+  ltcube : /nfs/slac/g/ki/ki20/cta/mdwood/fermi/data/P8_SOURCE_V6/P8_SOURCE_V6_239557414_428903014_z090_r180_gti_ft1_gtltcube_z090.fits
+
+binning:
+
+  # Binning
+  roiwidth   : 10.0
+  binsz      : 0.1 # spatial bin size in deg
+  binsperdec : 8   # nb energy bins per decade
+  coordsys   : 'GAL'
+
+selection:
+
+  # Data selections
+  emin    : 500
+  emax    : 500000
+  zmax    : 90
+  evclass : 128
+  evtype  : 3
+  tmin    : 239557414
+  tmax    : 428903014 # 6 years
+  filter  : null
+
+  # Set the ROI center to the coordinates of this source
+  target : 'mkn421'
+
+gtlike:
+  edisp : True
+  irfs : 'P8R2_SOURCE_V6'
+  edisp_disable : ['isodiff','galdiff']
+
+# Settings for ROI model
+model:
+
+  # Include catalog sources within a box of this width 
+  src_roiwidth : 15.0
+
+  galdiff  : '$FERMI_DIFFUSE_DIR/gll_iem_v06.fits'
+  isodiff  : 'iso_P8R2_SOURCE_V6_v06.txt'
+
+  # List of catalogs to be used in the model.
+  catalogs : 
+    - '3FGL'
+
+components: null
+
