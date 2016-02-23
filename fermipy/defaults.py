@@ -172,6 +172,8 @@ tscube = {
     'do_sed': (True, 'Compute the energy bin-by-bin fits', bool),
     'nnorm': (10, 'Number of points in the likelihood v. normalization scan', int),
     'norm_sigma': (5.0, 'Number of sigma to use for the scan range ', float),
+    'cov_scale_bb': (-1.0, 'Scale factor to apply to global fitting '
+                      'cov. matrix in broadband fits. ( < 0 -> no prior ) ', float),
     'cov_scale': (-1.0, 'Scale factor to apply to broadband fitting cov. '
                    'matrix in bin-by-bin fits ( < 0 -> fixed ) ', float),
     'tol': (1E-3, 'Critetia for fit convergence (estimated vertical distance to min < tol )', float),

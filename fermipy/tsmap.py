@@ -612,6 +612,8 @@ class TSCubeGenerator(fermipy.config.Configurable):
 
         # doSED         : Compute the energy bin-by-bin fits
         # nNorm         : Number of points in the likelihood v. normalization scan
+        # covScale_bb   : Scale factor to apply to global fitting cov. matrix 
+        #                 in broadband fits ( < 0 -> no prior )
         # covScale      : Scale factor to apply to broadband fitting cov.
         #                 matrix in bin-by-bin fits ( < 0 -> fixed )
         # normSigma     : Number of sigma to use for the scan range 
@@ -622,7 +624,8 @@ class TSCubeGenerator(fermipy.config.Configurable):
         # ST_scan_level : Level to which to do ST-based fitting (for testing)
         fitScanner.run_tscube(True,
                               config['do_sed'], config['nnorm'],
-                              config['norm_sigma'], config['cov_scale'],
+                              config['norm_sigma'], 
+                              config['cov_scale_bb'],config['cov_scale'],
                               config['tol'], config['max_iter'],
                               config['tol_type'], config['remake_test_source'],
                               config['st_scan_level'])
