@@ -1070,7 +1070,8 @@ class Source(Model):
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialWidth',0.5)
         spectrum_type = src_dict.setdefault('SpectrumType','PowerLaw')
-        spectral_pars = gtutils.get_function_pars_dict(spectrum_type)
+        spectral_pars = src_dict.setdefault('spectral_pars',
+                                            gtutils.get_function_pars_dict(spectrum_type))
         
         for k, v in spectral_pars.items():
 
@@ -1101,8 +1102,6 @@ class Source(Model):
         src_dict['DEJ2000'] = skydir.dec.deg
 
         radec = np.array([skydir.ra.deg, skydir.dec.deg])
-
-        src_dict['spectral_pars'] = spectral_pars
         
         return Source(name, src_dict, radec=radec)
 
