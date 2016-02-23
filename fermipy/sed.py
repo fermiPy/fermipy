@@ -249,7 +249,8 @@ class SEDGenerator(fermipy.config.Configurable):
                                         npts=20)
                 o['lnlprofile'] += [lnlp]
 
-                ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'],True)
+                ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'],True,
+                                                logger=self.logger)
                 
                 o['flux_ul95'][i] = ul_data['ul']
                 o['eflux_ul95'][i] = ul_data['ul']*(lnlp['eflux'][-1]/lnlp['flux'][-1])
@@ -262,7 +263,8 @@ class SEDGenerator(fermipy.config.Configurable):
                 
                 ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'],
                                                 True,
-                                                ul_confidence=ul_confidence)
+                                                ul_confidence=ul_confidence,
+                                                logger=self.logger)
 
                 o['flux_ul'][i] = ul_data['ul']
                 o['eflux_ul'][i] = ul_data['ul']*(lnlp['eflux'][-1]/lnlp['flux'][-1])

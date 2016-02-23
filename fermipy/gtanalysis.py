@@ -1747,7 +1747,8 @@ class GTAnalysis(fermipy.config.Configurable):
         try:
 
             ul_data = utils.get_upper_limit(o['dlogLike'], o['width'],
-                                            interpolate=True)
+                                            interpolate=True,
+                                            logger=self.logger)
 
             o['ext'] = ul_data['x0']
             o['ext_ul95'] = ul_data['ul']
@@ -2928,16 +2929,13 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src_dict['lnlprofile'] = lnlp
 
-        flux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'])
-        eflux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['eflux'])
+        flux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'],
+                                             interpolate=True,
+                                             logger=self.logger)
+        eflux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['eflux'],
+                                              interpolate=True,
+                                              logger=self.logger)
         
-#        flux, flux_ul95, flux_err_lo, flux_err_hi, dlnl0 = utils.get_upper_limit(
-#            lnlp['dlogLike'],
-#            lnlp['flux'])
-#        eflux, eflux_ul95, eflux_err_lo, eflux_err_hi, dlnl0 = utils.get_upper_limit(
-#            lnlp['dlogLike'],
-#            lnlp['eflux'])
-
         src_dict['flux_ul95'] = flux_ul_data['ul']
         src_dict['flux100_ul95'] = src_dict['flux100'][0] * (
             flux_ul_data['ul'] / src_dict['flux'][0])

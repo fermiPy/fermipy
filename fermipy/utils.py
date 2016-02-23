@@ -286,21 +286,34 @@ def cl_to_dlnl(cl):
     return 0.5 * np.power(np.sqrt(2.) * spfn.erfinv(1 - 2 * alpha), 2.)
 
 
-def get_upper_limit(dlogLike, xval, interpolate=False, ul_confidence=0.95):
-    """Compute 95% CL upper limit and 1-sigma errors given a 1-D
-    profile likelihood function."""
+def get_upper_limit(dlogLike, xval, interpolate=False, ul_confidence=0.95,
+                    logger=None):
+    """Compute upper limit, peak position, and 1-sigma errors from a
+    1-D likelihood function."""
 
     deltalnl = cl_to_dlnl(ul_confidence)
     
     if interpolate:
         s = UnivariateSpline(xval, dlogLike, k=2, s=0)
         sd = s.derivative()
-        if np.sign(sd(xval[0])) == -1:
-            x0 = xval[0]
-        else:
-            x0 = brentq(sd, xval[0], xval[-1],
-                        xtol=1e-10*np.median(xval))
+        
+        imax = np.argmax(dlogLike)
+        ilo = max(imax-2,0)
+        ihi = min(imax+2,len(xval)-1)
+
+        # Attempt to find a peak
+        x0 = xval[imax]        
+
+        # Refine the peak position
+        try:        
+            if np.sign(sd(xval[imax])) == 1:
+                x0 = brentq(sd, xval[ilo], xval[ihi],
+                            xtol=1e-10*np.median(xval[ilo:ihi+1]))
+        except Exception:
+            if logger is not None:
+                logger.error('Peak fit failed.',exc_info=True)
             
+                
         lnlmax = float(s(x0))
 
         fn = lambda t: s(t)+min(2*deltalnl,-(dlogLike[-1]-lnlmax))
