@@ -286,74 +286,93 @@ def cl_to_dlnl(cl):
     return 0.5 * np.power(np.sqrt(2.) * spfn.erfinv(1 - 2 * alpha), 2.)
 
 
-def get_upper_limit(dlogLike, xval, interpolate=False, ul_confidence=0.95,
-                    logger=None):
+def find_function_root(fn, x0, xb, delta):    
+    """Find the root of a function: f(x)+delta in the interval encompassed
+    by x0 and xb.
+
+    Parameters
+    ----------
+
+    fn : function
+       Python function.
+
+    x0 : float
+       Fixed bound for the root search.  This will either be used as
+       the lower or upper bound depending on the relative value of xb.
+
+    xb : float
+       Upper or lower bound for the root search.  If a root is not
+       found in the interval [x0,xb]/[xb,x0] this value will be
+       increased/decreased until a change in sign is found.
+
+    """
+    
+    for i in range(10):
+        if np.sign(fn(xb) + delta) != np.sign(fn(x0) + delta):
+            break
+
+        if xb < x0:
+            xb *= 0.5
+        else:
+            xb *= 2.0
+
+    # Failed to find a root
+    if np.sign(fn(xb) + delta) == np.sign(fn(x0) + delta):
+        return np.nan
+            
+    return brentq(lambda t: fn(t)+delta,x0, xb, xtol=1e-10*x0)
+
+
+def get_upper_limit(xval, logLike, ul_confidence=0.95):
     """Compute upper limit, peak position, and 1-sigma errors from a
-    1-D likelihood function."""
+    1-D likelihood function.
+
+    Parameters
+    ----------
+
+    xval : `~numpy.ndarray`
+       Array of parameter values.
+
+    logLike : `~numpy.ndarray`
+       Array of log-likelihood values.
+
+    ul_confidence : float
+       Confidence level to use for upper limit calculation.  
+    
+    """
 
     deltalnl = cl_to_dlnl(ul_confidence)
     
-    if interpolate:
-        s = UnivariateSpline(xval, dlogLike, k=2, s=0)
-        sd = s.derivative()
+    s = UnivariateSpline(xval, logLike, k=2, s=0)
+    sd = s.derivative()
         
-        imax = np.argmax(dlogLike)
-        ilo = max(imax-2,0)
-        ihi = min(imax+2,len(xval)-1)
+    imax = np.argmax(logLike)
+    ilo = max(imax-2,0)
+    ihi = min(imax+2,len(xval)-1)
+        
+    # Find the peak
+    x0 = xval[imax]        
 
-        # Attempt to find a peak
-        x0 = xval[imax]        
-
-        # Refine the peak position
-        try:        
-            if np.sign(sd(xval[imax])) == 1:
-                x0 = brentq(sd, xval[ilo], xval[ihi],
-                            xtol=1e-10*np.median(xval[ilo:ihi+1]))
-        except Exception:
-            if logger is not None:
-                logger.error('Peak fit failed.',exc_info=True)
-            
+    # Refine the peak position
+    if np.sign(sd(xval[ilo])) != np.sign(sd(xval[ihi])):
+        x0 = brentq(sd, xval[ilo], xval[ihi],
+                    xtol=1e-10*np.median(xval[ilo:ihi+1]))
                 
-        lnlmax = float(s(x0))
+    lnlmax = float(s(x0))
 
-        fn = lambda t: s(t)+min(2*deltalnl,-(dlogLike[-1]-lnlmax))
-
-        # Ensure that upper bound encompasses delta-lnl threshold
-        xub = xval[-1]        
-        while np.abs(s(xub) - lnlmax) < 2*deltalnl:
-            xub *= 2
-
-        xlim = brentq(lambda t: s(t)-lnlmax+2*deltalnl,
-                      x0, xub, xtol=1e-10*np.median(xval))
-        
-        xhi = np.linspace(x0, xlim, 100)
-        xlo = np.linspace(xval[0], x0, 100)
-        dlnllo = s(xlo) - lnlmax
-        dlnlhi = s(xhi) - lnlmax
-    else:
-        imax = np.argmax(dlogLike)
-        x0 = xval[imax]
-        xlo = xval[:imax+1]
-        xhi = xval[imax:]
-        lnlmax = dlogLike[imax]
-        dlnllo = dlogLike[:imax+1] - lnlmax
-        dlnlhi = dlogLike[imax:] - lnlmax
+    fn = lambda t: s(t)-lnlmax
+    ul = find_function_root(fn,x0,xval[-1],deltalnl)
+    err_lo = np.abs(x0 - find_function_root(fn,x0,xval[0],0.5))
+    err_hi = np.abs(x0 - find_function_root(fn,x0,xval[-1],0.5))
     
-    ul = np.interp(deltalnl, -dlnlhi, xhi)
-    err_hi = np.interp(0.5, -dlnlhi, xhi) - x0
-    err_lo = np.nan
-
-    if dlnllo[0] < -0.5:
-        err_lo = x0 - np.interp(0.5, -dlnllo[::-1], xlo[::-1])
-
     if np.isfinite(err_lo):
         err = 0.5*(err_lo+err_hi)
     else:
         err = err_hi
         
     o = {'x0' : x0, 'ul' : ul,
-            'err_lo' : err_lo, 'err_hi' : err_hi, 'err' : err,
-            'lnlmax' : lnlmax }
+         'err_lo' : err_lo, 'err_hi' : err_hi, 'err' : err,
+         'lnlmax' : lnlmax }
     return o
     
 

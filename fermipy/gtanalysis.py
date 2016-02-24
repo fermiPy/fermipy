@@ -1746,9 +1746,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         try:
 
-            ul_data = utils.get_upper_limit(o['dlogLike'], o['width'],
-                                            interpolate=True,
-                                            logger=self.logger)
+            ul_data = utils.get_upper_limit(o['width'], o['dlogLike'])
 
             o['ext'] = ul_data['x0']
             o['ext_ul95'] = ul_data['ul']
@@ -1860,10 +1858,19 @@ class GTAnalysis(fermipy.config.Configurable):
         return o
 
     def profile_norm(self, name, emin=None, emax=None, reoptimize=False,
-                     xvals=None, npts=50,
-                     savestate=True):
-        """
-        Profile the normalization of a source.
+                     xvals=None, npts=20, savestate=True):
+        """Profile the normalization of a source.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        reoptimize : bool
+            Re-optimize all free parameters in the model at each point
+            in the profile likelihood scan.
+
         """
 
         # Find the source
@@ -1874,6 +1881,7 @@ class GTAnalysis(fermipy.config.Configurable):
         emin = min(self.energies) if emin is None else emin
         emax = max(self.energies) if emax is None else emax
 
+        # Find a reasonable set of values for the normalization scan
         if xvals is None:
 
             val = par.getValue()
@@ -1933,7 +1941,8 @@ class GTAnalysis(fermipy.config.Configurable):
             val = par.getValue()
             if err <= 0 or val <= 3 * err:
                 xvals = 10 ** np.linspace(-2.0, 2.0, 51)
-                if val < xvals[0]: xvals = np.insert(xvals, val, 0)
+                if val < xvals[0]:
+                    xvals = np.insert(xvals, val, 0)
             else:
                 xvals = np.linspace(0, 1, 25)
                 xvals = np.concatenate((-1.0 * xvals[1:][::-1], xvals))
@@ -2769,7 +2778,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 "Did not recognize projection type %s" % self.projtype)
 
     def update_source(self, name, paramsonly=False, reoptimize=False,
-                      npts=50):
+                      npts=20):
         """Update the dictionary for this source.
 
         Parameters
@@ -2796,7 +2805,7 @@ class GTAnalysis(fermipy.config.Configurable):
             
 
     def get_src_model(self, name, paramsonly=False, reoptimize=False,
-                      npts=50):
+                      npts=20):
         """Compose a dictionary for the given source with the current
         best-fit parameters.
 
@@ -2819,6 +2828,7 @@ class GTAnalysis(fermipy.config.Configurable):
         name = self.get_source_name(name)
         source = self.like[name].src
         spectrum = source.spectrum()
+        normPar = self.like.normPar(name)
 
         src_dict = {'name': name,
                     'flux': np.ones(2) * np.nan,
@@ -2883,12 +2893,27 @@ class GTAnalysis(fermipy.config.Configurable):
             src_dict['dfde10000'][0] = self.like[name].spectrum()(
                 pyLike.dArg(10000.))
 
-            src_dict['dfde100_index'][0] = -get_spectral_index(self.like[name],
-                                                              100.)
-            src_dict['dfde1000_index'][0] = -get_spectral_index(self.like[name],
-                                                               1000.)
-            src_dict['dfde10000_index'][0] = -get_spectral_index(self.like[name],
-                                                                10000.)
+            if normPar.getValue() == 0:
+                normPar.setValue(1.0)
+                dfde100_index = -get_spectral_index(self.like[name],
+                                                    100.)
+                dfde1000_index = -get_spectral_index(self.like[name],
+                                                     1000.)
+                dfde10000_index = -get_spectral_index(self.like[name],
+                                                      10000.)
+                
+                normPar.setValue(0.0)
+            else:
+                dfde100_index = -get_spectral_index(self.like[name],
+                                                    100.)
+                dfde1000_index = -get_spectral_index(self.like[name],
+                                                     1000.)
+                dfde10000_index = -get_spectral_index(self.like[name],
+                                                      10000.)
+            
+            src_dict['dfde100_index'][0] = dfde100_index 
+            src_dict['dfde1000_index'][0] = dfde1000_index
+            src_dict['dfde10000_index'][0] = dfde10000_index
             
         except Exception:
             self.logger.error('Failed to update source parameters.',
@@ -2929,28 +2954,46 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src_dict['lnlprofile'] = lnlp
 
-        flux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['flux'],
-                                             interpolate=True,
-                                             logger=self.logger)
-        eflux_ul_data = utils.get_upper_limit(lnlp['dlogLike'], lnlp['eflux'],
-                                              interpolate=True,
-                                              logger=self.logger)
+        flux_ul_data = utils.get_upper_limit(lnlp['flux'], lnlp['dlogLike'])
+        eflux_ul_data = utils.get_upper_limit(lnlp['eflux'], lnlp['dlogLike'])
+
+        if normPar.getValue() == 0:
+            normPar.setValue(1.0)
+            flux = self.like.flux(name, 10 ** self.energies[0], 10 ** self.energies[-1])
+            flux100 = self.like.flux(name, 100., 10 ** 5.5)
+            flux1000 = self.like.flux(name, 1000., 10 ** 5.5)
+            flux10000 = self.like.flux(name, 10000., 10 ** 5.5)
+            eflux = self.like.energyFlux(name, 10 ** self.energies[0], 10 ** self.energies[-1])
+            eflux100 = self.like.energyFlux(name, 100., 10 ** 5.5)
+            eflux1000 = self.like.energyFlux(name, 1000., 10 ** 5.5)
+            eflux10000 = self.like.energyFlux(name, 10000., 10 ** 5.5)
+
+            flux100_ratio = flux100/flux
+            flux1000_ratio = flux1000/flux
+            flux10000_ratio = flux10000/flux
+            eflux100_ratio = eflux100/flux
+            eflux1000_ratio = eflux1000/flux
+            eflux10000_ratio = eflux10000/flux
+            normPar.setValue(0.0)
+        else:
+            flux100_ratio = src_dict['flux100'][0]/src_dict['flux'][0]
+            flux1000_ratio = src_dict['flux1000'][0]/src_dict['flux'][0]
+            flux10000_ratio = src_dict['flux10000'][0]/src_dict['flux'][0]
+            
+            eflux100_ratio = src_dict['eflux100'][0]/src_dict['eflux'][0]
+            eflux1000_ratio = src_dict['eflux1000'][0]/src_dict['eflux'][0]
+            eflux10000_ratio = src_dict['eflux10000'][0]/src_dict['eflux'][0]
+        
         
         src_dict['flux_ul95'] = flux_ul_data['ul']
-        src_dict['flux100_ul95'] = src_dict['flux100'][0] * (
-            flux_ul_data['ul'] / src_dict['flux'][0])
-        src_dict['flux1000_ul95'] = src_dict['flux1000'][0] * (
-            flux_ul_data['ul'] / src_dict['flux'][0])
-        src_dict['flux10000_ul95'] = src_dict['flux10000'][0] * (
-            flux_ul_data['ul'] / src_dict['flux'][0])
+        src_dict['flux100_ul95'] = flux_ul_data['ul']*flux100_ratio
+        src_dict['flux1000_ul95'] = flux_ul_data['ul']*flux1000_ratio
+        src_dict['flux10000_ul95'] = flux_ul_data['ul']*flux10000_ratio
 
-        src_dict['eflux_ul95'] = eflux_ul_data['ul']
-        src_dict['eflux100_ul95'] = src_dict['eflux100'][0] * (
-            eflux_ul_data['ul'] / src_dict['eflux'][0])
-        src_dict['eflux1000_ul95'] = src_dict['eflux1000'][0] * (
-            eflux_ul_data['ul'] / src_dict['eflux'][0])
-        src_dict['eflux10000_ul95'] = src_dict['eflux10000'][0] * (
-            eflux_ul_data['ul'] / src_dict['eflux'][0])
+        src_dict['eflux_ul95'] = flux_ul_data['ul']
+        src_dict['eflux100_ul95'] = flux_ul_data['ul']*eflux100_ratio
+        src_dict['eflux1000_ul95'] = flux_ul_data['ul']*eflux1000_ratio
+        src_dict['eflux10000_ul95'] = flux_ul_data['ul']*eflux10000_ratio
 
         # Extract covariance matrix
         fd = None
