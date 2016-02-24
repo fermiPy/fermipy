@@ -235,7 +235,7 @@ class SourceFinder(fermipy.config.Configurable):
  
         if tsmap_fitter == 'tsmap':
             peaks = find_peaks(m['sqrt_ts'], threshold, min_separation)
-            (names,src_dicts) = self._build_src_dicts_from_peaks(peaks[:sources_per_iter],
+            (names,src_dicts) = self._build_src_dicts_from_peaks(peaks,
                                                                  m,src_dict_template)
         elif tsmap_fitter == 'tscube':
             sd = m['tscube'].find_sources(threshold**2, min_separation,
@@ -265,6 +265,9 @@ class SourceFinder(fermipy.config.Configurable):
             gta.add_source(name, src_dict, free=True)
             gta.free_source(name,False)
             new_src_names.append(name)
+
+            if len(new_src_names) >= sources_per_iter:
+                break
 
         # Re-fit spectral parameters of each source individually
         for name in new_src_names:
