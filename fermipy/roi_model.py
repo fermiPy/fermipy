@@ -1717,9 +1717,9 @@ class ROIModel(fermipy.config.Configurable):
 
     def get_sources(self, cuts=None, distance=None,
                     minmax_ts=None, minmax_npred=None, square=False,
+                    exclude_diffuse=False,
                     coordsys='CEL'):
         """Retrieve list of sources satisfying the given selections.
-
 
         Returns
         -------
@@ -1733,7 +1733,8 @@ class ROIModel(fermipy.config.Configurable):
                                                   coordsys=coordsys)
         o = []
         for s, r in zip(srcs, rsrc):
-            if not s.check_cuts(cuts): continue
+            if not s.check_cuts(cuts):
+                continue
             ts = s['ts']
             npred = s['Npred']
 
@@ -1745,7 +1746,12 @@ class ROIModel(fermipy.config.Configurable):
             o.append(s)
 
         for s in self.diffuse_sources:
-            if not s.check_cuts(cuts): continue
+
+            if exclude_diffuse:
+                continue            
+            if not s.check_cuts(cuts):
+                continue
+
             ts = s['ts']
             npred = s['Npred']
 

@@ -842,7 +842,7 @@ class GTAnalysis(fermipy.config.Configurable):
         -------
 
         srcs : list 
-            A list of `~fermipy.roi_model.Source` objects.
+            A list of `~fermipy.roi_model.Model` objects.
         """
 
         return self.roi.get_sources(cuts,distance,
@@ -858,7 +858,7 @@ class GTAnalysis(fermipy.config.Configurable):
         -------
 
         srcs : list 
-            A list of `~fermipy.roi_model.Source` objects.
+            A list of `~fermipy.roi_model.Model` objects.
 
         """
 
@@ -873,7 +873,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def free_sources(self, free=True, pars=None, cuts=None,
                      distance=None, minmax_ts=None, minmax_npred=None, 
-                     square=False):
+                     square=False, exclude_diffuse=False):
         """Free or fix sources in the ROI model satisfying the given
         selection.  When multiple selections are defined, the selected
         sources will be those satisfying the logical AND of all
@@ -917,18 +917,21 @@ class GTAnalysis(fermipy.config.Configurable):
             selection on the maximum projected distance from the ROI
             center.
 
+        exclude_diffuse : bool
+            Exclude diffuse sources.
+            
         Returns
         -------
 
         srcs : list 
-            A list of `~fermipy.roi_model.Source` objects.
+            A list of `~fermipy.roi_model.Model` objects.
 
         
         """
 
         srcs = self.roi.get_sources(cuts, distance,
                                     minmax_ts,minmax_npred,
-                                    square=square,
+                                    square=square,exclude_diffuse=exclude_diffuse,
                                     coordsys=self.config['binning']['coordsys'])
 
         for s in srcs:
