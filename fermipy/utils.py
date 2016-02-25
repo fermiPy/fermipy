@@ -315,12 +315,17 @@ def find_function_root(fn, x0, xb, delta):
             xb *= 0.5
         else:
             xb *= 2.0
-
+            
     # Failed to find a root
     if np.sign(fn(xb) + delta) == np.sign(fn(x0) + delta):
         return np.nan
+
+    if x0 == 0:
+        xtol = 1e-10*xb
+    else:
+        xtol = 1e-10*(xb+x0)
             
-    return brentq(lambda t: fn(t)+delta,x0, xb, xtol=1e-10*x0)
+    return brentq(lambda t: fn(t)+delta,x0, xb, xtol=xtol)
 
 
 def get_upper_limit(xval, logLike, ul_confidence=0.95):
