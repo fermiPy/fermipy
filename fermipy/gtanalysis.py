@@ -1484,12 +1484,12 @@ class GTAnalysis(fermipy.config.Configurable):
         peaks = sourcefind.find_peaks(tsmap['sqrt_ts'],3.0)
 
         tsmap_fit = utils.fit_parabola(tsmap['ts'].counts,
-                                       peaks[0]['iy'],peaks[0]['ix'],dpix=2)
+                                       peaks[0]['iy'],peaks[0]['ix'],dpix=1)
                                      
         peak_skydir = SkyCoord.from_pixel(tsmap_fit['x0'],tsmap_fit['y0'],tsmap['ts'].wcs)
         peak_sigma = 0.5*(tsmap_fit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])+
                           tsmap_fit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1]))
-        
+
         # Fit baseline (point-source) model
         self.free_norm(name)
         self.fit(update=False)
@@ -1506,13 +1506,11 @@ class GTAnalysis(fermipy.config.Configurable):
 #        deltax = np.linspace(-dtheta_max, dtheta_max, nstep)[:, np.newaxis]
 #        deltay = np.linspace(-dtheta_max, dtheta_max, nstep)[np.newaxis, :]
 
-        deltax = np.linspace(-2*peak_sigma, 2*peak_sigma, nstep)[:, np.newaxis]
-        deltay = np.linspace(-2*peak_sigma, 2*peak_sigma, nstep)[np.newaxis, :]
+        delta = np.linspace(-4*peak_sigma, 4*peak_sigma, nstep)
+        deltax = np.ones((nstep, nstep)) * delta[:, np.newaxis]
+        deltay = np.ones((nstep, nstep)) * delta[np.newaxis, :]
         
-        deltax = np.ones((nstep, nstep)) * deltax
-        deltay = np.ones((nstep, nstep)) * deltay
-
-        scan_step = deltax[1]-deltax[0]
+        scan_step = delta[1]-delta[0]
         scan_skydir = utils.offset_to_skydir(peak_skydir, deltax.flat, deltay.flat,
                                              coordsys=self.config['binning']['coordsys'])
 
@@ -1563,45 +1561,55 @@ class GTAnalysis(fermipy.config.Configurable):
         
         scan_fit = utils.fit_parabola(lnlscan['dlogLike'], ix, iy, dpix=2)
 
-        offset = (scan_fit['x0']**2+scan_fit['y0']**2)**0.5*scan_step
-#        offset = (popt[1]**2 + popt[2]**2)**0.5
         lnlscan['dlogLike_fit'] = utils.parabola((lnlscan['deltax'], lnlscan['deltay']),
                                                  *scan_fit['popt']).reshape((nstep,nstep))
             
         o['lnlscan'] = lnlscan
-        o['deltax'] = scan_fit['x0']*scan_step
-        o['deltay'] = scan_fit['y0']*scan_step
+        o['deltax'] = scan_fit['x0']*scan_step + delta[0]
+        o['deltay'] = scan_fit['y0']*scan_step + delta[0]
         o['sigmax'] = scan_fit['sigmax']*scan_step
         o['sigmay'] = scan_fit['sigmay']*scan_step
         o['theta'] = scan_fit['theta']
-        o['offset'] = offset
-
-        
-#        o['deltax'] = popt[1]
-#        o['deltay'] = popt[2]
-#        o['sigmax'] = popt[3]
-#        o['sigmay'] = popt[4]
-#        o['theta'] = popt[5]
-#        o['offset'] = offset
+        o['peak_skydir'] = peak_skydir
+        o['tsmap'] = tsmap
         o['tsmap_fit'] = tsmap_fit
+        o['scan_fit'] = scan_fit
         
-        if o['fit_success'] and (np.abs(o['deltax']) > dtheta_max or
-                                 np.abs(o['deltay']) > dtheta_max):
-            o['fit_success'] = False
-            self.logger.error('Position offset larger than scan region:\n '
-                              'offset = %.3f dtheta_max = %.3f' % (offset,dtheta_max))
+#        if o['fit_success'] and (np.abs(o['deltax']) > dtheta_max or
+#                                 np.abs(o['deltay']) > dtheta_max):
+#            o['fit_success'] = False
+#            self.logger.error('Position offset larger than scan region:\n '
+#                              'offset = %.3f dtheta_max = %.3f' % (offset,dtheta_max))
             
         
 
 #        new_skydir = utils.offset_to_skydir(skydir, popt[1], popt[2],
-        new_skydir = utils.offset_to_skydir(skydir, o['deltax'], o['deltay'],
+        new_skydir = utils.offset_to_skydir(peak_skydir, o['deltax'], o['deltay'],
                                             coordsys=self.config['binning']['coordsys'])
 
+        o['offset'] = skydir.separation(new_skydir).deg        
         o['ra'] = new_skydir.icrs.ra.deg[0]
         o['dec'] = new_skydir.icrs.dec.deg[0]
         o['glon'] = new_skydir.galactic.l.deg[0]
         o['glat'] = new_skydir.galactic.b.deg[0]
+        o['skydir'] = new_skydir
 
+        import matplotlib.pyplot as plt
+
+        tsmap_renorm = copy.deepcopy(tsmap['ts'])
+        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+        
+        p = plotting.ROIPlotter(tsmap_renorm,self.roi)
+        plt.figure()
+
+        p.plot(levels=[-2.3,-5.99,-11.83],cmap='BuGn')
+        plt.gca().scatter(o['peak_skydir'].l.deg, o['peak_skydir'].b.deg,
+                          transform=plt.gca().get_transform('galactic'),color='k')
+        plt.gca().scatter(o['skydir'].l.deg, o['skydir'].b.deg,
+                          transform=plt.gca().get_transform('galactic'),color='r')
+
+        plt.savefig('%s_localize.png'%(name.lower().replace(' ','_')))
+        
         saved_state.restore()
 
         if update and o['fit_success']:
