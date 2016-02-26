@@ -382,12 +382,12 @@ class TSMapGenerator(fermipy.config.Configurable):
         Parameters
         ----------
 
-        gta : `~fermipy.gtanalysis.GTAnalysis`
-        Analysis instance.
+        gta : `~fermipy.gtanalysis.GTAnalysis`        
+           Analysis instance.
 
-        src_dict : dict or `~fermipy.roi_model.Source` object
-        Dictionary or Source object defining the properties of the
-        test source that will be used in the scan.
+        src_dict : dict or `~fermipy.roi_model.Source` object        
+           Dictionary or Source object defining the properties of the
+           test source that will be used in the scan.
 
         """
         
@@ -399,6 +399,9 @@ class TSMapGenerator(fermipy.config.Configurable):
                                        self.config['max_kernel_radius'])
 
         erange = kwargs.get('erange', self.config['erange'])
+        map_skydir = kwargs.get('map_skydir',None)
+        map_size = kwargs.get('map_size',1.0)
+        
         if erange is not None:            
             if len(erange) == 0: erange = [None,None]
             elif len(erange) == 1: erange += [None]            
@@ -417,7 +420,8 @@ class TSMapGenerator(fermipy.config.Configurable):
         skywcs = gta._skywcs
         skydir = utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
-        if src_dict is None: src_dict = {}
+        if src_dict is None:
+            src_dict = {}
         src_dict['ra'] = skydir.ra.deg
         src_dict['dec'] = skydir.dec.deg
         src_dict.setdefault('SpatialModel', 'PointSource')
@@ -440,20 +444,21 @@ class TSMapGenerator(fermipy.config.Configurable):
             eslice = slice(imin,imax)
             bm = c.model_counts_map(exclude=exclude).counts.astype('float')[eslice,...]
             cm = c.counts_map().counts.astype('float')[eslice,...]
-
+            
             background += [bm]
             counts += [cm]
             c0_map += [cash(cm, bm)]
             eslices += [eslice]
             enumbins += [cm.shape[0]]
 
-        self.logger.info(src_dict)
+        
         gta.add_source('tsmap_testsource', src_dict, free=True,
                        init_source=False)
         src = gta.roi['tsmap_testsource']
+        #self.logger.info(str(src_dict))
         modelname = utils.create_model_name(src)
-        for c, eslice in zip(gta.components,eslices):
-            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')[eslice,...]
+        for c, eslice in zip(gta.components,eslices):            
+            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')[eslice,...]            
             model_npred += np.sum(mm)
             model += [mm]
             
@@ -464,7 +469,8 @@ class TSMapGenerator(fermipy.config.Configurable):
             dpix = 3
             for j in range(mm.shape[0]):
 
-                ix,iy = np.unravel_index(np.argmax(mm[j,...]),mm[j,...].shape) 
+                ix,iy = np.unravel_index(np.argmax(mm[j,...]),mm[j,...].shape)
+                
                 mx = mm[j,ix, :] > mm[j,ix,iy] * threshold
                 my = mm[j,:, iy] > mm[j,ix,iy] * threshold
                 dpix = max(dpix, np.round(np.sum(mx) / 2.))
@@ -483,10 +489,33 @@ class TSMapGenerator(fermipy.config.Configurable):
         wrap = functools.partial(_ts_value, counts=counts, 
                                  background=background, model=model,
                                  C_0_map=c0_map, method='root brentq')
-#                                 logger=self.logger)
 
+        if map_skydir is not None:
+            map_offset = utils.skydir_to_pix(map_skydir, gta._skywcs)
+            map_offset[0] = int(map_offset[0])
+            map_offset[1] = int(map_offset[1])
+            map_delta = int(0.5*map_size/gta.components[0].binsz)
+            xmin = max(map_offset[1]-map_delta,0)
+            xmax = min(map_offset[1]+map_delta+1,gta.npix)
+            ymin = max(map_offset[0]-map_delta,0)
+            ymax = min(map_offset[0]+map_delta+1,gta.npix)
+
+            xslice = slice(xmin,xmax)
+            yslice = slice(ymin,ymax)
+            xyrange = [range(xmin,xmax), range(ymin,ymax)]
+            
+            map_wcs = skywcs.deepcopy()
+            map_wcs.wcs.crpix[0] -= ymin
+            map_wcs.wcs.crpix[1] -= xmin
+        else:
+            xyrange = [range(gta.npix),range(gta.npix)]
+            map_wcs = skywcs
+
+            xslice = slice(0,gta.npix)
+            yslice = slice(0,gta.npix)
+            
         positions = []
-        for i,j in itertools.product(range(gta.npix),range(gta.npix)):
+        for i,j in itertools.product(xyrange[0],xyrange[1]):
             p = [[k//2,i,j] for k in enumbins]
             positions += [p]
 
@@ -504,10 +533,13 @@ class TSMapGenerator(fermipy.config.Configurable):
             ts_values[ix, iy] = r[0]
             amp_values[ix, iy] = r[1]
 
-        ts_map = Map(ts_values, skywcs)
-        sqrt_ts_map = Map(ts_values**0.5, skywcs)
-        npred_map = Map(amp_values*model_npred, skywcs)
-        amp_map = Map(amp_values*src.get_norm(), skywcs)
+        ts_values = ts_values[xslice,yslice]
+        amp_values = amp_values[xslice,yslice]
+            
+        ts_map = Map(ts_values, map_wcs)
+        sqrt_ts_map = Map(ts_values**0.5, map_wcs)
+        npred_map = Map(amp_values*model_npred, map_wcs)
+        amp_map = Map(amp_values*src.get_norm(), map_wcs)
 
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),
