@@ -21,6 +21,7 @@ import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 import fermipy.sed as sed
+import fermipy.sed as sourcefind
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
@@ -1475,6 +1476,20 @@ class GTAnalysis(fermipy.config.Configurable):
         src = self.roi.get_source_by_name(name, True)
         skydir = src.skydir
 
+
+        tsmap = self.tsmap('%s_localize'%(name.lower().replace(' ','_')),
+                           model=src.data,multithread=True,
+                           map_skydir=skydir,exclude=[name])
+
+        peaks = sourcefind.find_peaks(tsmap['sqrt_ts'],3.0)
+
+        tsmap_fit = utils.fit_parabola(tsmap['ts'].counts,
+                                       peaks[0]['iy'],peaks[0]['ix'],dpix=2)
+                                     
+        peak_skydir = SkyCoord.from_pixel(tsmap_fit['x0'],tsmap_fit['y0'],tsmap['ts'].wcs)
+        peak_sigma = 0.5*(tsmap_fit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])+
+                          tsmap_fit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1]))
+        
         # Fit baseline (point-source) model
         self.free_norm(name)
         self.fit(update=False)
@@ -1488,12 +1503,17 @@ class GTAnalysis(fermipy.config.Configurable):
              'fit_success': True,
              'logLike_base': logLike0 }
 
-        deltax = np.linspace(-dtheta_max, dtheta_max, nstep)[:, np.newaxis]
-        deltay = np.linspace(-dtheta_max, dtheta_max, nstep)[np.newaxis, :]
+#        deltax = np.linspace(-dtheta_max, dtheta_max, nstep)[:, np.newaxis]
+#        deltay = np.linspace(-dtheta_max, dtheta_max, nstep)[np.newaxis, :]
+
+        deltax = np.linspace(-2*peak_sigma, 2*peak_sigma, nstep)[:, np.newaxis]
+        deltay = np.linspace(-2*peak_sigma, 2*peak_sigma, nstep)[np.newaxis, :]
+        
         deltax = np.ones((nstep, nstep)) * deltax
         deltay = np.ones((nstep, nstep)) * deltay
 
-        scan_skydir = utils.offset_to_skydir(skydir, deltax.flat, deltay.flat,
+        scan_step = deltax[1]-deltax[0]
+        scan_skydir = utils.offset_to_skydir(peak_skydir, deltax.flat, deltay.flat,
                                              coordsys=self.config['binning']['coordsys'])
 
         lnlscan = dict(deltax=deltax,
@@ -1513,43 +1533,57 @@ class GTAnalysis(fermipy.config.Configurable):
 
             self.add_source(model_name, s, free=True,
                             init_source=False, save_source_maps=False)
-            self.fit(update=False)
-
+            #self.fit(update=False)
+            self.like.optimize(0)
+            
             logLike1 = -self.like()
             lnlscan['logLike'].flat[i] = logLike1
             self.delete_source(model_name)
 
         lnlscan['dlogLike'] = lnlscan['logLike'] - np.max(lnlscan['logLike'])
-        dlogmax = np.max(lnlscan['dlogLike']) - np.min(lnlscan['dlogLike'])
-        sigma = (0.5 * dtheta_max ** 2 / dlogmax) ** 0.5
+        
+#        dlogmax = np.max(lnlscan['dlogLike']) - np.min(lnlscan['dlogLike'])
+#        sigma = (0.5 * dtheta_max ** 2 / dlogmax) ** 0.5
+#        ix, iy = np.unravel_index(np.argmax(lnlscan['dlogLike']),(nstep,nstep))
+#        p0 = (0.0, deltax[ix,iy], deltay[ix,iy], sigma, sigma, 0.0)
+#        dpix = 2
+#        sx = slice(max(ix - dpix, 0), ix+dpix+1)
+#        sy = slice(max(iy - dpix, 0), iy+dpix+1)       
+#        try:
+#            popt, pcov = scipy.optimize.curve_fit(utils.parabola, (
+#                lnlscan['deltax'][sx,sy],
+#                lnlscan['deltay'][sx,sy]),
+#                lnlscan['dlogLike'][sx,sy].flat, p0)
+#        except Exception:
+#            popt = p0
+#            o['fit_success'] = False
+#            self.logger.error('Localization failed.', exc_info=True)
 
         ix, iy = np.unravel_index(np.argmax(lnlscan['dlogLike']),(nstep,nstep))
-        p0 = (0.0, deltax[ix,iy], deltay[ix,iy], sigma, sigma, 0.0)
-        dpix = 2
-        sx = slice(max(ix - dpix, 0), ix+dpix+1)
-        sy = slice(max(iy - dpix, 0), iy+dpix+1)
         
-        try:
-            popt, pcov = scipy.optimize.curve_fit(utils.parabola, (
-                lnlscan['deltax'][sx,sy],
-                lnlscan['deltay'][sx,sy]),
-                lnlscan['dlogLike'][sx,sy].flat, p0)
-        except Exception:
-            popt = p0
-            o['fit_success'] = False
-            self.logger.error('Localization failed.', exc_info=True)
+        scan_fit = utils.fit_parabola(lnlscan['dlogLike'], ix, iy, dpix=2)
 
-        offset = (popt[1]**2 + popt[2]**2)**0.5
+        offset = (scan_fit['x0']**2+scan_fit['y0']**2)**0.5*scan_step
+#        offset = (popt[1]**2 + popt[2]**2)**0.5
         lnlscan['dlogLike_fit'] = utils.parabola((lnlscan['deltax'], lnlscan['deltay']),
-                                           *popt).reshape((nstep,nstep))
+                                                 *scan_fit['popt']).reshape((nstep,nstep))
             
         o['lnlscan'] = lnlscan
-        o['deltax'] = popt[1]
-        o['deltay'] = popt[2]
-        o['sigmax'] = popt[3]
-        o['sigmay'] = popt[4]
-        o['theta'] = popt[5]
+        o['deltax'] = scan_fit['x0']*scan_step
+        o['deltay'] = scan_fit['y0']*scan_step
+        o['sigmax'] = scan_fit['sigmax']*scan_step
+        o['sigmay'] = scan_fit['sigmay']*scan_step
+        o['theta'] = scan_fit['theta']
         o['offset'] = offset
+
+        
+#        o['deltax'] = popt[1]
+#        o['deltay'] = popt[2]
+#        o['sigmax'] = popt[3]
+#        o['sigmay'] = popt[4]
+#        o['theta'] = popt[5]
+#        o['offset'] = offset
+        o['tsmap_fit'] = tsmap_fit
         
         if o['fit_success'] and (np.abs(o['deltax']) > dtheta_max or
                                  np.abs(o['deltay']) > dtheta_max):
@@ -1559,7 +1593,8 @@ class GTAnalysis(fermipy.config.Configurable):
             
         
 
-        new_skydir = utils.offset_to_skydir(skydir, popt[1], popt[2],
+#        new_skydir = utils.offset_to_skydir(skydir, popt[1], popt[2],
+        new_skydir = utils.offset_to_skydir(skydir, o['deltax'], o['deltay'],
                                             coordsys=self.config['binning']['coordsys'])
 
         o['ra'] = new_skydir.icrs.ra.deg[0]
