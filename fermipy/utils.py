@@ -815,7 +815,7 @@ def skydir_to_pix(skydir, wcs):
     else:
         raise Exception('Unrecognized WCS coordinate system.')
 
-    return xpix, ypix
+    return [xpix, ypix]
 
 
 def pix_to_skydir(xpix, ypix, wcs):

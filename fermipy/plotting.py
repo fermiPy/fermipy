@@ -425,8 +425,10 @@ class ROIPlotter(fermipy.config.Configurable):
         
         for i, s in enumerate(self._roi.point_sources):
             label = s.name
-            t = ax.text(pixcrd[0][i] + 2.0, pixcrd[1][i] + 2.0, label,
-                    **text_kwargs)
+            t = ax.annotate(label,xy=(pixcrd[0][i],pixcrd[1][i]),
+                            xytext=(5.0, 5.0), textcoords='offset points',
+                            **text_kwargs)
+            
             plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
             
             t = ax.plot(pixcrd[0][i], pixcrd[1][i], **plot_kwargs)
