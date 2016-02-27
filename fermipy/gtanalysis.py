@@ -1623,9 +1623,8 @@ class GTAnalysis(fermipy.config.Configurable):
             self.add_source(newname, s, free=True)
             self.fit()
             src = self.roi.get_source_by_name(newname, True)
-        else:
-            src = self.roi.get_source_by_name(name, True)
-        
+            src.update_data({'localize': copy.deepcopy(o)})
+            
         self.logger.info('Finished localization.')
         return o
 
