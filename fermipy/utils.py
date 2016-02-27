@@ -274,7 +274,9 @@ def create_model_name(src):
 
     if src['SpectrumType'] == 'PowerLaw':
         o += '_powerlaw_%04.2f' % float(src.spectral_pars['Index']['value'])
-
+    else:
+        o += '_%s'%(src['SpectrumType'].lower())
+        
     return o
 
 

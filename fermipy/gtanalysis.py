@@ -1419,7 +1419,14 @@ class GTAnalysis(fermipy.config.Configurable):
             'LogLike: %f Delta-LogLike: %f' % (logLike1, logLike1 - logLike0))
 
     def localize(self, name, **kwargs):
-        """Perform a fit for the best-fit position of this source.
+        """Find the best-fit position of a source.  Localization is
+        performed in two steps.  First a TS map is computed centered
+        on the source with half-width set by ``dtheta_max``.  A fit is
+        then performed to the maximum TS peak in this map.  The best
+        fit position is then refined by scanning the likelihood in the
+        vicinity of the peak found in the first step.  The size of the
+        scan region is set to encompass the 99% positional uncertainty
+        contour as determined from the peak fit.
 
         Parameters
         ----------
@@ -1430,10 +1437,13 @@ class GTAnalysis(fermipy.config.Configurable):
         dtheta_max : float
             Maximum offset in RA/DEC in deg from the nominal source
             position that will be used to define the boundaries of the
-            scan region.
+            TS map search region.
 
-        nstep : int
-            Number of steps that in RA and DEC.  The total number of
+        nstep : int        
+            Number of steps in longitude/latitude that will be taken
+            when refining the source position.  The bounds of the scan
+            range are set to the 99% positional uncertainty as
+            deterined from the TS map peak fit.  The total number of
             sampling points will be nstep**2.
 
         update : bool
@@ -1475,21 +1485,26 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src = self.roi.get_source_by_name(name, True)
         skydir = src.skydir
-
+        skywcs = self._skywcs
+        src_pix = skydir.to_pixel(skywcs)
 
         tsmap = self.tsmap('%s_localize'%(name.lower().replace(' ','_')),
                            model=src.data,multithread=True,
-                           map_skydir=skydir,exclude=[name])
+                           map_skydir=skydir,
+                           map_size=2.0*dtheta_max,
+                           exclude=[name])
 
-        peaks = sourcefind.find_peaks(tsmap['sqrt_ts'],3.0)
-
-        tsmap_fit = utils.fit_parabola(tsmap['ts'].counts,
-                                       peaks[0]['iy'],peaks[0]['ix'],dpix=1)
+        ix, iy = np.unravel_index(np.argmax(0.5*tsmap['ts'].counts),tsmap['ts'].counts.shape)        
+        tsmap_fit = utils.fit_parabola(tsmap['ts'].counts, ix, iy, dpix=2)
                                      
-        peak_skydir = SkyCoord.from_pixel(tsmap_fit['x0'],tsmap_fit['y0'],tsmap['ts'].wcs)
-        peak_sigma = 0.5*(tsmap_fit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])+
-                          tsmap_fit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1]))
-
+        peak_skydir = SkyCoord.from_pixel(tsmap_fit['y0'],tsmap_fit['x0'],tsmap['ts'].wcs)
+        peak_sigma = 0.5*(tsmap_fit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])+
+                          tsmap_fit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1]))
+        peak_pix = peak_skydir.to_pixel(skywcs)
+        peak_r68 = 2.30**0.5*peak_sigma
+        peak_r95 = 5.99**0.5*peak_sigma
+        peak_r99 = 9.21**0.5*peak_sigma        
+        
         # Fit baseline (point-source) model
         self.free_norm(name)
         self.fit(update=False)
@@ -1503,19 +1518,20 @@ class GTAnalysis(fermipy.config.Configurable):
              'fit_success': True,
              'logLike_base': logLike0 }
 
-#        deltax = np.linspace(-dtheta_max, dtheta_max, nstep)[:, np.newaxis]
-#        deltay = np.linspace(-dtheta_max, dtheta_max, nstep)[np.newaxis, :]
-
-        delta = np.linspace(-4*peak_sigma, 4*peak_sigma, nstep)
-        deltax = np.ones((nstep, nstep)) * delta[:, np.newaxis]
-        deltay = np.ones((nstep, nstep)) * delta[np.newaxis, :]
+        cdelt0 = np.abs(skywcs.wcs.cdelt[0])
+        cdelt1 = np.abs(skywcs.wcs.cdelt[1])
+        delta_pix = np.linspace(-peak_r99,peak_r99,nstep)/cdelt0
+        scan_step = 2.0*peak_r99/(nstep-1.0)
         
-        scan_step = delta[1]-delta[0]
-        scan_skydir = utils.offset_to_skydir(peak_skydir, deltax.flat, deltay.flat,
-                                             coordsys=self.config['binning']['coordsys'])
-
-        lnlscan = dict(deltax=deltax,
-                       deltay=deltay,
+        scan_xpix = delta_pix+peak_pix[0]
+        scan_ypix = delta_pix+peak_pix[1]
+              
+        scan_skydir = SkyCoord.from_pixel(np.ravel(np.ones((nstep, nstep)) * scan_xpix[:,np.newaxis]),
+                                          np.ravel(np.ones((nstep, nstep)) * scan_ypix[np.newaxis,:]),
+                                          skywcs)
+                
+        lnlscan = dict(xpix=scan_xpix,
+                       ypix=scan_ypix,
                        logLike=np.zeros((nstep, nstep)),
                        dlogLike=np.zeros((nstep, nstep)),
                        dlogLike_fit=np.zeros((nstep, nstep)))
@@ -1539,79 +1555,60 @@ class GTAnalysis(fermipy.config.Configurable):
             self.delete_source(model_name)
 
         lnlscan['dlogLike'] = lnlscan['logLike'] - np.max(lnlscan['logLike'])
-        
-#        dlogmax = np.max(lnlscan['dlogLike']) - np.min(lnlscan['dlogLike'])
-#        sigma = (0.5 * dtheta_max ** 2 / dlogmax) ** 0.5
-#        ix, iy = np.unravel_index(np.argmax(lnlscan['dlogLike']),(nstep,nstep))
-#        p0 = (0.0, deltax[ix,iy], deltay[ix,iy], sigma, sigma, 0.0)
-#        dpix = 2
-#        sx = slice(max(ix - dpix, 0), ix+dpix+1)
-#        sy = slice(max(iy - dpix, 0), iy+dpix+1)       
-#        try:
-#            popt, pcov = scipy.optimize.curve_fit(utils.parabola, (
-#                lnlscan['deltax'][sx,sy],
-#                lnlscan['deltay'][sx,sy]),
-#                lnlscan['dlogLike'][sx,sy].flat, p0)
-#        except Exception:
-#            popt = p0
-#            o['fit_success'] = False
-#            self.logger.error('Localization failed.', exc_info=True)
 
+        saved_state.restore()
+        
         ix, iy = np.unravel_index(np.argmax(lnlscan['dlogLike']),(nstep,nstep))
         
-        scan_fit = utils.fit_parabola(lnlscan['dlogLike'], ix, iy, dpix=2)
+        scan_fit = utils.fit_parabola(lnlscan['dlogLike'], ix, iy, dpix=3)
 
-        lnlscan['dlogLike_fit'] = utils.parabola((lnlscan['deltax'], lnlscan['deltay']),
-                                                 *scan_fit['popt']).reshape((nstep,nstep))
+        lnlscan['dlogLike_fit'] = \
+            utils.parabola((np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
+                            np.linspace(0,nstep-1.0,nstep)[np.newaxis,:]),
+                           *scan_fit['popt']).reshape((nstep,nstep))
             
         o['lnlscan'] = lnlscan
-        o['deltax'] = scan_fit['x0']*scan_step + delta[0]
-        o['deltay'] = scan_fit['y0']*scan_step + delta[0]
+        o['xpix'] = scan_fit['x0']*scan_step/cdelt0 + scan_xpix[0]
+        o['ypix'] = scan_fit['y0']*scan_step/cdelt1 + scan_ypix[0]
+        o['deltax'] = (o['xpix']-src_pix[0])*cdelt0
+        o['deltay'] = (o['ypix']-src_pix[1])*cdelt1
         o['sigmax'] = scan_fit['sigmax']*scan_step
         o['sigmay'] = scan_fit['sigmay']*scan_step
+        o['sigma'] = (o['sigmax']*o['sigmay'])**0.5
+        o['r68'] = 2.30**0.5*o['sigma']
+        o['r95'] = 5.99**0.5*o['sigma']
+        o['r99'] = 9.21**0.5*o['sigma']
         o['theta'] = scan_fit['theta']
+
+        # Best fit position and uncertainty from fit to TS map
         o['peak_skydir'] = peak_skydir
-        o['tsmap'] = tsmap
+        o['peak_sigma'] = peak_sigma
+        o['peak_r68'] = peak_r68
+        o['peak_r95'] = peak_r95
+        o['peak_r99'] = peak_r99
+        o['peak_ra'] = peak_skydir.icrs.ra.deg
+        o['peak_dec'] = peak_skydir.icrs.dec.deg
+        o['peak_glon'] = peak_skydir.galactic.l.deg
+        o['peak_glat'] = peak_skydir.galactic.b.deg
+                
+#        o['tsmap'] = tsmap
         o['tsmap_fit'] = tsmap_fit
         o['scan_fit'] = scan_fit
+
+        new_skydir = SkyCoord.from_pixel(o['xpix'],o['ypix'],skywcs)
+
+        o['offset'] = skydir.separation(new_skydir).deg
+        o['ra'] = new_skydir.icrs.ra.deg
+        o['dec'] = new_skydir.icrs.dec.deg
+        o['glon'] = new_skydir.galactic.l.deg
+        o['glat'] = new_skydir.galactic.b.deg
         
-#        if o['fit_success'] and (np.abs(o['deltax']) > dtheta_max or
-#                                 np.abs(o['deltay']) > dtheta_max):
-#            o['fit_success'] = False
-#            self.logger.error('Position offset larger than scan region:\n '
-#                              'offset = %.3f dtheta_max = %.3f' % (offset,dtheta_max))
+        if o['fit_success'] and o['offset'] > dtheta_max:
+            o['fit_success'] = False
+            self.logger.error('Position offset larger than search region:\n '
+                              'offset = %.3f deltax = %.3f deltay = %.3f '%(offset,o['deltax'],o['deltay']) +
+                              'dtheta_max = %.3f'%(dtheta_max))
             
-        
-
-#        new_skydir = utils.offset_to_skydir(skydir, popt[1], popt[2],
-        new_skydir = utils.offset_to_skydir(peak_skydir, o['deltax'], o['deltay'],
-                                            coordsys=self.config['binning']['coordsys'])
-
-        o['offset'] = skydir.separation(new_skydir).deg        
-        o['ra'] = new_skydir.icrs.ra.deg[0]
-        o['dec'] = new_skydir.icrs.dec.deg[0]
-        o['glon'] = new_skydir.galactic.l.deg[0]
-        o['glat'] = new_skydir.galactic.b.deg[0]
-        o['skydir'] = new_skydir
-
-        import matplotlib.pyplot as plt
-
-        tsmap_renorm = copy.deepcopy(tsmap['ts'])
-        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
-        
-        p = plotting.ROIPlotter(tsmap_renorm,self.roi)
-        plt.figure()
-
-        p.plot(levels=[-2.3,-5.99,-11.83],cmap='BuGn')
-        plt.gca().scatter(o['peak_skydir'].l.deg, o['peak_skydir'].b.deg,
-                          transform=plt.gca().get_transform('galactic'),color='k')
-        plt.gca().scatter(o['skydir'].l.deg, o['skydir'].b.deg,
-                          transform=plt.gca().get_transform('galactic'),color='r')
-
-        plt.savefig('%s_localize.png'%(name.lower().replace(' ','_')))
-        
-        saved_state.restore()
-
         if update and o['fit_success']:
 
 #            if newname == name:
@@ -1636,6 +1633,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
         src.update_data({'localize': copy.deepcopy(o)})
 
+        self._plotter.make_localization_plot(self, name, tsmap, **kwargs)
+        
         self.logger.info('Finished localization.')
         return o
 

@@ -492,13 +492,13 @@ class TSMapGenerator(fermipy.config.Configurable):
 
         if map_skydir is not None:
             map_offset = utils.skydir_to_pix(map_skydir, gta._skywcs)
-            map_offset[0] = int(map_offset[0])
-            map_offset[1] = int(map_offset[1])
-            map_delta = int(0.5*map_size/gta.components[0].binsz)
-            xmin = max(map_offset[1]-map_delta,0)
-            xmax = min(map_offset[1]+map_delta+1,gta.npix)
-            ymin = max(map_offset[0]-map_delta,0)
-            ymax = min(map_offset[0]+map_delta+1,gta.npix)
+            map_offset[0] = map_offset[0]
+            map_offset[1] = map_offset[1]
+            map_delta = 0.5*map_size/gta.components[0].binsz
+            xmin = max(int(np.ceil(map_offset[1]-map_delta)),0)
+            xmax = min(int(np.floor(map_offset[1]+map_delta))+1,gta.npix)
+            ymin = max(int(np.ceil(map_offset[0]-map_delta)),0)
+            ymax = min(int(np.floor(map_offset[0]+map_delta))+1,gta.npix)
 
             xslice = slice(xmin,xmax)
             yslice = slice(ymin,ymax)

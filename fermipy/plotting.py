@@ -987,6 +987,42 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.savefig(outfile)
         plt.close(fig)
 
+    def make_localization_plot(self,gta,name,tsmap,**kwargs):
+        
+        tsmap_renorm = copy.deepcopy(tsmap['ts'])
+        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+                
+        prefix = kwargs.get('prefix','')
+        src = gta.roi[name]
+        o = src['localize']
+        
+        name = src.name.lower().replace(' ', '_')
+        format = kwargs.get('format', gta.config['plotting']['format'])
+
+        p = ROIPlotter(tsmap_renorm,gta.roi)
+        fig = plt.figure()
+
+        p.plot(levels=[-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0)
+
+        if gta.config['binning']['coordsys'] == 'GAL':        
+            plt.gca().scatter(o['peak_glon'], o['peak_glat'],
+                              transform=plt.gca().get_transform('galactic'),color='k')
+            plt.gca().scatter(o['glon'], o['glat'],
+                              transform=plt.gca().get_transform('galactic'),color='r')
+        else:
+            plt.gca().scatter(o['peak_ra'], o['peak_dec'],
+                              transform=plt.gca().get_transform('fk5'),color='k')
+            plt.gca().scatter(o['ra'], o['dec'],
+                              transform=plt.gca().get_transform('fk5'),color='r')
+
+        
+        outfile = utils.format_filename(gta.config['fileio']['workdir'],
+                                        'localize', prefix=[prefix, name],
+                                        extension=format)
+
+        plt.savefig(outfile)
+        plt.close(fig)
+        
     def _plot_extension(self, gta, prefix, src, erange=None, **kwargs):
         """Utility function for generating diagnostic plots for the
         extension analysis."""

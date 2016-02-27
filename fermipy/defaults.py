@@ -219,8 +219,8 @@ extension = {
 
 # Options for localization analysis
 localize = {
-    'nstep': (10, '', int),
-    'dtheta_max': (0.05, '', float),
+    'nstep': (5, '', int),
+    'dtheta_max': (0.3, '', float),
     'update': (False, '', bool)
 }
 
