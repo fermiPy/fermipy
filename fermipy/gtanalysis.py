@@ -1589,8 +1589,6 @@ class GTAnalysis(fermipy.config.Configurable):
         o['peak_dec'] = peak_skydir.icrs.dec.deg
         o['peak_glon'] = peak_skydir.galactic.l.deg
         o['peak_glat'] = peak_skydir.galactic.b.deg
-                
-#        o['tsmap'] = tsmap
         o['tsmap_fit'] = tsmap_fit
         o['scan_fit'] = scan_fit
 
@@ -1607,13 +1605,11 @@ class GTAnalysis(fermipy.config.Configurable):
             self.logger.error('Position offset larger than search region:\n '
                               'offset = %.3f deltax = %.3f deltay = %.3f '%(offset,o['deltax'],o['deltay']) +
                               'dtheta_max = %.3f'%(dtheta_max))
-            
-        if update and o['fit_success']:
 
-#            if newname == name:
-#                raise Exception('Error setting name for new source model.  '
-#                                'Name string must be different than current '
-#                                'source name.')
+        self.roi[name].update_data({'localize': copy.deepcopy(o)})
+        self._plotter.make_localization_plot(self, name, tsmap, **kwargs)
+        
+        if update and o['fit_success']:
 
             self.logger.info(
                 'Updating position to: '
@@ -1629,10 +1625,6 @@ class GTAnalysis(fermipy.config.Configurable):
             src = self.roi.get_source_by_name(newname, True)
         else:
             src = self.roi.get_source_by_name(name, True)
-
-        src.update_data({'localize': copy.deepcopy(o)})
-
-        self._plotter.make_localization_plot(self, name, tsmap, **kwargs)
         
         self.logger.info('Finished localization.')
         return o
