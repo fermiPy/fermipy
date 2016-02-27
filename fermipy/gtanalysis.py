@@ -1581,7 +1581,6 @@ class GTAnalysis(fermipy.config.Configurable):
         o['theta'] = scan_fit['theta']
 
         # Best fit position and uncertainty from fit to TS map
-        o['peak_skydir'] = peak_skydir
         o['peak_sigma'] = peak_sigma
         o['peak_r68'] = peak_r68
         o['peak_r95'] = peak_r95
