@@ -1177,18 +1177,27 @@ def rebin_map(k, nebin, npix, rebin):
 
 def make_srcmap(skydir, psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
                 cdelt=0.01, rebin=1):
-    """Compute the source map for a given spatial model."""
+    """Compute the source map for a given spatial model.
+
+    Parameters
+    ----------
+
+    xpix : float
+
+    ypix : float
+
+    """
 
     energies = psf.energies
     nebin = len(energies)
 
-    if spatial_model == 'GaussianSource':
+    if spatial_model == 'GaussianSource' or spatial_model == 'SpatialGaussian':
         k = make_cgauss_kernel(psf, sigma, npix * rebin, cdelt / rebin,
                                xpix * rebin, ypix * rebin)
-    elif spatial_model == 'DiskSource':
+    elif spatial_model == 'DiskSource' or spatial_model == 'SpatialDisk':
         k = make_cdisk_kernel(psf, sigma, npix * rebin, cdelt / rebin,
                               xpix * rebin, ypix * rebin)
-    elif spatial_model == 'PSFSource':
+    elif spatial_model == 'PSFSource' or spatial_model == 'PointSource':
         k = make_psf_kernel(psf, npix * rebin, cdelt / rebin,
                             xpix * rebin, ypix * rebin)
     else:
