@@ -62,7 +62,7 @@ The *fileio* section collects options related to file bookkeeping.
 The ``outdir`` option sets the root directory of the analysis instance
 where all output files will be written.  If ``outdir`` is null then the
 output directory will be automatically set to the directory in which
-the configuration file is located.  Enabling the *usescratch* option
+the configuration file is located.  Enabling the ``usescratch`` option
 will stage all output data files to a temporary scratch directory
 created under ``scratchdir``.
 
@@ -110,7 +110,7 @@ model
 The *model* section collects options that control the inclusion of
 point-source and diffuse components in the model.  ``galdiff`` and
 ``isodiff`` set the templates for the Galactic IEM and isotropic diffuse
-respectively.  *catalogs* defines a list of catalogs that will be
+respectively.  ``catalogs`` defines a list of catalogs that will be
 merged to form a master analysis catalog from which sources will be
 drawn.  Valid entries in this list can be FITS files or XML model
 files.  *sources* can be used to insert additional point-source or
