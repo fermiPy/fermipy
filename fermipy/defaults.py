@@ -226,6 +226,6 @@ plotting = {
     'catalogs': (None, '', list),
     'draw_radii': (None, '', list),
     'format': ('png', '', str),
-    'cmap': ('magma', '', str),
+    'cmap': ('ds9_b', '', str),
     
 }

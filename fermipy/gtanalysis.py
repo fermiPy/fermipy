@@ -1287,18 +1287,8 @@ class GTAnalysis(fermipy.config.Configurable):
                                 logging=self.config['logging'])
 
         model = kwargs.get('model',self.config['residmap']['model'])
-        models = kwargs.get('models',self.config['residmap']['models'])
 
-        maps = []
-
-        if model is not None:
-            maps += [rmg.make_residual_map(self,prefix,copy.deepcopy(model),**kwargs)]
-
-        if models is not None and 'model' not in kwargs:            
-            for m in models:
-                maps += [rmg.make_residual_map(self,prefix,copy.deepcopy(m),**kwargs)]
-
-        
+        maps = rmg.make_residual_map(self,prefix,copy.deepcopy(model),**kwargs)
 
         for m in maps if isinstance(maps,list) else [maps]:
             if make_plots:
@@ -1309,7 +1299,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
                 plotter.make_residual_plots(self, m)
 
-        if len(maps) == 1: return maps[0]
+        self.logger.info('Finished residual maps')
+                
         return maps
 
     def optimize(self, **kwargs):
@@ -2144,9 +2135,6 @@ class GTAnalysis(fermipy.config.Configurable):
         self.logger.info('Generating TS maps')
 
         make_plots = kwargs.get('make_plots', True)
-
-        # Clear the internal tsmap data structure
-        self._roi_model['tsmap'] = {}
 
         maps = self._tsmap_fast(prefix, **kwargs)
 
