@@ -1,0 +1,5 @@
+``min_fit_quality``	3	Set the minimum fit quality.
+``optimizer``	MINUIT	Set the optimization algorithm to use when maximizing the likelihood function.
+``retries``	3	Set the number of times to retry the fit.
+``tol``	0.0001	Set the optimizer tolerance.
+``verbosity``	0	

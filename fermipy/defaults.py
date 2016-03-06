@@ -1,12 +1,9 @@
-# def build_defaults():
-#    path = os.path.join(fermipy.PACKAGE_ROOT,'config','defaults.yaml')
-#    with open(path,'r') as f: config = yaml.load(f)
 
 # Options for defining input data files
 data = {
-    'evfile': (None, 'Input FT1 file.', str),
-    'scfile': (None, 'Input FT2 file.', str),
-    'ltcube': (None, 'Input LT cube file (optional).', str),
+    'evfile': (None, 'Path to FT1 file or list of FT1 files.', str),
+    'scfile': (None, 'Path to FT2 (spacecraft) file.', str),
+    'ltcube': (None, 'Path to livetime cube.  If none a livetime cube will be generated with ``gtmktime``.', str),
 }
 
 # Options for data selection.
@@ -27,8 +24,8 @@ selection = {
     'dec': (None, '', float),
     'glat': (None, '', float),
     'glon': (None, '', float),
-    'radius': (None, '', float),
-    'filter': (None, '', str),
+    'radius': (None, 'Radius of data selection.  If none this will be automatically set from the ROI size.', float),
+    'filter': (None, 'Filter string for ``gtmktime`` selection.', str),
     'roicut': ('no', '', str)
 }
 
@@ -57,8 +54,8 @@ model = {
     'sources': (None, '', list),
     'extdir': ('Extended_archive_v15', '', str),
     'catalogs': (None, '', list),
-    'min_ts': (None, '', float),
-    'min_flux': (None, '', float),
+#    'min_ts': (None, '', float),
+#    'min_flux': (None, '', float),
     'merge_sources' :
         (True, 'Merge properties of sources that appear in multiple '
          'source catalogs.  If merge_sources=false then subsequent sources with '
@@ -75,13 +72,13 @@ model = {
 # Options for configuring likelihood analysis
 gtlike = {
     'irfs': (None, '', str),
-    'edisp': (True, '', bool),
+    'edisp': (True, 'Enable the correction for energy dispersion.', bool),
     'edisp_disable': (None,
                       'Provide a list of sources for which the edisp '
                       'correction should be disabled.',
                       list),
-    'likelihood': ('binned', '', str),
-    'minbinsz': (0.05, '', float),
+#    'likelihood': ('binned', '', str),
+    'minbinsz': (0.05, 'Set the minimum bin size used for resampling diffuse maps.', float),
     'rfactor': (2, '', int),
     'convolve': (True, '', bool),
     'resample': (True, '', bool),
@@ -91,24 +88,22 @@ gtlike = {
 
 # Options for binning.
 binning = {
-    'projtype': ('WCS', '', str),
-    'proj': ('AIT', '', str),
-    'coordsys': ('CEL', '', str),
+    'projtype': ('WCS', 'Projection mode (WCS or HPX).', str),
+    'proj': ('AIT', 'Spatial projection for WCS mode.', str),
+    'coordsys': ('CEL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
     'npix':
         (None,
-         'Number of spatial bins.  If none this will be inferred from roiwidth '
-         'and binsz.', int),
+         'Number of pixels.  If none then this will be set from ``roiwidth`` '
+         'and ``binsz``.', int),
     'roiwidth': (10.0,
-                 'Set the width of the ROI in degrees.  If both roiwidth and '
-                 'binsz are given the roiwidth will be rounded up to be a '
-                 'multiple of binsz.',
+                 'Width of the ROI in degrees.  The number of pixels in each spatial dimension will be set from ``roiwidth`` / ``binsz`` (rounded up).',
                  float),
-    'binsz': (0.1, 'Set the bin size in degrees.', float),
-    'binsperdec': (8, 'Set the number of energy bins per decade.', float),
+    'binsz': (0.1, 'Spatial bin size in degrees.', float),
+    'binsperdec': (8, 'Number of energy bins per decade.', float),
     'enumbins': (
         None,
         'Number of energy bins.  If none this will be inferred from energy '
-        'range and binsperdec parameter.', int),
+        'range and ``binsperdec`` parameter.', int),
     'hpx_ordering_scheme': ('RING', 'HEALPix Ordering Scheme', str),
     'hpx_order': (10, 'Order of the map (int between 0 and 12, included)', int),
     'hpx_ebin': (True, 'Include energy binning', bool)
@@ -116,13 +111,13 @@ binning = {
 
 # Options related to I/O and output file bookkeeping
 fileio = {
-    'outdir': (None, 'Set the name of the output directory.', str),
-    'scratchdir': ('/scratch', 'Set the path to the scratch directory.', str),
+    'outdir': (None, 'Path of the output directory.  If none this will default to the directory containing the configuration file.', str),
+    'scratchdir': ('/scratch', 'Path to the scratch directory.', str),
     'workdir': (None, 'Override the working directory.', str),
-    'logfile': (None, '', str),
-    'savefits': (True, 'Save intermediate FITS data products.', bool),
+    'logfile': (None, 'Path to log file.  If None then log will be written to fermipy.log.', str),
+    'savefits': (True, 'Save intermediate FITS files.', bool),
     'usescratch': (
-        False, 'Perform analysis in a temporary working directory.', bool),
+        False, 'Run analysis in a temporary directory under ``scratchdir``.', bool),
 }
 
 logging = {
@@ -155,12 +150,11 @@ roiopt = {
 
 # Residual Maps
 residmap = {
-    'models': (None, '', list),
     'model': (None, '', dict),
     'erange': (None, '', list),
 }
 
-#
+# TS Map
 tsmap = {
     'model': (None, '', dict),
     'multithread': (False, '', bool),
@@ -168,7 +162,7 @@ tsmap = {
     'erange': (None, '', list),
 }
 
-#
+# TS Cube
 tscube = {
     'model': (None, '', dict),
     'do_sed': (True, 'Compute the energy bin-by-bin fits', bool),
@@ -187,10 +181,10 @@ tscube = {
 
 # Options for Source Finder
 sourcefind = {
-    'model': (None, '', dict),
-    'min_separation': (1.0, '', float),
-    'sqrt_ts_threshold': (5.0, '', float),
-    'max_iter': (3, '', int),
+    'model': (None, 'Set the source model dictionary.', dict),
+    'min_separation': (1.0, 'Set the minimum separation in deg for sources added in each iteration.', float),
+    'sqrt_ts_threshold': (5.0, 'Set the threshold on sqrt(TS).', float),
+    'max_iter': (3, 'Set the number of search iterations.', int),
     'sources_per_iter': (3, '', int),
     'tsmap_fitter': ('tsmap', '', str)
 }
@@ -207,13 +201,15 @@ sed = {
 
 # Options for extension analysis
 extension = {
-    'spatial_model': ('GaussianSource', '', str),
-    'width': (None, '', str),
+    'spatial_model': ('GaussianSource', 'Spatial model use for extension test.', str),
+    'width': (None, 'Parameter vector for scan over spatial extent.  If none then the parameter '
+              'vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.', str),
     'width_min': (0.01, '', float),
     'width_max': (1.0, '', float),
     'width_nstep': (21, '', int),
     'save_templates': (False, '', bool),
-    'fix_background': (False, '', bool),
+    'fix_background': (False, 'Fix any background parameters that are currently free in the model when '
+                       'performing the likelihood scan over extension.', bool),
     'save_model_map': (False, '', bool),
 }
 

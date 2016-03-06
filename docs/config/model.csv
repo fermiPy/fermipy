@@ -1,0 +1,13 @@
+``assoc_xmatch_columns``	['3FGL_Name']	Choose a set of association columns on which to cross-match catalogs.
+``catalogs``	None	
+``diffuse``	None	
+``extdir``	Extended_archive_v15	
+``extract_diffuse``	False	Extract a copy of all mapcube components centered on the ROI.
+``galdiff``	None	Set the galactic IEM mapcube.
+``isodiff``	None	Set the isotropic template.
+``limbdiff``	None	
+``merge_sources``	True	Merge properties of sources that appear in multiple source catalogs.  If merge_sources=false then subsequent sources with the same name will be ignored.
+``sources``	None	
+``src_radius``	None	Set the maximum distance for inclusion of sources in the ROI model.  Selects all sources within a circle of this radius centered on the ROI.  If none then no selection is applied.  This selection will be ORed with sources passing the cut on src_roiwidth.
+``src_radius_roi``	None	Half-width of the ROI selection.  This parameter can be used in lieu of src_roiwidth.
+``src_roiwidth``	None	Select sources within a box of RxR centered on the ROI.  If none then no cut is applied.

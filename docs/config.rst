@@ -49,58 +49,67 @@ configuration file:
 Configuration File
 ##################################
 
-fermiPy uses YAML-format configuration files which define a structured
-hierarchy of parameters organized in sections that mirrors the layout
-of the configuration dictionary.  Each section of the configuration
-file groups a set of related options.  The following describes the
-options that can be set in each section.
+fermiPy uses YAML configuration files which define a hierarchy of
+parameters organized in sections that group sets of related options.
+The configuration file mirrors the layout of the configuration
+dictionary.  The options that can be set in each section are described
+below.
 
 fileio
 ------
 
-The *fileio* section collects options related to file bookkeeping.  The
-*outdir* option sets the root directory of the analysis instance where
-all output files will be written.  If *outdir* is null then the output
-directory will be set to the directory of the configuration file.
-Enabling the *usescratch* option will stage all output data files to
-a temporary scratch directory created under *scratchdir*.
+The *fileio* section collects options related to file bookkeeping.
+The ``outdir`` option sets the root directory of the analysis instance
+where all output files will be written.  If ``outdir`` is null then the
+output directory will be automatically set to the directory in which
+the configuration file is located.  Enabling the *usescratch* option
+will stage all output data files to a temporary scratch directory
+created under ``scratchdir``.
 
-.. code-block:: yaml
-
+.. code-block:: yaml                
+   :caption: Sample *fileio* Configuration
+           
    fileio:
+      outdir : null
+      logfile : null
+      usescratch : False
+      scratchdir  : '/scratch'
 
-     # Set the output directory
-     outdir : null
-
-     # Enable staging analysis output to an intermediate scratch directory
-     usescratch : False
-
-     # Set the root directory under which the scratch directory should
-     # be written
-     scratchdir  : '/scratch'
+.. csv-table:: *fileio* Options
+   :header:    Option, Default, Description
+   :file: config/fileio.csv
+   :delim: tab
+   :widths: 10,10,80
 
 data
 ----
 
 The *data* section defines the input data files for the analysis (FT1,
-FT2, and livetime cube).  *evfile* and *scfile* can either be an
-individual file or group of files.  The optional *ltcube* option can
-be used to choose a pre-generated livetime cube.  If this parameter is
-null a livetime cube will be generated at runtime.
+FT2, and livetime cube).  ``evfile`` and ``scfile`` can either be 
+individual files or group of files.  The optional ``ltcube`` option can
+be used to choose a pre-generated livetime cube.  If ``ltcube`` is
+null a livetime cube will be generated at runtime with ``gtltcube``.  
 
 .. code-block:: yaml
+   :caption: Sample *data* Configuration
 
    data :
      evfile : ft1.lst
      scfile : ft2.fits 
      ltcube : null
 
+.. csv-table:: *data* Options
+   :header:    Option, Default, Description
+   :file: config/data.csv
+   :delim: tab
+   :widths: 10,10,80
+     
 model
 -----
 
 The *model* section collects options that control the inclusion of
-point-source and diffuse components in the model.  *galdiff* and
-*isodiff* set the templates for the Galactic IEM and isotropic diffuse
+point-source and diffuse components in the model.  ``galdiff`` and
+``isodiff`` set the templates for the Galactic IEM and isotropic diffuse
 respectively.  *catalogs* defines a list of catalogs that will be
 merged to form a master analysis catalog from which sources will be
 drawn.  Valid entries in this list can be FITS files or XML model
@@ -111,7 +120,8 @@ center at which sources in the master catalog will be included in the
 ROI model.
 
 .. code-block:: yaml
-
+   :caption: Sample *model* Configuration
+                
    model :
    
      # Diffuse components
@@ -120,7 +130,7 @@ ROI model.
 
      # List of catalogs to be used in the model.
      catalogs : 
-       - 'gll_psc_v14.fit'
+       - '3FGL'
        - 'extra_sources.xml'
 
      sources :
@@ -133,11 +143,20 @@ ROI model.
      # Include catalog sources within a box of width roisrc.
      src_roiwidth : 15.0
 
+.. csv-table:: *model* Options
+   :header:    Option, Default, Description
+   :file: config/model.csv
+   :delim: tab
+   :widths: 10,10,80
+     
 binning
 -------
 
-.. code-block:: yaml
+Options in the *binning* section control the spatial and spectral binning of the data.
 
+.. code-block:: yaml
+   :caption: Sample *binning* Configuration
+                
    binning:
 
      # Binning
@@ -145,8 +164,14 @@ binning
      npix       : null
      binsz      : 0.1 # spatial bin size in deg
      binsperdec : 8   # nb energy bins per decade
+     projtype   : WCS
 
-
+.. csv-table:: *binning* Options
+   :header:    Option, Default, Description
+   :file: config/binning.csv
+   :delim: tab
+   :widths: 10,10,80
+          
 selection
 ---------
 
@@ -178,7 +203,66 @@ explicit sky coordinates with *ra* and *dec* or *glon* and *glat*.
      # Set the ROI center to the coordinates of this source
      target : 'mkn421'
 
+.. csv-table:: *selection* Options
+   :header:    Option, Default, Description
+   :file: config/selection.csv
+   :delim: tab
+   :widths: 10,10,80
+     
+optimizer
+---------
 
+.. csv-table:: *optimizer* Options
+   :header:    Option, Default, Description
+   :file: config/optimizer.csv
+   :delim: tab
+   :widths: 10,10,80
+
+extension
+---------
+
+.. csv-table:: *extension* Options
+   :header:    Option, Default, Description
+   :file: config/extension.csv
+   :delim: tab
+   :widths: 10,10,80
+
+sed
+---------
+
+.. csv-table:: *sed* Options
+   :header:    Option, Default, Description
+   :file: config/sed.csv
+   :delim: tab
+   :widths: 10,10,80
+            
+tsmap
+---------
+
+.. csv-table:: *tsmap* Options
+   :header:    Option, Default, Description
+   :file: config/tsmap.csv
+   :delim: tab
+   :widths: 10,10,80
+            
+tscube
+---------
+
+.. csv-table:: *tscube* Options
+   :header:    Option, Default, Description
+   :file: config/tscube.csv
+   :delim: tab
+   :widths: 10,10,80
+            
+sourcefind
+----------
+
+.. csv-table:: *sourcefind* Options
+   :header:    Option, Default, Description
+   :file: config/sourcefind.csv
+   :delim: tab
+   :widths: 10,10,80
+            
 components
 ----------
 

@@ -1,0 +1,6 @@
+``logfile``	None	Path to log file.  If None then log will be written to fermipy.log.
+``outdir``	None	Path of the output directory.  If none this will default to the directory containing the configuration file.
+``savefits``	True	Save intermediate FITS files.
+``scratchdir``	/scratch	Path to the scratch directory.
+``usescratch``	False	Run analysis in a temporary directory under ``scratchdir``.
+``workdir``	None	Override the working directory.

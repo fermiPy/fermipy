@@ -1,0 +1,4 @@
+``bin_index``	2.0	
+``fix_background``	True	Fix background parameters when fitting the source flux in each energy bin.
+``ul_confidence``	0.95	Confidence level for upper limit calculation.
+``use_local_index``	False	

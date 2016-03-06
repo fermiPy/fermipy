@@ -1,0 +1,8 @@
+``fix_background``	False	Fix any background parameters that are currently free in the model when performing the likelihood scan over extension.
+``save_model_map``	False	
+``save_templates``	False	
+``spatial_model``	GaussianSource	Spatial model use for extension test.
+``width``	None	Parameter vector for scan over spatial extent.  If none then the parameter vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.
+``width_max``	1.0	
+``width_min``	0.01	
+``width_nstep``	21	

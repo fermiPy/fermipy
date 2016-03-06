@@ -15,6 +15,7 @@
 import sys
 import os
 import shlex
+#import sphinx_bootstrap_theme
 from os import path
 
 from mock import Mock as MagicMock
@@ -33,10 +34,10 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'astropy.table',
                 'numpy','healpy','wcsaxes',
                 'scipy','scipy.special','scipy.interpolate','scipy.optimize',
-                'scipy.signal','scipy.ndimage','scipy.integrate',
+                'scipy.signal','scipy.ndimage','scipy.ndimage.filters','scipy.integrate',
                 'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
                 'matplotlib.axes','matplotlib.cbook','matplotlib.colors',
-                'matplotlib.patheffects']
+                'matplotlib.patheffects','matplotlib.patches']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -159,6 +160,8 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'sphinx_rtd_theme'
+#html_theme = 'bootstrap'
+#html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -188,6 +191,12 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_context = {
+    'css_files': [
+        '_static/theme_overrides.css',  # overrides for wide tables in RTD theme
+        ],
+    }
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied

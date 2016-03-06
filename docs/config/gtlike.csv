@@ -1,0 +1,9 @@
+``bexpmap``	None	
+``convolve``	True	
+``edisp``	True	Enable the correction for energy dispersion.
+``edisp_disable``	None	Provide a list of sources for which the edisp correction should be disabled.
+``irfs``	None	
+``minbinsz``	0.05	Set the minimum bin size used for resampling diffuse maps.
+``resample``	True	
+``rfactor``	2	
+``srcmap``	None	

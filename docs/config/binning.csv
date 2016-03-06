@@ -1,0 +1,11 @@
+``binsperdec``	8	Number of energy bins per decade.
+``binsz``	0.1	Spatial bin size in degrees.
+``coordsys``	CEL	Coordinate system of the spatial projection (CEL or GAL).
+``enumbins``	None	Number of energy bins.  If none this will be inferred from energy range and ``binsperdec`` parameter.
+``hpx_ebin``	True	Include energy binning
+``hpx_order``	10	Order of the map (int between 0 and 12, included)
+``hpx_ordering_scheme``	RING	HEALPix Ordering Scheme
+``npix``	None	Number of pixels.  If none then this will be set from ``roiwidth`` and ``binsz``.
+``proj``	AIT	Spatial projection for WCS mode.
+``projtype``	WCS	Projection mode (WCS or HPX).
+``roiwidth``	10.0	Width of the ROI in degrees.  The number of pixels in each spatial dimension will be set from ``roiwidth`` / ``binsz`` (rounded up).
