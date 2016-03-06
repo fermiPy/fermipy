@@ -2,6 +2,8 @@ import copy
 
 import numpy as np
 import scipy.ndimage
+from scipy.ndimage.filters import maximum_filter
+
 from astropy.coordinates import SkyCoord
 
 import fermipy.config
@@ -12,7 +14,7 @@ from fermipy.logger import Logger
 from fermipy.logger import logLevel
 
 
-def find_peaks(input_map, threshold, min_separation=1.0):
+def find_peaks(input_map, threshold, min_separation=0.5):
     """Find peaks in a 2-D map object that have amplitude larger than
     `threshold` and lie a distance at least `min_separation` from another
     peak of larger amplitude.  The implementation of this method uses
@@ -36,24 +38,18 @@ def find_peaks(input_map, threshold, min_separation=1.0):
     """
 
     data = input_map.counts
-
+    
     cdelt = max(input_map.wcs.wcs.cdelt) 
     min_separation = max(min_separation,2*cdelt)
     
     region_size_pix = int(min_separation/cdelt)
     region_size_pix = max(3,region_size_pix)
 
-    
     deltaxy = utils.make_pixel_offset(region_size_pix*2+3)
     deltaxy *= max(input_map.wcs.wcs.cdelt)
     region = deltaxy < min_separation
 
-#    print region.shape
-#    import matplotlib.pyplot as plt
-#    plt.figure(); plt.imshow(region,interpolation='nearest')    
-#    local_max = scipy.ndimage.filters.maximum_filter(data, region_size) == data
-    local_max = scipy.ndimage.filters.maximum_filter(data,
-                                                     footprint=region) == data
+    local_max = maximum_filter(data,footprint=region) == data    
     local_max[data < threshold] = False
 
     labeled, num_objects = scipy.ndimage.label(local_max)

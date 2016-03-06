@@ -221,13 +221,21 @@ class Catalog(object):
     def __init__(self, table, extdir=''):
         self._table = table
         self._extdir = extdir
-        self._src_skydir = SkyCoord(ra=self.table['RAJ2000'] * u.deg,
-                                    dec=self.table['DEJ2000'] * u.deg)
+
+        if self.table['RAJ2000'].unit is None:
+            self._src_skydir = SkyCoord(ra=self.table['RAJ2000']*u.deg,
+                                        dec=self.table['DEJ2000']*u.deg)
+        else:
+            self._src_skydir = SkyCoord(ra=self.table['RAJ2000'],
+                                        dec=self.table['DEJ2000'])
         self._radec = np.vstack((self._src_skydir.ra.deg,
                                  self._src_skydir.dec.deg)).T
         self._glonlat = np.vstack((self._src_skydir.galactic.l.deg,
                                    self._src_skydir.galactic.b.deg)).T
 
+        if not 'Spatial_Filename' in self.table.columns:
+            self.table['Spatial_Filename'] = ''
+            
         m = self.table['Spatial_Filename'] != ''
         self.table['extended'] = False
         self.table['extended'][m] = True
@@ -260,7 +268,12 @@ class Catalog(object):
             if not os.path.isfile(fitsfile):
                 fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
                                         fitsfile)
-            return Catalog3FGL(fitsfile)
+
+            if 'gll_psc' in fitsfile:                
+                return Catalog3FGL(fitsfile)
+            else:
+                return Catalog(Table.read(fitsfile))
+            
         elif name == '3FGL':
             return Catalog3FGL()
         elif name == '2FHL':
@@ -311,7 +324,8 @@ class Catalog3FGL(Catalog):
                                     'gll_psc_v16.fit')
 
         hdulist = pyfits.open(fitsfile)
-        table = Table(hdulist['LAT_Point_Source_Catalog'].data)
+        #table = Table(hdulist['LAT_Point_Source_Catalog'])
+        table = Table.read(fitsfile)
         table_extsrc = Table(hdulist['ExtendedSources'].data)
 
         strip_columns(table)

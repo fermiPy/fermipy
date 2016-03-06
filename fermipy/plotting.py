@@ -13,8 +13,10 @@ except KeyError:
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
+from matplotlib.patches import Circle
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
+from astropy.coordinates import SkyCoord
 import wcsaxes
 import numpy as np
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
@@ -23,6 +25,7 @@ import fermipy.config
 import fermipy.utils as utils
 import fermipy.fits_utils as fits_utils
 import fermipy.defaults as defaults
+import fermipy.roi_model as roi_model
 from fermipy.utils import merge_dict, Map
 from fermipy.hpx_utils import HpxMap
 from fermipy.logger import Logger
@@ -180,12 +183,12 @@ class ImagePlotter(object):
         return self._projtype
 
 
-    def plot(self, subplot=111, catalog=None, cmap='jet', **kwargs):
+    def plot(self, subplot=111, cmap='jet', **kwargs):
 
         kwargs_contour = {'levels': None, 'colors': ['k'],
                           'linewidths': None}
 
-        kwargs_imshow = {'interpolation': 'nearest',
+        kwargs_imshow = {'interpolation': 'bicubic',
                          'origin': 'lower', 'norm': None,
                          'vmin': None, 'vmax': None}
 
@@ -250,32 +253,39 @@ class ImagePlotter(object):
 
 class ROIPlotter(fermipy.config.Configurable):
     defaults = {
-        'marker_threshold': (10, '', float),
-        'source_color': ('w', '', str),
-        'erange': (None, '', list)
+        'erange': (None, '', list),
+        'catalogs': (None, '', list),
+        'draw_radii': (None, '', list),
+        'cmap': (None, 'magma', str),
     }
 
-    def __init__(self, cmap, roi, **kwargs):
-        #        super(ROIPlotter,self).__init__(None,**kwargs)
-        fermipy.config.Configurable.__init__(self, None, **kwargs)
+    def __init__(self, data_map, **kwargs):
+        self._roi = kwargs.pop('roi',None)
+        super(ROIPlotter,self).__init__(None,**kwargs)        
+        #fermipy.config.Configurable.__init__(self, None, **kwargs)
 
-        self._roi = roi
-        self._cmap = cmap        
-
-        if isinstance(cmap,Map):
+        self._data_map = data_map
+        self._catalogs = []
+        for c in self.config['catalogs']:
+            if isinstance(c,str):            
+                self._catalogs += [roi_model.Catalog.create(c)]
+            else:
+                self._catalogs += [c]
+                
+        if isinstance(data_map,Map):
             self._projtype = 'WCS'
-            self._data = cmap.counts.T
-            self._proj = cmap.wcs
+            self._data = data_map.counts.T
+            self._proj = data_map.wcs
             self._wcs = self._proj
-        elif isinstance(cmap,HpxMap):
+        elif isinstance(data_map,HpxMap):
             self._projtype = 'HPX'
-            self._proj = cmap.hpx
-            self._wcs,dataT = cmap.make_wcs_from_hpx(sum_ebins=False,
-                                                    proj='CAR',                                                     
-                                                    oversample=2)                                                     
+            self._proj = data_map.hpx
+            self._wcs,dataT = data_map.make_wcs_from_hpx(sum_ebins=False,
+                                                    proj='CAR',
+                                                    oversample=2)
             self._data = dataT.T
         else:
-            raise Exception("Can't make ROIPlotter of unknown projection type %s"%type(cmap))
+            raise Exception("Can't make ROIPlotter of unknown projection type %s"%type(data_map))
     
         self._erange = self.config['erange']
 
@@ -295,7 +305,7 @@ class ROIPlotter(fermipy.config.Configurable):
 
     @property
     def cmap(self):
-        return self._cmap
+        return self._data_map
 
     @property
     def projtype(self):
@@ -328,7 +338,7 @@ class ROIPlotter(fermipy.config.Configurable):
         else:
             raise Exception("Unknown projection type %s"%projtype)        
         
-        return ROIPlotter(themap, roi, **kwargs)
+        return ROIPlotter(themap, roi=roi, **kwargs)
 
     def plot_projection(self, iaxis, **kwargs):
 
@@ -376,17 +386,6 @@ class ROIPlotter(fermipy.config.Configurable):
     @staticmethod
     def setup_projection_axis(iaxis, erange=None):
 
-        #        if erange:
-        #            plt.gca().annotate('E = %.3f - %.3f GeV'%(10**erange[
-        # 0]/1E3,
-        #                                                      10**erange[
-        # 1]/1E3),
-        #                               xy=(0.05,0.93),
-        #                               xycoords='axes fraction', fontsize=12,
-        #                               xytext=(-5, 5), textcoords='offset
-        # points',
-        #                               ha='left', va='center')
-
         plt.gca().legend(frameon=False, prop={'size': 10})
         plt.gca().set_ylabel('Counts')
         if iaxis == 0:
@@ -394,15 +393,27 @@ class ROIPlotter(fermipy.config.Configurable):
         else:
             plt.gca().set_xlabel('LAT Offset [deg]')
 
-    def plot(self, **kwargs):
+    def plot_sources(self,skydir,labels,plot_kwargs,text_kwargs, nolabels=False):
+
+        ax = plt.gca()
+
+        pixcrd = utils.skydir_to_pix(skydir, self._implot._wcs)
+        
+        for i, (x,y,label) in enumerate(zip(pixcrd[0],pixcrd[1],labels)):
+
+            if not nolabels:
+                t = ax.annotate(label,xy=(x,y),
+                                xytext=(5.0, 5.0), textcoords='offset points',
+                                **text_kwargs)            
+                plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
+            
+            t = ax.plot(x, y, **plot_kwargs)
+            plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
+        
+    def plot_roi(self, roi):
 
         src_color = 'w'
-        fontweight = 'normal'
-
-        im_kwargs = dict(cmap=kwargs.get('cmap', 'ds9_b'),
-                         vmin=None, vmax=None, levels=None,
-                         zscale='lin', subplot=111)
-
+        
         plot_kwargs = dict(linestyle='None', marker='+',
                            markerfacecolor='None',mew=0.66,ms=8,
 #                           markersize=8,
@@ -410,39 +421,112 @@ class ROIPlotter(fermipy.config.Configurable):
 
         text_kwargs = dict(color=src_color, size=8, clip_on=True,
                            fontweight='normal')
+        
+        skydir = roi._src_skydir
+        labels = [s.name for s in roi.point_sources]
+        
+        self.plot_sources(skydir,labels,plot_kwargs,text_kwargs)
+
+    def plot_catalog(self, catalog):
+
+        color = 'lime'
+        
+        plot_kwargs = dict(linestyle='None', marker='x',
+                           markerfacecolor='None',
+                           markeredgecolor=color, clip_on=True)
+
+        text_kwargs = dict(color=color, size=8, clip_on=True,
+                           fontweight='normal')
+                
+        skydir = catalog.skydir
+
+        if 'NickName' in catalog.table.columns:
+            labels = catalog.table['NickName']
+        else:
+            labels = catalog.table['Source_Name']
+            
+        separation = skydir.separation(self.cmap.skydir).deg
+        m = separation < max(self.cmap.width)
+
+        self.plot_sources(skydir[m],labels[m],plot_kwargs,text_kwargs,
+                          nolabels=True)
+
+            
+    def plot(self, **kwargs):
+
+        zoom = kwargs.get('zoom',None)
+        draw_radii = kwargs.get('draw_radii',self.config['draw_radii'])
+        
+        im_kwargs = dict(cmap='magma',
+                         interpolation='nearest',
+                         vmin=None, vmax=None, levels=None,
+                         zscale='lin', subplot=111)
 
         cb_kwargs = dict(orientation='vertical', shrink=1.0, pad=0.1,
                          fraction=0.1, cb_label=None)
 
-        im_kwargs = merge_dict(im_kwargs, kwargs, add_new_keys=True)
-        plot_kwargs = merge_dict(plot_kwargs, kwargs)
-        text_kwargs = merge_dict(text_kwargs, kwargs)
+        im_kwargs = merge_dict(im_kwargs, kwargs)
         cb_kwargs = merge_dict(cb_kwargs, kwargs)
 
         im, ax = self._implot.plot(**im_kwargs)
-        
-        pixcrd = utils.skydir_to_pix(self._roi._src_skydir, self._implot._wcs)
-        
-        for i, s in enumerate(self._roi.point_sources):
-            label = s.name
-            t = ax.annotate(label,xy=(pixcrd[0][i],pixcrd[1][i]),
-                            xytext=(5.0, 5.0), textcoords='offset points',
-                            **text_kwargs)
-            
-            plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
-            
-            t = ax.plot(pixcrd[0][i], pixcrd[1][i], **plot_kwargs)
-            plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
 
-        extent = im.get_extent()
-        ax.set_xlim(extent[0], extent[1])
-        ax.set_ylim(extent[2], extent[3])
-
+        self._ax = ax
+        
+        for c in self._catalogs:
+            self.plot_catalog(c)
+        
+        if self._roi is not None:
+            self.plot_roi(self._roi)        
+            
+        self._extent = im.get_extent()
+        ax.set_xlim(self._extent[0], self._extent[1])
+        ax.set_ylim(self._extent[2], self._extent[3])
+        
+        self.zoom(zoom)
+            
         cb_label = cb_kwargs.pop('cb_label', None)
         cb = plt.colorbar(im, **cb_kwargs)
         if cb_label:
             cb.set_label(cb_label)
 
+        for r in draw_radii:            
+            self.draw_circle(self.cmap.skydir,r)
+        
+
+    def draw_circle(self,skydir,radius):
+
+        coordsys = utils.get_coordsys(self.proj)
+        #if coordsys == 'GAL':            
+        #    c = Circle((skydir.galactic.l.deg,skydir.galactic.b.deg),
+        #               radius,facecolor='none',edgecolor='w',linestyle='--',
+        #               transform=self._ax.get_transform('galactic'))
+        #elif coordsys == 'CEL':            
+        #    c = Circle((skydir.fk5.l.deg,skydir.fk5.b.deg),
+        #               radius,facecolor='none',edgecolor='w',linestyle='--',
+        #               transform=self._ax.get_transform('fk5'))
+        
+        c = Circle(self.cmap.pix_center,radius/max(self.cmap.pix_size),
+                   facecolor='none',edgecolor='w',linestyle='--',linewidth=0.5)
+        
+        self._ax.add_patch(c)
+
+    def zoom(self,zoom):
+
+        if zoom is None:
+            return
+
+        extent = self._extent
+        
+        xw = extent[1]-extent[0]
+        x0 = 0.5*(extent[0]+extent[1])
+        yw = extent[1]-extent[0]
+        y0 = 0.5*(extent[0]+extent[1])
+                                
+        xlim = [x0 - 0.5*xw/zoom,x0 + 0.5*xw/zoom]
+        ylim = [y0 - 0.5*yw/zoom,y0 + 0.5*yw/zoom]
+        
+        self._ax.set_xlim(xlim[0],xlim[1])
+        self._ax.set_ylim(ylim[0],ylim[1])
 
 class SEDPlotter(object):
     def __init__(self, src):
@@ -638,9 +722,9 @@ class ExtensionPlotter(object):
 
     def plot(self, iaxis):
 
-        p0 = ROIPlotter.create_from_fits(self._file2, self._roi,
+        p0 = ROIPlotter.create_from_fits(self._file2, roi=self._roi,
                                          erange=self._erange)
-        p1 = ROIPlotter.create_from_fits(self._file1, self._roi,
+        p1 = ROIPlotter.create_from_fits(self._file1, roi=self._roi,
                                          erange=self._erange)
         p0.plot_projection(iaxis, color='k', label='Data', marker='s',
                            linestyle='None')
@@ -655,7 +739,7 @@ class ExtensionPlotter(object):
             cf = float(i) / float(len(fw) - 1.0)
             cf = 0.2 + cf * 0.8
 
-            p = ROIPlotter.create_from_fits(f, self._roi, erange=self._erange)
+            p = ROIPlotter.create_from_fits(f, roi=self._roi, erange=self._erange)
             p._data += p1.data
             p.plot_projection(iaxis, color=matplotlib.cm.Reds(cf),
                               noerror=True, label='%.4f$^\circ$' % w)
@@ -669,6 +753,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
     def __init__(self, config, **kwargs):
         fermipy.config.Configurable.__init__(self, config, **kwargs)
 
+        self._catalogs = []
+        for c in self.config['catalogs']:
+            self._catalogs += [roi_model.Catalog.create(c)]
+        
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
                                  logLevel(self.config['logging']['verbosity']))
@@ -686,11 +774,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                 format=format)
         # self.make_extension_plots(gta,prefix, erange=x,
         # format=format)
-
-#        for k, v in gta._roi_model['residmap'].items():
-#            self.make_residual_plots(gta, v, **kwargs)
-#        for k, v in gta._roi_model['tsmap'].items():
-#            self.make_tsmap_plots(gta, v, **kwargs)
 
         self.make_sed_plots(gta, prefix, format=format)
 
@@ -711,10 +794,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
         # Reload maps from FITS file
 
         sigma_levels = [-5,-3,3,5,7] + list(np.logspace(1,3,17))
-        
+
+        kwargs.setdefault('draw_radii',self.config['draw_radii'])
+        kwargs.setdefault('cmap',self.config['cmap'])
+        kwargs.setdefault('catalogs',self._catalogs)
+                  
         prefix = maps['name']
         fig = plt.figure()
-        p = ROIPlotter(maps['sigma'], gta.roi)
+        p = ROIPlotter(maps['sigma'], roi=gta.roi, **kwargs)
         p.plot(vmin=-5, vmax=5, levels=sigma_levels,
                cb_label='Significance [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
@@ -724,7 +811,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure()
-        p = ROIPlotter(maps['data'], gta.roi)
+        p = ROIPlotter(maps['data'], roi=gta.roi, **kwargs)
         p.plot(cb_label='Counts')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           'residmap_data',
@@ -733,7 +820,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure()
-        p = ROIPlotter(maps['model'], gta.roi)
+        p = ROIPlotter(maps['model'], roi=gta.roi, **kwargs)
         p.plot(cb_label='Counts')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           'residmap_model',
@@ -742,7 +829,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure()
-        p = ROIPlotter(maps['excess'], gta.roi)
+        p = ROIPlotter(maps['excess'], roi=gta.roi, **kwargs)
         p.plot(cb_label='Counts')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           'residmap_excess',
@@ -759,10 +846,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
             return
 
         sigma_levels = [3,5,7] + list(np.logspace(1,3,17))
+
+        kwargs.setdefault('draw_radii',self.config['draw_radii'])
+        kwargs.setdefault('cmap',self.config['cmap'])
+        kwargs.setdefault('catalogs',self.config['catalogs'])
         
         prefix = maps['name']
         fig = plt.figure()
-        p = ROIPlotter(maps['sqrt_ts'], gta.roi)
+        p = ROIPlotter(maps['sqrt_ts'], roi=gta.roi, **kwargs)
         p.plot(vmin=0, vmax=5, levels=sigma_levels,
                cb_label='Sqrt(TS) [$\sigma$]')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
@@ -772,7 +863,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure()
-        p = ROIPlotter(maps['npred'], gta.roi)
+        p = ROIPlotter(maps['npred'], roi=gta.roi, **kwargs)
         p.plot(vmin=0, cb_label='NPred [Counts]')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           '%s_npred'%suffix,
@@ -794,6 +885,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
 
+        roi_kwargs = {}
+        roi_kwargs.setdefault('erange',erange)
+        roi_kwargs.setdefault('draw_radii',self.config['draw_radii'])
+        roi_kwargs.setdefault('cmap',self.config['cmap'])
+        roi_kwargs.setdefault('catalogs',self._catalogs)
+        
         if erange is None:
             erange = (gta.energies[0], gta.energies[-1])
         esuffix = '_%.3f_%.3f' % (erange[0], erange[1])
@@ -802,67 +899,20 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         if len(mcube_maps):
             fig = plt.figure()
-            p = ROIPlotter(mcube_maps[0], gta.roi, erange=erange)
+            p = ROIPlotter(mcube_maps[0], roi=gta.roi, **roi_kwargs)
             p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
             plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                      '%s_model_map%s.%s' % (
                                          prefix, esuffix, format)))
             plt.close(fig)
 
-        figx = plt.figure('xproj')
-        figy = plt.figure('yproj')
 
         colors = ['k', 'b', 'g', 'r']
         data_style = {'marker': 's', 'linestyle': 'None'}
 
-        for i, c in enumerate(gta.components):
-            fig = plt.figure()
-            p = ROIPlotter(mcube_maps[i + 1], gta.roi, erange=erange)
-
-            mcube_data = p.data
-
-            p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
-            plt.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                     '%s_model_map%s_%02i.%s' % (
-                                     prefix, esuffix, i, format)))
-            plt.close(fig)
-
-            plt.figure(figx.number)
-            p = ROIPlotter(c.counts_map(), gta.roi, erange=erange)
-            p.plot_projection(0, color=colors[i % 4], label='Component %i' % i,
-                              **data_style)
-
-            p.plot_projection(0, data=mcube_data,
-                              color=colors[i % 4], noerror=True,
-                              label='__nolegend__')
-
-            plt.figure(figy.number)
-            p.plot_projection(1, color=colors[i % 4], label='Component %i' % i,
-                              **data_style)
-           
-            p.plot_projection(1, data=mcube_data,
-                              color=colors[i % 4], noerror=True,
-                              label='__nolegend__')
-
-        plt.figure(figx.number)
-        ROIPlotter.setup_projection_axis(0)
-        annotate(erange=erange)
-        figx.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                  '%s_counts_map_comp_xproj%s.%s' % (
-                                      prefix, esuffix, format)))
-
-        plt.figure(figy.number)
-        ROIPlotter.setup_projection_axis(1)
-        annotate(erange=erange)
-        figy.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                  '%s_counts_map_comp_yproj%s.%s' % (
-                                      prefix, esuffix, format)))
-        plt.close(figx)
-        plt.close(figy)
-
         fig = plt.figure()
-        p = ROIPlotter.create_from_fits(gta._ccube_file, gta.roi,
-                                        erange=erange)
+        p = ROIPlotter.create_from_fits(gta._ccube_file, roi=gta.roi,
+                                        **roi_kwargs)
         
         if p.projtype == "WCS":
             model_data = mcube_maps[0].counts.T
@@ -914,6 +964,68 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         plt.close(fig)
 
+    def make_components_plots(self):
+
+        figx = plt.figure('xproj')
+        figy = plt.figure('yproj')
+
+        colors = ['k', 'b', 'g', 'r']
+        data_style = {'marker': 's', 'linestyle': 'None'}
+
+        roi_kwargs = {}
+        roi_kwargs.setdefault('erange',erange)
+        roi_kwargs.setdefault('draw_radii',self.config['draw_radii'])
+        roi_kwargs.setdefault('cmap',self.config['cmap'])
+        roi_kwargs.setdefault('catalogs',self.config['catalogs'])
+
+        
+        for i, c in enumerate(gta.components):
+                
+            fig = plt.figure()
+            p = ROIPlotter(mcube_maps[i + 1], roi=gta.roi, **roi_kwargs)
+
+            mcube_data = p.data
+
+            p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
+            plt.savefig(os.path.join(gta.config['fileio']['workdir'],
+                                     '%s_model_map%s_%02i.%s' % (
+                                     prefix, esuffix, i, format)))
+            plt.close(fig)
+
+            plt.figure(figx.number)
+            p = ROIPlotter(c.counts_map(), roi=gta.roi, **roi_kwargs)
+            p.plot_projection(0, color=colors[i % 4], label='Component %i' % i,
+                              **data_style)
+
+            p.plot_projection(0, data=mcube_data,
+                              color=colors[i % 4], noerror=True,
+                              label='__nolegend__')
+
+            plt.figure(figy.number)
+            p.plot_projection(1, color=colors[i % 4], label='Component %i' % i,
+                              **data_style)
+           
+            p.plot_projection(1, data=mcube_data,
+                              color=colors[i % 4], noerror=True,
+                              label='__nolegend__')
+
+        plt.figure(figx.number)
+        ROIPlotter.setup_projection_axis(0)
+        annotate(erange=erange)
+        figx.savefig(os.path.join(gta.config['fileio']['workdir'],
+                                  '%s_counts_map_comp_xproj%s.%s' % (
+                                      prefix, esuffix, format)))
+
+        plt.figure(figy.number)
+        ROIPlotter.setup_projection_axis(1)
+        annotate(erange=erange)
+        figy.savefig(os.path.join(gta.config['fileio']['workdir'],
+                                  '%s_counts_map_comp_yproj%s.%s' % (
+                                      prefix, esuffix, format)))
+        plt.close(figx)
+        plt.close(figy)
+        
+        
     def make_extension_plots(self, prefix, erange=None, **kwargs):
 
         format = kwargs.get('format', self.config['plotting']['format'])
@@ -999,7 +1111,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         name = src.name.lower().replace(' ', '_')
         format = kwargs.get('format', gta.config['plotting']['format'])
 
-        p = ROIPlotter(tsmap_renorm,gta.roi)
+        p = ROIPlotter(tsmap_renorm,roi=gta.roi)
         fig = plt.figure()
 
         p.plot(levels=[-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0)

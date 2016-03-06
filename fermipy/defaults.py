@@ -227,5 +227,9 @@ localize = {
 # Options for plotting
 plotting = {
     'erange': (None, '', list),
-    'format': ('png', '', str)
+    'catalogs': (None, '', list),
+    'draw_radii': (None, '', list),
+    'format': ('png', '', str),
+    'cmap': ('magma', '', str),
+    
 }

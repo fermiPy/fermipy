@@ -38,6 +38,9 @@ def create_default_config(defaults):
 def cast_config(config, defaults):
     for key, item in config.items():
 
+        if not key in defaults:
+            continue
+        
         if isinstance(item, dict):
             cast_config(config[key], defaults[key])
         elif item is None:
@@ -83,14 +86,16 @@ class Configurable(object):
 
     def configure(self, config, **kwargs):
 
+        validate = kwargs.pop('validate',False)        
         config = utils.merge_dict(config, kwargs, add_new_keys=True)
-        validate_config(config, self.defaults)
+        if validate:
+            validate_config(config, self.defaults)
         cast_config(config, self.defaults)
         self._config = utils.merge_dict(self._config, config)
 
     @classmethod
     def get_config(cls):
-        # Load defaults
+        """Return a default configuration dictionary for this class."""
         return create_default_config(cls.defaults)
 
     @property

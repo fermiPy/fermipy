@@ -60,12 +60,53 @@ class Map(Map_Base):
         Map_Base.__init__(self, counts)
         self._wcs = wcs
 
+        self._npix = counts.shape
+
+        if len(self._npix) == 3:
+            xindex = 2
+            yindex = 1
+        elif len(self._npix) == 2:
+            xindex = 1
+            yindex = 0
+        else:
+            raise Exception('Wrong number of dimensions for Map object.')
+
+        self._width = np.array([np.abs(self.wcs.wcs.cdelt[0])*self._npix[xindex],
+                                np.abs(self.wcs.wcs.cdelt[1])*self._npix[yindex]])
+        self._pix_center = np.array([(self._npix[xindex]-1.0)/2.,
+                                     (self._npix[yindex]-1.0)/2.])
+        self._pix_size = np.array([np.abs(self.wcs.wcs.cdelt[0]),
+                                   np.abs(self.wcs.wcs.cdelt[1])])
+
+        
+        self._skydir = SkyCoord.from_pixel(self._pix_center[0],
+                                           self._pix_center[1],
+                                           self.wcs)
+        
     @property
     def wcs(self):
         return self._wcs
 
+    @property
+    def skydir(self):
+        """Return the sky coordinate of the Map center."""
+        return self._skydir
 
+    @property
+    def width(self):
+        """Return the sky coordinate of the Map center."""
+        return self._width
 
+    @property
+    def pix_size(self):
+        """Return the pixel size along the two image dimensions."""
+        return self._pix_size
+
+    @property
+    def pix_center(self):
+        """Return the ROI center in pixel coordinates."""
+        return self._pix_center
+    
     @staticmethod
     def create_from_hdu(hdu, wcs):
         return Map(hdu.data.T, wcs)

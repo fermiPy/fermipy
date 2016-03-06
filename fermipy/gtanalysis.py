@@ -221,7 +221,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def __init__(self, config, **kwargs):
 
-        super(GTAnalysis, self).__init__(config, **kwargs)
+        super(GTAnalysis, self).__init__(config, validate=True,**kwargs)
 
         self._projtype = self.config['binning']['projtype']
 
