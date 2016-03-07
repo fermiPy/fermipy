@@ -371,6 +371,11 @@ class GTAnalysis(fermipy.config.Configurable):
         self.cleanup()
 
     @property
+    def workdir(self):
+        """Return the analysis working directory."""
+        return self.config['fileio']['workdir']
+        
+    @property
     def roi(self):
         """Return the ROI object."""
         return self._roi
