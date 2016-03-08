@@ -175,9 +175,9 @@ def load_roi_data(infile, workdir=None):
     ext = os.path.splitext(infile)[1]
 
     if ext == '.npy':
-        return load_npy(infile)
+        return infile, load_npy(infile)
     elif ext == '.yaml':
-        return load_yaml(infile)
+        return infile, load_yaml(infile)
     else:
         raise Exception('Unrecognized extension.')
 
@@ -431,7 +431,7 @@ class GTAnalysis(fermipy.config.Configurable):
         """
 
         infile = os.path.abspath(infile)
-        roi_data = load_roi_data(infile)
+        roi_file, roi_data = load_roi_data(infile)
 
         if config is None:
             config = roi_data['config']
@@ -1990,6 +1990,7 @@ class GTAnalysis(fermipy.config.Configurable):
                 xvals = np.linspace(0, 1, 1 + npts)
                 xvals = np.concatenate((-1.0 * xvals[1:][::-1], xvals))
                 xvals = val * 10 ** xvals
+                xvals = np.insert(xvals, 0, 0.0)
                 
         return self.profile(name, parName, emin=emin, emax=emax,
                             reoptimize=reoptimize, xvals=xvals,
@@ -2539,14 +2540,13 @@ class GTAnalysis(fermipy.config.Configurable):
         """This function reloads the analysis state from a previously
         saved instance generated with
         `~fermipy.gtanalysis.GTAnalysis.write_roi`."""
-
-        self.logger.info('Loading ROI')
         
         infile = resolve_path(infile, workdir=self.config['fileio']['workdir'])
+        roi_file, roi_data = load_roi_data(infile,
+                                           workdir=self.config['fileio']['workdir'])
 
-        roi_data = load_roi_data(infile,
-                                 workdir=self.config['fileio']['workdir'])
-
+        self.logger.info('Loading ROI file: %s'%roi_file)
+        
         self._roi_model = roi_data['roi']
 
         sources = roi_data.pop('sources')
@@ -3517,23 +3517,24 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         
         Parameters
         ----------
-        name : str or list of str
+        name : str
 
            Parameter controlling the set of sources for which the
-           model counts map will be calculated.  If name=None the
+           model counts map will be calculated.  If name=None a
            model map will be generated for all sources in the ROI.
 
         exclude : str or list of str
 
-           List of sources that will be excluded when calculating the
-           model map.
+           Source or list of sources that will be excluded when
+           calculating the model map.
 
         Returns
         -------
 
-        map : A Map object containing the counts and WCS projection.
-           
-        
+        map : `~fermipy.utils.Map`
+
+           A map object containing the counts and WCS projection.
+                   
         """
         if self.projtype == "WCS":
             v = pyLike.FloatVector(self.npix ** 2 * self.enumbins)
