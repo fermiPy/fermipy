@@ -2623,7 +2623,7 @@ class GTAnalysis(fermipy.config.Configurable):
         self.write_xml(prefix)
 
         for c in self.components:
-            c.like.logLike.saveSourceMaps(self._srcmap_file)
+            c.like.logLike.saveSourceMaps(c._srcmap_file)
         
         mcube_maps = None
         if save_model_map:
