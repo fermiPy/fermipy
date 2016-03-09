@@ -1949,7 +1949,6 @@ class GTAnalysis(fermipy.config.Configurable):
             in the profile likelihood scan.
 
         """
-
         # Find the source
         name = self.roi.get_source_by_name(name, True).name
 
@@ -2013,7 +2012,11 @@ class GTAnalysis(fermipy.config.Configurable):
 
         if savestate:
             saved_state = LikelihoodState(self.like)
-
+            
+        # If parameter is fixed temporarily free it
+        if not par.isFree() and reoptimize and self.like.logLike.getNumFreeParams():
+            par.setFree(True)
+            
         if emin is not None and emax is not None:
             self.setEnergyRange(emin, emax)
 
@@ -2048,6 +2051,10 @@ class GTAnalysis(fermipy.config.Configurable):
              'logLike': np.zeros(len(xvals))
              }
 
+        if hasattr(self.like.components[0].logLike, 'setUpdateFixedWeights'):        
+            for c in self.components:
+                c.like.logLike.setUpdateFixedWeights(False)
+        
         for i, x in enumerate(xvals):
             
             self.like[idx] = x
@@ -2057,10 +2064,11 @@ class GTAnalysis(fermipy.config.Configurable):
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
                 self.like.optimize(0)
+                logLike1 = -self.like()
                 self.like.thaw(idx)
-
-            logLike1 = -self.like()
-
+            else:
+                logLike1 = -self.like()
+            
             flux = self.like[name].flux(10 ** emin, 10 ** emax)
             eflux = self.like[name].energyFlux(10 ** emin, 10 ** emax)
             prefactor = self.like[idx]
@@ -2073,11 +2081,15 @@ class GTAnalysis(fermipy.config.Configurable):
 
             cs = self.model_counts_spectrum(name, emin, emax, summed=True)
             o['Npred'][i] += np.sum(cs)
-
+            
         # Restore model parameters to original values
         if savestate:
             saved_state.restore()
 
+        if hasattr(self.like.components[0].logLike, 'setUpdateFixedWeights'):        
+            for c in self.components:
+                c.like.logLike.setUpdateFixedWeights(True)
+            
         self.like[idx].setBounds(*bounds)
 
         return o
@@ -2368,8 +2380,16 @@ class GTAnalysis(fermipy.config.Configurable):
     def load_xml(self, xmlfile):
         """Load model definition from XML."""
 
+        self.logger.info('Loading XML')
+        
         for c in self.components:
             c.load_xml(xmlfile)
+
+        for name in self.like.sourceNames():
+            print name
+            self.update_source(name)
+
+        self.logger.info('Finished Loading XML')
 
     def write_xml(self, xmlfile):
         """Save current model definition as XML file.
@@ -2602,6 +2622,9 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self.write_xml(prefix)
 
+        for c in self.components:
+            c.like.logLike.saveSourceMaps(self._srcmap_file)
+        
         mcube_maps = None
         if save_model_map:
             mcube_maps = self.generate_model_map(prefix)
@@ -3012,8 +3035,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
         # Only compute TS, errors, and ULs if the source was free in
         # the fit
-        if not self.get_free_source_params(name) or paramsonly:
-            return src_dict
+        #if not self.get_free_source_params(name) or paramsonly:
+        #    return src_dict
 
         try:
             src_dict['flux'][1] = self.like.fluxError(name,
@@ -3318,17 +3341,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
             if src['SpatialModel'] in ['PSFSource','GaussianSource','DiskSource']:
                 self._update_srcmap_file([src], True)
-                self.like.logLike.loadSourceMap(name, False)
+                self.like.logLike.loadSourceMap(name, False, False)
             else:
-                self.like.logLike.loadSourceMap(name, True)
-            
+                self.like.logLike.loadSourceMap(name, True, False)
+
+            utils.delete_source_map(self._srcmap_file,name)
+            self.like.logLike.saveSourceMaps(self._srcmap_file)
+            self.like.logLike.buildFixedModelWts()
         else:
             self.write_xml('tmp')
             src = self.delete_source(name)
             self.add_source(name, src, free=True)
             self.load_xml('tmp')
-            
-        self.like.logLike.saveSourceMaps(self._srcmap_file)
     
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
         """Add a new source to the model.  Source properties
@@ -3502,7 +3526,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             return Map(z, copy.deepcopy(self.wcs))
         elif p_method == 1:  # HPX
             z = self.like.logLike.countsMap().data()
-            print self.hpx
             nhpix = self.hpx.npix
             z = np.array(z).reshape(self.enumbins, nhpix)
             return HpxMap(z, self.hpx)
@@ -3594,7 +3617,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             vsum = np.zeros(v.size())
             for s in src_names:
                 vtmp = pyLike.FloatVector(v.size())
-                self.like.logLike.computeModelMap(s,vtmp)
+                self.like.logLike.computeModelMap(str(s),vtmp)
                 vsum += vtmp
             v = pyLike.FloatVector(vsum)
                 
@@ -3875,8 +3898,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         # Recompute fixed model weights
         self.like.logLike.buildFixedModelWts()
-        self.like.logLike.buildFixedModelWts(True)
-
         self.like.logLike.saveSourceMaps(self._srcmap_file)
 
     def make_scaled_srcmap(self):
@@ -4121,7 +4142,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.logLike.reReadXml(xmlfile)
 
         if not self.like.logLike.fixedModelUpdated():
-            self.like.logLike.buildFixedModelWts(True)
+            self.like.logLike.buildFixedModelWts()
 
     def write_xml(self, xmlfile):
         """Write the XML model for this analysis component."""
