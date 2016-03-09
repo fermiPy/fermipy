@@ -188,7 +188,7 @@ class ImagePlotter(object):
         kwargs_contour = {'levels': None, 'colors': ['k'],
                           'linewidths': None}
 
-        kwargs_imshow = {'interpolation': 'bicubic',
+        kwargs_imshow = {'interpolation': 'nearest',
                          'origin': 'lower', 'norm': None,
                          'vmin': None, 'vmax': None}
 
@@ -255,7 +255,7 @@ class ROIPlotter(fermipy.config.Configurable):
     defaults = {
         'erange': (None, '', list),
         'catalogs': (None, '', list),
-        'draw_radii': (None, '', list),
+        'graticule_radii': (None, '', list),
         'cmap': (None, 'magma', str),
     }
 
@@ -455,7 +455,7 @@ class ROIPlotter(fermipy.config.Configurable):
     def plot(self, **kwargs):
 
         zoom = kwargs.get('zoom',None)
-        draw_radii = kwargs.get('draw_radii',self.config['draw_radii'])
+        graticule_radii = kwargs.get('graticule_radii',self.config['graticule_radii'])
         
         im_kwargs = dict(cmap='magma',
                          interpolation='nearest',
@@ -489,7 +489,7 @@ class ROIPlotter(fermipy.config.Configurable):
         if cb_label:
             cb.set_label(cb_label)
 
-        for r in draw_radii:            
+        for r in graticule_radii:            
             self.draw_circle(self.cmap.skydir,r)
         
 
@@ -795,7 +795,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         sigma_levels = [-5,-3,3,5,7] + list(np.logspace(1,3,17))
 
-        kwargs.setdefault('draw_radii',self.config['draw_radii'])
+        kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
         kwargs.setdefault('cmap',self.config['cmap'])
         kwargs.setdefault('catalogs',self._catalogs)
                   
@@ -803,7 +803,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure()
         p = ROIPlotter(maps['sigma'], roi=gta.roi, **kwargs)
         p.plot(vmin=-5, vmax=5, levels=sigma_levels,
-               cb_label='Significance [$\sigma$]')
+               cb_label='Significance [$\sigma$]',interpolation='bicubic')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           'residmap_sigma',
                                           prefix=[prefix],
@@ -812,7 +812,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['data'], roi=gta.roi, **kwargs)
-        p.plot(cb_label='Counts')
+        p.plot(cb_label='Counts',interpolation='bicubic')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           'residmap_data',
                                           prefix=[prefix],
@@ -821,7 +821,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['model'], roi=gta.roi, **kwargs)
-        p.plot(cb_label='Counts')
+        p.plot(cb_label='Counts',interpolation='bicubic')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           'residmap_model',
                                           prefix=[prefix],
@@ -830,7 +830,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['excess'], roi=gta.roi, **kwargs)
-        p.plot(cb_label='Counts')
+        p.plot(cb_label='Counts',interpolation='bicubic')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           'residmap_excess',
                                           prefix=[prefix],
@@ -847,7 +847,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         sigma_levels = [3,5,7] + list(np.logspace(1,3,17))
 
-        kwargs.setdefault('draw_radii',self.config['draw_radii'])
+        kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
         kwargs.setdefault('cmap',self.config['cmap'])
         kwargs.setdefault('catalogs',self.config['catalogs'])
         
@@ -855,7 +855,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure()
         p = ROIPlotter(maps['sqrt_ts'], roi=gta.roi, **kwargs)
         p.plot(vmin=0, vmax=5, levels=sigma_levels,
-               cb_label='Sqrt(TS) [$\sigma$]')
+               cb_label='Sqrt(TS) [$\sigma$]',interpolation='bicubic')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           '%s_sqrt_ts'%suffix,
                                           prefix=[prefix],
@@ -864,7 +864,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['npred'], roi=gta.roi, **kwargs)
-        p.plot(vmin=0, cb_label='NPred [Counts]')
+        p.plot(vmin=0, cb_label='NPred [Counts]',interpolation='bicubic')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           '%s_npred'%suffix,
                                           prefix=[prefix],
@@ -887,7 +887,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         roi_kwargs = {}
         roi_kwargs.setdefault('erange',erange)
-        roi_kwargs.setdefault('draw_radii',self.config['draw_radii'])
+        roi_kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
         roi_kwargs.setdefault('cmap',self.config['cmap'])
         roi_kwargs.setdefault('catalogs',self._catalogs)
         
@@ -974,7 +974,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         roi_kwargs = {}
         roi_kwargs.setdefault('erange',erange)
-        roi_kwargs.setdefault('draw_radii',self.config['draw_radii'])
+        roi_kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
         roi_kwargs.setdefault('cmap',self.config['cmap'])
         roi_kwargs.setdefault('catalogs',self.config['catalogs'])
 

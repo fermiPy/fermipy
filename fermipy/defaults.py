@@ -224,7 +224,7 @@ localize = {
 plotting = {
     'erange': (None, '', list),
     'catalogs': (None, '', list),
-    'draw_radii': (None, '', list),
+    'graticule_radii': (None, '', list),
     'format': ('png', '', str),
     'cmap': ('ds9_b', '', str),
     
