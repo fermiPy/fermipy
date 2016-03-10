@@ -13,7 +13,7 @@ except KeyError:
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
-from matplotlib.patches import Circle
+from matplotlib.patches import Circle, Ellipse
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 from astropy.coordinates import SkyCoord
@@ -1114,20 +1114,69 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p = ROIPlotter(tsmap_renorm,roi=gta.roi)
         fig = plt.figure()
 
-        p.plot(levels=[-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0)
+        p.plot(levels=[-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
+               interpolation='bicubic')
 
-        if gta.config['binning']['coordsys'] == 'GAL':        
-            plt.gca().scatter(o['peak_glon'], o['peak_glat'],
-                              transform=plt.gca().get_transform('galactic'),color='k')
-            plt.gca().scatter(o['glon'], o['glat'],
-                              transform=plt.gca().get_transform('galactic'),color='r')
-        else:
-            plt.gca().scatter(o['peak_ra'], o['peak_dec'],
-                              transform=plt.gca().get_transform('fk5'),color='k')
-            plt.gca().scatter(o['ra'], o['dec'],
-                              transform=plt.gca().get_transform('fk5'),color='r')
-
+        cdelt0 = np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
+        cdelt1 = np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
         
+        peak_skydir = SkyCoord(o['peak_glon'],o['peak_glat'],frame='galactic',unit='deg')
+        peak_pix = peak_skydir.to_pixel(tsmap_renorm.wcs)
+
+        scan_skydir = SkyCoord(o['glon'],o['glat'],frame='galactic',unit='deg')
+        scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
+
+        if np.isfinite(float(peak_pix[0])):
+            
+            e0 = Ellipse(xy=(float(peak_pix[0]),float(peak_pix[1])),
+                         width=o['peak_sigmay']/cdelt0*o['peak_r68']/o['peak_sigma'],
+                         height=o['peak_sigmax']/cdelt1*o['peak_r68']/o['peak_sigma'],
+                         angle=np.degrees(o['peak_theta']),
+                         facecolor='None',edgecolor='k')
+
+            e1 = Ellipse(xy=(float(peak_pix[0]),float(peak_pix[1])),
+                         width=o['peak_sigmay']/cdelt1*3.0,
+                         height=o['peak_sigmax']/cdelt0*3.0,
+                         angle=np.degrees(o['peak_theta']),
+                         facecolor='None',edgecolor='k')
+
+            plt.gca().add_artist(e0)
+            plt.gca().add_artist(e1)
+            
+            plt.gca().plot(float(peak_pix[0]),float(peak_pix[1]),
+                           marker='x',color='k')
+
+        if np.isfinite(float(scan_pix[0])):
+
+            e0 = Ellipse(xy=(float(scan_pix[0]),float(scan_pix[1])),
+                         width=o['sigmay']/cdelt0*o['r68']/o['sigma'],
+                         height=o['sigmax']/cdelt1*o['r68']/o['sigma'],
+                         angle=np.degrees(o['theta']),
+                         facecolor='None',edgecolor='r')
+
+            e1 = Ellipse(xy=(float(scan_pix[0]),float(scan_pix[1])),
+                         width=o['sigmay']/cdelt1*3.0,
+                         height=o['sigmax']/cdelt0*3.0,
+                         angle=np.degrees(o['theta']),
+                         facecolor='None',edgecolor='r')
+
+            plt.gca().add_artist(e0)
+            plt.gca().add_artist(e1)
+            
+            plt.gca().plot(float(scan_pix[0]),float(scan_pix[1]),
+                           marker='x',color='r')
+        
+#        if gta.config['binning']['coordsys'] == 'GAL':        
+#            plt.gca().scatter(o['peak_glon'], o['peak_glat'],
+#                              transform=plt.gca().get_transform('galactic'),color='k')
+#            plt.gca().scatter(o['glon'], o['glat'],
+#                              transform=plt.gca().get_transform('galactic'),color='r')
+#        else:
+#            plt.gca().scatter(o['peak_ra'], o['peak_dec'],
+#                              transform=plt.gca().get_transform('fk5'),color='k')
+#            plt.gca().scatter(o['ra'], o['dec'],
+#                              transform=plt.gca().get_transform('fk5'),color='r')
+       
         outfile = utils.format_filename(gta.config['fileio']['workdir'],
                                         'localize', prefix=[prefix, name],
                                         extension=format)

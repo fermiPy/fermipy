@@ -1452,7 +1452,7 @@ class GTAnalysis(fermipy.config.Configurable):
             Number of steps in longitude/latitude that will be taken
             when refining the source position.  The bounds of the scan
             range are set to the 99% positional uncertainty as
-            deterined from the TS map peak fit.  The total number of
+            determined from the TS map peak fit.  The total number of
             sampling points will be nstep**2.
 
         update : bool
@@ -1501,14 +1501,15 @@ class GTAnalysis(fermipy.config.Configurable):
                            model=src.data,multithread=True,
                            map_skydir=skydir,
                            map_size=2.0*dtheta_max,
-                           exclude=[name])
+                           exclude=[name],make_plots=False)
 
         ix, iy = np.unravel_index(np.argmax(0.5*tsmap['ts'].counts),tsmap['ts'].counts.shape)        
         tsmap_fit = utils.fit_parabola(tsmap['ts'].counts, ix, iy, dpix=2)
                                      
         peak_skydir = SkyCoord.from_pixel(tsmap_fit['y0'],tsmap_fit['x0'],tsmap['ts'].wcs)
-        peak_sigma = 0.5*(tsmap_fit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])+
-                          tsmap_fit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1]))
+        peak_sigmax = 2.0**0.5*tsmap_fit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
+        peak_sigmay = 2.0**0.5*tsmap_fit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
+        peak_sigma = (peak_sigmax*peak_sigmay)**0.5
         peak_pix = peak_skydir.to_pixel(skywcs)
         peak_r68 = 2.30**0.5*peak_sigma
         peak_r95 = 5.99**0.5*peak_sigma
@@ -1571,25 +1572,20 @@ class GTAnalysis(fermipy.config.Configurable):
         
         scan_fit = utils.fit_parabola(lnlscan['dlogLike'], ix, iy, dpix=3)
 
+        sigmax = 2.**0.5*scan_fit['sigmax']*scan_step
+        sigmay = 2.**0.5*scan_fit['sigmay']*scan_step
+                
         lnlscan['dlogLike_fit'] = \
             utils.parabola((np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
                             np.linspace(0,nstep-1.0,nstep)[np.newaxis,:]),
                            *scan_fit['popt']).reshape((nstep,nstep))
             
         o['lnlscan'] = lnlscan
-        o['xpix'] = scan_fit['x0']*scan_step/cdelt0 + scan_xpix[0]
-        o['ypix'] = scan_fit['y0']*scan_step/cdelt1 + scan_ypix[0]
-        o['deltax'] = (o['xpix']-src_pix[0])*cdelt0
-        o['deltay'] = (o['ypix']-src_pix[1])*cdelt1
-        o['sigmax'] = scan_fit['sigmax']*scan_step
-        o['sigmay'] = scan_fit['sigmay']*scan_step
-        o['sigma'] = (o['sigmax']*o['sigmay'])**0.5
-        o['r68'] = 2.30**0.5*o['sigma']
-        o['r95'] = 5.99**0.5*o['sigma']
-        o['r99'] = 9.21**0.5*o['sigma']
-        o['theta'] = scan_fit['theta']
 
         # Best fit position and uncertainty from fit to TS map
+        o['peak_theta'] = tsmap_fit['theta']
+        o['peak_sigmax'] = peak_sigmax
+        o['peak_sigmay'] = peak_sigmay
         o['peak_sigma'] = peak_sigma
         o['peak_r68'] = peak_r68
         o['peak_r95'] = peak_r95
@@ -1600,6 +1596,19 @@ class GTAnalysis(fermipy.config.Configurable):
         o['peak_glat'] = peak_skydir.galactic.b.deg
         o['tsmap_fit'] = tsmap_fit
         o['scan_fit'] = scan_fit
+        
+        # Best fit position and uncertainty from likelihood scan
+        o['xpix'] = scan_fit['x0']*scan_step/cdelt0 + scan_xpix[0]
+        o['ypix'] = scan_fit['y0']*scan_step/cdelt1 + scan_ypix[0]
+        o['deltax'] = (o['xpix']-src_pix[0])*cdelt0
+        o['deltay'] = (o['ypix']-src_pix[1])*cdelt1
+        o['theta'] = scan_fit['theta']
+        o['sigmax'] = sigmax
+        o['sigmay'] = sigmay
+        o['sigma'] = (o['sigmax']*o['sigmay'])**0.5
+        o['r68'] = 2.30**0.5*o['sigma']
+        o['r95'] = 5.99**0.5*o['sigma']
+        o['r99'] = 9.21**0.5*o['sigma']
 
         new_skydir = SkyCoord.from_pixel(o['xpix'],o['ypix'],skywcs)
 
@@ -1612,12 +1621,17 @@ class GTAnalysis(fermipy.config.Configurable):
         if o['fit_success'] and o['offset'] > dtheta_max:
             o['fit_success'] = False
             self.logger.error('Position offset larger than search region:\n '
-                              'offset = %.3f deltax = %.3f deltay = %.3f '%(offset,o['deltax'],o['deltay']) +
+                              'offset = %.3f deltax = %.3f deltay = %.3f '%(o['offset'],
+                                                                            o['deltax'],o['deltay']) +
                               'dtheta_max = %.3f'%(dtheta_max))
 
         self.roi[name].update_data({'localize': copy.deepcopy(o)})
-        self._plotter.make_localization_plot(self, name, tsmap, **kwargs)
-        
+
+        try:
+            self._plotter.make_localization_plot(self, name, tsmap, **kwargs)
+        except Exception:
+            self.logger.error('Plot failed.', exc_info=True)
+            
         if update and o['fit_success']:
 
             self.logger.info(
@@ -2051,7 +2065,7 @@ class GTAnalysis(fermipy.config.Configurable):
              'logLike': np.zeros(len(xvals))
              }
 
-        if hasattr(self.like.components[0].logLike, 'setUpdateFixedWeights'):        
+        if hasattr(self.like.components[0].logLike, 'setUpdateFixedWeights'):
             for c in self.components:
                 c.like.logLike.setUpdateFixedWeights(False)
         
@@ -2086,7 +2100,7 @@ class GTAnalysis(fermipy.config.Configurable):
         if savestate:
             saved_state.restore()
 
-        if hasattr(self.like.components[0].logLike, 'setUpdateFixedWeights'):        
+        if hasattr(self.like.components[0].logLike, 'setUpdateFixedWeights'):
             for c in self.components:
                 c.like.logLike.setUpdateFixedWeights(True)
             
@@ -2386,7 +2400,6 @@ class GTAnalysis(fermipy.config.Configurable):
             c.load_xml(xmlfile)
 
         for name in self.like.sourceNames():
-            print name
             self.update_source(name)
 
         self.logger.info('Finished Loading XML')
