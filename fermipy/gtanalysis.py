@@ -2028,8 +2028,7 @@ class GTAnalysis(fermipy.config.Configurable):
             saved_state = LikelihoodState(self.like)
             
         # If parameter is fixed temporarily free it
-        if not par.isFree() and reoptimize and self.like.logLike.getNumFreeParams():
-            par.setFree(True)
+        par.setFree(True)
             
         if emin is not None and emax is not None:
             self.setEnergyRange(emin, emax)
@@ -3048,8 +3047,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
         # Only compute TS, errors, and ULs if the source was free in
         # the fit
-        #if not self.get_free_source_params(name) or paramsonly:
-        #    return src_dict
+        if not self.get_free_source_params(name) or paramsonly:
+            return src_dict
 
         try:
             src_dict['flux'][1] = self.like.fluxError(name,
