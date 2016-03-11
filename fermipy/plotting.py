@@ -1114,7 +1114,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p = ROIPlotter(tsmap_renorm,roi=gta.roi)
         fig = plt.figure()
 
-        p.plot(levels=[-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
+        p.plot(levels=[-200,-100,-50,-20,-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
                interpolation='bicubic')
 
         cdelt0 = np.abs(tsmap['ts'].wcs.wcs.cdelt[0])

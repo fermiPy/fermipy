@@ -165,14 +165,16 @@ class Map(Map_Base):
         xy = self.ipix_to_xypix(ipix,colwise)
         return self.xy_pix_to_ipix(xy,not colwise)
 
-    
-def format_filename(outdir, basename, prefix=None, extension=None):
-    filename = ''
-    if prefix is not None:
-        for t in prefix:
-            if t:
-                filename += '%s_' % t
 
+def join_strings(strings,sep='_'):
+
+    if strings is None:
+        return ''
+    else:
+        return sep.join([s for s in strings if s])
+        
+def format_filename(outdir, basename, prefix=None, extension=None):
+    filename = join_strings(prefix)
     filename += basename
 
     if extension is not None:
@@ -1393,7 +1395,7 @@ def update_source_maps(srcmap_file, srcmaps, logger=None):
             hdulist.append(newhdu)
 
         if logger is not None:
-            logger.info('Updating source map for %s' % name)
+            logger.debug('Updating source map for %s' % name)
 
         hdulist[name].data[...] = data
 

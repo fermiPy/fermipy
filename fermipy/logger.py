@@ -72,7 +72,9 @@ class Logger(object):
         logger.setLevel(logging.DEBUG)
 
         datefmt = '%Y-%m-%d %H:%M:%S'
-        format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format_stream = '%(asctime)s %(levelname)-8s %(name)s.%(funcName)s(): %(message)s'
+        format_file = '%(asctime)s %(levelname)-8s %(name)s.%(funcName)s(): %(message)s' 
+#        format_file = '%(asctime)s %(levelname)-8s %(name)s.%(funcName)s() [%(filename)s:%(lineno)d]: %(message)s' 
         
         if not logger.handlers:
 
@@ -82,13 +84,13 @@ class Logger(object):
             if not logfile is None:
                 fh = logging.FileHandler(logfile)
                 fh.setLevel(logging.DEBUG)
-                fh.setFormatter(formatter)
+                fh.setFormatter(logging.Formatter(format_file,datefmt))
                 logger.addHandler(fh)
             
             # Add a stream handler
             ch = logging.StreamHandler()
             ch.setLevel(loglevel)
-            ch.setFormatter(formatter)
+            ch.setFormatter(logging.Formatter(format_stream,datefmt))
             logger.addHandler(ch)
         else:
             logger.handlers[-1].setLevel(loglevel)
@@ -101,7 +103,7 @@ class StreamLogger(object):
     def __init__(self, name='stdout', logfile=None, quiet=True):
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
-        self.format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        self.format = '%(asctime)s - %(name)s - %(funcName)s - %(levelname)s - %(message)s'
         self.datefmt='%Y-%m-%d %H:%M:%S'
         self.stdout = sys.stdout
 #        logging.basicConfig(level=logging.DEBUG, 
