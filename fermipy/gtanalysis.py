@@ -2083,7 +2083,6 @@ class GTAnalysis(fermipy.config.Configurable):
         if reoptimize and hasattr(self.like.components[0].logLike,
                                   'setUpdateFixedWeights'):
 
-            print 'disabling fixed weights'
             for c in self.components:
                 c.like.logLike.setUpdateFixedWeights(False)
         
@@ -2589,6 +2588,58 @@ class GTAnalysis(fermipy.config.Configurable):
     def print_roi(self):
         print(str(self.roi))
 
+    def print_model(self):
+
+        o = ''
+        o += '%-20s%8s%8s%7s%10s%10s%12s%5s\n' % (
+        'name', 'offset','norm','eflux','index',
+        'ts', 'Npred', 'Free')
+        o += '-' * 80 + '\n'
+        
+        for s in sorted(self.roi.sources, key=lambda t: t['offset']):
+            if s.diffuse:
+                continue
+
+            normVal = self.like.normPar(s.name).getValue()
+            fixed = self.like[s.name].fixedSpectrum()
+
+            if fixed:
+                free_str = ' '
+            else:
+                free_str = '*'
+
+            if s['SpectrumType'] == 'PowerLaw':
+                index = s['dfde1000_index'][0]
+            else:
+                index = 0.5*(s['dfde1000_index'][0]+s['dfde10000_index'][0])
+                
+            o += '%-20.19s%8.3f%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
+            s['name'], s['offset'], normVal, s['eflux'][0],index,
+            s['ts'], s['Npred'],free_str)
+
+        for s in sorted(self.roi.sources, key=lambda t: t['offset']):
+            if not s.diffuse:
+                continue
+            
+            normVal = self.like.normPar(s.name).getValue()
+            fixed = self.like[s.name].fixedSpectrum()
+
+            if fixed:
+                free_str = ' '
+            else:
+                free_str = '*'
+
+            if s['SpectrumType'] == 'PowerLaw':
+                index = s['dfde1000_index'][0]
+            else:
+                index = 0.5*(s['dfde1000_index'][0]+s['dfde10000_index'][0])
+                
+            o += '%-20.19s%8s%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
+            s['name'], 
+            '---', normVal, s['eflux'][0], index, s['ts'], s['Npred'],free_str)
+                        
+        print(o)
+                    
     def load_roi(self, infile):
         """This function reloads the analysis state from a previously
         saved instance generated with
@@ -3103,23 +3154,25 @@ class GTAnalysis(fermipy.config.Configurable):
             lnlp0 = self.profile_norm(name, savestate=True,
                                       reoptimize=False,npts=20)
             xval0 = self.like.normPar(name).getValue()
-            xvals_ul = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dlogLike'],
-                                             ul_confidence=0.99)
+            lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dlogLike'],
+                                               ul_confidence=0.999)
             
-            xvals = np.array([0.0,xval0,xvals_ul['ul']])
-            
+            xvals = np.array([0.0,xval0,lims0['ul']])            
             lnlp1 = self.profile_norm(name, savestate=True,
                                       reoptimize=True,xvals=xvals)
-
-            xvals_ul = utils.get_parameter_limits(lnlp1['xvals'], lnlp1['dlogLike'],
-                                             ul_confidence=0.99)
+            lims1 = utils.get_parameter_limits(lnlp1['xvals'], lnlp1['dlogLike'],
+                                               ul_confidence=0.99)
             
-            if np.isfinite(xvals_ul['ll']):
-                xlo = np.concatenate(([0.0],np.linspace(xvals_ul['ll'],xval0,(npts+1)//2-1)))
+            if np.isfinite(lims1['ll']):
+                xlo = np.concatenate(([0.0],np.linspace(lims1['ll'],xval0,(npts+1)//2-1)))
             else:
                 xlo = np.linspace(0.0,xval0,(npts+1)//2)
 
-            xhi = np.linspace(xval0,xvals_ul['ul'],npts+1-len(xlo))[1:]
+            if np.isfinite(lims1['ul']):
+                xhi = np.linspace(xval0,lims1['ul'],npts+1-len(xlo))[1:]
+            else:
+                xhi = np.linspace(xval0,lims0['ul'],npts+1-len(xlo))[1:]
+                
             xvals = np.concatenate((xlo[1:-1],xhi))
             lnlp = self.profile_norm(name, savestate=True,
                                      reoptimize=True,xvals=xvals)
