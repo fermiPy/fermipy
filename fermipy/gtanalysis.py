@@ -485,7 +485,7 @@ class GTAnalysis(fermipy.config.Configurable):
         self.like.model = self.like.components[0].model
         
     def add_source(self, name, src_dict, free=False, init_source=True,
-                   save_source_maps=True):
+                   save_source_maps=True, **kwargs):
         """Add a source to the ROI model.  This function may be called
         either before or after setup().
 
@@ -509,7 +509,9 @@ class GTAnalysis(fermipy.config.Configurable):
             self.logger.error(msg)
             raise Exception(msg)
 
-        self.logger.info('Adding source ' + name)
+        loglevel=kwargs.pop('loglevel',logging.INFO)
+        
+        self.logger.log(loglevel,'Adding source ' + name)
 
         src = self.roi.create_source(name,src_dict)
 
@@ -530,7 +532,8 @@ class GTAnalysis(fermipy.config.Configurable):
         if init_source:
             self._init_source(name)
 
-    def delete_source(self, name, save_template=True, delete_source_map=False):
+    def delete_source(self, name, save_template=True, delete_source_map=False,
+                      **kwargs):
         """Delete a source from the model.
 
         Parameters
@@ -550,7 +553,9 @@ class GTAnalysis(fermipy.config.Configurable):
             self.logger.error('No source with name: %s' % name)
             return
 
-        self.logger.info('Deleting source %s' % name)
+        loglevel=kwargs.pop('loglevel',logging.INFO)
+        
+        self.logger.log(loglevel,'Deleting source %s' % name)
 
         # STs require a source to be freed before deletion
         normPar = self.like.normPar(name)
@@ -650,19 +655,26 @@ class GTAnalysis(fermipy.config.Configurable):
         else:
             self.logger.error('Working directory does not exist.')
 
-    def setup(self, init_sources=True):
-        """Run pre-processing step for each analysis component and
-        construct a joint likelihood object.  This will run everything
-        except the likelihood optimization: data selection (gtselect,
-        gtmktime), counts maps generation (gtbin), model generation
-        (gtexpcube2,gtsrcmaps,gtdiffrsp).
+    def setup(self, init_sources=True, overwrite=False):
+        """Run pre-processing for each analysis component and
+        construct a joint likelihood object.  This function performs
+        the following tasks: data selection (gtselect, gtmktime),
+        data binning (gtbin), and model generation (gtexpcube2,gtsrcmaps).
 
         Parameters
         ----------
 
         init_sources : bool
+        
            Choose whether to compute properties (flux, TS, etc.) for
            individual sources.
+
+        overwrite : bool
+
+           Run all pre-processing steps even if the output file of
+           that step is present in the working directory.  By default
+           this function will skip any steps for which the output file
+           already exists.
 
         """
 
@@ -672,7 +684,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._like = SummedLikelihood()
         for i, c in enumerate(self._components):
-            c.setup()
+            c.setup(overwrite=overwrite)
             self._like.addComponent(c.like)
 
         self._ccube_file = os.path.join(self.config['fileio']['workdir'],
@@ -1350,7 +1362,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
         """
 
-        self.logger.info('Running ROI Optimization')
+        self.logger.info('Starting')
 
         logLike0 = -self.like()
         self.logger.debug('LogLike: %f' % logLike0)
@@ -1423,7 +1435,7 @@ class GTAnalysis(fermipy.config.Configurable):
         self.set_free_params(free)
 
         logLike1 = -self.like()
-        self.logger.info('Finished ROI Optimization')
+        self.logger.info('Finished')
         self.logger.info(
             'LogLike: %f Delta-LogLike: %f' % (logLike1, logLike1 - logLike0))
 
@@ -1487,7 +1499,8 @@ class GTAnalysis(fermipy.config.Configurable):
         dtheta_max = config['dtheta_max']
         update = config['update']
         newname = config['newname']
-
+        prefix = kwargs.pop('prefix','')
+        
         self.logger.info('Running localization for %s' % name)
 
         saved_state = LikelihoodState(self.like)
@@ -1497,7 +1510,7 @@ class GTAnalysis(fermipy.config.Configurable):
         skywcs = self._skywcs
         src_pix = skydir.to_pixel(skywcs)
 
-        tsmap = self.tsmap('%s_localize'%(name.lower().replace(' ','_')),
+        tsmap = self.tsmap(utils.join_strings([prefix,name.lower().replace(' ','_')]),
                            model=src.data,multithread=True,
                            map_skydir=skydir,
                            map_size=2.0*dtheta_max,
@@ -1556,13 +1569,14 @@ class GTAnalysis(fermipy.config.Configurable):
             #            s.set_spatial_model(spatial_model,w)
 
             self.add_source(model_name, s, free=True,
-                            init_source=False, save_source_maps=False)
+                            init_source=False, save_source_maps=False,
+                            loglevel=logging.DEBUG)
             #self.fit(update=False)
             self.like.optimize(0)
             
             logLike1 = -self.like()
             lnlscan['logLike'].flat[i] = logLike1
-            self.delete_source(model_name)
+            self.delete_source(model_name,loglevel=logging.DEBUG)
 
         lnlscan['dlogLike'] = lnlscan['logLike'] - np.max(lnlscan['logLike'])
 
@@ -1620,15 +1634,16 @@ class GTAnalysis(fermipy.config.Configurable):
         
         if o['fit_success'] and o['offset'] > dtheta_max:
             o['fit_success'] = False
-            self.logger.error('Position offset larger than search region:\n '
+            self.logger.error('Best-fit position outside search region:\n '
                               'offset = %.3f deltax = %.3f deltay = %.3f '%(o['offset'],
                                                                             o['deltax'],o['deltay']) +
                               'dtheta_max = %.3f'%(dtheta_max))
 
-        self.roi[name].update_data({'localize': copy.deepcopy(o)})
+        self.roi[name]['localize'] = copy.deepcopy(o)
 
         try:
-            self._plotter.make_localization_plot(self, name, tsmap, **kwargs)
+            self._plotter.make_localization_plot(self, name, tsmap, prefix=prefix,
+                                                 **kwargs)
         except Exception:
             self.logger.error('Plot failed.', exc_info=True)
             
@@ -1646,7 +1661,7 @@ class GTAnalysis(fermipy.config.Configurable):
             self.add_source(newname, s, free=True)
             self.fit()
             src = self.roi.get_source_by_name(newname, True)
-            src.update_data({'localize': copy.deepcopy(o)})
+            self.roi[name]['localize'] = copy.deepcopy(o)
             
         self.logger.info('Finished localization.')
         return o
@@ -1715,7 +1730,8 @@ class GTAnalysis(fermipy.config.Configurable):
         fix_background = config['fix_background']
         save_model_map = config['save_model_map']
 
-        self.logger.info('Running extension analysis for %s' % name)
+        self.logger.info('Starting')
+        self.logger.info('Running analysis for %s' % name)
 
         ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
         null_model_name = '%s_noext' % (name.lower().replace(' ', '_'))
@@ -1769,16 +1785,18 @@ class GTAnalysis(fermipy.config.Configurable):
         #s.set_spatial_model('PointSource')
 
         self.logger.debug('Testing point-source model.')
-        self.add_source(model_name, s, free=True, init_source=False)
+        self.add_source(model_name, s, free=True, init_source=False,
+                        loglevel=logging.DEBUG)
         self.fit(update=False)
         o['logLike_ptsrc'] = -self.like()
         
-        self.delete_source(model_name, save_template=False)
+        self.delete_source(model_name, save_template=False,
+                           loglevel=logging.DEBUG)
         
         # Perform scan over width parameter
         self.logger.debug('Width scan vector:\n %s' % width)
 
-        if not hasattr(self.like.logLike, 'setSourceMapImage'):
+        if not hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
             o['logLike'] = self._scan_extension_pylike(name, spatial_model, width)
         else:
             o['logLike'] = self._scan_extension(name, spatial_model, width)
@@ -1786,7 +1804,7 @@ class GTAnalysis(fermipy.config.Configurable):
         
         try:
 
-            ul_data = utils.get_upper_limit(o['width'], o['dlogLike'])
+            ul_data = utils.get_parameter_limits(o['width'], o['dlogLike'])
 
             o['ext'] = ul_data['x0']
             o['ext_ul95'] = ul_data['ul']
@@ -1828,13 +1846,9 @@ class GTAnalysis(fermipy.config.Configurable):
         saved_state.restore()
 
         src = self.roi.get_source_by_name(name, True)
+        src['extension'] = copy.deepcopy(o)
 
-        try:
-            src.update_data({'extension': copy.deepcopy(o)})
-        except Exception:
-            self.logger.error('Update failed.', exc_info=True)
-
-        self.logger.info('Finished extension analysis.')
+        self.logger.info('Finished')
 
         return o
 
@@ -1874,7 +1888,8 @@ class GTAnalysis(fermipy.config.Configurable):
             s.set_spatial_model(spatial_model, w)
             
             self.logger.debug('Adding test source with width: %10.3f deg' % w)
-            self.add_source(ext_model_name, s, free=True, init_source=False)
+            self.add_source(ext_model_name, s, free=True, init_source=False,
+                            loglevel=logging.DEBUG)
             
             self.like.optimize(0)
             logLike += [-self.like()]
@@ -1883,7 +1898,8 @@ class GTAnalysis(fermipy.config.Configurable):
 #                self.generate_model_map(model_name=model_name + '%02i' % i,
 #                                        name=model_name)
                 
-            self.delete_source(ext_model_name, save_template=False)
+            self.delete_source(ext_model_name, save_template=False,
+                               loglevel=logging.DEBUG)
 
         return np.array(logLike)
     
@@ -2064,7 +2080,10 @@ class GTAnalysis(fermipy.config.Configurable):
              'logLike': np.zeros(len(xvals))
              }
 
-        if hasattr(self.like.components[0].logLike, 'setUpdateFixedWeights'):
+        if reoptimize and hasattr(self.like.components[0].logLike,
+                                  'setUpdateFixedWeights'):
+
+            print 'disabling fixed weights'
             for c in self.components:
                 c.like.logLike.setUpdateFixedWeights(False)
         
@@ -2094,14 +2113,16 @@ class GTAnalysis(fermipy.config.Configurable):
 
             cs = self.model_counts_spectrum(name, emin, emax, summed=True)
             o['Npred'][i] += np.sum(cs)
-            
-        # Restore model parameters to original values
-        if savestate:
-            saved_state.restore()
 
-        if hasattr(self.like.components[0].logLike, 'setUpdateFixedWeights'):
+        if reoptimize and hasattr(self.like.components[0].logLike,
+                                  'setUpdateFixedWeights'):
+
             for c in self.components:
                 c.like.logLike.setUpdateFixedWeights(True)
+                
+        # Restore model parameters to original values
+        if savestate:
+            saved_state.restore()        
             
         self.like[idx].setBounds(*bounds)
 
@@ -3075,13 +3096,45 @@ class GTAnalysis(fermipy.config.Configurable):
         # self.logger.error('Failed to update source parameters.',
         #  exc_info=True)
 
-        lnlp = self.profile_norm(name, savestate=True,
-                                 reoptimize=reoptimize,npts=npts)
 
+        if reoptimize:
+
+            npts = max(npts,5)            
+            lnlp0 = self.profile_norm(name, savestate=True,
+                                      reoptimize=False,npts=20)
+            xval0 = self.like.normPar(name).getValue()
+            xvals_ul = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dlogLike'],
+                                             ul_confidence=0.99)
+            
+            xvals = np.array([0.0,xval0,xvals_ul['ul']])
+            
+            lnlp1 = self.profile_norm(name, savestate=True,
+                                      reoptimize=True,xvals=xvals)
+
+            xvals_ul = utils.get_parameter_limits(lnlp1['xvals'], lnlp1['dlogLike'],
+                                             ul_confidence=0.99)
+            
+            if np.isfinite(xvals_ul['ll']):
+                xlo = np.concatenate(([0.0],np.linspace(xvals_ul['ll'],xval0,(npts+1)//2-1)))
+            else:
+                xlo = np.linspace(0.0,xval0,(npts+1)//2)
+
+            xhi = np.linspace(xval0,xvals_ul['ul'],npts+1-len(xlo))[1:]
+            xvals = np.concatenate((xlo[1:-1],xhi))
+            lnlp = self.profile_norm(name, savestate=True,
+                                     reoptimize=True,xvals=xvals)
+            
+            isort = np.argsort(np.concatenate((lnlp1['xvals'][:2],lnlp['xvals'])))
+            for k, v in lnlp.items():
+                lnlp[k] = np.concatenate((lnlp1[k][:2],lnlp[k]))[isort]
+        else:
+            lnlp = self.profile_norm(name, savestate=True,
+                                     reoptimize=reoptimize,npts=npts)
+            
         src_dict['lnlprofile'] = lnlp
         
-        flux_ul_data = utils.get_upper_limit(lnlp['flux'], lnlp['dlogLike'])
-        eflux_ul_data = utils.get_upper_limit(lnlp['eflux'], lnlp['dlogLike'])
+        flux_ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dlogLike'])
+        eflux_ul_data = utils.get_parameter_limits(lnlp['eflux'], lnlp['dlogLike'])
 
         if normPar.getValue() == 0:
             normPar.setValue(1.0)
@@ -3156,9 +3209,11 @@ class GTAnalysis(fermipy.config.Configurable):
                 pyLike.dArg(10 ** e0))
             src_dict['dfde'][1] = fd.error(10 ** e0)
 
-
-        src_dict['ts'] = self.like.Ts2(name, reoptimize=reoptimize)
-
+        if not reoptimize:
+            src_dict['ts'] = self.like.Ts2(name, reoptimize=reoptimize)
+        else:
+            src_dict['ts'] = -2.0*lnlp['dlogLike'][0]
+            
         return src_dict
 
 
@@ -3407,6 +3462,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         pylike_src = self._create_source(src,free=free)        
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(str(name))
+        self.like.logLike.buildFixedModelWts()
         if save_source_maps:
             self.like.logLike.saveSourceMaps(self._srcmap_file)
 
@@ -3481,7 +3537,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if str(src.name) in self.like.sourceNames():
                 self.like.deleteSource(str(src.name))
                 self.like.logLike.eraseSourceMap(str(src.name))
-
+                
             if not isFree:            
                 self.like.logLike.buildFixedModelWts()
                     
@@ -3651,8 +3707,19 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if imax <= imin: raise Exception('Invalid energy range.')
         return cs[imin:imax]
 
-    def setup(self):
-        """Run pre-processing step."""
+    def setup(self, overwrite=False):
+        """Run pre-processing step for this component.
+
+        Parameters
+        ----------
+
+        overwrite : bool
+
+           Run all pre-processing steps even if the output file of
+           that step is present in the working directory.  By default
+           this function will skip any steps for which the output file
+           already exists.
+        """
 
         self.logger.info("Running setup for Analysis Component: " +
                          self.name)
@@ -3681,7 +3748,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                            roicut=self.config['selection']['roicut'],
                            filter=self.config['selection']['filter'])
 
-        if not os.path.isfile(self._ft1_file):
+        if not os.path.isfile(self._ft1_file) or overwrite:
             run_gtapp('gtselect', self.logger, kw_gtselect)
             if self.config['selection']['roicut'] == 'yes' or \
                             self.config['selection']['filter'] is not None:
@@ -3707,7 +3774,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if not os.path.isfile(self._ltcube):
                 raise Exception('Invalid livetime cube: %s' % self._ltcube)
 
-        elif not os.path.isfile(self._ltcube):
+        elif not os.path.isfile(self._ltcube) or overwrite:
             run_gtapp('gtltcube', self.logger, kw)
         else:
             self.logger.debug('Skipping gtltcube')
@@ -3765,7 +3832,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 'Unknown projection type, %s. Choices are WCS or HPX' %
                 self.projtype)
 
-        if not os.path.isfile(self._ccube_file):
+        if not os.path.isfile(self._ccube_file) or overwrite:
             run_gtapp('gtbin', self.logger, kw)
         else:
             self.logger.debug('Skipping gtbin')
@@ -3793,7 +3860,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   irfs=self.config['gtlike']['irfs'],
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
-        if not os.path.isfile(self._bexpmap_file):
+        
+        if not os.path.isfile(self._bexpmap_file) or overwrite:
             run_gtapp('gtexpcube2', self.logger, kw)
         else:
             self.logger.debug('Skipping gtexpcube')
@@ -3812,7 +3880,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       irfs=self.config['gtlike']['irfs'],
                       coordsys=self.config['binning']['coordsys'],
                       chatter=self.config['logging']['chatter'])
-            if not os.path.isfile(self._bexpmap_roi_file):
+            if not os.path.isfile(self._bexpmap_roi_file) or overwrite:
                 run_gtapp('gtexpcube2', self.logger, kw)
             else:
                 self.logger.debug('Skipping local gtexpcube')
@@ -3849,7 +3917,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no')
 
-        if not os.path.isfile(self._srcmap_file):
+        if not os.path.isfile(self._srcmap_file) or overwrite:
             if self.config['gtlike']['srcmap'] and self.config['gtlike']['bexpmap']:
                 self.make_scaled_srcmap()
             else:
@@ -4152,7 +4220,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         xmlfile = self.get_model_path(xmlfile)
         self.logger.info('Loading %s' % xmlfile)
         self.like.logLike.reReadXml(xmlfile)
-
         if not self.like.logLike.fixedModelUpdated():
             self.like.logLike.buildFixedModelWts()
 

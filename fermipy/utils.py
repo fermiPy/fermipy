@@ -171,11 +171,13 @@ def join_strings(strings,sep='_'):
     if strings is None:
         return ''
     else:
+        if not isinstance(strings,list):
+            strings = [strings]        
         return sep.join([s for s in strings if s])
         
 def format_filename(outdir, basename, prefix=None, extension=None):
     filename = join_strings(prefix)
-    filename += basename
+    filename = join_strings([filename,basename])
 
     if extension is not None:
 
@@ -373,8 +375,8 @@ def find_function_root(fn, x0, xb, delta):
     return brentq(lambda t: fn(t)+delta,x0, xb, xtol=xtol)
 
 
-def get_upper_limit(xval, logLike, ul_confidence=0.95):
-    """Compute upper limit, peak position, and 1-sigma errors from a
+def get_parameter_limits(xval, logLike, ul_confidence=0.95):
+    """Compute upper/lower limits, peak position, and 1-sigma errors from a
     1-D likelihood function.
 
     Parameters
@@ -387,7 +389,7 @@ def get_upper_limit(xval, logLike, ul_confidence=0.95):
        Array of log-likelihood values.
 
     ul_confidence : float
-       Confidence level to use for upper limit calculation.  
+       Confidence level to use for limit calculation.  
     
     """
 
@@ -412,6 +414,7 @@ def get_upper_limit(xval, logLike, ul_confidence=0.95):
 
     fn = lambda t: s(t)-lnlmax
     ul = find_function_root(fn,x0,xval[-1],deltalnl)
+    ll = find_function_root(fn,x0,xval[0],deltalnl)
     err_lo = np.abs(x0 - find_function_root(fn,x0,xval[0],0.5))
     err_hi = np.abs(x0 - find_function_root(fn,x0,xval[-1],0.5))
     
@@ -420,7 +423,7 @@ def get_upper_limit(xval, logLike, ul_confidence=0.95):
     else:
         err = err_hi
         
-    o = {'x0' : x0, 'ul' : ul,
+    o = {'x0' : x0, 'ul' : ul, 'll' : ll,
          'err_lo' : err_lo, 'err_hi' : err_hi, 'err' : err,
          'lnlmax' : lnlmax }
     return o
