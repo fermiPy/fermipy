@@ -841,6 +841,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         format = kwargs.get('format', gta.config['plotting']['format'])
         suffix = kwargs.get('suffix', 'tsmap')
+        zoom = kwargs.get('zoom',None)
         
         if 'ts' not in maps: 
             return
@@ -855,7 +856,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure()
         p = ROIPlotter(maps['sqrt_ts'], roi=gta.roi, **kwargs)
         p.plot(vmin=0, vmax=5, levels=sigma_levels,
-               cb_label='Sqrt(TS) [$\sigma$]',interpolation='bicubic')
+               cb_label='Sqrt(TS) [$\sigma$]',interpolation='bicubic',
+               zoom=zoom)
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           '%s_sqrt_ts'%suffix,
                                           prefix=[prefix],
@@ -864,7 +866,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['npred'], roi=gta.roi, **kwargs)
-        p.plot(vmin=0, cb_label='NPred [Counts]',interpolation='bicubic')
+        p.plot(vmin=0, cb_label='NPred [Counts]',interpolation='bicubic',
+               zoom=zoom)
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           '%s_npred'%suffix,
                                           prefix=[prefix],
