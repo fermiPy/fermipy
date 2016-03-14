@@ -3222,10 +3222,10 @@ class GTAnalysis(fermipy.config.Configurable):
         src_dict['flux1000_ul95'] = flux_ul_data['ul']*flux1000_ratio
         src_dict['flux10000_ul95'] = flux_ul_data['ul']*flux10000_ratio
 
-        src_dict['eflux_ul95'] = flux_ul_data['ul']
-        src_dict['eflux100_ul95'] = flux_ul_data['ul']*eflux100_ratio
-        src_dict['eflux1000_ul95'] = flux_ul_data['ul']*eflux1000_ratio
-        src_dict['eflux10000_ul95'] = flux_ul_data['ul']*eflux10000_ratio
+        src_dict['eflux_ul95'] = eflux_ul_data['ul']
+        src_dict['eflux100_ul95'] = eflux_ul_data['ul']*eflux100_ratio
+        src_dict['eflux1000_ul95'] = eflux_ul_data['ul']*eflux1000_ratio
+        src_dict['eflux10000_ul95'] = eflux_ul_data['ul']*eflux10000_ratio
 
         # Extract covariance matrix
         fd = None
