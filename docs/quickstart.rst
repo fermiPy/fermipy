@@ -12,11 +12,13 @@ Creating a Configuration File
 -----------------------------
 
 The first step is to compose a configuration file that defines the
-basic analysis parameters.  Complete documentation for the configuration
-file format and parameters is given in the :ref:`config` page.
-fermiPy accepts configuration files in the YAML format.  The following
-example is a configuration file for a SOURCE-class analysis of
-Markarian 421 with all event types combined (evtype=3).
+data selection and analysis parameters.  Complete documentation on the
+configuration file and available options is given in the :ref:`config`
+page.  fermiPy uses the YAML format for its configuration files.  The
+configuration file has a hierarchical structure in which sets of
+related options are grouped into sections.  The following example is a
+configuration file for a SOURCE-class analysis of Markarian 421 with
+all event types combined (evtype=3).
 
 .. code-block:: yaml
    
@@ -49,17 +51,16 @@ Markarian 421 with all event types combined (evtype=3).
      catalogs : 
        - 'gll_psc_v14.fit'
 
-The configuration file is divided into sections that group together
-related options.  The *data* section defines the FT1 and FT2 files.
-Here *evfile* points to a list of FT1 files that encompass the chosen
-ROI, energy range, and time selection.  The parameters in the
-*binning* section define the dimensions of the ROI and the spatial and energy
-bin size.  The *selection* section defines parameters related to the
-data selection (energy range, zmax cut, and event class/type).  The
-*target* parameter in this section defines the ROI center to have the
-same coordinates as the given source.   The *model*
-section defines all parameters related to the ROI model definition (diffuse
-templates, point sources).  
+The *data* section defines the input data set and spacecraft file for
+the analysis.  Here ``evfile`` points to a list of FT1 files that
+encompass the chosen ROI, energy range, and time selection.  The
+parameters in the *binning* section define the dimensions of the ROI
+and the spatial and energy bin size.  The *selection* section defines
+parameters related to the data selection (energy range, zmax cut, and
+event class/type).  The ``target`` parameter in this section defines
+the ROI center to have the same coordinates as the given source.  The
+*model* section defines parameters related to the ROI model definition
+(diffuse templates, point sources).
 
 fermiPy allows the user to combine multiple data selections into a
 joint likelihood with the *components* section.  The components section
@@ -80,9 +81,8 @@ configuration to define a joint analysis with four PSF event types:
      - { selection : { evtype : 32 } } # PSF3
 
 Any configuration parameter can be changed with this mechanism.  The
-following example shows how to define a different zmax selection and
-isotropic template for an analysis using each of the four PSF event
-types:
+following example shows how to use a different zmax selection and
+isotropic template for each of the four PSF event types:
 
 .. code-block:: yaml
 
@@ -100,16 +100,14 @@ types:
 Creating an Analysis Script
 ---------------------------
 
-.. These classes are also directly exposed
-
 Once the configuration file has been composed, the analysis is
 executed by creating an instance of
-:py:class:`~fermipy.gtanalysis.GTAnalysis` with this configuration and
-calling its associated methods.
-:py:class:`~fermipy.gtanalysis.GTAnalysis` provides a similar
-functionality to the underlying BinnedAnalysis/UnbinnedAnalysis
-classes with methods to fix/free parameters, add/remove sources from
-the model, and perform a fit to the ROI.
+:py:class:`~fermipy.gtanalysis.GTAnalysis` with the configuration file
+as its argument and calling its analysis methods.
+:py:class:`~fermipy.gtanalysis.GTAnalysis` provides functionality
+similar to the underlying BinnedAnalysis/UnbinnedAnalysis classes with
+methods to fix/free parameters, add/remove sources from the model, and
+perform a fit to the ROI.
 
 In the following example we lay out the sequence of python calls that
 could be run interactively or in a script to setup and run an

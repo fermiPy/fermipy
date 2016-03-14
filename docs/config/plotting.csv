@@ -1,5 +1,5 @@
 ``catalogs``	None	
-``cmap``	magma	
-``draw_radii``	None	
+``cmap``	ds9_b	
 ``erange``	None	
 ``format``	png	
+``graticule_radii``	None	
