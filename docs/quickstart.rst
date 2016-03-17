@@ -18,7 +18,7 @@ page.  fermiPy uses the YAML format for its configuration files.  The
 configuration file has a hierarchical structure in which sets of
 related options are grouped into sections.  The following example is a
 configuration file for a SOURCE-class analysis of Markarian 421 with
-all event types combined (evtype=3).
+FRONT+BACK event types (evtype=3).
 
 .. code-block:: yaml
    
@@ -33,11 +33,14 @@ all event types combined (evtype=3).
 
    selection :
      emin : 100
-     emax : 10000
+     emax : 100000
      zmax    : 90
      evclass : 128
      evtype  : 3
      target : 'mkn421'
+     tmin    : 239557414
+     tmax    : 428903014
+     filter  : null
 
    gtlike:
      edisp : True
@@ -45,11 +48,10 @@ all event types combined (evtype=3).
      edisp_disable : ['isodiff','galdiff']
 
    model:
-     src_roiwidth : 10.0
-     galdiff  : '$FERMI_DIFFUSE_DIR/template_4years_P8_V2_scaled.fits'
-     isodiff  : '$FERMI_DIFFUSE_DIR/isotropic_source_4years_P8V3.txt'
-     catalogs : 
-       - 'gll_psc_v14.fit'
+     src_roiwidth : 15.0
+     galdiff  : '$FERMI_DIFFUSE_DIR/gll_iem_v06.fits'
+     isodiff  : 'iso_P8R2_SOURCE_V6_v06.txt'
+     catalogs : ['3FGL']
 
 The *data* section defines the input data set and spacecraft file for
 the analysis.  Here ``evfile`` points to a list of FT1 files that
@@ -69,7 +71,7 @@ analysis configuration.  Each element of the list defines the analysis
 parameters for an independent sub-selection of the data.  Any
 parameters not defined within the component dictionary default to the
 value defined in the root configuration.  The following example shows
-the components section that could be appended to the previous
+the *components* section that could be appended to the previous
 configuration to define a joint analysis with four PSF event types:
 
 .. code-block:: yaml
@@ -81,7 +83,7 @@ configuration to define a joint analysis with four PSF event types:
      - { selection : { evtype : 32 } } # PSF3
 
 Any configuration parameter can be changed with this mechanism.  The
-following example shows how to use a different zmax selection and
+following example shows how to define a different zmax selection and
 isotropic template for each of the four PSF event types:
 
 .. code-block:: yaml
@@ -104,16 +106,17 @@ Once the configuration file has been composed, the analysis is
 executed by creating an instance of
 :py:class:`~fermipy.gtanalysis.GTAnalysis` with the configuration file
 as its argument and calling its analysis methods.
-:py:class:`~fermipy.gtanalysis.GTAnalysis` provides functionality
-similar to the underlying BinnedAnalysis/UnbinnedAnalysis classes with
-methods to fix/free parameters, add/remove sources from the model, and
-perform a fit to the ROI.
+:py:class:`~fermipy.gtanalysis.GTAnalysis` serves as a wrapper over
+the underlying pyLikelihood classes and provides methods to fix/free
+parameters, add/remove sources from the model, and perform a fit to
+the ROI.  For a complete documentation of the available methods you
+can refer to the :ref:`fermipy` page.
 
-In the following example we lay out the sequence of python calls that
-could be run interactively or in a script to setup and run an
-analysis.  First we instantiate
-:py:class:`~fermipy.gtanalysis.GTAnalysis` with the
-configuration and run :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup`.
+In the following python examples we show how to initialize and run a
+basic analysis of a source.  First we instantiate a
+:py:class:`~fermipy.gtanalysis.GTAnalysis` object with the path to the
+configuration file and run
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.setup`.
 
 .. code-block:: python
 
@@ -123,10 +126,10 @@ configuration and run :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup`.
    gta.setup()
 
 The :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` method performs
-all the prepratory steps for the analysis (selecting the data,
-creating counts and exposure maps, etc.).  Depending on the data
-selection and binning of the analysis this will often be the slowest
-step in the analysis sequence.  The output of
+the data preparation and response calculations needed for the analysis
+(selecting the data, creating counts and exposure maps, etc.).
+Depending on the data selection and binning of the analysis this will
+often be the slowest step in the analysis sequence.  The output of
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` is cached in the
 analysis working directory so subsequent calls to
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` will run much faster.
@@ -186,8 +189,9 @@ values:
    
 When passing a source name argument both case and whitespace are
 ignored.  When using a FITS catalog file a source can also be referred
-to by any of its associations.  The following calls are equivalent
-ways of freeing the parameters of Mkn 421:
+to by any of its associations.  When using the 3FGL catalog, the
+following calls are equivalent ways of freeing the parameters of Mkn
+421:
 
 .. code-block:: python
 

@@ -1,5 +1,5 @@
 ``catalogs``	None	
-``cmap``	ds9_b	
+``cmap``	ds9_b	Set the colormap for 2D plots.
 ``erange``	None	
 ``format``	png	
-``graticule_radii``	None	
+``graticule_radii``	None	Define a list of radii at which circular graticules will be drawn.

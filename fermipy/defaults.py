@@ -1,3 +1,4 @@
+import numpy as np
 
 # Options for defining input data files
 data = {
@@ -19,7 +20,7 @@ selection = {
     'evtype': (None, 'Event type selection.', int),
     'convtype': (None, 'Conversion type selection.', int),
     'target': (None, 'Choose an object on which to center the ROI.  '
-                     'This option takes precendence over ra/dec.', str),
+                     'This option takes precendence over ra/dec or glon/glat.', str),
     'ra': (None, '', float),
     'dec': (None, '', float),
     'glat': (None, '', float),
@@ -54,8 +55,6 @@ model = {
     'sources': (None, '', list),
     'extdir': ('Extended_archive_v15', '', str),
     'catalogs': (None, '', list),
-#    'min_ts': (None, '', float),
-#    'min_flux': (None, '', float),
     'merge_sources' :
         (True, 'Merge properties of sources that appear in multiple '
          'source catalogs.  If merge_sources=false then subsequent sources with '
@@ -63,7 +62,6 @@ model = {
     'assoc_xmatch_columns' :
         (['3FGL_Name'],'Choose a set of association columns on which to '
          'cross-match catalogs.',list),
-#    'remove_duplicates': (False, 'Remove duplicate catalog sources.', bool),
     'extract_diffuse': (
         False, 'Extract a copy of all mapcube components centered on the ROI.',
         bool)
@@ -71,7 +69,7 @@ model = {
 
 # Options for configuring likelihood analysis
 gtlike = {
-    'irfs': (None, '', str),
+    'irfs': (None, 'Set the IRF string.', str),
     'edisp': (True, 'Enable the correction for energy dispersion.', bool),
     'edisp_disable': (None,
                       'Provide a list of sources for which the edisp '
@@ -131,7 +129,7 @@ optimizer = {
         ('MINUIT', 'Set the optimization algorithm to use when maximizing the '
                    'likelihood function.', str),
     'tol': (1E-4, 'Set the optimizer tolerance.', float),
-    'retries': (3, 'Set the number of times to retry the fit.', int),
+    'retries': (3, 'Set the number of times to retry the fit when the fit quality is less than ``min_fit_quality``.', int),
     'min_fit_quality': (3, 'Set the minimum fit quality.', int),
     'verbosity': (0, '', int)
 }
@@ -150,21 +148,21 @@ roiopt = {
 
 # Residual Maps
 residmap = {
-    'model': (None, '', dict),
-    'erange': (None, '', list),
+    'model': (None, 'Dictionary defining the properties of the test source.  By default the test source will be a PointSource with an Index 2 power-law specturm.', dict),
+    'erange': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
 }
 
 # TS Map
 tsmap = {
-    'model': (None, '', dict),
+    'model': (None, 'Dictionary defining the properties of the test source.', dict),
     'multithread': (False, '', bool),
     'max_kernel_radius': (3.0, '', float),
-    'erange': (None, '', list),
+    'erange': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
 }
 
 # TS Cube
 tscube = {
-    'model': (None, '', dict),
+    'model': (None, 'Dictionary defining the properties of the test source.  By default the test source will be a PointSource with an Index 2 power-law specturm.', dict),
     'do_sed': (True, 'Compute the energy bin-by-bin fits', bool),
     'nnorm': (10, 'Number of points in the likelihood v. normalization scan', int),
     'norm_sigma': (5.0, 'Number of sigma to use for the scan range ', float),
@@ -181,22 +179,51 @@ tscube = {
 
 # Options for Source Finder
 sourcefind = {
-    'model': (None, 'Set the source model dictionary.', dict),
+    'model': (None, 'Set the source model dictionary.  By default the test source will be a PointSource with an Index 2 power-law specturm.', dict),
     'min_separation': (1.0, 'Set the minimum separation in deg for sources added in each iteration.', float),
     'sqrt_ts_threshold': (5.0, 'Set the threshold on sqrt(TS).', float),
     'max_iter': (3, 'Set the number of search iterations.', int),
     'sources_per_iter': (3, '', int),
-    'tsmap_fitter': ('tsmap', '', str)
+    'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.', str)
 }
 
 # Options for SED analysis
 sed = {
-    'bin_index': (2.0, '', float),
-    'use_local_index': (False, '', bool),
+    'bin_index': (2.0, 'Spectral index that will be use when fitting the energy distribution within an energy bin.', float),
+    'use_local_index': (False, 'Use a power-law approximation to the shape of the global spectrum in '
+                        'each bin.  If this is false then a constant index set to `bin_index` '
+                        'will be used.', bool),
     'fix_background': (True, 'Fix background parameters when fitting the '
                        'source flux in each energy bin.', bool),
     'ul_confidence': (0.95, 'Confidence level for upper limit calculation.',
                       float)
+}
+
+# Output for SED analysis
+sed_output = {
+    'emin' : (None, 'Lower edges of SED energy bins (log10(E/MeV)).',np.ndarray,'`~numpy.ndarray`'),
+    'emax' : (None, 'Upper edges of SED energy bins (log10(E/MeV)).',np.ndarray,'`~numpy.ndarray`'),
+    'ecenter' : (None, 'Centers of SED energy bins (log10(E/MeV)).',np.ndarray,'`~numpy.ndarray`'),
+    'flux' : (None, 'Flux in each bin (cm^{-2} s^{-1}).',np.ndarray,'`~numpy.ndarray`'),
+    'eflux' : (None, 'Energy flux in each bin (MeV cm^{-2} s^{-1}).',np.ndarray,'`~numpy.ndarray`'),
+    'dfde' : (None, 'Differential flux in each bin (MeV^{-1} cm^{-2} s^{-1}).',np.ndarray,'`~numpy.ndarray`'),
+    'e2dfde' :       (None, 'E^2 x the differential flux in each bin (MeV^{-1} cm^{-2} s^{-1}).',np.ndarray,'`~numpy.ndarray`'),
+    'dfde_err' :     (None, '1-sigma error on dfde evaluated from likelihood curvature.',np.ndarray,'`~numpy.ndarray`'),
+    'dfde_err_lo' :  (None, 'Lower 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
+    'dfde_err_hi' :  (None, 'Upper 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
+    'dfde_ul95' :    (None, '95% CL upper limit on dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
+    'dfde_ul' :      (None, 'Upper limit on dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.',np.ndarray,'`~numpy.ndarray`'),
+    'e2dfde_err' :   (None, '1-sigma error on e2dfde evaluated from likelihood curvature.',np.ndarray,'`~numpy.ndarray`'),
+    'e2dfde_err_lo' : (None, 'Lower 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
+    'e2dfde_err_hi' : (None, 'Upper 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
+    'e2dfde_ul95' :  (None, '95% CL upper limit on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
+    'e2dfde_ul' :    (None, 'Upper limit on e2dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.',np.ndarray,'`~numpy.ndarray`'),
+    'ts' :           (None, 'Test statistic.',np.ndarray,'`~numpy.ndarray`'),
+    'Npred' :        (None, 'Number of model counts.',np.ndarray,'`~numpy.ndarray`'),
+    'fit_quality' :  (None, 'Fit quality parameter.',np.ndarray,'`~numpy.ndarray`'),
+    'index' :        (None, 'Spectral index of the power-law model used to fit this bin.',np.ndarray,'`~numpy.ndarray`'),
+    'lnlprofile' :   (None, 'Likelihood scan for each energy bin.',dict,'dict'),
+    'config' :       (None, 'Copy of the input parameters to this method.',dict,'dict'),
 }
 
 # Options for extension analysis
@@ -204,9 +231,9 @@ extension = {
     'spatial_model': ('GaussianSource', 'Spatial model use for extension test.', str),
     'width': (None, 'Parameter vector for scan over spatial extent.  If none then the parameter '
               'vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.', str),
-    'width_min': (0.01, '', float),
-    'width_max': (1.0, '', float),
-    'width_nstep': (21, '', int),
+    'width_min': (0.01, 'Minimum value in degrees for the likelihood scan over spatial extent.', float),
+    'width_max': (1.0, 'Maximum value in degrees for the likelihood scan over spatial extent.', float),
+    'width_nstep': (21, 'Number of steps for the spatial likelihood scan.', int),
     'save_templates': (False, '', bool),
     'fix_background': (False, 'Fix any background parameters that are currently free in the model when '
                        'performing the likelihood scan over extension.', bool),
@@ -215,17 +242,37 @@ extension = {
 
 # Options for localization analysis
 localize = {
-    'nstep': (5, '', int),
-    'dtheta_max': (0.3, '', float),
-    'update': (False, '', bool)
+    'nstep': (5, 'Number of steps along each spatial dimension in the refined likelihood scan.', int),
+    'dtheta_max': (0.3, 'Half-width of the search region in degrees used for the first pass of the localization search.', float),
+    'fix_background': (True, 'Fix background parameters when fitting the '
+                       'source flux in each energy bin.', bool),
+    'update': (False, 'Update the source model with the best-fit position.', bool)
+}
+
+# Output for localization analysis
+localize_output  = {
+    'ra' : (np.nan,'Right ascension of best-fit position in deg.',float,'float'),
+    'dec' : (np.nan,'Declination of best-fit position in deg.',float,'float'),
+    'glon' : (np.nan,'Galactic Longitude of best-fit position in deg.',float,'float'),
+    'glat' : (np.nan,'Galactic Latitude of best-fit position in deg.',float,'float'),
+    'offset' : (np.nan,'Angular offset in deg between the current and localized source position.',float,'float'),
+    'r68'  : (np.nan,'68% positional uncertainty in deg.',float,'float'),
+    'r95'  : (np.nan,'95% positional uncertainty in deg.',float,'float'),
+    'r99'  : (np.nan,'99% positional uncertainty in deg.',float,'float'),
+    'sigmax'  : (np.nan,'1-sigma uncertainty in deg in longitude.',float,'float'),
+    'sigmay'  : (np.nan,'1-sigma uncertainty in deg in latitude.',float,'float'),
+    'xpix'  : (np.nan,'Longitude pixel coordinate of best-fit position.',float,'float'),
+    'ypix'  : (np.nan,'Latitude pixel coordinate of best-fit position.',float,'float'),
+    'theta'  : (np.nan,'Position angle of uncertainty ellipse.',float,'float'),
+    'config' : (None, 'Copy of the input parameters to this method.',dict,'dict')
 }
 
 # Options for plotting
 plotting = {
     'erange': (None, '', list),
     'catalogs': (None, '', list),
-    'graticule_radii': (None, '', list),
+    'graticule_radii': (None, 'Define a list of radii at which circular graticules will be drawn.', list),
     'format': ('png', '', str),
-    'cmap': ('ds9_b', '', str),
+    'cmap': ('ds9_b', 'Set the colormap for 2D plots.', str),
     
 }

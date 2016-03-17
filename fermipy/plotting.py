@@ -1118,7 +1118,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure()
 
         p.plot(levels=[-200,-100,-50,-20,-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
-               interpolation='bicubic')
+               interpolation='bicubic',cb_label='2$\\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap['ts'].wcs.wcs.cdelt[1])

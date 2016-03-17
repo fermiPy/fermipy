@@ -13,4 +13,4 @@ in the following pages:
    sed
    extension
    detection
-
+   localization

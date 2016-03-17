@@ -1,6 +1,6 @@
 ``max_iter``	3	Set the number of search iterations.
 ``min_separation``	1.0	Set the minimum separation in deg for sources added in each iteration.
-``model``	None	Set the source model dictionary.
+``model``	None	Set the source model dictionary.  By default the test source will be a PointSource with an Index 2 power-law specturm.
 ``sources_per_iter``	3	
 ``sqrt_ts_threshold``	5.0	Set the threshold on sqrt(TS).
-``tsmap_fitter``	tsmap	
+``tsmap_fitter``	tsmap	Set the method for generating the TS map.

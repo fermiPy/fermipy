@@ -12,7 +12,7 @@
 ``ra``	None	
 ``radius``	None	Radius of data selection.  If none this will be automatically set from the ROI size.
 ``roicut``	no	
-``target``	None	Choose an object on which to center the ROI.  This option takes precendence over ra/dec.
+``target``	None	Choose an object on which to center the ROI.  This option takes precendence over ra/dec or glon/glat.
 ``tmax``	None	Maximum time (MET).
 ``tmin``	None	Minimum time (MET).
 ``zmax``	None	Maximum zenith angle.

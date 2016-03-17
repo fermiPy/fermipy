@@ -1,3 +1,5 @@
+.. _fermipy:
+
 fermipy package
 ===============
 

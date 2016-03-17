@@ -1467,6 +1467,9 @@ class GTAnalysis(fermipy.config.Configurable):
             determined from the TS map peak fit.  The total number of
             sampling points will be nstep**2.
 
+        fix_background : bool
+            Fix background parameters when fitting the source position.
+
         update : bool
             Update the properties of this source with the best-fit
             position.  If newname=None this will overwrite the
@@ -1945,10 +1948,9 @@ class GTAnalysis(fermipy.config.Configurable):
         Returns
         -------
 
-        sed : dict
-            Dictionary containing results of the SED analysis.  The same
-            dictionary is also saved to the source dictionary under
-            'sed'.
+        sed : dict Dictionary containing output of the SED analysis.
+            This dictionary is also saved to the 'sed' dictionary of
+            the `~fermipy.roi_model.Source` instance.
 
         """
 
