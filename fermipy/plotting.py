@@ -256,7 +256,7 @@ class ROIPlotter(fermipy.config.Configurable):
         'erange': (None, '', list),
         'catalogs': (None, '', list),
         'graticule_radii': (None, '', list),
-        'cmap': (None, 'magma', str),
+        'cmap': (None, 'ds9_b', str),
     }
 
     def __init__(self, data_map, **kwargs):
@@ -457,7 +457,7 @@ class ROIPlotter(fermipy.config.Configurable):
         zoom = kwargs.get('zoom',None)
         graticule_radii = kwargs.get('graticule_radii',self.config['graticule_radii'])
         
-        im_kwargs = dict(cmap='magma',
+        im_kwargs = dict(cmap='ds9_b',
                          interpolation='nearest',
                          vmin=None, vmax=None, levels=None,
                          zscale='lin', subplot=111)
