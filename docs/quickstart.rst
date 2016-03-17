@@ -375,7 +375,7 @@ IPython Notebook Tutorials
 --------------------------
 
 Additional tutorials with more detailed fermipy examples are available
-as a set of IPython notebooks.  These are located in the `notebooks
+as IPython notebooks in the `notebooks
 <https://github.com/fermiPy/fermipy/tree/master/notebooks/>`_
 directory of the fermipy respository.  To run any of the notebooks,
 download the fermipy repository and run ``jupyter notebook`` followed
@@ -394,7 +394,7 @@ conda- or pip-based installation as follows:
 .. code-block:: bash
 
    # Install with conda
-   conda install ipython jupyter
+   $ conda install ipython jupyter
 
    # Install with pip
-   pip install ipython jupyter
+   $ pip install ipython jupyter
