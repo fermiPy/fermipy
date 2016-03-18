@@ -1,7 +1,7 @@
 .. _extension:
 
-Extension Analysis
-==================
+Extension Fitting
+=================
 
 The :py:meth:`~fermipy.gtanalysis.GTAnalysis.extension` method executes
 a source extension analysis for a given source by computing a
@@ -11,29 +11,27 @@ is evaluated by a likelihood profile scan over the source width.
 Currently this method supports two models for extension: a 2D Gaussian
 (*GaussianSource*) or a 2D disk (*DiskSource*).
 
-The configuration of
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.extension` can be controlled
-with the *extension* block of the configuration file:
+The default configuration of
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.extension` is defined in the
+*extension* section of the configuration file:
 
-.. code-block:: yaml
-   
-   extension:
-     spatial_model : GaussianSource
-     width_min : 0.01
-     width_max : 1.0
-     width_nstep : 21
-     
+.. csv-table:: *extension* Options
+   :header:    Option, Default, Description
+   :file: ../config/extension.csv
+   :delim: tab
+   :widths: 10,10,80
+
 At runtime the default settings for the extension analysis can be
-overriden by supplying one or more *kwargs* when executing
+overriden by passing one or more *kwargs* when executing
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.extension`:
 
 .. code-block:: python
    
-   # Run analysis with default settings
-   gta.extension('sourceA')
+   # Run extension fit of sourceA with default settings
+   >>> gta.extension('sourceA')
 
-   # Override spatial model
-   gta.extension('sourceA',spatial_model='DiskSource')
+   # Override default spatial model
+   >>> gta.extension('sourceA',spatial_model='DiskSource')
 
 By default the extension method will profile over any background parameters
 that were free when the method was executed.  One can optionally fix
@@ -43,7 +41,7 @@ all background parameters with the *fix_background* parameter:
    
    # Free a nearby source that maybe be partially degenerate with the
    # source of interest
-   gta.free_source_norm('sourceB')
+   gta.free_norm('sourceB')
 
    # Normalization of SourceB will be refit when testing the extension
    # of sourceA

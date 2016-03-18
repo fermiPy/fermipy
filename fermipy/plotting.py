@@ -256,7 +256,7 @@ class ROIPlotter(fermipy.config.Configurable):
         'erange': (None, '', list),
         'catalogs': (None, '', list),
         'graticule_radii': (None, '', list),
-        'cmap': (None, 'magma', str),
+        'cmap': (None, 'ds9_b', str),
     }
 
     def __init__(self, data_map, **kwargs):
@@ -457,7 +457,7 @@ class ROIPlotter(fermipy.config.Configurable):
         zoom = kwargs.get('zoom',None)
         graticule_radii = kwargs.get('graticule_radii',self.config['graticule_radii'])
         
-        im_kwargs = dict(cmap='magma',
+        im_kwargs = dict(cmap='ds9_b',
                          interpolation='nearest',
                          vmin=None, vmax=None, levels=None,
                          zscale='lin', subplot=111)
@@ -1118,7 +1118,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure()
 
         p.plot(levels=[-200,-100,-50,-20,-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
-               interpolation='bicubic')
+               interpolation='bicubic',cb_label='2$\\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap['ts'].wcs.wcs.cdelt[1])

@@ -84,7 +84,7 @@ recommended to use this option when running in a cluster environment.
        
 .. code-block:: python
                 
-   maps = gta.tsmap('fit1',model=model,multithread=True)
+   >>> maps = gta.tsmap('fit1',model=model,multithread=True)
        
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` returns a `maps`
 dictionary containing `~fermipy.utils.Map` representations of the TS
@@ -95,7 +95,7 @@ and NPred of the best-fit test source at each position.
    >>> model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
    >>> maps = gta.tsmap('fit1',model=model)
    >>> print(maps.keys())
-   [u'files', u'name', u'sqrt_ts', u'ts', u'src_dict', u'npred', u'amplitude']
+   [u'file', u'name', u'sqrt_ts', u'ts', u'src_dict', u'npred', u'amplitude']
 
 The contents of the output dictionary are described in the following table.
 
@@ -264,7 +264,7 @@ Source Finding
 
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.find_sources` is an iterative source-finding
 algorithm that uses peak detection on the TS map to find the locations
-of new sources.  
+of new sources.
 
 .. automethod:: fermipy.gtanalysis.GTAnalysis.find_sources
    :noindex:

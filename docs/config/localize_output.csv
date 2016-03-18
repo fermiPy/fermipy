@@ -1,0 +1,14 @@
+``config``	dict	Copy of the input parameters to this method.
+``dec``	float	Declination of best-fit position in deg.
+``glat``	float	Galactic Latitude of best-fit position in deg.
+``glon``	float	Galactic Longitude of best-fit position in deg.
+``offset``	float	Angular offset in deg between the current and localized source position.
+``r68``	float	68% positional uncertainty in deg.
+``r95``	float	95% positional uncertainty in deg.
+``r99``	float	99% positional uncertainty in deg.
+``ra``	float	Right ascension of best-fit position in deg.
+``sigmax``	float	1-sigma uncertainty in deg in longitude.
+``sigmay``	float	1-sigma uncertainty in deg in latitude.
+``theta``	float	Position angle of uncertainty ellipse.
+``xpix``	float	Longitude pixel coordinate of best-fit position.
+``ypix``	float	Latitude pixel coordinate of best-fit position.

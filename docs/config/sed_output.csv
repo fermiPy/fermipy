@@ -1,0 +1,23 @@
+``Npred``	`~numpy.ndarray`	Number of model counts.
+``config``	dict	Copy of the input parameters to this method.
+``dfde``	`~numpy.ndarray`	Differential flux in each bin (MeV^{-1} cm^{-2} s^{-1}).
+``dfde_err``	`~numpy.ndarray`	1-sigma error on dfde evaluated from likelihood curvature.
+``dfde_err_hi``	`~numpy.ndarray`	Upper 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).
+``dfde_err_lo``	`~numpy.ndarray`	Lower 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).
+``dfde_ul``	`~numpy.ndarray`	Upper limit on dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.
+``dfde_ul95``	`~numpy.ndarray`	95% CL upper limit on dfde evaluated from the profile likelihood (MINOS errors).
+``e2dfde``	`~numpy.ndarray`	E^2 x the differential flux in each bin (MeV^{-1} cm^{-2} s^{-1}).
+``e2dfde_err``	`~numpy.ndarray`	1-sigma error on e2dfde evaluated from likelihood curvature.
+``e2dfde_err_hi``	`~numpy.ndarray`	Upper 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).
+``e2dfde_err_lo``	`~numpy.ndarray`	Lower 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).
+``e2dfde_ul``	`~numpy.ndarray`	Upper limit on e2dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.
+``e2dfde_ul95``	`~numpy.ndarray`	95% CL upper limit on e2dfde evaluated from the profile likelihood (MINOS errors).
+``ecenter``	`~numpy.ndarray`	Centers of SED energy bins (log10(E/MeV)).
+``eflux``	`~numpy.ndarray`	Energy flux in each bin (MeV cm^{-2} s^{-1}).
+``emax``	`~numpy.ndarray`	Upper edges of SED energy bins (log10(E/MeV)).
+``emin``	`~numpy.ndarray`	Lower edges of SED energy bins (log10(E/MeV)).
+``fit_quality``	`~numpy.ndarray`	Fit quality parameter.
+``flux``	`~numpy.ndarray`	Flux in each bin (cm^{-2} s^{-1}).
+``index``	`~numpy.ndarray`	Spectral index of the power-law model used to fit this bin.
+``lnlprofile``	dict	Likelihood scan for each energy bin.
+``ts``	`~numpy.ndarray`	Test statistic.

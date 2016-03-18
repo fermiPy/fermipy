@@ -55,6 +55,112 @@ The configuration file mirrors the layout of the configuration
 dictionary.  The options that can be set in each section are described
 below.
 
+
+     
+
+     
+binning
+-------
+
+Options in the *binning* section control the spatial and spectral binning of the data.
+
+.. code-block:: yaml
+   :caption: Sample *binning* Configuration
+                
+   binning:
+
+     # Binning
+     roiwidth   : 10.0
+     npix       : null
+     binsz      : 0.1 # spatial bin size in deg
+     binsperdec : 8   # nb energy bins per decade
+     projtype   : WCS
+
+.. csv-table:: *binning* Options
+   :header:    Option, Default, Description
+   :file: config/binning.csv
+   :delim: tab
+   :widths: 10,10,80
+
+components
+----------
+
+The *components* section can be used to define analysis configurations
+for a sequence of independent subselections of the data.  Each
+subselection will have its own binned likelihood instance that will be
+combined in a global likelihood likelihood function for the whole ROI
+(implemented with the SummedLikelihood class in pyLikelihood).  This
+section is optional and when this section is empty (the default)
+fermiPy will construct a single likelihood with the parameters of the
+root analysis configuration.
+
+The component section can be defined as either a list or dictionary of
+dictionary elements where each element sets analysis parameters for a
+different subcomponent of the analysis.  Dictionary elements have the
+same hierarchy of parameters as the root analysis configuration.
+Parameters not defined in a given element will default to the values
+set in the root analysis configuration.
+
+The following example illustrates how to define a Front/Back analysis
+with the a list of dictionaries.  In this case files associated to
+each component will be named according to their order in the list
+(e.g. file_00.fits, file_01.fits, etc.).
+
+.. code-block:: yaml
+
+   # Component section for Front/Back analysis with list style
+   components:
+     - { selection : { evtype : 1 } } # Front
+     - { selection : { evtype : 2 } } # Back
+
+This example illustrates how to define the components as a dictionary
+of dictionaries.  In this case the files of a component will be
+appended with its corresponding key (e.g. file_front.fits,
+file_back.fits).
+
+.. code-block:: yaml
+
+   # Component section for Front/Back analysis with dictionary style
+   components:
+     front : { selection : { evtype : 1 } } # Front
+     back  : { selection : { evtype : 2 } } # Back
+
+data
+----
+
+The *data* section defines the input data files for the analysis (FT1,
+FT2, and livetime cube).  ``evfile`` and ``scfile`` can either be 
+individual files or group of files.  The optional ``ltcube`` option can
+be used to choose a pre-generated livetime cube.  If ``ltcube`` is
+null a livetime cube will be generated at runtime with ``gtltcube``.  
+
+.. code-block:: yaml
+   :caption: Sample *data* Configuration
+
+   data :
+     evfile : ft1.lst
+     scfile : ft2.fits 
+     ltcube : null
+
+.. csv-table:: *data* Options
+   :header:    Option, Default, Description
+   :file: config/data.csv
+   :delim: tab
+   :widths: 10,10,80
+
+extension
+---------
+
+The options in *extension* control the default behavior of the
+`~fermipy.gtanalysis.GTAnalysis.extension` method.  For more information
+about running this method see the :ref:`extension` page.
+
+.. csv-table:: *extension* Options
+   :header:    Option, Default, Description
+   :file: config/extension.csv
+   :delim: tab
+   :widths: 10,10,80
+            
 fileio
 ------
 
@@ -80,44 +186,33 @@ created under ``scratchdir``.
    :file: config/fileio.csv
    :delim: tab
    :widths: 10,10,80
+            
+gtlike
+------
 
-data
-----
+Options in the *gtlike* section control the setup of the likelihood
+analysis include the IRF name (``irfs``).
 
-The *data* section defines the input data files for the analysis (FT1,
-FT2, and livetime cube).  ``evfile`` and ``scfile`` can either be 
-individual files or group of files.  The optional ``ltcube`` option can
-be used to choose a pre-generated livetime cube.  If ``ltcube`` is
-null a livetime cube will be generated at runtime with ``gtltcube``.  
-
-.. code-block:: yaml
-   :caption: Sample *data* Configuration
-
-   data :
-     evfile : ft1.lst
-     scfile : ft2.fits 
-     ltcube : null
-
-.. csv-table:: *data* Options
+.. csv-table:: *gtlike* Options
    :header:    Option, Default, Description
-   :file: config/data.csv
+   :file: config/gtlike.csv
    :delim: tab
    :widths: 10,10,80
-     
+            
 model
 -----
 
 The *model* section collects options that control the inclusion of
 point-source and diffuse components in the model.  ``galdiff`` and
-``isodiff`` set the templates for the Galactic IEM and isotropic diffuse
-respectively.  ``catalogs`` defines a list of catalogs that will be
-merged to form a master analysis catalog from which sources will be
-drawn.  Valid entries in this list can be FITS files or XML model
-files.  *sources* can be used to insert additional point-source or
-extended components beyond those defined in the master catalog.
-*src_radius* and *src_roiwidth* set the maximum distance from the ROI
-center at which sources in the master catalog will be included in the
-ROI model.
+``isodiff`` set the templates for the Galactic IEM and isotropic
+diffuse respectively.  ``catalogs`` defines a list of catalogs that
+will be merged to form a master analysis catalog from which sources
+will be drawn.  Valid entries in this list can be FITS files or XML
+model files.  ``sources`` can be used to insert additional
+point-source or extended components beyond those defined in the master
+catalog.  ``src_radius`` and ``src_roiwidth`` set the maximum distance
+from the ROI center at which sources in the master catalog will be
+included in the ROI model.
 
 .. code-block:: yaml
    :caption: Sample *model* Configuration
@@ -148,30 +243,38 @@ ROI model.
    :file: config/model.csv
    :delim: tab
    :widths: 10,10,80
-     
-binning
--------
+            
+optimizer
+---------
 
-Options in the *binning* section control the spatial and spectral binning of the data.
-
-.. code-block:: yaml
-   :caption: Sample *binning* Configuration
-                
-   binning:
-
-     # Binning
-     roiwidth   : 10.0
-     npix       : null
-     binsz      : 0.1 # spatial bin size in deg
-     binsperdec : 8   # nb energy bins per decade
-     projtype   : WCS
-
-.. csv-table:: *binning* Options
+.. csv-table:: *optimizer* Options
    :header:    Option, Default, Description
-   :file: config/binning.csv
+   :file: config/optimizer.csv
    :delim: tab
    :widths: 10,10,80
-          
+
+plotting
+---------
+
+.. csv-table:: *plotting* Options
+   :header:    Option, Default, Description
+   :file: config/plotting.csv
+   :delim: tab
+   :widths: 10,10,80
+            
+sed
+---
+
+The options in the *sed* section controls the default behavior of the
+`~fermipy.gtanalysis.GTAnalysis.sed` method.  For more information
+about running this method see the :ref:`sed` page.
+
+.. csv-table:: *sed* Options
+   :header:    Option, Default, Description
+   :file: config/sed.csv
+   :delim: tab
+   :widths: 10,10,80
+
 selection
 ---------
 
@@ -208,31 +311,13 @@ explicit sky coordinates with *ra* and *dec* or *glon* and *glat*.
    :file: config/selection.csv
    :delim: tab
    :widths: 10,10,80
-     
-optimizer
----------
+            
+sourcefind
+----------
 
-.. csv-table:: *optimizer* Options
+.. csv-table:: *sourcefind* Options
    :header:    Option, Default, Description
-   :file: config/optimizer.csv
-   :delim: tab
-   :widths: 10,10,80
-
-extension
----------
-
-.. csv-table:: *extension* Options
-   :header:    Option, Default, Description
-   :file: config/extension.csv
-   :delim: tab
-   :widths: 10,10,80
-
-sed
----------
-
-.. csv-table:: *sed* Options
-   :header:    Option, Default, Description
-   :file: config/sed.csv
+   :file: config/sourcefind.csv
    :delim: tab
    :widths: 10,10,80
             
@@ -254,54 +339,6 @@ tscube
    :delim: tab
    :widths: 10,10,80
             
-sourcefind
-----------
 
-.. csv-table:: *sourcefind* Options
-   :header:    Option, Default, Description
-   :file: config/sourcefind.csv
-   :delim: tab
-   :widths: 10,10,80
             
-components
-----------
-
-The *components* section is used to define a joint analysis formed by
-the product of likelihoods for different subselection of the data
-(implemented with the SummedLikelihood class in pyLikelihood).  This
-section is optional and when set to null (the default) fermiPy will
-construct a single likelihood using the parameters of the root
-analysis configuration.
-
-The component section can be defined as either a list or dictionary of
-dictionary elements where each element sets analysis parameters for a
-different subcomponent of the analysis.  Dictionary elements have the
-same hierarchy of parameters as the root analysis configuration.
-Parameters not defined in a given element will default to the values
-set in the root analysis configuration.
-
-The following example illustrates how to define a Front/Back analysis
-with the a list of dictionaries.  In this case files associated to
-each component will be named according to their order in the list
-(e.g. file_00.fits, file_01.fits, etc.).
-
-.. code-block:: yaml
-
-   # Component section for Front/Back analysis with list style
-   components:
-     - { selection : { evtype : 1 } } # Front
-     - { selection : { evtype : 2 } } # Back
-
-This example illustrates how to define the components as a dictionary
-of dictionaries.  In this case the files of a component will be
-appended with its corresponding key (e.g. file_front.fits,
-file_back.fits).
-
-.. code-block:: yaml
-
-   # Component section for Front/Back analysis with dictionary style
-   components:
-     front : { selection : { evtype : 1 } } # Front
-     back  : { selection : { evtype : 2 } } # Back
-
 

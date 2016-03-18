@@ -5,15 +5,17 @@ Installation
 
 .. note:: 
 
-   fermiPy is only compatible with ST v10r0p5 or later.
+   fermiPy is only compatible with ST v10r0p5 or later.  If you are
+   using an earlier version, it is recommended to download and install
+   the latest version from the FSSC.
 
 These instructions assume that you already have a local installation
 of the Fermi STs.  Instructions for downloading and installing the STs
 are provided through the `FSSC
 <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  If you
-are running at SLAC you can follow the instructions under `Running at
-SLAC`_.  For Unix/Linux users we currently recommend following the
-:ref:`condainstall` instructions.  For OSX users we recommend
+are running at SLAC you can follow the `Running at SLAC`_
+instructions.  For Unix/Linux users we currently recommend following
+the :ref:`condainstall` instructions.  For OSX users we recommend
 following the :ref:`pipinstall` instructions.
 
 .. _pipinstall:
@@ -29,7 +31,7 @@ Science Tools
 
 .. code-block:: bash
 
-   >>> which python
+   $ which python
 
 If this doesn't point to the python in your Science Tools install
 (i.e. it returns /usr/bin/python or /usr/local/bin/python) then the
@@ -44,27 +46,27 @@ local environment:
 
 .. code-block:: bash
 
-   >>> curl https://bootstrap.pypa.io/get-pip.py | python -
+   $ curl https://bootstrap.pypa.io/get-pip.py | python -
 
 Check if pip is correctly installed:
 
 .. code-block:: bash
 
-   >>> which pip
+   $ which pip
 
 Once again, if this isn't the pip in the Science Tools, something went
 wrong.  Now install fermipy by running
 
 .. code-block:: bash
 
-   >>> pip install fermipy
+   $ pip install fermipy
 
 To run the ipython notebook examples you will also need to install
 jupyter notebook:
    
 .. code-block:: bash
 
-   >>> pip install jupyter
+   $ pip install jupyter
 
 .. Running pip and setup.py with the ``user`` flag is recommended if you do not
 .. have write access to your python installation (for instance if you are
@@ -76,7 +78,7 @@ Finally, check that fermipy imports:
 
 .. code-block:: bash
 
-   >>> python
+   $ python
    Python 2.7.8 (default, Aug 20 2015, 11:36:15)
    [GCC 4.2.1 Compatible Apple LLVM 6.0 (clang-600.0.56)] on darwin
    Type "help", "copyright", "credits" or "license" for more information. 
@@ -108,16 +110,13 @@ installation from scratch.  In either case download and run the
 
 .. code-block:: bash
 
-   >>> curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condainstall.sh
-   >>> bash condainstall.sh
-   
-..   >>> git clone https://github.com/fermiPy/fermipy.git; cd fermipy
-..   >>> bash condainstall.sh
+   $ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condainstall.sh
+   $ bash condainstall.sh
 
 If you do not already have anaconda python installed on your system
 this script will create a new installation under ``$HOME/miniconda``.
-If you already have conda installed (i.e. if the conda command is
-already in your path) the script will use your existing installation.
+If you already have conda installed and the ``conda`` command is
+in your path the script will use your existing installation.
 The script will create a separate environment for your fermipy
 installation called *fermi-env*.
 
@@ -126,8 +125,8 @@ running ``condasetup.sh``:
 
 .. code-block:: bash
 
-   >>> curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condasetup.sh 
-   >>> source condasetup.sh
+   $ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condasetup.sh 
+   $ source condasetup.sh
 
 This will both activate the *fermi-env* environment and set up your
 shell environment to run the Fermi Science Tools.  The *fermi-env*
@@ -135,25 +134,26 @@ python environment can be exited by running:
 
 .. code-block:: bash
 
-   >>> source deactivate
+   $ source deactivate
 
 
 Running at SLAC
 ---------------
 
 This section provides specific installation instructions for running
-on the SLAC cluster.  First download and source the ``slacsetup.sh`` script:
+in the SLAC computing environment.  First download and source the
+``slacsetup.sh`` script:
 
 .. code-block:: bash
 
-   >>> wget https://raw.githubusercontent.com/fermiPy/fermipy/master/slacsetup.sh -O slacsetup.sh
-   >>> source slacsetup.sh
+   $ wget https://raw.githubusercontent.com/fermiPy/fermipy/master/slacsetup.sh -O slacsetup.sh
+   $ source slacsetup.sh
    
 To initialize the ST environment run the ``slacsetup`` function:
 
 .. code-block:: bash
 
-   >>> slacsetup
+   $ slacsetup
 
 This will setup your ``GLAST_EXT`` path and source the setup script
 for one of the pre-built ST installations (the current default is
@@ -162,27 +162,24 @@ provide the release tag as an argument to ``slacsetup``:
 
 .. code-block:: bash
 
-   >>> slacsetup 10-XX-XX
+   $ slacsetup 10-XX-XX
 
-After initializing the STs environment, install fermipy with pip:
-
-.. code-block:: bash
-
-   >>> pip install fermipy --user
-
-This will install fermipy in ``$HOME/.local``.  To upgrade an existing
-fermipy installation run the same command with ``--upgrade --no-deps`` :
+Because users don't have write access to the ST python installation
+all pip commands that install or uninstall packages must be executed
+with the ``--user`` flag.  After initializing the STs environment,
+install fermipy with pip:
 
 .. code-block:: bash
 
-   >>> pip install fermipy --user --upgrade --no-deps
+   $ pip install fermipy --user
 
-You can verify that the installation has succeeded by importing
+This will install fermipy in ``$HOME/.local``.  You can verify that
+the installation has succeeded by importing
 `~fermipy.gtanalysis.GTAnalysis`:
 
 .. code-block:: bash
 
-   >>> python
+   $ python
    Python 2.7.8 |Anaconda 2.1.0 (64-bit)| (default, Aug 21 2014, 18:22:21) 
    [GCC 4.4.7 20120313 (Red Hat 4.4.7-1)] on linux2
    Type "help", "copyright", "credits" or "license" for more information.
@@ -190,6 +187,45 @@ You can verify that the installation has succeeded by importing
    Please check out: http://continuum.io/thanks and https://binstar.org
    >>> from fermipy.gtanalysis import GTAnalysis
 
+.. _upgrade:
+   
+Upgrading
+---------
+
+By default installing fermipy with ``pip`` will get the latest tagged
+released available on the `PyPi <https://pypi.python.org/pypi>`_
+package respository.  You can check your currently installed version
+of fermipy with ``pip show``:
+
+.. code-block:: bash
+
+   $ pip show fermipy
+   ---
+   Metadata-Version: 2.0
+   Name: fermipy
+   Version: 0.6.7
+   Summary: A Python package for analysis of Fermi-LAT data
+   Home-page: https://github.com/fermiPy/fermipy
+   Author: The Fermipy developers
+   Author-email: fermipy.developers@gmail.com
+   License: BSD
+   Location: /home/vagrant/miniconda/envs/fermi-env/lib/python2.7/site-packages
+   Requires: wcsaxes, astropy, matplotlib, healpy, scipy, numpy, pyyaml
+
+To upgrade your fermipy installation to the latest version run the pip
+installation command with ``--upgrade --no-deps``:
+   
+.. code-block:: bash
+   
+   $ pip install fermipy --upgrade --no-deps
+   Collecting fermipy
+   Installing collected packages: fermipy
+     Found existing installation: fermipy 0.6.6
+       Uninstalling fermipy-0.6.6:
+         Successfully uninstalled fermipy-0.6.6
+   Successfully installed fermipy-0.6.7
+
+   
 .. _gitinstall:
    
 Building from Source
@@ -197,41 +233,48 @@ Building from Source
 
 These instructions describe how to install fermipy from its git source
 code repository.  This is necessary if you want to locally develop
-fermipy or you want to use the latest development version of the
-fermipy code.  Note that for most users installing fermipy with pip
-should be sufficient.  First clone the fermipy repository:
+fermipy or you want to use features in a development version of the
+fermipy code.  Note that for non-expert users it is recommended to
+install fermipy with ``pip`` following the instructions above.  First
+clone the fermipy repository:
 
 .. code-block:: bash
 
-   >>> git clone https://github.com/fermiPy/fermipy.git
-   >>> cd fermipy
+   $ git clone https://github.com/fermiPy/fermipy.git
+   $ cd fermipy
 
-You then have the option of either installing a tagged release or the
-head of the master branch.  To install the head of the master branch
-run ``setup.py install`` from the root of the source tree:
+To install the head of the master branch run ``setup.py install`` from
+the root of the source tree:
 
 .. code-block:: bash
 
    # Install the latest version
-   >>> git checkout master
-   >>> python setup.py install --user 
+   $ git checkout master
+   $ python setup.py install --user 
 
-To use your current copy of the code as the working installation run
-``setup.py develop``:
+A useful option if you are doing active code development is to install
+your working copy as the local installation.  This can be done by
+running ``setup.py develop``:
 
 .. code-block:: bash
 
    # Install a link to your source code installation
-   >>> python setup.py develop --user 
+   $ python setup.py develop --user 
 
-This is particularly useful if you are doing active code development.
-   
-From the git source code repository you can also install any tagged
-release.  To see the list of release tags use ``git tag``:
+You can later remove the link to your working copy by running the same
+command with the ``--uninstall`` flag:
 
 .. code-block:: bash
 
-   >>> git tag
+   # Install a link to your source code installation
+   $ python setup.py develop --user --uninstall
+   
+You also have the option of installing a previous release tag.  To see
+the list of release tags use ``git tag``:
+
+.. code-block:: bash
+
+   $ git tag
    0.4.0
    0.5.0
    0.5.1
@@ -247,18 +290,30 @@ name followed by ``setup.py install``:
 .. code-block:: bash
    
    # Checkout a specific release tag
-   >>> git checkout X.X.X 
-   >>> python setup.py install --user 
+   $ git checkout X.X.X 
+   $ python setup.py install --user 
 
+
+   
 Issues
 ------
 
 If you get an error about importing matplotlib (specifically something
 about the macosx backend) you might change your default backend to get
-it working.  The `customizing matplotlib
-page <http://matplotlib.org/users/customizing.html>`_ details the
+it working.  The `customizing matplotlib page
+<http://matplotlib.org/users/customizing.html>`_ details the
 instructions to modify your default matplotlibrc file (you can pick
-GTK or WX as an alternative).
+GTK or WX as an alternative).  Specifically the ``TkAgg`` and
+``macosx`` backends currently do not work on OSX if you upgrade
+matplotlib to the version required by fermipy.  To get around this
+issue you can enable the ``Agg`` backend at runtime:
+
+.. code-block:: bash
+
+   >>> import matplotlib
+   >>> matplotlib.use('Agg')
+
+However this backend does not support interactive plotting.
 
 In some cases the setup.py script will fail to properly install the
 fermipy package dependecies.  If installation fails you can try
@@ -266,4 +321,4 @@ running a forced upgrade of these packages with ``pip install --upgrade``:
 
 .. code-block:: bash
 
-   >>> pip install --upgrade --user numpy matplotlib scipy astropy pyyaml healpy wcsaxes ipython jupyter
+   $ pip install --upgrade --user numpy matplotlib scipy astropy pyyaml healpy wcsaxes ipython jupyter
