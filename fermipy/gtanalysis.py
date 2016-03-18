@@ -25,7 +25,7 @@ import fermipy.sed as sourcefind
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
-from fermipy.utils import mkdir, merge_dict, tolist, create_wcs
+from fermipy.utils import merge_dict, tolist, create_wcs
 from fermipy.utils import Map
 from fermipy.utils import create_hpx_disk_region_string
 from fermipy.hpx_utils import HpxMap, HPX
@@ -39,8 +39,6 @@ import FluxDensity
 from LikelihoodState import LikelihoodState
 from gtutils import BinnedAnalysis, SummedLikelihood
 import BinnedAnalysis as ba
-
-# from UpperLimits import UpperLimits
 
 norm_parameters = {
     'ConstantValue': ['Value'],
@@ -74,7 +72,6 @@ index_parameters = {
     'ExpCutoff': ['Index1'],
     'FileFunction': [],
 }
-
 
 def interpolate_function_min(x, y):
     sp = scipy.interpolate.splrep(x, y, k=2, s=0)
@@ -235,7 +232,7 @@ class GTAnalysis(fermipy.config.Configurable):
         if self.config['fileio']['outdir'] is not None:
             self._savedir = os.path.join(self._rootdir,
                                          self.config['fileio']['outdir'])
-            mkdir(self._savedir)
+            utils.mkdir(self._savedir)
         else:
             raise Exception('Save directory not defined.')
 
