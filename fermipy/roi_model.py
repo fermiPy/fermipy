@@ -1295,7 +1295,7 @@ class ROIModel(fermipy.config.Configurable):
         self._src_radius = []
 
         self.load(coordsys=coordsys)
-
+        
     def __getitem__(self, key):
         return self.get_source_by_name(key, True)
 
@@ -1505,7 +1505,6 @@ class ROIModel(fermipy.config.Configurable):
         
         match_srcs = self.match_source(src)
         
-        #if name in self._src_dict and self._src_dict[name]:
         if len(match_srcs) == 1:
 
             self.logger.debug('Found matching source for %s : %s'
@@ -1513,7 +1512,7 @@ class ROIModel(fermipy.config.Configurable):
             
             if merge_sources:
                 self.logger.debug('Updating source model for %s' % src.name)
-                match_srcs[0].update_from_src(src)
+                match_srcs[0].update_from_source(src)
             else:
                 match_srcs[0].add_name(src.name)
                 self.logger.debug('Skipping source model for %s' % src.name)
@@ -1561,6 +1560,8 @@ class ROIModel(fermipy.config.Configurable):
     def load(self, **kwargs):
         """Load both point source and diffuse components."""
 
+        self.logger.debug('Starting')
+        
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
 
@@ -1584,7 +1585,7 @@ class ROIModel(fermipy.config.Configurable):
 
             self.create_source(c['name'],c, build_index=False)
 
-        self._build_src_index()
+        self._build_src_index()        
 
     def delete_sources(self, srcs):
 
@@ -1626,6 +1627,9 @@ class ROIModel(fermipy.config.Configurable):
     def create_from_position(skydir, config, **kwargs):
         """Create an ROIModel instance centered on a sky direction.
 
+        Parameters
+        ----------
+        
         skydir : `~astropy.coordinates.SkyCoord` 
             Sky direction on which the ROI will be centered.
 
@@ -1842,6 +1846,8 @@ class ROIModel(fermipy.config.Configurable):
         name : str
             Catalog name or path to a catalog FITS file.
         """
+
+        self.logger.debug('Loading FITS catalog: %s'%name)
         
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
