@@ -1,4 +1,13 @@
+import copy
 import numpy as np
+
+def make_default_dict(d):
+
+    o = {}
+    for k, v in d.items():
+        o[k] = copy.deepcopy(v[0])
+
+    return o
 
 # Options for defining input data files
 data = {
@@ -238,7 +247,25 @@ extension = {
     'fix_background': (False, 'Fix any background parameters that are currently free in the model when '
                        'performing the likelihood scan over extension.', bool),
     'save_model_map': (False, '', bool),
+    'update': (False, 'Update the source model with the best-fit spatial extension.', bool)
 }
+
+extension_output = {
+    'width': (None, 'List of width parameters.',np.ndarray,'`~numpy.ndarray`'),
+    'dlogLike': (None, 'Sequence of delta-log-likelihood values for each point in the profile likelihood scan.',np.ndarray,'`~numpy.ndarray`'),
+    'logLike': (None, 'Sequence of likelihood values for each point in the scan over the spatial extension.',np.ndarray,'`~numpy.ndarray`'),
+    'logLike_ptsrc': (np.nan,'Model log-Likelihood value of the best-fit point-source model.',float,'float'),
+    'logLike_ext': (np.nan,'Model log-Likelihood value of the best-fit extended source model.',float,'float'),
+    'logLike_base': (np.nan,'Model log-Likelihood value of the baseline model.',float,'float'),
+    'ext': (np.nan, 'Best-fit extension in degrees.',float,'float'),
+    'ext_err_hi': (np.nan, 'Upper (1 sigma) error on the best-fit extension in degrees.',float,'float'),
+    'ext_err_lo': (np.nan,'Lower (1 sigma) error on the best-fit extension in degrees.',float,'float'),
+    'ext_err': (np.nan,'Symmetric (1 sigma) error on the best-fit extension in degrees.',float,'float'),
+    'ext_ul95': (np.nan,'95% CL upper limit on the spatial extension in degrees.',float,'float'),
+    'ts_ext': (np.nan,'Test statistic for the extension hypothesis.',float,'float'),
+    'source_fit': ({},'Dictionary with parameters of the best-fit extended source model.',dict,'dict'),
+    'config': ({},'Copy of the input configuration to this method.',dict,'dict')
+    }
 
 # Options for localization analysis
 localize = {

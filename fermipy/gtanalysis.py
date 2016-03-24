@@ -1440,11 +1440,11 @@ class GTAnalysis(fermipy.config.Configurable):
         """Find the best-fit position of a source.  Localization is
         performed in two steps.  First a TS map is computed centered
         on the source with half-width set by ``dtheta_max``.  A fit is
-        then performed to the maximum TS peak in this map.  The best
-        fit position is then refined by scanning the likelihood in the
-        vicinity of the peak found in the first step.  The size of the
-        scan region is set to encompass the 99% positional uncertainty
-        contour as determined from the peak fit.
+        then performed to the maximum TS peak in this map.  The source
+        position is then further refined by scanning the likelihood in
+        the vicinity of the peak found in the first step.  The size of
+        the scan region is set to encompass the 99% positional
+        uncertainty contour as determined from the peak fit.
 
         Parameters
         ----------
@@ -1468,13 +1468,13 @@ class GTAnalysis(fermipy.config.Configurable):
             Fix background parameters when fitting the source position.
 
         update : bool
-            Update the properties of this source with the best-fit
+            Update the model for this source with the best-fit
             position.  If newname=None this will overwrite the
             existing source map of this source with one corresponding
             to its new location.
 
         newname : str
-            Name that will be assigned to the relocalized source model
+            Name that will be assigned to the relocalized source 
             when update=True.  If newname is None then the existing
             source name will be used.
 
@@ -1667,12 +1667,15 @@ class GTAnalysis(fermipy.config.Configurable):
         return o
 
     def extension(self, name, **kwargs):
-        """Perform an angular extension test for this source.  This
-        will substitute an extended spatial template for the given
-        source and perform a one-dimensional scan of the spatial
-        extension parameter over the range specified with the width
-        parameters.  The 1-D profile likelihood is used to
-        compute the best-fit value, upper limit, and TS for extension.
+        """Test this source for spatial extension with the likelihood
+        ratio method (TS_ext).  This method will substitute an
+        extended spatial model for the given source and perform a
+        one-dimensional scan of the spatial extension parameter over
+        the range specified with the width parameters.  The 1-D
+        profile likelihood is then used to compute the best-fit value,
+        upper limit, and TS for extension.  Any background parameters
+        that are free will also be simultaneously profiled in the
+        likelihood scan.
 
         Parameters
         ----------
@@ -1696,13 +1699,17 @@ class GTAnalysis(fermipy.config.Configurable):
             between log(width_min) and log(width_max).
 
         width : array-like        
-            Explicit sequence of values in degrees for the spatial extension
+            Sequence of values in degrees for the spatial extension
             scan.  If this argument is None then the scan points will
             be determined from width_min/width_max/width_nstep.
             
         fix_background : bool
             Fix all background sources when performing the extension fit.
 
+        update : bool        
+            Update this source with the best-fit model for spatial
+            extension.
+            
         save_model_map : bool
             Save model maps for all steps in the likelihood scan.
             
@@ -1729,6 +1736,7 @@ class GTAnalysis(fermipy.config.Configurable):
         width = config['width']
         fix_background = config['fix_background']
         save_model_map = config['save_model_map']
+        update = config['update']
 
         self.logger.info('Starting')
         self.logger.info('Running analysis for %s' % name)
@@ -1763,19 +1771,16 @@ class GTAnalysis(fermipy.config.Configurable):
             width = np.logspace(np.log10(width_min), np.log10(width_max),
                                 width_nstep)
 
-        o = {'width': width,
-             'dlogLike': np.zeros(len(width)),
-             'logLike': np.zeros(len(width)),
-             'logLike_ptsrc': 0.0,
-             'logLike_base': logLike0,
-             'ext': np.nan,
-             'ext_err_hi': np.nan,
-             'ext_err_lo': np.nan,
-             'ext_err': np.nan,
-             'ext_ul95': np.nan,
-             'ts_ext': np.nan,
-             'source_fit': {},
-             'config': config}
+        width = np.array(width)
+        width = np.delete(width,0.0)            
+        width = np.concatenate(([0.0],np.array(width)))
+            
+        o = defaults.make_default_dict(defaults.extension_output)
+        o['width'] = width
+        o['dlogLike'] = np.zeros(len(width)+1)
+        o['logLike'] = np.zeros(len(width)+1)
+        o['logLike_base'] = logLike0
+        o['config'] = config
 
         # Fit a point-source
         s = self.roi.copy_source(name)
@@ -1797,13 +1802,14 @@ class GTAnalysis(fermipy.config.Configurable):
         self.logger.debug('Width scan vector:\n %s' % width)
 
         if not hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
-            o['logLike'] = self._scan_extension_pylike(name, spatial_model, width)
+            o['logLike'] = self._scan_extension_pylike(name, spatial_model, width[1:])
         else:
-            o['logLike'] = self._scan_extension(name, spatial_model, width)
+            o['logLike'] = self._scan_extension(name, spatial_model, width[1:])
+        o['logLike'] = np.concatenate(([o['logLike_ptsrc']],o['logLike']))
         o['dlogLike'] = o['logLike'] - o['logLike_ptsrc']
         
         try:
-
+            
             ul_data = utils.get_parameter_limits(o['width'], o['dlogLike'])
 
             o['ext'] = ul_data['x0']
@@ -1825,26 +1831,34 @@ class GTAnalysis(fermipy.config.Configurable):
 
             # Fit with the best-fit extension model
             s = self.roi.copy_source(name)
-            model_name = '%s' % (ext_model_name)
+            model_name = ext_model_name
             s.set_name(model_name)
-            s.set_spatial_model(spatial_model, o['ext'])
+            s.set_spatial_model(spatial_model, max(o['ext'],10**-2.5))
 
             self.logger.info('Refitting extended model')
             self.add_source(model_name, s, free=True)
-            self.fit(update=False)
+            self.fit()
 
             o['source_fit'] = self.get_src_model(model_name)
-
+            o['logLike_ext'] = -self.like()
+            
 #            self.generate_model_map(model_name=model_name,
 #                                    name=model_name)
 
-            self.delete_source(model_name, save_template=False)
+            src_ext = self.delete_source(model_name, save_template=False)
 
         # Restore ROI parameters to previous state
         self.scale_parameter(name, normPar, 1E10)
         self.like.syncSrcParams(name)
         saved_state.restore()
-
+                
+        if update and src_ext is not None:
+            src = self.delete_source(name)
+            src.set_spectral_pars(src_ext.spectral_pars)
+            src.set_spatial_model(src_ext['SpatialModel'],
+                                  src_ext['SpatialWidth'])
+            self.add_source(name,src,free=True)            
+        
         src = self.roi.get_source_by_name(name, True)
         src['extension'] = copy.deepcopy(o)
 

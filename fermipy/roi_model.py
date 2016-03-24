@@ -370,6 +370,8 @@ def make_parameter_dict(pdict, fixed_par=False):
         value, scale = scale_parameter(o['value'])
         o['value'] = value
         o['scale'] = scale
+        if 'error' in o:
+            o['error'] /= np.abs(scale)
 
     if 'min' not in o:
         o['min'] = o['value']*1E-3
@@ -534,9 +536,9 @@ class Model(object):
             self._data['assoc'][k] = name
 
         if self.params:
-            self._update_spectral_pars()
+            self._sync_spectral_pars()
         else:
-            self._update_params()
+            self._sync_params()
             
     def __contains__(self, key):
         return key in self._data
@@ -614,19 +616,24 @@ class Model(object):
         else:
             return Source.create_from_dict(src_dict)
 
-    def _update_spectral_pars(self):
+    def _sync_spectral_pars(self):
         """Update spectral parameters dictionary."""
         sp = self['spectral_pars']
         for k, p in sp.items():
             sp[k]['value'] = self['params'][k][0]/float(sp[k]['scale'])
+            if np.isfinite(self['params'][k][1]):
+                sp[k]['error'] = self['params'][k][1]/np.abs(float(sp[k]['scale']))
             sp[k] = make_parameter_dict(sp[k])
 
-    def _update_params(self):
+    def _sync_params(self):
 
         sp = self['spectral_pars']
         for k, p in sp.items():
             val = float(p['value'])*float(p['scale'])
-            self._data['params'][k]=np.array([val,np.nan])
+            err = np.nan
+            if 'error' in p:
+                err = float(p['error'])*float(p['scale'])            
+            self._data['params'][k]=np.array([val,err])
 
     def get_norm(self):
 
@@ -661,6 +668,11 @@ class Model(object):
 
         return True
 
+    def set_spectral_pars(self,spectral_pars):
+
+        self._data['spectral_pars'] = copy.deepcopy(spectral_pars)
+        self._sync_params()
+        
     def set_name(self, name, names=None):
         self._data['name'] = name
         if names is None:
@@ -671,16 +683,16 @@ class Model(object):
     def add_name(self, name):
         if name not in self._names:
             self._names.append(name)
-
+            
     def update_data(self, d):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
         if self.params:
-            self._update_spectral_pars()
+            self._sync_spectral_pars()
 
     def update_from_source(self, src):
 
-        if 'SpectrumType' in src and self['SpectrumType'] != src['SpectrumType']:
-            self._data['spectral_pars'] = {}
+        self._data['spectral_pars'] = {}
+        self._data['spatial_pars'] = {}
 
         self._data = utils.merge_dict(self.data, src.data, add_new_keys=True)
         self._name = src.name
@@ -978,7 +990,7 @@ class Source(Model):
         if 'ra' in d and 'dec' in d:
             self._set_radec([d['ra'],d['dec']])
         if self.params:
-            self._update_spectral_pars()
+            self._sync_spectral_pars()
                           
     def set_position(self, skydir):
         """
