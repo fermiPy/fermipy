@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 
 # Check if conda exists if not then install it
 if ! type "conda" > /dev/null; then
@@ -10,7 +11,7 @@ if ! type "conda" > /dev/null; then
     
     if [ ! -d "$CONDA_PATH" ]; then
 	echo 'Creating a new conda installation under $CONDA_PATH' 
-	wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+	curl -o miniconda.sh -L http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
 	bash miniconda.sh -b -p $CONDA_PATH
     fi
 
