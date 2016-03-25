@@ -298,13 +298,16 @@ class GTAnalysis(fermipy.config.Configurable):
 
         self._ebin_edges = np.sort(np.unique(energies.round(5)))
         self._enumbins = len(self._ebin_edges) - 1
-
+        self._erange = np.array([self._ebin_edges[0],
+                                 self._ebin_edges[-1]])
+        
         self._roi_model = {
             'logLike': np.nan,
             'Npred': 0.0,
             'counts': np.zeros(self.enumbins),
             'model_counts': np.zeros(self.enumbins),
             'energies': np.copy(self.energies),
+            'erange': np.copy(self.erange),
             'components': []
         }
 
@@ -402,6 +405,10 @@ class GTAnalysis(fermipy.config.Configurable):
         """Return the number of energy bins."""
         return self._npix
 
+    @property
+    def erange(self):
+        return self._erange
+    
     @property
     def projtype(self):
         """Return the type of projection to use"""
@@ -773,6 +780,8 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def setEnergyRange(self, emin, emax):
         """Set the energy range of the analysis."""
+        self._erange = np.array([emin,emax])
+        self._roi_model['erange'] = np.copy(self.erange)
         for c in self.components:
             c.setEnergyRange(emin, emax)
 
@@ -2666,7 +2675,8 @@ class GTAnalysis(fermipy.config.Configurable):
         self.logger.info('Loading ROI file: %s'%roi_file)
         
         self._roi_model = roi_data['roi']
-
+        self._erange = self._roi_model.setdefault('erange',self.erange)
+                
         sources = roi_data.pop('sources')
 
         self.roi.load_sources(sources.values())
@@ -2674,6 +2684,8 @@ class GTAnalysis(fermipy.config.Configurable):
             c.roi.load_sources(sources.values())
 
         self._create_likelihood(infile)
+        self.setEnergyRange(self.erange[0], self.erange[1])
+        
         # Load XML
 #        self.load_xml(infile)
 

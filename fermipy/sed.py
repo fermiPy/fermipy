@@ -163,7 +163,8 @@ class SEDGenerator(fermipy.config.Configurable):
 
         max_index = 5.0
         min_flux = 1E-30
-
+        erange = gta.erange
+        
         # Precompute fluxes in each bin from global fit
         gf_bin_flux = []
         gf_bin_index = []
@@ -269,7 +270,7 @@ class SEDGenerator(fermipy.config.Configurable):
                 o['e2dfde_ul'][i] = o['dfde_ul'][i] * 10 ** (2 * ecenter)
 
 
-        gta.setEnergyRange(gta.energies[0], gta.energies[-1])
+        gta.setEnergyRange(erange[0], erange[1])
         gta.like.setSpectrum(name, old_spectrum)
         saved_state.restore()
 

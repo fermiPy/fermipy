@@ -256,7 +256,7 @@ class ROIPlotter(fermipy.config.Configurable):
         'erange': (None, '', list),
         'catalogs': (None, '', list),
         'graticule_radii': (None, '', list),
-        'cmap': (None, 'ds9_b', str),
+        'cmap': ('ds9_b', '', str),
     }
 
     def __init__(self, data_map, **kwargs):
@@ -393,7 +393,8 @@ class ROIPlotter(fermipy.config.Configurable):
         else:
             plt.gca().set_xlabel('LAT Offset [deg]')
 
-    def plot_sources(self,skydir,labels,plot_kwargs,text_kwargs, nolabels=False):
+    def plot_sources(self,skydir,labels,
+                     plot_kwargs,text_kwargs, nolabels=False):
 
         ax = plt.gca()
 
@@ -453,9 +454,11 @@ class ROIPlotter(fermipy.config.Configurable):
 
             
     def plot(self, **kwargs):
-
+        
         zoom = kwargs.get('zoom',None)
-        graticule_radii = kwargs.get('graticule_radii',self.config['graticule_radii'])
+        graticule_radii = kwargs.get('graticule_radii',
+                                     self.config['graticule_radii'])
+        cmap = kwargs.setdefault('cmap',self.config['cmap'])
         
         im_kwargs = dict(cmap='ds9_b',
                          interpolation='nearest',
@@ -467,7 +470,7 @@ class ROIPlotter(fermipy.config.Configurable):
 
         im_kwargs = merge_dict(im_kwargs, kwargs)
         cb_kwargs = merge_dict(cb_kwargs, kwargs)
-
+        
         im, ax = self._implot.plot(**im_kwargs)
 
         self._ax = ax
