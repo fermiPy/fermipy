@@ -1857,7 +1857,8 @@ class GTAnalysis(fermipy.config.Configurable):
             src.set_spectral_pars(src_ext.spectral_pars)
             src.set_spatial_model(src_ext['SpatialModel'],
                                   src_ext['SpatialWidth'])
-            self.add_source(name,src,free=True)            
+            self.add_source(name,src,free=True)
+            self.fit()
         
         src = self.roi.get_source_by_name(name, True)
         src['extension'] = copy.deepcopy(o)
