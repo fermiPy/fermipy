@@ -3485,7 +3485,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         
         if hasattr(self.like.logLike, 'loadSourceMap'):
 
-            if src['SpatialModel'] in ['PSFSource','GaussianSource','DiskSource']:
+            if src['SpatialModel'] in ['PSFSource','GaussianSource',
+                                       'DiskSource']:
                 self._update_srcmap_file([src], True)
                 self.like.logLike.loadSourceMap(name, False, False)
             else:
