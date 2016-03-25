@@ -353,6 +353,9 @@ def find_function_root(fn, x0, xb, delta):
        increased/decreased until a change in sign is found.
 
     """
+
+    if x0 == xb:
+        return np.nan
     
     for i in range(10):
         if np.sign(fn(xb) + delta) != np.sign(fn(x0) + delta):
@@ -395,7 +398,7 @@ def get_parameter_limits(xval, logLike, ul_confidence=0.95):
 
     deltalnl = cl_to_dlnl(ul_confidence)
     
-    s = UnivariateSpline(xval, logLike, k=2, s=0)
+    s = UnivariateSpline(xval, logLike, k=2, s=1E-4)
     sd = s.derivative()
         
     imax = np.argmax(logLike)
