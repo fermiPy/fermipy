@@ -198,6 +198,9 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
+def setup(app):
+   app.add_stylesheet("theme_overrides.css")
+
 #html_context = {
 #    'css_files': [
 #        '_static/theme_overrides.css',  # overrides for wide tables in RTD theme
