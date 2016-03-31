@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Check if conda exists if not then install it
-if ! type "conda" > /dev/null; then
+if ! type "conda" &> /dev/null; then
 
     if [ -n "$1" ]; then
 	CONDA_PATH=$1
