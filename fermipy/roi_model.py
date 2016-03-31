@@ -1307,6 +1307,10 @@ class ROIModel(fermipy.config.Configurable):
         self._src_radius = []
 
         self.load(coordsys=coordsys)
+
+    def __contains__(self, key):
+        key = key.replace(' ', '').lower()        
+        return key in self._src_dict.keys()
         
     def __getitem__(self, key):
         return self.get_source_by_name(key, True)

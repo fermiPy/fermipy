@@ -288,6 +288,11 @@ class GTAnalysis(fermipy.config.Configurable):
             comp = self._create_component(cfg)
             self._components.append(comp)
 
+        for c in self.components:
+            for s in c.roi.sources:
+                if s.name not in self.roi:
+                    self.roi.load_source(s)
+            
         energies = np.zeros(0)
         roiwidths = np.zeros(0)
         binsz = np.zeros(0)
