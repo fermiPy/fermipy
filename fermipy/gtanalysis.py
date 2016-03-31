@@ -823,25 +823,21 @@ class GTAnalysis(fermipy.config.Configurable):
         Returns
         -------
 
-        maps : list 
-           A list of :py:class:`~fermipy.utils.Map` objects.
+        map : `~fermipy.utils.Map`
         """
 
-        maps = []
-        for c in self.components:
-            maps += [c.model_counts_map(name, exclude)]
-
+        maps = [c.model_counts_map(name, exclude) for c in self.components]
        
         if self.projtype == "HPX":
             shape = (self.enumbins, self._proj.npix)
-            maps = [fits_utils.make_coadd_map(maps, self._proj, shape)] + maps
+            cmap = fits_utils.make_coadd_map(maps, self._proj, shape)
         elif self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            maps = [fits_utils.make_coadd_map(maps, self._proj, shape)] + maps
+            cmap = fits_utils.make_coadd_map(maps, self._proj, shape)
         else:
             raise Exception(
                 "Did not recognize projection type %s" % self.projtype)
-        return maps
+        return cmap
 
     def model_counts_spectrum(self, name, emin=None, emax=None, summed=False):
         """Return the predicted number of model counts versus energy
@@ -1770,7 +1766,7 @@ class GTAnalysis(fermipy.config.Configurable):
         # Save likelihood value for baseline fit
         logLike0 = -self.like()
 
-        #self.generate_model_map(model_name=null_model_name, name=name)
+        #self.write_model_map(model_name=null_model_name, name=name)
 
         #        src = self.like.deleteSource(name)
         normPar = self.like.normPar(name).getName()
@@ -1779,7 +1775,7 @@ class GTAnalysis(fermipy.config.Configurable):
         self.like.syncSrcParams(name)
 
         if save_model_map:
-            self.generate_model_map(model_name=ext_model_name + '_bkg')
+            self.write_model_map(model_name=ext_model_name + '_bkg')
 
         if width is None:
             width = np.logspace(np.log10(width_min), np.log10(width_max),
@@ -1856,7 +1852,7 @@ class GTAnalysis(fermipy.config.Configurable):
             o['source_fit'] = self.get_src_model(model_name)
             o['logLike_ext'] = -self.like()
             
-#            self.generate_model_map(model_name=model_name,
+#            self.write_model_map(model_name=model_name,
 #                                    name=model_name)
 
             src_ext = self.delete_source(model_name, save_template=False)
@@ -1924,7 +1920,7 @@ class GTAnalysis(fermipy.config.Configurable):
             logLike += [-self.like()]
             
 #            if save_model_map:
-#                self.generate_model_map(model_name=model_name + '%02i' % i,
+#                self.write_model_map(model_name=model_name + '%02i' % i,
 #                                        name=model_name)
                 
             self.delete_source(ext_model_name, save_template=False,
@@ -2493,7 +2489,7 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def simulate_source(self, src_dict=None):
         """
-        Inject a simulated source into the ROI.
+        Inject a simulated source into the 
 
         Parameters
         ----------
@@ -2536,17 +2532,28 @@ class GTAnalysis(fermipy.config.Configurable):
             self._init_roi_model()
             self.load_xml('tmp')
 
-    def simulate_roi(self):
+    def simulate_roi(self,name=None):
         """
-        Perform a simulation of the whole ROI.  This will replace the
-        current counts cube with a simulated realization of the
-        current model.  The counts cube can be restored to its
-        original state by calling
-        `~fermipy.GTanalysis.restore_counts_maps`.
+        Generate a simulation of the ROI using the current best-fit
+        model and replace the data counts cube with this simulation.
+        The simulation is created by generating an array of Poisson
+        random numbers with expectation values drawn from the model
+        cube of the binned analysis instance.  This function will
+        update the counts cube both in memory and in the source map
+        file.  The counts cube can be restored to its original state
+        by calling `~fermipy.GTanalysis.restore_counts_maps`.
+
+        Parameters
+        ----------
+
+        name : str        
+           Name of the model component to be simulated.  If None then
+           the whole ROI will be simulated.
+        
         """
         
         for c in self.components:
-            c.simulate_roi(clear=True)
+            c.simulate_roi(name=name,clear=True)
 
         if hasattr(self.like.components[0].logLike, 'setCountsMap'):
             self._init_roi_model()
@@ -2559,28 +2566,8 @@ class GTAnalysis(fermipy.config.Configurable):
             self._init_roi_model()
             self.load_xml('tmp')
 
-    def get_model_map(self, name=None):
-        maps = []
-        for i, c in enumerate(self._components):
-            maps += [c.model_counts_map(name)]
-        shape = (self.enumbins, self.npix, self.npix)
-        model_counts = fits_utils.make_coadd_map(maps, self._proj, shape)
-
-        """
-        if self.projtype == "HPX":
-            shape = (self.enumbins, self._proj.npix)
-            model_counts = utils.make_coadd_map(maps, self._proj, shape)
-        elif self.projtype == "WCS":
-            shape = (self.enumbins, self.npix, self.npix)
-            model_counts = utils.make_coadd_map(maps, self._proj, shape)
-        else:
-            raise Exception(
-                "Did not recognize projection type %s" % self.projtype)
-        """
-        return [model_counts] + maps
-
-    def generate_model_map(self, model_name, name=None):
-        """
+    def write_model_map(self, model_name, name=None):
+        """Save the counts model map to a FITS file.
 
         Parameters
         ----------
@@ -2593,9 +2580,7 @@ class GTAnalysis(fermipy.config.Configurable):
         -------
 
         """
-        maps = []
-        for i, c in enumerate(self._components):
-            maps += [c.generate_model_map(model_name, name)]
+        maps = [c.write_model_map(model_name, name) for c in self.components]
 
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'mcube_%s.fits' % (model_name))
@@ -2714,7 +2699,7 @@ class GTAnalysis(fermipy.config.Configurable):
             Run residual analysis.
 
         save_model_map : bool
-            Save the current counts model as a FITS file.
+            Save the current counts model to a FITS file.
 
         format : str
             Set the output file format (yaml or npy).
@@ -2742,7 +2727,7 @@ class GTAnalysis(fermipy.config.Configurable):
         
         mcube_maps = None
         if save_model_map:
-            mcube_maps = self.generate_model_map(prefix)
+            mcube_maps = self.write_model_map(prefix)
 
         if make_residuals:
             resid_maps = self.residmap(prefix, make_plots=make_plots)
@@ -2776,19 +2761,19 @@ class GTAnalysis(fermipy.config.Configurable):
                 raise Exception('Unrecognized format.')
 
         if make_plots:
-            self.make_plots(prefix, mcube_maps,
+            self.make_plots(prefix, mcube_maps[0],
                             **kwargs.get('plotting',{}))
 
-    def make_plots(self, prefix, mcube_maps, **kwargs):
+    def make_plots(self, prefix, mcube_map=None, **kwargs):
 
         #mcube_maps = kwargs.pop('mcube_maps', None)
-        if mcube_maps is None:
-            mcube_maps = self.get_model_map()
+        if mcube_map is None:
+            mcube_map = self.model_counts_map()
 
         plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                            fileio=self.config['fileio'],
                                            logging=self.config['logging'])
-        plotter.run(self, mcube_maps, prefix=prefix, **kwargs)
+        plotter.run(self, mcube_map, prefix=prefix, **kwargs)
 
     def tscube(self,  prefix='', **kwargs):
         """Generate a spatial TS map for a source component with
@@ -4099,9 +4084,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(cmap.counts.astype(float)))
-        else:
-            utils.update_source_maps(self._srcmap_file, {'PRIMARY': cmap.counts},
-                                     logger=self.logger)
+
+        utils.update_source_maps(self._srcmap_file, {'PRIMARY': cmap.counts},
+                                 logger=self.logger)
 
     def simulate_roi(self, name=None, clear=True):
         """Simulate the whole ROI or inject a simulation of one or
@@ -4129,14 +4114,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(data))
-        else:            
-            utils.update_source_maps(self._srcmap_file, {'PRIMARY': data},
-                                     logger=self.logger)
-            utils.write_fits_image(data, self.wcs, self._ccubemc_file)
+
+        utils.update_source_maps(self._srcmap_file, {'PRIMARY': data},
+                                 logger=self.logger)
+        utils.write_fits_image(data, self.wcs, self._ccubemc_file)
         
-    def generate_model_map(self, model_name=None, name=None):
-        """Generate a counts model map from the in-memory source map
-        data structures."""
+    def write_model_map(self, model_name=None, name=None):
+        """Save counts model map to a FITS file.
+
+        """
 
         if model_name is None:
             suffix = self.config['file_suffix']

@@ -764,7 +764,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                  self.config['fileio']['logfile'],
                                  logLevel(self.config['logging']['verbosity']))
 
-    def run(self, gta, mcube_maps, **kwargs):
+    def run(self, gta, mcube_map, **kwargs):
         """Make all plots."""
         
         prefix = kwargs.get('prefix', 'test')
@@ -773,7 +773,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         erange = [None] + gta.config['plotting']['erange']
 
         for x in erange:
-            self.make_roi_plots(gta, mcube_maps, prefix, erange=x,
+            self.make_roi_plots(gta, mcube_map, prefix, erange=x,
                                 format=format)
         # self.make_extension_plots(gta,prefix, erange=x,
         # format=format)
@@ -877,7 +877,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=format))
         plt.close(fig)
 
-    def make_roi_plots(self, gta, mcube_maps, prefix, erange=None, **kwargs):
+    def make_roi_plots(self, gta, mcube_map, prefix, erange=None, **kwargs):
         """Make various diagnostic plots for the 1D and 2D
         counts/model distributions.
 
@@ -903,29 +903,27 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         mcube_diffuse = gta.model_counts_map('diffuse')
 
-        if len(mcube_maps):
-            fig = plt.figure()
-            p = ROIPlotter(mcube_maps[0], roi=gta.roi, **roi_kwargs)
-            p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
-            plt.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                     '%s_model_map%s.%s' % (
-                                         prefix, esuffix, format)))
-            plt.close(fig)
+        fig = plt.figure()
+        p = ROIPlotter(mcube_map, roi=gta.roi, **roi_kwargs)
+        p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
+        plt.savefig(os.path.join(gta.config['fileio']['workdir'],
+                                 '%s_model_map%s.%s' % (
+                    prefix, esuffix, format)))
+        plt.close(fig)
 
 
         colors = ['k', 'b', 'g', 'r']
         data_style = {'marker': 's', 'linestyle': 'None'}
 
         fig = plt.figure()
-        p = ROIPlotter.create_from_fits(gta._ccube_file, roi=gta.roi,
-                                        **roi_kwargs)
+        p = ROIPlotter(gta.counts_map(), roi=gta.roi, **roi_kwargs)
         
         if p.projtype == "WCS":
-            model_data = mcube_maps[0].counts.T
-            diffuse_data = mcube_diffuse[0].counts.T
+            model_data = mcube_map.counts.T
+            diffuse_data = mcube_diffuse.counts.T
         elif p.projtype == "HPX":
-            dummy,model_dataT = p.cmap.convert_to_cached_wcs(mcube_maps[0].counts,sum_ebins=False)
-            dummy,diffuse_dataT = p.cmap.convert_to_cached_wcs(mcube_diffuse[0].counts,sum_ebins=False)
+            dummy,model_dataT = p.cmap.convert_to_cached_wcs(mcube_map.counts,sum_ebins=False)
+            dummy,diffuse_dataT = p.cmap.convert_to_cached_wcs(mcube_diffuse.counts,sum_ebins=False)
             model_data = model_dataT.T
             diffuse_data = diffuse_dataT.T
 
