@@ -2532,7 +2532,7 @@ class GTAnalysis(fermipy.config.Configurable):
             self._init_roi_model()
             self.load_xml('tmp')
 
-    def simulate_roi(self,name=None):
+    def simulate_roi(self,name=None,randomize=True):
         """
         Generate a simulation of the ROI using the current best-fit
         model and replace the data counts cube with this simulation.
@@ -2553,7 +2553,7 @@ class GTAnalysis(fermipy.config.Configurable):
         """
         
         for c in self.components:
-            c.simulate_roi(name=name,clear=True)
+            c.simulate_roi(name=name,clear=True,randomize=randomize)
 
         if hasattr(self.like.components[0].logLike, 'setCountsMap'):
             self._init_roi_model()
@@ -4088,7 +4088,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         utils.update_source_maps(self._srcmap_file, {'PRIMARY': cmap.counts},
                                  logger=self.logger)
 
-    def simulate_roi(self, name=None, clear=True):
+    def simulate_roi(self, name=None, clear=True, randomize=True):
         """Simulate the whole ROI or inject a simulation of one or
         more model components into the data.
 
@@ -4109,9 +4109,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if clear:
             data.fill(0.0)
-            
-        data += np.random.poisson(m.counts).astype(float)
 
+        if randomize:            
+            data += np.random.poisson(m.counts).astype(float)
+        else:
+            data += m.counts
+            
+            
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(data))
 
