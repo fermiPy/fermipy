@@ -20,5 +20,5 @@ fi
 
 conda create -q -n fermi-env -y python=2.7 numpy scipy matplotlib astropy pytest pyyaml ipython
 source activate fermi-env
-pip install healpy
+conda install -c openastronomy healpy wcsaxes
 pip install fermipy
