@@ -1030,15 +1030,44 @@ class GTAnalysis(fermipy.config.Configurable):
 
     def set_parameter(self, name, par, value, true_value=True, scale=None,
                       bounds=None, update_source=True):
+        """
+        Update the value of a parameter.  Parameter bounds will
+        automatically be adjusted to encompass the new parameter
+        value.
+        
+        Parameters
+        ----------
 
+        name : str
+            Source name.
+
+        par : str
+            Parameter name.
+
+        value : float        
+            Parameter value.  By default this argument should be the
+            unscaled (True) parameter value.
+
+        scale : float        
+            Parameter scale (optional).  Value argument is interpreted
+            with respect to the scale parameter if it is provided.
+
+        update_source : bool
+            Update the source dictionary for the object.            
+
+        """
         name = self.roi.get_source_by_name(name, True).name
         idx = self.like.par_index(name, par)
         current_bounds = list(self.like.model[idx].getBounds())
-        current_scale = self.like.model[idx].getScale()
+
+        if scale is not None:
+            self.like[idx].setScale(scale)
+        else:
+            scale = self.like.model[idx].getScale()
         
         if true_value:
-            current_bounds[0] = min(current_bounds[0],value/current_scale)
-            current_bounds[1] = max(current_bounds[1],value/current_scale)
+            current_bounds[0] = min(current_bounds[0],value/scale)
+            current_bounds[1] = max(current_bounds[1],value/scale)
         else:
             current_bounds[0] = min(current_bounds[0],value)
             current_bounds[1] = max(current_bounds[1],value)
@@ -1052,15 +1081,28 @@ class GTAnalysis(fermipy.config.Configurable):
         else:
             self.like[idx].setValue(value)
 
-        if scale is not None:
-            self.like[idx].setScale(scale)
-
         if bounds is not None:
             self.like[idx].setBounds(*bounds)
 
+        self.like.syncSrcParams(str(name))
+            
         if update_source:
             self.update_source(name)
 
+    def set_parameter_scale(self,name,par,scale):
+        """Update the scale of a parameter while keeping its value constant."""
+        name = self.roi.get_source_by_name(name, True).name
+        idx = self.like.par_index(name, par)
+        current_bounds = list(self.like.model[idx].getBounds())
+        current_scale = self.like.model[idx].getScale()
+        current_value = self.like[idx].getValue()
+
+        self.like[idx].setScale(scale)
+        self.like[idx].setValue(current_value*current_scale/scale)
+        self.like[idx].setBounds(current_bounds[0]*current_scale/scale,
+                                 current_bounds[1]*current_scale/scale)
+        
+            
     def set_parameter_bounds(self,name,par,bounds):
         """Set the bounds of a parameter.
 
@@ -2463,7 +2505,7 @@ class GTAnalysis(fermipy.config.Configurable):
         for c in self._components:
             c.write_xml(xmlfile)
 
-    def restore_counts_maps(self):
+    def _restore_counts_maps(self):
         """
         Revert counts maps to their state prior to injecting any simulated
         components.  
@@ -2532,7 +2574,7 @@ class GTAnalysis(fermipy.config.Configurable):
             self._init_roi_model()
             self.load_xml('tmp')
 
-    def simulate_roi(self,name=None,randomize=True):
+    def simulate_roi(self, name=None, randomize=True, restore=False):
         """
         Generate a simulation of the ROI using the current best-fit
         model and replace the data counts cube with this simulation.
@@ -2541,16 +2583,23 @@ class GTAnalysis(fermipy.config.Configurable):
         cube of the binned analysis instance.  This function will
         update the counts cube both in memory and in the source map
         file.  The counts cube can be restored to its original state
-        by calling `~fermipy.GTanalysis.restore_counts_maps`.
+        by calling this method with `restore`=True.
 
         Parameters
         ----------
 
-        name : str        
+        name : str
            Name of the model component to be simulated.  If None then
            the whole ROI will be simulated.
-        
+
+        restore : bool
+           Restore the data counts cube to its original state.
+           
         """
+
+        if restore:
+            self._restore_counts_maps()
+            return
         
         for c in self.components:
             c.simulate_roi(name=name,clear=True,randomize=randomize)
@@ -3165,25 +3214,82 @@ class GTAnalysis(fermipy.config.Configurable):
 
 
         if reoptimize:
-
+            
             npts = max(npts,5)            
             lnlp0 = self.profile_norm(name, savestate=True,
                                       reoptimize=False,npts=20)
             xval0 = self.like.normPar(name).getValue()
             lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dlogLike'],
-                                               ul_confidence=0.999)
+                                               ul_confidence=0.99)
+
             
-            xvals = np.array([0.0,xval0,lims0['ul']])            
+            xvals = np.array([0.0,xval0,0.5*(xval0+lims0['ul']),lims0['ul']])            
             lnlp1 = self.profile_norm(name, savestate=True,
                                       reoptimize=True,xvals=xvals)
-            lims1 = utils.get_parameter_limits(lnlp1['xvals'], lnlp1['dlogLike'],
-                                               ul_confidence=0.99)
+
+#            import pprint
+#            pprint.pprint(lims0)            
+#            print '-------------'
+#            print xvals
+#            print lnlp1['dlogLike']
+#            import matplotlib.pyplot as plt
+#            from scipy.interpolate import UnivariateSpline
+            
+            dlogLike = copy.deepcopy(lnlp1['dlogLike'])
+            dlogLike0 = dlogLike[-1]
+            x0 = xvals[-1]
+                        
+            for i in range(20):
+
+               
+                lims1 = utils.get_parameter_limits(xvals[1:], dlogLike[1:],
+                                                   ul_confidence=0.99)
+
+#                print '--------------------'
+#                print i, x0, dlogLike0, utils.cl_to_dlnl(0.99)
+#                print xvals
+#                print dlogLike
+#                print lims1
+#                print np.abs(np.abs(dlogLike[1]-dlogLike0) - utils.cl_to_dlnl(0.99))
+                
+                if np.abs(np.abs(dlogLike[1]-dlogLike0) - utils.cl_to_dlnl(0.99)) < 0.2:
+                    break
+                
+                if not np.isfinite(lims1['ul']) or np.abs(dlogLike[1]-dlogLike[-1]) < 1.0:
+                    x0 = 2.0*xvals[-1]
+                else:
+                    x0 = lims1['ul']
+                                                    
+                lnlp = self.profile_norm(name, savestate=True,
+                                         reoptimize=True,xvals=[x0])
+                dlogLike0 = lnlp['dlogLike']
+                
+                dlogLike = np.concatenate((dlogLike,dlogLike0))
+                xvals = np.concatenate((xvals,[x0]))
+                isort = np.argsort(xvals)
+                dlogLike = dlogLike[isort]
+                xvals = xvals[isort]
+
+#                s = UnivariateSpline(xvals,dlogLike,k=2,s=1E-4)                
+#                plt.figure()
+#                plt.plot(xvals,dlogLike,marker='o')
+#                plt.axhline(-utils.cl_to_dlnl(0.99))
+#                plt.axvline(x0)
+#                plt.plot(np.linspace(xvals[0],xvals[-1],100),
+#                         s(np.linspace(xvals[0],xvals[-1],100)))
+#                plt.gca().set_ylim(-4,0.5)
+
+#            print xvals
+#            print dlogLike
+#            pprint.pprint(lims1)            
             
             if np.isfinite(lims1['ll']):
-                xlo = np.concatenate(([0.0],np.linspace(lims1['ll'],xval0,(npts+1)//2-1)))
-            else:
+                xlo = np.concatenate(([0.0],np.linspace(lims1['ll'],xval0,(npts+1)//2-1)))            
+            elif np.abs(dlogLike[0]-dlogLike[1]) > 0.1:
                 xlo = np.linspace(0.0,xval0,(npts+1)//2)
-
+            else:
+                xlo = np.array([0.0,xval0])
+                
             if np.isfinite(lims1['ul']):
                 xhi = np.linspace(xval0,lims1['ul'],npts+1-len(xlo))[1:]
             else:
@@ -3196,6 +3302,7 @@ class GTAnalysis(fermipy.config.Configurable):
             isort = np.argsort(np.concatenate((lnlp1['xvals'][:2],lnlp['xvals'])))
             for k, v in lnlp.items():
                 lnlp[k] = np.concatenate((lnlp1[k][:2],lnlp[k]))[isort]
+            
         else:
             lnlp = self.profile_norm(name, savestate=True,
                                      reoptimize=reoptimize,npts=npts)

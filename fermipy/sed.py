@@ -190,9 +190,9 @@ class SEDGenerator(fermipy.config.Configurable):
         gta.like.setSpectrum(name, 'PowerLaw')
         gta.free_parameter(name, 'Index', False)
         gta.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
-                           true_value=False,
-                           bounds=[1E-10, 1E10],
-                           update_source=False)
+                          true_value=False,
+                          bounds=[1E-10, 1E10],
+                          update_source=False)
         
         for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
 
