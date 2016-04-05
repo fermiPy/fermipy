@@ -784,11 +784,52 @@ class GTAnalysis(fermipy.config.Configurable):
             # could generate a co-added model map here
 
     def setEnergyRange(self, emin, emax):
-        """Set the energy range of the analysis."""
+        """Set the energy bounds of the analysis.  This restricts the
+        evaluation of the likelihood to the data that falls in this
+        range.  Input values will be rounded to the closest bin edge
+        value.  If either argument is None then the lower or upper
+        bound of the analysis instance will be used.
+
+        Parameters
+        ----------
+
+        emin : float
+           Lower energy bound in log10(E/MeV).
+
+        emax : float
+           Upper energy bound in log10(E/MeV).
+
+        Returns
+        -------
+
+        eminmax : array
+           Minimum and maximum energy.
+
+        """
+
+        if emin is None:
+            emin = self.energies[0]
+        else:
+            imin = int(utils.val_to_edge(self.energies, emin)[0])
+            emin = self.energies[imin]
+            
+        if emax is None:
+            emax = self.energies[-1]
+        else:
+            imax = int(utils.val_to_edge(self.energies, emax)[0])
+            emax = self.energies[imax]
+
+        erange = np.array([emin,emax])
+        
+        if np.allclose(erange,self._erange):
+            return self._erange
+        
         self._erange = np.array([emin,emax])
         self._roi_model['erange'] = np.copy(self.erange)
         for c in self.components:
             c.setEnergyRange(emin, emax)
+
+        return self._erange
 
     def counts_map(self):
         """Return a `~fermipy.utils.Map` representation of the counts map.
@@ -2045,55 +2086,182 @@ class GTAnalysis(fermipy.config.Configurable):
             in the profile likelihood scan.
 
         """
+
+        if savestate:
+            saved_state = LikelihoodState(self.like)
+        
         # Find the source
         name = self.roi.get_source_by_name(name, True).name
-
-        par = self.like.normPar(name)
         parName = self.like.normPar(name).getName()
-        
-        eminmax = [min(self.energies) if emin is None else emin,
-                   max(self.energies) if emax is None else emax]
 
-        # Find a reasonable set of values for the normalization scan
+        erange = self.erange
+        if emin is not None or emax is not None:
+            self.setEnergyRange(emin,emax)
+
+        self.like.optimize(0)
+            
+        # Find a sequence of values for the normalization scan
         if xvals is None:
 
-            val = par.getValue()
-            if val == 0:
-                par.setValue(1.0)
-                self.like.syncSrcParams(name)
-                cs = self.model_counts_spectrum(name,
-                                                eminmax[0],
-                                                eminmax[1],
-                                                summed=True)
-                npred = np.sum(cs)
-                val = 1./npred
-                npred = 1.0
-                par.setValue(0.0)
-                self.like.syncSrcParams(name)
+            if reoptimize:
+                xvals = self._find_scan_pts_reopt(name,npts=npts)
             else:
-                cs = self.model_counts_spectrum(name,
-                                                eminmax[0],
-                                                eminmax[1],
-                                                summed=True)
-                npred = np.sum(cs)
-
-            if npred < 10:
-                val *= 1. / min(1.0, npred)
-                xvals = val * 10 ** np.linspace(-1.0, 3.0, 2 * npts + 1)
-                xvals = np.insert(xvals, 0, 0.0)
-            else:
-                xvals = np.linspace(0, 1, 1 + npts)
-                xvals = np.concatenate((-1.0 * xvals[1:][::-1], xvals))
-                xvals = val * 10 ** xvals
-                xvals = np.insert(xvals, 0, 0.0)
+                xvals = self._find_scan_pts(name,npts=npts)
                 
-        return self.profile(name, parName, emin=emin, emax=emax,
-                            reoptimize=reoptimize, xvals=xvals,
-                            savestate=savestate)
+        o = self.profile(name, parName, 
+                         reoptimize=reoptimize, xvals=xvals,
+                         savestate=savestate)
 
+        if savestate:
+            saved_state.restore() 
+        
+        if emin is not None or emax is not None:
+            self.setEnergyRange(*erange)
+        
+        return o
+
+    def _find_scan_pts(self,name,emin=None,emax=None,npts=20):
+
+        par = self.like.normPar(name)
+        
+        eminmax = [self.erange[0] if emin is None else emin,
+                   self.erange[1] if emax is None else emax]
+        
+        val = par.getValue()
+        if val == 0:
+            par.setValue(1.0)
+            self.like.syncSrcParams(name)
+            cs = self.model_counts_spectrum(name,
+                                            eminmax[0],
+                                            eminmax[1],
+                                            summed=True)
+            npred = np.sum(cs)
+            val = 1./npred
+            npred = 1.0
+            par.setValue(0.0)
+            self.like.syncSrcParams(name)
+        else:
+            cs = self.model_counts_spectrum(name,
+                                            eminmax[0],
+                                            eminmax[1],
+                                            summed=True)
+            npred = np.sum(cs)
+
+        if npred < 10:
+            val *= 1. / min(1.0, npred)
+            xvals = val * 10 ** np.linspace(-1.0, 3.0, 2 * npts + 1)
+            xvals = np.insert(xvals, 0, 0.0)
+        else:
+            xvals = np.linspace(0, 1, 1 + npts)
+            xvals = np.concatenate((-1.0 * xvals[1:][::-1], xvals))
+            xvals = val * 10 ** xvals
+            xvals = np.insert(xvals, 0, 0.0)
+
+        return xvals
+    
+    def _find_scan_pts_reopt(self,name,emin=None,emax=None,npts=11):
+        
+        parName = self.like.normPar(name).getName()
+        
+        npts = max(npts,5)       
+        lnlp0 = self.profile(name, parName, emin=emin, emax=emax, 
+                             reoptimize=False,npts=20)
+        xval0 = self.like.normPar(name).getValue()
+        lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dlogLike'],
+                                           ul_confidence=0.99)
+
+        if not np.isfinite(lims0['ll']):
+            xvals = np.array([0.0,xval0,xval0+lims0['err_hi'],lims0['ul']])
+        else:
+            xvals = np.array([lims0['ll'],
+                              xval0-lims0['err_lo'],xval0,
+                              xval0+lims0['err_hi'],
+                              lims0['ul']])            
+        lnlp1 = self.profile(name, parName, emin=emin, emax=emax, 
+                             reoptimize=True,xvals=xvals)
+
+        dlogLike = copy.deepcopy(lnlp1['dlogLike'])
+        dlogLike0 = dlogLike[-1]
+        xup = xvals[-1]
+        
+        for i in range(20):
+            
+            lims1 = utils.get_parameter_limits(xvals, dlogLike,
+                                               ul_confidence=0.99)
+                
+            if np.abs(np.abs(dlogLike0) - utils.cl_to_dlnl(0.99)) < 0.1:
+                break
+                
+            if not np.isfinite(lims1['ul']) or np.abs(dlogLike[-1]) < 1.0:
+                xup = 2.0*xvals[-1]
+            else:
+                xup = lims1['ul']
+                                                    
+            lnlp = self.profile(name, parName, emin=emin, emax=emax,
+                                reoptimize=True,xvals=[xup])
+            dlogLike0 = lnlp['dlogLike']
+                
+            dlogLike = np.concatenate((dlogLike,dlogLike0))
+            xvals = np.concatenate((xvals,[xup]))
+            isort = np.argsort(xvals)
+            dlogLike = dlogLike[isort]
+            xvals = xvals[isort]
+
+#        from scipy.interpolate import UnivariateSpline
+#        s = UnivariateSpline(xvals,dlogLike,k=2,s=1E-4)        
+#        import matplotlib.pyplot as plt
+#        plt.figure()
+#        plt.plot(xvals,dlogLike,marker='o')
+#        plt.plot(np.linspace(xvals[0],xvals[-1],100),s(np.linspace(xvals[0],xvals[-1],100)))
+#        plt.gca().set_ylim(-5,1)
+#        plt.gca().axhline(-utils.cl_to_dlnl(0.99))
+        
+        if np.isfinite(lims1['ll']):
+            xlo = np.concatenate(([0.0],np.linspace(lims1['ll'],xval0,(npts+1)//2-1)))            
+        elif np.abs(dlogLike[0]) > 0.1:
+            xlo = np.linspace(0.0,xval0,(npts+1)//2)
+        else:
+            xlo = np.array([0.0,xval0])
+            
+        if np.isfinite(lims1['ul']):
+            xhi = np.linspace(xval0,lims1['ul'],npts+1-len(xlo))[1:]
+        else:
+            xhi = np.linspace(xval0,lims0['ul'],npts+1-len(xlo))[1:]
+
+        xvals = np.concatenate((xlo,xhi))
+        return xvals
+#        xvals = np.concatenate((xlo[1:-1],xhi))
+#        lnlp = self.profile_norm(name, savestate=True,
+#                                 reoptimize=True,xvals=xvals)
+
+#        isort = np.argsort(np.concatenate((lnlp1['xvals'][:2],lnlp['xvals'])))
+#        for k, v in lnlp.items():
+#            lnlp[k] = np.concatenate((lnlp1[k][:2],lnlp[k]))[isort]
+    
     def profile(self, name, parName, emin=None, emax=None, reoptimize=False,
                 xvals=None, npts=None, savestate=True):
-        """ Profile the likelihood for the given source and parameter.
+        """Profile the likelihood for the given source and parameter.
+
+        Parameters
+        ----------
+
+        name : str
+           Source name.
+
+        parName : str
+           Parameter name.
+        
+        reoptimize : bool
+           Re-fit nuisance parameters at each step in the scan.  Note
+           that this will only re-fit parameters that were free when
+           the method was executed.
+
+        Returns
+        -------
+
+        lnlprofile : dict
+           Dictionary containing results of likelihood scan.
+
         """
         
         # Find the source
@@ -2102,21 +2270,20 @@ class GTAnalysis(fermipy.config.Configurable):
         par = self.like.normPar(name)
         parName = self.like.normPar(name).getName()
         idx = self.like.par_index(name, parName)
-        #scale = float(self.like.model[idx].getScale())
         bounds = self.like.model[idx].getBounds()
         value = self.like.model[idx].getValue()
-
+        erange = self.erange
+        
         if savestate:
             saved_state = LikelihoodState(self.like)
             
         # If parameter is fixed temporarily free it
         par.setFree(True)
-            
-        if emin is not None and emax is not None:
-            self.setEnergyRange(emin, emax)
 
-        emin = min(self.energies) if emin is None else emin
-        emax = max(self.energies) if emax is None else emax
+        if emin is not None or emax is not None:
+            eminmax = self.setEnergyRange(emin, emax)
+        else:
+            eminmax = self.erange
             
         logLike0 = -self.like()
 
@@ -2166,8 +2333,8 @@ class GTAnalysis(fermipy.config.Configurable):
             else:
                 logLike1 = -self.like()
             
-            flux = self.like[name].flux(10 ** emin, 10 ** emax)
-            eflux = self.like[name].energyFlux(10 ** emin, 10 ** emax)
+            flux = self.like[name].flux(10 ** eminmax[0], 10 ** eminmax[1])
+            eflux = self.like[name].energyFlux(10 ** eminmax[0], 10 ** eminmax[1])
             prefactor = self.like[idx]
 
             o['dlogLike'][i] = logLike1 - logLike0
@@ -2176,7 +2343,9 @@ class GTAnalysis(fermipy.config.Configurable):
             o['flux'][i] = flux
             o['eflux'][i] = eflux
 
-            cs = self.model_counts_spectrum(name, emin, emax, summed=True)
+            cs = self.model_counts_spectrum(name,
+                                            eminmax[0],
+                                            eminmax[1], summed=True)
             o['Npred'][i] += np.sum(cs)
 
         if reoptimize and hasattr(self.like.components[0].logLike,
@@ -2190,7 +2359,9 @@ class GTAnalysis(fermipy.config.Configurable):
             saved_state.restore()        
             
         self.like[idx].setBounds(*bounds)
-
+        if emin is not None or emax is not None:
+            self.setEnergyRange(*erange)
+        
         return o
 
     def tsmap(self, prefix='', **kwargs):
@@ -3212,100 +3383,8 @@ class GTAnalysis(fermipy.config.Configurable):
         # self.logger.error('Failed to update source parameters.',
         #  exc_info=True)
 
-
-        if reoptimize:
-            
-            npts = max(npts,5)            
-            lnlp0 = self.profile_norm(name, savestate=True,
-                                      reoptimize=False,npts=20)
-            xval0 = self.like.normPar(name).getValue()
-            lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dlogLike'],
-                                               ul_confidence=0.99)
-
-            
-            xvals = np.array([0.0,xval0,0.5*(xval0+lims0['ul']),lims0['ul']])            
-            lnlp1 = self.profile_norm(name, savestate=True,
-                                      reoptimize=True,xvals=xvals)
-
-#            import pprint
-#            pprint.pprint(lims0)            
-#            print '-------------'
-#            print xvals
-#            print lnlp1['dlogLike']
-#            import matplotlib.pyplot as plt
-#            from scipy.interpolate import UnivariateSpline
-            
-            dlogLike = copy.deepcopy(lnlp1['dlogLike'])
-            dlogLike0 = dlogLike[-1]
-            x0 = xvals[-1]
-                        
-            for i in range(20):
-
-               
-                lims1 = utils.get_parameter_limits(xvals[1:], dlogLike[1:],
-                                                   ul_confidence=0.99)
-
-#                print '--------------------'
-#                print i, x0, dlogLike0, utils.cl_to_dlnl(0.99)
-#                print xvals
-#                print dlogLike
-#                print lims1
-#                print np.abs(np.abs(dlogLike[1]-dlogLike0) - utils.cl_to_dlnl(0.99))
-                
-                if np.abs(np.abs(dlogLike[1]-dlogLike0) - utils.cl_to_dlnl(0.99)) < 0.2:
-                    break
-                
-                if not np.isfinite(lims1['ul']) or np.abs(dlogLike[1]-dlogLike[-1]) < 1.0:
-                    x0 = 2.0*xvals[-1]
-                else:
-                    x0 = lims1['ul']
-                                                    
-                lnlp = self.profile_norm(name, savestate=True,
-                                         reoptimize=True,xvals=[x0])
-                dlogLike0 = lnlp['dlogLike']
-                
-                dlogLike = np.concatenate((dlogLike,dlogLike0))
-                xvals = np.concatenate((xvals,[x0]))
-                isort = np.argsort(xvals)
-                dlogLike = dlogLike[isort]
-                xvals = xvals[isort]
-
-#                s = UnivariateSpline(xvals,dlogLike,k=2,s=1E-4)                
-#                plt.figure()
-#                plt.plot(xvals,dlogLike,marker='o')
-#                plt.axhline(-utils.cl_to_dlnl(0.99))
-#                plt.axvline(x0)
-#                plt.plot(np.linspace(xvals[0],xvals[-1],100),
-#                         s(np.linspace(xvals[0],xvals[-1],100)))
-#                plt.gca().set_ylim(-4,0.5)
-
-#            print xvals
-#            print dlogLike
-#            pprint.pprint(lims1)            
-            
-            if np.isfinite(lims1['ll']):
-                xlo = np.concatenate(([0.0],np.linspace(lims1['ll'],xval0,(npts+1)//2-1)))            
-            elif np.abs(dlogLike[0]-dlogLike[1]) > 0.1:
-                xlo = np.linspace(0.0,xval0,(npts+1)//2)
-            else:
-                xlo = np.array([0.0,xval0])
-                
-            if np.isfinite(lims1['ul']):
-                xhi = np.linspace(xval0,lims1['ul'],npts+1-len(xlo))[1:]
-            else:
-                xhi = np.linspace(xval0,lims0['ul'],npts+1-len(xlo))[1:]
-                
-            xvals = np.concatenate((xlo[1:-1],xhi))
-            lnlp = self.profile_norm(name, savestate=True,
-                                     reoptimize=True,xvals=xvals)
-            
-            isort = np.argsort(np.concatenate((lnlp1['xvals'][:2],lnlp['xvals'])))
-            for k, v in lnlp.items():
-                lnlp[k] = np.concatenate((lnlp1[k][:2],lnlp[k]))[isort]
-            
-        else:
-            lnlp = self.profile_norm(name, savestate=True,
-                                     reoptimize=reoptimize,npts=npts)
+        lnlp = self.profile_norm(name, savestate=True,
+                                 reoptimize=reoptimize,npts=npts)
             
         src_dict['lnlprofile'] = lnlp
         
@@ -3743,6 +3822,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like[name].src.set_edisp_flag(flag)
 
     def setEnergyRange(self, emin, emax):
+        """Set the energy range of the analysis.
+        
+        """
+        
+        if emin is None:
+            emin = self.energies[0]
+
+        if emax is None:
+            emax = self.energies[-1]
+            
         imin = int(utils.val_to_edge(self.energies, emin)[0])
         imax = int(utils.val_to_edge(self.energies, emax)[0])
 
@@ -3751,6 +3840,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             imax = len(self.energies) - 1
 
         self.like.selectEbounds(int(imin), int(imax))
+
+        return np.array([self.energies[imin], self.energies[imax]])
 
     def counts_map(self):
         """Return 3-D counts map for this component as a Map object.
