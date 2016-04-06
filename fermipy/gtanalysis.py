@@ -1187,7 +1187,7 @@ class GTAnalysis(fermipy.config.Configurable):
             
         """
 
-        free_pars = self.get_free_params()
+        free_pars = self.get_free_param_vector()
 
         # Find the source
         src = self.roi.get_source_by_name(name, True)
@@ -1309,12 +1309,31 @@ class GTAnalysis(fermipy.config.Configurable):
                          pars=shape_parameters[src['SpectrumType']])
 
     def get_free_params(self):
+
+        params = {}
+        for srcName in self.like.sourceNames():
+            for parName in self.get_free_source_params(srcName):
+                idx = self.like.par_index(srcName, parName)
+                par = self.like.model[idx]
+                is_norm = parName == self.like.normPar(srcName).getName()
+                
+                params[idx] = {'src_name' : srcName,
+                               'par_name' : parName,
+                               'value' : par.getValue(),
+                               'error' : par.error(),
+                               'idx' : idx,
+                               'is_free' : par.isFree(),
+                               'is_norm' : is_norm }
+
+        return [params[k] for k in sorted(params.keys())]
+        
+    def get_free_param_vector(self):
         free = []
         for p in self.like.params():
             free.append(p.isFree())
         return free
 
-    def set_free_params(self, free):
+    def set_free_param_vector(self, free):
         for i, t in enumerate(free):
             if t:
                 self.like.thaw(i)
@@ -1467,7 +1486,7 @@ class GTAnalysis(fermipy.config.Configurable):
                                             'shape_ts_threshold'])
 
         # preserve free parameters
-        free = self.get_free_params()
+        free = self.get_free_param_vector()
 
         # Fix all parameters
         self.free_sources(free=False)
@@ -1522,7 +1541,7 @@ class GTAnalysis(fermipy.config.Configurable):
             self.fit()
             self.free_source(s.name, free=False)
 
-        self.set_free_params(free)
+        self.set_free_param_vector(free)
 
         logLike1 = -self.like()
         self.logger.info('Finished')
@@ -2072,7 +2091,7 @@ class GTAnalysis(fermipy.config.Configurable):
         return o
 
     def profile_norm(self, name, emin=None, emax=None, reoptimize=False,
-                     xvals=None, npts=20, savestate=True):
+                     xvals=None, npts=20, fix_shape=True, savestate=True):
         """Profile the normalization of a source.
 
         Parameters
@@ -2082,14 +2101,17 @@ class GTAnalysis(fermipy.config.Configurable):
             Source name.
 
         reoptimize : bool
-            Re-optimize all free parameters in the model at each point
+            Re-optimize free parameters in the model at each point
             in the profile likelihood scan.
 
         """
 
         if savestate:
             saved_state = LikelihoodState(self.like)
-        
+
+        if fix_shape:
+            self.free_sources(False,pars='shape')
+            
         # Find the source
         name = self.roi.get_source_by_name(name, True).name
         parName = self.like.normPar(name).getName()
@@ -2532,6 +2554,41 @@ class GTAnalysis(fermipy.config.Configurable):
 
         return quality
 
+    def constrain_norms(self,cov_scale=1.0):
+
+        # Get the coviarnace matrix
+
+        for src in self.roi.sources:
+            par = self.like.normPar(src.name)
+
+            err = par.error()
+            val = par.getValue()
+            
+            if par.error() == 0.0:
+                continue
+                
+            self.add_gauss_prior(src.name, par.getName(),
+                                 val,err*cov_scale)
+            
+            print src.name, par.error()
+
+    def add_gauss_prior(self, name, parName, mean, sigma):
+        
+        par = self.like[name].funcs["Spectrum"].params[parName]
+        par.addGaussianPrior(mean,sigma)
+
+    def remove_prior(self,name, parName):
+
+        par = self.like[name].funcs["Spectrum"].params[parName]
+        par.removePrior()
+
+    def remove_priors(self):
+        """Clear all priors."""
+
+        for src in self.roi.sources:
+            for par in self.like[name].funcs["Spectrum"]:
+                par.removePrior()
+        
     def fit(self, update=True, **kwargs):
         """Run the likelihood optimization.  This will execute a fit
         of all parameters that are currently free in the ROI model and
@@ -2592,8 +2649,18 @@ class GTAnalysis(fermipy.config.Configurable):
         kw = dict(optObject=self._create_optObject(),
                   covar=covar, verbosity=verbosity, tol=tol)
 
-        o = {'fit_quality' : 0, 'covariance' : None,
-             'logLike' : None, 'dlogLike' : None}
+        num_free = self.like.logLike.getNumFreeParams()
+        
+        o = {'fit_quality' : 0,
+             'covariance' : None,
+             'correlation' : None,
+             'logLike' : None, 'dlogLike' : None,
+             'values' : np.ones(num_free)*np.nan,
+             'errors' : np.ones(num_free)*np.nan,
+             'indices': np.zeros(num_free,dtype=int),
+             'src_names' : num_free*[None],
+             'par_names' : num_free*[None],
+             }
 
         logLike0 = -self.like()        
         quality = 0
@@ -2607,6 +2674,21 @@ class GTAnalysis(fermipy.config.Configurable):
 
         o['fit_quality'] = quality
         o['covariance'] = np.array(self.like.covariance)
+        o['errors'] = np.diag(o['covariance'])**0.5
+        
+        errinv = 1./o['errors']
+
+        o['correlation'] = \
+            o['covariance']*errinv[:,np.newaxis]*errinv[np.newaxis,:]
+
+        params = self.get_free_params()
+        for i, p in enumerate(params):
+            o['values'][i] = p['value']
+            o['errors'][i] = p['error']
+            o['indices'][i] = p['idx']
+            o['src_names'][i] = p['src_name']
+            o['par_names'][i] = p['par_name']
+        
         o['niter'] = niter
         
         # except Exception, message:
@@ -2821,6 +2903,31 @@ class GTAnalysis(fermipy.config.Configurable):
     def print_roi(self):
         print(str(self.roi))
 
+    def print_params(self):
+
+        pars = self.get_free_params()
+
+        o = ''
+        o += '%3s %-20s%-20s%7s%7s%5s\n' % (
+        'idx','parname', 'sourcename','value','error', 'Free')
+        
+        o += '-' * 80 + '\n'
+        
+        for p in pars:
+
+            o += '%3i %-20.19s%-20.19s' % (p['idx'],
+                                          p['par_name'], p['src_name'])  
+            o += '%7.3f%7.3f' % (p['value'],p['error'])
+
+            if p['is_free']:
+                o += ' * '
+            else:
+                o += '   '
+
+            o += '\n'
+            
+        print(o)
+            
     def print_model(self):
 
         o = ''
