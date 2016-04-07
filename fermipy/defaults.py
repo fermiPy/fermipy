@@ -205,7 +205,8 @@ sed = {
     'fix_background': (True, 'Fix background parameters when fitting the '
                        'source flux in each energy bin.', bool),
     'ul_confidence': (0.95, 'Confidence level for upper limit calculation.',
-                      float)
+                      float),
+    'cov_scale' : (3.0,'',float)
 }
 
 # Output for SED analysis

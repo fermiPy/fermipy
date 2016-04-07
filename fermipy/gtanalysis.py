@@ -187,7 +187,7 @@ def load_npy(infile):
     return np.load(infile).flat[0]
 
 
-class GTAnalysis(fermipy.config.Configurable):
+class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
     """High-level analysis interface that internally manages a set of
     analysis component objects.  Most of the functionality of the
     fermiPy package is provided through the methods of this class.
@@ -1315,15 +1315,19 @@ class GTAnalysis(fermipy.config.Configurable):
             for parName in self.get_free_source_params(srcName):
                 idx = self.like.par_index(srcName, parName)
                 par = self.like.model[idx]
+                bounds = par.getBounds()
+                
                 is_norm = parName == self.like.normPar(srcName).getName()
                 
                 params[idx] = {'src_name' : srcName,
                                'par_name' : parName,
                                'value' : par.getValue(),
                                'error' : par.error(),
+                               'scale' : par.getScale(),
                                'idx' : idx,
                                'is_free' : par.isFree(),
-                               'is_norm' : is_norm }
+                               'is_norm' : is_norm,
+                               'bounds' : bounds }
 
         return [params[k] for k in sorted(params.keys())]
         
@@ -1340,6 +1344,12 @@ class GTAnalysis(fermipy.config.Configurable):
             else:
                 self.like.freeze(i)
 
+    def _latch_free_params(self):
+        self._free_params = self.get_free_param_vector()
+
+    def _restore_free_params(self):
+        self.set_free_param_vector(self._free_params)
+                
     def get_free_source_params(self, name):
         name = self.get_source_name(name)
         spectrum = self.like[name].src.spectrum()
@@ -2030,66 +2040,6 @@ class GTAnalysis(fermipy.config.Configurable):
 
         return np.array(logLike)
     
-    def sed(self, name, profile=True, energies=None, **kwargs):
-        """Generate an SED for a source.  This function will fit the
-        normalization of a given source in each energy bin.
-
-        Parameters
-        ----------
-
-        name : str
-            Source name.
-
-        profile : bool
-            Profile the likelihood in each energy bin.
-
-        energies : `~numpy.ndarray`
-            Sequence of energies in log10(E/MeV) defining the edges of
-            the energy bins.  If this argument is None then the
-            analysis energy bins will be used.  The energies in this
-            sequence must align with the bin edges of the underyling
-            analysis instance.
-
-        bin_index : float
-            Spectral index that will be use when fitting the energy
-            distribution within an energy bin.
-
-        use_local_index : bool
-            Use a power-law approximation to the shape of the global
-            spectrum in each bin.  If this is false then a constant
-            index set to `bin_index` will be used.
-
-        fix_background : bool
-            Fix background components when fitting the flux
-            normalization in each energy bin.  If fix_background=False
-            then all background parameters that are currently free in
-            the fit will be profiled.  By default fix_background=True.
-
-        ul_confidence : float
-            Set the confidence level that will be used for the
-            calculation of flux upper limits in each energy bin.
-
-        Returns
-        -------
-
-        sed : dict Dictionary containing output of the SED analysis.
-            This dictionary is also saved to the 'sed' dictionary of
-            the `~fermipy.roi_model.Source` instance.
-
-        """
-
-        name = self.roi.get_source_by_name(name, True).name
-
-        sg = sed.SEDGenerator(self.config['sed'],
-                              fileio=self.config['fileio'],
-                              logging=self.config['logging'])
-
-        o = sg.make_sed(self, name, profile, energies, **kwargs)
-
-        self._plotter.make_sed_plot(self, name, **kwargs)
-
-        return o
-
     def profile_norm(self, name, emin=None, emax=None, reoptimize=False,
                      xvals=None, npts=20, fix_shape=True, savestate=True):
         """Profile the normalization of a source.
@@ -2150,6 +2100,7 @@ class GTAnalysis(fermipy.config.Configurable):
                    self.erange[1] if emax is None else emax]
         
         val = par.getValue()
+        
         if val == 0:
             par.setValue(1.0)
             self.like.syncSrcParams(name)
@@ -2178,16 +2129,17 @@ class GTAnalysis(fermipy.config.Configurable):
             xvals = np.concatenate((-1.0 * xvals[1:][::-1], xvals))
             xvals = val * 10 ** xvals
             xvals = np.insert(xvals, 0, 0.0)
-
+            
         return xvals
     
     def _find_scan_pts_reopt(self,name,emin=None,emax=None,npts=11):
         
         parName = self.like.normPar(name).getName()
         
-        npts = max(npts,5)       
+        npts = max(npts,5)
+        xvals = self._find_scan_pts(name,emin=emin, emax=emax, npts=20)
         lnlp0 = self.profile(name, parName, emin=emin, emax=emax, 
-                             reoptimize=False,npts=20)
+                             reoptimize=False,xvals=xvals)
         xval0 = self.like.normPar(name).getValue()
         lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dlogLike'],
                                            ul_confidence=0.99)
@@ -2198,7 +2150,8 @@ class GTAnalysis(fermipy.config.Configurable):
             xvals = np.array([lims0['ll'],
                               xval0-lims0['err_lo'],xval0,
                               xval0+lims0['err_hi'],
-                              lims0['ul']])            
+                              lims0['ul']])
+            
         lnlp1 = self.profile(name, parName, emin=emin, emax=emax, 
                              reoptimize=True,xvals=xvals)
 
@@ -2452,8 +2405,7 @@ class GTAnalysis(fermipy.config.Configurable):
             if make_plots:
                 plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                    fileio=self.config['fileio'],
-                                                   logging=self.config[
-                                                       'logging'])
+                                                   logging=self.config['logging'])
 
                 plotter.make_tsmap_plots(self, m)
 
@@ -2554,23 +2506,21 @@ class GTAnalysis(fermipy.config.Configurable):
 
         return quality
 
-    def constrain_norms(self,cov_scale=1.0):
+    def constrain_norms(self, srcNames, cov_scale=1.0):
 
-        # Get the coviarnace matrix
+        # Get the covariance matrix
 
-        for src in self.roi.sources:
-            par = self.like.normPar(src.name)
+        for name in srcNames:
+            par = self.like.normPar(name)
 
             err = par.error()
             val = par.getValue()
             
-            if par.error() == 0.0:
+            if par.error() == 0.0 or not par.isFree():
                 continue
-                
-            self.add_gauss_prior(src.name, par.getName(),
-                                 val,err*cov_scale)
             
-            print src.name, par.error()
+            self.add_gauss_prior(name, par.getName(),
+                                 val,err*cov_scale)
 
     def add_gauss_prior(self, name, parName, mean, sigma):
         
@@ -2586,7 +2536,8 @@ class GTAnalysis(fermipy.config.Configurable):
         """Clear all priors."""
 
         for src in self.roi.sources:
-            for par in self.like[name].funcs["Spectrum"]:
+
+            for par in self.like[src.name].funcs["Spectrum"].params.values():
                 par.removePrior()
         
     def fit(self, update=True, **kwargs):
@@ -2658,6 +2609,7 @@ class GTAnalysis(fermipy.config.Configurable):
              'values' : np.ones(num_free)*np.nan,
              'errors' : np.ones(num_free)*np.nan,
              'indices': np.zeros(num_free,dtype=int),
+             'is_norm' : np.empty(num_free,dtype=bool),
              'src_names' : num_free*[None],
              'par_names' : num_free*[None],
              }
@@ -2681,13 +2633,14 @@ class GTAnalysis(fermipy.config.Configurable):
         o['correlation'] = \
             o['covariance']*errinv[:,np.newaxis]*errinv[np.newaxis,:]
 
-        params = self.get_free_params()
-        for i, p in enumerate(params):
+        free_params = self.get_free_params()
+        for i, p in enumerate(free_params):
             o['values'][i] = p['value']
             o['errors'][i] = p['error']
             o['indices'][i] = p['idx']
             o['src_names'][i] = p['src_name']
             o['par_names'][i] = p['par_name']
+            o['is_norm'][i] = p['is_norm']
         
         o['niter'] = niter
         
@@ -2708,6 +2661,8 @@ class GTAnalysis(fermipy.config.Configurable):
             return o
 
         if update:
+
+            self._extract_correlation(o,free_params)
             for name in self.like.sourceNames():
                 freePars = self.get_free_source_params(name)                
                 if len(freePars) == 0:
@@ -2729,6 +2684,27 @@ class GTAnalysis(fermipy.config.Configurable):
                           "DeltaLogLike: %12.3f"%o['dlogLike'])
         return o
 
+    def fit_correlation(self):
+
+        saved_state = LikelihoodState(self.like)
+        self.free_sources(False)
+        self.free_sources(pars='norm')
+        fit_results = self.fit(min_fit_quality=2)
+        free_params = self.get_free_params()
+        self._extract_correlation(fit_results,free_params)        
+        saved_state.restore()
+    
+    def _extract_correlation(self,fit_results,free_params):
+        
+        for i, p0 in enumerate(free_params):
+            if not p0['is_norm']:
+                continue
+
+            src = self.roi[p0['src_name']]
+            for j, p1 in enumerate(free_params):            
+                src['correlation'][p1['src_name']] = fit_results['correlation'][i,j]
+        
+    
     def load_xml(self, xmlfile):
         """Load model definition from XML."""
 
@@ -2901,39 +2877,41 @@ class GTAnalysis(fermipy.config.Configurable):
         return [model_counts] + maps
 
     def print_roi(self):
-        print(str(self.roi))
+        self.logger.info(str(self.roi))
 
     def print_params(self):
 
         pars = self.get_free_params()
 
-        o = ''
-        o += '%3s %-20s%-20s%7s%7s%5s\n' % (
-        'idx','parname', 'sourcename','value','error', 'Free')
+        o = '\n'
+        o += '%3s %-15s%-15s%9s%8s%8s%8s%8s%5s\n' % (
+        'idx','parname', 'sourcename','value','error',
+        'min', 'max', 'scale', 'free')
         
         o += '-' * 80 + '\n'
         
         for p in pars:
 
-            o += '%3i %-20.19s%-20.19s' % (p['idx'],
+            o += '%3i %-15.14s%-15.14s' % (p['idx'],
                                           p['par_name'], p['src_name'])  
-            o += '%7.3f%7.3f' % (p['value'],p['error'])
+            o += '%9.3g%8.2g' % (p['value'],p['error'])
+            o += '%8.2g%8.2g%8.2g' % (p['bounds'][0],p['bounds'][1],p['scale'])
 
             if p['is_free']:
-                o += ' * '
+                o += '    *'
             else:
-                o += '   '
+                o += '     '
 
             o += '\n'
             
-        print(o)
+        self.logger.info(o)
             
     def print_model(self):
 
-        o = ''
+        o = '\n'
         o += '%-20s%8s%8s%7s%10s%10s%12s%5s\n' % (
-        'name', 'offset','norm','eflux','index',
-        'ts', 'Npred', 'Free')
+        'sourcename', 'offset','norm','eflux','index',
+        'ts', 'Npred', 'free')
         o += '-' * 80 + '\n'
         
         for s in sorted(self.roi.sources, key=lambda t: t['offset']):
@@ -2978,7 +2956,7 @@ class GTAnalysis(fermipy.config.Configurable):
             s['name'], 
             '---', normVal, s['eflux'][0], index, s['ts'], s['Npred'],free_str)
                         
-        print(o)
+        self.logger.info(o)
                     
     def load_roi(self, infile):
         """This function reloads the analysis state from a previously

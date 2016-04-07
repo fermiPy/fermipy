@@ -541,7 +541,7 @@ class SEDPlotter(object):
     def plot_lnlscan(sed, **kwargs):
 
         ax = kwargs.pop('ax', plt.gca())
-        llhCut = kwargs.pop('llhCut', -5)
+        llhCut = kwargs.pop('llhCut', -3)
         cmap = kwargs.pop('cmap', 'BuGn')
 
         lhProf = sed['lnlprofile']

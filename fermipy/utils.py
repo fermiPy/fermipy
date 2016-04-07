@@ -912,10 +912,13 @@ def offset_to_skydir(skydir, offset_lon, offset_lat,
 def sky_to_offset(skydir, lon, lat, coordsys='CEL', projection='AIT'):
     """Convert sky coordinates to a projected offset.  This function
     is the inverse of offset_to_sky."""
-
+    
     w = create_wcs(skydir, coordsys, projection)
     skycrd = np.vstack((lon, lat)).T
-
+    
+    if len(skycrd) == 0:
+        return skycrd
+    
     return w.wcs_world2pix(skycrd, 0)
 
 

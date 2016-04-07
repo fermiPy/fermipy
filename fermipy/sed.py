@@ -48,19 +48,12 @@ PAR_NAMES = {"PowerLaw":["Prefactor","Index"],
              "LogParabola":["norm","alpha","beta"],
              "PLExpCutoff":["Prefactor","Index1","Cutoff"]}
 
-class SEDGenerator(fermipy.config.Configurable):
-
-    defaults = dict(defaults.sed.items(),
-                    fileio=defaults.fileio,
-                    logging=defaults.logging)
-
-    def __init__(self, config=None, **kwargs):
-        fermipy.config.Configurable.__init__(self, config, **kwargs)
-        self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['fileio']['logfile'],
-                                 logLevel(self.config['logging']['verbosity']))
-
-    def make_sed(self, gta, name, profile=True, energies=None, **kwargs):
+#class SEDGenerator(fermipy.config.Configurable):
+class SEDGenerator(object):
+    """Mixin class which provides SED functionality to
+    `~fermipy.gtanalysis.GTAnalysis`."""
+    
+    def sed(self, name, profile=True, energies=None, **kwargs):
         """Generate an SED for a source.  This function will fit the
         normalization of a given source in each energy bin.
 
@@ -95,36 +88,65 @@ class SEDGenerator(fermipy.config.Configurable):
             then all background parameters that are currently free in
             the fit will be profiled.  By default fix_background=True.
 
+        ul_confidence : float
+            Set the confidence level that will be used for the
+            calculation of flux upper limits in each energy bin.
+
+        cov_scale : float
+            
         Returns
         -------
 
-        sed : dict
-            Dictionary containing results of the SED analysis.  The same
-            dictionary is also saved to the source dictionary under
-            'sed'.
+        sed : dict Dictionary containing output of the SED analysis.
+            This dictionary is also saved to the 'sed' dictionary of
+            the `~fermipy.roi_model.Source` instance.
 
         """
 
-        # Find the source
-        name = gta.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name, True).name
+
+        self.logger.info('Computing SED for %s' % name)
+        
+        o = self._make_sed(name,profile,energies,**kwargs)
+        
+        self._plotter.make_sed_plot(self, name, **kwargs)
+
+        self.logger.info('Finished SED')
+        
+        return o
+    
+    def _make_sed(self, name, profile=True, energies=None, **kwargs):
+
 
         # Extract options from kwargs
-        config = copy.deepcopy(self.config)
+        config = copy.deepcopy(self.config['sed'])
         config.update(kwargs)
 
         bin_index = config['bin_index']
         use_local_index = config['use_local_index']
         fix_background = config['fix_background']
         ul_confidence = config['ul_confidence']
+        cov_scale = config['cov_scale']        
+        
+        saved_state = LikelihoodState(self.like)
 
-        self.logger.info('Computing SED for %s' % name)
-        saved_state = LikelihoodState(gta.like)
-
+        self.free_sources(False,pars='shape')
+        self.free_norm(name)
+        
         if fix_background:
-            gta.free_sources(free=False)
-
+            self.free_sources(free=False)
+        elif cov_scale is not None:
+            self._latch_free_params()
+            self.zero_source(name)
+            self.fit(update=False)            
+            srcNames = list(self.like.sourceNames())
+            srcNames.remove(name)
+            self.constrain_norms(srcNames, cov_scale)
+            self.unzero_source(name)
+            self._restore_free_params()
+            
         if energies is None:
-            energies = gta.energies
+            energies = self.energies
         else:
             energies = np.array(energies)
 
@@ -158,12 +180,13 @@ class SEDGenerator(fermipy.config.Configurable):
              'ts': np.zeros(nbins),
              'fit_quality': np.zeros(nbins),
              'lnlprofile': [],
+             'correlation' : {},
              'config': config
              }
 
         max_index = 5.0
         min_flux = 1E-30
-        erange = gta.erange
+        erange = self.erange        
         
         # Precompute fluxes in each bin from global fit
         gf_bin_flux = []
@@ -171,10 +194,10 @@ class SEDGenerator(fermipy.config.Configurable):
         for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
 
             delta = 1E-5
-            f = gta.like[name].flux(10 ** emin, 10 ** emax)
-            f0 = gta.like[name].flux(10 ** emin * (1 - delta),
+            f = self.like[name].flux(10 ** emin, 10 ** emax)
+            f0 = self.like[name].flux(10 ** emin * (1 - delta),
                                       10 ** emin * (1 + delta))
-            f1 = gta.like[name].flux(10 ** emax * (1 - delta),
+            f1 = self.like[name].flux(10 ** emax * (1 - delta),
                                       10 ** emax * (1 + delta))
 
             if f0 > min_flux:
@@ -185,19 +208,29 @@ class SEDGenerator(fermipy.config.Configurable):
                 gf_bin_index += [max_index]
                 gf_bin_flux += [min_flux]
 
-        source = gta.components[0].like.logLike.getSource(name)
+        source = self.components[0].like.logLike.getSource(name)
         old_spectrum = source.spectrum()
-        gta.like.setSpectrum(name, 'PowerLaw')
-        gta.free_parameter(name, 'Index', False)
-        gta.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
+        self.like.setSpectrum(name, 'PowerLaw')
+        self.free_parameter(name, 'Index', False)
+        self.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
                           true_value=False,
                           bounds=[1E-10, 1E10],
                           update_source=False)
+
+        src_norm_idx = -1        
+        free_params = self.get_free_params()
+        for j, p in enumerate(free_params):
+            if not p['is_norm']:
+                continue
+            if p['is_norm'] and p['src_name'] == name:
+                src_norm_idx = j
+            
+            o['correlation'][p['src_name']] =  np.zeros(nbins) * np.nan
         
         for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
 
             ecenter = 0.5 * (emin + emax)
-            gta.set_parameter(name, 'Scale', 10 ** ecenter, scale=1.0,
+            self.set_parameter(name, 'Scale', 10 ** ecenter, scale=1.0,
                                bounds=[1, 1E6], update_source=False)
 
             if use_local_index:
@@ -205,28 +238,39 @@ class SEDGenerator(fermipy.config.Configurable):
             else:
                 o['index'][i] = -bin_index
                 
-            gta.set_parameter(name, 'Index', o['index'][i], scale=1.0,
+            self.set_parameter(name, 'Index', o['index'][i], scale=1.0,
                                update_source=False)
 
-            normVal = gta.like.normPar(name).getValue()
-            flux_ratio = gf_bin_flux[i] / gta.like[name].flux(10 ** emin,
+            normVal = self.like.normPar(name).getValue()
+            flux_ratio = gf_bin_flux[i] / self.like[name].flux(10 ** emin,
                                                                10 ** emax)
             newVal = max(normVal * flux_ratio, 1E-10)
-            gta.set_norm(name, newVal)
+            self.set_norm(name, newVal)
             
-            gta.like.syncSrcParams(name)
-            gta.free_norm(name)
+            self.like.syncSrcParams(name)
+            self.free_norm(name)
             self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
                               (name, 10 ** emin, 10 ** emax))
-            gta.setEnergyRange(emin, emax)
-            o['fit_quality'][i] = gta.fit(update=False)['fit_quality']
+            self.setEnergyRange(emin, emax)
 
-            prefactor = gta.like[gta.like.par_index(name, 'Prefactor')]
+            fit_output = self.fit(update=False)
+            free_params = self.get_free_params()
+            for j, p in enumerate(free_params):
+                
+                if not p['is_norm']:
+                    continue
+                
+                o['correlation'][p['src_name']][i] = \
+                    fit_output['correlation'][src_norm_idx,j]
+            
+            o['fit_quality'][i] = fit_output['fit_quality']
 
-            flux = gta.like[name].flux(10 ** emin, 10 ** emax)
-            flux_err = gta.like.fluxError(name, 10 ** emin, 10 ** emax)
-            eflux = gta.like[name].energyFlux(10 ** emin, 10 ** emax)
-            eflux_err = gta.like.energyFluxError(name, 10 ** emin, 10 ** emax)
+            prefactor = self.like[self.like.par_index(name, 'Prefactor')]
+
+            flux = self.like[name].flux(10 ** emin, 10 ** emax)
+            flux_err = self.like.fluxError(name, 10 ** emin, 10 ** emax)
+            eflux = self.like[name].energyFlux(10 ** emin, 10 ** emax)
+            eflux_err = self.like.energyFluxError(name, 10 ** emin, 10 ** emax)
             dfde = prefactor.getTrueValue()
             dfde_err = dfde * flux_err / flux
             e2dfde = dfde * 10 ** (2 * ecenter)
@@ -240,12 +284,12 @@ class SEDGenerator(fermipy.config.Configurable):
             o['dfde_err'][i] = dfde_err
             o['e2dfde_err'][i] = dfde_err * 10 ** (2 * ecenter)
 
-            cs = gta.model_counts_spectrum(name, emin, emax, summed=True)
+            cs = self.model_counts_spectrum(name, emin, emax, summed=True)
             o['Npred'][i] = np.sum(cs)
-            o['ts'][i] = max(gta.like.Ts2(name, reoptimize=False), 0.0)
+            o['ts'][i] = max(self.like.Ts2(name, reoptimize=False), 0.0)
 
             if profile:
-                lnlp = gta.profile_norm(name, emin=emin, emax=emax,
+                lnlp = self.profile_norm(name, emin=emin, emax=emax,
                                         savestate=False, reoptimize=True,
                                         npts=20)
                 o['lnlprofile'] += [lnlp]
@@ -270,14 +314,16 @@ class SEDGenerator(fermipy.config.Configurable):
                 o['e2dfde_ul'][i] = o['dfde_ul'][i] * 10 ** (2 * ecenter)
 
 
-        gta.setEnergyRange(erange[0], erange[1])
-        gta.like.setSpectrum(name, old_spectrum)
+        self.setEnergyRange(erange[0], erange[1])
+        self.like.setSpectrum(name, old_spectrum)
         saved_state.restore()
 
-        src = gta.roi.get_source_by_name(name, True)
+        if cov_scale is not None:
+            self.remove_priors()
+        
+        src = self.roi.get_source_by_name(name, True)
         src.update_data({'sed': copy.deepcopy(o)})
 
-        self.logger.info('Finished SED')
         return o
         
 class Interpolator(object):

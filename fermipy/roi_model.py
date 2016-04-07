@@ -504,7 +504,8 @@ class Model(object):
                       'Npred': 0.0,
                       'flux' : np.array([np.nan,np.nan]),
                       'eflux' : np.array([np.nan,np.nan]),
-                      'params': {}
+                      'params': {},
+                      'correlation' : {}
                       }
         if data is not None:
             self._data.update(data)
@@ -1939,8 +1940,7 @@ class ROIModel(fermipy.config.Configurable):
         ra, dec = [], []
 
         for s in root.findall('source'):
-            src = Source.create_from_xml(s, extdir=extdir)
-
+            src = Source.create_from_xml(s, extdir=extdir)            
             if src.diffuse:
                 diffuse_srcs += [src]
             else:
