@@ -1,6 +1,7 @@
 import os
 import copy
 import shutil
+import collections
 import yaml
 import numpy as np
 import tempfile
@@ -2702,7 +2703,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
                 continue
 
             src = self.roi[p0['src_name']]
-            for j, p1 in enumerate(free_params):            
+            for j, p1 in enumerate(free_params):
+
+                if not p1['is_norm']:
+                    continue
+                
                 src['correlation'][p1['src_name']] = fit_results['correlation'][i,j]
         
     
@@ -2885,25 +2890,33 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
         pars = self.get_free_params()
 
         o = '\n'
-        o += '%3s %-15s%-15s%9s%8s%8s%8s%8s%5s\n' % (
-        'idx','parname', 'sourcename','value','error',
+        o += '%4s %-20s%10s%10s%10s%10s%10s%5s\n' % (
+        'idx','parname', 'value','error',
         'min', 'max', 'scale', 'free')
         
         o += '-' * 80 + '\n'
-        
+
+        src_pars = collections.OrderedDict()
         for p in pars:
+            src_pars.setdefault(p['src_name'],[])
+            src_pars[p['src_name']] += [p]
 
-            o += '%3i %-15.14s%-15.14s' % (p['idx'],
-                                          p['par_name'], p['src_name'])  
-            o += '%9.3g%8.2g' % (p['value'],p['error'])
-            o += '%8.2g%8.2g%8.2g' % (p['bounds'][0],p['bounds'][1],p['scale'])
+        for k, v in src_pars.items():
 
-            if p['is_free']:
-                o += '    *'
-            else:
-                o += '     '
+            o += '%s\n'%k
+            for p in v:
 
-            o += '\n'
+                o += '%4i %-20.19s' % (p['idx'], p['par_name'])  
+                o += '%10.3g%10.3g' % (p['value'],p['error'])
+                o += '%10.3g%10.3g%10.3g' % (p['bounds'][0],p['bounds'][1],
+                                          p['scale'])
+            
+                if p['is_free']:
+                    o += '    *'
+                else:
+                    o += '     '
+
+                o += '\n'
             
         self.logger.info(o)
             
