@@ -1166,6 +1166,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
     def free_parameter(self, name, par, free=True):
         idx = self.like.par_index(name, par)
         self.like[idx].setFree(free)
+        self.like.syncSrcParams()
 
     def free_source(self, name, free=True, pars=None):
         """Free/Fix parameters of a source.
@@ -2601,7 +2602,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
                   covar=covar, verbosity=verbosity, tol=tol)
 
         num_free = self.like.logLike.getNumFreeParams()
-        
         o = {'fit_quality' : 0,
              'covariance' : None,
              'correlation' : None,
@@ -2622,8 +2622,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
             self.logger.debug("Fit iteration: %i" % niter)
             niter += 1
             quality = self._run_fit(**kw)
-            if quality > 2: break
-
+            if quality > 2:
+                break
+            
         o['fit_quality'] = quality
         o['covariance'] = np.array(self.like.covariance)
         o['errors'] = np.diag(o['covariance'])**0.5
