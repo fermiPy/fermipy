@@ -333,7 +333,7 @@ def cl_to_dlnl(cl):
     return 0.5 * np.power(np.sqrt(2.) * spfn.erfinv(1 - 2 * alpha), 2.)
 
 
-def find_function_root(fn, x0, xb, delta):    
+def find_function_root(fn, x0, xb, delta = 0.0):    
     """Find the root of a function: f(x)+delta in the interval encompassed
     by x0 and xb.
 
@@ -410,8 +410,7 @@ def get_parameter_limits(xval, logLike, ul_confidence=0.95):
 
     # Refine the peak position
     if np.sign(sd(xval[ilo])) != np.sign(sd(xval[ihi])):
-        x0 = brentq(sd, xval[ilo], xval[ihi],
-                    xtol=1e-10*np.median(xval[ilo:ihi+1]))
+        x0 = find_function_root(sd, xval[ilo], xval[ihi])
                 
     lnlmax = float(s(x0))
 

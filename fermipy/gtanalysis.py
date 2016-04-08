@@ -2103,8 +2103,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dlogLike'],
                                            ul_confidence=0.99)
 
-        if not np.isfinite(lims0['ll']):
+        if not np.isfinite(lims0['ll']) and lims0['x0'] > 1E-6:
             xvals = np.array([0.0,lims0['x0'],lims0['x0']+lims0['err_hi'],lims0['ul']])
+        elif not np.isfinite(lims0['ll']) and lims0['x0'] < 1E-6:
+            xvals = np.array([0.0,lims0['x0']+lims0['err_hi'],lims0['ul']])
         else:
             xvals = np.array([lims0['ll'],
                               lims0['x0']-lims0['err_lo'],lims0['x0'],
