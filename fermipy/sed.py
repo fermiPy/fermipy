@@ -63,6 +63,10 @@ class SEDGenerator(object):
         name : str
             Source name.
 
+        prefix : str
+           Optional string that will be prepended to all output files
+           (FITS and rendered images).
+            
         profile : bool
             Profile the likelihood in each energy bin.
 
@@ -105,6 +109,8 @@ class SEDGenerator(object):
 
         name = self.roi.get_source_by_name(name, True).name
 
+        prefix = kwargs.get('prefix','')
+        
         self.logger.info('Computing SED for %s' % name)
         
         o = self._make_sed(name,profile,energies,**kwargs)
@@ -117,7 +123,6 @@ class SEDGenerator(object):
     
     def _make_sed(self, name, profile=True, energies=None, **kwargs):
 
-
         # Extract options from kwargs
         config = copy.deepcopy(self.config['sed'])
         config.update(kwargs)
@@ -127,31 +132,18 @@ class SEDGenerator(object):
         fix_background = config['fix_background']
         ul_confidence = config['ul_confidence']
         cov_scale = config['cov_scale']        
-        
-        saved_state = LikelihoodState(self.like)
 
-        self.free_sources(False,pars='shape')
-        self.free_norm(name)
-        
-        if fix_background:
-            self.free_sources(free=False)
-        elif cov_scale is not None:
-            self._latch_free_params()
-            self.zero_source(name)
-            self.fit(update=False)            
-            srcNames = list(self.like.sourceNames())
-            srcNames.remove(name)
-            self.constrain_norms(srcNames, cov_scale)
-            self.unzero_source(name)
-            self._restore_free_params()
-            
         if energies is None:
             energies = self.energies
         else:
             energies = np.array(energies)
 
         nbins = len(energies) - 1
-
+        max_index = 5.0
+        min_flux = 1E-30
+        erange = self.erange
+        
+        # Output Dictionary
         o = {'emin': energies[:-1],
              'emax': energies[1:],
              'ecenter': 0.5 * (energies[:-1] + energies[1:]),
@@ -181,13 +173,37 @@ class SEDGenerator(object):
              'fit_quality': np.zeros(nbins),
              'lnlprofile': [],
              'correlation' : {},
+             'model_flux' : {},
              'config': config
              }
-
-        max_index = 5.0
-        min_flux = 1E-30
-        erange = self.erange        
         
+        saved_state = LikelihoodState(self.like)
+
+        # Perform global spectral fit
+        self._latch_free_params()
+        self.free_sources(False,pars='shape')
+        self.free_source(name)
+        self.fit(update=False)
+        o['model_flux'] = self.bowtie(name)
+        
+        self._restore_free_params()
+
+        # Setup background parameters for SED
+        self.free_sources(False,pars='shape')
+        self.free_norm(name)
+
+        if fix_background:
+            self.free_sources(free=False)
+        elif cov_scale is not None:
+            self._latch_free_params()
+            self.zero_source(name)
+            self.fit(update=False)            
+            srcNames = list(self.like.sourceNames())
+            srcNames.remove(name)
+            self.constrain_norms(srcNames, cov_scale)
+            self.unzero_source(name)
+            self._restore_free_params()
+                                    
         # Precompute fluxes in each bin from global fit
         gf_bin_flux = []
         gf_bin_index = []
