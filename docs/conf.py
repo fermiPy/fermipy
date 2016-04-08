@@ -28,10 +28,10 @@ class Mock(MagicMock):
 MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
                 'SummedLikelihood','FluxDensity','LikelihoodState',
-                'GtApp','pywcsgrid2','astropy',
+                'GtApp','astropy',
                 'astropy.coordinates',
                 'astropy.io','astropy.wcs','astropy.io.fits',
-                'astropy.table','healpy','wcsaxes']
+                'astropy.table','healpy','wcsaxes','matplotlib.colors']
 #                'numpy',
 #                'scipy','scipy.special','scipy.interpolate','scipy.optimize',
 #                'scipy.signal','scipy.ndimage','scipy.ndimage.filters','scipy.integrate']
