@@ -2715,8 +2715,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
            
         """
 
+        self.logger.info('Simulating ROI')
+        
         if restore:
+            self.logger.info('Restoring')
             self._restore_counts_maps()
+            self.logger.info('Finished')
             return
         
         for c in self.components:
@@ -2732,6 +2736,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 self._like.addComponent(c.like)
             self._init_roi_model()
             self.load_xml('tmp')
+
+        self.logger.info('Finished')
 
     def write_model_map(self, model_name, name=None):
         """Save the counts model map to a FITS file.
@@ -2985,17 +2991,47 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                            logging=self.config['logging'])
         plotter.run(self, mcube_map, prefix=prefix, **kwargs)
 
-    def _bowtie(self, fd, energies=None):
+    def bowtie(self, name, fd=None, energies=None):
         """Generate a spectral uncertainty band for the given source.
         This will create a band as a function of energy by propagating
         the errors on the global fit parameters.  Note that this band
-        only reflects the uncertainty for parameters that were left
-        free in the fit."""
+        only reflects the uncertainty for parameters that are currently
+        free in the model.
+
+        Parameters
+        ----------
+
+        name : str
+           Source name.
+
+        fd : FluxDensity        
+           Flux density object.  If this parameter is None then one
+           will be created on the fly.
+        
+        energies : array-like
+           Sequence of energies at which the flux band will be evaluated.
+        
+        """
 
         if energies is None:
             emin = self.energies[0]
             emax = self.energies[-1]
             energies = np.linspace(emin, emax, 50)
+        
+        o = {'ecenter': energies,
+             'dfde': np.zeros(len(energies)) * np.nan,
+             'dfde_lo': np.zeros(len(energies)) * np.nan,
+             'dfde_hi': np.zeros(len(energies)) * np.nan,
+             'dfde_ferr' : np.zeros(len(energies)) * np.nan,
+             'pivot_energy' : np.nan }
+
+        try:        
+            if fd is None:
+                fd = FluxDensity.FluxDensity(self.like, name)
+        except RuntimeError:
+            self.logger.error('Failed to create FluxDensity',
+                              exc_info=True)
+            return o
 
         dfde = [fd.value(10 ** x) for x in energies]
         dfde_err = [fd.error(10 ** x) for x in energies]
@@ -3005,9 +3041,19 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         fhi = dfde * (1.0 + dfde_err / dfde)
         flo = dfde / (1.0 + dfde_err / dfde)
 
-        return {'ecenter': energies, 'dfde': dfde,
-                'dfde_lo': flo, 'dfde_hi': fhi}
+        o['dfde'] = dfde
+        o['dfde_lo'] = flo
+        o['dfde_hi'] = fhi
+        o['dfde_ferr'] = (fhi - flo) / dfde
+        
+        try:
+            o['pivot_energy'] = interpolate_function_min(energies,o['dfde_ferr'])
+        except Exception:
+            self.logger.error('Failed to compute pivot energy',
+                              exc_info=True)
 
+        return o
+    
     def _coadd_maps(self, cmaps, shape, rm):
         """
         """
@@ -3261,26 +3307,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # Extract bowtie
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
             energies = np.linspace(self.energies[0], self.energies[-1], 50)
-            src_dict['model_flux'] = self._bowtie(fd, energies)
+            src_dict['model_flux'] = self.bowtie(name, fd=fd, energies=energies)
             src_dict['dfde100'][1] = fd.error(100.)
             src_dict['dfde1000'][1] = fd.error(1000.)
             src_dict['dfde10000'][1] = fd.error(10000.)
 
-            ferr = (src_dict['model_flux']['dfde_hi'] -
-                    src_dict['model_flux']['dfde_lo']) / src_dict['model_flux'][
-                       'dfde']
-
-            # Extract pivot energy
-            try:
-                src_dict['pivot_energy'] = interpolate_function_min(energies,
-                                                                    ferr)
-            except Exception:
-                self.logger.error('Failed to compute pivot energy',
-                                  exc_info=True)
-
+            src_dict['pivot_energy'] = src_dict['model_flux']['pivot_energy']
+            
             e0 = src_dict['pivot_energy']
-            src_dict['dfde'][0] = self.like[name].spectrum()(
-                pyLike.dArg(10 ** e0))
+            src_dict['dfde'][0] = self.like[name].spectrum()(pyLike.dArg(10 ** e0))
             src_dict['dfde'][1] = fd.error(10 ** e0)
 
         if not reoptimize:

@@ -561,7 +561,7 @@ class SEDPlotter(object):
     def plot_lnlscan(sed, **kwargs):
 
         ax = kwargs.pop('ax', plt.gca())
-        llhCut = kwargs.pop('llhCut', -3)
+        llhCut = kwargs.pop('llhCut', -2.70)
         cmap = kwargs.pop('cmap', 'BuGn')
 
         lhProf = sed['lnlprofile']
@@ -658,28 +658,28 @@ class SEDPlotter(object):
         plt.errorbar(x, (y - ym) / ym, xerr=xerr, yerr=yerr / ym, **kwargs)
 
     @staticmethod
-    def plot_model(src, **kwargs):
+    def plot_model(model_flux, **kwargs):
 
         ax = plt.gca()
         color = kwargs.pop('color', 'k')
         noband = kwargs.pop('noband', False)
 
-        e2 = 10 ** (2 * src['model_flux']['ecenter'])
+        e2 = 10 ** (2 * model_flux['ecenter'])
 
-        ax.plot(10 ** src['model_flux']['ecenter'],
-                src['model_flux']['dfde'] * e2, color=color, **kwargs)
+        ax.plot(10 ** model_flux['ecenter'],
+                model_flux['dfde'] * e2, color=color, **kwargs)
 
-        ax.plot(10 ** src['model_flux']['ecenter'],
-                src['model_flux']['dfde_lo'] * e2, color=color,
+        ax.plot(10 ** model_flux['ecenter'],
+                model_flux['dfde_lo'] * e2, color=color,
                 linestyle='--', **kwargs)
-        ax.plot(10 ** src['model_flux']['ecenter'],
-                src['model_flux']['dfde_hi'] * e2, color=color,
+        ax.plot(10 ** model_flux['ecenter'],
+                model_flux['dfde_hi'] * e2, color=color,
                 linestyle='--', **kwargs)
 
         if not noband:
-            ax.fill_between(10 ** src['model_flux']['ecenter'],
-                            src['model_flux']['dfde_lo'] * e2,
-                            src['model_flux']['dfde_hi'] * e2,
+            ax.fill_between(10 ** model_flux['ecenter'],
+                            model_flux['dfde_lo'] * e2,
+                            model_flux['dfde_hi'] * e2,
                             alpha=0.5, color=color, zorder=-1)
 
     @staticmethod
@@ -710,7 +710,9 @@ class SEDPlotter(object):
 
         SEDPlotter.plot_sed(sed)
 
-        if 'model_flux' in src:
+        if 'model_flux' in sed:
+            SEDPlotter.plot_model(sed['model_flux'], noband=showlnl)        
+        elif 'model_flux' in src:
             SEDPlotter.plot_model(src, noband=showlnl)
 
         if showlnl:
