@@ -31,10 +31,10 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'GtApp','pywcsgrid2','astropy',
                 'astropy.coordinates',
                 'astropy.io','astropy.wcs','astropy.io.fits',
-                'astropy.table',
-                'numpy','healpy','wcsaxes',
-                'scipy','scipy.special','scipy.interpolate','scipy.optimize',
-                'scipy.signal','scipy.ndimage','scipy.ndimage.filters','scipy.integrate']
+                'astropy.table','healpy','wcsaxes']
+#                'numpy',
+#                'scipy','scipy.special','scipy.interpolate','scipy.optimize',
+#                'scipy.signal','scipy.ndimage','scipy.ndimage.filters','scipy.integrate']
 #                'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
 #                'matplotlib.axes','matplotlib.cbook','matplotlib.colors',
 #                'matplotlib.patheffects','matplotlib.patches']
