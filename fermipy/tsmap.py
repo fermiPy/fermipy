@@ -364,7 +364,7 @@ def _ts_value(position, counts, background, model, C_0_map, method,logger=None):
 class TSMapGenerator(object):
     """Mixin class for `~fermipy.gtanalysis.GTAnalysis` that
     generates TS maps."""
-    
+
     def tsmap(self, prefix='', **kwargs):
         """Generate a spatial TS map for a source component with
         properties defined by the `model` argument.  The TS map will
@@ -460,9 +460,9 @@ class TSMapGenerator(object):
         make_fits = kwargs.get('make_fits', True)
         map_skydir = kwargs.get('map_skydir',None)
         map_size = kwargs.get('map_size',1.0)
+        exclude = kwargs.get('exclude', None)
         
         src_dict = copy.deepcopy(config.setdefault('model',{}))
-        exclude = config.setdefault('exclude', None)
         multithread = config.setdefault('multithread',False)
         threshold = config.setdefault('threshold',1E-2)
         max_kernel_radius = config.get('max_kernel_radius')

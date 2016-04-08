@@ -1591,7 +1591,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         src_pix = skydir.to_pixel(skywcs)
 
         tsmap = self.tsmap(utils.join_strings([prefix,name.lower().replace(' ','_')]),
-                           model=src.data,multithread=True,
+                           model=src.data,
                            map_skydir=skydir,
                            map_size=2.0*dtheta_max,
                            exclude=[name],make_plots=False)
