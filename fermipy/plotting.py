@@ -256,6 +256,7 @@ class ROIPlotter(fermipy.config.Configurable):
         'erange': (None, '', list),
         'catalogs': (None, '', list),
         'graticule_radii': (None, '', list),
+        'label_ts_threshold': (0.0, '', float),
         'cmap': ('ds9_b', '', str),
     }
 
@@ -394,15 +395,21 @@ class ROIPlotter(fermipy.config.Configurable):
             plt.gca().set_xlabel('LAT Offset [deg]')
 
     def plot_sources(self,skydir,labels,
-                     plot_kwargs,text_kwargs, nolabels=False):
+                     plot_kwargs,text_kwargs, **kwargs):
 
         ax = plt.gca()
 
+        nolabels = kwargs.get('nolabels',False)
+        label_mask = kwargs.get('label_mask',
+                                np.ones(len(labels),dtype=bool))
+        if nolabels:
+            label_mask.fill(False)
+        
         pixcrd = utils.skydir_to_pix(skydir, self._implot._wcs)
         
-        for i, (x,y,label) in enumerate(zip(pixcrd[0],pixcrd[1],labels)):
+        for i, (x,y,label,show_label) in enumerate(zip(pixcrd[0],pixcrd[1],labels,label_mask)):
 
-            if not nolabels:
+            if show_label:
                 t = ax.annotate(label,xy=(x,y),
                                 xytext=(5.0, 5.0), textcoords='offset points',
                                 **text_kwargs)            
@@ -411,10 +418,11 @@ class ROIPlotter(fermipy.config.Configurable):
             t = ax.plot(x, y, **plot_kwargs)
             plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
         
-    def plot_roi(self, roi):
+    def plot_roi(self, roi, **kwargs):
 
         src_color = 'w'
         
+        label_ts_threshold = kwargs.get('label_ts_threshold',0.0)
         plot_kwargs = dict(linestyle='None', marker='+',
                            markerfacecolor='None',mew=0.66,ms=8,
 #                           markersize=8,
@@ -422,11 +430,20 @@ class ROIPlotter(fermipy.config.Configurable):
 
         text_kwargs = dict(color=src_color, size=8, clip_on=True,
                            fontweight='normal')
-        
+
+        ts = np.array([s['ts'] for s in roi.point_sources])
+
+        if label_ts_threshold is None:
+            m = np.zeros(len(ts),dtype=bool)            
+        elif label_ts_threshold <= 0:
+            m = np.ones(len(ts),dtype=bool)            
+        else:
+            m = ts > label_ts_threshold
+            
         skydir = roi._src_skydir
-        labels = [s.name for s in roi.point_sources]
-        
-        self.plot_sources(skydir,labels,plot_kwargs,text_kwargs)
+        labels = [s.name for s in roi.point_sources]        
+        self.plot_sources(skydir,labels,plot_kwargs,text_kwargs,
+                          label_mask=m, **kwargs)
 
     def plot_catalog(self, catalog):
 
@@ -458,6 +475,8 @@ class ROIPlotter(fermipy.config.Configurable):
         zoom = kwargs.get('zoom',None)
         graticule_radii = kwargs.get('graticule_radii',
                                      self.config['graticule_radii'])
+        label_ts_threshold = kwargs.get('label_ts_threshold',
+                                       self.config['label_ts_threshold'])
         cmap = kwargs.setdefault('cmap',self.config['cmap'])
         
         im_kwargs = dict(cmap='ds9_b',
@@ -479,7 +498,8 @@ class ROIPlotter(fermipy.config.Configurable):
             self.plot_catalog(c)
         
         if self._roi is not None:
-            self.plot_roi(self._roi)        
+            self.plot_roi(self._roi,
+                          label_ts_threshold=label_ts_threshold)        
             
         self._extent = im.get_extent()
         ax.set_xlim(self._extent[0], self._extent[1])
@@ -799,6 +819,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         sigma_levels = [-5,-3,3,5,7] + list(np.logspace(1,3,17))
 
         kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
+        kwargs.setdefault('label_ts_threshold',
+                          self.config['label_ts_threshold'])
         kwargs.setdefault('cmap',self.config['cmap'])
         kwargs.setdefault('catalogs',self._catalogs)
                   
@@ -852,6 +874,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         sigma_levels = [3,5,7] + list(np.logspace(1,3,17))
 
         kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
+        kwargs.setdefault('label_ts_threshold',
+                          self.config['label_ts_threshold'])
         kwargs.setdefault('cmap',self.config['cmap'])
         kwargs.setdefault('catalogs',self.config['catalogs'])
         
@@ -894,6 +918,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         roi_kwargs = {}
         roi_kwargs.setdefault('erange',erange)
         roi_kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
+        roi_kwargs.setdefault('label_ts_threshold',
+                              self.config['label_ts_threshold'])
         roi_kwargs.setdefault('cmap',self.config['cmap'])
         roi_kwargs.setdefault('catalogs',self._catalogs)
         
