@@ -34,10 +34,10 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'astropy.table',
                 'numpy','healpy','wcsaxes',
                 'scipy','scipy.special','scipy.interpolate','scipy.optimize',
-                'scipy.signal','scipy.ndimage','scipy.ndimage.filters','scipy.integrate',
-                'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
-                'matplotlib.axes','matplotlib.cbook','matplotlib.colors',
-                'matplotlib.patheffects','matplotlib.patches']
+                'scipy.signal','scipy.ndimage','scipy.ndimage.filters','scipy.integrate']
+#                'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
+#                'matplotlib.axes','matplotlib.cbook','matplotlib.colors',
+#                'matplotlib.patheffects','matplotlib.patches']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # If extensions (or modules to document with autodoc) are in another directory,
