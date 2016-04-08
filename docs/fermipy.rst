@@ -29,7 +29,8 @@ fermipy.gtanalysis module
     :members:
     :undoc-members:
     :show-inheritance:
-
+    :inherited-members:
+       
 fermipy.logger module
 ---------------------
 
