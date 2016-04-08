@@ -3657,8 +3657,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             imax = len(self.energies) - 1
 
         self.like.selectEbounds(int(imin), int(imax))
-        self._update_roi()
-        
         return np.array([self.energies[imin], self.energies[imax]])
 
     def counts_map(self):
