@@ -31,13 +31,8 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'GtApp','astropy',
                 'astropy.coordinates',
                 'astropy.io','astropy.wcs','astropy.io.fits',
-                'astropy.table','healpy','wcsaxes','matplotlib.colors']
-#                'numpy',
-#                'scipy','scipy.special','scipy.interpolate','scipy.optimize',
-#                'scipy.signal','scipy.ndimage','scipy.ndimage.filters','scipy.integrate']
-#                'matplotlib','matplotlib.pyplot','matplotlib.gridspec',
-#                'matplotlib.axes','matplotlib.cbook','matplotlib.colors',
-#                'matplotlib.patheffects','matplotlib.patches']
+                'astropy.table','healpy','wcsaxes']
+
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -98,15 +93,15 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Fermipy'
-copyright = u'2015, Matthew Wood'
-author = u'Matthew Wood'
+author = u'Fermipy Developers'
+copyright = u'2016, ' + author
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = fermipy.__version__ #'0.1.0'
+version = fermipy.__version__ 
 # The full version, including alpha/beta/rc tags.
 release = fermipy.__version__
 
