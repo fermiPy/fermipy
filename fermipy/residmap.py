@@ -5,6 +5,7 @@ import scipy.signal
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.plotting as plotting
 from fermipy.utils import Map
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
@@ -119,67 +120,102 @@ def get_source_kernel(gta, name, kernel=None):
 
     return sm
 
-class ResidMapGenerator(fermipy.config.Configurable):
-    """This class generates spatial residual maps from the difference
-    of data and model maps smoothed with a user-defined
-    spatial/spectral template.  The resulting map of source
-    significance can be interpreted in the same way as the TS map (the
-    likelihood of a source at the given location).  The algorithm
-    approximates the best-fit source amplitude that would be derived
-    from a least-squares fit to the data."""
+class ResidMapGenerator(object):
+    """Mixin class for `~fermipy.gtanalysis.GTAnalysis` that generates
+    spatial residual maps from the difference of data and model maps
+    smoothed with a user-defined spatial/spectral template.  The map
+    of residual significance can be interpreted in the same way as a
+    TS map (the likelihood of a source at the given location)."""
 
-    defaults = dict(defaults.residmap.items(),
-                    fileio=defaults.fileio,
-                    logging=defaults.logging)
+    def residmap(self, prefix='', **kwargs):
+        """Generate 2-D spatial residual maps using the current ROI
+        model and the convolution kernel defined with the `model`
+        argument.
 
-    def __init__(self, config=None, **kwargs):
-        #        super(ResidMapGenerator,self).__init__(config,**kwargs)
-        fermipy.config.Configurable.__init__(self, config, **kwargs)
-        self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['fileio']['logfile'],
-                                 ll(self.config['logging']['verbosity']))
+        Parameters
+        ----------
 
-    def run(self, gta, prefix, **kwargs):
+        prefix : str
+            String that will be prefixed to the output residual map files.
 
-        models = kwargs.get('models', self.config['models'])
+        model : dict
+           Dictionary defining the properties of the convolution kernel.
 
-        if isinstance(models,dict):
-            models = [models]
+        exclude : str or list of str
+            Source or sources that will be removed from the model when
+            computing the residual map.
 
-        o = []
+        erange : list
+           Restrict the analysis to an energy range (emin,emax) in
+           log10(E/MeV) that is a subset of the analysis energy range.
+           By default the full analysis energy range will be used.  If
+           either emin/emax are None then only an upper/lower bound on
+           the energy range wil be applied.    
 
-        for m in models:
-            self.logger.info('Generating Residual map')
-            self.logger.info(m)
-            o += [self.make_residual_map(gta,prefix,copy.deepcopy(m),**kwargs)]
+        make_plots : bool        
+            Write image files.
 
-        return o
+        make_fits : bool
+            Write FITS files.
 
-    def make_residual_map(self, gta, prefix, src_dict=None, **kwargs):
+        Returns
+        -------
 
-        exclude = kwargs.get('exclude', None)
-        erange = kwargs.get('erange', self.config['erange'])
+        maps : dict
+           A dictionary containing the `~fermipy.utils.Map` objects
+           for the residual significance and amplitude.    
+
+        """
+
+        self.logger.info('Generating residual maps')
+
+        config = copy.deepcopy(self.config['residmap'])
+        config = utils.merge_dict(config,kwargs)
+        
+        make_plots = kwargs.get('make_plots', True)
+        maps = self._make_residual_map(prefix,config,**kwargs)
+
+        if make_plots:
+            plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                               fileio=self.config['fileio'],
+                                               logging=self.config['logging'])
+            
+            plotter.make_residual_plots(self, maps)
+            
+        self.logger.info('Finished residual maps')
+                
+        return maps
+        
+    def _make_residual_map(self, prefix, config, **kwargs):
+
         make_fits = kwargs.get('make_fits', True)
         
+        src_dict = copy.deepcopy(config.setdefault('model',{}))        
+        exclude = config.setdefault('exclude', None)
+        erange = config.setdefault('erange', None)
+        
         if erange is not None:            
-            if len(erange) == 0: erange = [None,None]
-            elif len(erange) == 1: erange += [None]            
+            if len(erange) == 0:
+                erange = [None,None]
+            elif len(erange) == 1:
+                erange += [None]            
             erange[0] = (erange[0] if erange[0] is not None 
-                         else gta.energies[0])
+                         else self.energies[0])
             erange[1] = (erange[1] if erange[1] is not None 
-                         else gta.energies[-1])
+                         else self.energies[-1])
         else:
-            erange = [gta.energies[0],gta.energies[-1]]
+            erange = [self.energies[0],self.energies[-1]]
 
         # Put the test source at the pixel closest to the ROI center
-        xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
-                      np.round((gta.npix - 1.0) / 2.))
+        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
+                      np.round((self.npix - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        skywcs = gta._skywcs
+        skywcs = self._skywcs
         skydir = utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
-        if src_dict is None: src_dict = {}
+        if src_dict is None:
+            src_dict = {}
         src_dict['ra'] = skydir.ra.deg
         src_dict['dec'] = skydir.dec.deg
         src_dict.setdefault('SpatialModel', 'PointSource')
@@ -190,30 +226,30 @@ class ResidMapGenerator(fermipy.config.Configurable):
 
         if src_dict['SpatialModel'] == 'Gaussian':
             kernel = utils.make_gaussian_kernel(src_dict['SpatialWidth'],
-                                                cdelt=gta.components[0].binsz,
+                                                cdelt=self.components[0].binsz,
                                                 npix=101)
             kernel /= np.sum(kernel)
             cpix = [50, 50]
 
-        gta.add_source('residmap_testsource', src_dict, free=True,
+        self.add_source('residmap_testsource', src_dict, free=True,
                        init_source=False,save_source_maps=False)
-        src = gta.roi.get_source_by_name('residmap_testsource', True)
+        src = self.roi.get_source_by_name('residmap_testsource', True)
 
         modelname = utils.create_model_name(src)
-        npix = gta.components[0].npix
+        npix = self.components[0].npix
 
         mmst = np.zeros((npix, npix))
         cmst = np.zeros((npix, npix))
         emst = np.zeros((npix, npix))
 
-        sm = get_source_kernel(gta,'residmap_testsource', kernel)
+        sm = get_source_kernel(self,'residmap_testsource', kernel)
         ts = np.zeros((npix, npix))
         sigma = np.zeros((npix, npix))
         excess = np.zeros((npix, npix))
 
-        gta.delete_source('residmap_testsource')
+        self.delete_source('residmap_testsource')
 
-        for i, c in enumerate(gta.components):
+        for i, c in enumerate(self.components):
 
             imin = utils.val_to_edge(c.energies,erange[0])[0]
             imax = utils.val_to_edge(c.energies,erange[1])[0]
@@ -266,11 +302,11 @@ class ResidMapGenerator(fermipy.config.Configurable):
 
         o = {'name': '%s_%s' % (prefix, modelname),
              'file': None,
-             'wcs': skywcs,
              'sigma': sigma_map,
              'model': model_map,
              'data': data_map,
-             'excess': excess_map }
+             'excess': excess_map,
+             'config' : config }
         
         if make_fits:
 

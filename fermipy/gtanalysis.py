@@ -188,7 +188,8 @@ def load_npy(infile):
     return np.load(infile).flat[0]
 
 
-class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
+class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
+                 ResidMapGenerator, TSMapGenerator, TSCubeGenerator):
     """High-level analysis interface that internally manages a set of
     analysis component objects.  Most of the functionality of the
     fermiPy package is provided through the methods of this class.
@@ -538,9 +539,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
 
         self.like.syncSrcParams(str(name))
         self.like.model = self.like.components[0].model
-
         if init_source:
             self._init_source(name)
+            self._update_roi()
 
     def delete_source(self, name, save_template=True, delete_source_map=False,
                       **kwargs):
@@ -579,7 +580,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
         src = self.roi.get_source_by_name(name, True)
         self.roi.delete_sources([src])
         self.like.model = self.like.components[0].model
-
+        self._update_roi()
         return src
 
     def _create_component_configs(self):
@@ -707,7 +708,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
             self.logger.info('Initializing source properties')
             for name in self.like.sourceNames():
                 self._init_source(name)
-
             self._update_roi()
 
         self.logger.info('Finished setup')
@@ -741,7 +741,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
                 proj_type = 1
                 rm['components'][i]['counts'] = \
                     np.squeeze(np.apply_over_axes(np.sum, cm.counts, axes=[1]))
-            rm['components'][i]['logLike'] = c.like()
+            rm['components'][i]['logLike'] = -c.like()
 
         if proj_type == 0:
             shape = (self.enumbins, self.npix, self.npix)
@@ -1143,8 +1143,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
         self.like[idx].setValue(current_value*current_scale/scale)
         self.like[idx].setBounds(current_bounds[0]*current_scale/scale,
                                  current_bounds[1]*current_scale/scale)
-        
-            
+
     def set_parameter_bounds(self,name,par,bounds):
         """Set the bounds of a parameter.
 
@@ -1377,70 +1376,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
         self.scale_parameter(name, normPar, 1E10)
         self.like.syncSrcParams(str(name))
 
-    def residmap(self, prefix='', **kwargs):
-        """Generate 2-D spatial residual maps using the current ROI
-        model and the convolution kernel defined with the `model`
-        argument.
-
-        Parameters
-        ----------
-
-        prefix : str
-            String that will be prefixed to the output residual map files.
-
-        model : dict
-           Dictionary defining the properties of the convolution kernel.
-
-        exclude : str or list of str
-            Source or sources that will be removed from the model when
-            computing the residual map.
-
-        erange : list
-           Restrict the analysis to an energy range (emin,emax) in
-           log10(E/MeV) that is a subset of the analysis energy range.
-           By default the full analysis energy range will be used.  If
-           either emin/emax are None then only an upper/lower bound on
-           the energy range wil be applied.    
-
-        make_plots : bool        
-            Write image files.
-
-        make_fits : bool
-            Write FITS files.
-
-        Returns
-        -------
-
-        maps : dict
-           A dictionary containing the `~fermipy.utils.Map` objects
-           for the residual significance and amplitude.    
-
-        """
-
-        self.logger.info('Generating residual maps')
-
-        make_plots = kwargs.get('make_plots', True)
-        rmg = ResidMapGenerator(self.config['residmap'], 
-                                fileio=self.config['fileio'],
-                                logging=self.config['logging'])
-
-        model = kwargs.get('model',self.config['residmap']['model'])
-
-        maps = rmg.make_residual_map(self,prefix,copy.deepcopy(model),**kwargs)
-
-        for m in maps if isinstance(maps,list) else [maps]:
-            if make_plots:
-                plotter = plotting.AnalysisPlotter(self.config['plotting'],
-                                                   fileio=self.config['fileio'],
-                                                   logging=self.config[
-                                                       'logging'])
-
-                plotter.make_residual_plots(self, m)
-
-        self.logger.info('Finished residual maps')
-                
-        return maps
-
     def optimize(self, **kwargs):
         """Iteratively optimize the ROI model.  The optimization is
         performed in three sequential steps:
@@ -1481,22 +1416,31 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
             Threshold on source TS used for determining the sources
             that will be fit in the third optimization step.
 
+        max_free_sources : int        
+            Maximum number of sources that will be fit simultaneously
+            in the first optimization step.
+
         """
 
         self.logger.info('Starting')
 
         logLike0 = -self.like()
         self.logger.debug('LogLike: %f' % logLike0)
-
+        
         # Extract options from kwargs
-        npred_frac_threshold = kwargs.get('npred_frac',
-                                          self.config['roiopt']['npred_frac'])
-        npred_threshold = kwargs.get('npred_threshold',
-                                     self.config['roiopt']['npred_threshold'])
-        shape_ts_threshold = kwargs.get('shape_ts_threshold',
-                                        self.config['roiopt'][
-                                            'shape_ts_threshold'])
-
+        config = copy.deepcopy(self.config['roiopt'])
+        config.update(kwargs)
+        
+        # Extract options from kwargs
+        npred_frac_threshold = config['npred_frac']
+        npred_threshold = config['npred_threshold']
+        shape_ts_threshold = config['shape_ts_threshold']
+        max_free_sources = config['max_free_sources']
+        
+        o = defaults.make_default_dict(defaults.roiopt_output)
+        o['config'] = config
+        o['logLike0'] = logLike0
+        
         # preserve free parameters
         free = self.get_free_param_vector()
 
@@ -1509,22 +1453,28 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
         skip_sources = []
         for s in sorted(self.roi.sources, key=lambda t: t['Npred'],
                         reverse=True):
-
+            
             npred_sum += s['Npred']
             npred_frac = npred_sum / self._roi_model['Npred']
             self.free_norm(s.name)
             skip_sources.append(s.name)
-
-            if npred_frac > npred_frac_threshold: break
+            
+            if npred_frac > npred_frac_threshold:
+                break
+            if s['Npred'] < npred_threshold:
+                break
+            if len(skip_sources) >= max_free_sources:
+                break
 
         self.fit()
         self.free_sources(free=False)
-
+        
         # Step through remaining sources and re-fit normalizations
         for s in sorted(self.roi.sources, key=lambda t: t['Npred'],
                         reverse=True):
 
-            if s.name in skip_sources: continue
+            if s.name in skip_sources:
+                continue
 
             if s['Npred'] < npred_threshold:
                 self.logger.debug(
@@ -1556,9 +1506,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
         self.set_free_param_vector(free)
 
         logLike1 = -self.like()
+
+        o['logLike1'] = logLike1
+        o['dlogLike'] = logLike1 - logLike0
+        
         self.logger.info('Finished')
         self.logger.info(
             'LogLike: %f Delta-LogLike: %f' % (logLike1, logLike1 - logLike0))
+
+        return o
 
     def localize(self, name, **kwargs):
         """Find the best-fit position of a source.  Localization is
@@ -2134,7 +2090,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
             
         return xvals
     
-    def _find_scan_pts_reopt(self,name,emin=None,emax=None,npts=11):
+    def _find_scan_pts_reopt(self,name,emin=None,emax=None,npts=11,
+                             dloglike_thresh = 3.0):
         
         parName = self.like.normPar(name).getName()
         
@@ -2147,12 +2104,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
                                            ul_confidence=0.99)
 
         if not np.isfinite(lims0['ll']):
-            xvals = np.array([0.0,xval0,xval0+lims0['err_hi'],lims0['ul']])
+            xvals = np.array([0.0,lims0['x0'],lims0['x0']+lims0['err_hi'],lims0['ul']])
         else:
             xvals = np.array([lims0['ll'],
-                              xval0-lims0['err_lo'],xval0,
-                              xval0+lims0['err_hi'],
-                              lims0['ul']])
+                              lims0['x0']-lims0['err_lo'],lims0['x0'],
+                              lims0['x0']+lims0['err_hi'],lims0['ul']])
             
         lnlp1 = self.profile(name, parName, emin=emin, emax=emax, 
                              reoptimize=True,xvals=xvals)
@@ -2278,8 +2234,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
                 xvals = val * 10 ** xvals
 
         # Update parameter bounds to encompass scan range
-        self.like[idx].setBounds(min(xvals[0],value),
-                                 max(xvals[-1],value))
+        self.like[idx].setBounds(min(min(xvals),value),
+                                 max(max(xvals),value))
 
         o = {'xvals': xvals,
              'Npred': np.zeros(len(xvals)),
@@ -2340,81 +2296,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
             self.setEnergyRange(*erange)
         
         return o
-
-    def tsmap(self, prefix='', **kwargs):
-        """Generate a spatial TS map for a source component with
-        properties defined by the `model` argument.  The TS map will
-        have the same geometry as the ROI.  The output of this method
-        is a dictionary containing `~fermipy.utils.Map` objects with
-        the TS and amplitude of the best-fit test source.  By default
-        this method will also save maps to FITS files and render them
-        as image files.
-
-        This method uses a simplified likelihood fitting
-        implementation that only fits for the normalization of the
-        test source.  Before running this method it is recommended to
-        first optimize the ROI model (e.g. by running
-        :py:meth:`~fermipy.gtanalysis.GTAnalysis.optimize`).
-
-        Parameters
-        ----------
-
-        prefix : str
-           Optional string that will be prepended to all output files
-           (FITS and rendered images).
-
-        model : dict
-           Dictionary defining the properties of the test source.
-
-        exclude : str or list of str
-            Source or sources that will be removed from the model when
-            computing the TS map.
-
-        erange : list
-           Restrict the analysis to an energy range (emin,emax) in
-           log10(E/MeV) that is a subset of the analysis energy range.
-           By default the full analysis energy range will be used.  If
-           either emin/emax are None then only an upper/lower bound on
-           the energy range wil be applied.
-
-        max_kernel_radius : float
-           Set the maximum radius of the test source kernel.  Using a
-           smaller value will speed up the TS calculation at the loss of
-           accuracy.  The default value is 3 degrees.
-
-        make_plots : bool
-           Write image files.
-
-        make_fits : bool
-           Write FITS files.
-
-        Returns
-        -------
-
-        maps : dict
-           A dictionary containing the `~fermipy.utils.Map` objects
-           for TS and source amplitude.
-
-        """
-
-        self.logger.info('Generating TS maps')
-
-        make_plots = kwargs.get('make_plots', True)
-
-        maps = self._tsmap_fast(prefix, **kwargs)
-
-        for m in maps if isinstance(maps, list) else [maps]:
-            if make_plots:
-                plotter = plotting.AnalysisPlotter(self.config['plotting'],
-                                                   fileio=self.config['fileio'],
-                                                   logging=self.config['logging'])
-
-                plotter.make_tsmap_plots(self, m)
-
-        self.logger.info('Finished TS maps')
-
-        return maps
-
 
     def find_sources(self, prefix='', **kwargs):
         """An iterative source-finding algorithm.
@@ -2883,7 +2764,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
         return [model_counts] + maps
 
     def print_roi(self):
-        self.logger.info(str(self.roi))
+        self.logger.info('\n' + str(self.roi))
 
     def print_params(self):
 
@@ -2972,10 +2853,18 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
                         
         self.logger.info(o)
                     
-    def load_roi(self, infile):
+    def load_roi(self, infile, reload_sources=False):
         """This function reloads the analysis state from a previously
         saved instance generated with
-        `~fermipy.gtanalysis.GTAnalysis.write_roi`."""
+        `~fermipy.gtanalysis.GTAnalysis.write_roi`.
+
+        Parameters
+        ----------
+
+        reload_sources : bool
+           Regenerate source maps.
+
+        """
         
         infile = resolve_path(infile, workdir=self.config['fileio']['workdir'])
         roi_file, roi_data = load_roi_data(infile,
@@ -3094,176 +2983,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
                                            logging=self.config['logging'])
         plotter.run(self, mcube_map, prefix=prefix, **kwargs)
 
-    def tscube(self,  prefix='', **kwargs):
-        """Generate a spatial TS map for a source component with
-        properties defined by the `model` argument.  This method uses
-        the `gttscube` ST application for source fitting and will
-        simultaneously fit the test source normalization as well as
-        the normalizations of any background components that are
-        currently free.  The output of this method is a dictionary
-        containing `~fermipy.utils.Map` objects with the TS and
-        amplitude of the best-fit test source.  By default this method
-        will also save maps to FITS files and render them as image
-        files.
-
-        Parameters
-        ----------
-
-        prefix : str
-           Optional string that will be prepended to all output files
-           (FITS and rendered images).
-
-        model : dict
-           Dictionary defining the properties of the test source.
-
-        do_sed : bool
-           Compute the energy bin-by-bin fits.
-        
-        nnorm : int
-           Number of points in the likelihood v. normalization scan.
-
-        norm_sigma : float
-           Number of sigma to use for the scan range.
-        
-        tol : float        
-           Critetia for fit convergence (estimated vertical distance
-           to min < tol ).
-        
-        tol_type : int
-           Absoulte (0) or relative (1) criteria for convergence.
-        
-        max_iter : int
-           Maximum number of iterations for the Newton's method fitter
-        
-        remake_test_source : bool
-           If true, recomputes the test source image (otherwise just shifts it)
-        
-        st_scan_level : int
-           
-        make_plots : bool
-           Write image files.
-
-        make_fits : bool
-           Write FITS files.       
-
-        Returns
-        -------
-        
-        maps : dict
-           A dictionary containing the `~fermipy.utils.Map` objects
-           for TS and source amplitude.
-
-        """
-        
-        make_plots = kwargs.get('make_plots', True)
-        
-        tsg = TSCubeGenerator(self.config['tscube'],
-                              fileio=self.config['fileio'],
-                              logging=self.config['logging'])
-
-        model = kwargs.get('model', self.config['tscube']['model'])
-        maps = tsg.make_ts_cube(self, prefix, copy.deepcopy(model), **kwargs)
-
-        if make_plots:
-            plotter = plotting.AnalysisPlotter(self.config['plotting'],
-                                               fileio=self.config['fileio'],
-                                               logging=self.config['logging'])
-            
-            plotter.make_tsmap_plots(self, maps, suffix='tscube')
-
-        self.logger.info("Finished running TSCube.")
-        return maps            
-
-    def _tsmap_fast(self, prefix, **kwargs):
-        """Evaluate the TS for an additional source component at each point
-        in the ROI.  This is a simplified implementation optimized for speed
-        that only fits for the source normalization (all background components
-        are kept fixed)."""
-
-        tsg = TSMapGenerator(self.config['tsmap'],
-                             fileio=self.config['fileio'],
-                             logging=self.config['logging'])
-
-        model = kwargs.get('model', self.config['tsmap']['model'])
-        return tsg.make_ts_map(self, prefix, copy.deepcopy(model), **kwargs)
-
-    def _tsmap_pylike(self, prefix, **kwargs):
-        """Evaluate the TS for an additional source component at each point
-        in the ROI.  This is the brute force implementation of TS map
-        generation that runs a full pyLikelihood fit
-        at each point in the ROI."""
-
-        logLike0 = -self.like()
-        self.logger.info('LogLike: %f' % logLike0)
-
-        saved_state = LikelihoodState(self.like)
-
-        # Get the ROI geometry
-
-        # Loop over pixels
-        w = copy.deepcopy(self._skywcs)
-        #        w = create_wcs(self._roi.skydir,cdelt=self._binsz,crpix=50.5)
-
-        data = np.zeros((self.npix, self.npix))
-
-        #        hdu_image = pyfits.PrimaryHDU(np.zeros((self.npix,self.npix)),
-        #                                      header=w.to_header())
-        #        for i in range(100):
-        #            for j in range(100):
-        #                print w.wcs_pix2world(i,j,0)
-
-        #        self.free_sources(free=False)
-
-        xpix = np.linspace(0, self.npix - 1, self.npix)[:,
-               np.newaxis] * np.ones(data.shape)
-        ypix = np.linspace(0, self.npix - 1, self.npix)[np.newaxis,
-               :] * np.ones(data.shape)
-
-        radec = utils.pix_to_skydir(xpix, ypix, w)
-        radec = (np.ravel(radec.ra.deg), np.ravel(radec.dec.deg))
-
-        testsource_dict = {
-            'ra': radec[0][0],
-            'dec': radec[1][0],
-            'SpectrumType': 'PowerLaw',
-            'Index': 2.0,
-            'Scale': 1000,
-            'Prefactor': {'value': 0.0, 'scale': 1e-13},
-            'SpatialModel': 'PSFSource',
-        }
-
-        #        src = self.roi.get_source_by_name('tsmap_testsource',True)
-
-        for i, (ra, dec) in enumerate(zip(radec[0], radec[1])):
-            testsource_dict['ra'] = ra
-            testsource_dict['dec'] = dec
-            #                        src.set_position([ra,dec])
-            self.add_source('tsmap_testsource', testsource_dict, free=True,
-                            init_source=False,save_source_maps=False)
-
-            #            for c in self.components:
-            #                c.update_srcmap_file([src],True)
-
-            self.set_parameter('tsmap_testsource', 'Prefactor', 0.0,
-                               update_source=False)
-            self.fit(update=False)
-
-            logLike1 = -self.like()
-            ts = max(0, 2 * (logLike1 - logLike0))
-
-            data.flat[i] = ts
-
-            #            print i, ra, dec, ts
-            #            print self.like()
-            #            print self.components[0].like.model['tsmap_testsource']
-
-            self.delete_source('tsmap_testsource')
-
-        saved_state.restore()
-
-        outfile = os.path.join(self.config['fileio']['workdir'], 'tsmap.fits')
-        utils.write_fits_image(data, w, outfile)
-
     def _bowtie(self, fd, energies=None):
         """Generate a spectral uncertainty band for the given source.
         This will create a band as a function of energy by propagating
@@ -3334,13 +3053,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator):
 
         for c in self.components:
             src = c.roi.get_source_by_name(name, True)            
-            src.update_data(sd)
-            
+            src.update_data(sd)            
 
     def get_src_model(self, name, paramsonly=False, reoptimize=False,
                       npts=20):
-        """Compose a dictionary for the given source with the current
-        best-fit parameters.
+        """Compose a dictionary for a source with the current best-fit
+        parameters.
 
         Parameters
         ----------
@@ -3939,7 +3657,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             imax = len(self.energies) - 1
 
         self.like.selectEbounds(int(imin), int(imax))
-
+        self._update_roi()
+        
         return np.array([self.energies[imin], self.energies[imax]])
 
     def counts_map(self):

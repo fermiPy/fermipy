@@ -15,6 +15,7 @@ import pyLikelihood as pyLike
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.plotting as plotting
 from fermipy.utils import Map
 from fermipy.roi_model import Source
 from fermipy.logger import Logger
@@ -360,64 +361,129 @@ def _ts_value(position, counts, background, model, C_0_map, method,logger=None):
     return (C_0 - C_1) * np.sign(amplitude), amplitude, niter
 
 
-class TSMapGenerator(fermipy.config.Configurable):
-    defaults = dict(defaults.tsmap.items(),
-                    fileio=defaults.fileio,
-                    logging=defaults.logging)
+class TSMapGenerator(object):
+    """Mixin class for `~fermipy.gtanalysis.GTAnalysis` that
+    generates TS maps."""
+    
+    def tsmap(self, prefix='', **kwargs):
+        """Generate a spatial TS map for a source component with
+        properties defined by the `model` argument.  The TS map will
+        have the same geometry as the ROI.  The output of this method
+        is a dictionary containing `~fermipy.utils.Map` objects with
+        the TS and amplitude of the best-fit test source.  By default
+        this method will also save maps to FITS files and render them
+        as image files.
 
-    def __init__(self, config=None, **kwargs):
-        fermipy.config.Configurable.__init__(self, config, **kwargs)
-        self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['fileio']['logfile'],
-                                 logLevel(self.config['logging']['verbosity']))
-
-    def make_ts_map(self, gta, prefix, src_dict=None,**kwargs):
-        """
-        Make a TS map from a GTAnalysis instance.  The
-        spectral/spatial characteristics of the test source can be
-        defined with the src_dict argument.  By default this method
-        will generate a TS map for a point source with an index=2.0
-        power-law spectrum.
+        This method uses a simplified likelihood fitting
+        implementation that only fits for the normalization of the
+        test source.  Before running this method it is recommended to
+        first optimize the ROI model (e.g. by running
+        :py:meth:`~fermipy.gtanalysis.GTAnalysis.optimize`).
 
         Parameters
         ----------
 
-        gta : `~fermipy.gtanalysis.GTAnalysis`        
-           Analysis instance.
+        prefix : str
+           Optional string that will be prepended to all output files
+           (FITS and rendered images).
 
-        src_dict : dict or `~fermipy.roi_model.Source` object        
+        model : dict
+           Dictionary defining the properties of the test source.
+
+        exclude : str or list of str
+            Source or sources that will be removed from the model when
+            computing the TS map.
+
+        erange : list
+           Restrict the analysis to an energy range (emin,emax) in
+           log10(E/MeV) that is a subset of the analysis energy range.
+           By default the full analysis energy range will be used.  If
+           either emin/emax are None then only an upper/lower bound on
+           the energy range wil be applied.
+
+        max_kernel_radius : float
+           Set the maximum radius of the test source kernel.  Using a
+           smaller value will speed up the TS calculation at the loss of
+           accuracy.  The default value is 3 degrees.
+
+        make_plots : bool
+           Write image files.
+
+        make_fits : bool
+           Write FITS files.
+
+        Returns
+        -------
+
+        maps : dict
+           A dictionary containing the `~fermipy.utils.Map` objects
+           for TS and source amplitude.
+
+        """
+
+        self.logger.info('Generating TS map')
+
+        config = copy.deepcopy(self.config['tsmap'])
+        config = utils.merge_dict(config,kwargs)
+        
+        make_plots = kwargs.get('make_plots', True)
+        maps = self._make_tsmap_fast(prefix, config, **kwargs)
+
+        if make_plots:
+            plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                               fileio=self.config['fileio'],
+                                               logging=self.config['logging'])
+
+            plotter.make_tsmap_plots(self, maps)
+            
+        self.logger.info('Finished TS map')
+        return maps
+    
+    def _make_tsmap_fast(self, prefix, config, **kwargs):
+        """
+        Make a TS map from a GTAnalysis instance.  This is a
+        simplified implementation optimized for speed that only fits
+        for the source normalization (all background components are
+        kept fixed). The spectral/spatial characteristics of the test
+        source can be defined with the src_dict argument.  By default
+        this method will generate a TS map for a point source with an
+        index=2.0 power-law spectrum.
+        
+        Parameters
+        ----------
+        model : dict or `~fermipy.roi_model.Source` object        
            Dictionary or Source object defining the properties of the
            test source that will be used in the scan.
 
         """
         
         make_fits = kwargs.get('make_fits', True)
-        exclude = kwargs.get('exclude', None)
-        multithread = kwargs.get('multithread',self.config['multithread'])
-        threshold = kwargs.get('threshold',1E-2)
-        max_kernel_radius = kwargs.get('max_kernel_radius',
-                                       self.config['max_kernel_radius'])
-
-        erange = kwargs.get('erange', self.config['erange'])
         map_skydir = kwargs.get('map_skydir',None)
         map_size = kwargs.get('map_size',1.0)
+        
+        src_dict = copy.deepcopy(config.setdefault('model',{}))
+        exclude = config.setdefault('exclude', None)
+        multithread = config.setdefault('multithread',False)
+        threshold = config.setdefault('threshold',1E-2)
+        max_kernel_radius = config.get('max_kernel_radius')
+        erange = config.setdefault('erange', None)        
         
         if erange is not None:            
             if len(erange) == 0: erange = [None,None]
             elif len(erange) == 1: erange += [None]            
             erange[0] = (erange[0] if erange[0] is not None 
-                         else gta.energies[0])
+                         else self.energies[0])
             erange[1] = (erange[1] if erange[1] is not None 
-                         else gta.energies[-1])
+                         else self.energies[-1])
         else:
-            erange = [gta.energies[0],gta.energies[-1]]
+            erange = [self.energies[0],self.energies[-1]]
         
         # Put the test source at the pixel closest to the ROI center
-        xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
-                      np.round((gta.npix - 1.0) / 2.))
+        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
+                      np.round((self.npix - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        skywcs = gta._skywcs
+        skywcs = self._skywcs
         skydir = utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
         if src_dict is None:
@@ -436,7 +502,7 @@ class TSMapGenerator(fermipy.config.Configurable):
         eslices = []
         enumbins = []
         model_npred = 0
-        for c in gta.components:
+        for c in self.components:
 
             imin = utils.val_to_edge(c.energies,erange[0])[0]
             imax = utils.val_to_edge(c.energies,erange[1])[0]
@@ -452,17 +518,17 @@ class TSMapGenerator(fermipy.config.Configurable):
             enumbins += [cm.shape[0]]
 
         
-        gta.add_source('tsmap_testsource', src_dict, free=True,
+        self.add_source('tsmap_testsource', src_dict, free=True,
                        init_source=False)
-        src = gta.roi['tsmap_testsource']
+        src = self.roi['tsmap_testsource']
         #self.logger.info(str(src_dict))
         modelname = utils.create_model_name(src)
-        for c, eslice in zip(gta.components,eslices):            
+        for c, eslice in zip(self.components,eslices):            
             mm = c.model_counts_map('tsmap_testsource').counts.astype('float')[eslice,...]            
             model_npred += np.sum(mm)
             model += [mm]
             
-        gta.delete_source('tsmap_testsource')
+        self.delete_source('tsmap_testsource')
         
         for i, mm in enumerate(model):
 
@@ -477,28 +543,28 @@ class TSMapGenerator(fermipy.config.Configurable):
                 dpix = max(dpix, np.round(np.sum(my) / 2.))
                 
             if max_kernel_radius is not None and \
-                    dpix > int(max_kernel_radius/gta.components[i].binsz):
-                dpix = int(max_kernel_radius/gta.components[i].binsz)
+                    dpix > int(max_kernel_radius/self.components[i].binsz):
+                dpix = int(max_kernel_radius/self.components[i].binsz)
 
-            xslice = slice(max(xpix-dpix,0),min(xpix+dpix+1,gta.npix))
+            xslice = slice(max(xpix-dpix,0),min(xpix+dpix+1,self.npix))
             model[i] = model[i][:,xslice,xslice]
             
-        ts_values = np.zeros((gta.npix, gta.npix))
-        amp_values = np.zeros((gta.npix, gta.npix))
+        ts_values = np.zeros((self.npix, self.npix))
+        amp_values = np.zeros((self.npix, self.npix))
         
         wrap = functools.partial(_ts_value, counts=counts, 
                                  background=background, model=model,
                                  C_0_map=c0_map, method='root brentq')
 
         if map_skydir is not None:
-            map_offset = utils.skydir_to_pix(map_skydir, gta._skywcs)
+            map_offset = utils.skydir_to_pix(map_skydir, self._skywcs)
             map_offset[0] = map_offset[0]
             map_offset[1] = map_offset[1]
-            map_delta = 0.5*map_size/gta.components[0].binsz
+            map_delta = 0.5*map_size/self.components[0].binsz
             xmin = max(int(np.ceil(map_offset[1]-map_delta)),0)
-            xmax = min(int(np.floor(map_offset[1]+map_delta))+1,gta.npix)
+            xmax = min(int(np.floor(map_offset[1]+map_delta))+1,self.npix)
             ymin = max(int(np.ceil(map_offset[0]-map_delta)),0)
-            ymax = min(int(np.floor(map_offset[0]+map_delta))+1,gta.npix)
+            ymax = min(int(np.floor(map_offset[0]+map_delta))+1,self.npix)
 
             xslice = slice(xmin,xmax)
             yslice = slice(ymin,ymax)
@@ -508,11 +574,11 @@ class TSMapGenerator(fermipy.config.Configurable):
             map_wcs.wcs.crpix[0] -= ymin
             map_wcs.wcs.crpix[1] -= xmin
         else:
-            xyrange = [range(gta.npix),range(gta.npix)]
+            xyrange = [range(self.npix),range(self.npix)]
             map_wcs = skywcs
 
-            xslice = slice(0,gta.npix)
-            yslice = slice(0,gta.npix)
+            xslice = slice(0,self.npix)
+            yslice = slice(0,self.npix)
             
         positions = []
         for i,j in itertools.product(xyrange[0],xyrange[1]):
@@ -548,6 +614,7 @@ class TSMapGenerator(fermipy.config.Configurable):
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
              'amplitude': amp_map,
+             'config' : config
              }
         
         if make_fits:
@@ -564,55 +631,199 @@ class TSMapGenerator(fermipy.config.Configurable):
 
         return o
 
-class TSCubeGenerator(fermipy.config.Configurable):
-    defaults = dict(defaults.tscube.items(),
-                    fileio=defaults.fileio,
-                    logging=defaults.logging)
+    def _tsmap_pylike(self, prefix, **kwargs):
+        """Evaluate the TS for an additional source component at each point
+        in the ROI.  This is the brute force implementation of TS map
+        generation that runs a full pyLikelihood fit
+        at each point in the ROI."""
 
+        logLike0 = -self.like()
+        self.logger.info('LogLike: %f' % logLike0)
 
-    def __init__(self, config=None, **kwargs):
-        fermipy.config.Configurable.__init__(self, config, **kwargs)
-        self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['fileio']['logfile'],
-                                 logLevel(self.config['logging']['verbosity']))
+        saved_state = LikelihoodState(self.like)
 
+        # Get the ROI geometry
 
-    def make_ts_cube(self, gta, prefix, src_dict=None, **kwargs):
+        # Loop over pixels
+        w = copy.deepcopy(self._skywcs)
+        #        w = create_wcs(self._roi.skydir,cdelt=self._binsz,crpix=50.5)
+
+        data = np.zeros((self.npix, self.npix))
+
+        #        hdu_image = pyfits.PrimaryHDU(np.zeros((self.npix,self.npix)),
+        #                                      header=w.to_header())
+        #        for i in range(100):
+        #            for j in range(100):
+        #                print w.wcs_pix2world(i,j,0)
+
+        #        self.free_sources(free=False)
+
+        xpix = np.linspace(0, self.npix - 1, self.npix)[:,
+               np.newaxis] * np.ones(data.shape)
+        ypix = np.linspace(0, self.npix - 1, self.npix)[np.newaxis,
+               :] * np.ones(data.shape)
+
+        radec = utils.pix_to_skydir(xpix, ypix, w)
+        radec = (np.ravel(radec.ra.deg), np.ravel(radec.dec.deg))
+
+        testsource_dict = {
+            'ra': radec[0][0],
+            'dec': radec[1][0],
+            'SpectrumType': 'PowerLaw',
+            'Index': 2.0,
+            'Scale': 1000,
+            'Prefactor': {'value': 0.0, 'scale': 1e-13},
+            'SpatialModel': 'PSFSource',
+        }
+
+        #        src = self.roi.get_source_by_name('tsmap_testsource',True)
+
+        for i, (ra, dec) in enumerate(zip(radec[0], radec[1])):
+            testsource_dict['ra'] = ra
+            testsource_dict['dec'] = dec
+            #                        src.set_position([ra,dec])
+            self.add_source('tsmap_testsource', testsource_dict, free=True,
+                            init_source=False,save_source_maps=False)
+
+            #            for c in self.components:
+            #                c.update_srcmap_file([src],True)
+
+            self.set_parameter('tsmap_testsource', 'Prefactor', 0.0,
+                               update_source=False)
+            self.fit(update=False)
+
+            logLike1 = -self.like()
+            ts = max(0, 2 * (logLike1 - logLike0))
+
+            data.flat[i] = ts
+
+            #            print i, ra, dec, ts
+            #            print self.like()
+            #            print self.components[0].like.model['tsmap_testsource']
+
+            self.delete_source('tsmap_testsource')
+
+        saved_state.restore()
+
+        outfile = os.path.join(self.config['fileio']['workdir'], 'tsmap.fits')
+        utils.write_fits_image(data, w, outfile)
+    
+class TSCubeGenerator(object):
+
+    def tscube(self,  prefix='', **kwargs):
+        """Generate a spatial TS map for a source component with
+        properties defined by the `model` argument.  This method uses
+        the `gttscube` ST application for source fitting and will
+        simultaneously fit the test source normalization as well as
+        the normalizations of any background components that are
+        currently free.  The output of this method is a dictionary
+        containing `~fermipy.utils.Map` objects with the TS and
+        amplitude of the best-fit test source.  By default this method
+        will also save maps to FITS files and render them as image
+        files.
+
+        Parameters
+        ----------
+
+        prefix : str
+           Optional string that will be prepended to all output files
+           (FITS and rendered images).
+
+        model : dict
+           Dictionary defining the properties of the test source.
+
+        do_sed : bool
+           Compute the energy bin-by-bin fits.
+        
+        nnorm : int
+           Number of points in the likelihood v. normalization scan.
+
+        norm_sigma : float
+           Number of sigma to use for the scan range.
+        
+        tol : float        
+           Critetia for fit convergence (estimated vertical distance
+           to min < tol ).
+        
+        tol_type : int
+           Absoulte (0) or relative (1) criteria for convergence.
+        
+        max_iter : int
+           Maximum number of iterations for the Newton's method fitter
+        
+        remake_test_source : bool
+           If true, recomputes the test source image (otherwise just shifts it)
+        
+        st_scan_level : int
+           
+        make_plots : bool
+           Write image files.
+
+        make_fits : bool
+           Write FITS files.       
+
+        Returns
+        -------
+        
+        maps : dict
+           A dictionary containing the `~fermipy.utils.Map` objects
+           for TS and source amplitude.
+
+        """
+
+        self.logger.info('Generating TS cube')
+
+        config = copy.deepcopy(self.config['tscube'])
+        config = utils.merge_dict(config,kwargs)
+        
+        make_plots = kwargs.get('make_plots', True)
+        maps = self._make_ts_cube(self, prefix, config, **kwargs)
+
+        if make_plots:
+            plotter = plotting.AnalysisPlotter(self.config['plotting'],
+                                               fileio=self.config['fileio'],
+                                               logging=self.config['logging'])
+            
+            plotter.make_tsmap_plots(self, maps, suffix='tscube')
+            
+        self.logger.info("Finished TS cube")
+        return maps
+        
+    def _make_ts_cube(self, prefix, config, **kwargs):
 
         make_fits = kwargs.get('make_fits', True)
-
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config)
-        config.update(kwargs)        
         
-        xpix, ypix = (np.round((gta.npix - 1.0) / 2.),
-                      np.round((gta.npix - 1.0) / 2.))
+        src_dict = copy.deepcopy(config.setdefault('model',{}))
+        
+        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
+                      np.round((self.npix - 1.0) / 2.))
 
         #xpix = kwargs.get('xpix',xpix)
         #ypix = kwargs.get('ypix',ypix)
         #add_source = kwargs.get('add_source',True)        
-        skywcs = gta._skywcs
+        skywcs = self._skywcs
         skydir = utils.pix_to_skydir(xpix, ypix, skywcs)
         
-        if gta.config['binning']['coordsys'] == 'CEL':
+        if self.config['binning']['coordsys'] == 'CEL':
             galactic=False
-        elif gta.config['binning']['coordsys'] == 'GAL':
+        elif self.config['binning']['coordsys'] == 'GAL':
             galactic=True
         else:
             raise Exception('Unsupported coordinate system: %s'%
-                            gta.config['binning']['coordsys'])
+                            self.config['binning']['coordsys'])
 
-        refdir = pyLike.SkyDir(gta.roi.skydir.ra.deg,
-                               gta.roi.skydir.dec.deg)
-        npix = gta.npix
-        pixsize = np.abs(gta._skywcs.wcs.cdelt[0])
+        refdir = pyLike.SkyDir(self.roi.skydir.ra.deg,
+                               self.roi.skydir.dec.deg)
+        npix = self.npix
+        pixsize = np.abs(self._skywcs.wcs.cdelt[0])
         
         skyproj = pyLike.FitScanner.buildSkyProj(str("AIT"),
                                                  refdir, pixsize, npix,
                                                  galactic)
 
         
-        if src_dict is None: src_dict = {}
+        if src_dict is None:
+            src_dict = {}
         src_dict['ra'] = skydir.ra.deg
         src_dict['dec'] = skydir.dec.deg
         src_dict.setdefault('SpatialModel', 'PointSource')
@@ -627,12 +838,10 @@ class TSCubeGenerator(fermipy.config.Configurable):
 
         optFactory = pyLike.OptimizerFactory_instance()        
         optObject = optFactory.create(str("MINUIT"),
-                                      gta.components[0].like.logLike)
+                                      self.components[0].like.logLike)
 
-        
-
-        pylike_src = gta.components[0]._create_source(src)
-        fitScanner = pyLike.FitScanner(gta.like.composite, optObject, skyproj,
+        pylike_src = self.components[0]._create_source(src)
+        fitScanner = pyLike.FitScanner(self.like.composite, optObject, skyproj,
                                        npix, npix)
         
         fitScanner.setTestSource(pylike_src)

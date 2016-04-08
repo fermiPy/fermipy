@@ -152,7 +152,19 @@ mc = {
 roiopt = {
     'npred_threshold': (1.0, '', float),
     'npred_frac': (0.95, '', float),
-    'shape_ts_threshold': (100.0, '', float)
+    'shape_ts_threshold':
+        (25.0, 'Threshold on source TS used for determining the sources '
+         'that will be fit in the third optimization step.', float),
+    'max_free_sources' :
+        (5, 'Maximum number of sources that will be fit simultaneously in '
+         'the first optimization step.', int)
+}
+
+roiopt_output = {
+    'logLike0' : (None, 'Pre-optimization log-likelihood value.',float,'float'),
+    'logLike1' : (None, 'Post-optimization log-likelihood value.',float,'float'),
+    'dlogLike' : (None, 'Improvement in log-likehood value.',float,'float'),
+    'config' : (None, 'Copy of input configuration to this method.',dict,'dict'),
 }
 
 # Residual Maps
@@ -233,7 +245,7 @@ sed_output = {
     'fit_quality' :  (None, 'Fit quality parameter.',np.ndarray,'`~numpy.ndarray`'),
     'index' :        (None, 'Spectral index of the power-law model used to fit this bin.',np.ndarray,'`~numpy.ndarray`'),
     'lnlprofile' :   (None, 'Likelihood scan for each energy bin.',dict,'dict'),
-    'config' :       (None, 'Copy of the input parameters to this method.',dict,'dict'),
+    'config' :       (None, 'Copy of input configuration to this method.',dict,'dict'),
 }
 
 # Options for extension analysis
@@ -302,5 +314,7 @@ plotting = {
     'graticule_radii': (None, 'Define a list of radii at which circular graticules will be drawn.', list),
     'format': ('png', '', str),
     'cmap': ('ds9_b', 'Set the colormap for 2D plots.', str),
+    'label_ts_threshold':
+        (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),
     
 }
