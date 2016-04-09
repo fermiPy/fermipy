@@ -381,7 +381,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def workdir(self):
         """Return the analysis working directory."""
         return self.config['fileio']['workdir']
-        
+
+    @property
+    def outdir(self):
+        """Return the analysis output directory."""
+        return self._savedir
+    
     @property
     def roi(self):
         """Return the ROI object."""
