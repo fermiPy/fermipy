@@ -461,9 +461,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         rm = self._roi_model
 
+        rm['logLike'] = -self.like()
         rm['model_counts'].fill(0)
         rm['Npred'] = 0
         for i, c in enumerate(self.components):
+            rm['components'][i]['logLike'] = -c.like()
             rm['components'][i]['model_counts'].fill(0)
             rm['components'][i]['Npred'] = 0
 
@@ -1907,8 +1909,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                          % (o['ext'], o['ext_err_lo'], o['ext_err_hi']))
         self.logger.info('TS_ext:        %.3f' % o['ts_ext'])
         self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
-
-            
+        
         if np.isfinite(o['ext']):
 
             # Fit with the best-fit extension model
@@ -1929,12 +1930,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 #                                    name=model_name)
 
             src_ext = self.delete_source(model_name, save_template=False)
-
-        # Restore ROI parameters to previous state
+            
+        # Restore ROI to previous state
         self.scale_parameter(name, normPar, 1E10)
-        self.like.syncSrcParams(name)
+        self.like.syncSrcParams(name)        
         saved_state.restore()
-                
+        self._update_roi()
+        
         if update and src_ext is not None:
             src = self.delete_source(name)
             src.set_spectral_pars(src_ext.spectral_pars)
@@ -2557,12 +2559,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     continue
                 self.update_source(name, reoptimize=reoptimize)
                 
-            self._roi_model['logLike'] = o['logLike']
-            self._roi_model['fit_quality'] = o['fit_quality']
-
-            for i, c in enumerate(self.components):
-                self._roi_model['components'][i]['logLike'] = -c.like()
-
             # Update roi model counts
             self._update_roi()
 
