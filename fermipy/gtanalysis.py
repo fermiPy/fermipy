@@ -632,16 +632,16 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if self.config['fileio']['savefits']:
             extensions += ['.fits', '.fit']
 
-        if self.config['fileio']['workdir'] == self._savedir:
+        if self.workdir == self._savedir:
             return
-        elif os.path.isdir(self.config['fileio']['workdir']):
+        elif os.path.isdir(self.workdir):
             self.logger.info('Staging files to %s' % self._savedir)
-            for f in os.listdir(self.config['fileio']['workdir']):
+            for f in os.listdir(self.workdir):
 
                 if not os.path.splitext(f)[1] in extensions: continue
 
                 self.logger.info('Copying ' + f)
-                shutil.copy(os.path.join(self.config['fileio']['workdir'], f),
+                shutil.copy(os.path.join(self.workdir, f),
                             self._savedir)
 
         else:
@@ -652,17 +652,18 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         extensions = ['.fits', '.fit', '.xml', '.npy']
 
-        if self.config['fileio']['workdir'] == self._savedir:
+        if self.workdir == self._savedir:
             return
-        elif os.path.isdir(self.config['fileio']['workdir']):
+        elif os.path.isdir(self.workdir):
             self.logger.info('Staging files to %s' %
-                             self.config['fileio']['workdir'])
+                             self.workdir)
             #            for f in glob.glob(os.path.join(self._savedir,'*')):
             for f in os.listdir(self._savedir):
-                if not os.path.splitext(f)[1] in extensions: continue
+                if not os.path.splitext(f)[1] in extensions:
+                    continue
                 self.logger.debug('Copying ' + f)
                 shutil.copy(os.path.join(self._savedir, f),
-                            self.config['fileio']['workdir'])
+                            self.workdir)
         else:
             self.logger.error('Working directory does not exist.')
 
@@ -698,7 +699,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             c.setup(overwrite=overwrite)
             self._like.addComponent(c.like)
 
-        self._ccube_file = os.path.join(self.config['fileio']['workdir'],
+        self._ccube_file = os.path.join(self.workdir,
                                         'ccube.fits')
 
         self._init_roi_model()
@@ -765,12 +766,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     def cleanup(self):
 
-        if self.config['fileio']['workdir'] == self._savedir:
+        if self.workdir == self._savedir:
             return
-        elif os.path.isdir(self.config['fileio']['workdir']):
+        elif os.path.isdir(self.workdir):
             self.logger.info('Deleting working directory: ' +
-                             self.config['fileio']['workdir'])
-            shutil.rmtree(self.config['fileio']['workdir'])
+                             self.workdir)
+            shutil.rmtree(self.workdir)
 
     def generate_model(self, model_name=None):
         """Generate model maps for all components.  model_name should
@@ -1882,7 +1883,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.debug('Width scan vector:\n %s' % width)
 
         if not hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
-            o['logLike'] = self._scan_extension_pylike(name, spatial_model, width[1:])
+            o['logLike'] = self._scan_extension_pylike(name, spatial_model,
+                                                       width[1:])
         else:
             o['logLike'] = self._scan_extension(name, spatial_model, width[1:])
         o['logLike'] = np.concatenate(([o['logLike_ptsrc']],o['logLike']))
@@ -1917,8 +1919,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
             self.logger.info('Refitting extended model')
             self.add_source(model_name, s, free=True)
-            self.fit()
-
+            self.fit(update=False)
+            self.update_source(model_name,reoptimize=True)
+            
             o['source_fit'] = self.get_src_model(model_name)
             o['logLike_ext'] = -self.like()
             
@@ -2755,7 +2758,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
         maps = [c.write_model_map(model_name, name) for c in self.components]
 
-        outfile = os.path.join(self.config['fileio']['workdir'],
+        outfile = os.path.join(self.workdir,
                                'mcube_%s.fits' % (model_name))
 
         if self.projtype == "HPX":
@@ -2869,14 +2872,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         Parameters
         ----------
 
+        infile : str
+        
         reload_sources : bool
-           Regenerate source maps.
+           Regenerate source maps for non-diffuse sources.
 
         """
         
-        infile = resolve_path(infile, workdir=self.config['fileio']['workdir'])
-        roi_file, roi_data = load_roi_data(infile,
-                                           workdir=self.config['fileio']['workdir'])
+        infile = resolve_path(infile, workdir=self.workdir)
+        roi_file, roi_data = load_roi_data(infile, workdir=self.workdir)
 
         self.logger.info('Loading ROI file: %s'%roi_file)
         
@@ -2891,10 +2895,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self._create_likelihood(infile)
         self.setEnergyRange(self.erange[0], self.erange[1])
-        
-        # Load XML
-#        self.load_xml(infile)
 
+        if reload_sources:
+
+            for s in self.roi.sources:
+                if s.diffuse:
+                    continue
+                self.reload_source(s.name)
+        
         self.logger.info('Finished Loading ROI')
 
     def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
