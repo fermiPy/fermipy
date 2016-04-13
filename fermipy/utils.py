@@ -169,7 +169,38 @@ class Map(Map_Base):
         xy = self.ipix_to_xypix(ipix,colwise)
         return self.xy_pix_to_ipix(xy,not colwise)
 
+    
+class PowerLaw(object):
+    def __init__(self, phi0, x0, index):
+        self._params = np.array([phi0, x0, index])
 
+    @property
+    def params(self):
+        return self._params
+
+    def dfde(self, x):
+        return PowerLaw.eval_dfde(x, *self.params)
+
+    @staticmethod
+    def eval_dfde(x, phi0, x0, index):
+        return phi0 * (x / x0) ** index
+
+    @staticmethod
+    def eval_flux(phi0, x0, index, xmin, xmax):
+        if np.allclose(index, -1.0):
+            return phi0 * x0 ** (-index) * (np.log(xmax) - np.log(xmin))
+
+        y0 = x0 * phi0 * (xmin / x0) ** (index + 1) / (index + 1)
+        y1 = x0 * phi0 * (xmax / x0) ** (index + 1) / (index + 1)
+        v = y1 - y0
+
+        return y1 - y0
+
+    @staticmethod
+    def eval_norm(x0, index, xmin, xmax, flux):
+        return flux / PowerLaw.eval_flux(1.0, x0, index, xmin, xmax)
+
+    
 def join_strings(strings,sep='_'):
 
     if strings is None:

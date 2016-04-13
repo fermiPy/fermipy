@@ -7,6 +7,7 @@ from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
 
 import fermipy
+import fermipy.utils as utils
 
 def add_columns(t0, t1):
     """Add columns of table t1 to table t0."""
@@ -147,10 +148,10 @@ class Catalog2FHL(Catalog):
 
         super(Catalog2FHL, self).__init__(table, extdir)
 
-        self._table['Flux_Density'] = PowerLaw.eval_norm(50E3, -self.table[
-            'Spectral_Index'],
-                                                         50E3, 2000E3,
-                                                         self.table['Flux50'])
+        self._table['Flux_Density'] = \
+            utils.PowerLaw.eval_norm(50E3, -self.table['Spectral_Index'],
+                                     50E3, 2000E3,
+                                     self.table['Flux50'])
         self._table['Pivot_Energy'] = 50E3
         self._table['SpectrumType'] = 'PowerLaw'
 

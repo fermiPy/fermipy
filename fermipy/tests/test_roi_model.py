@@ -50,9 +50,9 @@ def test_load_source_from_dict(tmppath):
 
     sp = src['spectral_pars']
 
-    assert(sp['Index']['value'] == str(sources[0]['Index']))
-    assert(sp['Scale']['value'] == '1.452')
-    assert(sp['Prefactor']['value'] == '1.3')
+    assert_allclose(sp['Index']['value'],sources[0]['Index'])
+    assert_allclose(sp['Scale']['value'],1.452)
+    assert_allclose(sp['Prefactor']['value'],1.3)
 
     for p in ['Index', 'Prefactor', 'Scale']:
         if p == 'Index':
@@ -132,13 +132,13 @@ def test_load_source_from_xml(tmppath):
     attribs = ['value', 'scale', 'min', 'max']
 
     for x in attribs:
-        assert(sp['Index'][x] == str(values['ptsrc_index_%s'%x]))
+        assert_allclose(sp['Index'][x],values['ptsrc_index_%s'%x])
 
     for x in attribs:
-        assert(sp['Prefactor'][x] == str(values['ptsrc_prefactor_%s'%x]))
+        assert_allclose(sp['Prefactor'][x],values['ptsrc_prefactor_%s'%x])
 
     for x in attribs:
-        assert(sp['Scale'][x] == str(values['ptsrc_scale_%s'%x]))
+        assert_allclose(sp['Scale'][x],values['ptsrc_scale_%s'%x])
         
     assert_allclose(src.params['Prefactor'][0],
                     values['ptsrc_prefactor_value']*values['ptsrc_prefactor_scale'])
