@@ -1,0 +1,4 @@
+``config``	dict	Copy of input configuration to this method.
+``dlogLike``	float	Improvement in log-likehood value.
+``logLike0``	float	Pre-optimization log-likelihood value.
+``logLike1``	float	Post-optimization log-likelihood value.
