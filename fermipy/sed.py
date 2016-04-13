@@ -624,6 +624,8 @@ class CastroData(object):
     def __init__(self,norm_vals,nll_vals,specData,fluxType):
         """ C'tor
 
+        Parameters
+        ----------
         norm_vals   : The normalization values ( nEBins X N array, where N is the number of sampled values for each bin )
         nll_vals    : The log-likelihood values ( nEBins X N array, where N is the number of sampled values for each bin )
         specData    : The specData object
@@ -692,9 +694,15 @@ class CastroData(object):
     def __call__(self,x):
         """ return the log-like for an array of values, summed over the energy bins
 
-        x  : Array of nEbins x M values
+        Parameters
+        ----------
+        x  : `~numpy.ndarray`  
+           Array of nEbins x M values
 
-        returns an array of M values
+        Returns
+        -------
+        nll_val : `~numpy.ndarray`          
+           Array of negative log-likelihood values.
         """
         nll_val = 0.
         # crude hack to force the fitter away from unphysical values
@@ -709,10 +717,18 @@ class CastroData(object):
     def derivative(self,x,der=1):
         """ return the derivate of the log-like summed over the energy bins
 
-        x   : Array of nEbins x M values
-        der : Order of the derivate
+        Parameters
+        ----------
+        x   : `~numpy.ndarray`  
+           Array of nEbins x M values
+           
+        der : int
+           Order of the derivate
 
-        returns an array of M values        
+        Returns
+        -------
+        der_val : `~numpy.ndarray`  
+           Array of negative log-likelihood values.
         """
         der_val = 0.
         for i,xv in enumerate(x):
@@ -775,7 +791,7 @@ class CastroData(object):
 
         This version is faster, and solves for the root of the derivatvie
 
-          Parameters
+        Parameters
         ----------
         specVals :  an array of (nebin values that define a spectral shape
         xlims    :  fit limits     
@@ -798,7 +814,7 @@ class CastroData(object):
 
         This version uses scipy.optimize.fmin
         
-          Parameters
+        Parameters
         ----------
         specVals :  an array of (nebin values that define a spectral shape
         xlims    :  fit limits     
@@ -813,14 +829,14 @@ class CastroData(object):
     def fit_spectrum(self,specFunc,initPars):
         """ Fit for the free parameters of a spectral function
         
-          Parameters
+        Parameters
         ----------
         specFunc :  The Spectral Function
         initPars :  The initial values of the parameters     
 
 
-          Returns (result,spec_out,TS_spec)
-       ----------          
+        Returns (result,spec_out,TS_spec)
+        ----------          
         result   : The output of scipy.optimize.fmin
         spec_out : The best-fit spectral values
         TS_spec  : The TS of the best-fit spectrum
@@ -920,12 +936,28 @@ class TSCube(object):
     def __init__(self,tsmap,normmap,tscube,norm_vals,nll_vals,specData,fluxType):
         """ C'tor
 
-        tsmap       : A Map object with the TestStatistic values in each pixel
-        tscube      : A Map object with the TestStatistic values in each pixel & energy bin        
-        norm_vals   : The normalization values ( nEBins X N array, where N is the number of sampled values for each bin )
-        nll_vals    : The log-likelihood values ( nEBins X N array, where N is the number of sampled values for each bin )
-        specData    : The specData object
-        fluxType :  code specifying the quantity used for the flux 
+
+        Parameters
+        ----------
+        tsmap       : `~fermipy.utils.Map`
+           A Map object with the TestStatistic values in each pixel
+           
+        tscube      : `~fermipy.utils.Map`
+           A Map object with the TestStatistic values in each pixel & energy bin
+           
+        norm_vals   : `~numpy.ndarray`        
+           The normalization values ( nEBins X N array, where N is the
+           number of sampled values for each bin )
+           
+        nll_vals    : `~numpy.ndarray`        
+           The log-likelihood values ( nEBins X N array, where N is
+           the number of sampled values for each bin )
+           
+        specData    : `~fermipy.sed.SpecData`
+           The specData object
+           
+        fluxType :
+           code specifying the quantity used for the flux 
            0: Normalization w.r.t. to test source
            1: Flux of the test source ( ph cm^-2 s^-1 )
            2: Energy Flux of the test source ( MeV cm^-2 s^-1 )

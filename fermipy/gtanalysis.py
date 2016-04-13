@@ -15,14 +15,15 @@ from scipy.interpolate import UnivariateSpline
 import pyLikelihood as pyLike
 import astropy.io.fits as pyfits
 from astropy.coordinates import SkyCoord
+
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.gtutils as gtutils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 import fermipy.sed as sed
-import fermipy.sed as sourcefind
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
@@ -33,8 +34,8 @@ from fermipy.hpx_utils import HpxMap, HPX
 from fermipy.roi_model import ROIModel, Model
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
-# pylikelihood
 
+# pylikelihood
 import GtApp
 import FluxDensity
 from LikelihoodState import LikelihoodState
@@ -130,26 +131,7 @@ def filter_dict(d, val):
         if v == val:
             del d[k]
 
-
-def gtlike_spectrum_to_dict(spectrum):
-    """ Convert a pyLikelihood object to a python dictionary which can
-        be easily saved to a file."""
-    parameters = pyLike.ParameterVector()
-    spectrum.getParams(parameters)
-    d = dict(spectrum_type=spectrum.genericName())
-    for p in parameters:
-
-        pname = p.getName()
-        pval = p.getTrueValue()
-        perr = abs(p.error() * p.getScale()) if p.isFree() else np.nan
-        d[pname] = np.array([pval, perr])
-
-        if d['spectrum_type'] == 'FileFunction':
-            ff = pyLike.FileFunction_cast(spectrum)
-            d['file'] = ff.filename()
-    return d
-
-
+            
 def resolve_path(path, workdir=None):
     if os.path.isabs(path):
         return path
@@ -157,7 +139,6 @@ def resolve_path(path, workdir=None):
         return os.path.abspath(path)
     else:
         return os.path.join(workdir, path)
-
 
 def load_roi_data(infile, workdir=None):
     infile = resolve_path(infile, workdir=workdir)
@@ -501,6 +482,86 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._init_source(name)
             
         self.like.model = self.like.components[0].model
+
+    def set_source_spectrum(self,name,spectrum_type='PowerLaw',
+                            spectrum_pars=None, update_source=True):
+        """Set the spectral model of a source.  This function can be
+        used to change the spectral type of a source or modify its
+        spectral parameters.  If called with
+        spectrum_type='FileFunction' and spectrum_pars=None, the
+        source spectrum will be replaced with a FileFunction with the
+        same differential flux distribution as the original spectrum.
+
+        Parameters
+        ----------
+
+        name : str
+           Source name.
+
+        spectrum_type : str
+           Spectrum type (PowerLaw, etc.).
+
+        spectrum_pars : dict
+           Dictionary of spectral parameters (optional).
+
+        update_source : bool        
+           Recompute all source characteristics (flux, TS, NPred)
+           using the new spectral model of the source.
+           
+        """
+        
+        if spectrum_type == 'FileFunction':
+            self._create_filefunction(name,spectrum_pars)
+        else:
+            fn = gtutils.create_spectrum_from_dict(spectrum_type,
+                                                   spectrum_pars)
+            self.like.setSpectrum(name,fn)
+
+        # Get parameters
+        src = self.components[0].like.logLike.getSource(name)
+        pars_dict = gtutils.get_pars_dict_from_source(src)
+
+        import pprint
+        pprint.pprint(pars_dict)
+        
+        self.roi[name].set_spectral_pars(pars_dict)
+        self.roi[name]['SpectrumType'] = spectrum_type
+        for c in self.components:
+            c.roi[name].set_spectral_pars(pars_dict)
+            c.roi[name]['SpectrumType'] = spectrum_type
+        
+        if update_source:
+            self.update_source(name)
+            
+    def _create_filefunction(self,name,spectrum_pars):
+        # Get the values
+        energies = np.linspace(0.5,6.5,16*6+1)
+        dfde = np.zeros(len(energies))
+
+        for i, egy in enumerate(energies):
+            dfde[i] = self.like[name].spectrum()(pyLike.dArg(10 ** egy))
+            
+        filename = \
+            os.path.join(self.workdir,
+                         '%s_filespectrum.txt'%(name.lower().replace(' ','_')))
+            
+        # Create file spectrum txt file
+        np.savetxt(filename,
+                   np.stack((10**energies,dfde),axis=1))
+        self.like.setSpectrum(name, 'FileFunction')
+        
+        # Update
+        for c in self.components:
+            src = c.like.logLike.getSource(name)
+            spectrum = src.spectrum()
+
+            spectrum.getParam('Normalization').setBounds(1E-3,1E3)
+            
+            file_function = pyLike.FileFunction_cast(spectrum)
+            print 'reading ', filename
+            file_function.readFunction(filename)
+        #self.like.spectrum().setSpectrum(10**energies,dfde)
+            
         
     def add_source(self, name, src_dict, free=False, init_source=True,
                    save_source_maps=True, **kwargs):
@@ -938,7 +999,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     def delete_sources(self, cuts=None, distance=None,
                        minmax_ts=None, minmax_npred=None,
-                       square=False):
+                       square=False, exclude_diffuse=True):
         """Delete sources in the ROI model satisfying the given
         selection criteria.
 
@@ -950,9 +1011,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         """
 
-        srcs = self.get_sources(cuts, distance,
-                                minmax_ts,minmax_npred,
-                                square=square)
+        srcs = self.roi.get_sources(cuts, distance,
+                                    minmax_ts,minmax_npred,
+                                    square=square,exclude_diffuse=exclude_diffuse,
+                                    coordsys=self.config['binning']['coordsys'])
+
         self._roi.delete_sources(srcs)
         for c in self.components:
             c.delete_sources(srcs)
@@ -1174,7 +1237,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def free_parameter(self, name, par, free=True):
         idx = self.like.par_index(name, par)
         self.like[idx].setFree(free)
-        self.like.syncSrcParams()
+        self._sync_params()
 
     def free_source(self, name, free=True, pars=None):
         """Free/Fix parameters of a source.
@@ -1246,25 +1309,19 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         for (idx, par_name) in zip(par_indices, par_names):
             self.like[idx].setFree(free)
-        self.like.syncSrcParams(str(name))
-
-    #        freePars = self.like.freePars(name)
-    #        if not free:
-    #            self.like.setFreeFlag(name, freePars, False)
-    #        else:
-    #            self.like[idx].setFree(True)
+        self._sync_params(name)
 
     def set_norm_scale(self, name, value):
         name = self.get_source_name(name)
         normPar = self.like.normPar(name)
         normPar.setScale(value)
-        self.like.syncSrcParams(str(name))
+        self._sync_params(name)
     
     def set_norm(self, name, value):
         name = self.get_source_name(name)
         normPar = self.like.normPar(name)
         normPar.setValue(value)
-        self.like.syncSrcParams(str(name))
+        self._sync_params(name)
 
     def free_norm(self, name, free=True):
         """Free/Fix normalization of a source.
@@ -1317,16 +1374,34 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.free_source(name, free=free,
                          pars=shape_parameters[src['SpectrumType']])
 
-    def get_free_params(self):
+    def _sync_params(self,name):
+        self.like.syncSrcParams(str(name))
+        src = self.components[0].like.logLike.getSource(str(name))
+        spectral_pars = gtutils.get_pars_dict_from_source(src)
+        self.roi[name].set_spectral_pars(spectral_pars)
+        for c in self.components:
+            c.roi[name].set_spectral_pars(spectral_pars)
+        
+    def get_params(self, freeonly=False):
 
         params = {}
         for srcName in self.like.sourceNames():
-            for parName in self.get_free_source_params(srcName):
+
+            par_names = pyLike.StringVector()
+            src = self.components[0].like.logLike.getSource(srcName)
+            src.spectrum().getParamNames(par_names)
+            
+#            for parName in self.get_free_source_params(srcName):
+            for parName in par_names:
                 idx = self.like.par_index(srcName, parName)
                 par = self.like.model[idx]
                 bounds = par.getBounds()
                 
                 is_norm = parName == self.like.normPar(srcName).getName()
+
+
+                if freeonly and not par.isFree():
+                    continue
                 
                 params[idx] = {'src_name' : srcName,
                                'par_name' : parName,
@@ -1334,7 +1409,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                'error' : par.error(),
                                'scale' : par.getScale(),
                                'idx' : idx,
-                               'is_free' : par.isFree(),
+                               'free' : par.isFree(),
                                'is_norm' : is_norm,
                                'bounds' : bounds }
 
@@ -2024,6 +2099,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         """
 
+        self.logger.debug('Profiling %s'%name)
+        
         if savestate:
             saved_state = LikelihoodState(self.like)
 
@@ -2037,17 +2114,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         erange = self.erange
         if emin is not None or emax is not None:
             self.setEnergyRange(emin,emax)
-
-        self.like.optimize(0)
             
         # Find a sequence of values for the normalization scan
         if xvals is None:
-
             if reoptimize:
                 xvals = self._find_scan_pts_reopt(name,npts=npts)
             else:
                 xvals = self._find_scan_pts(name,npts=npts)
-                
+
         o = self.profile(name, parName, 
                          reoptimize=reoptimize, xvals=xvals,
                          savestate=savestate)
@@ -2057,7 +2131,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         if emin is not None or emax is not None:
             self.setEnergyRange(*erange)
-        
+
+        self.logger.debug('Finished')
+            
         return o
 
     def _find_scan_pts(self,name,emin=None,emax=None,npts=20):
@@ -2519,6 +2595,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             if quality > 2:
                 break
             
+        self.logger.debug("Fit complete.")        
+            
         o['fit_quality'] = quality
         o['covariance'] = np.array(self.like.covariance)
         o['errors'] = np.diag(o['covariance'])**0.5
@@ -2528,7 +2606,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['correlation'] = \
             o['covariance']*errinv[:,np.newaxis]*errinv[np.newaxis,:]
 
-        free_params = self.get_free_params()
+        free_params = self.get_params(True)
         for i, p in enumerate(free_params):
             o['values'][i] = p['value']
             o['errors'][i] = p['error']
@@ -2579,7 +2657,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.free_sources(False)
         self.free_sources(pars='norm')
         fit_results = self.fit(min_fit_quality=2)
-        free_params = self.get_free_params()
+        free_params = self.get_params(True)
         self._extract_correlation(fit_results,free_params)        
         saved_state.restore()
     
@@ -2778,9 +2856,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def print_roi(self):
         self.logger.info('\n' + str(self.roi))
 
-    def print_params(self):
+    def print_params(self, freeonly=False):
 
-        pars = self.get_free_params()
+        pars = self.get_params(freeonly=freeonly)
 
         o = '\n'
         o += '%4s %-20s%10s%10s%10s%10s%10s%5s\n' % (
@@ -2791,6 +2869,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         src_pars = collections.OrderedDict()
         for p in pars:
+            
             src_pars.setdefault(p['src_name'],[])
             src_pars[p['src_name']] += [p]
 
@@ -2804,7 +2883,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 o += '%10.3g%10.3g%10.3g' % (p['bounds'][0],p['bounds'][1],
                                           p['scale'])
             
-                if p['is_free']:
+                if p['free']:
                     o += '    *'
                 else:
                     o += '     '
@@ -2906,7 +2985,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         self.logger.info('Finished Loading ROI')
 
-    def write_roi(self, outfile=None, make_residuals=False, make_tsmap=False,
+    def write_roi(self, outfile=None, make_residuals=False, 
                   save_model_map=True, format=None, **kwargs):
         """Write current model to a file.  This function will write an
         XML model file and an ROI dictionary in both YAML and npy
@@ -2920,6 +2999,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             will be stripped when generating the XML, YAML and
             Numpy filenames.
 
+        make_plots : bool
+            Generate diagnostic plots.
+            
         make_residuals : bool
             Run residual analysis.
 
@@ -2956,9 +3038,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if make_residuals:
             resid_maps = self.residmap(prefix, make_plots=make_plots)
-
-        if make_tsmap:
-            ts_maps = self.tsmap(prefix, make_plots=make_plots)
 
         o = {}
         o['roi'] = copy.deepcopy(self._roi_model)
@@ -3168,7 +3247,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     'lnlprofile': None
                     }
 
-        src_dict['params'] = gtlike_spectrum_to_dict(spectrum)
+        src = self.components[0].like.logLike.getSource(name)
+        src_dict['params'] = gtutils.gtlike_spectrum_to_dict(spectrum)
+        src_dict['spectral_pars'] = gtutils.get_pars_dict_from_source(src)
         
         # Get Counts Spectrum
         src_dict['model_counts'] = self.model_counts_spectrum(name, summed=True)
@@ -3256,10 +3337,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             pass
         # self.logger.error('Failed to update source parameters.',
         #  exc_info=True)
-
         lnlp = self.profile_norm(name, savestate=True,
                                  reoptimize=reoptimize,npts=npts)
-            
+        
         src_dict['lnlprofile'] = lnlp
         
         flux_ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dlogLike'])
@@ -3614,33 +3694,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             raise Exception(
                 'Unrecognized spatial type: %s' % src['SpatialType'])
 
-        pl = pyLike.SourceFactory_funcFactory().create(src['SpectrumType'])
-
-        for k, v in src.spectral_pars.items():
-
-            par = pl.getParam(k)
-
-            vmin = min(float(v['value']), float(v['min']))
-            vmax = max(float(v['value']), float(v['max']))
-
-            par.setValue(float(v['value']))
-            par.setBounds(vmin, vmax)
-            par.setScale(float(v['scale']))
-
-            if 'free' in v and int(v['free']) != 0:
-                par.setFree(True)
-            else:
-                par.setFree(False)
-            pl.setParam(par)
-
-        pylike_src.setSpectrum(pl)
+        fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
+                                               src.spectral_pars)
+        pylike_src.setSpectrum(fn)
         pylike_src.setName(str(src.name))
 
         # Initialize source as free/fixed
         pylike_src.spectrum().normPar().setFree(free)
 
         return pylike_src
-        
             
     def delete_source(self, name, save_template=True, delete_source_map=False):
 
@@ -3680,6 +3742,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._roi.delete_sources(srcs)
 
     def set_edisp_flag(self, name, flag=True):
+        """Enable/Disable the energy dispersion correction for a
+        source."""
         src = self.roi.get_source_by_name(name, True)
         name = src.name
         self.like[name].src.set_edisp_flag(flag)
@@ -4107,7 +4171,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.set_edisp_flag(s, False)
 
         # Recompute fixed model weights
+        self.logger.debug('Computing fixed weights')
         self.like.logLike.buildFixedModelWts()
+        self.logger.debug('Updating source maps')
         self.like.logLike.saveSourceMaps(self._srcmap_file)
 
     def make_scaled_srcmap(self):

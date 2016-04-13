@@ -16,64 +16,10 @@ import fermipy
 import fermipy.config
 import fermipy.utils as utils
 import fermipy.gtutils as gtutils
+import fermipy.catalog as catalog
 import fermipy.defaults as defaults
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
-
-
-def xyz_to_lonlat(*args):
-    if len(args) == 1:
-        x, y, z = args[0][0], args[0][1], args[0][2]
-    else:
-        x, y, z = args[0], args[1], args[2]
-
-    lat = np.pi / 2. - np.arctan2(np.sqrt(x ** 2 + y ** 2), z)
-    lon = np.arctan2(y, x)
-    return lon, lat
-
-
-def lonlat_to_xyz(lon, lat):
-    phi = lon
-    theta = np.pi / 2. - lat
-    return np.array([np.sin(theta) * np.cos(phi),
-                     np.sin(theta) * np.sin(phi),
-                     np.cos(theta)])
-
-
-def project(lon0, lat0, lon1, lat1):
-    """This function performs a stereographic projection on the unit
-    vector (lon1,lat1) with the pole defined at the reference unit
-    vector (lon0,lat0)."""
-
-    costh = np.cos(np.pi / 2. - lat0)
-    cosphi = np.cos(lon0)
-
-    sinth = np.sin(np.pi / 2. - lat0)
-    sinphi = np.sin(lon0)
-
-    xyz = lonlat_to_xyz(lon1, lat1)
-    x1 = xyz[0];
-    y1 = xyz[1];
-    z1 = xyz[2]
-
-    x1p = x1 * costh * cosphi + y1 * costh * sinphi - z1 * sinth
-    y1p = -x1 * sinphi + y1 * cosphi
-    z1p = x1 * sinth * cosphi + y1 * sinth * sinphi + z1 * costh
-
-    r = np.arctan2(np.sqrt(x1p ** 2 + y1p ** 2), z1p)
-    phi = np.arctan2(y1p, x1p)
-
-    return r * np.cos(phi), r * np.sin(phi)
-
-
-def scale_parameter(p):
-    if isinstance(p, str): p = float(p)
-
-    if p > 0:
-        scale = 10 ** -np.round(np.log10(1. / p))
-        return p / scale, scale
-    else:
-        return p, 1.0
 
 
 def resolve_file_path(path, **kwargs):
@@ -91,52 +37,6 @@ def resolve_file_path(path, **kwargs):
             return p
 
     raise Exception('Failed to resolve file path: %s' % path)
-
-
-default_par_dict = {
-    'Prefactor':
-        {'name': 'Prefactor', 'value': 1.0, 'scale': None, 'min': 0.01,
-         'max': 100.0, 'free': '0'},
-    'norm':
-        {'name': 'norm', 'value': 1.0, 'scale': None, 'min': 0.01, 'max': 100.0,
-         'free': '0'},
-    'Scale':
-        {'name': 'Scale', 'value': 1000.0, 'scale': 1.0, 'min': 1.0, 'max': 1.0,
-         'free': '0'},
-    'Eb':
-        {'name': 'Eb', 'value': 1.0, 'scale': None, 'min': 0.01, 'max': 10.0,
-         'free': '0'},
-    'Cutoff':
-        {'name': 'Cutoff', 'value': 1.0, 'scale': None, 'min': 0.01,
-         'max': 10.0, 'free': '0'},
-    'BreakValue':
-        {'name': 'BreakValue', 'value': 1000.0, 'scale': 1.0, 'min': 20.,
-         'max': 1000000.0, 'free': '0'},
-    'Index':
-        {'name': 'Index', 'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0,
-         'free': '0'},
-    'alpha':
-        {'name': 'alpha', 'value': 0.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0,
-         'free': '0'},
-    'beta':
-        {'name': 'beta', 'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0,
-         'free': '0'},
-    'Beta':
-        {'name': 'Beta', 'value': 0.2, 'scale': 1.0, 'min': 0.01, 'max': 10.0,
-         'free': '0'},
-    'Index1':
-        {'name': 'Index1', 'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0,
-         'free': '0'},
-    'Index2':
-        {'name': 'Index2', 'value': 1.0, 'scale': -1.0, 'min': 0.0, 'max': 2.0,
-         'free': '0'},
-    'LowerLimit':
-        {'name': 'LowerLimit', 'value': 100.0, 'scale': 1.0, 'min': 20.0,
-         'max': 1000000., 'free': '0'},
-    'UpperLimit':
-        {'name': 'UpperLimit', 'value': 100000.0, 'scale': 1.0, 'min': 20.0,
-         'max': 1000000., 'free': '0'},
-}
 
 
 class PowerLaw(object):
@@ -168,231 +68,6 @@ class PowerLaw(object):
     @staticmethod
     def eval_norm(x0, index, xmin, xmax, flux):
         return flux / PowerLaw.eval_flux(1.0, x0, index, xmin, xmax)
-
-
-def add_columns(t0, t1):
-    """Add columns of table t1 to table t0."""
-
-    for colname in t1.colnames:
-        col = t1.columns[colname]
-        if colname in t0.columns: continue
-        new_col = Column(name=col.name, length=len(t0), dtype=col.dtype)  # ,
-        # shape=col.shape)
-        t0.add_column(new_col)
-
-
-def join_tables(t0, t1, key0, key1):
-    v0, v1 = t0[key0], t1[key1]
-    v0 = np.core.defchararray.strip(v0)
-    v1 = np.core.defchararray.strip(v1)
-    add_columns(t0, t1)
-
-    # Get mask of elements in t0 that are shared with t0
-    m0 = np.in1d(v0, v1)
-    idx1 = np.searchsorted(v1, v0)[m0]
-
-    for colname in t1.colnames:
-        if colname == 'Source_Name': continue
-        t0[colname][m0] = t1[colname][idx1]
-
-
-def strip_columns(t):
-    for colname in t.colnames:
-        if not t[colname].dtype.type is np.string_: continue
-        t[colname] = np.core.defchararray.strip(t[colname])
-
-
-def row_to_dict(row):
-    o = {}
-    for colname in row.colnames:
-
-        if isinstance(row[colname], np.string_):
-            o[colname] = str(row[colname])
-        else:
-            o[colname] = row[colname]
-
-    return o
-
-
-class Catalog(object):
-    """Source catalog object.  This class provides a simple wrapper around
-    FITS catalog tables."""
-    
-    def __init__(self, table, extdir=''):
-        self._table = table
-        self._extdir = extdir
-
-        if self.table['RAJ2000'].unit is None:
-            self._src_skydir = SkyCoord(ra=self.table['RAJ2000']*u.deg,
-                                        dec=self.table['DEJ2000']*u.deg)
-        else:
-            self._src_skydir = SkyCoord(ra=self.table['RAJ2000'],
-                                        dec=self.table['DEJ2000'])
-        self._radec = np.vstack((self._src_skydir.ra.deg,
-                                 self._src_skydir.dec.deg)).T
-        self._glonlat = np.vstack((self._src_skydir.galactic.l.deg,
-                                   self._src_skydir.galactic.b.deg)).T
-
-        if not 'Spatial_Filename' in self.table.columns:
-            self.table['Spatial_Filename'] = ''
-            
-        m = self.table['Spatial_Filename'] != ''
-        self.table['extended'] = False
-        self.table['extended'][m] = True
-        self.table['extdir'] = extdir
-
-    @property
-    def table(self):
-        """Return the `~astropy.table.Table` representation of this
-        catalog."""
-        return self._table
-
-    @property
-    def skydir(self):
-        return self._src_skydir
-
-    @property
-    def radec(self):
-        return self._radec
-
-    @property
-    def glonlat(self):
-        return self._glonlat
-
-    @staticmethod
-    def create(name):
-
-        extname = os.path.splitext(name)[1]
-        if extname == '.fits' or extname == '.fit':
-            fitsfile = name
-            if not os.path.isfile(fitsfile):
-                fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                        fitsfile)
-
-            if 'gll_psc' in fitsfile:                
-                return Catalog3FGL(fitsfile)
-            else:
-                return Catalog(Table.read(fitsfile))
-            
-        elif name == '3FGL':
-            return Catalog3FGL()
-        elif name == '2FHL':
-            return Catalog2FHL()
-        else:
-            raise Exception('Unrecognized catalog type.')
-
-
-class Catalog2FHL(Catalog):
-    def __init__(self, fitsfile=None, extdir=None):
-
-        if extdir is None:
-            extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
-                                  'Extended_archive_2fhl_v00')
-
-        if fitsfile is None:
-            fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                    'gll_psch_v08.fit')
-
-        hdulist = pyfits.open(fitsfile)
-        table = Table(hdulist['2FHL Source Catalog'].data)
-        table_extsrc = Table(hdulist['Extended Sources'].data)
-
-        strip_columns(table)
-        strip_columns(table_extsrc)
-
-        join_tables(table, table_extsrc, 'Source_Name', 'Source_Name')
-
-        super(Catalog2FHL, self).__init__(table, extdir)
-
-        self._table['Flux_Density'] = PowerLaw.eval_norm(50E3, -self.table[
-            'Spectral_Index'],
-                                                         50E3, 2000E3,
-                                                         self.table['Flux50'])
-        self._table['Pivot_Energy'] = 50E3
-        self._table['SpectrumType'] = 'PowerLaw'
-
-
-class Catalog3FGL(Catalog):
-    def __init__(self, fitsfile=None, extdir=None):
-
-        if extdir is None:
-            extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
-                                  'Extended_archive_v15')
-
-        if fitsfile is None:
-            fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                    'gll_psc_v16.fit')
-
-        hdulist = pyfits.open(fitsfile)
-        #table = Table(hdulist['LAT_Point_Source_Catalog'])
-        table = Table.read(fitsfile)
-        table_extsrc = Table(hdulist['ExtendedSources'].data)
-
-        strip_columns(table)
-        strip_columns(table_extsrc)
-
-        self._table_extsrc = table_extsrc
-
-        join_tables(table, table_extsrc, 'Extended_Source_Name', 'Source_Name')
-
-        super(Catalog3FGL, self).__init__(table, extdir)
-
-        m = self.table['SpectrumType'] == 'PLExpCutoff'
-        self.table['SpectrumType'][m] = 'PLSuperExpCutoff'
-
-        self.table['TS_value'] = 0.0
-        self.table['TS'] = 0.0
-
-        ts_keys = ['Sqrt_TS30_100', 'Sqrt_TS100_300',
-                   'Sqrt_TS300_1000', 'Sqrt_TS1000_3000',
-                   'Sqrt_TS3000_10000', 'Sqrt_TS10000_100000']
-
-        for k in ts_keys:
-            m = np.isfinite(self.table[k])
-            self._table['TS_value'][m] += self.table[k][m] ** 2
-            self._table['TS'][m] += self.table[k][m] ** 2
-
-
-# if not os.path.isfile(src_dict['Spatial_Filename']) and extdir:
-#            src_dict['Spatial_Filename'] = os.path.join(extdir,'Templates',
-#                                                        src_dict[
-# 'Spatial_Filename'])
-
-#        m = self.table['extended']
-#       src_dict['Spatial_Filename'] = os.path.join(extdir,'Templates',
-#                                                    src_dict[
-# 'Spatial_Filename'])
-
-def make_parameter_dict(pdict, fixed_par=False):
-    o = copy.deepcopy(pdict)
-
-    if 'scale' not in o or o['scale'] is None:
-        value, scale = scale_parameter(o['value'])
-        o['value'] = value
-        o['scale'] = scale
-        if 'error' in o:
-            o['error'] /= np.abs(scale)
-
-    if 'min' not in o:
-        o['min'] = o['value']*1E-3
-
-    if 'max' not in o:
-        o['max'] = o['value']*1E3
-        
-    if fixed_par:
-        o['min'] = o['value']
-        o['max'] = o['value']
-
-    if float(o['min']) > float(o['value']):
-        o['min'] = o['value']
-
-    if float(o['max']) < float(o['value']):
-        o['max'] = o['value']
-
-    for k, v in o.items():
-        o[k] = str(v)
-
-    return o
 
 
 def get_skydir_distance_mask(src_skydir, skydir, dist, min_dist=None,
@@ -470,11 +145,6 @@ def get_dist_to_edge(skydir, lon, lat, width, coordsys='CEL'):
     return dtheta
 
 
-def create_model_name(src):
-    if src['SpectrumType'] == 'PowerLaw':
-        return 'powerlaw_%04.2f' % src['Index']
-
-
 class Model(object):
     """Base class for source objects.  This class is a container for both
     spectral and spatial parameters as well as other source properties
@@ -521,7 +191,7 @@ class Model(object):
             pdict = gtutils.get_function_pars_dict(self['SpectrumType'])
             self._data['spectral_pars'] = pdict
             for k, v in self.spectral_pars.items():
-                self._data['spectral_pars'][k] = make_parameter_dict(v)
+                self._data['spectral_pars'][k] = gtutils.make_parameter_dict(v)
             
         self._names = [name]
         catalog = self._data['catalog']
@@ -609,6 +279,9 @@ class Model(object):
 
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialType','SkyDirFunction')
+
+        src_dict['spectral_pars'] = gtutils.cast_pars_dict(src_dict['spectral_pars'])
+        src_dict['spatial_pars'] = gtutils.cast_pars_dict(src_dict['spatial_pars'])
         
         if src_dict['SpatialModel'] == 'DiffuseSource' and src_dict['SpatialType'] == 'ConstantValue':
             return IsoSource(src_dict['name'],src_dict)
@@ -619,21 +292,23 @@ class Model(object):
 
     def _sync_spectral_pars(self):
         """Update spectral parameters dictionary."""
+        
         sp = self['spectral_pars']
         for k, p in sp.items():
-            sp[k]['value'] = self['params'][k][0]/float(sp[k]['scale'])
+            sp[k]['value'] = self['params'][k][0]/sp[k]['scale']
             if np.isfinite(self['params'][k][1]):
-                sp[k]['error'] = self['params'][k][1]/np.abs(float(sp[k]['scale']))
-            sp[k] = make_parameter_dict(sp[k])
+                sp[k]['error'] = self['params'][k][1]/np.abs(sp[k]['scale'])
+            sp[k] = gtutils.make_parameter_dict(sp[k])
 
     def _sync_params(self):
-
+        
         sp = self['spectral_pars']
+        self._data['params'] = {}
         for k, p in sp.items():
-            val = float(p['value'])*float(p['scale'])
+            val = p['value']*p['scale']
             err = np.nan
             if 'error' in p:
-                err = float(p['error'])*float(p['scale'])            
+                err = p['error']*np.abs(p['scale'])
             self._data['params'][k]=np.array([val,err])
 
     def get_norm(self):
@@ -687,8 +362,8 @@ class Model(object):
             
     def update_data(self, d):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
-        if self.params:
-            self._sync_spectral_pars()
+        #if self.params:
+        #    self._sync_spectral_pars()
 
     def update_from_source(self, src):
 
@@ -710,10 +385,10 @@ class IsoSource(Model):
 
         if not 'spectral_pars' in data:        
             data['spectral_pars'] = {
-                'Normalization': {'name': 'Normalization', 'scale': '1.0',
-                                  'value': '1.0',
-                                  'min': '0.001', 'max': '1000.0',
-                                  'free': '0'}}
+                'Normalization': {'name': 'Normalization', 'scale': 1.0,
+                                  'value': 1.0,
+                                  'min': 0.001, 'max': 1000.0,
+                                  'free': False }}
         
         super(IsoSource, self).__init__(name, data)
             
@@ -763,16 +438,16 @@ class MapCubeSource(Model):
 
         if not 'spectral_pars' in data:
             data['spectral_pars'] = {
-                'Prefactor': {'name': 'Prefactor', 'scale': '1',
-                              'value': '1.0', 'min': '0.1', 'max': '10.0',
-                              'free': '0'},
-                'Index': {'name': 'Index', 'scale': '-1',
-                          'value': '0.0', 'min': '-1.0', 'max': '1.0',
-                          'free': '0'},
-                'Scale': {'name': 'Scale', 'scale': '1',
-                          'value': '1000.0',
-                          'min': '1000.0', 'max': '1000.0',
-                          'free': '0'},
+                'Prefactor': {'name': 'Prefactor', 'scale': 1.0,
+                              'value': 1.0, 'min': 0.1, 'max': '10.0',
+                              'free': False},
+                'Index': {'name': 'Index', 'scale': -1.0,
+                          'value': 0.0, 'min': -1.0, 'max': 1.0,
+                          'free': False},
+                'Scale': {'name': 'Scale', 'scale': 1.0,
+                          'value': 1000.0,
+                          'min': 1000.0, 'max': 1000.0,
+                          'free': False},
             }
         
         super(MapCubeSource, self).__init__(name, data)
@@ -871,8 +546,8 @@ class Source(Model):
         output += ['{:15s}:'.format('GLON/GLAT') + ' {glon:10.3f}/{glat:10.3f}']
         output += ['{:15s}:'.format('TS') + ' {ts:.2f}']
         output += ['{:15s}:'.format('Npred') + ' {Npred:.2f}']
-        output += ['{:15s}:'.format('Flux') + ' {flux:8.3g} +/- {flux_err:8.3g}']
-        output += ['{:15s}:'.format('EnergyFlux') + ' {eflux:8.3g} +/- {eflux_err:8.3g}']
+        output += ['{:15s}:'.format('Flux') + ' {flux:9.4g} +/- {flux_err:8.3g}']
+        output += ['{:15s}:'.format('EnergyFlux') + ' {eflux:9.4g} +/- {eflux_err:8.3g}']
         output += ['{:15s}:'.format('SpatialModel') + ' {SpatialModel:s}']
         output += ['{:15s}:'.format('SpectrumType') + ' {SpectrumType:s}']
         output += ['Spectral Parameters']
@@ -898,30 +573,30 @@ class Source(Model):
 
         if self['SpatialType'] == 'SpatialMap':
             self._data['spatial_pars'] = {
-                'Prefactor': {'name': 'Prefactor', 'value': '1',
-                              'free': '0', 'min': '0.001', 'max': '1000',
-                              'scale': '1.0'}
+                'Prefactor': {'name': 'Prefactor', 'value': 1.0,
+                              'free': False, 'min': 0.001, 'max': 1000.0,
+                              'scale': 1.0}
                 }
         else:
             self._data['spatial_pars'] = {
-                'RA': {'name': 'RA', 'value': str(self['RAJ2000']),
-                       'free': '0',
-                       'min': '-360.0', 'max': '360.0', 'scale': '1.0'},
-                'DEC': {'name': 'DEC', 'value': str(self['DEJ2000']),
-                        'free': '0',
-                        'min': '-90.0', 'max': '90.0', 'scale': '1.0'}
+                'RA': {'name': 'RA', 'value': self['RAJ2000'],
+                       'free': False,
+                       'min': -360.0, 'max': 360.0, 'scale': 1.0},
+                'DEC': {'name': 'DEC', 'value': self['DEJ2000'],
+                        'free': False,
+                        'min': -90.0, 'max': 90.0, 'scale': 1.0}
                 }
             
         if self['SpatialType'] == 'SpatialGaussian':
             self._data['spatial_pars']['Sigma'] = {
-                'name': 'Sigma', 'value': str(self['SpatialWidth']),
-                'free': '0', 'min': '0.001', 'max': '10',
+                'name': 'Sigma', 'value': self['SpatialWidth'],
+                'free': False, 'min': 0.001, 'max': 10,
                 'scale': '1.0'}
         elif self['SpatialType'] == 'SpatialDisk':
             self._data['spatial_pars']['Radius'] = {
-                'name': 'Radius', 'value': str(self['SpatialWidth']),
-                'free': '0', 'min': '0.001', 'max': '10',
-                'scale': '1.0'}
+                'name': 'Radius', 'value': self['SpatialWidth'],
+                'free': False, 'min': 0.001, 'max': 10,
+                'scale': 1.0}
        
 
     def load_from_catalog(self):
@@ -944,9 +619,9 @@ class Source(Model):
             sp['Index']['min'] = min(0.0, sp['Index']['value'] - 1.0)
             sp['Index']['scale'] = -1.0
             
-            sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
-            sp['Scale'] = make_parameter_dict(sp['Scale'], True)
-            sp['Index'] = make_parameter_dict(sp['Index'])
+            sp['Prefactor'] = gtutils.make_parameter_dict(sp['Prefactor'])
+            sp['Scale'] = gtutils.make_parameter_dict(sp['Scale'], True)
+            sp['Index'] = gtutils.make_parameter_dict(sp['Index'])
 
         elif self['SpectrumType'] == 'LogParabola':
 
@@ -956,10 +631,10 @@ class Source(Model):
             sp['alpha']['value'] = catalog['Spectral_Index']
             sp['beta']['value'] = catalog['beta']
 
-            sp['norm'] = make_parameter_dict(sp['norm'])
-            sp['Eb'] = make_parameter_dict(sp['Eb'], True)
-            sp['alpha'] = make_parameter_dict(sp['alpha'])
-            sp['beta'] = make_parameter_dict(sp['beta'])
+            sp['norm'] = gtutils.make_parameter_dict(sp['norm'])
+            sp['Eb'] = gtutils.make_parameter_dict(sp['Eb'], True)
+            sp['alpha'] = gtutils.make_parameter_dict(sp['alpha'])
+            sp['beta'] = gtutils.make_parameter_dict(sp['beta'])
 
         elif self['SpectrumType'] == 'PLSuperExpCutoff':
 
@@ -977,11 +652,11 @@ class Source(Model):
             sp['Scale']['value'] = catalog['Pivot_Energy']
             sp['Cutoff']['value'] = catalog['Cutoff']
 
-            sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
-            sp['Scale'] = make_parameter_dict(sp['Scale'], True)
-            sp['Index1'] = make_parameter_dict(sp['Index1'])
-            sp['Index2'] = make_parameter_dict(sp['Index2'])
-            sp['Cutoff'] = make_parameter_dict(sp['Cutoff'])
+            sp['Prefactor'] = gtutils.make_parameter_dict(sp['Prefactor'])
+            sp['Scale'] = gtutils.make_parameter_dict(sp['Scale'], True)
+            sp['Index1'] = gtutils.make_parameter_dict(sp['Index1'])
+            sp['Index2'] = gtutils.make_parameter_dict(sp['Index2'])
+            sp['Cutoff'] = gtutils.make_parameter_dict(sp['Cutoff'])
 
         else:
             raise Exception('Unsupported spectral type:' + self['SpectrumType'])
@@ -990,8 +665,8 @@ class Source(Model):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
         if 'ra' in d and 'dec' in d:
             self._set_radec([d['ra'],d['dec']])
-        if self.params:
-            self._sync_spectral_pars()
+        #if self.params:
+        #    self._sync_spectral_pars()
                           
     def set_position(self, skydir):
         """
@@ -1097,8 +772,9 @@ class Source(Model):
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialWidth',0.5)
         spectrum_type = src_dict.setdefault('SpectrumType','PowerLaw')
-        spectral_pars = src_dict.setdefault('spectral_pars',
-                                            gtutils.get_function_pars_dict(spectrum_type))
+        spectral_pars = \
+            src_dict.setdefault('spectral_pars',
+                                gtutils.get_function_pars_dict(spectrum_type))
         
         for k, v in spectral_pars.items():
 
@@ -1112,7 +788,7 @@ class Source(Model):
                 spectral_pars[k].update(src_dict.pop(k))
 
         for k, v in spectral_pars.items():
-            spectral_pars[k] = make_parameter_dict(spectral_pars[k])
+            spectral_pars[k] = gtutils.make_parameter_dict(spectral_pars[k])
         #        validate_config(src_dict,default_src_dict)
 
         if 'name' in src_dict:
@@ -1241,7 +917,7 @@ class Source(Model):
 
 class ROIModel(fermipy.config.Configurable):
     """This class is responsible for managing the ROI model (both sources
-    and diffuse emission components).  Source catalogs can be read
+    and diffuse components).  Source catalogs can be read
     from either FITS or XML files.  Individual components are
     represented by instances of `~fermipy.roi_model.Model` and can be
     accessed by name using the bracket operator.
@@ -1481,6 +1157,8 @@ class ROIModel(fermipy.config.Configurable):
     def load_sources(self, sources):
         """Delete all sources in the ROI and load the input source list."""
 
+        self.logger.debug('Loading sources')
+        
         self.clear()
         for s in sources:
 
@@ -1489,6 +1167,8 @@ class ROIModel(fermipy.config.Configurable):
             
             self.load_source(s, build_index=False)
         self._build_src_index()
+
+        self.logger.debug('Finished')
 
     def load_source(self, src, build_index=True, merge_sources=True,
                     **kwargs):
@@ -1869,7 +1549,7 @@ class ROIModel(fermipy.config.Configurable):
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
 
-        cat = Catalog.create(name)
+        cat = catalog.Catalog.create(name)
 
         m0 = get_skydir_distance_mask(cat.skydir, self.skydir,
                                       self.config['src_radius'])
@@ -1889,7 +1569,7 @@ class ROIModel(fermipy.config.Configurable):
         for i, (row, radec) in enumerate(zip(cat.table[m],
                                              cat.radec[m])):
             
-            catalog_dict = row_to_dict(row)
+            catalog_dict = catalog.row_to_dict(row)
             src_dict = {'catalog': catalog_dict}
             src_dict['Source_Name'] = row['Source_Name']
             src_dict['SpectrumType'] = row['SpectrumType']

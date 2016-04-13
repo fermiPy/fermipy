@@ -16,6 +16,8 @@ _funcFactory = pyLike.SourceFactory_funcFactory()
 import BinnedAnalysis 
 import SummedLikelihood
 
+import fermipy.utils as utils
+
 evtype_string = {
     4 : 'PSF0',
     8 : 'PSF1',
@@ -123,7 +125,7 @@ def init_function_pars():
                             value = p.getValue(),
                             min = bounds[0],
                             max = bounds[1],
-                            free = '0')
+                            free = False)
 
             par_dict.update(copy.deepcopy(FUNCTION_DEFAULT_PARS[fname][pname]))
             par_dict['name'] = pname            
@@ -153,6 +155,164 @@ def get_function_pars_dict(function_type):
         init_function_pars()
             
     return copy.deepcopy(FUNCTION_DEFAULT_PARS[function_type])
+
+def make_parameter_dict(pdict, fixed_par=False):
+    """
+    Prepare a parameter dictionary.  This function will automatically
+    set the parameter scale and bounds if they are not defined.
+    Bounds are also adjusted to ensure that they encompass the
+    parameter value.
+    """
+    o = copy.deepcopy(pdict)
+
+    if 'scale' not in o or o['scale'] is None:
+        value, scale = utils.scale_parameter(o['value'])
+        o['value'] = value
+        o['scale'] = scale
+        if 'error' in o:
+            o['error'] /= np.abs(scale)
+
+    if 'min' not in o:
+        o['min'] = o['value']*1E-3
+
+    if 'max' not in o:
+        o['max'] = o['value']*1E3
+        
+    if fixed_par:
+        o['min'] = o['value']
+        o['max'] = o['value']
+
+    if float(o['min']) > float(o['value']):
+        o['min'] = o['value']
+
+    if float(o['max']) < float(o['value']):
+        o['max'] = o['value']
+
+#    for k, v in o.items():
+#        o[k] = str(v)
+
+    return o
+
+
+def create_spectral_pars_dict(spectrum_type,spectral_pars=None):
+
+    pars_dict = get_function_pars_dict(spectrum_type)
+
+    if spectral_pars is None:
+        spectral_pars = {}
+    else:
+        spectral_pars = copy.deepcopy(spectral_pars)
+
+    for k, v in spectral_pars.items():
+
+        if not k in pars_dict:
+            continue
+        
+        if not isinstance(v,dict):
+            spectral_pars[k] = {'name' : k, 'value' : v}
+    
+    pars_dict = utils.merge_dict(pars_dict,spectral_pars)
+
+    for k, v in pars_dict.items():
+        pars_dict[k] = make_parameter_dict(v)
+
+    return pars_dict
+
+def create_spectrum_from_dict(spectrum_type,spectral_pars=None):
+    """Create a Function object from a parameter dictionary.
+
+    Parameters
+    ----------
+    spectrum_type : str
+       String identifying the spectrum type (e.g. PowerLaw).
+
+    spectral_pars : dict
+       Dictionary of spectral parameters.
+
+    """
+
+    pars = create_spectral_pars_dict(spectrum_type,spectral_pars)
+    fn = pyLike.SourceFactory_funcFactory().create(spectrum_type)
+
+    for k, v in pars.items():
+
+        v = make_parameter_dict(v)
+        
+        par = fn.getParam(k)
+
+        vmin = min(float(v['value']), float(v['min']))
+        vmax = max(float(v['value']), float(v['max']))
+        
+        par.setValue(float(v['value']))
+        par.setBounds(vmin, vmax)
+        par.setScale(float(v['scale']))
+
+        if 'free' in v and int(v['free']) != 0:
+            par.setFree(True)
+        else:
+            par.setFree(False)
+        fn.setParam(par)
+
+    return fn
+
+def gtlike_spectrum_to_dict(spectrum):
+    """ Convert a pyLikelihood object to a python dictionary which can
+        be easily saved to a file."""
+    parameters = pyLike.ParameterVector()
+    spectrum.getParams(parameters)
+    d = dict(spectrum_type=spectrum.genericName())
+    for p in parameters:
+
+        pname = p.getName()
+        pval = p.getTrueValue()
+        perr = abs(p.error() * p.getScale()) if p.isFree() else np.nan
+        d[pname] = np.array([pval, perr])
+
+        if d['spectrum_type'] == 'FileFunction':
+            ff = pyLike.FileFunction_cast(spectrum)
+            d['file'] = ff.filename()
+    return d
+
+def get_pars_dict_from_source(src):
+
+    pars_dict = {}
+
+    par_names = pyLike.StringVector()
+    src.spectrum().getParamNames(par_names)
+
+    for pname in par_names:
+
+        par = src.spectrum().getParam(pname)
+        bounds = par.getBounds()
+        perr = par.error() if par.isFree() else np.nan
+        pars_dict[pname] = dict(name = pname,
+                                value = par.getValue(),
+                                error = perr,
+                                min = bounds[0],
+                                max = bounds[1],
+                                free = par.isFree(),
+                                scale = par.getScale())
+
+    return pars_dict
+
+def cast_pars_dict(pars_dict):
+
+    o = {}
+
+    for pname, pdict in pars_dict.items():
+
+        o[pname] = {}
+        
+        for k,v in pdict.items():
+
+            if k == 'free':
+                o[pname][k] = bool(v)
+            elif k == 'name':
+                o[pname][k] = v
+            else:
+                o[pname][k] = float(v)
+
+    return o
 
 class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 

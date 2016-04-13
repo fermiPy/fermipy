@@ -11,6 +11,7 @@ import astropy.wcs as pywcs
 import scipy.special as specialfn
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
+import scipy.special as special
 
 def read_energy_bounds(hdu):
     """ Reads and returns the energy bin edges from a FITs HDU
@@ -22,7 +23,8 @@ def read_energy_bounds(hdu):
     return ebin_edges
 
 def read_spectral_data(hdu):
-    """ Reads and returns the energy bin edges, fluxes and npreds from a FITs HDU
+    """ Reads and returns the energy bin edges, fluxes and npreds from
+    a FITs HDU
     """
     ebins = read_energy_bounds(hdu)
     fluxes = np.ndarray((len(ebins)))
@@ -71,8 +73,9 @@ class Map(Map_Base):
         else:
             raise Exception('Wrong number of dimensions for Map object.')
 
-        self._width = np.array([np.abs(self.wcs.wcs.cdelt[0])*self._npix[xindex],
-                                np.abs(self.wcs.wcs.cdelt[1])*self._npix[yindex]])
+        self._width = \
+            np.array([np.abs(self.wcs.wcs.cdelt[0])*self._npix[xindex],
+                      np.abs(self.wcs.wcs.cdelt[1])*self._npix[yindex]])
         self._pix_center = np.array([(self._npix[xindex]-1.0)/2.,
                                      (self._npix[yindex]-1.0)/2.])
         self._pix_size = np.array([np.abs(self.wcs.wcs.cdelt[0]),
@@ -160,7 +163,8 @@ class Map(Map_Base):
     def ipix_swap_axes(self,ipix,colwise=False):
         """ Return the transposed pixel index from the pixel xy coordinates 
 
-        if colwise is True (False) this assumes the original index was in column wise scheme
+        if colwise is True (False) this assumes the original index was
+        in column wise scheme
         """        
         xy = self.ipix_to_xypix(ipix,colwise)
         return self.xy_pix_to_ipix(xy,not colwise)
@@ -266,6 +270,61 @@ def eq2gal(ra, dec):
     return l, b
 
 
+def xyz_to_lonlat(*args):
+    if len(args) == 1:
+        x, y, z = args[0][0], args[0][1], args[0][2]
+    else:
+        x, y, z = args[0], args[1], args[2]
+
+    lat = np.pi / 2. - np.arctan2(np.sqrt(x ** 2 + y ** 2), z)
+    lon = np.arctan2(y, x)
+    return lon, lat
+
+
+def lonlat_to_xyz(lon, lat):
+    phi = lon
+    theta = np.pi / 2. - lat
+    return np.array([np.sin(theta) * np.cos(phi),
+                     np.sin(theta) * np.sin(phi),
+                     np.cos(theta)])
+
+
+def project(lon0, lat0, lon1, lat1):
+    """This function performs a stereographic projection on the unit
+    vector (lon1,lat1) with the pole defined at the reference unit
+    vector (lon0,lat0)."""
+
+    costh = np.cos(np.pi / 2. - lat0)
+    cosphi = np.cos(lon0)
+
+    sinth = np.sin(np.pi / 2. - lat0)
+    sinphi = np.sin(lon0)
+
+    xyz = lonlat_to_xyz(lon1, lat1)
+    x1 = xyz[0];
+    y1 = xyz[1];
+    z1 = xyz[2]
+
+    x1p = x1 * costh * cosphi + y1 * costh * sinphi - z1 * sinth
+    y1p = -x1 * sinphi + y1 * cosphi
+    z1p = x1 * sinth * cosphi + y1 * sinth * sinphi + z1 * costh
+
+    r = np.arctan2(np.sqrt(x1p ** 2 + y1p ** 2), z1p)
+    phi = np.arctan2(y1p, x1p)
+
+    return r * np.cos(phi), r * np.sin(phi)
+
+
+def scale_parameter(p):
+    if isinstance(p, str): p = float(p)
+
+    if p > 0:
+        scale = 10 ** -np.round(np.log10(1. / p))
+        return p / scale, scale
+    else:
+        return p, 1.0
+
+
 def apply_minmax_selection(val, val_minmax):
     if val_minmax is None:
         return True
@@ -328,9 +387,8 @@ def create_model_name(src):
 def cl_to_dlnl(cl):
     """Compute the delta-log-likehood corresponding to an upper limit of
     the given confidence level."""
-    import scipy.special as spfn
     alpha = 1.0 - cl
-    return 0.5 * np.power(np.sqrt(2.) * spfn.erfinv(1 - 2 * alpha), 2.)
+    return 0.5 * np.power(np.sqrt(2.) * special.erfinv(1 - 2 * alpha), 2.)
 
 
 def find_function_root(fn, x0, xb, delta = 0.0):    
@@ -562,8 +620,6 @@ def fits_recarray_to_dict(table):
     for icol, col in enumerate(table.columns.names):
 
         col_data = table.data[col]
-        #            print icol, col, type(col_data[0])
-
         if type(col_data[0]) == np.float32:
             cols[col] = np.array(col_data, dtype=float)
         elif type(col_data[0]) == np.float64:
@@ -587,7 +643,14 @@ def fits_recarray_to_dict(table):
 def create_xml_element(root, name, attrib):
     el = et.SubElement(root, name)
     for k, v in attrib.iteritems():
-        el.set(k, v)
+
+        if isinstance(v,bool):
+            el.set(k,str(int(v)))
+        elif isinstance(v,str):
+             el.set(k, v)
+        elif np.isfinite(v):        
+            el.set(k, str(v))
+            
     return el
 
 

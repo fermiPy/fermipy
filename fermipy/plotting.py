@@ -26,6 +26,7 @@ import fermipy.utils as utils
 import fermipy.fits_utils as fits_utils
 import fermipy.defaults as defaults
 import fermipy.roi_model as roi_model
+import fermipy.catalog as catalog
 from fermipy.utils import merge_dict, Map
 from fermipy.hpx_utils import HpxMap
 from fermipy.logger import Logger
@@ -269,7 +270,7 @@ class ROIPlotter(fermipy.config.Configurable):
         self._catalogs = []
         for c in self.config['catalogs']:
             if isinstance(c,str):            
-                self._catalogs += [roi_model.Catalog.create(c)]
+                self._catalogs += [catalog.Catalog.create(c)]
             else:
                 self._catalogs += [c]
                 
@@ -780,7 +781,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         self._catalogs = []
         for c in self.config['catalogs']:
-            self._catalogs += [roi_model.Catalog.create(c)]
+            self._catalogs += [catalog.Catalog.create(c)]
         
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
