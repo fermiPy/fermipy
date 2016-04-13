@@ -280,8 +280,11 @@ class Model(object):
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialType','SkyDirFunction')
 
-        src_dict['spectral_pars'] = gtutils.cast_pars_dict(src_dict['spectral_pars'])
-        src_dict['spatial_pars'] = gtutils.cast_pars_dict(src_dict['spatial_pars'])
+        if 'spectral_pars' in src_dict:
+            src_dict['spectral_pars'] = gtutils.cast_pars_dict(src_dict['spectral_pars'])
+
+        if 'spatial_pars' in src_dict:
+            src_dict['spatial_pars'] = gtutils.cast_pars_dict(src_dict['spatial_pars'])
         
         if src_dict['SpatialModel'] == 'DiffuseSource' and src_dict['SpatialType'] == 'ConstantValue':
             return IsoSource(src_dict['name'],src_dict)
@@ -789,8 +792,10 @@ class Source(Model):
 
         for k, v in spectral_pars.items():
             spectral_pars[k] = gtutils.make_parameter_dict(spectral_pars[k])
-        #        validate_config(src_dict,default_src_dict)
 
+        src_dict['spectral_pars'] = gtutils.cast_pars_dict(spectral_pars)
+        #        validate_config(src_dict,default_src_dict)
+            
         if 'name' in src_dict:
             name = src_dict['name']
             src_dict['Source_Name'] = src_dict.pop('name')
