@@ -1,3 +1,4 @@
+``max_free_sources``	5	Maximum number of sources that will be fit simultaneously in the first optimization step.
 ``npred_frac``	0.95	
 ``npred_threshold``	1.0	
-``shape_ts_threshold``	100.0	
+``shape_ts_threshold``	25.0	Threshold on source TS used for determining the sources that will be fit in the third optimization step.

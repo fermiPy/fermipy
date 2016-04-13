@@ -1,5 +1,5 @@
 ``Npred``	`~numpy.ndarray`	Number of model counts.
-``config``	dict	Copy of the input parameters to this method.
+``config``	dict	Copy of input configuration to this method.
 ``dfde``	`~numpy.ndarray`	Differential flux in each bin (MeV^{-1} cm^{-2} s^{-1}).
 ``dfde_err``	`~numpy.ndarray`	1-sigma error on dfde evaluated from likelihood curvature.
 ``dfde_err_hi``	`~numpy.ndarray`	Upper 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).
