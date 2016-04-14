@@ -18,7 +18,8 @@ install:
   - conda info -a
   - conda create -q -n fermi-env python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy pytest pyyaml
   - source activate fermi-env
-  - pip install healpy
+  - conda install -c openastronomy healpy wcsaxes
+#  - pip install healpy
   - python setup.py install
   - bash stinstall.sh force # Download and install the ST binaries
   - source travissetup.sh

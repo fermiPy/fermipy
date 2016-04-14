@@ -11,6 +11,7 @@ Many parts of this code are taken from dsphs/like/lnlfn.py by
 """
 
 import copy
+import logging
 
 import numpy as np
 from scipy.interpolate import UnivariateSpline, splrep, splev
@@ -183,7 +184,7 @@ class SEDGenerator(object):
         self._latch_free_params()
         self.free_sources(False,pars='shape')
         self.free_source(name)
-        self.fit(update=False)
+        self.fit(loglevel=logging.DEBUG,update=False)
         o['model_flux'] = self.bowtie(name)
         
         self._restore_free_params()
@@ -197,7 +198,7 @@ class SEDGenerator(object):
         elif cov_scale is not None:
             self._latch_free_params()
             self.zero_source(name)
-            self.fit(update=False)            
+            self.fit(loglevel=logging.DEBUG,update=False)            
             srcNames = list(self.like.sourceNames())
             srcNames.remove(name)
             self.constrain_norms(srcNames, cov_scale)
@@ -269,7 +270,7 @@ class SEDGenerator(object):
                               (name, 10 ** emin, 10 ** emax))
             self.setEnergyRange(emin, emax)
 
-            fit_output = self.fit(update=False)
+            fit_output = self.fit(loglevel=logging.DEBUG,update=False)
             free_params = self.get_params(True)
             for j, p in enumerate(free_params):
                 
