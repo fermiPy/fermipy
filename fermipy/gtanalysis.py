@@ -1669,7 +1669,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         saved_state = LikelihoodState(self.like)
 
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.copy_source(name)
         skydir = src.skydir
         skywcs = self._skywcs
         src_pix = skydir.to_pixel(skywcs)
@@ -1724,15 +1724,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                        dlogLike_fit=np.zeros((nstep, nstep)))
 
         for i, t in enumerate(scan_skydir):
-            # make a copy
-            s = self.roi.copy_source(name)
 
             model_name = '%s_localize' % (name.replace(' ', '').lower())
-            s.set_name(model_name)
-            s.set_position(t)
-            #            s.set_spatial_model(spatial_model,w)
-
-            self.add_source(model_name, s, free=True,
+            src.set_name(model_name)
+            src.set_position(t)
+            self.add_source(model_name, src, free=True,
                             init_source=False, save_source_maps=False,
                             loglevel=logging.DEBUG)
             #self.fit(update=False)
@@ -1744,7 +1740,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         lnlscan['dlogLike'] = lnlscan['logLike'] - np.max(lnlscan['logLike'])
 
+        self.unzero_source(name)
         saved_state.restore()
+        self._sync_params(name)
+        self._update_roi()
         
         ix, iy = np.unravel_index(np.argmax(lnlscan['dlogLike']),(nstep,nstep))
         
@@ -1817,12 +1816,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 'Updating position to: '
                 'RA %8.3f DEC %8.3f (offset = %8.3f)' % (o['ra'], o['dec'],
                                                          o['offset']))
-            s = self.roi.copy_source(name)
-            self.delete_source(name)
-            s.set_position(new_skydir)
-            s.set_name(newname, names=s.names)
+            src = self.delete_source(name)
+            src.set_position(new_skydir)
+            src.set_name(newname, names=src.names)
 
-            self.add_source(newname, s, free=True)
+            self.add_source(newname, src, free=True)
             self.fit()
             src = self.roi.get_source_by_name(newname, True)
             self.roi[name]['localize'] = copy.deepcopy(o)

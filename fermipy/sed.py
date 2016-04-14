@@ -234,7 +234,7 @@ class SEDGenerator(object):
                           update_source=False)
 
         src_norm_idx = -1        
-        free_params = self.get_free_params()
+        free_params = self.get_params(True)
         for j, p in enumerate(free_params):
             if not p['is_norm']:
                 continue
