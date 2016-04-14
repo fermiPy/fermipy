@@ -231,7 +231,7 @@ fit quality and look for new sources.
 
    # Dictionary defining the spatial/spectral template
    model = {'SpatialModel' : 'PointSource', 'Index' : 2.0,
-            'SpectrumType' ; 'PowerLaw'}
+            'SpectrumType' : 'PowerLaw'}
 
    # Both methods return a dictionary with the maps
    m0 = gta.residmap('fit_model',model=model)
