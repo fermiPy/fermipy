@@ -1140,6 +1140,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         idx = self.like.par_index(name, par)
         self.like[idx].setScale(self.like[idx].getScale() * scale)
+        self._sync_params(name)
 
     def set_parameter(self, name, par, value, true_value=True, scale=None,
                       bounds=None, update_source=True):
@@ -1197,7 +1198,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if bounds is not None:
             self.like[idx].setBounds(*bounds)
 
-        self.like.syncSrcParams(str(name))
+        self._sync_params(name)
             
         if update_source:
             self.update_source(name)
@@ -1214,6 +1215,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.like[idx].setValue(current_value*current_scale/scale)
         self.like[idx].setBounds(current_bounds[0]*current_scale/scale,
                                  current_bounds[1]*current_scale/scale)
+        self._sync_params(name)
 
     def set_parameter_bounds(self,name,par,bounds):
         """Set the bounds of a parameter.
@@ -1233,11 +1235,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
         idx = self.like.par_index(name, par)
         self.like[idx].setBounds(*bounds)
+        self._sync_params(name)
 
     def free_parameter(self, name, par, free=True):
         idx = self.like.par_index(name, par)
         self.like[idx].setFree(free)
-        self._sync_params()
+        self._sync_params(name)
 
     def free_source(self, name, free=True, pars=None):
         """Free/Fix parameters of a source.
@@ -1452,12 +1455,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         normPar = self.like.normPar(name).getName()
         self.scale_parameter(name, normPar, 1E-10)
         self.free_source(name, free=False)
-        self.like.syncSrcParams(str(name))
 
     def unzero_source(self, name):
         normPar = self.like.normPar(name).getName()
         self.scale_parameter(name, normPar, 1E10)
-        self.like.syncSrcParams(str(name))
 
     def optimize(self, **kwargs):
         """Iteratively optimize the ROI model.  The optimization is
@@ -1915,18 +1916,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # Fit baseline model
         self.free_norm(name)
         self.fit(update=False)
-
+        src = self.roi.copy_source(name)
+        
         # Save likelihood value for baseline fit
         logLike0 = -self.like()
 
-        #self.write_model_map(model_name=null_model_name, name=name)
-
-        #        src = self.like.deleteSource(name)
-        normPar = self.like.normPar(name).getName()
-        self.scale_parameter(name, normPar, 1E-10)
-        self.free_source(name, free=False)
-        self.like.syncSrcParams(name)
-
+        self.zero_source(name)
+        
         if save_model_map:
             self.write_model_map(model_name=ext_model_name + '_bkg')
 
@@ -1946,18 +1942,18 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['config'] = config
 
         # Fit a point-source
-        s = self.roi.copy_source(name)
+        
         model_name = '%s_ptsrc' % (name)
-        s.set_name(model_name)
-        s.set_spatial_model('PSFSource')
-        #s.set_spatial_model('PointSource')
+        src.set_name(model_name)
+        src.set_spatial_model('PSFSource')
+        #src.set_spatial_model('PointSource')
 
         self.logger.debug('Testing point-source model.')
-        self.add_source(model_name, s, free=True, init_source=False,
+        self.add_source(model_name, src, free=True, init_source=False,
                         loglevel=logging.DEBUG)
         self.fit(update=False)
         o['logLike_ptsrc'] = -self.like()
-        
+
         self.delete_source(model_name, save_template=False,
                            loglevel=logging.DEBUG)
         
@@ -1965,10 +1961,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.debug('Width scan vector:\n %s' % width)
 
         if not hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
-            o['logLike'] = self._scan_extension_pylike(name, spatial_model,
+            o['logLike'] = self._scan_extension_pylike(name, src,
+                                                       spatial_model,
                                                        width[1:])
         else:
-            o['logLike'] = self._scan_extension(name, spatial_model, width[1:])
+            o['logLike'] = self._scan_extension(name, src, spatial_model, width[1:])
         o['logLike'] = np.concatenate(([o['logLike_ptsrc']],o['logLike']))
         o['dlogLike'] = o['logLike'] - o['logLike_ptsrc']
         
@@ -1993,13 +1990,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if np.isfinite(o['ext']):
 
             # Fit with the best-fit extension model
-            s = self.roi.copy_source(name)
             model_name = ext_model_name
-            s.set_name(model_name)
-            s.set_spatial_model(spatial_model, max(o['ext'],10**-2.5))
+            src.set_name(model_name)
+            src.set_spatial_model(spatial_model, max(o['ext'],10**-2.5))
 
             self.logger.info('Refitting extended model')
-            self.add_source(model_name, s, free=True)
+            self.add_source(model_name, src, free=True)
             self.fit(update=False)
             self.update_source(model_name,reoptimize=True)
             
@@ -2012,9 +2008,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             src_ext = self.delete_source(model_name, save_template=False)
             
         # Restore ROI to previous state
-        self.scale_parameter(name, normPar, 1E10)
-        self.like.syncSrcParams(name)        
+        self.unzero_source(name)
         saved_state.restore()
+        self._sync_params(name)
         self._update_roi()
         
         if update and src_ext is not None:
@@ -2032,14 +2028,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         return o
 
-    def _scan_extension(self, name, spatial_model, width):
+    def _scan_extension(self, name, src, spatial_model, width):
 
         ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
         
-        s = self.roi.copy_source(name)
-        s.set_name(ext_model_name)
-        s.set_spatial_model('PSFSource', width[-1])
-        self.add_source(ext_model_name, s, free=True, init_source=False)
+        src.set_name(ext_model_name)
+        src.set_spatial_model('PSFSource', width[-1])
+        self.add_source(ext_model_name, src, free=True, init_source=False)
 
         par = self.like.normPar(ext_model_name)
         
@@ -2055,7 +2050,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
         return np.array(logLike)
 
-    def _scan_extension_pylike(self, name, spatial_model, width):
+    def _scan_extension_pylike(self, name, src, spatial_model, width):
 
         ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
 
@@ -2063,12 +2058,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for i, w in enumerate(width):
 
             # make a copy
-            s = self.roi.copy_source(name)
-            s.set_name(ext_model_name)
-            s.set_spatial_model(spatial_model, w)
+            src.set_name(ext_model_name)
+            src.set_spatial_model(spatial_model, w)
             
             self.logger.debug('Adding test source with width: %10.3f deg' % w)
-            self.add_source(ext_model_name, s, free=True, init_source=False,
+            self.add_source(ext_model_name, src, free=True, init_source=False,
                             loglevel=logging.DEBUG)
             
             self.like.optimize(0)
@@ -2114,6 +2108,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         erange = self.erange
         if emin is not None or emax is not None:
             self.setEnergyRange(emin,emax)
+
             
         # Find a sequence of values for the normalization scan
         if xvals is None:
@@ -2125,7 +2120,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o = self.profile(name, parName, 
                          reoptimize=reoptimize, xvals=xvals,
                          savestate=savestate)
-
+            
         if savestate:
             saved_state.restore() 
         
@@ -2341,7 +2336,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 c.like.logLike.setUpdateFixedWeights(False)
         
         for i, x in enumerate(xvals):
-            
+
             self.like[idx] = x
             self.like.syncSrcParams(name)
 
@@ -2355,7 +2350,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 logLike1 = -self.like()
             
             flux = self.like[name].flux(10 ** eminmax[0], 10 ** eminmax[1])
-            eflux = self.like[name].energyFlux(10 ** eminmax[0], 10 ** eminmax[1])
+            eflux = self.like[name].energyFlux(10 ** eminmax[0],
+                                               10 ** eminmax[1])
             prefactor = self.like[idx]
 
             o['dlogLike'][i] = logLike1 - logLike0

@@ -74,6 +74,25 @@ def test_gtanalysis_residmap(setup):
     gta.load_roi('fit1')
     gta.residmap(model={})
 
+    
+def test_gtanalysis_sed(setup):
+
+    gta = setup
+    gta.load_roi('fit1')
+    np.random.seed(1)
+    gta.simulate_roi()
+
+    gta.simulate_source({'SpatialModel': 'PointSource',
+                         'Index' : 2.0,
+                         'Prefactor': 3E-12})
+
+    gta.free_norm('draco')
+    gta.fit()
+    
+    o = gta.sed('draco')
+
+    gta.simulate_roi(restore=True)
+    
 
 def test_gtanalysis_extension_gaussian(setup):
 
