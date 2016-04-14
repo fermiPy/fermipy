@@ -270,7 +270,7 @@ class SEDGenerator(object):
             self.setEnergyRange(emin, emax)
 
             fit_output = self.fit(update=False)
-            free_params = self.get_free_params()
+            free_params = self.get_params(True)
             for j, p in enumerate(free_params):
                 
                 if not p['is_norm']:
