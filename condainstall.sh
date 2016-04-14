@@ -20,6 +20,6 @@ fi
 
 conda create -q -n fermi-env -y python=2.7 numpy scipy matplotlib astropy pytest pyyaml ipython
 source activate fermi-env
-conda install -c openastronomy wcsaxes
+conda install -c openastronomy -y wcsaxes
 pip install healpy
 pip install fermipy
