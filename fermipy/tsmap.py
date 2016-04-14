@@ -649,13 +649,6 @@ class TSMapGenerator(object):
         #        w = create_wcs(self._roi.skydir,cdelt=self._binsz,crpix=50.5)
 
         data = np.zeros((self.npix, self.npix))
-
-        #        hdu_image = pyfits.PrimaryHDU(np.zeros((self.npix,self.npix)),
-        #                                      header=w.to_header())
-        #        for i in range(100):
-        #            for j in range(100):
-        #                print w.wcs_pix2world(i,j,0)
-
         #        self.free_sources(free=False)
 
         xpix = np.linspace(0, self.npix - 1, self.npix)[:,
@@ -690,7 +683,7 @@ class TSMapGenerator(object):
 
             self.set_parameter('tsmap_testsource', 'Prefactor', 0.0,
                                update_source=False)
-            self.fit(update=False)
+            self.fit(loglevel=logging.DEBUG,update=False)
 
             logLike1 = -self.like()
             ts = max(0, 2 * (logLike1 - logLike0))

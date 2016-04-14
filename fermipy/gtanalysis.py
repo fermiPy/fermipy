@@ -562,95 +562,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             file_function.readFunction(filename)
         #self.like.spectrum().setSpectrum(10**energies,dfde)
             
-        
-    def add_source(self, name, src_dict, free=False, init_source=True,
-                   save_source_maps=True, **kwargs):
-        """Add a source to the ROI model.  This function may be called
-        either before or after setup().
-
-        Parameters
-        ----------
-
-        name : str
-            Source name.
-
-        src_dict : dict or `~fermipy.roi_model.Source` object
-            Dictionary or source object defining the source properties
-            (coordinates, spectral parameters, etc.).
-
-        free : bool
-            Initialize the source with a free normalization parameter.
-
-        """
-
-        if self.roi.has_source(name):
-            msg = 'Source %s already exists.' % name
-            self.logger.error(msg)
-            raise Exception(msg)
-
-        loglevel=kwargs.pop('loglevel',logging.INFO)
-        
-        self.logger.log(loglevel,'Adding source ' + name)
-
-        src = self.roi.create_source(name,src_dict)
-
-        for c in self.components:
-            c.add_source(name, src_dict, free=free,
-                         save_source_maps=save_source_maps)
-
-        if self._like is None:
-            return
-
-        if self.config['gtlike']['edisp'] and src.name not in \
-                self.config['gtlike']['edisp_disable']:
-            self.set_edisp_flag(src.name, True)
-
-        self.like.syncSrcParams(str(name))
-        self.like.model = self.like.components[0].model
-        if init_source:
-            self._init_source(name)
-            self._update_roi()
-
-    def delete_source(self, name, save_template=True, delete_source_map=False,
-                      **kwargs):
-        """Delete a source from the model.
-
-        Parameters
-        ----------
-
-        name : str
-            Source name.
-
-        Returns
-        -------    
-        src : `~fermipy.roi_model.Model`
-            The deleted source object.
-
-        """
-
-        if not self.roi.has_source(name):
-            self.logger.error('No source with name: %s' % name)
-            return
-
-        loglevel=kwargs.pop('loglevel',logging.INFO)
-        
-        self.logger.log(loglevel,'Deleting source %s' % name)
-
-        # STs require a source to be freed before deletion
-        normPar = self.like.normPar(name)
-        if not normPar.isFree():
-            self.free_norm(name)
-
-        for c in self.components:
-            c.delete_source(name, save_template=save_template,
-                            delete_source_map=delete_source_map)
-
-        src = self.roi.get_source_by_name(name, True)
-        self.roi.delete_sources([src])
-        self.like.model = self.like.components[0].model
-        self._update_roi()
-        return src
-
     def _create_component_configs(self):
         configs = []
 
@@ -997,6 +908,104 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         return self.roi.get_sources(cuts,distance,
                                     minmax_ts,minmax_npred,square)
 
+
+    def add_source(self, name, src_dict, free=False, init_source=True,
+                   save_source_maps=True, **kwargs):
+        """Add a source to the ROI model.  This function may be called
+        either before or after `~fermipy.gtanalysis.GTAnalysis.setup`.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        src_dict : dict or `~fermipy.roi_model.Source` object
+            Dictionary or source object defining the source properties
+            (coordinates, spectral parameters, etc.).
+
+        free : bool
+            Initialize the source with a free normalization parameter.
+
+        """
+
+        if self.roi.has_source(name):
+            msg = 'Source %s already exists.' % name
+            self.logger.error(msg)
+            raise Exception(msg)
+
+        loglevel=kwargs.pop('loglevel',logging.INFO)
+        
+        self.logger.log(loglevel,'Adding source ' + name)
+
+        src = self.roi.create_source(name,src_dict)
+
+        for c in self.components:
+            c.add_source(name, src_dict, free=free,
+                         save_source_maps=save_source_maps)
+
+        if self._like is None:
+            return
+
+        if self.config['gtlike']['edisp'] and src.name not in \
+                self.config['gtlike']['edisp_disable']:
+            self.set_edisp_flag(src.name, True)
+
+        self.like.syncSrcParams(str(name))
+        self.like.model = self.like.components[0].model
+        if init_source:
+            self._init_source(name)
+            self._update_roi()
+
+    def delete_source(self, name, save_template=True, delete_source_map=False,
+                      build_fixed_wts=True, **kwargs):
+        """Delete a source from the ROI model.
+
+        Parameters
+        ----------
+
+        name : str
+            Source name.
+
+        save_template : bool        
+            Delete the SpatialMap FITS template associated with this
+            source.
+
+        delete_source_map : bool        
+            Delete the source map associated with this source from the
+            source maps file.
+            
+        Returns
+        -------    
+        src : `~fermipy.roi_model.Model`
+            The deleted source object.
+
+        """
+
+        if not self.roi.has_source(name):
+            self.logger.error('No source with name: %s' % name)
+            return
+
+        loglevel=kwargs.pop('loglevel',logging.INFO)
+        
+        self.logger.log(loglevel,'Deleting source %s' % name)
+
+        # STs require a source to be freed before deletion
+        normPar = self.like.normPar(name)
+        if not normPar.isFree():
+            self.free_norm(name)
+
+        for c in self.components:
+            c.delete_source(name, save_template=save_template,
+                            delete_source_map=delete_source_map,
+                            build_fixed_wts=build_fixed_wts)
+
+        src = self.roi.get_source_by_name(name, True)
+        self.roi.delete_sources([src])
+        self.like.model = self.like.components[0].model
+        self._update_roi()
+        return src
+    
     def delete_sources(self, cuts=None, distance=None,
                        minmax_ts=None, minmax_npred=None,
                        square=False, exclude_diffuse=True):
@@ -1016,10 +1025,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                     square=square,exclude_diffuse=exclude_diffuse,
                                     coordsys=self.config['binning']['coordsys'])
 
-        self._roi.delete_sources(srcs)
-        for c in self.components:
-            c.delete_sources(srcs)
+        for s in srcs:
+            self.delete_source(s.name,build_fixed_wts=False)
 
+        # Build fixed model weights in one pass
+        for c in self.components:
+            c.like.logLike.buildFixedModelWts()
+            
+        self._update_roi()            
+        
         return srcs
 
     def free_sources(self, free=True, pars=None, cuts=None,
@@ -1550,7 +1564,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             if len(skip_sources) >= max_free_sources:
                 break
 
-        self.fit()
+        self.fit(loglevel=logging.DEBUG)
         self.free_sources(free=False)
         
         # Step through remaining sources and re-fit normalizations
@@ -1568,7 +1582,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.logger.debug('Fitting %s Npred: %10.3f TS: %10.3f' % (
                 s.name, s['Npred'], s['ts']))
             self.free_norm(s.name)
-            self.fit()
+            self.fit(loglevel=logging.DEBUG)
             self.logger.debug('Post-fit Results Npred: %10.3f TS: %10.3f' % (
                 s['Npred'], s['ts']))
             self.free_norm(s.name, free=False)
@@ -1584,7 +1598,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
             self.logger.debug('Fitting shape %s TS: %10.3f' % (s.name, s['ts']))
             self.free_source(s.name)
-            self.fit()
+            self.fit(loglevel=logging.DEBUG)
             self.free_source(s.name, free=False)
 
         self.set_free_param_vector(free)
@@ -1694,7 +1708,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         # Fit baseline (point-source) model
         self.free_norm(name)
-        self.fit(update=False)
+        self.fit(loglevel=logging.DEBUG,update=False)
 
         # Save likelihood value for baseline fit
         logLike0 = -self.like()
@@ -1821,7 +1835,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             src.set_name(newname, names=src.names)
 
             self.add_source(newname, src, free=True)
-            self.fit()
+            self.fit(loglevel=logging.DEBUG)
             src = self.roi.get_source_by_name(newname, True)
             self.roi[name]['localize'] = copy.deepcopy(o)
             
@@ -1913,7 +1927,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Fit baseline model
         self.free_norm(name)
-        self.fit(update=False)
+        self.fit(loglevel=logging.DEBUG,update=False)
         src = self.roi.copy_source(name)
         
         # Save likelihood value for baseline fit
@@ -1949,7 +1963,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.debug('Testing point-source model.')
         self.add_source(model_name, src, free=True, init_source=False,
                         loglevel=logging.DEBUG)
-        self.fit(update=False)
+        self.fit(loglevel=logging.DEBUG,update=False)
         o['logLike_ptsrc'] = -self.like()
 
         self.delete_source(model_name, save_template=False,
@@ -1994,7 +2008,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
             self.logger.info('Refitting extended model')
             self.add_source(model_name, src, free=True)
-            self.fit(update=False)
+            self.fit(loglevel=logging.DEBUG,update=False)
             self.update_source(model_name,reoptimize=True)
             
             o['source_fit'] = self.get_src_model(model_name)
@@ -2017,7 +2031,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             src.set_spatial_model(src_ext['SpatialModel'],
                                   src_ext['SpatialWidth'])
             self.add_source(name,src,free=True)
-            self.fit()
+            self.fit(loglevel=logging.DEBUG)
         
         src = self.roi.get_source_by_name(name, True)
         src['extension'] = copy.deepcopy(o)
@@ -2443,10 +2457,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def _init_optimizer(self):
         pass
 
-    def _create_optObject(self):
+    def _create_optObject(self,**kwargs):
         """ Make MINUIT or NewMinuit type optimizer object """
-
-        optimizer = self.config['optimizer']['optimizer']
+        
+        optimizer = kwargs.get('optimizer',self.config['optimizer']['optimizer'])
         if optimizer.upper() == 'MINUIT':
             optObject = pyLike.Minuit(self.like.logLike)
         elif optimizer.upper == 'NEWMINUIT':
@@ -2472,7 +2486,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         return quality
 
     def constrain_norms(self, srcNames, cov_scale=1.0):
-
+        """Constrain the normalizations of one or more sources by
+        adding gaussian priors with sigma equal to the parameter
+        error times a scaling factor."""
+        
         # Get the covariance matrix
 
         for name in srcNames:
@@ -2507,11 +2524,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
     def fit(self, update=True, **kwargs):
         """Run the likelihood optimization.  This will execute a fit
-        of all parameters that are currently free in the ROI model and
-        update the charateristics (TS, Npred, etc.) of the
-        corresponding model components.  The fit will be repeated N
-        times (set with the retries parameter) until a fit quality of
-        3 is obtained.
+        of all parameters that are currently free in the model and
+        update the charateristics of the corresponding model
+        components (TS, Npred, etc.).  The fit will be repeated N
+        times (set with the `retries` parameter) until a fit quality
+        greater than or equal to `min_fit_quality` is obtained.  If
+        the requested fit quality is not obtained then all parameter
+        values will be reverted to their state prior to the execution
+        of the fit.
 
         Parameters
         ----------
@@ -2525,6 +2545,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         verbosity : int
            Set the optimizer output level.
 
+        optimizer : str
+           Set the likelihood optimizer (e.g. MINUIT or NEWMINUIT).
+           
         retries : int
            Set the number of times to rerun the fit when the fit quality
            is < 3.
@@ -2542,7 +2565,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         -------
 
         fit : dict
-           Dictionary containing diagnostic information for the fit
+           Dictionary containing diagnostic information from the fit
            (fit quality, parameter covariances, etc.).
 
         """
@@ -2551,19 +2574,21 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.logger.debug("Skipping fit.  No free parameters.")
             return
 
-        verbosity = kwargs.get('verbosity',
-                               self.config['optimizer']['verbosity'])
-        covar = kwargs.get('covar', True)
-        tol = kwargs.get('tol', self.config['optimizer']['tol'])
-        retries = kwargs.get('retries', self.config['optimizer']['retries'])
-        min_fit_quality = kwargs.get('min_fit_quality',
-                                     self.config['optimizer'][
-                                         'min_fit_quality'])
-        reoptimize = kwargs.get('reoptimize', False)
+        loglevel=kwargs.pop('loglevel',logging.INFO)
+
+        self.logger.log(loglevel,"Starting fit.")
+
+        config = copy.deepcopy(self.config['optimizer'])
+        config.setdefault('covar',True)
+        config.setdefault('reoptimize',False)
+        config.update(kwargs)
         
+        optObject = self._create_optObject(optimizer=config['optimizer'])
         saved_state = LikelihoodState(self.like)
-        kw = dict(optObject=self._create_optObject(),
-                  covar=covar, verbosity=verbosity, tol=tol)
+        kw = dict(optObject=optObject,
+                  covar=config['covar'],
+                  verbosity=config['verbosity'],
+                  tol=config['tol'])
 
         num_free = self.like.logLike.getNumFreeParams()
         o = {'fit_quality' : 0,
@@ -2576,12 +2601,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
              'is_norm' : np.empty(num_free,dtype=bool),
              'src_names' : num_free*[None],
              'par_names' : num_free*[None],
+             'config' : config
              }
 
         logLike0 = -self.like()        
         quality = 0
         niter = 0
-        max_niter = retries
+        max_niter = config['retries']
         while niter < max_niter:
             self.logger.debug("Fit iteration: %i" % niter)
             niter += 1
@@ -2621,7 +2647,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['logLike'] = -self.like()
         o['dlogLike'] = o['logLike'] - logLike0
 
-        if o['fit_quality'] < min_fit_quality:
+        if o['fit_quality'] < config['min_fit_quality']:
             self.logger.error(
                 "Failed to converge with %s" % self.like.optimizer)
             saved_state.restore()
@@ -2634,15 +2660,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 freePars = self.get_free_source_params(name)                
                 if len(freePars) == 0:
                     continue
-                self.update_source(name, reoptimize=reoptimize)
+                self.update_source(name, reoptimize=config['reoptimize'])
                 
             # Update roi model counts
             self._update_roi()
 
-        self.logger.debug("Fit returned successfully.")
-        self.logger.debug("Fit Quality: %i "%o['fit_quality'] + 
-                          "LogLike: %12.3f "%o['logLike'] + 
-                          "DeltaLogLike: %12.3f"%o['dlogLike'])
+        self.logger.log(loglevel,"Fit returned successfully.")
+        self.logger.log(loglevel,"Fit Quality: %i "%o['fit_quality'] + 
+                        "LogLike: %12.3f "%o['logLike'] + 
+                        "DeltaLogLike: %12.3f"%o['dlogLike'])
         return o
 
     def fit_correlation(self):
@@ -2650,7 +2676,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         saved_state = LikelihoodState(self.like)
         self.free_sources(False)
         self.free_sources(pars='norm')
-        fit_results = self.fit(min_fit_quality=2)
+        fit_results = self.fit(loglevel=logging.DEBUG,min_fit_quality=2)
         free_params = self.get_params(True)
         self._extract_correlation(fit_results,free_params)        
         saved_state.restore()
@@ -2671,7 +2697,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
     
     def load_xml(self, xmlfile):
-        """Load model definition from XML."""
+        """Load model definition from XML.
+
+        Parameters
+        ----------
+        xmlfile : str
+            Name of the input XML file.
+
+        """
 
         self.logger.info('Loading XML')
         
@@ -2688,7 +2721,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         Parameters
         ----------
-
         xmlfile : str
             Name of the output XML file.
 
@@ -2703,10 +2735,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
         Revert counts maps to their state prior to injecting any simulated
         components.  
-
-        Returns
-        -------
-
         """
 
         for c in self.components:
@@ -2725,15 +2753,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     def simulate_source(self, src_dict=None):
         """
-        Inject a simulated source into the 
+        Inject simulated source counts into the data.
 
         Parameters
         ----------
-        src_dict : dict
-
-        Returns
-        -------
-
+        src_dict : dict        
+           Dictionary defining the spatial and spectral properties of
+           the source that will be injected.
+        
         """
 
         if src_dict is None:
@@ -2851,7 +2878,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.info('\n' + str(self.roi))
 
     def print_params(self, freeonly=False):
-
+        """Print information about the model parameters (values,
+        errors, bounds, scale)."""
+        
         pars = self.get_params(freeonly=freeonly)
 
         o = '\n'
@@ -3063,7 +3092,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                             **kwargs.get('plotting',{}))
 
     def make_plots(self, prefix, mcube_map=None, **kwargs):
-
+        """Make diagnostic plots using the current ROI model."""
+        
         #mcube_maps = kwargs.pop('mcube_maps', None)
         if mcube_map is None:
             mcube_map = self.model_counts_map()
@@ -3698,7 +3728,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         return pylike_src
             
-    def delete_source(self, name, save_template=True, delete_source_map=False):
+    def delete_source(self, name, save_template=True, delete_source_map=False,
+                      build_fixed_wts=True):
 
         src = self.roi.get_source_by_name(name, True)
 
@@ -3713,7 +3744,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 self.like.deleteSource(str(src.name))
                 self.like.logLike.eraseSourceMap(str(src.name))
                 
-            if not isFree:            
+            if not isFree and build_fixed_wts:            
                 self.like.logLike.buildFixedModelWts()
                     
         if not save_template and 'Spatial_Filename' in src and \
@@ -3727,13 +3758,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             utils.delete_source_map(self._srcmap_file,name)
             
         return src
-
-    def delete_sources(self, srcs):
-        for s in srcs:
-            if self.like is not None:
-                self.like.deleteSource(str(s.name))
-                self.like.logLike.eraseSourceMap(str(s.name))
-        self._roi.delete_sources(srcs)
 
     def set_edisp_flag(self, name, flag=True):
         """Enable/Disable the energy dispersion correction for a
@@ -3888,7 +3912,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 "Did not recognize projection type %s" % self.projtype)
 
     def model_counts_spectrum(self, name, emin, emax):
+        """Return the model counts spectrum of a source.
 
+        Parameters
+        ----------
+
+        name : str
+           Source name.
+
+        """
+        
         cs = np.array(self.like.logLike.modelCountsSpectrum(name))
         imin = utils.val_to_edge(self.energies, emin)[0]
         imax = utils.val_to_edge(self.energies, emax)[0]
