@@ -11,6 +11,7 @@ Many parts of this code are taken from dsphs/like/lnlfn.py by
 """
 
 import copy
+import logging
 
 import numpy as np
 from scipy.interpolate import UnivariateSpline, splrep, splev
