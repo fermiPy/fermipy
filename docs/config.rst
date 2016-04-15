@@ -186,6 +186,9 @@ created under ``scratchdir``.
    :file: config/fileio.csv
    :delim: tab
    :widths: 10,10,80
+
+
+.. _config_gtlike:
             
 gtlike
 ------
@@ -198,7 +201,10 @@ analysis include the IRF name (``irfs``).
    :file: config/gtlike.csv
    :delim: tab
    :widths: 10,10,80
-            
+
+
+.. _config_model:
+
 model
 -----
 
@@ -244,6 +250,8 @@ included in the ROI model.
    :delim: tab
    :widths: 10,10,80
             
+.. _config_optimizer:
+            
 optimizer
 ---------
 
@@ -253,14 +261,18 @@ optimizer
    :delim: tab
    :widths: 10,10,80
 
+.. _config_plotting:
+            
 plotting
----------
+--------
 
 .. csv-table:: *plotting* Options
    :header:    Option, Default, Description
    :file: config/plotting.csv
    :delim: tab
    :widths: 10,10,80
+
+.. _config_sed:
             
 sed
 ---

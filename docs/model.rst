@@ -5,7 +5,7 @@ Customizing the Model
 
 The ROIModel class is responsible for managing the source and diffuse
 components in the ROI.  Configuration of the model is controlled with
-the *model* block of YAML configuration file.
+the :ref:`config_model` block of YAML configuration file.
 
 Configuring Diffuse Components
 ------------------------------
