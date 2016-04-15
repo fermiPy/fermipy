@@ -377,18 +377,18 @@ IPython Notebook Tutorials
 
 Additional tutorials with more detailed examples are available as
 IPython notebooks in the `notebooks
-<https://github.com/fermiPy/fermipy-extras/tree/master/notebooks/>`_
-directory of the `fermipy-extras
-<https://github.com/fermiPy/fermipy-extras>`_ respository.  These
+<https://github.com/fermiPy/fermipy-extra/tree/master/notebooks/>`_
+directory of the `fermipy-extra
+<https://github.com/fermiPy/fermipy-extra>`_ respository.  These
 notebooks can be browsed as `static web pages
-<http://nbviewer.jupyter.org/github/fermiPy/fermipy-extras/blob/master/notebooks/index.ipynb>`_
-or run interactively by downloading the fermipy-extras repository and
+<http://nbviewer.jupyter.org/github/fermiPy/fermipy-extra/blob/master/notebooks/index.ipynb>`_
+or run interactively by downloading the fermipy-extra repository and
 running ``jupyter notebook`` in the notebooks directory:
 
 .. code-block:: bash
 
-   $ git clone https://github.com/fermiPy/fermipy-extras.git    
-   $ cd fermipy-extras/notebooks
+   $ git clone https://github.com/fermiPy/fermipy-extra.git    
+   $ cd fermipy-extra/notebooks
    $ jupyter notebook index.ipynb
 
 Note that this will require you to have both ipython and jupyter
