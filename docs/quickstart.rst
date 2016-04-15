@@ -15,10 +15,10 @@ The first step is to compose a configuration file that defines the
 data selection and analysis parameters.  Complete documentation on the
 configuration file and available options is given in the :ref:`config`
 page.  fermiPy uses the YAML format for its configuration files.  The
-configuration file has a hierarchical structure in which sets of
-related options are grouped into sections.  The following example is a
-configuration file for a SOURCE-class analysis of Markarian 421 with
-FRONT+BACK event types (evtype=3).
+configuration file has a hierarchical structure that groups sets of
+related options into sections.  The following example is a
+configuration file for a SOURCE-class analysis of Markarian 421
+with FRONT+BACK event types (evtype=3):
 
 .. code-block:: yaml
    
@@ -64,7 +64,7 @@ the ROI center to have the same coordinates as the given source.  The
 *model* section defines parameters related to the ROI model definition
 (diffuse templates, point sources).
 
-fermiPy allows the user to combine multiple data selections into a
+fermiPy gives the user the option to combine multiple data selections into a
 joint likelihood with the *components* section.  The components section
 contains a list of dictionaries with the same hierarchy as the root
 analysis configuration.  Each element of the list defines the analysis
@@ -83,8 +83,9 @@ configuration to define a joint analysis with four PSF event types:
      - { selection : { evtype : 32 } } # PSF3
 
 Any configuration parameter can be changed with this mechanism.  The
-following example shows how to define a different zmax selection and
-isotropic template for each of the four PSF event types:
+following example is a configuration in which a different zmax
+selection and isotropic template is used for each of the four PSF
+event types:
 
 .. code-block:: yaml
 
@@ -374,18 +375,21 @@ analysis instance already exists.
 IPython Notebook Tutorials
 --------------------------
 
-Additional tutorials with more detailed fermipy examples are available
-as IPython notebooks in the `notebooks
-<https://github.com/fermiPy/fermipy/tree/master/notebooks/>`_
-directory of the fermipy respository.  To run any of the notebooks,
-download the fermipy repository and run ``jupyter notebook`` followed
-by the notebook name:
+Additional tutorials with more detailed examples are available as
+IPython notebooks in the `notebooks
+<https://github.com/fermiPy/fermipy-extras/tree/master/notebooks/>`_
+directory of the `fermipy-extras
+<https://github.com/fermiPy/fermipy-extras>`_ respository.  These
+notebooks can be browsed as `static web pages
+<http://nbviewer.jupyter.org/github/fermiPy/fermipy-extras/blob/master/notebooks/index.ipynb>`_
+or run interactively by downloading the fermipy-extras repository and
+running ``jupyter notebook`` in the notebooks directory:
 
 .. code-block:: bash
 
-   git clone https://github.com/fermiPy/fermipy.git
-   cd fermipy/notebooks
-   jupyter notebook PG\ 1553+113.ipynb
+   $ git clone https://github.com/fermiPy/fermipy-extras.git    
+   $ cd fermipy-extras/notebooks
+   $ jupyter notebook index.ipynb
 
 Note that this will require you to have both ipython and jupyter
 installed in your python environment.  These can be installed in a
