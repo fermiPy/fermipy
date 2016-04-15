@@ -261,10 +261,13 @@ Extracting Analysis Results
 Results of the analysis can be extracted from the dictionary file
 written by :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`.  This
 method writes the current ROI model to both an XML model file and a
-results dictionary.  The results dictionary is written in both npy and
-yaml formats and can be loaded from a python session after your
-analysis is complete.  The following example demonstrates how to load
-the dictionary from either format:
+results dictionary.  More documentation on the contents of the output
+file are available in the :ref:`output` page.
+
+The results dictionary is written in both npy and yaml formats and can
+be loaded from a python session after your analysis is complete.  The
+following example demonstrates how to load the dictionary from either
+format:
 
 .. code-block:: python
    
@@ -277,26 +280,15 @@ the dictionary from either format:
    >>> c = np.load('fit_model.npy').flat[0]
    >>>
    >>> print c.keys()
-   ['roi', 'config', 'sources']
+   ['roi', 'config', 'sources', 'version']
 
 The output dictionary contains the following top-level elements:
 
-roi 
-   A dictionary containing information about the ROI as a whole.
-
-config   
-   The configuration dictionary of the
-   :py:class:`~fermipy.gtanalysis.GTAnalysis` instance.
-
-sources
-   A dictionary containing information for individual
-   sources in the model (diffuse and point-like).  Each element of this dictionary
-   maps to a single source in the ROI model.
-
-version
-   The version of the fermiPy package that was used to run this
-   analysis.  This will automatically be generated from the git release
-   tag.
+.. csv-table:: File Dictionary
+   :header:    Key, Description
+   :file: config/file_output.csv
+   :delim: tab
+   :widths: 10,10,80
 
 Each source dictionary collects the properties of the given source
 (TS, NPred, best-fit parameters, etc.) computed up to that point in

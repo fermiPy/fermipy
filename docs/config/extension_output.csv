@@ -1,14 +1,14 @@
-``config``	dict	Copy of the input configuration to this method.
+``width``	`~numpy.ndarray`	Vector of width values.
 ``dlogLike``	`~numpy.ndarray`	Sequence of delta-log-likelihood values for each point in the profile likelihood scan.
+``logLike``	`~numpy.ndarray`	Sequence of likelihood values for each point in the scan over the spatial extension.
+``logLike_ptsrc``	float	Model log-Likelihood value of the best-fit point-source model.
+``logLike_ext``	float	Model log-Likelihood value of the best-fit extended source model.
+``logLike_base``	float	Model log-Likelihood value of the baseline model.
 ``ext``	float	Best-fit extension in degrees.
-``ext_err``	float	Symmetric (1 sigma) error on the best-fit extension in degrees.
 ``ext_err_hi``	float	Upper (1 sigma) error on the best-fit extension in degrees.
 ``ext_err_lo``	float	Lower (1 sigma) error on the best-fit extension in degrees.
+``ext_err``	float	Symmetric (1 sigma) error on the best-fit extension in degrees.
 ``ext_ul95``	float	95% CL upper limit on the spatial extension in degrees.
-``logLike``	`~numpy.ndarray`	Sequence of likelihood values for each point in the scan over the spatial extension.
-``logLike_base``	float	Model log-Likelihood value of the baseline model.
-``logLike_ext``	float	Model log-Likelihood value of the best-fit extended source model.
-``logLike_ptsrc``	float	Model log-Likelihood value of the best-fit point-source model.
-``source_fit``	dict	Dictionary with parameters of the best-fit extended source model.
 ``ts_ext``	float	Test statistic for the extension hypothesis.
-``width``	`~numpy.ndarray`	List of width parameters.
+``source_fit``	dict	Dictionary with parameters of the best-fit extended source model.
+``config``	dict	Copy of the input configuration to this method.

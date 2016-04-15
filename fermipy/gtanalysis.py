@@ -175,9 +175,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     analysis component objects.  Most of the functionality of the
     fermiPy package is provided through the methods of this class.
     The class constructor accepts a dictionary that defines the
-    configuration for the analysis.  Keyword arguments provided in
-    **kwargs can be used to override parameter values in the
-    configuration dictionary."""
+    configuration for the analysis.  Keyword arguments provided can be
+    used to override parameter values in the configuration dictionary.
+
+    """
 
     defaults = {'logging': defaults.logging,
                 'fileio': defaults.fileio,
@@ -2796,26 +2797,23 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.load_xml('tmp')
 
     def simulate_roi(self, name=None, randomize=True, restore=False):
-        """
-        Generate a simulation of the ROI using the current best-fit
-        model and replace the data counts cube with this simulation.
-        The simulation is created by generating an array of Poisson
-        random numbers with expectation values drawn from the model
-        cube of the binned analysis instance.  This function will
-        update the counts cube both in memory and in the source map
-        file.  The counts cube can be restored to its original state
-        by calling this method with `restore`=True.
+        """Generate a simulation of the ROI using the current best-fit model
+        and replace the data counts cube with this simulation.  The
+        simulation is created by generating an array of Poisson random
+        numbers with expectation values drawn from the model cube of
+        the binned analysis instance.  This function will update the
+        counts cube both in memory and in the source map file.  The
+        counts cube can be restored to its original state by calling
+        this method with ``restore`` = True.
 
         Parameters
         ----------
-
         name : str
            Name of the model component to be simulated.  If None then
            the whole ROI will be simulated.
 
         restore : bool
            Restore the data counts cube to its original state.
-           
         """
 
         self.logger.info('Simulating ROI')
@@ -4247,7 +4245,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         Parameters
         ----------
-
         name : str        
            Name of the model component to be simulated.  If None then
            the whole ROI will be simulated.

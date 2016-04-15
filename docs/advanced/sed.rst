@@ -3,16 +3,16 @@
 SED Analysis
 ============
 
-The :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` method can be used
-to compute a spectral energy distribution (SED) for a source by
-fitting the source flux normalization in a sequence of energy bins.
-The normalization in each bin is fit independently using a power-law
-spectrum with a fixed index.  The value of this index can be set with
-the ``bin_index`` parameter or allowed to vary over the energy range
-according to the local slope of the global spectral model (with the
-``use_local_index`` parameter).  By default this method will fix the
-parameters of all background components in the ROI.  To leave
-background parameters free in the fit set ``fix_background`` to True.
+The :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` method computes a
+spectral energy distribution (SED) for a source by fitting the source
+flux normalization in a sequence of energy bins.  The normalization in
+each bin is fit independently using a power-law spectrum with a fixed
+index.  The value of this index can be set with the ``bin_index``
+parameter or allowed to vary over the energy range according to the
+local slope of the global spectral model (with the ``use_local_index``
+parameter).  By default this method will fix the parameters of all
+background components in the ROI.  To leave background parameters free
+in the fit set ``fix_background`` to True.
 
 The default configuration of
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` is defined in the *sed*
@@ -24,9 +24,9 @@ section of the configuration file:
    :delim: tab
    :widths: 10,10,80
 
-The :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` method is
-executed by passing the name of a source in the ROI as a single
-argument.  Additional keyword argument can also be provided to override the
+The :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` method is executed
+by passing the name of a source in the ROI as a single argument.
+Additional keyword argument can also be provided to override the
 default configuration of the method:
 
 .. code-block:: python

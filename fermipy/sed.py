@@ -37,7 +37,9 @@ from LikelihoodState import LikelihoodState
 
 
 def alphaToDeltaLogLike_1DOF(alpha):
-    """ return the delta log-likelihood corresponding to a particular C.L. of (1-alpha)%
+    """return the delta log-likelihood corresponding to a particular
+    C.L. of (1-alpha)%
+
     """
     dlnl = pow(np.sqrt(2.)*spf.erfinv(1-2*alpha),2.)/2.  
     return dlnl
@@ -55,12 +57,14 @@ class SEDGenerator(object):
     `~fermipy.gtanalysis.GTAnalysis`."""
     
     def sed(self, name, profile=True, energies=None, **kwargs):
-        """Generate an SED for a source.  This function will fit the
-        normalization of a given source in each energy bin.
+        """Generate a spectral energy distribution (SED) for a source.  This
+        function will fit the normalization of the source in each
+        energy bin.  By default the SED will be generated with the
+        analysis energy bins but a custom binning can be defined with
+        the ``energies`` parameter.  
 
         Parameters
         ----------
-
         name : str
             Source name.
 
@@ -98,13 +102,17 @@ class SEDGenerator(object):
             calculation of flux upper limits in each energy bin.
 
         cov_scale : float
-            
+            Scaling factor that will be applied when setting the
+            gaussian prior on the normalization of free background
+            sources.  If this parameter is None then no gaussian prior
+            will be applied.
+
         Returns
         -------
-
-        sed : dict Dictionary containing output of the SED analysis.
-            This dictionary is also saved to the 'sed' dictionary of
-            the `~fermipy.roi_model.Source` instance.
+        sed : dict 
+           Dictionary containing output of the SED analysis.  This
+           dictionary is also saved to the 'sed' dictionary of the
+           `~fermipy.roi_model.Source` instance.
 
         """
 
@@ -619,8 +627,9 @@ class SpecData(object):
 
 
 class CastroData(object):
-    """ This class wraps the data needed to make a "Castro" plot, namely 
-        the log-likelihood as a function of normalization for a series of energy bins
+    """This class wraps the data needed to make a "Castro" plot, namely
+        the log-likelihood as a function of normalization for a series
+        of energy bins.
     """
     def __init__(self,norm_vals,nll_vals,specData,fluxType):
         """ C'tor
@@ -836,11 +845,14 @@ class CastroData(object):
         initPars :  The initial values of the parameters     
 
 
-        Returns (result,spec_out,TS_spec)
-        ----------          
-        result   : The output of scipy.optimize.fmin
-        spec_out : The best-fit spectral values
-        TS_spec  : The TS of the best-fit spectrum
+        Returns
+        -------
+        result   : tuple
+           The output of scipy.optimize.fmin
+        spec_out : `~numpy.ndarray`
+           The best-fit spectral values
+        TS_spec  : float
+           The TS of the best-fit spectrum
         """
         fToMin = lambda x : self.__call__(specFunc(x))
         result = scipy.optimize.fmin(fToMin,initPars,disp=False,xtol=1e-6)   
