@@ -131,6 +131,7 @@ class Model(object):
                       'SourceType': None,
                       'SpectrumType': None,
                       'Spatial_Filename': None,
+                      'filefunction' : None,
                       'RAJ2000': 0.0,
                       'DEJ2000': 0.0,
                       'ra': 0.0,
@@ -247,7 +248,7 @@ class Model(object):
         return self._data['assoc']
 
     @staticmethod
-    def create_from_dict(src_dict):
+    def create_from_dict(src_dict, roi_skydir=None):
 
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialType','SkyDirFunction')
@@ -263,7 +264,7 @@ class Model(object):
         elif src_dict['SpatialModel'] == 'DiffuseSource' and src_dict['SpatialType'] == 'MapCubeFunction':
             return MapCubeSource(src_dict['name'],src_dict)
         else:
-            return Source.create_from_dict(src_dict)
+            return Source.create_from_dict(src_dict,roi_skydir)
 
     def _sync_spectral_pars(self):
         """Update spectral parameters dictionary."""
@@ -740,7 +741,7 @@ class Source(Model):
         return self._data
 
     @staticmethod
-    def create_from_dict(src_dict):
+    def create_from_dict(src_dict, roi_skydir=None):
         """Create a source object from a python dictionary."""
 
         src_dict = copy.deepcopy(src_dict)
@@ -776,8 +777,8 @@ class Source(Model):
         else:
             raise Exception('Source name undefined.')
 
-        skydir = utils.get_target_skydir(src_dict)
-
+        skydir = utils.get_target_skydir(src_dict, roi_skydir)
+        
         src_dict['RAJ2000'] = skydir.ra.deg
         src_dict['DEJ2000'] = skydir.dec.deg
 
@@ -1117,7 +1118,7 @@ class ROIModel(fermipy.config.Configurable):
 
         if isinstance(src_dict,dict):
             src_dict['name'] = name
-            src = Model.create_from_dict(src_dict)
+            src = Model.create_from_dict(src_dict,self.skydir)
         else:
             src = src_dict
 
@@ -1650,8 +1651,8 @@ class ROIModel(fermipy.config.Configurable):
         nsrc = len(self._srcs)
         radec = np.zeros((2, nsrc))
 
-        for i, s in enumerate(self._srcs):
-            radec[:, i] = s.radec
+        for i, src in enumerate(self._srcs):
+            radec[:, i] = src.radec
 
         self._src_skydir = SkyCoord(ra=radec[0], dec=radec[1], unit=u.deg)
         self._src_radius = self._src_skydir.separation(self.skydir)

@@ -638,6 +638,24 @@ def val_to_bin_bounded(edges, x):
     return ibin
 
 
+def extend_array(edges,binsz,lo,hi):
+    """Extend an array to encompass lo and hi values."""
+    
+    numlo = int(np.ceil((edges[0]-lo)/binsz))
+    numhi = int(np.ceil((hi-edges[-1])/binsz))
+
+    edges = copy.deepcopy(edges)
+    if numlo > 0:
+        edges_lo = np.linspace(edges[0]-numlo*binsz, edges[0], numlo+1)
+        edges = np.concatenate((edges_lo[:-1],edges))
+        
+    if numhi > 0:
+        edges_hi = np.linspace(edges[-1],edges[-1]+numhi*binsz,numhi+1)
+        edges = np.concatenate((edges,edges_hi[1:]))
+
+    return edges
+        
+
 def mkdir(dir):
     if not os.path.exists(dir):
         os.makedirs(dir)
@@ -1015,7 +1033,11 @@ def sky_to_offset(skydir, lon, lat, coordsys='CEL', projection='AIT'):
     return w.wcs_world2pix(skycrd, 0)
 
 
-def get_target_skydir(config,default=None):
+def get_target_skydir(config,ref_skydir=None):
+
+    if ref_skydir is None:
+        ref_skydir = SkyCoord(0.0,0.0,unit=u.deg)
+    
     radec = config.get('radec', None)
 
     if isinstance(radec, str):
@@ -1036,7 +1058,21 @@ def get_target_skydir(config,default=None):
         return SkyCoord(glon, glat, unit=u.deg,
                         frame='galactic').transform_to('icrs')
 
-    return default
+    offset_ra = config.get('offset_ra', None)
+    offset_dec = config.get('offset_dec', None)
+    
+    if offset_ra is not None and offset_dec is not None:
+        return offset_to_skydir(ref_skydir, offset_ra, offset_dec,
+                                coordsys='CEL')[0]
+
+    offset_glon = config.get('offset_glon', None)
+    offset_glat = config.get('offset_glat', None)
+    
+    if offset_glon is not None and offset_glat is not None:
+        return offset_to_skydir(ref_skydir, offset_glon, offset_glat,
+                                coordsys='GAL')[0]
+        
+    return ref_skydir
 
 
 def convolve2d_disk(fn, r, sig, nstep=200):
