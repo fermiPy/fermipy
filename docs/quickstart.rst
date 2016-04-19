@@ -5,26 +5,35 @@ Quickstart Guide
 
 This page walks through the steps to setup and perform a basic
 spectral analysis of a source.  For additional fermipy tutorials see
-the section on `IPython Notebook Tutorials`_.
+the `IPython Notebook Tutorials`_.  To more easily follow along with
+this example a directory containing pre-generated input files (FT1,
+source maps, etc.) is available from the following link:
 
-
+.. code-block:: bash
+                
+   $ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/mkn421.tar.gz
+   $ tar xzf mkn421.tar.gz
+   $ cd mkn421
+   
 Creating a Configuration File
 -----------------------------
 
 The first step is to compose a configuration file that defines the
 data selection and analysis parameters.  Complete documentation on the
 configuration file and available options is given in the :ref:`config`
-page.  fermiPy uses the YAML format for its configuration files.  The
-configuration file has a hierarchical structure that groups sets of
-related options into sections.  The following example is a
-configuration file for a SOURCE-class analysis of Markarian 421
-with FRONT+BACK event types (evtype=3):
+page.  fermiPy uses the `YAML format <http://yaml.org/>`_ for its
+configuration files.  The configuration file has a hierarchical
+organization that groups related parameters into separate
+dictionaries.  In this example we will compose a configuration file
+for a SOURCE-class analysis of Markarian 421 with FRONT+BACK event
+types (evtype=3):
 
 .. code-block:: yaml
    
    data:
      evfile : ft1.lst
      scfile : ft2.fits
+     ltfile : ltcube.fits
      
    binning:
      roiwidth   : 10.0    
@@ -33,15 +42,15 @@ with FRONT+BACK event types (evtype=3):
 
    selection :
      emin : 100
-     emax : 100000
+     emax : 316227.76
      zmax    : 90
      evclass : 128
      evtype  : 3
-     target : 'mkn421'
      tmin    : 239557414
      tmax    : 428903014
      filter  : null
-
+     target : 'mkn421'
+     
    gtlike:
      edisp : True
      irfs : 'P8R2_SOURCE_V6'
@@ -64,11 +73,11 @@ the ROI center to have the same coordinates as the given source.  The
 *model* section defines parameters related to the ROI model definition
 (diffuse templates, point sources).
 
-fermiPy gives the user the option to combine multiple data selections into a
-joint likelihood with the *components* section.  The components section
-contains a list of dictionaries with the same hierarchy as the root
-analysis configuration.  Each element of the list defines the analysis
-parameters for an independent sub-selection of the data.  Any
+Fermipy gives the user the option to combine multiple data selections
+into a joint likelihood with the *components* section.  The components
+section contains a list of dictionaries with the same hierarchy as the
+root analysis configuration.  Each element of the list defines the
+analysis parameters for an independent sub-selection of the data.  Any
 parameters not defined within the component dictionary default to the
 value defined in the root configuration.  The following example shows
 the *components* section that could be appended to the previous

@@ -52,24 +52,49 @@ Configuration File
 
 fermiPy uses YAML files to read and write its configuration in a
 persistent format.  The configuration file has a hierarchical
-structure that organizes parameters into groups that are keyed to a
-section name (*data*, *binnig*, etc.).
+organization that groups parameters into dictionaries that are keyed
+to a section name (*data*, *binnig*, etc.).  
 
 .. code-block:: yaml
    :caption: Sample Configuration
-                
-   data:
-      evfile : ft1.fits
-      scfile : ft2.fits
 
+   data:
+     evfile : ft1.lst
+     scfile : ft2.fits
+     ltfile : ltcube.fits
+     
    binning:
-     roiwidth   : 10.0
+     roiwidth   : 10.0    
      binsz      : 0.1 
      binsperdec : 8   
-             
+
+   selection :
+     emin : 100
+     emax : 316227.76
+     zmax    : 90
+     evclass : 128
+     evtype  : 3
+     tmin    : 239557414
+     tmax    : 428903014
+     filter  : null
+     target : 'mkn421'
+     
+   gtlike:
+     edisp : True
+     irfs : 'P8R2_SOURCE_V6'
+     edisp_disable : ['isodiff','galdiff']
+
+   model:
+     src_roiwidth : 15.0
+     galdiff  : '$FERMI_DIFFUSE_DIR/gll_iem_v06.fits'
+     isodiff  : 'iso_P8R2_SOURCE_V6_v06.txt'
+     catalogs : ['3FGL']
+                          
 The configuration file mirrors the layout of the configuration
-dictionary.  The parameters that can be set in each section are
-described below.
+dictionary.  Most of the available configuration parameters are
+optional and if not set explicitly in the configuration file will be
+set to a default value.  The parameters that can be set in each
+section are described below.
      
 binning
 -------
