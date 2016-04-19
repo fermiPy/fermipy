@@ -75,6 +75,9 @@ class Configurable(object):
 
         self._config = self.get_config()
 
+        if isinstance(config,str) and not os.path.isfile(config):
+            raise Exception('Invalid path to configuration file: %s'%config)
+        
         if isinstance(config, dict) or config is None:
             pass
         elif os.path.isfile(config) and 'fileio' in self._config:
