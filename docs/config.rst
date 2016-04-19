@@ -4,29 +4,30 @@ Configuration
 =============
 
 This page describes the configuration management scheme used within
-the fermiPy package and the documents the analysis options that can be
-controlled with the configuration file.
+the fermiPy package and the documents the configuration parameters
+that can be set in the configuration file.
 
 
 ##################################
 Class Configuration
 ##################################
 
-Classes in the fermiPy package follow a common convention by which the
-the runtime behavior of a class instance can be controlled.
-Internally every class instance has a dictionary that defines its
-configuration state.  Elements of this dictionary can be scalars (str,
+Classes in the fermiPy package follow a common convention for
+configuring the runtime behavior of a class instance.  Internally
+every class instance has a dictionary that defines its configuration
+state.  Elements of the configuration dictionary can be scalars (str,
 int ,float) or dictionaries defining nested blocks of the
 configuration.
 
-The class configuration dictionary is set at the time of object
-creation by passing a dictionary or a path to YAML configuration file
-to the class constructor.  Optional kwargs arguments can be used to
-override options in the input dictionary.  For instance in the
-following example the *config* dictionary defines values for the
-parameters *emin* and *emax*.  By passing an additional dictionary for
-the selection block, the value of emax in the kwargs argument (10000)
-overrides the value of this parameter in the config dictionary.
+The class configuration dictionary is initialized at the time of
+object creation by passing a dictionary or a path to YAML
+configuration file to the class constructor.  Keyword arguments can be
+optionally passed to the constructor to override configuration
+parameters in the input dictionary.  For instance in the following
+example the *config* dictionary defines values for the parameters
+*emin* and *emax*.  By passing a dictionary for the *selection*
+keyword argument, the value of emax in the keyword argument (10000)
+overrides the value of this parameter in the input dictionary.
 
 .. code-block:: python
    
@@ -37,8 +38,8 @@ overrides the value of this parameter in the config dictionary.
 
    gta = GTAnalysis(config,selection={'emax' : 10000})
    
-Alternatively the config argument can be the path to a YAML
-configuration file:
+The first argument can also be the path to a YAML configuration file
+rather than a dictionary:
 
 .. code-block:: python
    
@@ -49,15 +50,26 @@ configuration file:
 Configuration File
 ##################################
 
-fermiPy uses YAML configuration files which define a hierarchy of
-parameters organized in sections that group sets of related options.
+fermiPy uses YAML files to read and write its configuration in a
+persistent format.  The configuration file has a hierarchical
+structure that organizes parameters into groups that are keyed to a
+section name (*data*, *binnig*, etc.).
+
+.. code-block:: yaml
+   :caption: Sample Configuration
+                
+   data:
+      evfile : ft1.fits
+      scfile : ft2.fits
+
+   binning:
+     roiwidth   : 10.0
+     binsz      : 0.1 
+     binsperdec : 8   
+             
 The configuration file mirrors the layout of the configuration
-dictionary.  The options that can be set in each section are described
-below.
-
-
-     
-
+dictionary.  The parameters that can be set in each section are
+described below.
      
 binning
 -------

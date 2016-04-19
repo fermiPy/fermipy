@@ -31,6 +31,7 @@ Documentation Contents
    quickstart
    config
    output
+   fitting
    model
    advanced/index
    fermipy

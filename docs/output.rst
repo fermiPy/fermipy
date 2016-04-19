@@ -11,9 +11,9 @@ The current state of the ROI can be written at any point by calling
    >>> gta.write_roi('output.npy')
 
 The output file will contain all information about the state of the
-ROI up to that point in the analysis including model parameters and
-measured source characteristics (flux, TS, NPred).  An XML model file
-will also be saved for each analysis component.
+ROI as calculated up to that point in the analysis including model
+parameters and measured source characteristics (flux, TS, NPred).  An
+XML model file will also be saved for each analysis component.
    
 The output file can be read with `~numpy.load`:
 

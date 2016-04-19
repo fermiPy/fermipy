@@ -148,6 +148,20 @@ optimizer = {
     'verbosity': (0, '', int)
 }
 
+fit_output = {
+    'fit_quality' : (None, 'Fit quality parameter (3 - Full accurate covariance matrix, '
+                     '2 - Full matrix, but forced positive-definite (i.e. not accurate), '
+                     '1 - Diagonal approximation only, not accurate, '
+                     '0 - Error matrix not calculated at all)',int,'int'),
+    'covariance' : (None, 'Covariance matrix between free parameters of the fit.',np.ndarray, '`~numpy.ndarray`'),
+    'correlation' : (None, 'Correlation matrix between free parameters of the fit.',np.ndarray, '`~numpy.ndarray`'),
+    'dlogLike' : (None, 'Improvement in log-likehood value.',float,'float'),
+    'logLike' : (None, 'Post-fit log-likehood value.',float,'float'),
+    'values' : (None, 'Vector of best-fit parameter values (unscaled).',np.ndarray, '`~numpy.ndarray`'),
+    'errors' : (None, 'Vector of parameter errors (unscaled).',np.ndarray, '`~numpy.ndarray`'),
+    'config' : (None, 'Copy of input configuration to this method.',dict,'dict'),
+}
+
 # MC options
 mc = {
     'seed' : (None, '', int)
