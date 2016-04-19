@@ -201,15 +201,16 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     def __init__(self, config, **kwargs):
 
+        # Setup directories
+        self._rootdir = os.getcwd()
+        self._savedir = None
+        
         super(GTAnalysis, self).__init__(config, validate=True,**kwargs)
 
         self._projtype = self.config['binning']['projtype']
 
         # Set random seed
         np.random.seed(self.config['mc']['seed'])
-        
-        # Setup directories
-        self._rootdir = os.getcwd()
 
         # Destination directory for output data products
         if self.config['fileio']['outdir'] is not None:
@@ -483,7 +484,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
         self.like.model = self.like.components[0].model
 
-    def set_source_spectrum(self,name,spectrum_type='PowerLaw',
+    def set_source_spectrum(self, name, spectrum_type='PowerLaw',
                             spectrum_pars=None, update_source=True):
         """Set the spectral model of a source.  This function can be
         used to change the spectral type of a source or modify its
@@ -509,6 +510,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
            using the new spectral model of the source.
            
         """
+        name = self.roi.get_source_by_name(name, True).name
         
         if spectrum_type == 'FileFunction':
             self._create_filefunction(name,spectrum_pars)
@@ -520,9 +522,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # Get parameters
         src = self.components[0].like.logLike.getSource(name)
         pars_dict = gtutils.get_pars_dict_from_source(src)
-
-        import pprint
-        pprint.pprint(pars_dict)
         
         self.roi[name].set_spectral_pars(pars_dict)
         self.roi[name]['SpectrumType'] = spectrum_type
@@ -532,14 +531,101 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         if update_source:
             self.update_source(name)
-            
-    def _create_filefunction(self,name,spectrum_pars):
-        # Get the values
-        energies = np.linspace(0.5,6.5,16*6+1)
-        dfde = np.zeros(len(energies))
 
-        for i, egy in enumerate(energies):
-            dfde[i] = self.like[name].spectrum()(pyLike.dArg(10 ** egy))
+    def set_source_dfde(self, name, dfde, update_source=True):
+        """Set the differential flux distribution of a source with the
+        FileFunction spectral type.
+
+        Parameters
+        ----------
+        name : str
+           Source name.
+        
+        dfde : `~numpy.ndarray`
+           Array of differential flux values (cm^{-2} s^{-1} MeV^{-1}).
+        """
+        name = self.roi.get_source_by_name(name, True).name
+        
+        if self.roi[name]['SpectrumType'] != 'FileFunction':
+            msg = 'Wrong spectral type: %s'%self.roi[name]['SpectrumType']
+            self.logger.error(msg)
+            raise Exception(msg)
+
+        xy = self.get_source_dfde(name)
+
+        if len(dfde) != len(xy[0]):
+            msg = 'Wrong length for dfde array: %i'%len(dfde)
+            self.logger.error(msg)
+            raise Exception(msg)
+        
+        for c in self.components:
+            src = c.like.logLike.getSource(name)
+            spectrum = src.spectrum()
+            file_function = pyLike.FileFunction_cast(spectrum)
+            file_function.setSpectrum(10**xy[0],dfde)
+
+        if update_source:
+            self.update_source(name)
+
+    def get_source_dfde(self, name):
+        """Return differential flux distribution of a source.  For
+        sources with FileFunction spectral type this returns the
+        internal differential flux array.
+
+        Returns
+        -------
+        loge : `~numpy.ndarray`        
+           Array of energies at which the differential flux is
+           evaluated (log10(E/MeV)).
+        
+        dfde : `~numpy.ndarray`        
+           Array of differential flux values (cm^{-2} s^{-1} MeV^{-1})
+           evaluated at energies in ``loge``.
+        
+        """
+        name = self.roi.get_source_by_name(name, True).name
+
+        if self.roi[name]['SpectrumType'] != 'FileFunction':
+        
+            src = self.components[0].like.logLike.getSource(name)
+            spectrum = src.spectrum()
+            file_function = pyLike.FileFunction_cast(spectrum)
+            loge = file_function.log_energy()
+            logdfde = file_function.log_dnde()
+            
+            loge = np.log10(np.exp(loge))
+            dfde = np.exp(logdfde)
+        
+            return loge, dfde
+
+        else:
+            ebinsz = (self.energies[-1]-self.energies[0])/self.enumbins
+            loge = utils.extend_array(self.energies,ebinsz,0.5,6.5)
+
+            dfde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
+                             for egy in loge])
+
+            return loge, dfde
+        
+    def _create_filefunction(self,name,spectrum_pars):
+        """Replace the spectrum of an existing source with a
+        FileFunction."""
+        
+        spectrum_pars = {} if spectrum_pars is None else spectrum_pars
+
+        if 'loge' in spectrum_pars:
+            energies = spectrum_pars.get('loge')
+        else:            
+            ebinsz = (self.energies[-1]-self.energies[0])/self.enumbins
+            energies = utils.extend_array(self.energies,ebinsz,0.5,6.5)
+            
+        # Get the values
+        dfde = np.zeros(len(energies))
+        if 'dfde' in spectrum_pars:
+            dfde = spectrum_pars.get('dfde')
+        else:
+            dfde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
+                             for egy in energies])
             
         filename = \
             os.path.join(self.workdir,
@@ -549,7 +635,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         np.savetxt(filename,
                    np.stack((10**energies,dfde),axis=1))
         self.like.setSpectrum(name, 'FileFunction')
-        
+
+        self.roi[name]['filefunction'] = filename
         # Update
         for c in self.components:
             src = c.like.logLike.getSource(name)
@@ -558,9 +645,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             spectrum.getParam('Normalization').setBounds(1E-3,1E3)
             
             file_function = pyLike.FileFunction_cast(spectrum)
-            print 'reading ', filename
             file_function.readFunction(filename)
-        #self.like.spectrum().setSpectrum(10**energies,dfde)
+            c.roi[name]['filefunction'] = filename 
             
     def _create_component_configs(self):
         configs = []
