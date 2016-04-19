@@ -633,8 +633,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                          '%s_filespectrum.txt'%(name.lower().replace(' ','_')))
             
         # Create file spectrum txt file
-        np.savetxt(filename,
-                   np.stack((10**energies,dfde),axis=1))
+        np.savetxt(filename,np.vstack((10**energies,dfde)).T)
+#                   np.stack((10**energies,dfde),axis=1))
         self.like.setSpectrum(name, 'FileFunction')
 
         self.roi[name]['filefunction'] = filename
