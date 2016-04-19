@@ -624,14 +624,17 @@ class SEDPlotter(object):
 
         delo = 10 ** sed['ecenter'] - 10 ** sed['emin']
         dehi = 10 ** sed['emax'] - 10 ** sed['ecenter']
-        xerr = np.vstack((delo, dehi))
+        xerr0 = np.vstack((delo[m], dehi[m]))
+        xerr1 = np.vstack((delo[~m], dehi[~m]))
 
-        draw_arrows(x[m], y[m], color=color)
-        plt.errorbar(x, y, xerr=xerr, yerr=(yerr_lo, yerr_hi), **kwargs)
+        plt.errorbar(x[~m], y[~m], xerr=xerr1, yerr=(yerr_lo[~m], yerr_hi[~m]), **kwargs)
+        plt.errorbar(x[m], yul[m], xerr=xerr0, yerr=yul[m]*0.2, uplims=True, **kwargs)
 
         plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
         plt.gca().set_xlim(10 ** sed['emin'][0], 10 ** sed['emax'][-1])
+        plt.gca().set_ylim(min(1E-8,np.min(y)*0.5),max(1E-5,np.max(y)*1.5))
+        
 
     @staticmethod
     def plot_sed_resid(src, model_flux, **kwargs):
@@ -711,10 +714,12 @@ class SEDPlotter(object):
 
         SEDPlotter.plot_sed(sed)
 
-        if 'model_flux' in sed:
-            SEDPlotter.plot_model(sed['model_flux'], noband=showlnl)        
-        elif 'model_flux' in src:
-            SEDPlotter.plot_model(src, noband=showlnl)
+        if src['ts'] > 9.:
+        
+            if 'model_flux' in sed:
+                SEDPlotter.plot_model(sed['model_flux'], noband=showlnl)        
+            elif 'model_flux' in src:
+                SEDPlotter.plot_model(src, noband=showlnl)
 
         if showlnl:
             SEDPlotter.plot_lnlscan(sed, cmap=cmap)

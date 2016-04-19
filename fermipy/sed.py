@@ -192,7 +192,8 @@ class SEDGenerator(object):
         self._latch_free_params()
         self.free_sources(False,pars='shape')
         self.free_source(name)
-        self.fit(loglevel=logging.DEBUG,update=False)
+        self.fit(loglevel=logging.DEBUG,update=False,
+                 min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
         
         self._restore_free_params()

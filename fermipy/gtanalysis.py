@@ -2699,7 +2699,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.logger.debug("Fit iteration: %i" % niter)
             niter += 1
             quality = self._run_fit(**kw)
-            if quality > 2:
+            if quality >= config['min_fit_quality']:
                 break
             
         self.logger.debug("Fit complete.")        
