@@ -15,10 +15,10 @@ The first step is to compose a configuration file that defines the
 data selection and analysis parameters.  Complete documentation on the
 configuration file and available options is given in the :ref:`config`
 page.  fermiPy uses the YAML format for its configuration files.  The
-configuration file has a hierarchical structure in which sets of
-related options are grouped into sections.  The following example is a
-configuration file for a SOURCE-class analysis of Markarian 421 with
-FRONT+BACK event types (evtype=3).
+configuration file has a hierarchical structure that groups sets of
+related options into sections.  The following example is a
+configuration file for a SOURCE-class analysis of Markarian 421
+with FRONT+BACK event types (evtype=3):
 
 .. code-block:: yaml
    
@@ -64,7 +64,7 @@ the ROI center to have the same coordinates as the given source.  The
 *model* section defines parameters related to the ROI model definition
 (diffuse templates, point sources).
 
-fermiPy allows the user to combine multiple data selections into a
+fermiPy gives the user the option to combine multiple data selections into a
 joint likelihood with the *components* section.  The components section
 contains a list of dictionaries with the same hierarchy as the root
 analysis configuration.  Each element of the list defines the analysis
@@ -83,8 +83,9 @@ configuration to define a joint analysis with four PSF event types:
      - { selection : { evtype : 32 } } # PSF3
 
 Any configuration parameter can be changed with this mechanism.  The
-following example shows how to define a different zmax selection and
-isotropic template for each of the four PSF event types:
+following example is a configuration in which a different zmax
+selection and isotropic template is used for each of the four PSF
+event types:
 
 .. code-block:: yaml
 
@@ -260,10 +261,13 @@ Extracting Analysis Results
 Results of the analysis can be extracted from the dictionary file
 written by :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`.  This
 method writes the current ROI model to both an XML model file and a
-results dictionary.  The results dictionary is written in both npy and
-yaml formats and can be loaded from a python session after your
-analysis is complete.  The following example demonstrates how to load
-the dictionary from either format:
+results dictionary.  More documentation on the contents of the output
+file are available in the :ref:`output` page.
+
+The results dictionary is written in both npy and yaml formats and can
+be loaded from a python session after your analysis is complete.  The
+following example demonstrates how to load the dictionary from either
+format:
 
 .. code-block:: python
    
@@ -276,26 +280,15 @@ the dictionary from either format:
    >>> c = np.load('fit_model.npy').flat[0]
    >>>
    >>> print c.keys()
-   ['roi', 'config', 'sources']
+   ['roi', 'config', 'sources', 'version']
 
 The output dictionary contains the following top-level elements:
 
-roi 
-   A dictionary containing information about the ROI as a whole.
-
-config   
-   The configuration dictionary of the
-   :py:class:`~fermipy.gtanalysis.GTAnalysis` instance.
-
-sources
-   A dictionary containing information for individual
-   sources in the model (diffuse and point-like).  Each element of this dictionary
-   maps to a single source in the ROI model.
-
-version
-   The version of the fermiPy package that was used to run this
-   analysis.  This will automatically be generated from the git release
-   tag.
+.. csv-table:: File Dictionary
+   :header:    Key, Description
+   :file: config/file_output.csv
+   :delim: tab
+   :widths: 10,10,80
 
 Each source dictionary collects the properties of the given source
 (TS, NPred, best-fit parameters, etc.) computed up to that point in
@@ -374,18 +367,21 @@ analysis instance already exists.
 IPython Notebook Tutorials
 --------------------------
 
-Additional tutorials with more detailed fermipy examples are available
-as IPython notebooks in the `notebooks
-<https://github.com/fermiPy/fermipy/tree/master/notebooks/>`_
-directory of the fermipy respository.  To run any of the notebooks,
-download the fermipy repository and run ``jupyter notebook`` followed
-by the notebook name:
+Additional tutorials with more detailed examples are available as
+IPython notebooks in the `notebooks
+<https://github.com/fermiPy/fermipy-extra/tree/master/notebooks/>`_
+directory of the `fermipy-extra
+<https://github.com/fermiPy/fermipy-extra>`_ respository.  These
+notebooks can be browsed as `static web pages
+<http://nbviewer.jupyter.org/github/fermiPy/fermipy-extra/blob/master/notebooks/index.ipynb>`_
+or run interactively by downloading the fermipy-extra repository and
+running ``jupyter notebook`` in the notebooks directory:
 
 .. code-block:: bash
 
-   git clone https://github.com/fermiPy/fermipy.git
-   cd fermipy/notebooks
-   jupyter notebook PG\ 1553+113.ipynb
+   $ git clone https://github.com/fermiPy/fermipy-extra.git    
+   $ cd fermipy-extra/notebooks
+   $ jupyter notebook index.ipynb
 
 Note that this will require you to have both ipython and jupyter
 installed in your python environment.  These can be installed in a

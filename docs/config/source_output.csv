@@ -1,0 +1,27 @@
+``ra``	float	Right ascension.
+``dec``	float	Declination.
+``glon``	float	Galactic Longitude.
+``glat``	float	Galactic Latitude.
+``ts``	float	Source test statistic.
+``params``	dict	Dictionary of spectral parameters.
+``Npred``	float	Number of predicted counts from this source integrated over the analysis energy range.
+``model_counts``	`~numpy.ndarray`	Vector of predicted counts for this source in each analysis energy bin.
+``sed``	dict	Output of SED analysis.  See :ref:`sed` for more information.
+``extension``	dict	Output of extension analysis.  See :ref:`extension` for more information.
+``localize``	dict	Output of localization analysis.  See :ref:`localization` for more information.
+``flux``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``flux100``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``flux1000``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``flux10000``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``eflux``	`~numpy.ndarray`	Energy flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``eflux100``	`~numpy.ndarray`	Energy flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``eflux1000``	`~numpy.ndarray`	Energy flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``eflux10000``	`~numpy.ndarray`	Energy flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``dfde``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at the pivot energy.
+``dfde100``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 100 MeV.
+``dfde1000``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 1 GeV.
+``dfde10000``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 10 GeV.
+``e2dfde``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at the pivot energy.
+``e2dfde100``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at 100 MeV.
+``e2dfde1000``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at 1 GeV.
+``e2dfde10000``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at 10 GeV.

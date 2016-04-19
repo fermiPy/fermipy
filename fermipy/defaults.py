@@ -1,4 +1,5 @@
 import copy
+from collections import OrderedDict
 import numpy as np
 
 def make_default_dict(d):
@@ -8,6 +9,10 @@ def make_default_dict(d):
         o[k] = copy.deepcopy(v[0])
 
     return o
+
+DIFF_FLUX_UNIT = ':math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`'
+FLUX_UNIT = ':math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`'
+ENERGY_FLUX_UNIT = ':math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`'
 
 # Options for defining input data files
 data = {
@@ -222,31 +227,31 @@ sed = {
 }
 
 # Output for SED analysis
-sed_output = {
-    'emin' : (None, 'Lower edges of SED energy bins (log10(E/MeV)).',np.ndarray,'`~numpy.ndarray`'),
-    'emax' : (None, 'Upper edges of SED energy bins (log10(E/MeV)).',np.ndarray,'`~numpy.ndarray`'),
-    'ecenter' : (None, 'Centers of SED energy bins (log10(E/MeV)).',np.ndarray,'`~numpy.ndarray`'),
-    'flux' : (None, 'Flux in each bin (cm^{-2} s^{-1}).',np.ndarray,'`~numpy.ndarray`'),
-    'eflux' : (None, 'Energy flux in each bin (MeV cm^{-2} s^{-1}).',np.ndarray,'`~numpy.ndarray`'),
-    'dfde' : (None, 'Differential flux in each bin (MeV^{-1} cm^{-2} s^{-1}).',np.ndarray,'`~numpy.ndarray`'),
-    'e2dfde' :       (None, 'E^2 x the differential flux in each bin (MeV^{-1} cm^{-2} s^{-1}).',np.ndarray,'`~numpy.ndarray`'),
-    'dfde_err' :     (None, '1-sigma error on dfde evaluated from likelihood curvature.',np.ndarray,'`~numpy.ndarray`'),
-    'dfde_err_lo' :  (None, 'Lower 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
-    'dfde_err_hi' :  (None, 'Upper 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
-    'dfde_ul95' :    (None, '95% CL upper limit on dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
-    'dfde_ul' :      (None, 'Upper limit on dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.',np.ndarray,'`~numpy.ndarray`'),
-    'e2dfde_err' :   (None, '1-sigma error on e2dfde evaluated from likelihood curvature.',np.ndarray,'`~numpy.ndarray`'),
-    'e2dfde_err_lo' : (None, 'Lower 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
-    'e2dfde_err_hi' : (None, 'Upper 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
-    'e2dfde_ul95' :  (None, '95% CL upper limit on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`'),
-    'e2dfde_ul' :    (None, 'Upper limit on e2dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.',np.ndarray,'`~numpy.ndarray`'),
-    'ts' :           (None, 'Test statistic.',np.ndarray,'`~numpy.ndarray`'),
-    'Npred' :        (None, 'Number of model counts.',np.ndarray,'`~numpy.ndarray`'),
-    'fit_quality' :  (None, 'Fit quality parameter.',np.ndarray,'`~numpy.ndarray`'),
-    'index' :        (None, 'Spectral index of the power-law model used to fit this bin.',np.ndarray,'`~numpy.ndarray`'),
-    'lnlprofile' :   (None, 'Likelihood scan for each energy bin.',dict,'dict'),
-    'config' :       (None, 'Copy of input configuration to this method.',dict,'dict'),
-}
+sed_output = OrderedDict((
+    ('emin', (None, 'Lower edges of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
+    ('emax', (None, 'Upper edges of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
+    ('ecenter', (None, 'Centers of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
+    ('flux', (None, 'Flux in each bin (%s).'%FLUX_UNIT,np.ndarray, '`~numpy.ndarray`')),
+    ('eflux', (None, 'Energy flux in each bin (%s).'%ENERGY_FLUX_UNIT,np.ndarray,'`~numpy.ndarray`')),
+    ('dfde', (None, 'Differential flux in each bin (%s).'%DIFF_FLUX_UNIT,np.ndarray,'`~numpy.ndarray`')),
+    ('e2dfde', (None, 'E^2 x the differential flux in each bin (%s).'%ENERGY_FLUX_UNIT,np.ndarray,'`~numpy.ndarray`')),
+    ('dfde_err', (None, '1-sigma error on dfde evaluated from likelihood curvature.',np.ndarray,'`~numpy.ndarray`')),
+    ('dfde_err_lo', (None, 'Lower 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`')),
+    ('dfde_err_hi', (None, 'Upper 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`')),
+    ('dfde_ul95', (None, '95% CL upper limit on dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`')),
+    ('dfde_ul', (None, 'Upper limit on dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.',np.ndarray,'`~numpy.ndarray`')),
+    ('e2dfde_err', (None, '1-sigma error on e2dfde evaluated from likelihood curvature.',np.ndarray,'`~numpy.ndarray`')),
+    ('e2dfde_err_lo', (None, 'Lower 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`')),
+    ('e2dfde_err_hi', (None, 'Upper 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`')),
+    ('e2dfde_ul95', (None, '95% CL upper limit on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`')),
+    ('e2dfde_ul', (None, 'Upper limit on e2dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.',np.ndarray,'`~numpy.ndarray`')),
+    ('ts', (None, 'Test statistic.',np.ndarray,'`~numpy.ndarray`')),
+    ('Npred', (None, 'Number of model counts.',np.ndarray,'`~numpy.ndarray`')),
+    ('fit_quality', (None, 'Fit quality parameter.',np.ndarray,'`~numpy.ndarray`')),
+    ('index', (None, 'Spectral index of the power-law model used to fit this bin.',np.ndarray,'`~numpy.ndarray`')),
+    ('lnlprofile', (None, 'Likelihood scan for each energy bin.',dict,'dict')),
+    ('config', (None, 'Copy of input configuration to this method.',dict,'dict')),
+))
 
 # Options for extension analysis
 extension = {
@@ -263,22 +268,22 @@ extension = {
     'update': (False, 'Update the source model with the best-fit spatial extension.', bool)
 }
 
-extension_output = {
-    'width': (None, 'List of width parameters.',np.ndarray,'`~numpy.ndarray`'),
-    'dlogLike': (None, 'Sequence of delta-log-likelihood values for each point in the profile likelihood scan.',np.ndarray,'`~numpy.ndarray`'),
-    'logLike': (None, 'Sequence of likelihood values for each point in the scan over the spatial extension.',np.ndarray,'`~numpy.ndarray`'),
-    'logLike_ptsrc': (np.nan,'Model log-Likelihood value of the best-fit point-source model.',float,'float'),
-    'logLike_ext': (np.nan,'Model log-Likelihood value of the best-fit extended source model.',float,'float'),
-    'logLike_base': (np.nan,'Model log-Likelihood value of the baseline model.',float,'float'),
-    'ext': (np.nan, 'Best-fit extension in degrees.',float,'float'),
-    'ext_err_hi': (np.nan, 'Upper (1 sigma) error on the best-fit extension in degrees.',float,'float'),
-    'ext_err_lo': (np.nan,'Lower (1 sigma) error on the best-fit extension in degrees.',float,'float'),
-    'ext_err': (np.nan,'Symmetric (1 sigma) error on the best-fit extension in degrees.',float,'float'),
-    'ext_ul95': (np.nan,'95% CL upper limit on the spatial extension in degrees.',float,'float'),
-    'ts_ext': (np.nan,'Test statistic for the extension hypothesis.',float,'float'),
-    'source_fit': ({},'Dictionary with parameters of the best-fit extended source model.',dict,'dict'),
-    'config': ({},'Copy of the input configuration to this method.',dict,'dict')
-    }
+extension_output = OrderedDict((
+    ('width', (None, 'Vector of width values.',np.ndarray,'`~numpy.ndarray`')),
+    ('dlogLike', (None, 'Sequence of delta-log-likelihood values for each point in the profile likelihood scan.',np.ndarray,'`~numpy.ndarray`')),
+    ('logLike', (None, 'Sequence of likelihood values for each point in the scan over the spatial extension.',np.ndarray,'`~numpy.ndarray`')),
+    ('logLike_ptsrc', (np.nan,'Model log-Likelihood value of the best-fit point-source model.',float,'float')),
+    ('logLike_ext', (np.nan,'Model log-Likelihood value of the best-fit extended source model.',float,'float')),
+    ('logLike_base', (np.nan,'Model log-Likelihood value of the baseline model.',float,'float')),
+    ('ext', (np.nan, 'Best-fit extension in degrees.',float,'float')),
+    ('ext_err_hi', (np.nan, 'Upper (1 sigma) error on the best-fit extension in degrees.',float,'float')),
+    ('ext_err_lo', (np.nan,'Lower (1 sigma) error on the best-fit extension in degrees.',float,'float')),
+    ('ext_err', (np.nan,'Symmetric (1 sigma) error on the best-fit extension in degrees.',float,'float')),
+    ('ext_ul95', (np.nan,'95% CL upper limit on the spatial extension in degrees.',float,'float')),
+    ('ts_ext', (np.nan,'Test statistic for the extension hypothesis.',float,'float')),
+    ('source_fit', ({},'Dictionary with parameters of the best-fit extended source model.',dict,'dict')),
+    ('config', ({},'Copy of the input configuration to this method.',dict,'dict')),
+))
 
 # Options for localization analysis
 localize = {
@@ -291,20 +296,20 @@ localize = {
 
 # Output for localization analysis
 localize_output  = {
-    'ra' : (np.nan,'Right ascension of best-fit position in deg.',float,'float'),
-    'dec' : (np.nan,'Declination of best-fit position in deg.',float,'float'),
-    'glon' : (np.nan,'Galactic Longitude of best-fit position in deg.',float,'float'),
-    'glat' : (np.nan,'Galactic Latitude of best-fit position in deg.',float,'float'),
-    'offset' : (np.nan,'Angular offset in deg between the current and localized source position.',float,'float'),
-    'r68'  : (np.nan,'68% positional uncertainty in deg.',float,'float'),
-    'r95'  : (np.nan,'95% positional uncertainty in deg.',float,'float'),
-    'r99'  : (np.nan,'99% positional uncertainty in deg.',float,'float'),
-    'sigmax'  : (np.nan,'1-sigma uncertainty in deg in longitude.',float,'float'),
-    'sigmay'  : (np.nan,'1-sigma uncertainty in deg in latitude.',float,'float'),
-    'xpix'  : (np.nan,'Longitude pixel coordinate of best-fit position.',float,'float'),
-    'ypix'  : (np.nan,'Latitude pixel coordinate of best-fit position.',float,'float'),
-    'theta'  : (np.nan,'Position angle of uncertainty ellipse.',float,'float'),
-    'config' : (None, 'Copy of the input parameters to this method.',dict,'dict')
+    'ra': (np.nan,'Right ascension of best-fit position in deg.',float,'float'),
+    'dec': (np.nan,'Declination of best-fit position in deg.',float,'float'),
+    'glon': (np.nan,'Galactic Longitude of best-fit position in deg.',float,'float'),
+    'glat': (np.nan,'Galactic Latitude of best-fit position in deg.',float,'float'),
+    'offset': (np.nan,'Angular offset in deg between the current and localized source position.',float,'float'),
+    'r68': (np.nan,'68% positional uncertainty in deg.',float,'float'),
+    'r95': (np.nan,'95% positional uncertainty in deg.',float,'float'),
+    'r99': (np.nan,'99% positional uncertainty in deg.',float,'float'),
+    'sigmax': (np.nan,'1-sigma uncertainty in deg in longitude.',float,'float'),
+    'sigmay': (np.nan,'1-sigma uncertainty in deg in latitude.',float,'float'),
+    'xpix': (np.nan,'Longitude pixel coordinate of best-fit position.',float,'float'),
+    'ypix': (np.nan,'Latitude pixel coordinate of best-fit position.',float,'float'),
+    'theta': (np.nan,'Position angle of uncertainty ellipse.',float,'float'),
+    'config': (None, 'Copy of the input parameters to this method.',dict,'dict')
 }
 
 # Options for plotting
@@ -318,3 +323,58 @@ plotting = {
         (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),
     
 }
+
+# Source dictionary
+source_output = OrderedDict((
+    ('ra', (np.nan,'Right ascension.',float,'float')),
+    ('dec', (np.nan,'Declination.',float,'float')),
+    ('glon', (np.nan,'Galactic Longitude.',float,'float')),
+    ('glat', (np.nan,'Galactic Latitude.',float,'float')),
+    ('ts', (np.nan,'Source test statistic.',float,'float')),
+    ('params', (None,'Dictionary of spectral parameters.',dict,'dict')),
+    ('Npred', (np.nan,'Number of predicted counts from this source integrated over the analysis energy range.',float,'float')),
+    ('model_counts', (None,'Vector of predicted counts for this source in each analysis energy bin.',np.ndarray, '`~numpy.ndarray`')),
+    ('sed', (None,'Output of SED analysis.  See :ref:`sed` for more information.',dict,'dict')),
+    ('extension', (None,'Output of extension analysis.  See :ref:`extension` for more information.',dict,'dict')),
+    ('localize', (None,'Output of localization analysis.  See :ref:`localization` for more information.',dict,'dict')),
+    ('flux', (None, 'Photon flux and uncertainty (%s) integrated over analysis energy range'%FLUX_UNIT,
+             np.ndarray, '`~numpy.ndarray`')),
+    ('flux100', (None, 'Photon flux and uncertainty (%s) integrated from 100 MeV to 316 GeV.'%FLUX_UNIT,
+                np.ndarray, '`~numpy.ndarray`')),
+    ('flux1000', (None, 'Photon flux and uncertainty (%s) integrated from 1 GeV to 316 GeV.'%FLUX_UNIT,
+                 np.ndarray, '`~numpy.ndarray`')),
+    ('flux10000', (None, 'Photon flux and uncertainty (%s) integrated from 10 GeV to 316 GeV.'%FLUX_UNIT,
+                  np.ndarray, '`~numpy.ndarray`')),
+    ('eflux', (None, 'Energy flux and uncertainty (%s) integrated over analysis energy range'%ENERGY_FLUX_UNIT,
+             np.ndarray, '`~numpy.ndarray`')),
+    ('eflux100', (None, 'Energy flux and uncertainty (%s) integrated from 100 MeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+                np.ndarray, '`~numpy.ndarray`')),
+    ('eflux1000', (None, 'Energy flux and uncertainty (%s) integrated from 1 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+                 np.ndarray, '`~numpy.ndarray`')),
+    ('eflux10000', (None, 'Energy flux and uncertainty (%s) integrated from 10 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+                  np.ndarray, '`~numpy.ndarray`')),    
+    ('dfde', (None, 'Differential photon flux and uncertainty (%s) evaluated at the pivot energy.'%DIFF_FLUX_UNIT,
+             np.ndarray, '`~numpy.ndarray`')),
+    ('dfde100', (None, 'Differential photon flux and uncertainty (%s) evaluated at 100 MeV.'%DIFF_FLUX_UNIT,
+                np.ndarray, '`~numpy.ndarray`')),
+    ('dfde1000', (None, 'Differential photon flux and uncertainty (%s) evaluated at 1 GeV.'%DIFF_FLUX_UNIT,
+                 np.ndarray, '`~numpy.ndarray`')),
+    ('dfde10000', (None, 'Differential photon flux and uncertainty (%s) evaluated at 10 GeV.'%DIFF_FLUX_UNIT,
+                  np.ndarray, '`~numpy.ndarray`')),
+    ('e2dfde', (None, 'E^2 times the differential photon flux and uncertainty (%s) evaluated at the pivot energy.'%ENERGY_FLUX_UNIT,
+             np.ndarray, '`~numpy.ndarray`')),
+    ('e2dfde100', (None, 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 100 MeV.'%ENERGY_FLUX_UNIT,
+                np.ndarray, '`~numpy.ndarray`')),
+    ('e2dfde1000', (None, 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 1 GeV.'%ENERGY_FLUX_UNIT,
+                 np.ndarray, '`~numpy.ndarray`')),
+    ('e2dfde10000', (None, 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 10 GeV.'%ENERGY_FLUX_UNIT,
+                  np.ndarray, '`~numpy.ndarray`')),  
+))
+
+# Top-level dictionary for output file
+file_output = OrderedDict((
+    ('roi', (None, 'A dictionary containing information about the ROI as a whole.',dict,'dict')),
+    ('sources', (None, 'A dictionary containing information for individual sources in the model (diffuse and point-like).  Each element of this dictionary maps to a single source in the ROI model.',dict,'dict')),
+    ('config', (None, 'The configuration dictionary of the :py:class:`~fermipy.gtanalysis.GTAnalysis` instance.',dict,'dict')),
+    ('version', (None, 'The version of the fermiPy package that was used to run the analysis.  This is automatically generated from the git release tag.',dict,'dict'))
+))

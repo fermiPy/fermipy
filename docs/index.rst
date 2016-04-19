@@ -30,6 +30,7 @@ Documentation Contents
    install
    quickstart
    config
+   output
    model
    advanced/index
    fermipy
