@@ -168,8 +168,8 @@ class Catalog3FGL(Catalog):
                                     'gll_psc_v16.fit')
 
         hdulist = pyfits.open(fitsfile)
-        #table = Table(hdulist['LAT_Point_Source_Catalog'])
-        table = Table.read(fitsfile)
+        table = Table(hdulist['LAT_Point_Source_Catalog'])
+        #table = Table.read(fitsfile)
         table_extsrc = Table(hdulist['ExtendedSources'].data)
 
         strip_columns(table)
