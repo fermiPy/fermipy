@@ -212,7 +212,7 @@ src_dict      dict                   Source dictionary with the
 Maps are also written as both FITS and rendered image files to the
 analysis working directory.  All output files are prepended with the
 `prefix` argument.  Sample images for `sigma` and `excess` generated
-by :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` are shown below.  A
+by :py:meth:`~fermipy.gtanalysis.GTAnalysis.residmap` are shown below.  A
 colormap threshold for the `sigma` image is applied at both -5 and 5
 sigma with iscontours at 2 sigma intervals (-5, -3, 3, 5, 7, 9, ...)
 indicating values above and below this threshold.
