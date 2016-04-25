@@ -20,12 +20,34 @@ normalizations of all sources within 3 deg of the ROI center:
 
 .. code-block:: python
 
-   >>> gta.free_sources(distance=3.0,pars='norm')
+   >>> gta.free_sources(distance=2.0,pars='norm')
    >>> gta.print_params(True)
-                
+    idx parname                  value     error       min       max     scale free
+   --------------------------------------------------------------------------------
+   3FGL J1104.4+3812
+     18 Prefactor                 1.77         0     1e-05       100     1e-11    *
+   3FGL J1109.6+3734
+     24 Prefactor                 0.33         0     1e-05       100     1e-14    *
+   galdiff
+     52 Prefactor                    1         0       0.1        10         1    *
+   isodiff
+     55 Normalization                1         0     0.001     1e+03         1    *                
    >>> o = gta.fit()
-
+   2016-04-19 14:07:55 INFO     GTAnalysis.fit(): Starting fit.
+   2016-04-19 14:08:56 INFO     GTAnalysis.fit(): Fit returned successfully.
+   2016-04-19 14:08:56 INFO     GTAnalysis.fit(): Fit Quality: 3 LogLike:   -77279.869 DeltaLogLike:      501.128
    >>> gta.print_params(True)
+   2016-04-19 14:10:02 INFO     GTAnalysis.print_params(): 
+    idx parname                  value     error       min       max     scale free
+   --------------------------------------------------------------------------------
+   3FGL J1104.4+3812
+     18 Prefactor                 2.13    0.0161     1e-05       100     1e-11    *
+   3FGL J1109.6+3734
+     24 Prefactor                0.342    0.0904     1e-05       100     1e-14    *
+   galdiff
+     52 Prefactor                0.897    0.0231       0.1        10         1    *
+   isodiff
+     55 Normalization             1.15     0.016     0.001     1e+03         1    *
 
 By default `~fermipy.gtanalysis.GTAnalysis.fit` will repeat the fit
 until a fit quality of 3 is obtained.  After the fit returns all
