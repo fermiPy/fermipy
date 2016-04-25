@@ -7,19 +7,18 @@ try:
 except KeyError:
     matplotlib.use('Agg')
 
-# matplotlib.interactive(False)
-# matplotlib.use('Agg')
-
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
 from matplotlib.patches import Circle, Ellipse
+from matplotlib.colors import LogNorm, Normalize, PowerNorm
+
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 from astropy.coordinates import SkyCoord
 import wcsaxes
 import numpy as np
-from matplotlib.colors import LogNorm, Normalize, PowerNorm
+
 import fermipy
 import fermipy.config
 import fermipy.utils as utils

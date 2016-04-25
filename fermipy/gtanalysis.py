@@ -2,16 +2,16 @@ import os
 import copy
 import shutil
 import collections
+import logging
+import tempfile
+
 import yaml
 import numpy as np
-import tempfile
-import logging
 import scipy
 import scipy.optimize
-import scipy.ndimage
-from scipy.interpolate import UnivariateSpline
-# for some reason a matplotlib import needs to come before the pyLikelihood import or else font-related errors may come up
-import matplotlib.pyplot
+# for some reason a matplotlib import needs to come before the
+# pyLikelihood import or else font-related errors may come up
+# import matplotlib.pyplot
 # pyLikelihood needs to be imported before astropy to avoid CFITSIO
 # header error
 import pyLikelihood as pyLike
