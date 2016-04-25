@@ -770,7 +770,7 @@ class TSCubeGenerator(object):
         config = utils.merge_dict(config,kwargs)
         
         make_plots = kwargs.get('make_plots', True)
-        maps = self._make_ts_cube(self, prefix, config, **kwargs)
+        maps = self._make_ts_cube(prefix, config, **kwargs)
 
         if make_plots:
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
