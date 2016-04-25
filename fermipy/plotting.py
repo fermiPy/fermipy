@@ -128,6 +128,23 @@ def load_ds9_cmap():
     plt.cm.ds9_b = plt.cm.get_cmap('ds9_b')
     return plt.cm.ds9_b
 
+def load_bluered_cmap():
+    bluered = {'red':   ((0.0, 0.0, 0.0),
+                        (0.5, 0.0, 0.0),
+                        (1.0, 1.0, 1.0)),
+
+               'green': ((0.0, 0.0, 0.0),
+                        (1.0, 0.0, 0.0)),
+
+               'blue':  ((0.0, 0.0, 1.0),
+                        (0.5, 0.0, 0.0),
+                        (1.0, 0.0, 0.0))
+    }
+
+    plt.register_cmap(name='bluered', data=bluered)
+    plt.cm.bluered = plt.cm.get_cmap('bluered')
+    return plt.cm.bluered
+
 
 def annotate(**kwargs):
     ax = kwargs.pop('ax', plt.gca())
@@ -831,12 +848,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
                           self.config['label_ts_threshold'])
         kwargs.setdefault('cmap',self.config['cmap'])
         kwargs.setdefault('catalogs',self._catalogs)
-                  
+                 
+        load_bluered_cmap()
+
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sigma'], roi=gta.roi, **kwargs)
         p.plot(vmin=-5, vmax=5, levels=sigma_levels,
-               cb_label='Significance [$\sigma$]',interpolation='bicubic')
+               cb_label='Significance [$\sigma$]',interpolation='bicubic', cmap='bluered')
         plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
                                           'residmap_sigma',
                                           prefix=[prefix],
