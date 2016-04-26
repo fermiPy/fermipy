@@ -78,7 +78,7 @@ class Catalog(object):
                                    self._src_skydir.galactic.b.deg)).T
 
         if not 'Spatial_Filename' in self.table.columns:
-            self.table['Spatial_Filename'] = ''
+            self.table['Spatial_Filename'] = Column(dtype='S20',length=len(self.table))
             
         m = self.table['Spatial_Filename'] != ''
         self.table['extended'] = False
@@ -112,9 +112,15 @@ class Catalog(object):
             if not os.path.isfile(fitsfile):
                 fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
                                         fitsfile)
-
+                
+            # Try to guess the catalog type form its name
             if 'gll_psc' in fitsfile:                
                 return Catalog3FGL(fitsfile)
+
+            tab = Table.read(fitsfile)
+            
+            if 'NickName' in tab.columns:
+                return Catalog4FGLP(fitsfile)
             else:
                 return Catalog(Table.read(fitsfile))
             
@@ -197,12 +203,38 @@ class Catalog3FGL(Catalog):
             self._table['TS'][m] += self.table[k][m] ** 2
 
 
-# if not os.path.isfile(src_dict['Spatial_Filename']) and extdir:
-#            src_dict['Spatial_Filename'] = os.path.join(extdir,'Templates',
-#                                                        src_dict[
-# 'Spatial_Filename'])
+class Catalog4FGLP(Catalog):
+    """This class supports preliminary releases of the 4FGL catalog.
+    Because there is currently no dedicated extended source library
+    for 4FGL this class reuses the extended source library from the
+    3FGL."""
+    
+    def __init__(self, fitsfile=None, extdir=None):
 
-#        m = self.table['extended']
-#       src_dict['Spatial_Filename'] = os.path.join(extdir,'Templates',
-#                                                    src_dict[
-# 'Spatial_Filename'])
+        if extdir is None:
+            extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
+                                  'Extended_archive_v15')
+
+        hdulist = pyfits.open(fitsfile)
+        table = Table.read(fitsfile)
+
+        strip_columns(table)
+
+        table['Source_Name'] = table['NickName']
+        table['beta'] = table['Beta']
+
+        m = table['Extended'] == True
+
+        table['Spatial_Filename'] = Column(dtype='S20',length=len(table))
+        
+        spatial_filenames = []
+        for i, row in enumerate(table[m]):
+            spatial_filenames += [table[m][i]['Source_Name'].replace(' ','') + '.fits']
+        table['Spatial_Filename'][m] =  np.array(spatial_filenames)
+        
+        super(Catalog4FGLP, self).__init__(table, extdir)
+        
+        m = self.table['SpectrumType'] == 'PLExpCutoff'
+        self.table['SpectrumType'][m] = 'PLSuperExpCutoff'
+
+        table['TS'] = table['Test_Statistic']
