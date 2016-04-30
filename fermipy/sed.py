@@ -19,8 +19,12 @@ import scipy.optimize as opt
 import scipy.special as spf
 from scipy.integrate import quad
 import scipy
+
+import pyLikelihood as pyLike
+
 import astropy.io.fits as pf
 from astropy.coordinates import SkyCoord
+from astropy.table import Table, Column
 
 import fermipy.config
 import fermipy.defaults as defaults
@@ -126,10 +130,45 @@ class SEDGenerator(object):
         
         self._plotter.make_sed_plot(self, name, **kwargs)
 
+        self._make_sed_fits(o,name,**kwargs)
         self.logger.info('Finished SED')
         
         return o
-    
+
+    def _make_sed_fits(self,sed,name,**kwargs):
+
+        prefix = kwargs.get('prefix',None)
+
+        name = name.lower().replace(' ', '_')
+        
+        # Write a FITS file
+        cols = [Column(name='E_MIN',dtype='f8',data=10**sed['emin'],unit='MeV'),
+                Column(name='E_MAX',dtype='f8',data=10**sed['emax'],unit='MeV'),
+                Column(name='REF_DFDE_E_MIN',dtype='f8',data=sed['ref_dfde_emin'],unit='ph / (MeV cm2 s)'),
+                Column(name='REF_DFDE_E_MAX',dtype='f8',data=sed['ref_dfde_emax'],unit='ph / (MeV cm2 s)'),
+                Column(name='REF_DFDE',dtype='f8',data=sed['ref_dfde'],unit='ph / (MeV cm2 s)'),
+                Column(name='REF_E2DFDE',dtype='f8',data=sed['ref_e2dfde'],unit='MeV / (cm2 s)'),
+                Column(name='REF_FLUX',dtype='f8',data=sed['ref_flux'],unit='ph / (cm2 s)'),
+                Column(name='REF_EFLUX',dtype='f8',data=sed['ref_eflux'],unit='MeV / (cm2 s)'),
+                Column(name='REF_NPRED',dtype='f8',data=sed['ref_npred']),
+                Column(name='NORM',dtype='f8',data=sed['norm']),
+                Column(name='NORM_ERR',dtype='f8',data=sed['norm_err']),
+                Column(name='NORM_ERRP',dtype='f8',data=sed['norm_err_hi']),
+                Column(name='NORM_ERRN',dtype='f8',data=sed['norm_err_lo']),
+                Column(name='NORM_UL95',dtype='f8',data=sed['norm_ul95']),
+                Column(name='TS',dtype='f8',data=sed['ts']),
+                Column(name='NORM_SCAN',dtype='f8',data=sed['norm_scan']),
+                Column(name='NLL_SCAN',dtype='f8',data=-sed['logLike_scan']),
+                Column(name='DNLL_SCAN',dtype='f8',data=-sed['dlogLike_scan']),
+                ]
+
+                
+        tab = Table(cols)
+        filename = utils.format_filename(self.config['fileio']['workdir'],
+                                         'sed', prefix=[prefix,name],
+                                         extension='.fits')        
+        tab.write(filename,format='fits',overwrite=True)
+        
     def _make_sed(self, name, profile=True, energies=None, **kwargs):
 
         # Extract options from kwargs
@@ -150,41 +189,44 @@ class SEDGenerator(object):
         nbins = len(energies) - 1
         max_index = 5.0
         min_flux = 1E-30
+        npts = 20
         erange = self.erange
         
         # Output Dictionary
         o = {'emin': energies[:-1],
              'emax': energies[1:],
              'ecenter': 0.5 * (energies[:-1] + energies[1:]),
+             'ref_flux': np.zeros(nbins),
+             'ref_eflux': np.zeros(nbins),
+             'ref_dfde': np.zeros(nbins),
+             'ref_dfde_emin': np.zeros(nbins),
+             'ref_dfde_emax': np.zeros(nbins),
+             'ref_e2dfde': np.zeros(nbins),
+             'ref_npred': np.zeros(nbins),
+             'norm': np.zeros(nbins),
              'flux': np.zeros(nbins),
              'eflux': np.zeros(nbins),
              'dfde': np.zeros(nbins),
              'e2dfde': np.zeros(nbins),
-             'flux_err': np.zeros(nbins),
-             'eflux_err': np.zeros(nbins),
-             'dfde_err': np.zeros(nbins),
-             'e2dfde_err': np.zeros(nbins),
-             'flux_ul95': np.zeros(nbins) * np.nan,
-             'eflux_ul95': np.zeros(nbins) * np.nan,
-             'dfde_ul95': np.zeros(nbins) * np.nan,
-             'e2dfde_ul95': np.zeros(nbins) * np.nan,
-             'flux_ul': np.zeros(nbins) * np.nan,
-             'eflux_ul': np.zeros(nbins) * np.nan,
-             'dfde_ul': np.zeros(nbins) * np.nan,
-             'e2dfde_ul': np.zeros(nbins) * np.nan,
-             'dfde_err_lo': np.zeros(nbins) * np.nan,
-             'e2dfde_err_lo': np.zeros(nbins) * np.nan,
-             'dfde_err_hi': np.zeros(nbins) * np.nan,
-             'e2dfde_err_hi': np.zeros(nbins) * np.nan,
              'index': np.zeros(nbins),
-             'Npred': np.zeros(nbins),
+             'npred': np.zeros(nbins),
              'ts': np.zeros(nbins),
+             'norm_scan' : np.zeros((nbins,npts)),
+             'dlogLike_scan' : np.zeros((nbins,npts)),
+             'logLike_scan' : np.zeros((nbins,npts)),
              'fit_quality': np.zeros(nbins),
              'lnlprofile': [],
              'correlation' : {},
              'model_flux' : {},
              'config': config
              }
+
+        for t in ['norm','flux','eflux','dfde','e2dfde']:
+            o['%s_err'%t] = np.zeros(nbins)*np.nan
+            o['%s_err_hi'%t] = np.zeros(nbins)*np.nan
+            o['%s_err_lo'%t] = np.zeros(nbins)*np.nan
+            o['%s_ul95'%t] = np.zeros(nbins)*np.nan
+            o['%s_ul'%t] = np.zeros(nbins)*np.nan
         
         saved_state = LikelihoodState(self.like)
 
@@ -255,18 +297,31 @@ class SEDGenerator(object):
         
         for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
 
-            ecenter = 0.5 * (emin + emax)
-            self.set_parameter(name, 'Scale', 10 ** ecenter, scale=1.0,
+            ectr = 0.5 * (emin + emax)
+            self.set_parameter(name, 'Scale', 10 ** ectr, scale=1.0,
                                bounds=[1, 1E6], update_source=False)
 
             if use_local_index:
                 o['index'][i] = -min(gf_bin_index[i], max_index)
             else:
                 o['index'][i] = -bin_index
-                
+
+            self.set_norm(name, 1.0)
             self.set_parameter(name, 'Index', o['index'][i], scale=1.0,
                                update_source=False)
+            self.like.syncSrcParams(name)
 
+            ref_flux = self.like[name].flux(10 ** emin, 10 ** emax)
+            
+            o['ref_flux'][i] = self.like[name].flux(10 ** emin, 10 ** emax)
+            o['ref_eflux'][i] = self.like[name].energyFlux(10 ** emin, 10 ** emax)
+            o['ref_dfde'][i] = self.like[name].spectrum()(pyLike.dArg(10 ** ectr))
+            o['ref_dfde_emin'][i] = self.like[name].spectrum()(pyLike.dArg(10 ** emin))
+            o['ref_dfde_emax'][i] = self.like[name].spectrum()(pyLike.dArg(10 ** emax))
+            o['ref_e2dfde'][i] = o['ref_dfde'][i]*10**(2.0*ectr)
+            cs = self.model_counts_spectrum(name, emin, emax, summed=True)
+            o['ref_npred'][i] = np.sum(cs)
+                                   
             normVal = self.like.normPar(name).getValue()
             flux_ratio = gf_bin_flux[i] / self.like[name].flux(10 ** emin,
                                                                10 ** emax)
@@ -294,52 +349,53 @@ class SEDGenerator(object):
             prefactor = self.like[self.like.par_index(name, 'Prefactor')]
 
             flux = self.like[name].flux(10 ** emin, 10 ** emax)
-            flux_err = self.like.fluxError(name, 10 ** emin, 10 ** emax)
             eflux = self.like[name].energyFlux(10 ** emin, 10 ** emax)
-            eflux_err = self.like.energyFluxError(name, 10 ** emin, 10 ** emax)
-            dfde = prefactor.getTrueValue()
-            dfde_err = dfde * flux_err / flux
-            e2dfde = dfde * 10 ** (2 * ecenter)
-            
+            dfde = self.like[name].spectrum()(pyLike.dArg(10 ** ectr))
+            #prefactor.getTrueValue()
+
+            o['norm'][i] = flux/o['ref_flux'][i]
             o['flux'][i] = flux
             o['eflux'][i] = eflux
             o['dfde'][i] = dfde
-            o['e2dfde'][i] = e2dfde
-            o['flux_err'][i] = flux_err
-            o['eflux_err'][i] = eflux_err
-            o['dfde_err'][i] = dfde_err
-            o['e2dfde_err'][i] = dfde_err * 10 ** (2 * ecenter)
+            o['e2dfde'][i] = dfde * 10 ** (2 * ectr)
 
             cs = self.model_counts_spectrum(name, emin, emax, summed=True)
-            o['Npred'][i] = np.sum(cs)
+            o['npred'][i] = np.sum(cs)
             o['ts'][i] = max(self.like.Ts2(name, reoptimize=False), 0.0)
 
-            if profile:
-                lnlp = self.profile_norm(name, emin=emin, emax=emax,
-                                        savestate=False, reoptimize=True,
-                                        npts=20)
-                o['lnlprofile'] += [lnlp]
+            lnlp = self.profile_norm(name, emin=emin, emax=emax,
+                                    savestate=False, reoptimize=True,
+                                    npts=20)
 
-                ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dlogLike'])
-                
-                o['flux_ul95'][i] = ul_data['ul']
-                o['eflux_ul95'][i] = ul_data['ul']*(lnlp['eflux'][-1]/lnlp['flux'][-1])
-                o['dfde_ul95'][i] = ul_data['ul']*(lnlp['dfde'][-1]/lnlp['flux'][-1])
-                o['e2dfde_ul95'][i] = o['dfde_ul95'][i] * 10 ** (2 * ecenter)
-                o['dfde_err_hi'][i] = ul_data['err_hi']*(lnlp['dfde'][-1]/lnlp['flux'][-1])
-                o['e2dfde_err_hi'][i] = o['dfde_err_hi'][i] * 10 ** (2 * ecenter)
-                o['dfde_err_lo'][i] = ul_data['err_lo']*(lnlp['dfde'][-1]/lnlp['flux'][-1])
-                o['e2dfde_err_lo'][i] = o['dfde_err_lo'][i] * 10 ** (2 * ecenter)
-                
-                ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dlogLike'], 
-                                                     ul_confidence=ul_confidence)
+            o['logLike_scan'][i] = lnlp['logLike']
+            o['dlogLike_scan'][i] = lnlp['dlogLike']
+            o['norm_scan'][i] = lnlp['flux']/ref_flux            
+            o['lnlprofile'] += [lnlp]
 
-                o['flux_ul'][i] = ul_data['ul']
-                o['eflux_ul'][i] = ul_data['ul']*(lnlp['eflux'][-1]/lnlp['flux'][-1])
-                o['dfde_ul'][i] = ul_data['ul']*(lnlp['dfde'][-1]/lnlp['flux'][-1])
-                o['e2dfde_ul'][i] = o['dfde_ul'][i] * 10 ** (2 * ecenter)
+            ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dlogLike'])
 
+            o['norm_err_hi'][i] = ul_data['err_hi']/ref_flux
+            o['norm_err_lo'][i] = ul_data['err_lo']/ref_flux
+            
+            if np.isfinite(ul_data['err_lo']):
+                o['norm_err'][i] = 0.5*(ul_data['err_lo'] + ul_data['err_hi'])/ref_flux
+            else:
+                o['norm_err'][i] = ul_data['err_hi']/ref_flux
 
+            o['norm_ul95'][i] = ul_data['ul']/ref_flux
+
+            ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dlogLike'], 
+                                                 ul_confidence=ul_confidence)
+            o['norm_ul'][i] = ul_data['ul']/ref_flux
+
+        for t in ['flux','eflux','dfde','e2dfde']:
+            
+            o['%s_err'%t] = o['norm_err']*o['ref_%s'%t]
+            o['%s_err_hi'%t] = o['norm_err_hi']*o['ref_%s'%t]
+            o['%s_err_lo'%t] = o['norm_err_lo']*o['ref_%s'%t]
+            o['%s_ul95'%t] = o['norm_ul95']*o['ref_%s'%t]
+            o['%s_ul'%t] = o['norm_ul']*o['ref_%s'%t]
+        
         self.setEnergyRange(erange[0], erange[1])
         self.like.setSpectrum(name, old_spectrum)
         saved_state.restore()
@@ -349,7 +405,7 @@ class SEDGenerator(object):
         
         src = self.roi.get_source_by_name(name, True)
         src.update_data({'sed': copy.deepcopy(o)})
-
+        
         return o
         
 class Interpolator(object):
