@@ -424,7 +424,7 @@ class TSMapGenerator(object):
         self.logger.info('Generating TS map')
 
         config = copy.deepcopy(self.config['tsmap'])
-        config = utils.merge_dict(config,kwargs)
+        config = utils.merge_dict(config,kwargs,add_new_keys=True)
         
         make_plots = kwargs.get('make_plots', True)
         maps = self._make_tsmap_fast(prefix, config, **kwargs)
@@ -467,7 +467,7 @@ class TSMapGenerator(object):
         threshold = config.setdefault('threshold',1E-2)
         max_kernel_radius = config.get('max_kernel_radius')
         erange = config.setdefault('erange', None)        
-        
+
         if erange is not None:            
             if len(erange) == 0: erange = [None,None]
             elif len(erange) == 1: erange += [None]            
@@ -767,7 +767,7 @@ class TSCubeGenerator(object):
         self.logger.info('Generating TS cube')
 
         config = copy.deepcopy(self.config['tscube'])
-        config = utils.merge_dict(config,kwargs)
+        config = utils.merge_dict(config,kwargs,add_new_keys=True)
         
         make_plots = kwargs.get('make_plots', True)
         maps = self._make_ts_cube(prefix, config, **kwargs)

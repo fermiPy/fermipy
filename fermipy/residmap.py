@@ -170,7 +170,7 @@ class ResidMapGenerator(object):
         self.logger.info('Generating residual maps')
 
         config = copy.deepcopy(self.config['residmap'])
-        config = utils.merge_dict(config,kwargs)
+        config = utils.merge_dict(config,kwargs,add_new_keys=True)
         
         make_plots = kwargs.get('make_plots', True)
         maps = self._make_residual_map(prefix,config,**kwargs)
