@@ -3011,7 +3011,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.logger.info('Loading ROI file: %s'%roi_file)
         
-        self._roi_model = roi_data['roi']
+        self._roi_model = utils.update_keys(roi_data['roi'],
+                                            {'Npred':'npred',
+                                             'logLike' : 'loglike',
+                                             'dloglike' : 'dloglike'})
         self._erange = self._roi_model.setdefault('erange',self.erange)
                 
         sources = roi_data.pop('sources')
