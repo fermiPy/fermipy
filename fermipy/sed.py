@@ -29,6 +29,8 @@ from astropy.table import Table, Column
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.gtutils as gtutils
+import fermipy.roi_model as roi_model
 from fermipy.utils import read_energy_bounds, read_spectral_data
 from fermipy.fits_utils import read_map_from_fits
 from fermipy.logger import Logger
@@ -210,6 +212,7 @@ class SEDGenerator(object):
              'lnlprofile': [],
              'correlation' : {},
              'model_flux' : {},
+             'params' : {},
              'config': config
              }
 
@@ -221,7 +224,8 @@ class SEDGenerator(object):
             o['%s_ul'%t] = np.zeros(nbins)*np.nan
         
         saved_state = LikelihoodState(self.like)
-
+        source = self.components[0].like.logLike.getSource(name)
+        
         # Perform global spectral fit
         self._latch_free_params()
         self.free_sources(False,pars='shape')
@@ -229,6 +233,8 @@ class SEDGenerator(object):
         self.fit(loglevel=logging.DEBUG,update=False,
                  min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
+        spectral_pars = gtutils.get_pars_dict_from_source(source)
+        o['params'] = roi_model.get_params_dict(spectral_pars)
         
         self._restore_free_params()
 
@@ -268,7 +274,6 @@ class SEDGenerator(object):
                 gf_bin_index += [max_index]
                 gf_bin_flux += [min_flux]
 
-        source = self.components[0].like.logLike.getSource(name)
         old_spectrum = source.spectrum()
         self.like.setSpectrum(name, str('PowerLaw'))
         self.free_parameter(name, 'Index', False)
@@ -391,6 +396,7 @@ class SEDGenerator(object):
         self.setEnergyRange(erange[0], erange[1])
         self.like.setSpectrum(name, old_spectrum)
         saved_state.restore()
+        self._sync_params(name)
 
         if cov_scale is not None:
             self.remove_priors()
