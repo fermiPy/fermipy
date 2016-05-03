@@ -155,8 +155,8 @@ fit_output = {
                      '0 - Error matrix not calculated at all)',int,'int'),
     'covariance' : (None, 'Covariance matrix between free parameters of the fit.',np.ndarray, '`~numpy.ndarray`'),
     'correlation' : (None, 'Correlation matrix between free parameters of the fit.',np.ndarray, '`~numpy.ndarray`'),
-    'dlogLike' : (None, 'Improvement in log-likehood value.',float,'float'),
-    'logLike' : (None, 'Post-fit log-likehood value.',float,'float'),
+    'dloglike' : (None, 'Improvement in log-likehood value.',float,'float'),
+    'loglike' : (None, 'Post-fit log-likehood value.',float,'float'),
     'values' : (None, 'Vector of best-fit parameter values (unscaled).',np.ndarray, '`~numpy.ndarray`'),
     'errors' : (None, 'Vector of parameter errors (unscaled).',np.ndarray, '`~numpy.ndarray`'),
     'config' : (None, 'Copy of input configuration to this method.',dict,'dict'),
@@ -180,9 +180,9 @@ roiopt = {
 }
 
 roiopt_output = {
-    'logLike0' : (None, 'Pre-optimization log-likelihood value.',float,'float'),
-    'logLike1' : (None, 'Post-optimization log-likelihood value.',float,'float'),
-    'dlogLike' : (None, 'Improvement in log-likehood value.',float,'float'),
+    'loglike0' : (None, 'Pre-optimization log-likelihood value.',float,'float'),
+    'loglike1' : (None, 'Post-optimization log-likelihood value.',float,'float'),
+    'dloglike' : (None, 'Improvement in log-likehood value.',float,'float'),
     'config' : (None, 'Copy of input configuration to this method.',dict,'dict'),
 }
 
@@ -260,10 +260,13 @@ sed_output = OrderedDict((
     ('e2dfde_ul95', (None, '95% CL upper limit on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`')),
     ('e2dfde_ul', (None, 'Upper limit on e2dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.',np.ndarray,'`~numpy.ndarray`')),
     ('ts', (None, 'Test statistic.',np.ndarray,'`~numpy.ndarray`')),
-    ('Npred', (None, 'Number of model counts.',np.ndarray,'`~numpy.ndarray`')),
+    ('npred', (None, 'Number of model counts.',np.ndarray,'`~numpy.ndarray`')),
     ('fit_quality', (None, 'Fit quality parameter.',np.ndarray,'`~numpy.ndarray`')),
     ('index', (None, 'Spectral index of the power-law model used to fit this bin.',np.ndarray,'`~numpy.ndarray`')),
     ('lnlprofile', (None, 'Likelihood scan for each energy bin.',dict,'dict')),
+    ('norm_scan', (None, 'Array of NxM normalization values for likelihood scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
+    ('dloglike_scan', (None, 'Array of NxM delta-loglikelihood values for likelihood scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
+    ('loglike_scan', (None, 'Array of NxM loglikelihood values for likelihood scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
     ('config', (None, 'Copy of input configuration to this method.',dict,'dict')),
 ))
 
@@ -284,11 +287,11 @@ extension = {
 
 extension_output = OrderedDict((
     ('width', (None, 'Vector of width values.',np.ndarray,'`~numpy.ndarray`')),
-    ('dlogLike', (None, 'Sequence of delta-log-likelihood values for each point in the profile likelihood scan.',np.ndarray,'`~numpy.ndarray`')),
-    ('logLike', (None, 'Sequence of likelihood values for each point in the scan over the spatial extension.',np.ndarray,'`~numpy.ndarray`')),
-    ('logLike_ptsrc', (np.nan,'Model log-Likelihood value of the best-fit point-source model.',float,'float')),
-    ('logLike_ext', (np.nan,'Model log-Likelihood value of the best-fit extended source model.',float,'float')),
-    ('logLike_base', (np.nan,'Model log-Likelihood value of the baseline model.',float,'float')),
+    ('dloglike', (None, 'Sequence of delta-log-likelihood values for each point in the profile likelihood scan.',np.ndarray,'`~numpy.ndarray`')),
+    ('loglike', (None, 'Sequence of likelihood values for each point in the scan over the spatial extension.',np.ndarray,'`~numpy.ndarray`')),
+    ('loglike_ptsrc', (np.nan,'Model log-Likelihood value of the best-fit point-source model.',float,'float')),
+    ('loglike_ext', (np.nan,'Model log-Likelihood value of the best-fit extended source model.',float,'float')),
+    ('loglike_base', (np.nan,'Model log-Likelihood value of the baseline model.',float,'float')),
     ('ext', (np.nan, 'Best-fit extension in degrees.',float,'float')),
     ('ext_err_hi', (np.nan, 'Upper (1 sigma) error on the best-fit extension in degrees.',float,'float')),
     ('ext_err_lo', (np.nan,'Lower (1 sigma) error on the best-fit extension in degrees.',float,'float')),
@@ -334,8 +337,7 @@ plotting = {
     'format': ('png', '', str),
     'cmap': ('ds9_b', 'Set the colormap for 2D plots.', str),
     'label_ts_threshold':
-        (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),
-    
+        (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),    
 }
 
 # Source dictionary
@@ -346,7 +348,7 @@ source_output = OrderedDict((
     ('glat', (np.nan,'Galactic Latitude.',float,'float')),
     ('ts', (np.nan,'Source test statistic.',float,'float')),
     ('params', (None,'Dictionary of spectral parameters.',dict,'dict')),
-    ('Npred', (np.nan,'Number of predicted counts from this source integrated over the analysis energy range.',float,'float')),
+    ('npred', (np.nan,'Number of predicted counts from this source integrated over the analysis energy range.',float,'float')),
     ('model_counts', (None,'Vector of predicted counts for this source in each analysis energy bin.',np.ndarray, '`~numpy.ndarray`')),
     ('sed', (None,'Output of SED analysis.  See :ref:`sed` for more information.',dict,'dict')),
     ('extension', (None,'Output of extension analysis.  See :ref:`extension` for more information.',dict,'dict')),

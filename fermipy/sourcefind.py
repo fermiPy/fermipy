@@ -73,7 +73,8 @@ def estimate_pos_and_err_parabolic(tsvals):
 
     Parameters
     ----------
-    tsvals  : The TS values at the maximum TS, and for each pixel on either side
+    tsvals  :  `~numpy.ndarray`
+       The TS values at the maximum TS, and for each pixel on either side
     
     Returns
     -------
@@ -87,17 +88,18 @@ def estimate_pos_and_err_parabolic(tsvals):
 
 
 def refine_peak(tsmap,pix):
-    """  Solve for the position and uncertainty of source
-         assuming that you are near the maximum and the errors are parabolic
+    """Solve for the position and uncertainty of source assuming that you
+    are near the maximum and the errors are parabolic
 
     Parameters
     ----------
-    tsmap : `numpy.ndarray with the TS data`
-    
+    tsmap : `~numpy.ndarray`
+       Array with the TS data.
+
     Returns
     -------
-    The position and uncertainty of the source, in pixel units w.r.t. the center of the maximum pixel         
-        
+    The position and uncertainty of the source, in pixel units w.r.t. the center of the maximum pixel
+
     """
     # Note the annoying WCS convention
     nx = tsmap.shape[1]
@@ -122,39 +124,85 @@ def refine_peak(tsmap,pix):
     return (xval,yval),(xerr,yerr)
 
 
-class SourceFinder(fermipy.config.Configurable):
+class SourceFinder(object):
+    """Mixin class which provides source-finding functionality to
+    `~fermipy.gtanalysis.GTAnalysis`."""
+    
+    def find_sources(self, prefix='', **kwargs):
+        """An iterative source-finding algorithm.
 
-    defaults = dict(defaults.sourcefind.items(),
-                    fileio=defaults.fileio,
-                    logging=defaults.logging)
+        Parameters
+        ----------
 
-    def __init__(self, config=None, **kwargs):
-        fermipy.config.Configurable.__init__(self, config, **kwargs)
-        self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['fileio']['logfile'],
-                                 logLevel(self.config['logging']['verbosity']))
+        model : dict        
+           Dictionary defining the properties of the test source.
+           This is the model that will be used for generating TS maps.
+        
+        sqrt_ts_threshold : float
+           Source threshold in sqrt(TS).  Only peaks with sqrt(TS)
+           exceeding this threshold will be used as seeds for new
+           sources.
 
-    def find_sources(self, gta, prefix, **kwargs):
-        """
-        Find new sources.
+        min_separation : float
+           Minimum separation in degrees of sources detected in each
+           iteration. The source finder will look for the maximum peak
+           in the TS map within a circular region of this radius.
+
+        max_iter : int
+           Maximum number of source finding iterations.  The source
+           finder will continue adding sources until no additional
+           peaks are found or the number of iterations exceeds this
+           number.
+
+        sources_per_iter : int
+           Maximum number of sources that will be added in each
+           iteration.  If the number of detected peaks in a given
+           iteration is larger than this number, only the N peaks with
+           the largest TS will be used as seeds for the current
+           iteration.
+
+        tsmap_fitter : str        
+           Set the method used internally for generating TS maps.
+           Valid options:
+
+           * tsmap 
+           * tscube
+
+        tsmap : dict
+           Keyword arguments dictionary for tsmap method.
+
+        tscube : dict
+           Keyword arguments dictionary for tscube method.
+           
+           
+        Returns
+        -------
+
+        peaks : list
+           List of peak objects.
+
+        sources : list
+           List of source objects.
+
         """
 
         self.logger.info('Starting.')
         
         # Extract options from kwargs
-        config = copy.deepcopy(self.config)
+        config = copy.deepcopy(self.config['sourcefind'])
         config.update(kwargs) 
 
         # Defining default properties of test source model
         config['model'].setdefault('Index', 2.0)
+        config['model'].setdefault('SpectrumType', 'PowerLaw')
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
         
         o = {'sources': [], 'peaks' : []}
         
-        max_iter = kwargs.get('max_iter', self.config['max_iter'])
-        for i in range(max_iter):
-            srcs, peaks = self._iterate(gta, prefix, i, **config)
+        
+        for i in range(config['max_iter']):
+            srcs, peaks = self._iterate(prefix, i, **config)
 
             self.logger.info('Found %i sources in iteration %i.'%(len(srcs),i))
             
@@ -166,7 +214,6 @@ class SourceFinder(fermipy.config.Configurable):
         self.logger.info('Done.')
             
         return o
-
 
     def _build_src_dicts_from_peaks(self,peaks,maps,src_dict_template):
 
@@ -180,6 +227,17 @@ class SourceFinder(fermipy.config.Configurable):
             o = utils.fit_parabola(tsmap.counts,p['iy'],p['ix'],dpix=2)
             p['fit_loc'] = o
             p['fit_skydir'] = SkyCoord.from_pixel(o['y0'],o['x0'],tsmap.wcs)
+
+            sigmax = 2.0**0.5*o['sigmax']*np.abs(tsmap.wcs.wcs.cdelt[0])
+            sigmay = 2.0**0.5*o['sigmay']*np.abs(tsmap.wcs.wcs.cdelt[1])
+            sigma = (sigmax*sigmay)**0.5
+            p['sigma'] = sigma
+            p['sigmax'] = sigmax
+            p['sigmay'] = sigmay
+            p['r68'] = 2.30**0.5*sigma
+            p['r95'] = 5.99**0.5*sigma
+            p['r99'] = 9.21**0.5*sigma     
+            
             if o['fit_success']:            
                 skydir = p['fit_skydir']
             else:
@@ -202,7 +260,7 @@ class SourceFinder(fermipy.config.Configurable):
         return names,src_dicts
 
 
-    def _iterate(self, gta, prefix, iiter, **kwargs):
+    def _iterate(self, prefix, iiter, **kwargs):
 
         src_dict_template = kwargs.pop('model')
         
@@ -217,11 +275,11 @@ class SourceFinder(fermipy.config.Configurable):
         tscube_kwargs = kwargs.get('tscube',{})
         
         if tsmap_fitter == 'tsmap':
-            m = gta.tsmap('%s_sourcefind_%02i'%(prefix,iiter),
+            m = self.tsmap('%s_sourcefind_%02i'%(prefix,iiter),
                           model=src_dict_template, 
                           **tsmap_kwargs)
         elif tsmap_fitter == 'tscube':
-            m = gta.tscube('%s_sourcefind_%02i'%(prefix,iiter),
+            m = self.tscube('%s_sourcefind_%02i'%(prefix,iiter),
                            model=src_dict_template, 
                           **tscube_kwargs)            
         else:
@@ -245,7 +303,7 @@ class SourceFinder(fermipy.config.Configurable):
         new_src_names = []
         for name,src_dict in zip(names,src_dicts):    
             # Protect against finding the same source twice
-            if gta.roi.has_source(name):
+            if self.roi.has_source(name):
                 self.logger.info('Source %s found again.  Ignoring it.'%name)
                 continue
             # Skip the source if it's outside the search region
@@ -258,8 +316,8 @@ class SourceFinder(fermipy.config.Configurable):
                     self.logger.info('Source %s outside of search region.  Ignoring it.'%name)
                     continue
                 
-            gta.add_source(name, src_dict, free=True)
-            gta.free_source(name,False)
+            self.add_source(name, src_dict, free=True)
+            self.free_source(name,False)
             new_src_names.append(name)
 
             if len(new_src_names) >= sources_per_iter:
@@ -267,17 +325,14 @@ class SourceFinder(fermipy.config.Configurable):
 
         # Re-fit spectral parameters of each source individually
         for name in new_src_names:
-            gta.free_source(name,True)
-            gta.fit()
-            gta.free_source(name,False)
+            self.free_source(name,True)
+            self.fit()
+            self.free_source(name,False)
                     
         srcs = []
         for name in new_src_names:
-            srcs.append(gta.roi[name])
+            srcs.append(self.roi[name])
 
         return srcs, peaks
             
-    def _fit_source(self, gta, **kwargs):
-
-        localize = kwargs.get('localize',self.config['localize'])
-        pass
+    

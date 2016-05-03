@@ -39,9 +39,6 @@ def resolve_file_path(path, **kwargs):
     raise Exception('Failed to resolve file path: %s' % path)
 
 
-
-
-
 def get_skydir_distance_mask(src_skydir, skydir, dist, min_dist=None,
                              square=False, coordsys='CEL'):
     """Retrieve sources within a certain angular distance of an
@@ -144,7 +141,7 @@ class Model(object):
                       'offset_glat': 0.0,
                       'offset': 0.0,
                       'ts': np.nan,
-                      'Npred': 0.0,
+                      'npred': 0.0,
                       'flux' : np.array([np.nan,np.nan]),
                       'eflux' : np.array([np.nan,np.nan]),
                       'params': {},
@@ -204,7 +201,7 @@ class Model(object):
         output = []
         output += ['{:15s}:'.format('Name') + ' {name:s}']
         output += ['{:15s}:'.format('TS') + ' {ts:.2f}']
-        output += ['{:15s}:'.format('Npred') + ' {Npred:.2f}']
+        output += ['{:15s}:'.format('Npred') + ' {npred:.2f}']
         output += ['{:15s}:'.format('SpatialModel') + ' {SpatialModel:s}']
         output += ['{:15s}:'.format('SpectrumType') + ' {SpectrumType:s}']
         output += ['Spectral Parameters']
@@ -294,6 +291,33 @@ class Model(object):
         scale = self.spectral_pars[par_name]['scale']
         return float(val)*float(scale)
 
+    def get_catalog_dict(self):
+
+        o = {'Spectral_Index' : np.nan,
+             'Flux_Density' : np.nan,
+             'Pivot_Energy' : np.nan,
+             'beta' : np.nan,
+             'Exp_Index' : np.nan,
+             'Cutoff' : np.nan}
+        
+        if self['SpectrumType'] == 'PowerLaw':
+            o['Spectral_Index'] = -1.0*self.params['Index'][0]
+            o['Flux_Density'] = self.params['Prefactor'][0]
+            o['Pivot_Energy'] = self.params['Scale'][0]
+        elif self['SpectrumType'] == 'LogParabola':
+            o['Spectral_Index'] = self.params['alpha'][0]
+            o['Flux_Density'] = self.params['norm'][0]
+            o['Pivot_Energy'] = self.params['Eb'][0]
+            o['beta'] = self.params['beta'][0]
+        elif self['SpectrumType'] == 'PLSuperExpCutoff':
+            o['Spectral_Index'] = -self.params['Index1'][0]
+            o['Exp_Index'] = self.params['Index2'][0]
+            o['Flux_Density'] = self.params['Prefactor'][0]
+            o['Pivot_Energy'] = self.params['Scale'][0]
+            o['Cutoff'] = self.params['Cutoff'][0]
+            
+        return o
+    
     def check_cuts(self, cuts):
 
         if cuts is None:
@@ -521,7 +545,7 @@ class Source(Model):
         output += ['{:15s}:'.format('RA/DEC') + ' {ra:10.3f}/{dec:10.3f}']
         output += ['{:15s}:'.format('GLON/GLAT') + ' {glon:10.3f}/{glat:10.3f}']
         output += ['{:15s}:'.format('TS') + ' {ts:.2f}']
-        output += ['{:15s}:'.format('Npred') + ' {Npred:.2f}']
+        output += ['{:15s}:'.format('Npred') + ' {npred:.2f}']
         output += ['{:15s}:'.format('Flux') + ' {flux:9.4g} +/- {flux_err:8.3g}']
         output += ['{:15s}:'.format('EnergyFlux') + ' {eflux:9.4g} +/- {eflux_err:8.3g}']
         output += ['{:15s}:'.format('SpatialModel') + ' {SpatialModel:s}']
@@ -908,7 +932,7 @@ class ROIModel(fermipy.config.Configurable):
         >>> skydir = astropy.coordinates.SkyCoord(0.0,0.0,unit='deg')
         >>> roi = ROIModel({'catalogs' : ['3FGL'],'src_roiwidth' : 10.0},skydir=skydir)
         >>> print roi
-        name                SpatialModel   SpectrumType     offset        ts       Npred
+        name                SpatialModel   SpectrumType     offset        ts       npred
         --------------------------------------------------------------------------------
         3FGL J2357.3-0150   PointSource    PowerLaw          1.956       nan         0.0
         3FGL J0006.2+0135   PointSource    PowerLaw          2.232       nan         0.0
@@ -981,7 +1005,7 @@ class ROIModel(fermipy.config.Configurable):
         o = ''
         o += '%-20s%-15s%-15s%8s%10s%12s\n' % (
         'name', 'SpatialModel', 'SpectrumType', 'offset',
-        'ts', 'Npred')
+        'ts', 'npred')
         o += '-' * 80 + '\n'
 
         for s in sorted(self.sources, key=lambda t: t['offset']):
@@ -990,7 +1014,7 @@ class ROIModel(fermipy.config.Configurable):
             o += '%-20.19s%-15.14s%-15.14s%8.3f%10.2f%12.1f\n' % (
             s['name'], s['SpatialModel'],
             s['SpectrumType'],
-            s['offset'], s['ts'], s['Npred'])
+            s['offset'], s['ts'], s['npred'])
 
         for s in sorted(self.sources, key=lambda t: t['offset']):
 
@@ -998,7 +1022,7 @@ class ROIModel(fermipy.config.Configurable):
             o += '%-20.19s%-15.14s%-15.14s%8s%10.2f%12.1f\n' % (
             s['name'], s['SpatialModel'],
             s['SpectrumType'],
-            '-----', s['ts'], s['Npred'])
+            '-----', s['ts'], s['npred'])
 
         return o
 
@@ -1432,7 +1456,7 @@ class ROIModel(fermipy.config.Configurable):
             if not s.check_cuts(cuts):
                 continue
             ts = s['ts']
-            npred = s['Npred']
+            npred = s['npred']
 
             if not utils.apply_minmax_selection(ts, minmax_ts):
                 continue
@@ -1449,7 +1473,7 @@ class ROIModel(fermipy.config.Configurable):
                 continue
 
             ts = s['ts']
-            npred = s['Npred']
+            npred = s['npred']
 
             if not utils.apply_minmax_selection(ts, minmax_ts):
                 continue
@@ -1658,7 +1682,7 @@ class ROIModel(fermipy.config.Configurable):
         self._src_radius = self._src_skydir.separation(self.skydir)
 
     def write_xml(self, xmlfile):
-        """Save this ROI model as an XML file."""
+        """Save the ROI model as an XML file."""
 
         root = ElementTree.Element('source_library')
         root.set('title', 'source_library')
@@ -1672,7 +1696,105 @@ class ROIModel(fermipy.config.Configurable):
         output_file = open(xmlfile, 'w')
         output_file.write(utils.prettify_xml(root))
 
+    def write_fits(self,fitsfile):
+        """Write the ROI model to a FITS file."""
 
+        scan_shape = (1,)
+        for src in self._srcs:
+            if src['lnlprofile'] is None:
+                continue                
+            scan_shape = max(scan_shape,src['lnlprofile']['loglike'].shape)
+            
+        cols_dict = collections.OrderedDict()
+        cols_dict['Source_Name'] = dict(dtype='S20', format='%s')
+        cols_dict['name'] = dict(dtype='S20', format='%s')
+        cols_dict['class'] = dict(dtype='S20', format='%s')
+        cols_dict['SpectrumType'] = dict(dtype='S20', format='%s')
+        cols_dict['SpatialType'] = dict(dtype='S20', format='%s')
+        cols_dict['SourceType'] = dict(dtype='S20', format='%s')
+        cols_dict['SpatialModel'] = dict(dtype='S20', format='%s')
+        cols_dict['RA'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['DEC'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['GLON'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['GLAT'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['ts'] = dict(dtype='f8', format='%.3f')
+        cols_dict['npred'] = dict(dtype='f8', format='%.3f')
+        cols_dict['offset'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['offset_ra'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['offset_dec'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['offset_glon'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['offset_glat'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['pivot_energy'] = dict(dtype='f8', format='%.3f',unit='MeV')
+        cols_dict['flux_scan'] = dict(dtype='f8', format='%.3f',
+                                      shape=scan_shape)
+        cols_dict['eflux_scan'] = dict(dtype='f8', format='%.3f',
+                                       shape=scan_shape)
+        cols_dict['loglike_scan'] = dict(dtype='f8', format='%.3f',
+                                         shape=scan_shape)
+        cols_dict['dloglike_scan'] = dict(dtype='f8', format='%.3f',
+                                          shape=scan_shape)
+
+        # Catalog Parameters
+        cols_dict['Flux_Density'] = dict(dtype='f8', format='%.5g',unit='1 / (MeV cm2 s)')
+        cols_dict['Spectral_Index'] = dict(dtype='f8', format='%.3f')
+        cols_dict['Pivot_Energy'] = dict(dtype='f8', format='%.3f',unit='MeV')
+        cols_dict['beta'] = dict(dtype='f8', format='%.3f')
+        cols_dict['Exp_Index'] = dict(dtype='f8', format='%.3f')
+        cols_dict['Cutoff'] = dict(dtype='f8', format='%.3f',unit='MeV')
+        
+        for t in ['eflux','eflux100','eflux1000','eflux10000']:
+            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)',shape=(2,))
+
+        for t in ['eflux_ul95','eflux100_ul95','eflux1000_ul95','eflux10000_ul95']:
+            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)')
+            
+        for t in ['flux','flux100','flux1000','flux10000']:
+            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (cm2 s)',shape=(2,))
+
+        for t in ['flux_ul95','flux100_ul95','flux1000_ul95','flux10000_ul95']:
+            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (cm2 s)')
+            
+        for t in ['dfde','dfde100','dfde1000','dfde10000']:
+            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (MeV cm2 s)',shape=(2,))
+
+#        for t in ['e2dfde','e2dfde100','e2dfde1000','e2dfde10000']:
+#            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)',shape=(2,))
+
+        cols = [Column(name=k, **v) for k,v in cols_dict.items()]
+        tab = Table(cols)
+        
+        for s in self._srcs:
+
+            row_dict = {} 
+            row_dict['Source_Name'] = s['name']
+            row_dict['RA'] = s['ra']
+            row_dict['DEC'] = s['dec']
+            row_dict['GLON'] = s['glon']
+            row_dict['GLAT'] = s['glat']
+
+            row_dict.update(s.get_catalog_dict())
+            
+            if s['lnlprofile'] is None:
+                row_dict['eflux_scan'] = np.zeros(scan_shape)*np.nan
+                row_dict['flux_scan'] = np.zeros(scan_shape)*np.nan
+                row_dict['loglike_scan'] = np.zeros(scan_shape)*np.nan
+                row_dict['dloglike_scan'] = np.zeros(scan_shape)*np.nan
+            else:
+                row_dict['eflux_scan'] = s['lnlprofile']['eflux']
+                row_dict['flux_scan'] = s['lnlprofile']['flux']
+                row_dict['loglike_scan'] = s['lnlprofile']['loglike']
+                row_dict['dloglike_scan'] = s['lnlprofile']['dloglike']
+                
+            for t in s.data.keys():
+                if t in cols_dict.keys():
+                    row_dict[t] = s[t]
+            
+            row  = [row_dict[k] for k in cols_dict.keys()]
+            tab.add_row(row)
+
+        tab.write(fitsfile,format='fits',overwrite=True)
+            
+        
 if __name__ == '__main__':
     roi = ROIModel()
 

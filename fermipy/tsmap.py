@@ -425,6 +425,12 @@ class TSMapGenerator(object):
 
         config = copy.deepcopy(self.config['tsmap'])
         config = utils.merge_dict(config,kwargs,add_new_keys=True)
+
+        # Defining default properties of test source model
+        config['model'].setdefault('Index', 2.0)
+        config['model'].setdefault('SpectrumType', 'PowerLaw')
+        config['model'].setdefault('SpatialModel', 'PointSource')
+        config['model'].setdefault('Prefactor', 1E-13)
         
         make_plots = kwargs.get('make_plots', True)
         maps = self._make_tsmap_fast(prefix, config, **kwargs)

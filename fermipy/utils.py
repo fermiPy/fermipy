@@ -725,6 +725,21 @@ def prettify_xml(elem):
     return reparsed.toprettyxml(indent="  ")
 
 
+def update_keys(input_dict,key_map):
+
+    o = {}
+    for k,v in input_dict.items():
+
+        if k in key_map.keys():
+            k = key_map[k]
+
+        if isinstance(v,dict):
+            o[k] = update_keys(v,key_map)
+        else:
+            o[k] = v
+            
+    return o
+
 def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
     """Recursively merge the contents of python dictionary d0 with
     the contents of another python dictionary, d1.

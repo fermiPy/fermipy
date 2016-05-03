@@ -71,12 +71,12 @@ def make_counts_spectrum_plot(o, roi, energies, imfile):
                  label='Total')
 
     for s in sorted(roi.sources,
-                    key=lambda t: t['Npred'], reverse=True)[:6]:
+                    key=lambda t: t['npred'], reverse=True)[:6]:
         ax0.errorbar(x, s['model_counts'], linestyle='-', marker='None',
                      label=s['name'])
 
     for s in sorted(roi.sources,
-                    key=lambda t: t['Npred'], reverse=True)[6:]:
+                    key=lambda t: t['npred'], reverse=True)[6:]:
         ax0.errorbar(x, s['model_counts'], color='gray',
                      linestyle='-', marker='None',
                      label='__nolabel__')
@@ -595,7 +595,7 @@ class SEDPlotter(object):
             m = lhProf[i]['dfde'] > 0
             flux = np.log10(
                 lhProf[i]['dfde'][m] * (10 ** sed['ecenter'][i]) ** 2)
-            logl = lhProf[i]['dlogLike'][m]
+            logl = lhProf[i]['dloglike'][m]
             logli = np.interp(fluxM, flux, logl)
             logli[fluxM > flux[-1]] = logl[-1]
             logli[fluxM < flux[0]] = logl[0]

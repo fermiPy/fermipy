@@ -39,23 +39,12 @@ from LikelihoodState import LikelihoodState
 
 # Some useful functions
 
-
-def alphaToDeltaLogLike_1DOF(alpha):
-    """return the delta log-likelihood corresponding to a particular
-    C.L. of (1-alpha)%
-
-    """
-    dlnl = pow(np.sqrt(2.)*spf.erfinv(1-2*alpha),2.)/2.  
-    return dlnl
-
-
 FluxTypes = ['NORM','FLUX','EFLUX','NPRED','DIF_FLUX','DIF_EFLUX']
 
 PAR_NAMES = {"PowerLaw":["Prefactor","Index"],
              "LogParabola":["norm","alpha","beta"],
              "PLExpCutoff":["Prefactor","Index1","Cutoff"]}
 
-#class SEDGenerator(fermipy.config.Configurable):
 class SEDGenerator(object):
     """Mixin class which provides SED functionality to
     `~fermipy.gtanalysis.GTAnalysis`."""
@@ -143,6 +132,7 @@ class SEDGenerator(object):
         
         # Write a FITS file
         cols = [Column(name='E_MIN',dtype='f8',data=10**sed['emin'],unit='MeV'),
+                Column(name='E_CTR',dtype='f8',data=10**sed['ecenter'],unit='MeV'),
                 Column(name='E_MAX',dtype='f8',data=10**sed['emax'],unit='MeV'),
                 Column(name='REF_DFDE_E_MIN',dtype='f8',data=sed['ref_dfde_emin'],unit='ph / (MeV cm2 s)'),
                 Column(name='REF_DFDE_E_MAX',dtype='f8',data=sed['ref_dfde_emax'],unit='ph / (MeV cm2 s)'),
@@ -158,15 +148,17 @@ class SEDGenerator(object):
                 Column(name='NORM_UL95',dtype='f8',data=sed['norm_ul95']),
                 Column(name='TS',dtype='f8',data=sed['ts']),
                 Column(name='NORM_SCAN',dtype='f8',data=sed['norm_scan']),
-                Column(name='NLL_SCAN',dtype='f8',data=-sed['logLike_scan']),
-                Column(name='DNLL_SCAN',dtype='f8',data=-sed['dlogLike_scan']),
+                Column(name='LOGLIKE_SCAN',dtype='f8',data=sed['loglike_scan']),
+                Column(name='DLOGLIKE_SCAN',dtype='f8',data=sed['dloglike_scan']),
                 ]
-
                 
         tab = Table(cols)
         filename = utils.format_filename(self.config['fileio']['workdir'],
                                          'sed', prefix=[prefix,name],
-                                         extension='.fits')        
+                                         extension='.fits')
+
+        sed['file'] = os.path.basename(filename)
+        
         tab.write(filename,format='fits',overwrite=True)
         
     def _make_sed(self, name, profile=True, energies=None, **kwargs):
@@ -212,8 +204,8 @@ class SEDGenerator(object):
              'npred': np.zeros(nbins),
              'ts': np.zeros(nbins),
              'norm_scan' : np.zeros((nbins,npts)),
-             'dlogLike_scan' : np.zeros((nbins,npts)),
-             'logLike_scan' : np.zeros((nbins,npts)),
+             'dloglike_scan' : np.zeros((nbins,npts)),
+             'loglike_scan' : np.zeros((nbins,npts)),
              'fit_quality': np.zeros(nbins),
              'lnlprofile': [],
              'correlation' : {},
@@ -367,12 +359,12 @@ class SEDGenerator(object):
                                     savestate=False, reoptimize=True,
                                     npts=20)
 
-            o['logLike_scan'][i] = lnlp['logLike']
-            o['dlogLike_scan'][i] = lnlp['dlogLike']
+            o['loglike_scan'][i] = lnlp['loglike']
+            o['dloglike_scan'][i] = lnlp['dloglike']
             o['norm_scan'][i] = lnlp['flux']/ref_flux            
             o['lnlprofile'] += [lnlp]
 
-            ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dlogLike'])
+            ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dloglike'])
 
             o['norm_err_hi'][i] = ul_data['err_hi']/ref_flux
             o['norm_err_lo'][i] = ul_data['err_lo']/ref_flux
@@ -384,7 +376,7 @@ class SEDGenerator(object):
 
             o['norm_ul95'][i] = ul_data['ul']/ref_flux
 
-            ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dlogLike'], 
+            ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dloglike'], 
                                                  ul_confidence=ul_confidence)
             o['norm_ul'][i] = ul_data['ul']/ref_flux
 
@@ -580,7 +572,7 @@ class LnLFn(object):
         alpha :  limit confidence level.
         upper :  upper or lower limits.
         """
-        dlnl = alphaToDeltaLogLike_1DOF(alpha)
+        dlnl = utils.cl_to_dlnl(1.0-alpha)
         lnl_max = self.fn_mle()
 
         # This ultra-safe code to find an absolute maximum

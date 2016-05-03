@@ -172,14 +172,14 @@ def load_npy(infile):
 
 
 class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
-                 ResidMapGenerator, TSMapGenerator, TSCubeGenerator):
-    """High-level analysis interface that internally manages a set of
-    analysis component objects.  Most of the functionality of the
-    fermiPy package is provided through the methods of this class.
-    The class constructor accepts a dictionary that defines the
-    configuration for the analysis.  Keyword arguments provided can be
-    used to override parameter values in the configuration dictionary.
-
+                 ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
+                 SourceFinder):
+    """High-level analysis interface that manages a set of analysis
+    component objects.  Most of the functionality of the Fermipy
+    package is provided through the methods of this class.  The class
+    constructor accepts a dictionary that defines the configuration
+    for the analysis.  Keyword arguments to the constructor can be
+    used to override parameters in the configuration dictionary.
     """
 
     defaults = {'logging': defaults.logging,
@@ -294,8 +294,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                  self._ebin_edges[-1]])
         
         self._roi_model = {
-            'logLike': np.nan,
-            'Npred': 0.0,
+            'loglike': np.nan,
+            'npred': 0.0,
             'counts': np.zeros(self.enumbins),
             'model_counts': np.zeros(self.enumbins),
             'energies': np.copy(self.energies),
@@ -304,8 +304,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         }
 
         for c in self._components:
-            comp_model = [{'logLike': np.nan,
-                           'Npred': 0.0,
+            comp_model = [{'loglike': np.nan,
+                           'npred': 0.0,
                            'counts': np.zeros(c.enumbins),
                            'model_counts': np.zeros(c.enumbins),
                            'energies': np.copy(c.energies)}]
@@ -415,9 +415,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def create(infile, config=None):
         """Create a new instance of GTAnalysis from an analysis output file
         generated with `~fermipy.GTAnalysis.write_roi`.  By default
-        the new instance will inherit the configuration of the
-        saved analysis instance.  The configuration may be overriden
-        by passing a config file path with the ``config`` argument.
+        the new instance will inherit the configuration of the saved
+        analysis instance.  The configuration may be overriden by
+        passing a configuration file path with the ``config``
+        argument.
 
         Parameters
         ----------
@@ -451,24 +452,24 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         rm = self._roi_model
 
-        rm['logLike'] = -self.like()
+        rm['loglike'] = -self.like()
         rm['model_counts'].fill(0)
-        rm['Npred'] = 0
+        rm['npred'] = 0
         for i, c in enumerate(self.components):
-            rm['components'][i]['logLike'] = -c.like()
+            rm['components'][i]['loglike'] = -c.like()
             rm['components'][i]['model_counts'].fill(0)
-            rm['components'][i]['Npred'] = 0
+            rm['components'][i]['npred'] = 0
 
         for name in self.like.sourceNames():
 
             src = self.roi.get_source_by_name(name, True)
             rm['model_counts'] += src['model_counts']
-            rm['Npred'] += np.sum(src['model_counts'])
+            rm['npred'] += np.sum(src['model_counts'])
             mc = self.model_counts_spectrum(name)
 
             for i, c in enumerate(self.components):
                 rm['components'][i]['model_counts'] += mc[i]
-                rm['components'][i]['Npred'] += np.sum(mc[i])
+                rm['components'][i]['npred'] += np.sum(mc[i])
 
     def _update_srcmap(self, name, skydir, spatial_model, spatial_width):
 
@@ -795,7 +796,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         rm = self._roi_model
 
         rm['counts'] = np.zeros(self.enumbins)
-        rm['logLike'] = -self.like()
+        rm['loglike'] = -self.like()
 
         cmaps = []
         proj_type = 0
@@ -810,7 +811,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 proj_type = 1
                 rm['components'][i]['counts'] = \
                     np.squeeze(np.apply_over_axes(np.sum, cm.counts, axes=[1]))
-            rm['components'][i]['logLike'] = -c.like()
+            rm['components'][i]['loglike'] = -c.like()
 
         if proj_type == 0:
             shape = (self.enumbins, self.npix, self.npix)
@@ -984,14 +985,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     def get_sources(self, cuts=None, distance=None, minmax_ts=None, minmax_npred=None,
                     square=False):
-        """Retrieve list of sources in the ROI model satisfying the
-        given selections.
+        """Retrieve list of sources in the ROI satisfying the given
+        selections.
 
         Returns
         -------
 
         srcs : list 
             A list of `~fermipy.roi_model.Model` objects.
+
         """
 
         return self.roi.get_sources(cuts,distance,
@@ -1161,7 +1163,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             will be applied.
 
         minmax_npred : list        
-            Free sources that have Npred in the range [min,max].  If
+            Free sources that have npred in the range [min,max].  If
             either min or max are None then only a lower (upper) bound
             will be applied.  If this parameter is none no selection
             will be applied.
@@ -1574,7 +1576,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
           components.
 
         * Individually fit the normalizations of all sources that were
-          not included in the first step in order of their Npred
+          not included in the first step in order of their npred
           values.  Skip any sources that have NPred <
           ``npred_threshold``.
 
@@ -1626,7 +1628,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         o = defaults.make_default_dict(defaults.roiopt_output)
         o['config'] = config
-        o['logLike0'] = logLike0
+        o['loglike0'] = logLike0
         
         # preserve free parameters
         free = self.get_free_param_vector()
@@ -1634,21 +1636,21 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # Fix all parameters
         self.free_sources(free=False)
 
-        # Free norms of sources for which the sum of Npred is a
+        # Free norms of sources for which the sum of npred is a
         # fraction > npred_frac of the total model counts in the ROI
         npred_sum = 0
         skip_sources = []
-        for s in sorted(self.roi.sources, key=lambda t: t['Npred'],
+        for s in sorted(self.roi.sources, key=lambda t: t['npred'],
                         reverse=True):
             
-            npred_sum += s['Npred']
-            npred_frac = npred_sum / self._roi_model['Npred']
+            npred_sum += s['npred']
+            npred_frac = npred_sum / self._roi_model['npred']
             self.free_norm(s.name)
             skip_sources.append(s.name)
             
             if npred_frac > npred_frac_threshold:
                 break
-            if s['Npred'] < npred_threshold:
+            if s['npred'] < npred_threshold:
                 break
             if len(skip_sources) >= max_free_sources:
                 break
@@ -1657,23 +1659,23 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.free_sources(free=False)
         
         # Step through remaining sources and re-fit normalizations
-        for s in sorted(self.roi.sources, key=lambda t: t['Npred'],
+        for s in sorted(self.roi.sources, key=lambda t: t['npred'],
                         reverse=True):
 
             if s.name in skip_sources:
                 continue
 
-            if s['Npred'] < npred_threshold:
+            if s['npred'] < npred_threshold:
                 self.logger.debug(
-                    'Skipping %s with Npred %10.3f' % (s.name, s['Npred']))
+                    'Skipping %s with npred %10.3f' % (s.name, s['npred']))
                 continue
 
-            self.logger.debug('Fitting %s Npred: %10.3f TS: %10.3f' % (
-                s.name, s['Npred'], s['ts']))
+            self.logger.debug('Fitting %s npred: %10.3f TS: %10.3f' % (
+                s.name, s['npred'], s['ts']))
             self.free_norm(s.name)
             self.fit(loglevel=logging.DEBUG)
-            self.logger.debug('Post-fit Results Npred: %10.3f TS: %10.3f' % (
-                s['Npred'], s['ts']))
+            self.logger.debug('Post-fit Results npred: %10.3f TS: %10.3f' % (
+                s['npred'], s['ts']))
             self.free_norm(s.name, free=False)
 
             # Refit spectral shape parameters for sources with TS >
@@ -1694,8 +1696,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         logLike1 = -self.like()
 
-        o['logLike1'] = logLike1
-        o['dlogLike'] = logLike1 - logLike0
+        o['loglike1'] = logLike1
+        o['dloglike'] = logLike1 - logLike0
         
         self.logger.info('Finished')
         self.logger.info(
@@ -1806,7 +1808,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         o = {'config': config,
              'fit_success': True,
-             'logLike_base': logLike0 }
+             'loglike_base': logLike0 }
 
         cdelt0 = np.abs(skywcs.wcs.cdelt[0])
         cdelt1 = np.abs(skywcs.wcs.cdelt[1])
@@ -1823,8 +1825,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         lnlscan = dict(xpix=scan_xpix,
                        ypix=scan_ypix,
                        logLike=np.zeros((nstep, nstep)),
-                       dlogLike=np.zeros((nstep, nstep)),
-                       dlogLike_fit=np.zeros((nstep, nstep)))
+                       dloglike=np.zeros((nstep, nstep)),
+                       dloglike_fit=np.zeros((nstep, nstep)))
 
         for i, t in enumerate(scan_skydir):
 
@@ -1837,25 +1839,25 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             #self.fit(update=False)
             self.like.optimize(0)
             
-            logLike1 = -self.like()
-            lnlscan['logLike'].flat[i] = logLike1
+            loglike1 = -self.like()
+            lnlscan['loglike'].flat[i] = logLike1
             self.delete_source(model_name,loglevel=logging.DEBUG)
 
-        lnlscan['dlogLike'] = lnlscan['logLike'] - np.max(lnlscan['logLike'])
+        lnlscan['dloglike'] = lnlscan['loglike'] - np.max(lnlscan['loglike'])
 
         self.unzero_source(name)
         saved_state.restore()
         self._sync_params(name)
         self._update_roi()
         
-        ix, iy = np.unravel_index(np.argmax(lnlscan['dlogLike']),(nstep,nstep))
+        ix, iy = np.unravel_index(np.argmax(lnlscan['dloglike']),(nstep,nstep))
         
-        scan_fit = utils.fit_parabola(lnlscan['dlogLike'], ix, iy, dpix=3)
+        scan_fit = utils.fit_parabola(lnlscan['dloglike'], ix, iy, dpix=3)
 
         sigmax = 2.**0.5*scan_fit['sigmax']*scan_step
         sigmay = 2.**0.5*scan_fit['sigmay']*scan_step
                 
-        lnlscan['dlogLike_fit'] = \
+        lnlscan['dloglike_fit'] = \
             utils.parabola((np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
                             np.linspace(0,nstep-1.0,nstep)[np.newaxis,:]),
                            *scan_fit['popt']).reshape((nstep,nstep))
@@ -2037,9 +2039,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
         o = defaults.make_default_dict(defaults.extension_output)
         o['width'] = width
-        o['dlogLike'] = np.zeros(len(width)+1)
-        o['logLike'] = np.zeros(len(width)+1)
-        o['logLike_base'] = logLike0
+        o['dloglike'] = np.zeros(len(width)+1)
+        o['loglike'] = np.zeros(len(width)+1)
+        o['loglike_base'] = logLike0
         o['config'] = config
 
         # Fit a point-source
@@ -2053,7 +2055,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.add_source(model_name, src, free=True, init_source=False,
                         loglevel=logging.DEBUG)
         self.fit(loglevel=logging.DEBUG,update=False)
-        o['logLike_ptsrc'] = -self.like()
+        o['loglike_ptsrc'] = -self.like()
 
         self.delete_source(model_name, save_template=False,
                            loglevel=logging.DEBUG)
@@ -2062,17 +2064,17 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.debug('Width scan vector:\n %s' % width)
 
         if not hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
-            o['logLike'] = self._scan_extension_pylike(name, src,
+            o['loglike'] = self._scan_extension_pylike(name, src,
                                                        spatial_model,
                                                        width[1:])
         else:
-            o['logLike'] = self._scan_extension(name, src, spatial_model, width[1:])
-        o['logLike'] = np.concatenate(([o['logLike_ptsrc']],o['logLike']))
-        o['dlogLike'] = o['logLike'] - o['logLike_ptsrc']
+            o['loglike'] = self._scan_extension(name, src, spatial_model, width[1:])
+        o['loglike'] = np.concatenate(([o['loglike_ptsrc']],o['loglike']))
+        o['dloglike'] = o['loglike'] - o['loglike_ptsrc']
         
         try:
             
-            ul_data = utils.get_parameter_limits(o['width'], o['dlogLike'])
+            ul_data = utils.get_parameter_limits(o['width'], o['dloglike'])
 
             o['ext'] = ul_data['x0']
             o['ext_ul95'] = ul_data['ul']
@@ -2101,7 +2103,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.update_source(model_name,reoptimize=True)
             
             o['source_fit'] = self.get_src_model(model_name)
-            o['logLike_ext'] = -self.like()
+            o['loglike_ext'] = -self.like()
             
 #            self.write_model_map(model_name=model_name,
 #                                    name=model_name)
@@ -2282,7 +2284,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         lnlp0 = self.profile(name, parName, emin=emin, emax=emax, 
                              reoptimize=False,xvals=xvals)
         xval0 = self.like.normPar(name).getValue()
-        lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dlogLike'],
+        lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dloglike'],
                                            ul_confidence=0.99)
 
         if not np.isfinite(lims0['ll']) and lims0['x0'] > 1E-6:
@@ -2297,7 +2299,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         lnlp1 = self.profile(name, parName, emin=emin, emax=emax, 
                              reoptimize=True,xvals=xvals)
 
-        dlogLike = copy.deepcopy(lnlp1['dlogLike'])
+        dlogLike = copy.deepcopy(lnlp1['dloglike'])
         dlogLike0 = dlogLike[-1]
         xup = xvals[-1]
         
@@ -2316,7 +2318,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                                     
             lnlp = self.profile(name, parName, emin=emin, emax=emax,
                                 reoptimize=True,xvals=[xup])
-            dlogLike0 = lnlp['dlogLike']
+            dlogLike0 = lnlp['dloglike']
                 
             dlogLike = np.concatenate((dlogLike,dlogLike0))
             xvals = np.concatenate((xvals,[xup]))
@@ -2422,12 +2424,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                  max(max(xvals),value))
 
         o = {'xvals': xvals,
-             'Npred': np.zeros(len(xvals)),
+             'npred': np.zeros(len(xvals)),
              'dfde': np.zeros(len(xvals)),
              'flux': np.zeros(len(xvals)),
              'eflux': np.zeros(len(xvals)),
-             'dlogLike': np.zeros(len(xvals)),
-             'logLike': np.zeros(len(xvals))
+             'dloglike': np.zeros(len(xvals)),
+             'loglike': np.zeros(len(xvals))
              }
 
         if reoptimize and hasattr(self.like.components[0].logLike,
@@ -2455,8 +2457,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                                10 ** eminmax[1])
             prefactor = self.like[idx]
 
-            o['dlogLike'][i] = logLike1 - logLike0
-            o['logLike'][i] = logLike1
+            o['dloglike'][i] = logLike1 - logLike0
+            o['loglike'][i] = logLike1
             o['dfde'][i] = prefactor.getTrueValue()
             o['flux'][i] = flux
             o['eflux'][i] = eflux
@@ -2464,7 +2466,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             cs = self.model_counts_spectrum(name,
                                             eminmax[0],
                                             eminmax[1], summed=True)
-            o['Npred'][i] += np.sum(cs)
+            o['npred'][i] += np.sum(cs)
 
         if reoptimize and hasattr(self.like.components[0].logLike,
                                   'setUpdateFixedWeights'):
@@ -2481,70 +2483,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.setEnergyRange(*erange)
         
         return o
-
-    def find_sources(self, prefix='', **kwargs):
-        """An iterative source-finding algorithm.
-
-        Parameters
-        ----------
-
-        model : dict        
-           Dictionary defining the properties of the test source.
-           This is the model that will be used for generating TS maps.
-        
-        sqrt_ts_threshold : float
-           Source threshold in sqrt(TS).  Only peaks with sqrt(TS)
-           exceeding this threshold will be used as seeds for new
-           sources.
-
-        min_separation : float
-           Minimum separation in degrees of sources detected in each
-           iteration. The source finder will look for the maximum peak
-           in the TS map within a circular region of this radius.
-
-        max_iter : int
-           Maximum number of source finding iterations.  The source
-           finder will continue adding sources until no additional
-           peaks are found or the number of iterations exceeds this
-           number.
-
-        sources_per_iter : int
-           Maximum number of sources that will be added in each
-           iteration.  If the number of detected peaks in a given
-           iteration is larger than this number, only the N peaks with
-           the largest TS will be used as seeds for the current
-           iteration.
-
-        tsmap_fitter : str        
-           Set the method used internally for generating TS maps.
-           Valid options:
-
-           * tsmap 
-           * tscube
-
-        tsmap : dict
-           Keyword arguments dictionary for tsmap method.
-
-        tscube : dict
-           Keyword arguments dictionary for tscube method.
-           
-           
-        """
-
-        self.logger.info('Running source finding.')
-
-        sf = SourceFinder(self.config['sourcefind'],
-                          fileio=self.config['fileio'],
-                          logging=self.config['logging'])
-        
-        maps = sf.find_sources(self, prefix, **kwargs)
-
-        self.logger.info('Finished source finding.')
-        
-        return maps
-        
-    def _init_optimizer(self):
-        pass
 
     def _create_optObject(self,**kwargs):
         """ Make MINUIT or NewMinuit type optimizer object """
@@ -2615,7 +2553,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """Run the likelihood optimization.  This will execute a fit
         of all parameters that are currently free in the model and
         update the charateristics of the corresponding model
-        components (TS, Npred, etc.).  The fit will be repeated N
+        components (TS, npred, etc.).  The fit will be repeated N
         times (set with the `retries` parameter) until a fit quality
         greater than or equal to `min_fit_quality` is obtained.  If
         the requested fit quality is not obtained then all parameter
@@ -2683,7 +2621,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o = {'fit_quality' : 0,
              'covariance' : None,
              'correlation' : None,
-             'logLike' : None, 'dlogLike' : None,
+             'loglike' : None, 'dloglike' : None,
              'values' : np.ones(num_free)*np.nan,
              'errors' : np.ones(num_free)*np.nan,
              'indices': np.zeros(num_free,dtype=int),
@@ -2733,8 +2671,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         #            saved_state.restore()
         #            return quality
 
-        o['logLike'] = -self.like()
-        o['dlogLike'] = o['logLike'] - logLike0
+        o['loglike'] = -self.like()
+        o['dloglike'] = o['loglike'] - logLike0
 
         if o['fit_quality'] < config['min_fit_quality']:
             self.logger.error(
@@ -2756,8 +2694,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.logger.log(loglevel,"Fit returned successfully.")
         self.logger.log(loglevel,"Fit Quality: %i "%o['fit_quality'] + 
-                        "LogLike: %12.3f "%o['logLike'] + 
-                        "DeltaLogLike: %12.3f"%o['dlogLike'])
+                        "LogLike: %12.3f "%o['loglike'] + 
+                        "DeltaLogLike: %12.3f"%o['dloglike'])
         return o
 
     def fit_correlation(self):
@@ -3006,7 +2944,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o = '\n'
         o += '%-20s%8s%8s%7s%10s%10s%12s%5s\n' % (
         'sourcename', 'offset','norm','eflux','index',
-        'ts', 'Npred', 'free')
+        'ts', 'npred', 'free')
         o += '-' * 80 + '\n'
         
         for s in sorted(self.roi.sources, key=lambda t: t['offset']):
@@ -3028,7 +2966,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 
             o += '%-20.19s%8.3f%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
             s['name'], s['offset'], normVal, s['eflux'][0],index,
-            s['ts'], s['Npred'],free_str)
+            s['ts'], s['npred'],free_str)
 
         for s in sorted(self.roi.sources, key=lambda t: t['offset']):
             if not s.diffuse:
@@ -3049,7 +2987,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 
             o += '%-20.19s%8s%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
             s['name'], 
-            '---', normVal, s['eflux'][0], index, s['ts'], s['Npred'],free_str)
+            '---', normVal, s['eflux'][0], index, s['ts'], s['npred'],free_str)
                         
         self.logger.info(o)
                     
@@ -3077,7 +3015,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._erange = self._roi_model.setdefault('erange',self.erange)
                 
         sources = roi_data.pop('sources')
-
+        sources = utils.update_keys(sources,{'Npred':'npred',
+                                             'logLike' : 'loglike',
+                                             'dloglike' : 'dloglike'})
+        
         self.roi.load_sources(sources.values())
         for c in self.components:
             c.roi.load_sources(sources.values())
@@ -3126,18 +3067,25 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         make_plots = kwargs.get('make_plots',True)
 
         if outfile is None:
-            outfile = os.path.join(self.config['fileio']['workdir'],
-                                   'results')
-            prefix = ''
+            pathprefix = os.path.join(self.config['fileio']['workdir'],
+                                      'results')            
+        elif not os.path.isabs(outfile):
+            pathprefix = os.path.join(self.config['fileio']['workdir'],
+                                      outfile)
         else:
-            outfile, ext = os.path.splitext(outfile)
-            prefix = outfile
-            if not os.path.isabs(outfile):
-                outfile = os.path.join(self.config['fileio']['workdir'],
-                                       outfile)
-
-        self.write_xml(prefix)
-
+            pathprefix = outfile
+            
+        pathprefix, ext = os.path.splitext(pathprefix)
+        prefix = os.path.basename(pathprefix)
+        
+        xmlfile = pathprefix + '.xml'
+        fitsfile = pathprefix + '.fits'
+        npyfile = pathprefix + '.npy'
+        ymlfile = pathprefix + '.yaml'
+        
+        self.write_xml(xmlfile)
+        self.roi.write_fits(fitsfile)
+        
         for c in self.components:
             c.like.logLike.saveSourceMaps(c._srcmap_file)
         
@@ -3165,11 +3113,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for fmt in format:
 
             if fmt == 'yaml':
-                self.logger.info('Writing %s...' % (outfile + '.yaml'))
-                yaml.dump(tolist(o), open(outfile + '.yaml', 'w'))
+                self.logger.info('Writing %s...' % (ymlfile))
+                yaml.dump(tolist(o), open(ymlfile, 'w'))
             elif fmt == 'npy':                
-                self.logger.info('Writing %s...' % (outfile + '.npy'))
-                np.save(outfile + '.npy', o)
+                self.logger.info('Writing %s...' % (npyfile))
+                np.save(npyfile, o)
             else:
                 raise Exception('Unrecognized format.')
 
@@ -3353,7 +3301,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     'eflux10000_ul95': np.nan,
                     'pivot_energy': 3.,
                     'ts': np.nan,
-                    'Npred': 0.0,
+                    'npred': 0.0,
                     'lnlprofile': None
                     }
 
@@ -3365,7 +3313,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         src_dict['model_counts'] = self.model_counts_spectrum(name, summed=True)
 
         # Get NPred
-        src_dict['Npred'] = self.like.NpredValue(name)
+        src_dict['npred'] = self.like.NpredValue(name)
         
         # Get the Model Fluxes
         try:
@@ -3452,8 +3400,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         src_dict['lnlprofile'] = lnlp
         
-        flux_ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dlogLike'])
-        eflux_ul_data = utils.get_parameter_limits(lnlp['eflux'], lnlp['dlogLike'])
+        flux_ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dloglike'])
+        eflux_ul_data = utils.get_parameter_limits(lnlp['eflux'], lnlp['dloglike'])
 
         if normPar.getValue() == 0:
             normPar.setValue(1.0)
@@ -3520,7 +3468,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if not reoptimize:
             src_dict['ts'] = self.like.Ts2(name, reoptimize=reoptimize)
         else:
-            src_dict['ts'] = -2.0*lnlp['dlogLike'][0]
+            src_dict['ts'] = -2.0*lnlp['dloglike'][0]
             
         return src_dict
 
