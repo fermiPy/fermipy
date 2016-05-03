@@ -33,7 +33,7 @@ install:
  
 # Run test
 script:
-  - py.test
+  - py.test -vv -s
  
 #cache:
 #  directories:
