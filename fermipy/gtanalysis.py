@@ -1617,8 +1617,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.logger.info('Starting')
 
-        logLike0 = -self.like()
-        self.logger.debug('LogLike: %f' % logLike0)
+        loglike0 = -self.like()
+        self.logger.debug('LogLike: %f' % loglike0)
         
         # Extract options from kwargs
         config = copy.deepcopy(self.config['roiopt'])
@@ -1632,7 +1632,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         o = defaults.make_default_dict(defaults.roiopt_output)
         o['config'] = config
-        o['loglike0'] = logLike0
+        o['loglike0'] = loglike0
         
         # preserve free parameters
         free = self.get_free_param_vector()
@@ -1698,14 +1698,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.set_free_param_vector(free)
 
-        logLike1 = -self.like()
+        loglike1 = -self.like()
 
-        o['loglike1'] = logLike1
-        o['dloglike'] = logLike1 - logLike0
+        o['loglike1'] = loglike1
+        o['dloglike'] = loglike1 - loglike0
         
         self.logger.info('Finished')
         self.logger.info(
-            'LogLike: %f Delta-LogLike: %f' % (logLike1, logLike1 - logLike0))
+            'LogLike: %f Delta-LogLike: %f' % (loglike1, loglike1 - loglike0))
 
         return o
 
@@ -1806,13 +1806,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.fit(loglevel=logging.DEBUG,update=False)
 
         # Save likelihood value for baseline fit
-        logLike0 = -self.like()
+        loglike0 = -self.like()
 
         self.zero_source(name)
 
         o = {'config': config,
              'fit_success': True,
-             'loglike_base': logLike0 }
+             'loglike_base': loglike0 }
 
         cdelt0 = np.abs(skywcs.wcs.cdelt[0])
         cdelt1 = np.abs(skywcs.wcs.cdelt[1])
@@ -1844,7 +1844,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.like.optimize(0)
             
             loglike1 = -self.like()
-            lnlscan['loglike'].flat[i] = logLike1
+            lnlscan['loglike'].flat[i] = loglike1
             self.delete_source(model_name,loglevel=logging.DEBUG)
 
         lnlscan['dloglike'] = lnlscan['loglike'] - np.max(lnlscan['loglike'])
@@ -2026,7 +2026,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         src = self.roi.copy_source(name)
         
         # Save likelihood value for baseline fit
-        logLike0 = -self.like()
+        loglike0 = -self.like()
 
         self.zero_source(name)
         
@@ -2045,7 +2045,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['width'] = width
         o['dloglike'] = np.zeros(len(width)+1)
         o['loglike'] = np.zeros(len(width)+1)
-        o['loglike_base'] = logLike0
+        o['loglike_base'] = loglike0
         o['config'] = config
 
         # Fit a point-source
@@ -2304,7 +2304,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                              reoptimize=True,xvals=xvals)
 
         dlogLike = copy.deepcopy(lnlp1['dloglike'])
-        dlogLike0 = dlogLike[-1]
+        dloglike0 = dlogLike[-1]
         xup = xvals[-1]
         
         for i in range(20):
@@ -2312,7 +2312,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             lims1 = utils.get_parameter_limits(xvals, dlogLike,
                                                ul_confidence=0.99)
                 
-            if np.abs(np.abs(dlogLike0) - utils.cl_to_dlnl(0.99)) < 0.1:
+            if np.abs(np.abs(dloglike0) - utils.cl_to_dlnl(0.99)) < 0.1:
                 break
                 
             if not np.isfinite(lims1['ul']) or np.abs(dlogLike[-1]) < 1.0:
@@ -2322,9 +2322,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                                     
             lnlp = self.profile(name, parName, emin=emin, emax=emax,
                                 reoptimize=True,xvals=[xup])
-            dlogLike0 = lnlp['dloglike']
+            dloglike0 = lnlp['dloglike']
                 
-            dlogLike = np.concatenate((dlogLike,dlogLike0))
+            dlogLike = np.concatenate((dlogLike,dloglike0))
             xvals = np.concatenate((xvals,[xup]))
             isort = np.argsort(xvals)
             dlogLike = dlogLike[isort]
@@ -2408,7 +2408,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         else:
             eminmax = self.erange
             
-        logLike0 = -self.like()
+        loglike0 = -self.like()
 
         if xvals is None:
 
@@ -2451,18 +2451,18 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
                 self.like.optimize(0)
-                logLike1 = -self.like()
+                loglike1 = -self.like()
                 self.like.thaw(idx)
             else:
-                logLike1 = -self.like()
+                loglike1 = -self.like()
             
             flux = self.like[name].flux(10 ** eminmax[0], 10 ** eminmax[1])
             eflux = self.like[name].energyFlux(10 ** eminmax[0],
                                                10 ** eminmax[1])
             prefactor = self.like[idx]
 
-            o['dloglike'][i] = logLike1 - logLike0
-            o['loglike'][i] = logLike1
+            o['dloglike'][i] = loglike1 - loglike0
+            o['loglike'][i] = loglike1
             o['dfde'][i] = prefactor.getTrueValue()
             o['flux'][i] = flux
             o['eflux'][i] = eflux
@@ -2635,7 +2635,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
              'config' : config
              }
 
-        logLike0 = -self.like()        
+        loglike0 = -self.like()        
         quality = 0
         niter = 0
         max_niter = config['retries']
@@ -2676,7 +2676,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         #            return quality
 
         o['loglike'] = -self.like()
-        o['dloglike'] = o['loglike'] - logLike0
+        o['dloglike'] = o['loglike'] - loglike0
 
         if o['fit_quality'] < config['min_fit_quality']:
             self.logger.error(
@@ -3312,7 +3312,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     'lnlprofile': None
                     }
 
-        src = self.components[0].like.logLike.getSource(name)
+        src = self.components[0].like.logLike.getSource(str(name))
         src_dict['params'] = gtutils.gtlike_spectrum_to_dict(spectrum)
         src_dict['spectral_pars'] = gtutils.get_pars_dict_from_source(src)
         
