@@ -16,8 +16,11 @@
 ``e2dfde_ul95``	`~numpy.ndarray`	95% CL upper limit on e2dfde evaluated from the profile likelihood (MINOS errors).
 ``e2dfde_ul``	`~numpy.ndarray`	Upper limit on e2dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.
 ``ts``	`~numpy.ndarray`	Test statistic.
-``Npred``	`~numpy.ndarray`	Number of model counts.
+``npred``	`~numpy.ndarray`	Number of model counts.
 ``fit_quality``	`~numpy.ndarray`	Fit quality parameter.
 ``index``	`~numpy.ndarray`	Spectral index of the power-law model used to fit this bin.
 ``lnlprofile``	dict	Likelihood scan for each energy bin.
+``norm_scan``	`~numpy.ndarray`	Array of NxM normalization values for likelihood scan in N energy bins and M scan points.
+``dloglike_scan``	`~numpy.ndarray`	Array of NxM delta-loglikelihood values for likelihood scan in N energy bins and M scan points.
+``loglike_scan``	`~numpy.ndarray`	Array of NxM loglikelihood values for likelihood scan in N energy bins and M scan points.
 ``config``	dict	Copy of input configuration to this method.

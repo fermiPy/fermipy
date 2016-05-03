@@ -4,7 +4,7 @@
 ``glat``	float	Galactic Latitude.
 ``ts``	float	Source test statistic.
 ``params``	dict	Dictionary of spectral parameters.
-``Npred``	float	Number of predicted counts from this source integrated over the analysis energy range.
+``npred``	float	Number of predicted counts from this source integrated over the analysis energy range.
 ``model_counts``	`~numpy.ndarray`	Vector of predicted counts for this source in each analysis energy bin.
 ``sed``	dict	Output of SED analysis.  See :ref:`sed` for more information.
 ``extension``	dict	Output of extension analysis.  See :ref:`extension` for more information.
