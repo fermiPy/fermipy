@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
+
 import os
 import copy
 from collections import OrderedDict
@@ -682,12 +685,22 @@ def fits_recarray_to_dict(table):
         elif type(col_data[0]) == np.ndarray:
             cols[col] = np.array(col_data)
         else:
-            print col, col_data
             raise Exception(
                 'Unrecognized column type: %s %s' % (col, str(type(col_data))))
 
     return cols
 
+
+def unicode_to_str(args):
+    o = {}
+    for k, v in args.items():
+        if isinstance(v,unicode):
+            o[k] = str(v)
+        else:
+            o[k] = v
+
+    return o
+    
 
 def create_xml_element(root, name, attrib):
     el = et.SubElement(root, name)
@@ -695,7 +708,7 @@ def create_xml_element(root, name, attrib):
 
         if isinstance(v,bool):
             el.set(k,str(int(v)))
-        elif isinstance(v,str):
+        elif isinstance(v,str) or isinstance(v,unicode):
              el.set(k, v)
         elif np.isfinite(v):        
             el.set(k, str(v))

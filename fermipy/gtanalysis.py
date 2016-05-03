@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
+
 import os
 import copy
 import shutil
@@ -41,7 +44,7 @@ from fermipy.logger import logLevel as ll
 import GtApp
 import FluxDensity
 from LikelihoodState import LikelihoodState
-from gtutils import BinnedAnalysis, SummedLikelihood
+from fermipy.gtutils import BinnedAnalysis, SummedLikelihood
 import BinnedAnalysis as ba
 
 norm_parameters = {
@@ -114,6 +117,7 @@ def get_spectral_index(src,egy):
 def run_gtapp(appname, logger, kw):
     logger.info('Running %s' % appname)
     filter_dict(kw, None)
+    kw = utils.unicode_to_str(kw)    
     gtapp = GtApp.GtApp(appname)
 
     for k, v in kw.items():
@@ -2441,7 +2445,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for i, x in enumerate(xvals):
 
             self.like[idx] = x
-            self.like.syncSrcParams(name)
+            self.like.syncSrcParams(str(name))
 
             if self.like.logLike.getNumFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
@@ -3090,7 +3094,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.roi.write_fits(fitsfile)
         
         for c in self.components:
-            c.like.logLike.saveSourceMaps(c._srcmap_file)
+            c.like.logLike.saveSourceMaps(str(c._srcmap_file))
         
         mcube_maps = None
         if save_model_map:
@@ -3724,7 +3728,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.syncSrcParams(str(name))
         self.like.logLike.buildFixedModelWts()
         if save_source_maps:
-            self.like.logLike.saveSourceMaps(self._srcmap_file)
+            self.like.logLike.saveSourceMaps(str(self._srcmap_file))
 
     def _create_source(self, src, free=False):
         """Create a pyLikelihood Source object from a
@@ -3863,18 +3867,17 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
            model counts map will be calculated.  If name=None a
            model map will be generated for all sources in the ROI.
 
-        exclude : str or list of str
+        exclude : list
 
-           Source or list of sources that will be excluded when
-           calculating the model map.
+           Source name or list of source names that will be excluded
+           from the model map.
 
         Returns
         -------
-
         map : `~fermipy.utils.Map`
 
            A map object containing the counts and WCS projection.
-                   
+
         """
         if self.projtype == "WCS":
             v = pyLike.FloatVector(self.npix ** 2 * self.enumbins)
@@ -3953,13 +3956,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         Parameters
         ----------
-
         name : str
            Source name.
 
         """
         
-        cs = np.array(self.like.logLike.modelCountsSpectrum(name))
+        cs = np.array(self.like.logLike.modelCountsSpectrum(str(name)))
         imin = utils.val_to_edge(self.energies, emin)[0]
         imax = utils.val_to_edge(self.energies, emax)[0]
         if imax <= imin: raise Exception('Invalid energy range.')
@@ -3970,7 +3972,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         Parameters
         ----------
-
         overwrite : bool
 
            Run all pre-processing steps even if the output file of
@@ -4204,7 +4205,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   irfs=self.config['gtlike']['irfs'])
         self.logger.debug(kw)
 
-        self._obs = ba.BinnedObs(**kw)
+        self._obs = ba.BinnedObs(**utils.unicode_to_str(kw))
 
         # Create BinnedAnalysis
         self.logger.debug('Creating BinnedAnalysis')
@@ -4216,7 +4217,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   resamp_fact=self.config['gtlike']['rfactor'])
         self.logger.debug(kw)
 
-        self._like = BinnedAnalysis(binnedData=self._obs, **kw)
+        self._like = BinnedAnalysis(binnedData=self._obs,
+                                    **utils.unicode_to_str(kw))
 
 #        print self.like.logLike.use_single_fixed_map()
 #        self.like.logLike.set_use_single_fixed_map(False)
@@ -4238,7 +4240,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Computing fixed weights')
         self.like.logLike.buildFixedModelWts()
         self.logger.debug('Updating source maps')
-        self.like.logLike.saveSourceMaps(self._srcmap_file)
+        self.like.logLike.saveSourceMaps(str(self._srcmap_file))
 
     def make_scaled_srcmap(self):
         """Make an exposure cube with the same binning as the counts map."""
@@ -4483,7 +4485,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         xmlfile = self.get_model_path(xmlfile)
         self.logger.info('Loading %s' % xmlfile)
-        self.like.logLike.reReadXml(xmlfile)
+        self.like.logLike.reReadXml(str(xmlfile))
         if not self.like.logLike.fixedModelUpdated():
             self.like.logLike.buildFixedModelWts()
 
@@ -4492,7 +4494,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         xmlfile = self.get_model_path(xmlfile)
         self.logger.info('Writing %s...' % xmlfile)
-        self.like.writeXml(xmlfile)
+        self.like.writeXml(str(xmlfile))
 
     def get_model_path(self, name):
         """Infer the path to the XML model name."""

@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
+
 import os
 import copy
 import re
@@ -1803,14 +1806,7 @@ if __name__ == '__main__':
     src = roi.get_source_by_name('lmc')
 
     import pprint
-
     pprint.pprint(src.data)
-
-    print src
-
+    print(src)
     srcs = roi.get_nearby_sources('lmc', 10.0)
-
-    #    for s in srcs:
-    #        print s.name, s.associations, s.separation(src)
-
     roi.create_roi_from_source('test.xml', 'lmc', 'test', 'test', 90.0)

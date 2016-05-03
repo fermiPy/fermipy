@@ -6,6 +6,9 @@
 Utilities for dealing with HEALPix projections and mappings
 """
 
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
+
 import re
 import copy
 
@@ -140,7 +143,6 @@ def make_hpx_to_wcs_mapping(hpx, wcs):
 def match_hpx_pixel(nside, nest, nside_pix, ipix_ring):
     """
     """
-    print 'match_nside',nside,nside_pix
     ipix_in = np.arange(12*nside*nside)
     vecs = hp.pix2vec(nside,ipix_in,nest)
     pix_match = hp.vec2pix(nside_pix,vecs[0],vecs[1],vecs[2]) == ipix_ring
@@ -452,7 +454,6 @@ class HPX(object):
             theta,phi = hp.pix2ang(nside_pix,ipix_pix,nest_pix)
             lat = np.degrees( (np.pi / 2) - theta )
             lon = np.degrees( phi )
-            print lon,lat
             if coordsys == "GAL":
                 c = SkyCoord(lon,lat, Galactic, unit="deg")    
             elif coordsys == "CEL":
@@ -474,7 +475,6 @@ class HPX(object):
             return float(tokens[3])
         elif tokens[0] == 'HPX_PIXEL':
             pixel_size = get_pixel_size_from_nside(int(tokens[2]))
-            print 2*pixel_size
             return 2.*pixel_size
         else:
             raise Exception("HPX.get_region_size did not recognize region type %s"%tokens[0])
@@ -498,7 +498,6 @@ class HPX(object):
             w.wcs.ctype[1] = 'GLAT-%s'%(proj)
             w.wcs.crval[0] = skydir.galactic.l.deg
             w.wcs.crval[1] = skydir.galactic.b.deg
-            print w.wcs.crval[0],w.wcs.crval[1]
         else:
             raise Exception('Unrecognized coordinate system.')
     
@@ -730,7 +729,7 @@ if __name__ == "__main__":
     hpx_2 = HPX(1024,False,"GAL",region="DISK(110.,75.,2.)",ebins=ebins)
     #hpx_2 = HPX(1024,False,"GAL",region="HPX_PIXEL(RING,16,500)",ebins=ebins)
     npixels = hpx_2.npix
-    print "Npixels",npixels
+    print("Npixels",npixels)
 
     n2 = np.ndarray((8,npixels),'d')
     for i in range(8):

@@ -1,4 +1,6 @@
 # pylikelihood
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
 
 import copy
 
@@ -232,13 +234,13 @@ def create_spectrum_from_dict(spectrum_type,spectral_pars=None):
     """
 
     pars = create_spectral_pars_dict(spectrum_type,spectral_pars)
-    fn = pyLike.SourceFactory_funcFactory().create(spectrum_type)
+    fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
 
     for k, v in pars.items():
 
         v = make_parameter_dict(v)
         
-        par = fn.getParam(k)
+        par = fn.getParam(str(k))
 
         vmin = min(float(v['value']), float(v['min']))
         vmax = max(float(v['value']), float(v['max']))
@@ -351,7 +353,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
                 except RuntimeError as e:
                     print(e)
                 if verbosity > 0:
-                    print "** Iteration :",Niter
+                    print("** Iteration :",Niter)
                 Niter += 1
         else:
             if approx:
@@ -392,8 +394,6 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
                 continue
             
             parameter = self.normPar(src)
-#            print src, parameter.getName(), parameter.isFree(), self.components[0]._isDiffuseOrNearby(src)
-            
             if (parameter.isFree() and 
                 self.components[0]._isDiffuseOrNearby(src)):
                 oldValue = parameter.getValue()
@@ -458,7 +458,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         
         saved_state = LikelihoodState(self)
         if verbosity > 0:
-            print "*** Start Ts_dl ***"
+            print("*** Start Ts_dl ***")
         source_attributes = self.getExtraSourceAttributes()
         self.logLike.syncParams()
         src = self.logLike.getSource(srcName)
@@ -472,7 +472,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
             tol = self.tol
         if reoptimize:
             if verbosity > 0:
-                print "** Do reoptimize"
+                print("** Do reoptimize")
             optFactory = pyLike.OptimizerFactory_instance()
             myOpt = optFactory.create(self.optimizer, self.logLike)
             Niter = 1
@@ -481,9 +481,9 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                     myOpt.find_min(0, tol)
                     break
                 except RuntimeError,e:
-                    print e
+                    print(e)
                 if verbosity > 0:
-                    print "** Iteration :",Niter
+                    print("** Iteration :",Niter)
                 Niter += 1
         else:
             if approx:

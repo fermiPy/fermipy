@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-#
-
-# Description
 """
 Utilities for dealing with SEDs
 
@@ -10,8 +6,12 @@ Many parts of this code are taken from dsphs/like/lnlfn.py by
   Alex Drlica-Wagner <kadrlica@slac.stanford.edu>
 """
 
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
+
 import copy
 import logging
+import os
 
 import numpy as np
 from scipy.interpolate import UnivariateSpline, splrep, splev
@@ -270,7 +270,7 @@ class SEDGenerator(object):
 
         source = self.components[0].like.logLike.getSource(name)
         old_spectrum = source.spectrum()
-        self.like.setSpectrum(name, 'PowerLaw')
+        self.like.setSpectrum(name, str('PowerLaw'))
         self.free_parameter(name, 'Index', False)
         self.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
                           true_value=False,
@@ -988,7 +988,7 @@ class CastroData(object):
         elif specType == "PLExpCutoff":
             return (PLExpCutoff(self._specData.evals,scaleEnergy),initPars_pc,scaleEnergy)
         else:
-            print "Did not recognize test specturm type %s"%specType
+            print("Did not recognize test specturm type %s"%specType)
         return None
 
     
@@ -1248,7 +1248,7 @@ if __name__ == "__main__":
     elif sys.argv[1] == "d_eflux":
         flux_type = 5
     else:
-        print "Didn't reconginize flux type %s, choose from norm | flux | eflux | npred"%sys.argv[1]
+        print("Didn't reconginize flux type %s, choose from norm | flux | eflux | npred"%sys.argv[1])
 
 
     tscube = sed.TSCube.create_from_fits("tscube_test.fits",flux_type)

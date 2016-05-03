@@ -1,3 +1,6 @@
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
+
 import copy
 import numpy as np
 
@@ -70,7 +73,7 @@ def read_projection_from_fits(fitsfile, extname=None):
 
 def make_coadd_map(maps, proj, shape):
     # this is a hack
-    from hpx_utils import make_coadd_hpx, HPX
+    from fermipy.hpx_utils import make_coadd_hpx, HPX
     if isinstance(proj, pywcs.WCS):
         return make_coadd_wcs(maps, proj, shape)
     elif isinstance(proj, HPX):
