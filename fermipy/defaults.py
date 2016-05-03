@@ -392,5 +392,5 @@ file_output = OrderedDict((
     ('roi', (None, 'A dictionary containing information about the ROI as a whole.',dict,'dict')),
     ('sources', (None, 'A dictionary containing information for individual sources in the model (diffuse and point-like).  Each element of this dictionary maps to a single source in the ROI model.',dict,'dict')),
     ('config', (None, 'The configuration dictionary of the :py:class:`~fermipy.gtanalysis.GTAnalysis` instance.',dict,'dict')),
-    ('version', (None, 'The version of the fermiPy package that was used to run the analysis.  This is automatically generated from the git release tag.',dict,'dict'))
+    ('version', (None, 'The version of the fermiPy package that was used to run the analysis.  This is automatically generated from the git release tag.',str,'str'))
 ))
