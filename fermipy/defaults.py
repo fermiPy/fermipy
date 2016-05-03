@@ -270,6 +270,7 @@ sed_output = OrderedDict((
     ('norm_scan', (None, 'Array of NxM normalization values for likelihood scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
     ('dloglike_scan', (None, 'Array of NxM delta-loglikelihood values for likelihood scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
     ('loglike_scan', (None, 'Array of NxM loglikelihood values for likelihood scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
+    ('params', (None, 'Best-fit spectral parameters with 1-sigma uncertainties.',dict,'dict')),
     ('config', (None, 'Copy of input configuration to this method.',dict,'dict')),
 ))
 

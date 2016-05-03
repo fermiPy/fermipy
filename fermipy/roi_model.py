@@ -117,6 +117,18 @@ def get_dist_to_edge(skydir, lon, lat, width, coordsys='CEL'):
     return dtheta
 
 
+def get_params_dict(pars_dict):
+
+    params = {}
+    for k, p in pars_dict.items():
+        val = p['value']*p['scale']
+        err = np.nan
+        if 'error' in p:
+            err = p['error']*np.abs(p['scale'])
+        params[k]=np.array([val,err])
+
+    return params
+
 class Model(object):
     """Base class for source objects.  This class is a container for both
     spectral and spatial parameters as well as other source properties
@@ -276,16 +288,8 @@ class Model(object):
                 sp[k]['error'] = self['params'][k][1]/np.abs(sp[k]['scale'])
             sp[k] = gtutils.make_parameter_dict(sp[k])
 
-    def _sync_params(self):
-        
-        sp = self['spectral_pars']
-        self._data['params'] = {}
-        for k, p in sp.items():
-            val = p['value']*p['scale']
-            err = np.nan
-            if 'error' in p:
-                err = p['error']*np.abs(p['scale'])
-            self._data['params'][k]=np.array([val,err])
+    def _sync_params(self):        
+        self._data['params'] = get_params_dict(self['spectral_pars'])
 
     def get_norm(self):
 

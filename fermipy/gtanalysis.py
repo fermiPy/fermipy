@@ -1828,7 +1828,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 
         lnlscan = dict(xpix=scan_xpix,
                        ypix=scan_ypix,
-                       logLike=np.zeros((nstep, nstep)),
+                       loglike=np.zeros((nstep, nstep)),
                        dloglike=np.zeros((nstep, nstep)),
                        dloglike_fit=np.zeros((nstep, nstep)))
 
@@ -2249,7 +2249,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         if val == 0:
             par.setValue(1.0)
-            self.like.syncSrcParams(name)
+            self.like.syncSrcParams(str(name))
             cs = self.model_counts_spectrum(name,
                                             eminmax[0],
                                             eminmax[1],
@@ -2258,7 +2258,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             val = 1./npred
             npred = 1.0
             par.setValue(0.0)
-            self.like.syncSrcParams(name)
+            self.like.syncSrcParams(str(name))
         else:
             cs = self.model_counts_spectrum(name,
                                             eminmax[0],
@@ -3320,7 +3320,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         src_dict['model_counts'] = self.model_counts_spectrum(name, summed=True)
 
         # Get NPred
-        src_dict['npred'] = self.like.NpredValue(name)
+        src_dict['npred'] = self.like.NpredValue(str(name))
         
         # Get the Model Fluxes
         try:

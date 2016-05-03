@@ -321,6 +321,8 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
     def Ts2(self, srcName, reoptimize=False, approx=True,
            tol=None, MaxIterations=10, verbosity=0):
 
+        srcName = str(srcName)
+        
         if verbosity > 0:
             print("*** Start Ts_dl ***")
         source_attributes = self.components[0].getExtraSourceAttributes()
