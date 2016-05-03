@@ -2,6 +2,7 @@ from numpy.testing import assert_allclose
 import astropy.units as u
 import numpy as np
 from .. import gtanalysis
+from .. import utils
 import pytest
 import os
 
@@ -11,12 +12,11 @@ def setup(request, tmpdir_factory):
     path = tmpdir_factory.mktemp('data')
 
     print('\ndownload')
-    url = 'https://www.dropbox.com/s/b5zln7ku780xvzq/fermipy_test0.tar.gz'
-#    url = 'https://www.dropbox.com/s/1lpkincrj04c8m2/draco.tar.gz'
+    url = 'https://www.dropbox.com/s/8a9ebwolxmif1n6/fermipy_test0_small.tar.gz'
+#    'https://www.dropbox.com/s/b5zln7ku780xvzq/fermipy_test0.tar.gz'
+
 #    dirname = os.path.abspath(os.path.dirname(__file__))
-#    dirname = path.dirpath()
-#    outfile = os.path.join(dirname,'draco.tar.gz')
-    outfile = path.join('fermipy_test0.tar.gz')
+    outfile = path.join('fermipy_test0_small.tar.gz')
     dirname = path.join()
     os.system('wget -nc %s -O %s' % (url, outfile))
     os.system('cd %s;tar xzf %s' % (dirname, outfile))
@@ -24,7 +24,7 @@ def setup(request, tmpdir_factory):
     os.system('touch %s' % path.join('test.txt'))
     request.addfinalizer(lambda: path.remove(rec=1))
 
-    cfgfile = path.join('fermipy_test0', 'config.yaml')
+    cfgfile = path.join('fermipy_test0_small', 'config.yaml')
 
     print(cfgfile)
 
@@ -82,15 +82,32 @@ def test_gtanalysis_sed(setup):
     np.random.seed(1)
     gta.simulate_roi()
 
-    gta.simulate_source({'SpatialModel': 'PointSource',
-                         'Index' : 2.0,
-                         'Prefactor': 3E-12})
+    prefactor = 3E-12
+    index = 1.9
+    scale = gta.roi['draco'].params['Scale'][0]
 
-    gta.free_norm('draco')
+    emin = gta.energies[:-1]
+    emax = gta.energies[1:]
+    
+    flux_true = utils.PowerLaw.eval_flux(prefactor,scale,
+                                         -index,10**emin,10**emax)
+    
+    gta.simulate_source({'SpatialModel': 'PointSource',
+                         'Index' : index,
+                         'Scale' : scale,
+                         'Prefactor': prefactor})
+
+    gta.free_source('draco')
     gta.fit()
     
     o = gta.sed('draco')
 
+    flux_resid = np.abs((flux_true - o['flux'])/o['flux_err'])
+    params = gta.roi['draco'].params
+    assert(np.all(flux_resid<3.0))
+    assert(np.abs(-params['Index'][0]-index)/params['Index'][1] < 3.0)
+    assert(np.abs(params['Prefactor'][0]-prefactor)/params['Prefactor'][1] < 3.0)
+    
     gta.simulate_roi(restore=True)
     
 
@@ -134,7 +151,7 @@ def test_gtanalysis_localization(setup):
     gta.add_source('testloc', src_dict, free=True)
     gta.fit()
 
-    o = gta.localize('testloc', nstep=5, dtheta_max=0.15,
+    o = gta.localize('testloc', nstep=5, dtheta_max=0.5,
                      update=True)
 
     import pprint
