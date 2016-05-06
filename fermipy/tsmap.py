@@ -12,6 +12,9 @@ import warnings
 
 import pyLikelihood as pyLike
 
+import astropy.io.fits as pyfits
+from astropy.table import Table
+
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
@@ -22,9 +25,193 @@ from fermipy.logger import Logger
 from fermipy.logger import logLevel
 
 import fermipy.sed as sed
+from fermipy.spectrum import PowerLaw
 
 MAX_NITER = 100
 
+
+def convert_tscube(infile,outfile):
+    """Convert between old and new TSCube formats."""
+    hdulist = pyfits.open(infile)
+    hdulist.writeto(outfile,clobber=True)
+
+    columns = hdulist['EBOUNDS'].columns
+    shape = hdulist['EBOUNDS'].data.field('E_MIN').shape
+
+    emin = hdulist['EBOUNDS'].data.field('E_MIN')
+    emax = hdulist['EBOUNDS'].data.field('E_MAX')
+    ectr = np.sqrt(emin*emax)
+    dfde_emin = hdulist['EBOUNDS'].data.field('E_MIN_FL')
+    dfde_emax = hdulist['EBOUNDS'].data.field('E_MAX_FL')
+
+    index = np.log(dfde_emin/dfde_emax)/np.log(emin/emax)
+
+    flux = PowerLaw.eval_flux(emin,emax,[dfde_emin,index],emin)
+    eflux = PowerLaw.eval_flux(emin,emax,[dfde_emin,index],emin)
+    dfde = PowerLaw.eval_dfde(np.sqrt(emin*emax),[dfde_emin,index],emin)
+
+    columns.add_col(pyfits.Column(name=str('E_CTR'),
+                                  format='E', array=ectr,
+                                  unit='keV'))    
+    columns.add_col(pyfits.Column(name=str('REF_FLUX'),
+                                  format='D', array=flux,
+                                  unit='ph / (cm2 s)'))
+    columns.add_col(pyfits.Column(name=str('REF_EFLUX'),
+                                  format='D', array=eflux,
+                                  unit='MeV / (cm2 s)'))
+    columns.add_col(pyfits.Column(name=str('REF_DFDE'),
+                                  format='D', array=dfde,
+                                  unit='ph / (MeV cm2 s)'))
+    
+    columns.change_name('E_MIN_FL',str('REF_DFDE_E_MIN'))
+    columns.change_unit('REF_DFDE_E_MIN','ph / (MeV cm2 s)')
+    columns.change_name('E_MAX_FL',str('REF_DFDE_E_MAX'))
+    columns.change_unit('REF_DFDE_E_MAX','ph / (MeV cm2 s)')
+    columns.change_name('NPRED',str('REF_NPRED'))
+    
+    hdulist['EBOUNDS'] = pyfits.BinTableHDU.from_columns(columns,name='EBOUNDS')
+    columns = hdulist['SCANDATA'].columns
+
+    columns.change_name('NORMSCAN',str('NORM_SCAN'))
+
+    scandata = hdulist['SCANDATA'].data
+    
+    nebins = len(emin)
+    npts = scandata['NORM_SCAN'].shape[1]/nebins
+    nrows = scandata['NORM_SCAN'].shape[0]
+    
+    norm_scan = np.array(scandata['NORM_SCAN']).reshape((nrows,npts,nebins))
+    nll_scan = np.array(scandata['NLL_SCAN']).reshape((nrows,npts,nebins))    
+    shape = scandata.field('NORM_SCAN').shape
+
+    columns.del_col('NORM_SCAN')
+    columns.del_col('NLL_SCAN')
+    
+    columns.add_col(pyfits.Column(name=str('NORM_SCAN'), format='%iE'%(nebins*npts),
+                                  dim=str('(%i,%i)'%(npts,nebins))))
+
+    columns.add_col(pyfits.Column(name=str('DELTA_NLL_SCAN'), format='%iE'%(nebins*npts),
+                                  dim=str('(%i,%i)'%(npts,nebins))))
+
+    columns.add_col(pyfits.Column(name=str('E_MIN'), format='%iE'%nebins,
+                                  unit='keV',
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('E_CTR'), format='%iE'%nebins,
+                                  unit='keV',
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('E_MAX'), format='%iE'%nebins,
+                                  unit='keV',
+                                  dim=str('(%i)'%nebins)))
+    
+    columns.add_col(pyfits.Column(name=str('REF_DFDE'), format='%iE'%nebins,
+                                  unit='ph / (MeV cm2 s)',
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('REF_DFDE_E_MIN'), format='%iE'%nebins,
+                                  unit='ph / (MeV cm2 s)',
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('REF_DFDE_E_MAX'), format='%iE'%nebins,
+                                  unit='ph / (MeV cm2 s)',
+                                  dim=str('(%i)'%nebins)))
+    
+    columns.add_col(pyfits.Column(name=str('REF_FLUX'), format='%iE'%nebins,
+                                  unit='ph / (cm2 s)',
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('REF_EFLUX'), format='%iE'%nebins,
+                                  unit='MeV / (cm2 s)',
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('REF_NPRED'), format='%iE'%nebins,
+                                  dim=str('(%i)'%nebins)))
+        
+    columns.add_col(pyfits.Column(name=str('NORM'), format='%iE'%nebins,
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('NORM_UL'), format='%iE'%nebins,
+                                  dim=str('(%i)'%nebins)))
+    
+    columns.add_col(pyfits.Column(name=str('NORM_ERR'), format='%iE'%nebins,
+                                  dim=str('(%i)'%nebins)))
+    
+    columns.add_col(pyfits.Column(name=str('NORM_ERRP'), format='%iE'%nebins,
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('NORM_ERRN'), format='%iE'%nebins,
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('TS'), format='%iE'%nebins,
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('NLL'), format='%iE'%nebins,
+                                  dim=str('(%i)'%nebins)))
+
+    columns.add_col(pyfits.Column(name=str('MODEL_NORM'), format='E'))
+    columns.add_col(pyfits.Column(name=str('MODEL_NORM_ERRP'), format='E'))
+    columns.add_col(pyfits.Column(name=str('MODEL_NORM_ERRN'), format='E'))
+    columns.add_col(pyfits.Column(name=str('MODEL_NORM_ERR'), format='E'))
+    columns.add_col(pyfits.Column(name=str('MODEL_NORM_UL'), format='E'))
+    columns.add_col(pyfits.Column(name=str('MODEL_NORM_TS'), format='E'))
+    
+    hdulist['SCANDATA'] = pyfits.BinTableHDU.from_columns(columns,name='SCANDATA',
+                                                          nrows=nrows)
+    scandata = hdulist['SCANDATA'].data
+
+    # transpose gives row-wise
+
+    ts_map = hdulist['PRIMARY'].data.reshape((nrows))
+    ncube = np.rollaxis(hdulist['N_CUBE'].data,0,3).reshape((nrows,nebins))
+    errpcube = np.rollaxis(hdulist['ERRPCUBE'].data,0,3).reshape((nrows,nebins))
+    errncube = np.rollaxis(hdulist['ERRNCUBE'].data,0,3).reshape((nrows,nebins))
+    tscube = np.rollaxis(hdulist['TSCUBE'].data,0,3).reshape((nrows,nebins))
+    nll_cube = np.rollaxis(hdulist['NLL_CUBE'].data,0,3).reshape((nrows,nebins))
+    n_map = hdulist['N_MAP'].data.reshape((nrows))
+    errp_map = hdulist['ERRP_MAP'].data.reshape((nrows))
+    errn_map = hdulist['ERRN_MAP'].data.reshape((nrows))
+    
+    scandata['NORM_SCAN'] = np.swapaxes(norm_scan,1,2)
+    scandata['DELTA_NLL_SCAN'] = np.swapaxes(nll_scan,1,2)
+    scandata['NORM'][...] = ncube
+    scandata['NORM_ERRP'][...] = errpcube
+    scandata['NORM_ERRN'][...] = errncube
+    scandata['TS'][...] = tscube
+    scandata['NLL'][...] = nll_cube
+    scandata['MODEL_NORM'] = n_map
+    scandata['MODEL_NORM_ERRP'] = errp_map
+    scandata['MODEL_NORM_ERRN'] = errn_map
+
+    m = errn_map > 0
+    scandata['MODEL_NORM_ERR'][m] = 0.5*(errp_map[m]+errn_map[m])
+    scandata['MODEL_NORM_ERR'][~m] = errp_map[~m]
+    scandata['MODEL_NORM_UL'][...] = scandata['MODEL_NORM'] + 2.0*scandata['MODEL_NORM_ERR']
+
+    scandata['MODEL_TS'] = ts_map
+    
+    scandata['E_MIN'][...] = hdulist['EBOUNDS'].data['E_MIN']
+    scandata['E_CTR'][...] = hdulist['EBOUNDS'].data['E_CTR']
+    scandata['E_MAX'][...] = hdulist['EBOUNDS'].data['E_MAX']
+    
+    scandata['REF_DFDE'][...] = hdulist['EBOUNDS'].data['REF_DFDE']
+    scandata['REF_DFDE_E_MIN'][...] = hdulist['EBOUNDS'].data['REF_DFDE_E_MIN']
+    scandata['REF_DFDE_E_MAX'][...] = hdulist['EBOUNDS'].data['REF_DFDE_E_MAX']
+    scandata['REF_EFLUX'][...] = hdulist['EBOUNDS'].data['REF_EFLUX']
+    scandata['REF_FLUX'][...] = hdulist['EBOUNDS'].data['REF_FLUX']
+    scandata['REF_NPRED'][...] = hdulist['EBOUNDS'].data['REF_NPRED']    
+    
+    m = scandata['NORM_ERRN'] > 0
+    scandata['NORM_ERR'][m] = 0.5*(scandata['NORM_ERRP'][m]+scandata['NORM_ERRN'][m])
+    scandata['NORM_ERR'][~m] = scandata['NORM_ERRP'][~m]
+    scandata['NORM_UL'][...] = scandata['NORM'] + 2.0*scandata['NORM_ERR']
+
+    hdulist['SCANDATA'].header['UL_CONFIDENCE'] = 0.95
+    
+    hdulist.writeto(outfile,clobber=True)
+
+    return columns
+    
 
 def overlap_slices(large_array_shape, small_array_shape, position):
     """
@@ -873,6 +1060,8 @@ class TSCubeGenerator(object):
                                         
         fitScanner.writeFitsFile(str(outfile), str("gttscube"))
 
+        convert_tscube(str(outfile),str(outfile))
+        
         tscube = sed.TSCube.create_from_fits(outfile,fluxType=2)
         ts_map = tscube.tsmap        
         norm_map = tscube.normmap
