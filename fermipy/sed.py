@@ -421,14 +421,13 @@ class Interpolator(object):
     def __init__(self,x,y):
         """ C'tor, take input array of x and y value         
         """
+        
         x = np.squeeze(np.array(x,ndmin=1))
         y = np.squeeze(np.array(y,ndmin=1))
         
         msk = np.isfinite(y)
         x = x[msk]
         y = y[msk]
-
-        y -= np.max(y)
 
         self._x = x
         self._y = y
@@ -750,8 +749,6 @@ class CastroData(object):
         self._loglikes = []
         self._ne = self._specData.nE
         self._nll_null = 0.0
-
-        print(norm_vals)
         
         for ie in range(self._specData.nE):            
             nvv = self._norm_vals[ie]
@@ -775,7 +772,7 @@ class CastroData(object):
         return self._nll_null
 
     @staticmethod
-    def create_from_fits(fitsfile,norm_type='EFLUX',hdu=0):
+    def create_from_fits(fitsfile,norm_type='FLUX',hdu=0):
 
         tab = Table.read(fitsfile,hdu=hdu)
 
@@ -965,7 +962,6 @@ class CastroData(object):
         """
 
         def fToMin(x):
-            print(x)
             return self.__call__(specFunc(x))
         
         #fToMin = lambda x : self.__call__(specFunc(x))
@@ -979,17 +975,17 @@ class CastroData(object):
         sfn = self.create_functor(specType)
         
         def fn(x):
-            print(x)
             return self.__call__(sfn(x))
 
         return fn        
         
     def TS_spectrum(self,spec_vals):
         """ Calculate and the TS for a given set of spectral values
-        """        
+        """
+        
         return 2. * (self._nll_null - self.__call__(spec_vals))
 
-    def test_spectra(self,spec_types=["PowerLaw"]): #,"LogParabola","PLExpCutoff"]):
+    def test_spectra(self,spec_types=['PowerLaw','LogParabola','PLExpCutoff']):
         """
         """
         retDict = {}
@@ -1016,16 +1012,21 @@ class CastroData(object):
         cutoffEnergy = 10.*scaleEnergy
         emin = self._specData.emin
         emax = self._specData.emax
-        
-        initPars = np.array([5e-13,-2.0])
-        initPars_pc = np.array([1e-12,-1.0,cutoffEnergy])
+
+        if specType == 'PowerLaw':        
+            initPars = np.array([5e-13,-2.0])
+        elif specType == 'LogParabola': 
+            initPars = np.array([5e-13,-2.0,0.0])
+        elif specType == 'PLExpCutoff': 
+            initPars = np.array([5e-13,-1.0,1E4])
 
         fn = SpectralFunction.create_functor(specType,
+                                             self.norm_type,
                                              emin,
                                              emax,
                                              scale=1E3)
 
-        return (fn,initPars[0:2],scaleEnergy)
+        return (fn,initPars,scaleEnergy)
 
     
 class TSCube(object):
@@ -1053,14 +1054,14 @@ class TSCube(object):
         specData    : `~fermipy.sed.SpecData`
            The specData object
            
-        norm_type :
-           code specifying the quantity used for the flux 
-           0: Normalization w.r.t. to test source
-           1: Flux of the test source ( ph cm^-2 s^-1 )
-           2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-           3: Number of predicted photons
-           4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
-           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )
+        norm_type : str
+           String specifying the quantity used for the normalization
+            * NORM : Normalization w.r.t. to test source
+            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
+            * EFLUX : Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * NPRED : Number of predicted photons
+            * DFDE : Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
+            * E2DFDE : E^2 times Differential energy flux of the test source ( MeV cm^-2 s^-1 )
            
         """
         self._tsmap = tsmap
@@ -1110,7 +1111,7 @@ class TSCube(object):
         return self._nN
 
     @staticmethod 
-    def create_from_fits(fitsfile,norm_type='EFLUX'):
+    def create_from_fits(fitsfile,norm_type='FLUX'):
         """ Build a TSCube object from a fits file created by gttscube """
         m,f = read_map_from_fits(fitsfile)
         n,f = read_map_from_fits(fitsfile,"N_MAP")
@@ -1118,8 +1119,8 @@ class TSCube(object):
 
         tab = Table.read(fitsfile,'EBOUNDS')
 
-        emin = np.array(tab['E_MIN']*1E3)
-        emax = np.array(tab['E_MAX']*1E3)
+        emin = np.array(tab['E_MIN']/1E3)
+        emax = np.array(tab['E_MAX']/1E3)
         npred = tab['REF_NPRED']
                 
         specData = SpecData(emin,emax,
@@ -1131,8 +1132,9 @@ class TSCube(object):
         nll_vals = -np.array(cube_data_hdu.data.field("DELTA_NLL_SCAN"))
         norm_vals = cube_data_hdu.data.field("NORM_SCAN")
 
-        norm_vals *= tab['REF_EFLUX'][np.newaxis,:,np.newaxis]
-        
+        ref_colname = 'REF_%s'%norm_type
+        norm_vals *= tab[ref_colname][np.newaxis,:,np.newaxis]
+            
         return TSCube(m,n,c,norm_vals,nll_vals,specData,
                       norm_type)
 
@@ -1225,36 +1227,6 @@ class TSCube(object):
         if output_srcs:
             retDict["Sources"]=srcs
         return retDict
-
-
-
-def PowerLaw(evals,scale):
-    """
-    Return a Power-law functor.
-    """
-    evals_scaled = evals/scale
-
-    print(evals, scale)
-    
-    return lambda x : x[0] * np.power(evals_scaled,x[1])
-
-
-def LogParabola(evals,scale):
-    """
-    Return a LogParabola functor.
-    """
-    evals_scaled = evals/scale
-    log_evals_scaled = np.log(evals_scaled)
-    return lambda x : x[0] * np.power(evals_scaled,x[1]-x[2]*log_evals_scaled);
-
-
-def PLExpCutoff(evals,scale):
-    """
-    """
-    evals_scaled = evals/scale
-    evals_diff = scale - evals
-    return lambda x : x[0] * np.power(evals_scaled,x[1]) * np.exp(evals_diff/x[2])
-
 
 def build_source_dict(src_name,peak_dict,spec_dict,spec_type):
     """

@@ -1,8 +1,12 @@
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
+
 from numpy.testing import assert_allclose
 import astropy.units as u
 import numpy as np
 from .. import gtanalysis
 from .. import utils
+from .. import spectrum
 import pytest
 import os
 
@@ -89,8 +93,8 @@ def test_gtanalysis_sed(setup):
     emin = gta.energies[:-1]
     emax = gta.energies[1:]
     
-    flux_true = utils.PowerLaw.eval_flux(prefactor,scale,
-                                         -index,10**emin,10**emax)
+    flux_true = spectrum.PowerLaw.eval_flux(prefactor,scale,
+                                            -index,10**emin,10**emax)
     
     gta.simulate_source({'SpatialModel': 'PointSource',
                          'Index' : index,
