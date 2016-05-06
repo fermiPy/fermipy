@@ -38,8 +38,8 @@ def convert_tscube(infile,outfile):
     columns = hdulist['EBOUNDS'].columns
     shape = hdulist['EBOUNDS'].data.field('E_MIN').shape
 
-    emin = hdulist['EBOUNDS'].data.field('E_MIN')
-    emax = hdulist['EBOUNDS'].data.field('E_MAX')
+    emin = hdulist['EBOUNDS'].data.field('E_MIN')/1E3
+    emax = hdulist['EBOUNDS'].data.field('E_MAX')/1E3
     ectr = np.sqrt(emin*emax)
     dfde_emin = hdulist['EBOUNDS'].data.field('E_MIN_FL')
     dfde_emax = hdulist['EBOUNDS'].data.field('E_MAX_FL')
@@ -47,11 +47,11 @@ def convert_tscube(infile,outfile):
     index = np.log(dfde_emin/dfde_emax)/np.log(emin/emax)
 
     flux = PowerLaw.eval_flux(emin,emax,[dfde_emin,index],emin)
-    eflux = PowerLaw.eval_flux(emin,emax,[dfde_emin,index],emin)
+    eflux = PowerLaw.eval_eflux(emin,emax,[dfde_emin,index],emin)
     dfde = PowerLaw.eval_dfde(np.sqrt(emin*emax),[dfde_emin,index],emin)
 
     columns.add_col(pyfits.Column(name=str('E_CTR'),
-                                  format='E', array=ectr,
+                                  format='E', array=ectr*1E3,
                                   unit='keV'))    
     columns.add_col(pyfits.Column(name=str('REF_FLUX'),
                                   format='D', array=flux,

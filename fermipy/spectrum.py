@@ -1,3 +1,5 @@
+import copy
+
 import numpy as np
 
 class SEDFunctor(object):
