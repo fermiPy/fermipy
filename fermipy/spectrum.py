@@ -1,10 +1,14 @@
-import copy
+from __future__ import absolute_import, division, print_function, \
+    unicode_literals
 
+import copy
 import numpy as np
 
 class SEDFunctor(object):
-    """Functor that computes the normalization of a source in a
-    sequence of SED energy bins."""
+    """Functor that accepts a model parameter vector and computes the
+    normalization of a spectral model in a sequence of SED energy
+    bins.
+    """
     def __init__(self,spectrum,scale,emin,emax):
 
         self._emin = emin
@@ -47,7 +51,7 @@ class SEDEFluxFunctor(SEDFunctor):
                                          params,self.scale)
         
 class SpectralFunction(object):
-    """Base class for spectral function classes."""
+    """Base class for spectral model classes."""
     
     def __init__(self, params, scale = 1.0):
         self._params = params
@@ -62,16 +66,14 @@ class SpectralFunction(object):
         return self._scale
 
     @staticmethod
-    def create_functor(specType,emin,emax,scale=1.0):
-
-        if specType == "PowerLaw":
-            return PowerLaw.create_flux_functor(emin,emax,scale)
-        elif specType == "LogParabola":
-            return LogParabola.create_flux_functor(emin,emax,scale)
-        elif specType == "PLExpCutoff":
-            return PLExpCutoff.create_flux_functor(emin,emax,scale)
+    def create_functor(spec_type,func_type,emin,emax,scale=1.0):
+        
+        if func_type.lower() == 'flux':
+            return eval(spec_type).create_flux_functor(emin,emax,scale)
+        elif func_type.lower() == 'eflux':
+            return eval(spec_type).create_eflux_functor(emin,emax,scale)
         else:
-            raise Exception("Did not recognize specturm type %s"%specType)
+            raise Exception("Did not recognize func_type: %s"%func_type)
         
     @classmethod
     def create_flux_functor(cls,emin,emax,escale=1.0):
@@ -90,10 +92,10 @@ class SpectralFunction(object):
         return cls.eval_dfde(x,params,scale)*x
 
     @classmethod
-    def integrate(cls, fn, emin, emax, params, scale=1.0):
+    def integrate(cls, fn, emin, emax, params, scale=1.0, npt=10):
         """Fast numerical integration method using mid-point rule."""
         
-        xedges = np.linspace(0.0,1.0,11)        
+        xedges = np.linspace(0.0,1.0,npt+1)        
         logx_edge = np.log(emin) + xedges[:,np.newaxis]*(np.log(emax)-np.log(emin)) 
         logx = 0.5*(logx_edge[1:,...]+logx_edge[:-1,...])
         xw = np.exp(logx_edge[1:,...])-np.exp(logx_edge[:-1,...])
@@ -118,11 +120,14 @@ class SpectralFunction(object):
         return self.eval_dfde(x, self.params, self.scale)*x**2
 
     def flux(self, emin, emax):
+        """Evaluate the integral flux."""
         return self.eval_flux(emin, emax, self.params, self.scale)
 
     def eflux(self, emin, emax):
+        """Evaluate the energy flux flux."""
         return self.eval_eflux(emin, emax, self.params, self.scale)
 
+    
 class PowerLaw(SpectralFunction):
     def __init__(self, params, scale=1.0):
         super(PowerLaw,self).__init__(params, scale)
@@ -164,12 +169,13 @@ class LogParabola(SpectralFunction):
     
     @staticmethod
     def eval_dfde(x, params, scale=1.0):
-        return params[0] * (x / scale) ** (params[1]-params[2]*x/scale)
+        return params[0] * (x / scale) ** (params[1]-params[2]*np.log(x/scale))
 
-class PowerLawExp(SpectralFunction):
+    
+class PLExpCutoff(SpectralFunction):
     def __init__(self, params, scale=1.0):
-        super(LogParabola,self).__init__(params, scale)
+        super(PLExpCutoff,self).__init__(params, scale)
     
     @staticmethod
     def eval_dfde(x, params, scale=1.0):
-        return params[0] * (x / scale) ** (params[1]) * np.exp(-params[2]*x/scale)
+        return params[0] * (x / scale) ** (params[1]) * np.exp(-x/params[2])
