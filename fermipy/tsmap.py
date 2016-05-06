@@ -90,7 +90,7 @@ def convert_tscube(infile,outfile):
     columns.add_col(pyfits.Column(name=str('NORM_SCAN'), format='%iE'%(nebins*npts),
                                   dim=str('(%i,%i)'%(npts,nebins))))
 
-    columns.add_col(pyfits.Column(name=str('DELTA_NLL_SCAN'), format='%iE'%(nebins*npts),
+    columns.add_col(pyfits.Column(name=str('DELTA_LOGLIKE_SCAN'), format='%iE'%(nebins*npts),
                                   dim=str('(%i,%i)'%(npts,nebins))))
 
     columns.add_col(pyfits.Column(name=str('E_MIN'), format='%iE'%nebins,
@@ -146,15 +146,10 @@ def convert_tscube(infile,outfile):
     columns.add_col(pyfits.Column(name=str('TS'), format='%iE'%nebins,
                                   dim=str('(%i)'%nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NLL'), format='%iE'%nebins,
+    columns.add_col(pyfits.Column(name=str('LOGLIKE'), format='%iE'%nebins,
                                   dim=str('(%i)'%nebins)))
 
-    columns.add_col(pyfits.Column(name=str('MODEL_NORM'), format='E'))
-    columns.add_col(pyfits.Column(name=str('MODEL_NORM_ERRP'), format='E'))
-    columns.add_col(pyfits.Column(name=str('MODEL_NORM_ERRN'), format='E'))
-    columns.add_col(pyfits.Column(name=str('MODEL_NORM_ERR'), format='E'))
-    columns.add_col(pyfits.Column(name=str('MODEL_NORM_UL'), format='E'))
-    columns.add_col(pyfits.Column(name=str('MODEL_TS'), format='E'))
+    
     
     hdulist['SCANDATA'] = pyfits.BinTableHDU.from_columns(columns,name='SCANDATA',
                                                           nrows=nrows)
@@ -173,22 +168,13 @@ def convert_tscube(infile,outfile):
     errn_map = hdulist['ERRN_MAP'].data.reshape((nrows))
     
     scandata['NORM_SCAN'] = np.swapaxes(norm_scan,1,2)
-    scandata['DELTA_NLL_SCAN'] = np.swapaxes(nll_scan,1,2)
+    scandata['DELTA_LOGLIKE_SCAN'] = np.swapaxes(nll_scan,1,2)
     scandata['NORM'][...] = ncube
     scandata['NORM_ERRP'][...] = errpcube
     scandata['NORM_ERRN'][...] = errncube
     scandata['TS'][...] = tscube
-    scandata['NLL'][...] = nll_cube
-    scandata['MODEL_NORM'] = n_map
-    scandata['MODEL_NORM_ERRP'] = errp_map
-    scandata['MODEL_NORM_ERRN'] = errn_map
+    scandata['LOGLIKE'][...] = nll_cube
 
-    m = errn_map > 0
-    scandata['MODEL_NORM_ERR'][m] = 0.5*(errp_map[m]+errn_map[m])
-    scandata['MODEL_NORM_ERR'][~m] = errp_map[~m]
-    scandata['MODEL_NORM_UL'][...] = scandata['MODEL_NORM'] + 2.0*scandata['MODEL_NORM_ERR']
-
-    scandata['MODEL_TS'] = ts_map
     
     scandata['E_MIN'][...] = hdulist['EBOUNDS'].data['E_MIN']
     scandata['E_CTR'][...] = hdulist['EBOUNDS'].data['E_CTR']
@@ -207,6 +193,31 @@ def convert_tscube(infile,outfile):
     scandata['NORM_UL'][...] = scandata['NORM'] + 2.0*scandata['NORM_ERR']
 
     hdulist['SCANDATA'].header['UL_CONFIDENCE'] = 0.95
+
+    columns = pyfits.ColDefs([])
+
+    columns.add_col(pyfits.Column(name=str('NORM'), format='E'))
+    columns.add_col(pyfits.Column(name=str('NORM_ERRP'), format='E'))
+    columns.add_col(pyfits.Column(name=str('NORM_ERRN'), format='E'))
+    columns.add_col(pyfits.Column(name=str('NORM_ERR'), format='E'))
+    columns.add_col(pyfits.Column(name=str('NORM_UL'), format='E'))
+    columns.add_col(pyfits.Column(name=str('TS'), format='E'))
+    
+    hdulist.append(pyfits.BinTableHDU.from_columns(columns,name='FITDATA',
+                                                   nrows=nrows))
+
+    fitdata = hdulist['FITDATA'].data
+
+    fitdata['NORM'] = n_map
+    fitdata['NORM_ERRP'] = errp_map
+    fitdata['NORM_ERRN'] = errn_map
+
+    m = errn_map > 0
+    fitdata['NORM_ERR'][m] = 0.5*(errp_map[m]+errn_map[m])
+    fitdata['NORM_ERR'][~m] = errp_map[~m]
+    fitdata['NORM_UL'][...] = fitdata['NORM'] + 2.0*fitdata['NORM_ERR']
+
+    fitdata['TS'] = ts_map
     
     hdulist.writeto(outfile,clobber=True)
 
