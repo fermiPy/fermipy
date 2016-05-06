@@ -154,7 +154,7 @@ def convert_tscube(infile,outfile):
     columns.add_col(pyfits.Column(name=str('MODEL_NORM_ERRN'), format='E'))
     columns.add_col(pyfits.Column(name=str('MODEL_NORM_ERR'), format='E'))
     columns.add_col(pyfits.Column(name=str('MODEL_NORM_UL'), format='E'))
-    columns.add_col(pyfits.Column(name=str('MODEL_NORM_TS'), format='E'))
+    columns.add_col(pyfits.Column(name=str('MODEL_TS'), format='E'))
     
     hdulist['SCANDATA'] = pyfits.BinTableHDU.from_columns(columns,name='SCANDATA',
                                                           nrows=nrows)
@@ -1062,11 +1062,11 @@ class TSCubeGenerator(object):
 
         convert_tscube(str(outfile),str(outfile))
         
-        tscube = sed.TSCube.create_from_fits(outfile,fluxType=2)
+        tscube = sed.TSCube.create_from_fits(outfile)
         ts_map = tscube.tsmap        
         norm_map = tscube.normmap
         npred_map = copy.deepcopy(norm_map)
-        npred_map._counts *= tscube.specData.npreds.sum()
+        npred_map._counts *= tscube.specData.npred.sum()
         amp_map = copy.deepcopy(norm_map) 
         amp_map._counts *= src_dict['Prefactor']
 
