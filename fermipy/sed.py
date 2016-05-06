@@ -36,6 +36,7 @@ from fermipy.fits_utils import read_map_from_fits
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 from fermipy.sourcefind import find_peaks, refine_peak
+from fermipy.spectrum import SpectralFunction
 
 from LikelihoodState import LikelihoodState
 
@@ -136,12 +137,16 @@ class SEDGenerator(object):
         cols = [Column(name='E_MIN',dtype='f8',data=10**sed['emin'],unit='MeV'),
                 Column(name='E_CTR',dtype='f8',data=10**sed['ecenter'],unit='MeV'),
                 Column(name='E_MAX',dtype='f8',data=10**sed['emax'],unit='MeV'),
-                Column(name='REF_DFDE_E_MIN',dtype='f8',data=sed['ref_dfde_emin'],unit='ph / (MeV cm2 s)'),
-                Column(name='REF_DFDE_E_MAX',dtype='f8',data=sed['ref_dfde_emax'],unit='ph / (MeV cm2 s)'),
-                Column(name='REF_DFDE',dtype='f8',data=sed['ref_dfde'],unit='ph / (MeV cm2 s)'),
-                Column(name='REF_E2DFDE',dtype='f8',data=sed['ref_e2dfde'],unit='MeV / (cm2 s)'),
-                Column(name='REF_FLUX',dtype='f8',data=sed['ref_flux'],unit='ph / (cm2 s)'),
-                Column(name='REF_EFLUX',dtype='f8',data=sed['ref_eflux'],unit='MeV / (cm2 s)'),
+                Column(name='REF_DFDE_E_MIN',dtype='f8',
+                       data=sed['ref_dfde_emin'],unit='ph / (MeV cm2 s)'),
+                Column(name='REF_DFDE_E_MAX',dtype='f8',
+                       data=sed['ref_dfde_emax'],unit='ph / (MeV cm2 s)'),
+                Column(name='REF_DFDE',dtype='f8',
+                       data=sed['ref_dfde'],unit='ph / (MeV cm2 s)'),
+                Column(name='REF_FLUX',dtype='f8',
+                       data=sed['ref_flux'],unit='ph / (cm2 s)'),
+                Column(name='REF_EFLUX',dtype='f8',
+                       data=sed['ref_eflux'],unit='MeV / (cm2 s)'),
                 Column(name='REF_NPRED',dtype='f8',data=sed['ref_npred']),
                 Column(name='NORM',dtype='f8',data=sed['norm']),
                 Column(name='NORM_ERR',dtype='f8',data=sed['norm_err']),
@@ -149,9 +154,10 @@ class SEDGenerator(object):
                 Column(name='NORM_ERRN',dtype='f8',data=sed['norm_err_lo']),
                 Column(name='NORM_UL95',dtype='f8',data=sed['norm_ul95']),
                 Column(name='TS',dtype='f8',data=sed['ts']),
+                Column(name='NLL',dtype='f8',data=np.min(-sed['loglike_scan'])),
                 Column(name='NORM_SCAN',dtype='f8',data=sed['norm_scan']),
-                Column(name='LOGLIKE_SCAN',dtype='f8',data=sed['loglike_scan']),
-                Column(name='DLOGLIKE_SCAN',dtype='f8',data=sed['dloglike_scan']),
+                Column(name='DELTA_NLL_SCAN',dtype='f8',data=-sed['dloglike_scan']),
+                
                 ]
                 
         tab = Table(cols)
@@ -500,10 +506,10 @@ class LnLFn(object):
     Helper class for interpolating a 1-D log-likelihood function from a
     set of tabulated values.  
     """
-    def __init__(self,x,y,fluxType=0):
+    def __init__(self,x,y,norm_type=0):
         """ C'tor, take input array of x and y value   
 
-        fluxType :  code specifying the quantity used for the flux 
+        norm_type :  code specifying the quantity used for the flux 
            0: Normalization w.r.t. to test source
            1: Flux of the test source ( ph cm^-2 s^-1 )
            2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
@@ -513,7 +519,7 @@ class LnLFn(object):
         """
         self._interp = Interpolator(x,y)
         self._mle = None
-        self._fluxType = fluxType
+        self._norm_type = norm_type
 
     @property
     def interp(self):
@@ -522,7 +528,7 @@ class LnLFn(object):
         return self._interp
 
     @property
-    def fluxType(self):
+    def norm_type(self):
         """ return a code specifying the quantity used for the flux 
 
            0: Normalization w.r.t. to test source
@@ -532,7 +538,7 @@ class LnLFn(object):
            4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
            5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
         """
-        return self._fluxType        
+        return self._norm_type        
 
     def _compute_mle(self):
         """ compute the maximum likelihood estimate, using the scipy.optimize.brentq method
@@ -617,19 +623,33 @@ class LnLFn(object):
 
 
 class SpecData(object):
-    """ This class wraps spectral data, e.g., energy bin definitions, flux values and number of predicted photons
+    """ This class wraps spectral data, e.g., energy bin definitions,
+    flux values and number of predicted photons
     """
-    def __init__(self,ebins,fluxes,npreds):
+    def __init__(self,emin,emax,dfde,flux,eflux,npred):
         """
+
+        Parameters
+        ----------
+
+        emin :  `~numpy.ndarray`
+           Array of lower bin edges.
+
+        emax :  `~numpy.ndarray`
+           Array of upper bin edges.
+        
         """
-        self._ebins = ebins
+        self._ebins = np.append(emin,emax[-1])
+        self._emin = emin
+        self._emax = emax
         self._log_ebins = np.log10(self._ebins)
-        self._evals = np.sqrt(self._ebins[0:-1]*self._ebins[1:])
+        self._evals = np.sqrt(self.emin*self.emax)
         self._bin_widths = self._ebins[1:] - self._ebins[0:-1]
-        self._fluxes = fluxes
-        self._efluxes = self._ebins * self._fluxes
-        self._npreds = npreds
-        self._ne = len(ebins)-1
+        self._dfde = dfde
+        self._flux = flux
+        self._eflux = eflux
+        self._npred = npred
+        self._ne = len(self.ebins)-1
 
 
     @property
@@ -643,6 +663,18 @@ class SpecData(object):
         """ return the energy bin edges
         """
         return self._ebins
+
+    @property
+    def emin(self):
+        """ return the lower energy bin edges
+        """
+        return self._emin
+
+    @property
+    def emax(self):
+        """ return the lower energy bin edges
+        """
+        return self._emax
     
     @property
     def bin_widths(self):
@@ -657,22 +689,22 @@ class SpecData(object):
         return self._evals
 
     @property
-    def fluxes(self):
-        """ return the flux values
+    def dfde(self):
+        """ return the differential flux values
         """
-        return self._fluxes
+        return self._dfde
 
     @property
-    def efluxes(self):
+    def eflux(self):
         """ return the energy flux values
         """
-        return self._efluxes
+        return self._eflux
 
     @property
-    def npreds(self):
+    def npred(self):
         """ return the number of predicted events
         """
-        return self._npreds
+        return self._npred
 
     @property
     def nE(self):
@@ -682,56 +714,50 @@ class SpecData(object):
 
 
 class CastroData(object):
-    """This class wraps the data needed to make a "Castro" plot, namely
-        the log-likelihood as a function of normalization for a series
-        of energy bins.
+    """This class wraps the data needed to make a "Castro" plot,
+    namely the log-likelihood as a function of normalization for a
+    series of energy bins.
     """
-    def __init__(self,norm_vals,nll_vals,specData,fluxType):
+    def __init__(self,norm_vals,nll_vals,specData,norm_type):
         """ C'tor
 
         Parameters
         ----------
-        norm_vals   : The normalization values ( nEBins X N array, where N is the number of sampled values for each bin )
-        nll_vals    : The log-likelihood values ( nEBins X N array, where N is the number of sampled values for each bin )
-        specData    : The specData object
-        fluxType :  code specifying the quantity used for the flux 
-           0: Normalization w.r.t. to test source
-           1: Flux of the test source ( ph cm^-2 s^-1 )
-           2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-           3: Number of predicted photons
-           4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
-           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
+        norm_vals : `~numpy.ndarray`        
+           The normalization values ( nEBins X N array, where N is the
+           number of sampled values for each bin )
+           
+        nll_vals : `~numpy.ndarray`  
+           The log-likelihood values ( nEBins X N array, where N is
+           the number of sampled values for each bin )
+           
+        specData : `~fermipy.sed.SpecData`
+           The specData object
+           
+        norm_type : str
+           String specifying the quantity used for the normalization:
+            0: Normalization w.r.t. to test source
+            FLUX: Flux of the test source ( ph cm^-2 s^-1 )
+            EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            3: Number of predicted photons
+            4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
+            5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
         """
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
         self._specData = specData
-        self._fluxType = fluxType
+        self._norm_type = norm_type
         self._loglikes = []
         self._ne = self._specData.nE
         self._nll_null = 0.0
-      
-        if fluxType == 0:
-            factors = np.ones((self._specData.nE))
-        elif fluxType == 1:
-            factors = np.sqrt(self._specData.fluxes[0:-1]*self._specData.fluxes[1:]) * self._specData.bin_widths
-        elif fluxType == 2:
-            factors = np.sqrt(self._specData.efluxes[0:-1]*self._specData.efluxes[1:]) * self._specData.bin_widths
-        elif fluxType == 3:
-            factors = self._specData.npreds
-        elif fluxType == 4:
-            factors = np.sqrt(self._specData.fluxes[0:-1]*self._specData.fluxes[1:]) 
-        elif fluxType == 5:
-            factors = np.sqrt(self._specData.efluxes[0:-1]*self._specData.efluxes[1:]) 
-        else:
-            raise Exception('Unknown flux type: %s.  Options are 0-5'%fluxType)
-         
-        for ie in range(self._specData.nE):            
-            nvv = factors[ie]*self._norm_vals[ie]
-            nllfunc = LnLFn(nvv,self._nll_vals[ie],self._fluxType)
-            self._nll_null -= self._nll_vals[ie][0]
-            self._loglikes.append(nllfunc)
-            pass
 
+        print(norm_vals)
+        
+        for ie in range(self._specData.nE):            
+            nvv = self._norm_vals[ie]
+            nllfunc = LnLFn(nvv,self._nll_vals[ie],self._norm_type)
+            self._nll_null += self._nll_vals[ie][0]
+            self._loglikes.append(nllfunc)
 
     @property
     def specData(self):
@@ -739,25 +765,49 @@ class CastroData(object):
         return self._specData
 
     @property
-    def fluxType(self):
-        """ Return the Flux type flag """ 
-        return self._fluxType
-    
+    def norm_type(self):
+        """ Return the normalization type flag """ 
+        return self._norm_type
 
     @property
     def nll_null(self):
         """ Return the negative log-likelihood for the null-hypothesis """ 
         return self._nll_null
-    
 
+    @staticmethod
+    def create_from_fits(fitsfile,norm_type='FLUX',hdu=0):
+
+        tab = Table.read(fitsfile,hdu=hdu)
+
+        if norm_type == 'FLUX':        
+            norm_vals = np.array(tab['NORM_SCAN']*tab['REF_FLUX'][:,np.newaxis])
+        elif norm_type == 'EFLUX':
+            norm_vals = np.array(tab['NORM_SCAN']*tab['REF_EFLUX'][:,np.newaxis])
+        else:
+            raise Exception('Unrecognized normalization type: %s'%norm_type)
+            
+        nll_vals = np.array(tab['DELTA_NLL_SCAN'])
+        emin = np.array(tab['E_MIN'])
+        emax = np.array(tab['E_MAX'])
+        npred = np.array(tab['NORM']*tab['REF_NPRED'])
+        dfde_emin = np.array(tab['NORM']*tab['REF_DFDE_E_MIN'])
+        dfde_emax = np.array(tab['NORM']*tab['REF_DFDE_E_MAX'])
+        dfde = np.array(tab['NORM']*tab['REF_DFDE'])
+        flux = np.array(tab['NORM']*tab['REF_FLUX'])
+        eflux = np.array(tab['NORM']*tab['REF_EFLUX'])
+        
+        sd = SpecData(emin,emax,dfde,flux,eflux,npred)
+    
+        return CastroData(norm_vals,nll_vals,sd,norm_type)
+        
     def __getitem__(self,i):
         """ return the LnLFn object for the ith energy bin
         """
         return self._loglikes[i]
 
-
     def __call__(self,x):
-        """ return the log-like for an array of values, summed over the energy bins
+        """Return the negative log-likelihood for an array of values,
+        summed over the energy bins
 
         Parameters
         ----------
@@ -774,13 +824,25 @@ class CastroData(object):
         if ( x < 0 ).any():
             return 1000.
 
+#        xp = np.logspace(-12,-9,101)
+
+#        import matplotlib.pyplot as plt
+#        plt.figure()
+        
         for i,xv in enumerate(x):            
-            nll_val -= self._loglikes[i].interp(xv)
+            nll_val += self._loglikes[i].interp(xv)
+
+#            plt.plot(xp,self._loglikes[i].interp(xp))
+#            plt.axvline(xv,color='k')
+            
+#        plt.gca().set_xscale('log')
+#        print('call ', x, nll_val)
+            
         return nll_val
         
-
     def derivative(self,x,der=1):
-        """ return the derivate of the log-like summed over the energy bins
+        """Return the derivate of the log-like summed over the energy
+        bins
 
         Parameters
         ----------
@@ -797,10 +859,8 @@ class CastroData(object):
         """
         der_val = 0.
         for i,xv in enumerate(x):
-            der_val -= self._loglikes[i].interp.derivative(xv,der=der)
-            pass
-        return der_val
-       
+            der_val += self._loglikes[i].interp.derivative(xv,der=der)
+        return der_val       
 
     def mles(self):
         """ return the maximum likelihood estimates for each of the energy bins
@@ -809,9 +869,7 @@ class CastroData(object):
         
         for i in range(self._ne):
             mle_vals[i] = self._loglikes[i].mle()
-            pass
         return mle_vals
-
 
     def fn_mles(self):
         """ returns the summed likelihood at the maximum likelihood estimate
@@ -822,7 +880,6 @@ class CastroData(object):
         mle_vals = self.mles()
         return self(mle_vals)
 
-
     def ts_vals(self):
         """ returns test statistic values for each energy bin
         """ 
@@ -831,7 +888,6 @@ class CastroData(object):
             ts_vals[i] = self._loglikes[i].TS()
             pass
         return ts_vals 
-
     
     def getLimits(self,alpha,upper=True):
         """ Evaluate the limits corresponding to a C.L. of (1-alpha)%.
@@ -849,10 +905,10 @@ class CastroData(object):
             limit_vals[i] = self._loglikes[i].getLimit(alpha,upper)
             pass
         return limit_vals
-
     
     def fitNormalization(self,specVals,xlims):
-        """ Fit the normalization given a set of spectral values that define a spectral shape
+        """Fit the normalization given a set of spectral values that
+        define a spectral shape
 
         This version is faster, and solves for the root of the derivatvie
 
@@ -873,7 +929,6 @@ class CastroData(object):
                 return xlims[1]
         return result
        
-    
     def fitNorm_v2(self,specVals):
         """ Fit the normalization given a set of spectral values that define a spectral shape
 
@@ -890,7 +945,6 @@ class CastroData(object):
         result = scipy.optimize.fmin(fToMin,0.,disp=False,xtol=1e-6)   
         return result
        
-    
     def fit_spectrum(self,specFunc,initPars):
         """ Fit for the free parameters of a spectral function
         
@@ -909,45 +963,39 @@ class CastroData(object):
         TS_spec  : float
            The TS of the best-fit spectrum
         """
-        fToMin = lambda x : self.__call__(specFunc(x))
+
+        def fToMin(x):
+            print(x)
+            return self.__call__(specFunc(x))
+        
+        #fToMin = lambda x : self.__call__(specFunc(x))
         result = scipy.optimize.fmin(fToMin,initPars,disp=False,xtol=1e-6)   
         spec_out = specFunc(result)
         TS_spec = self.TS_spectrum(spec_out)
         return result,spec_out,TS_spec
 
+    def spectrum_lnlfn(specType):
 
+        sfn = self.create_functor(specType)
+        
+        def fn(x):
+            print(x)
+            return self.__call__(sfn(x))
+
+        return fn        
+        
     def TS_spectrum(self,spec_vals):
         """ Calculate and the TS for a given set of spectral values
         """        
         return 2. * (self._nll_null - self.__call__(spec_vals))
 
-
-
-    def test_spectra(self,spec_types=["PowerLaw","LogParabola","PLExpCutoff"]):
+    def test_spectra(self,spec_types=["PowerLaw"]): #,"LogParabola","PLExpCutoff"]):
         """
         """
         retDict = {}
         for specType in spec_types:            
-            spec_func,init_pars,scaleEnergy = self.buildTestSpectrumFunction(specType)
+            spec_func,init_pars,scaleEnergy = self.create_functor(specType)
             fit_result,fit_spec,fit_ts = self.fit_spectrum(spec_func,init_pars)
-            # tweak the fit result to account for the flux type
-            if self._fluxType == 0:
-                fit_result[0] *= self._specData.fluxes[0] * self._specData.bin_widths[0]
-                fit_result[1] -= 2.
-            elif self._fluxType == 1:
-                #fit_result[0] *= 1.
-                fit_result[1] -= 1.
-            elif self._fluxType == 2:
-                fit_result[0] /= self._specData.ebins[0]
-                fit_result[1] -= 2.
-            elif self._fluxType == 3:
-                fit_result[0] *= self._specData.fluxes[0] * self._specData.bin_widths[0] / self._specData.npreds[0]
-                fit_result[1] -= 1.
-            elif self._fluxType == 4:
-                fit_result[0] *= self._specData.bin_widths[0]
-            elif self._fluxType == 5:
-                fit_result[0] *= self._specData.bin_widths[0] / self._specData.ebins[0]
-                fit_result[1] -= 1.
        
             specDict = {"Function":spec_func,
                         "Result":fit_result,
@@ -960,50 +1008,31 @@ class CastroData(object):
         return retDict
 
 
-    def buildTestSpectrumFunction(self,specType):
+    def create_functor(self,specType):
+        """Create a functor object that computes normalizations in a
+        sequence of energy bins for a given spectral model.
         """
-        """
-        scaleEnergy = self._specData.ebins[0]
+        scaleEnergy = 1E3
         cutoffEnergy = 10.*scaleEnergy
+        emin = self._specData.emin
+        emax = self._specData.emax
+        
+        initPars = np.array([5e-13,-2.0])
+        initPars_pc = np.array([1e-12,-1.0,cutoffEnergy])
 
-        # The initial parameters depend how the flux is expressed        
-        if self._fluxType == 0:
-            initPars = np.array([1e-3,0.0,0.0])
-            initPars_pc = np.array([1e-3,0.0,cutoffEnergy])    
-        elif self._fluxType == 1:
-            initPars = np.array([1e-12,-1.0,0.0])
-            initPars_pc = np.array([1e-12,-1.0,cutoffEnergy])
-        elif self._fluxType == 2:
-            initPars = np.array([1e-7,0.0,0.0])
-            initPars_pc = np.array([1e-7,0.0,cutoffEnergy])       
-        elif self._fluxType == 3:
-            initPars = np.array([1.0,-2.0,0.0])
-            initPars_pc = np.array([1.0,-2.0,cutoffEnergy])
-        elif self._fluxType == 4:
-            initPars = np.array([1e-17,-2.0,0.0])
-            initPars_pc = np.array([1e-17,-2.0,cutoffEnergy])     
-        elif self._fluxType == 5:
-            initPars = np.array([1e-12,-1.0,0.0])
-            initPars_pc = np.array([1e-12,-1.0,cutoffEnergy])
+        fn = SpectralFunction.create_functor(specType,
+                                             emin,
+                                             emax,
+                                             scale=1E3)
 
-        # Build a function, and return it and the correct initial parameters
-        if specType == "PowerLaw":
-            return (PowerLaw(self._specData.evals,scaleEnergy),initPars[0:2],scaleEnergy)
-        elif specType == "LogParabola":
-            return (LogParabola(self._specData.evals,scaleEnergy),initPars,scaleEnergy)
-        elif specType == "PLExpCutoff":
-            return (PLExpCutoff(self._specData.evals,scaleEnergy),initPars_pc,scaleEnergy)
-        else:
-            print("Did not recognize test specturm type %s"%specType)
-        return None
+        return (fn,initPars[0:2],scaleEnergy)
 
     
 class TSCube(object):
     """ 
     """
-    def __init__(self,tsmap,normmap,tscube,norm_vals,nll_vals,specData,fluxType):
-        """ C'tor
-
+    def __init__(self,tsmap,normmap,tscube,norm_vals,nll_vals,specData,norm_type):
+        """C'tor
 
         Parameters
         ----------
@@ -1024,15 +1053,16 @@ class TSCube(object):
         specData    : `~fermipy.sed.SpecData`
            The specData object
            
-        fluxType :
+        norm_type :
            code specifying the quantity used for the flux 
            0: Normalization w.r.t. to test source
            1: Flux of the test source ( ph cm^-2 s^-1 )
            2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
            3: Number of predicted photons
            4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
-           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
-       """
+           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )
+           
+        """
         self._tsmap = tsmap
         self._normmap = normmap
         self._tscube = tscube
@@ -1042,8 +1072,7 @@ class TSCube(object):
         self._nll_vals = nll_vals
         self._nE = self._specData.nE
         self._nN = 10
-        self._castro_shape = (self._nN,self._nE)
-        self._fluxType = fluxType
+        self._norm_type = norm_type
 
     @property
     def tsmap(self):
@@ -1081,18 +1110,31 @@ class TSCube(object):
         return self._nN
 
     @staticmethod 
-    def create_from_fits(fitsfile,fluxType):
+    def create_from_fits(fitsfile,norm_type='EFLUX'):
         """ Build a TSCube object from a fits file created by gttscube """
         m,f = read_map_from_fits(fitsfile)
         n,f = read_map_from_fits(fitsfile,"N_MAP")
         c,f = read_map_from_fits(fitsfile,"TSCUBE")
-        log_ebins,fluxes,npreds = read_spectral_data(f["EBOUNDS"])
-        ebins = np.power(10.,log_ebins)
-        specData = SpecData(ebins,fluxes,npreds)
+
+        tab = Table.read(fitsfile,'EBOUNDS')
+
+        emin = np.array(tab['E_MIN']*1E3)
+        emax = np.array(tab['E_MAX']*1E3)
+        npred = tab['REF_NPRED']
+                
+        specData = SpecData(emin,emax,
+                            np.array(tab['REF_DFDE']),
+                            np.array(tab['REF_FLUX']),
+                            np.array(tab['REF_EFLUX']),
+                            npred)
         cube_data_hdu = f["SCANDATA"]
-        nll_vals = cube_data_hdu.data.field("NLL_SCAN")
-        norm_vals = cube_data_hdu.data.field("NORMSCAN")
-        return TSCube(m,n,c,norm_vals,nll_vals,specData,fluxType)
+        nll_vals = cube_data_hdu.data.field("DELTA_NLL_SCAN")
+        norm_vals = cube_data_hdu.data.field("NORM_SCAN")
+
+        norm_vals *= tab['REF_EFLUX'][np.newaxis,:,np.newaxis]
+        
+        return TSCube(m,n,c,norm_vals,nll_vals,specData,
+                      norm_type)
 
 
     def castroData_from_ipix(self,ipix,colwise=False):
@@ -1100,9 +1142,9 @@ class TSCube(object):
         # pix = utils.skydir_to_pix
         if colwise:
             ipix = self._tsmap.ipix_swap_axes(ipix,colwise)
-        norm_d = self._norm_vals[ipix].reshape(self._castro_shape).swapaxes(0,1)
-        nll_d = self._nll_vals[ipix].reshape(self._castro_shape).swapaxes(0,1)
-        return CastroData(norm_d,nll_d,self._specData,self._fluxType)
+        norm_d = self._norm_vals[ipix]
+        nll_d = self._nll_vals[ipix]
+        return CastroData(norm_d,nll_d,self._specData,self._norm_type)
      
 
     def castroData_from_pix_xy(self,xy,colwise=False):
@@ -1188,13 +1230,18 @@ class TSCube(object):
 
 def PowerLaw(evals,scale):
     """
+    Return a Power-law functor.
     """
     evals_scaled = evals/scale
+
+    print(evals, scale)
+    
     return lambda x : x[0] * np.power(evals_scaled,x[1])
 
 
 def LogParabola(evals,scale):
     """
+    Return a LogParabola functor.
     """
     evals_scaled = evals/scale
     log_evals_scaled = np.log(evals_scaled)
