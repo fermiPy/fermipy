@@ -263,6 +263,7 @@ sed_output = OrderedDict((
     ('e2dfde_ul95', (None, '95% CL upper limit on e2dfde evaluated from the profile likelihood (MINOS errors).',np.ndarray,'`~numpy.ndarray`')),
     ('e2dfde_ul', (None, 'Upper limit on e2dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.',np.ndarray,'`~numpy.ndarray`')),
     ('ts', (None, 'Test statistic.',np.ndarray,'`~numpy.ndarray`')),
+    ('loglike', (None, 'Log-likelihood of model for the best-fit amplitude.',np.ndarray,'`~numpy.ndarray`')),
     ('npred', (None, 'Number of model counts.',np.ndarray,'`~numpy.ndarray`')),
     ('fit_quality', (None, 'Fit quality parameter.',np.ndarray,'`~numpy.ndarray`')),
     ('index', (None, 'Spectral index of the power-law model used to fit this bin.',np.ndarray,'`~numpy.ndarray`')),

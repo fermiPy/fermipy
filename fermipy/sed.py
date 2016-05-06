@@ -154,9 +154,10 @@ class SEDGenerator(object):
                 Column(name='NORM_ERRN',dtype='f8',data=sed['norm_err_lo']),
                 Column(name='NORM_UL95',dtype='f8',data=sed['norm_ul95']),
                 Column(name='TS',dtype='f8',data=sed['ts']),
-                Column(name='NLL',dtype='f8',data=np.min(-sed['loglike_scan'],axis=1)),
+                Column(name='LOGLIKE',dtype='f8', data=sed['loglike']),
                 Column(name='NORM_SCAN',dtype='f8',data=sed['norm_scan']),
-                Column(name='DELTA_NLL_SCAN',dtype='f8',data=-sed['dloglike_scan']),
+                Column(name='DELTA_LOGLIKE_SCAN',dtype='f8',
+                       data=sed['dloglike_scan']),
                 
                 ]
                 
@@ -211,6 +212,7 @@ class SEDGenerator(object):
              'index': np.zeros(nbins),
              'npred': np.zeros(nbins),
              'ts': np.zeros(nbins),
+             'loglike' : np.zeros(nbins),
              'norm_scan' : np.zeros((nbins,npts)),
              'dloglike_scan' : np.zeros((nbins,npts)),
              'loglike_scan' : np.zeros((nbins,npts)),
@@ -365,7 +367,8 @@ class SEDGenerator(object):
             cs = self.model_counts_spectrum(name, emin, emax, summed=True)
             o['npred'][i] = np.sum(cs)
             o['ts'][i] = max(self.like.Ts2(name, reoptimize=False), 0.0)
-
+            o['loglike'][i] = -self.like()
+            
             lnlp = self.profile_norm(name, emin=emin, emax=emax,
                                     savestate=False, reoptimize=True,
                                     npts=20)
@@ -783,7 +786,7 @@ class CastroData(object):
         else:
             raise Exception('Unrecognized normalization type: %s'%norm_type)
             
-        nll_vals = np.array(tab['DELTA_NLL_SCAN'])
+        nll_vals = -np.array(tab['DELTA_LOGLIKE_SCAN'])
         emin = np.array(tab['E_MIN'])
         emax = np.array(tab['E_MAX'])
         npred = np.array(tab['NORM']*tab['REF_NPRED'])
@@ -1048,7 +1051,7 @@ class TSCube(object):
            number of sampled values for each bin )
            
         nll_vals    : `~numpy.ndarray`        
-           The log-likelihood values ( nEBins X N array, where N is
+           The negative log-likelihood values ( nEBins X N array, where N is
            the number of sampled values for each bin )
            
         specData    : `~fermipy.sed.SpecData`
@@ -1129,7 +1132,7 @@ class TSCube(object):
                             np.array(tab['REF_EFLUX']),
                             npred)
         cube_data_hdu = f["SCANDATA"]
-        nll_vals = -np.array(cube_data_hdu.data.field("DELTA_NLL_SCAN"))
+        nll_vals = -np.array(cube_data_hdu.data.field("DELTA_LOGLIKE_SCAN"))
         norm_vals = cube_data_hdu.data.field("NORM_SCAN")
 
         ref_colname = 'REF_%s'%norm_type
