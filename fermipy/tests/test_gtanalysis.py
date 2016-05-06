@@ -93,8 +93,8 @@ def test_gtanalysis_sed(setup):
     emin = gta.energies[:-1]
     emax = gta.energies[1:]
     
-    flux_true = spectrum.PowerLaw.eval_flux(prefactor,scale,
-                                            -index,10**emin,10**emax)
+    flux_true = spectrum.PowerLaw.eval_flux(10**emin,10**emax,
+                                            [prefactor,-index],scale)
     
     gta.simulate_source({'SpatialModel': 'PointSource',
                          'Index' : index,
