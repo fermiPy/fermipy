@@ -775,7 +775,7 @@ class CastroData(object):
         return self._nll_null
 
     @staticmethod
-    def create_from_fits(fitsfile,norm_type='FLUX',hdu=0):
+    def create_from_fits(fitsfile,norm_type='EFLUX',hdu=0):
 
         tab = Table.read(fitsfile,hdu=hdu)
 
@@ -1128,7 +1128,7 @@ class TSCube(object):
                             np.array(tab['REF_EFLUX']),
                             npred)
         cube_data_hdu = f["SCANDATA"]
-        nll_vals = cube_data_hdu.data.field("DELTA_NLL_SCAN")
+        nll_vals = -np.array(cube_data_hdu.data.field("DELTA_NLL_SCAN"))
         norm_vals = cube_data_hdu.data.field("NORM_SCAN")
 
         norm_vals *= tab['REF_EFLUX'][np.newaxis,:,np.newaxis]
