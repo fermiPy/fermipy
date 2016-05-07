@@ -90,7 +90,7 @@ def convert_tscube(infile,outfile):
     columns.add_col(pyfits.Column(name=str('NORM_SCAN'), format='%iE'%(nebins*npts),
                                   dim=str('(%i,%i)'%(npts,nebins))))
 
-    columns.add_col(pyfits.Column(name=str('DELTA_LOGLIKE_SCAN'), format='%iE'%(nebins*npts),
+    columns.add_col(pyfits.Column(name=str('DLOGLIKE_SCAN'), format='%iE'%(nebins*npts),
                                   dim=str('(%i,%i)'%(npts,nebins))))
 
     columns.add_col(pyfits.Column(name=str('E_MIN'), format='%iE'%nebins,
@@ -168,7 +168,7 @@ def convert_tscube(infile,outfile):
     errn_map = hdulist['ERRN_MAP'].data.reshape((nrows))
     
     scandata['NORM_SCAN'] = np.swapaxes(norm_scan,1,2)
-    scandata['DELTA_LOGLIKE_SCAN'] = np.swapaxes(nll_scan,1,2)
+    scandata['DLOGLIKE_SCAN'] = np.swapaxes(nll_scan,1,2)
     scandata['NORM'][...] = ncube
     scandata['NORM_ERRP'][...] = errpcube
     scandata['NORM_ERRN'][...] = errncube

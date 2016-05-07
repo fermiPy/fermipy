@@ -156,7 +156,7 @@ class SEDGenerator(object):
                 Column(name='TS',dtype='f8',data=sed['ts']),
                 Column(name='LOGLIKE',dtype='f8', data=sed['loglike']),
                 Column(name='NORM_SCAN',dtype='f8',data=sed['norm_scan']),
-                Column(name='DELTA_LOGLIKE_SCAN',dtype='f8',
+                Column(name='DLOGLIKE_SCAN',dtype='f8',
                        data=sed['dloglike_scan']),
                 
                 ]
@@ -289,7 +289,9 @@ class SEDGenerator(object):
                           true_value=False,
                           bounds=[1E-10, 1E10],
                           update_source=False)
-
+        self.set_parameter(name, 'Scale', 1E3, scale=1.0,
+                           bounds=[1, 1E6], update_source=False)
+        
         src_norm_idx = -1        
         free_params = self.get_params(True)
         for j, p in enumerate(free_params):
@@ -328,8 +330,7 @@ class SEDGenerator(object):
             o['ref_npred'][i] = np.sum(cs)
                                    
             normVal = self.like.normPar(name).getValue()
-            flux_ratio = gf_bin_flux[i] / self.like[name].flux(10 ** emin,
-                                                               10 ** emax)
+            flux_ratio = gf_bin_flux[i] / ref_flux
             newVal = max(normVal * flux_ratio, 1E-10)
             self.set_norm(name, newVal)
             
@@ -786,7 +787,7 @@ class CastroData(object):
         else:
             raise Exception('Unrecognized normalization type: %s'%norm_type)
             
-        nll_vals = -np.array(tab['DELTA_LOGLIKE_SCAN'])
+        nll_vals = -np.array(tab['DLOGLIKE_SCAN'])
         emin = np.array(tab['E_MIN'])
         emax = np.array(tab['E_MAX'])
         npred = np.array(tab['NORM']*tab['REF_NPRED'])
@@ -1131,8 +1132,8 @@ class TSCube(object):
                             np.array(tab['REF_FLUX']),
                             np.array(tab['REF_EFLUX']),
                             npred)
-        cube_data_hdu = f["SCANDATA"]
-        nll_vals = -np.array(cube_data_hdu.data.field("DELTA_LOGLIKE_SCAN"))
+        cube_data_hdu = f['SCANDATA']
+        nll_vals = -np.array(cube_data_hdu.data.field("DLOGLIKE_SCAN"))
         norm_vals = cube_data_hdu.data.field("NORM_SCAN")
 
         ref_colname = 'REF_%s'%norm_type
