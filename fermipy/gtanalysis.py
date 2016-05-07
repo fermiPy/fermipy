@@ -3018,13 +3018,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._roi_model = utils.update_keys(roi_data['roi'],
                                             {'Npred':'npred',
                                              'logLike' : 'loglike',
-                                             'dloglike' : 'dloglike'})
+                                             'dlogLike' : 'dloglike'})
         self._erange = self._roi_model.setdefault('erange',self.erange)
                 
         sources = roi_data.pop('sources')
         sources = utils.update_keys(sources,{'Npred':'npred',
                                              'logLike' : 'loglike',
-                                             'dloglike' : 'dloglike'})
+                                             'dlogLike' : 'dloglike'})
         
         self.roi.load_sources(sources.values())
         for c in self.components:

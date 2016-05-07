@@ -160,7 +160,7 @@ class PowerLaw(SpectralFunction):
         
     @staticmethod
     def eval_norm(scale, index, xmin, xmax, flux):
-        return flux / PowerLaw.eval_flux(xmin,xmax, scale, [1.0, index])
+        return flux / PowerLaw.eval_flux(xmin,xmax, [1.0, index], scale)
 
 
 class LogParabola(SpectralFunction):
