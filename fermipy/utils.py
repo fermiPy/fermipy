@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
 import os
+import re
 import copy
 from collections import OrderedDict
 
@@ -196,6 +197,13 @@ def format_filename(outdir, basename, prefix=None, extension=None):
     return os.path.join(outdir, filename)
 
 
+def strip_suffix(filename,suffix):
+
+    for s in suffix:    
+        filename = re.sub(r'\.%s$'%s, '', filename)
+
+    return filename
+        
 RA_NGP = np.radians(192.8594812065348)
 DEC_NGP = np.radians(27.12825118085622)
 L_CP = np.radians(122.9319185680026)

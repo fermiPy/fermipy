@@ -190,7 +190,7 @@ class SEDGenerator(object):
         nbins = len(energies) - 1
         max_index = 5.0
         min_flux = 1E-30
-        npts = 20
+        npts = self.config['gtlike']['llscan_npts']
         erange = self.erange
         
         # Output Dictionary

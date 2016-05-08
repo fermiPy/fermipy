@@ -827,7 +827,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def _init_source(self, name):
         
         src = self.roi.get_source_by_name(name, True)
-        src.update_data({'sed': None, 'extension': None,
+        src.update_data({'sed': None,
+                         'extension': None,
                          'localize': None,
                          'class': None})
 
@@ -2223,6 +2224,23 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 xvals = self._find_scan_pts_reopt(name,npts=npts)
             else:
                 xvals = self._find_scan_pts(name,npts=npts)
+                lnlp = self.profile(name, parName, 
+                                    reoptimize=False,xvals=xvals)
+                lims = utils.get_parameter_limits(lnlp['xvals'], lnlp['dloglike'],
+                                                  ul_confidence=0.99)
+                
+                if np.isfinite(lims['ll']):
+                    xhi = np.linspace(lims['x0'], lims['ul'], npts - npts//2)
+                    xlo = np.linspace(lims['ll'], lims['x0'], npts//2)
+                    xvals = np.concatenate((xlo[:-1],xhi))
+                    xvals = np.insert(xvals, 0, 0.0)
+                elif np.abs(lnlp['dloglike'][0]) > 0.1:                    
+                    lims['ll'] = 0.0
+                    xhi = np.linspace(lims['x0'], lims['ul'], (npts+1) - (npts+1)//2)
+                    xlo = np.linspace(lims['ll'], lims['x0'], (npts+1)//2)
+                    xvals = np.concatenate((xlo[:-1],xhi))
+                else:
+                    xvals = np.linspace(0,lims['ul'],npts)
 
         o = self.profile(name, parName, 
                          reoptimize=reoptimize, xvals=xvals,
@@ -2240,6 +2258,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     def _find_scan_pts(self,name,emin=None,emax=None,npts=20):
 
+        
         par = self.like.normPar(name)
         
         eminmax = [self.erange[0] if emin is None else emin,
@@ -2266,19 +2285,23 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                             summed=True)
             npred = np.sum(cs)
 
+            
         if npred < 10:
             val *= 1. / min(1.0, npred)
-            xvals = val * 10 ** np.linspace(-1.0, 3.0, 2 * npts + 1)
+            xvals = val * 10 ** np.linspace(-1.0, 3.0, npts - 1)
             xvals = np.insert(xvals, 0, 0.0)
         else:
-            xvals = np.linspace(0, 1, 1 + npts)
-            xvals = np.concatenate((-1.0 * xvals[1:][::-1], xvals))
-            xvals = val * 10 ** xvals
+
+            npts_lo = npts//2
+            npts_hi = npts - npts_lo            
+            xhi = np.linspace(0, 1, npts_hi)
+            xlo = np.linspace(-1, 0, npts_lo)
+            xvals = val * 10 ** np.concatenate((xlo[:-1],xhi))
             xvals = np.insert(xvals, 0, 0.0)
             
         return xvals
     
-    def _find_scan_pts_reopt(self,name,emin=None,emax=None,npts=11,
+    def _find_scan_pts_reopt(self,name,emin=None,emax=None,npts=20,
                              dloglike_thresh = 3.0):
         
         parName = self.like.normPar(name).getName()
@@ -2353,13 +2376,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         xvals = np.concatenate((xlo,xhi))
         return xvals
-#        xvals = np.concatenate((xlo[1:-1],xhi))
-#        lnlp = self.profile_norm(name, savestate=True,
-#                                 reoptimize=True,xvals=xvals)
-
-#        isort = np.argsort(np.concatenate((lnlp1['xvals'][:2],lnlp['xvals'])))
-#        for k, v in lnlp.items():
-#            lnlp[k] = np.concatenate((lnlp1[k][:2],lnlp[k]))[isort]
     
     def profile(self, name, parName, emin=None, emax=None, reoptimize=False,
                 xvals=None, npts=None, savestate=True):
@@ -3081,8 +3097,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                       outfile)
         else:
             pathprefix = outfile
-            
-        pathprefix, ext = os.path.splitext(pathprefix)
+
+        pathprefix = utils.strip_suffix(pathprefix,
+                                        ['fits','yaml','npy'])            
+#        pathprefix, ext = os.path.splitext(pathprefix)
         prefix = os.path.basename(pathprefix)
         
         xmlfile = pathprefix + '.xml'
@@ -3230,8 +3248,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             raise Exception(
                 "Did not recognize projection type %s" % self.projtype)
 
-    def update_source(self, name, paramsonly=False, reoptimize=False,
-                      npts=20):
+    def update_source(self, name, paramsonly=False, reoptimize=False):
         """Update the dictionary for this source.
 
         Parameters
@@ -3244,9 +3261,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         reoptimize : bool
            Re-fit background parameters in likelihood scan.
 
-        npts : int
-           Number of points for likelihood scan.
         """
+
+        npts = self.config['gtlike']['llscan_npts']
         
         sd = self.get_src_model(name, paramsonly, reoptimize, npts)
         src = self.roi.get_source_by_name(name, True)
@@ -3257,7 +3274,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             src.update_data(sd)            
 
     def get_src_model(self, name, paramsonly=False, reoptimize=False,
-                      npts=20):
+                      npts=None):
         """Compose a dictionary for a source with the current best-fit
         parameters.
 
@@ -3277,6 +3294,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.logger.debug('Generating source dict for ' + name)
 
+        if npts is None:
+            npts = self.config['gtlike']['llscan_npts']
+        
         name = self.get_source_name(name)
         source = self.like[name].src
         spectrum = source.spectrum()
@@ -3308,8 +3328,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     'eflux10000_ul95': np.nan,
                     'pivot_energy': 3.,
                     'ts': np.nan,
+                    'loglike' : np.nan,
                     'npred': 0.0,
-                    'lnlprofile': None
+                    'lnlprofile': None,
+                    'dloglike_scan' : np.nan*np.ones(npts),
+                    'eflux_scan' : np.nan*np.ones(npts),
+                    'flux_scan' : np.nan*np.ones(npts),
                     }
 
         src = self.components[0].like.logLike.getSource(str(name))
@@ -3406,6 +3430,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                  reoptimize=reoptimize,npts=npts)
         
         src_dict['lnlprofile'] = lnlp
+
+        src_dict['dloglike_scan'] = lnlp['dloglike']
+        src_dict['eflux_scan'] = lnlp['eflux']
+        src_dict['flux_scan'] = lnlp['flux']
+        src_dict['loglike'] = np.max(lnlp['loglike'])
         
         flux_ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dloglike'])
         eflux_ul_data = utils.get_parameter_limits(lnlp['eflux'], lnlp['dloglike'])

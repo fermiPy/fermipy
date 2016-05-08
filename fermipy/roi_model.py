@@ -1708,9 +1708,7 @@ class ROIModel(fermipy.config.Configurable):
 
         scan_shape = (1,)
         for src in self._srcs:
-            if src['lnlprofile'] is None:
-                continue                
-            scan_shape = max(scan_shape,src['lnlprofile']['loglike'].shape)
+            scan_shape = max(scan_shape,src['dloglike_scan'].shape)
             
         cols_dict = collections.OrderedDict()
         cols_dict['Source_Name'] = dict(dtype='S20', format='%s')
@@ -1725,6 +1723,7 @@ class ROIModel(fermipy.config.Configurable):
         cols_dict['GLON'] = dict(dtype='f8', format='%.3f',unit='deg')
         cols_dict['GLAT'] = dict(dtype='f8', format='%.3f',unit='deg')
         cols_dict['ts'] = dict(dtype='f8', format='%.3f')
+        cols_dict['loglike'] = dict(dtype='f8', format='%.3f')
         cols_dict['npred'] = dict(dtype='f8', format='%.3f')
         cols_dict['offset'] = dict(dtype='f8', format='%.3f',unit='deg')
         cols_dict['offset_ra'] = dict(dtype='f8', format='%.3f',unit='deg')
@@ -1736,8 +1735,6 @@ class ROIModel(fermipy.config.Configurable):
                                       shape=scan_shape)
         cols_dict['eflux_scan'] = dict(dtype='f8', format='%.3f',
                                        shape=scan_shape)
-        cols_dict['loglike_scan'] = dict(dtype='f8', format='%.3f',
-                                         shape=scan_shape)
         cols_dict['dloglike_scan'] = dict(dtype='f8', format='%.3f',
                                           shape=scan_shape)
 
@@ -1780,18 +1777,7 @@ class ROIModel(fermipy.config.Configurable):
             row_dict['GLAT'] = s['glat']
 
             row_dict.update(s.get_catalog_dict())
-            
-            if s['lnlprofile'] is None:
-                row_dict['eflux_scan'] = np.zeros(scan_shape)*np.nan
-                row_dict['flux_scan'] = np.zeros(scan_shape)*np.nan
-                row_dict['loglike_scan'] = np.zeros(scan_shape)*np.nan
-                row_dict['dloglike_scan'] = np.zeros(scan_shape)*np.nan
-            else:
-                row_dict['eflux_scan'] = s['lnlprofile']['eflux']
-                row_dict['flux_scan'] = s['lnlprofile']['flux']
-                row_dict['loglike_scan'] = s['lnlprofile']['loglike']
-                row_dict['dloglike_scan'] = s['lnlprofile']['dloglike']
-                
+                            
             for t in s.data.keys():
                 if t in cols_dict.keys():
                     row_dict[t] = s[t]

@@ -99,6 +99,7 @@ gtlike = {
     'resample': (True, '', bool),
     'srcmap': (None, '', str),
     'bexpmap': (None, '', str),
+    'llscan_npts' : (20,'Number of evaluation points to use when performing a likelihood scan.',int)
 }
 
 # Options for binning.
