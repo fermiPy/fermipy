@@ -13,6 +13,7 @@ from astropy.coordinates import SkyCoord
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.wcs_utils as wcs_utils
 from fermipy.utils import Map
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
@@ -574,10 +575,18 @@ class SourceFinder(object):
         `~fermipy.gtanalysis.GTAnalysis.tscube`. """
 
         prefix = kwargs.get('prefix','')        
+
+        src = self.roi.copy_source(name)
+        skydir = src.skydir
+        
+        wp = wcs_utils.WCSProj.create(skydir,0.0125,20,coordsys='GAL')
         
         self.zero_source(name)
-        tscube = self.tscube(utils.join_strings([prefix,name.lower().replace(' ','_')]))
+        tscube = self.tscube(utils.join_strings([prefix,name.lower().replace(' ','_')]),
+                             wcs=wp.wcs,npix=wp.npix,remake_test_source=False)
         self.unzero_source(name)
+
+        
         
         tsmap_renorm = copy.deepcopy(tscube['ts'])
         tsmap_renorm._counts -= np.max(tsmap_renorm._counts)        

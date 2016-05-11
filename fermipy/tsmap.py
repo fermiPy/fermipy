@@ -991,36 +991,28 @@ class TSCubeGenerator(object):
     def _make_ts_cube(self, prefix, config, **kwargs):
 
         make_fits = kwargs.get('make_fits', True)
+        skywcs = kwargs.get('wcs',self._skywcs)
+        npix = kwargs.get('npix',self.npix)
         
-        src_dict = copy.deepcopy(config.setdefault('model',{}))
-        
-        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
-                      np.round((self.npix - 1.0) / 2.))
-
-        
-        skywcs = self._skywcs
-        skydir = utils.pix_to_skydir(xpix, ypix, skywcs)
-        
-        if self.config['binning']['coordsys'] == 'CEL':
-            galactic=False
-        elif self.config['binning']['coordsys'] == 'GAL':
-            galactic=True
-        else:
-            raise Exception('Unsupported coordinate system: %s'%
-                            self.config['binning']['coordsys'])
-
-        refdir = pyLike.SkyDir(self.roi.skydir.ra.deg,
-                               self.roi.skydir.dec.deg)
-        npix = self.npix
-        pixsize = np.abs(self._skywcs.wcs.cdelt[0])
+        galactic = wcs_utils.is_galactic(skywcs)
+        ref_skydir = wcs_utils.wcs_to_skydir(skywcs)
+        refdir = pyLike.SkyDir(ref_skydir.ra.deg,
+                               ref_skydir.dec.deg)
+        pixsize = np.abs(skywcs.wcs.cdelt[0])
         
         skyproj = pyLike.FitScanner.buildSkyProj(str("AIT"),
                                                  refdir, pixsize, npix,
                                                  galactic)
 
-        
+
+        src_dict = copy.deepcopy(config.setdefault('model',{}))
         if src_dict is None:
             src_dict = {}
+
+        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
+                      np.round((self.npix - 1.0) / 2.))
+        skydir = wcs_utils.pix_to_skydir(xpix, ypix, skywcs)
+            
         src_dict['ra'] = skydir.ra.deg
         src_dict['dec'] = skydir.dec.deg
         src_dict.setdefault('SpatialModel', 'PointSource')
@@ -1040,6 +1032,8 @@ class TSCubeGenerator(object):
         pylike_src = self.components[0]._create_source(src)
         fitScanner = pyLike.FitScanner(self.like.composite, optObject, skyproj,
                                        npix, npix)
+
+        pylike_src.spectrum().normPar().setBounds(0,1E6)
         
         fitScanner.setTestSource(pylike_src)
         

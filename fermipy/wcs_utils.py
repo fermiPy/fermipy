@@ -259,3 +259,27 @@ def wcs_to_coords(w, shape):
     z = np.ravel(np.ones(shape)*z[np.newaxis,np.newaxis,:])
          
     return np.vstack((x,y,z))    
+
+
+def wcs_to_skydir(wcs):
+
+    lon = wcs.wcs.crval[0]
+    lat = wcs.wcs.crval[1]
+
+    coordsys = get_coordsys(wcs)
+
+    if coordsys == 'GAL':
+        return SkyCoord(lon,lat,unit='deg',frame='galactic').transform_to('icrs')
+    else:
+        return SkyCoord(lon,lat,unit='deg',frame='icrs')
+
+
+def is_galactic(wcs):
+
+    coordsys = get_coordsys(wcs)
+    if coordsys == 'GAL':
+        return True
+    elif coordsys == 'CEL':
+        return False
+    else:
+        raise Exception('Unsupported coordinate system: %s'%coordsys)
