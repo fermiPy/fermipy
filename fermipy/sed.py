@@ -313,7 +313,7 @@ class SEDGenerator(object):
             else:
                 o['index'][i] = -bin_index
 
-            self.set_norm(name, 1.0)
+            self.set_norm(name, 1.0, update_source=False)
             self.set_parameter(name, 'Index', o['index'][i], scale=1.0,
                                update_source=False)
             self.like.syncSrcParams(name)
@@ -332,7 +332,7 @@ class SEDGenerator(object):
             normVal = self.like.normPar(name).getValue()
             flux_ratio = gf_bin_flux[i] / ref_flux
             newVal = max(normVal * flux_ratio, 1E-10)
-            self.set_norm(name, newVal)
+            self.set_norm(name, newVal, update_source=False)
             
             self.like.syncSrcParams(name)
             self.free_norm(name)
@@ -442,8 +442,8 @@ class Interpolator(object):
         self._dydx_lo = (y[1]-y[0])/(x[1]-x[0])
         self._dydx_hi = (y[-1]-y[-2])/(x[-1]-x[-2])
 
-        self._fn = UnivariateSpline(x,y,s=0,k=2)        
-        self._sp = splrep(x,y,k=2,s=0)
+        self._fn = UnivariateSpline(x,y,s=0,k=1)        
+        self._sp = splrep(x,y,k=1,s=0)
         
     @property
     def xmin(self):
@@ -715,7 +715,7 @@ class SpecData(object):
         """
         return self._ne
 
-
+    
 class CastroData(object):
     """This class wraps the data needed to make a "Castro" plot,
     namely the log-likelihood as a function of normalization for a
@@ -739,12 +739,12 @@ class CastroData(object):
            
         norm_type : str
            String specifying the quantity used for the normalization:
-            0: Normalization w.r.t. to test source
+            NORM: Normalization w.r.t. to test source
             FLUX: Flux of the test source ( ph cm^-2 s^-1 )
             EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-            3: Number of predicted photons
-            4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
-            5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
+            NPRED: Number of predicted photons
+            DFDE: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
+            E2DFDE: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
         """
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
@@ -824,20 +824,9 @@ class CastroData(object):
         # crude hack to force the fitter away from unphysical values
         if ( x < 0 ).any():
             return 1000.
-
-#        xp = np.logspace(-12,-9,101)
-
-#        import matplotlib.pyplot as plt
-#        plt.figure()
         
-        for i,xv in enumerate(x):            
+        for i,xv in enumerate(x):
             nll_val += self._loglikes[i].interp(xv)
-
-#            plt.plot(xp,self._loglikes[i].interp(xp))
-#            plt.axvline(xv,color='k')
-            
-#        plt.gca().set_xscale('log')
-#        print('call ', x, nll_val)
             
         return nll_val
         
@@ -967,21 +956,16 @@ class CastroData(object):
 
         def fToMin(x):
             return self.__call__(specFunc(x))
-        
-        #fToMin = lambda x : self.__call__(specFunc(x))
+                
         result = scipy.optimize.fmin(fToMin,initPars,disp=False,xtol=1e-6)   
         spec_out = specFunc(result)
         TS_spec = self.TS_spectrum(spec_out)
         return result,spec_out,TS_spec
 
-    def spectrum_lnlfn(specType):
+    def spectrum_loglike(self,specType,params,scale=1E3):
 
-        sfn = self.create_functor(specType)
-        
-        def fn(x):
-            return self.__call__(sfn(x))
-
-        return fn        
+        sfn = self.create_functor(specType,scale)[0]
+        return self.__call__(sfn(params))      
         
     def TS_spectrum(self,spec_vals):
         """ Calculate and the TS for a given set of spectral values
@@ -1008,12 +992,11 @@ class CastroData(object):
         return retDict
 
 
-    def create_functor(self,specType):
+    def create_functor(self,specType,scale=1E3):
         """Create a functor object that computes normalizations in a
         sequence of energy bins for a given spectral model.
         """
-        scaleEnergy = 1E3
-        cutoffEnergy = 10.*scaleEnergy
+
         emin = self._specData.emin
         emax = self._specData.emax
 
@@ -1023,14 +1006,16 @@ class CastroData(object):
             initPars = np.array([5e-13,-2.0,0.0])
         elif specType == 'PLExpCutoff': 
             initPars = np.array([5e-13,-1.0,1E4])
-
+        else:
+            raise Exception('Unknown spectral type: %s'%specType)
+            
         fn = SpectralFunction.create_functor(specType,
                                              self.norm_type,
                                              emin,
                                              emax,
-                                             scale=1E3)
+                                             scale=scale)
 
-        return (fn,initPars,scaleEnergy)
+        return (fn,initPars,scale)
 
     
 class TSCube(object):
@@ -1043,6 +1028,8 @@ class TSCube(object):
         ----------
         tsmap       : `~fermipy.utils.Map`
            A Map object with the TestStatistic values in each pixel
+
+        normmap     : `~fermipy.utils.Map`
            
         tscube      : `~fermipy.utils.Map`
            A Map object with the TestStatistic values in each pixel & energy bin
@@ -1116,7 +1103,18 @@ class TSCube(object):
 
     @staticmethod 
     def create_from_fits(fitsfile,norm_type='FLUX'):
-        """ Build a TSCube object from a fits file created by gttscube """
+        """Build a TSCube object from a fits file created by gttscube
+
+        Parameters
+        ----------
+
+        fitsfile : str
+           Path to the tscube FITS file.
+
+        norm_type : str 
+           String specifying the quantity used for the normalization
+        
+        """
         m,f = read_map_from_fits(fitsfile)
         n,f = read_map_from_fits(fitsfile,"N_MAP")
         c,f = read_map_from_fits(fitsfile,"TSCUBE")
@@ -1142,7 +1140,6 @@ class TSCube(object):
         return TSCube(m,n,c,norm_vals,nll_vals,specData,
                       norm_type)
 
-
     def castroData_from_ipix(self,ipix,colwise=False):
         """ Build a CastroData object for a particular pixel """
         # pix = utils.skydir_to_pix
@@ -1152,12 +1149,10 @@ class TSCube(object):
         nll_d = self._nll_vals[ipix]
         return CastroData(norm_d,nll_d,self._specData,self._norm_type)
      
-
     def castroData_from_pix_xy(self,xy,colwise=False):
         """ Build a CastroData object for a particular pixel """
         ipix = self._tsmap.xy_pix_to_ipix(xy,colwise)
         return self.castroData_from_ipix(ipix)
-
 
     def find_and_refine_peaks(self,threshold,min_separation=1.0,use_cumul=False):
         """
@@ -1179,14 +1174,12 @@ class TSCube(object):
             pass
         return peaks
 
-
     def test_spectra_of_peak(self,peak,spec_types=["PowerLaw","LogParabola","PLExpCutoff"]):
         """
         """
         castro = self.castroData_from_pix_xy(xy=(peak['ix'],peak['iy']),colwise=False)
         test_dict = castro.test_spectra(spec_types)
         return (castro,test_dict)
-
 
     def find_sources(self,threshold,
                      min_separation=1.0,
