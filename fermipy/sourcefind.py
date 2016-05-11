@@ -569,6 +569,32 @@ class SourceFinder(object):
         self.logger.info('Finished localization.')
         return o
 
+    def _localize_tscube(self,name,**kwargs):
+        """Localize a source from a TS map generated with
+        `~fermipy.gtanalysis.GTAnalysis.tscube`. """
+
+        prefix = kwargs.get('prefix','')        
+        
+        self.zero_source(name)
+        tscube = self.tscube(utils.join_strings([prefix,name.lower().replace(' ','_')]))
+        self.unzero_source(name)
+        
+        tsmap_renorm = copy.deepcopy(tscube['ts'])
+        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)        
+        
+        import matplotlib.pyplot as plt
+        from fermipy.plotting import ROIPlotter
+        fig = plt.figure()
+        
+        p = ROIPlotter(tsmap_renorm,roi=self.roi)
+
+        p.plot(levels=[-200,-100,-50,-20,-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
+               interpolation='bicubic',cb_label='2$\\times\Delta\ln$L')
+
+        plt.savefig('tscube_localize.png')
+        
+
+        
     def _localize_tsmap(self,name,**kwargs):
         """Localize a source from its TS map."""
         
@@ -584,8 +610,23 @@ class SourceFinder(object):
                            model=src.data,
                            map_skydir=skydir,
                            map_size=2.0*dtheta_max,
-                           exclude=[name],make_plots=True)
+                           exclude=[name],make_plots=False,
+                           multithread=True)
+        
+        tsmap_renorm = copy.deepcopy(tsmap['ts'])
+        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
 
+        import matplotlib.pyplot as plt
+        from fermipy.plotting import ROIPlotter
+        fig = plt.figure()
+        
+        p = ROIPlotter(tsmap_renorm,roi=self.roi)
+
+        p.plot(levels=[-200,-100,-50,-20,-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
+               interpolation='bicubic',cb_label='2$\\times\Delta\ln$L')
+
+        plt.savefig('tsmap_localize.png')
+        
         ix, iy = np.unravel_index(np.argmax(0.5*tsmap['ts'].counts),tsmap['ts'].counts.shape)        
         tsmap_fit = utils.fit_parabola(tsmap['ts'].counts, ix, iy, dpix=2)        
 

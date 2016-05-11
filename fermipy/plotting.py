@@ -25,6 +25,7 @@ import numpy as np
 import fermipy
 import fermipy.config
 import fermipy.utils as utils
+import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.defaults as defaults
 import fermipy.roi_model as roi_model
@@ -247,7 +248,7 @@ class ImagePlotter(object):
             cs.levels = ['%.0f'%val for val in cs.levels]
             plt.clabel(cs,inline=1,fontsize=8)
             
-        coordsys = utils.get_coordsys(self._proj)
+        coordsys = wcs_utils.get_coordsys(self._proj)
 
         if coordsys == 'CEL':
             ax.set_xlabel('RA')
@@ -311,7 +312,7 @@ class ROIPlotter(fermipy.config.Configurable):
         self._erange = self.config['erange']
 
         if self._erange:
-            axes = fits_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
+            axes = wcs_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
             i0 = utils.val_to_edge(axes[2], self._erange[0])
             i1 = utils.val_to_edge(axes[2], self._erange[1])
             imdata = self._data[:, :, i0:i1]
@@ -366,7 +367,7 @@ class ROIPlotter(fermipy.config.Configurable):
         data = kwargs.pop('data', self._data)
         noerror = kwargs.pop('noerror', False)
 
-        axes = fits_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
+        axes = wcs_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
         x = utils.edge_to_center(axes[iaxis])
         w = utils.edge_to_width(axes[iaxis])
 
@@ -425,7 +426,7 @@ class ROIPlotter(fermipy.config.Configurable):
         if nolabels:
             label_mask.fill(False)
         
-        pixcrd = utils.skydir_to_pix(skydir, self._implot._wcs)
+        pixcrd = wcs_utils.skydir_to_pix(skydir, self._implot._wcs)
         
         for i, (x,y,label,show_label) in enumerate(zip(pixcrd[0],pixcrd[1],labels,label_mask)):
 
@@ -538,7 +539,7 @@ class ROIPlotter(fermipy.config.Configurable):
 
     def draw_circle(self,skydir,radius):
 
-        coordsys = utils.get_coordsys(self.proj)
+        coordsys = wcs_utils.get_coordsys(self.proj)
         #if coordsys == 'GAL':            
         #    c = Circle((skydir.galactic.l.deg,skydir.galactic.b.deg),
         #               radius,facecolor='none',edgecolor='w',linestyle='--',

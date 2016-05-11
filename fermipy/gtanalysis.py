@@ -24,15 +24,17 @@ from astropy.coordinates import SkyCoord
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.wcs_utils as wcs_utils
 import fermipy.gtutils as gtutils
 import fermipy.fits_utils as fits_utils
+import fermipy.srcmap_utils as srcmap_utils
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 import fermipy.sed as sed
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
-from fermipy.utils import merge_dict, tolist, create_wcs
+from fermipy.utils import merge_dict, tolist
 from fermipy.utils import Map
 from fermipy.utils import create_hpx_disk_region_string
 from fermipy.hpx_utils import HpxMap, HPX
@@ -339,7 +341,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                     self._ebin_edges)
 
         else:
-            self._skywcs = create_wcs(self._roi.skydir,
+            self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
                                       coordsys=self.config['binning'][
                                           'coordsys'],
                                       projection=self.config['binning']['proj'],
@@ -347,7 +349,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                       crpix=1.0 + 0.5 * (self._npix - 1),
                                       naxis=2)
 
-            self._proj = create_wcs(self._roi.skydir,
+            self._proj = wcs_utils.create_wcs(self._roi.skydir,
                                     coordsys=self.config['binning']['coordsys'],
                                     projection=self.config['binning']['proj'],
                                     cdelt=self._binsz,
@@ -2587,7 +2589,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         else:
             src_dict = copy.deepcopy(src_dict)
 
-        skydir = utils.get_target_skydir(src_dict, self.roi.skydir)
+        skydir = wcs_utils.get_target_skydir(src_dict, self.roi.skydir)
 
         src_dict.setdefault('ra', skydir.ra.deg)
         src_dict.setdefault('dec', skydir.dec.deg)
@@ -3401,13 +3403,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                      self._hpx_region,
                                      self._ebin_edges)
         elif self.projtype == "WCS":
-            self._skywcs = create_wcs(self._roi.skydir,
+            self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
                                       coordsys=self._coordsys,
                                       projection=self.config['binning']['proj'],
                                       cdelt=self.binsz,
                                       crpix=1.0 + 0.5 * (self._npix - 1),
                                       naxis=2)
-            self._proj = create_wcs(self.roi.skydir,
+            self._proj = wcs_utils.create_wcs(self.roi.skydir,
                                     coordsys=self._coordsys,
                                     projection=self.config['binning']['proj'],
                                     cdelt=self.binsz,
@@ -3489,7 +3491,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             else:
                 self.like.logLike.loadSourceMap(name, True, False)
 
-            utils.delete_source_map(self._srcmap_file,name)
+            srcmap_utils.delete_source_map(self._srcmap_file,name)
             self.like.logLike.saveSourceMaps(self._srcmap_file)
             self.like.logLike.buildFixedModelWts()
         else:
@@ -3526,7 +3528,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.logger.error(msg)
             raise Exception(msg)
 
-        utils.delete_source_map(self._srcmap_file,name)
+        srcmap_utils.delete_source_map(self._srcmap_file,name)
 
         src = self.roi.create_source(name,src_dict)
         self.make_template(src, self.config['file_suffix'])
@@ -3609,7 +3611,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.roi.delete_sources([src])
 
         if delete_source_map:
-            utils.delete_source_map(self._srcmap_file,name)
+            srcmap_utils.delete_source_map(self._srcmap_file,name)
             
         return src
 
@@ -4090,7 +4092,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(cmap.counts.astype(float)))
 
-        utils.update_source_maps(self._srcmap_file, {'PRIMARY': cmap.counts},
+        srcmap_utils.update_source_maps(self._srcmap_file, {'PRIMARY': cmap.counts},
                                  logger=self.logger)
 
     def simulate_roi(self, name=None, clear=True, randomize=True):
@@ -4123,7 +4125,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(data))
 
-        utils.update_source_maps(self._srcmap_file, {'PRIMARY': data},
+        srcmap_utils.update_source_maps(self._srcmap_file, {'PRIMARY': data},
                                  logger=self.logger)
         utils.write_fits_image(data, self.wcs, self._ccubemc_file)
         
@@ -4162,7 +4164,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                          '%s_template_gauss_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
                                              suffix))
-            utils.make_gaussian_spatial_map(src.skydir, src['SpatialWidth'],
+            srcmap_utils.make_gaussian_spatial_map(src.skydir, src['SpatialWidth'],
                                             template_file, npix=500)
             src['Spatial_Filename'] = template_file
         elif src['SpatialModel'] == 'DiskSource':
@@ -4170,7 +4172,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                          '%s_template_disk_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
                                              suffix))
-            utils.make_disk_spatial_map(src.skydir, src['SpatialWidth'],
+            srcmap_utils.make_disk_spatial_map(src.skydir, src['SpatialWidth'],
                                         template_file, npix=500)
             src['Spatial_Filename'] = template_file        
 
@@ -4204,31 +4206,33 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
             self.logger.debug('Creating source map for %s' % s.name)
 
-            xpix, ypix = utils.skydir_to_pix(s.skydir, self._skywcs)
+            xpix, ypix = wcs_utils.skydir_to_pix(s.skydir, self._skywcs)
             xpix -= (self.npix-1.0)/2.
             ypix -= (self.npix-1.0)/2.
             
-            k = utils.make_srcmap(s.skydir, self._psf, s['SpatialModel'],
-                                  s['SpatialWidth'],
-                                  npix=self.npix, xpix=xpix, ypix=ypix,
-                                  cdelt=self.config['binning']['binsz'],
-                                  rebin=8)
+            k = srcmap_utils.make_srcmap(s.skydir, self._psf,
+                                         s['SpatialModel'],
+                                         s['SpatialWidth'],
+                                         npix=self.npix,
+                                         xpix=xpix, ypix=ypix,
+                                         cdelt=self.config['binning']['binsz'],
+                                         rebin=8)
             
             srcmaps[s.name] = k
 
         if srcmaps:
             self.logger.debug(
                 'Updating source map file for component %s.' % self.name)
-            utils.update_source_maps(self._srcmap_file, srcmaps,
-                                     logger=self.logger)
+            srcmap_utils.update_source_maps(self._srcmap_file, srcmaps,
+                                            logger=self.logger)
 
     def _update_srcmap(self, name, skydir, spatial_model, spatial_width):
 
-        xpix, ypix = utils.skydir_to_pix(skydir, self._skywcs)
+        xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
         xpix -= (self.npix-1.0)/2.
         ypix -= (self.npix-1.0)/2.
 
-        k = utils.make_srcmap(self.roi.skydir, self._psf, spatial_model,
+        k = srcmap_utils.make_srcmap(self.roi.skydir, self._psf, spatial_model,
                               spatial_width,
                               npix=self.npix, xpix=xpix, ypix=ypix,
                               cdelt=self.config['binning']['binsz'],

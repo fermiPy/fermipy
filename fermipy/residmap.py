@@ -8,6 +8,8 @@ import scipy.signal
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.wcs_utils as wcs_utils
+import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 from fermipy.utils import Map
 from fermipy.logger import Logger
@@ -221,7 +223,7 @@ class ResidMapGenerator(object):
         cpix = np.array([xpix, ypix])
 
         skywcs = self._skywcs
-        skydir = utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
+        skydir = wcs_utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
         if src_dict is None:
             src_dict = {}
@@ -322,11 +324,11 @@ class ResidMapGenerator(object):
             fits_file = utils.format_filename(self.config['fileio']['workdir'],
                                               'residmap.fits',
                                               prefix=[prefix,modelname])            
-            utils.write_maps(sigma_map,
-                             {'DATA_MAP': data_map,
-                              'MODEL_MAP': model_map,
-                              'EXCESS_MAP': excess_map },
-                             fits_file)
+            fits_utils.write_maps(sigma_map,
+                                  {'DATA_MAP': data_map,
+                                   'MODEL_MAP': model_map,
+                                   'EXCESS_MAP': excess_map },
+                                  fits_file)
             o['file'] = os.path.basename(fits_file)
 
         return o

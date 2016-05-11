@@ -7,10 +7,22 @@ import numpy as np
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 
+import fermipy.utils as utils
+import fermipy.wcs_utils as wcs_utils
 from fermipy.utils import Map, read_energy_bounds
 from fermipy.hpx_utils import HpxMap, HPX
 
 
+def write_maps(primary_map, maps, outfile):
+    
+    hdu_images = [primary_map.create_primary_hdu()]
+    for k, v in sorted(maps.items()):
+        hdu_images += [v.create_image_hdu(k)]
+
+    hdulist = pyfits.HDUList(hdu_images)
+    hdulist.writeto(outfile, clobber=True)
+
+    
 def read_map_from_fits(fitsfile, extname=None):
     """
     """
@@ -84,56 +96,11 @@ def make_coadd_map(maps, proj, shape):
 
 def make_coadd_wcs(maps, wcs, shape):
     data = np.zeros(shape)
-    axes = wcs_to_axes(wcs, shape)
+    axes = wcs_utils.wcs_to_axes(wcs, shape)
 
     for m in maps:
-        c = wcs_to_coords(m.wcs, m.counts.shape)
+        c = wcs_utils.wcs_to_coords(m.wcs, m.counts.shape)
         o = np.histogramdd(c.T, bins=axes[::-1], weights=np.ravel(m.counts))[0]
         data += o
 
-    return Map(data, copy.deepcopy(wcs))
-
-
-def wcs_to_axes(w, npix):
-    """Generate a sequence of bin edge vectors corresponding to the
-    axes of a WCS object."""
-
-    npix = npix[::-1]
-
-    x = np.linspace(-(npix[0]) / 2., (npix[0]) / 2.,
-                    npix[0] + 1) * np.abs(w.wcs.cdelt[0])
-    y = np.linspace(-(npix[1]) / 2., (npix[1]) / 2.,
-                    npix[1] + 1) * np.abs(w.wcs.cdelt[1])
-
-    cdelt2 = np.log10((w.wcs.cdelt[2] + w.wcs.crval[2]) / w.wcs.crval[2])
-
-    z = (np.linspace(0, npix[2], npix[2] + 1)) * cdelt2
-    z += np.log10(w.wcs.crval[2])
-
-    return x, y, z
-
-
-def wcs_to_coords(w, shape):
-    """Generate an N x D list of pixel center coordinates where N is
-    the number of pixels and D is the dimensionality of the map."""
-    if w.naxis == 2:
-        y, x = wcs_to_axes(w,shape)
-    elif w.naxis == 3:
-        z, y, x = wcs_to_axes(w,shape)
-    else:
-        raise Exception("Wrong number of WCS axes %i"%w.naxis)
-    
-    x = 0.5*(x[1:] + x[:-1])
-    y = 0.5*(y[1:] + y[:-1])
-
-    if w.naxis == 2:
-        x = np.ravel(np.ones(shape)*x[:,np.newaxis])
-        y = np.ravel(np.ones(shape)*y[np.newaxis,:])
-        return np.vstack((x,y))    
-
-    z = 0.5*(z[1:] + z[:-1])    
-    x = np.ravel(np.ones(shape)*x[:,np.newaxis,np.newaxis])
-    y = np.ravel(np.ones(shape)*y[np.newaxis,:,np.newaxis])       
-    z = np.ravel(np.ones(shape)*z[np.newaxis,np.newaxis,:])
-         
-    return np.vstack((x,y,z))    
+    return utils.Map(data, copy.deepcopy(wcs))

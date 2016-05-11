@@ -18,6 +18,8 @@ from astropy.table import Table
 import fermipy.config
 import fermipy.defaults as defaults
 import fermipy.utils as utils
+import fermipy.wcs_utils as wcs_utils
+import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 from fermipy.utils import Map
 from fermipy.roi_model import Source
@@ -688,7 +690,7 @@ class TSMapGenerator(object):
         cpix = np.array([xpix, ypix])
 
         skywcs = self._skywcs
-        skydir = utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
+        skydir = wcs_utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
         if src_dict is None:
             src_dict = {}
@@ -761,7 +763,7 @@ class TSMapGenerator(object):
                                  C_0_map=c0_map, method='root brentq')
 
         if map_skydir is not None:
-            map_offset = utils.skydir_to_pix(map_skydir, self._skywcs)
+            map_offset = wcs_utils.skydir_to_pix(map_skydir, self._skywcs)
             map_offset[0] = map_offset[0]
             map_offset[1] = map_offset[1]
             map_delta = 0.5*map_size/self.components[0].binsz
@@ -826,7 +828,7 @@ class TSMapGenerator(object):
             fits_file = utils.format_filename(self.config['fileio']['workdir'],
                                                 'tsmap.fits',
                                                 prefix=[prefix,modelname])            
-            utils.write_maps(ts_map,
+            fits_utils.write_maps(ts_map,
                              {'SQRT_TS_MAP': sqrt_ts_map,
                               'NPRED_MAP': npred_map,
                               'N_MAP': amp_map },
@@ -860,7 +862,7 @@ class TSMapGenerator(object):
         ypix = np.linspace(0, self.npix - 1, self.npix)[np.newaxis,
                :] * np.ones(data.shape)
 
-        radec = utils.pix_to_skydir(xpix, ypix, w)
+        radec = wcs_utils.pix_to_skydir(xpix, ypix, w)
         radec = (np.ravel(radec.ra.deg), np.ravel(radec.dec.deg))
 
         testsource_dict = {
@@ -995,9 +997,7 @@ class TSCubeGenerator(object):
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
                       np.round((self.npix - 1.0) / 2.))
 
-        #xpix = kwargs.get('xpix',xpix)
-        #ypix = kwargs.get('ypix',ypix)
-        #add_source = kwargs.get('add_source',True)        
+        
         skywcs = self._skywcs
         skydir = utils.pix_to_skydir(xpix, ypix, skywcs)
         

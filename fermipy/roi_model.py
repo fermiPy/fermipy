@@ -18,6 +18,7 @@ from astropy.table import Table, Column
 import fermipy
 import fermipy.config
 import fermipy.utils as utils
+import fermipy.wcs_utils as wcs_utils
 import fermipy.gtutils as gtutils
 import fermipy.catalog as catalog
 import fermipy.defaults as defaults
@@ -95,7 +96,7 @@ def get_skydir_distance_mask(src_skydir, skydir, dist, min_dist=None,
 
 
 def get_linear_dist(skydir, lon, lat, coordsys='CEL'):
-    xy = utils.sky_to_offset(skydir, np.degrees(lon), np.degrees(lat),
+    xy = wcs_utils.sky_to_offset(skydir, np.degrees(lon), np.degrees(lat),
                              coordsys=coordsys)
 
     x = np.radians(xy[:, 0])
@@ -106,7 +107,7 @@ def get_linear_dist(skydir, lon, lat, coordsys='CEL'):
 
 
 def get_dist_to_edge(skydir, lon, lat, width, coordsys='CEL'):
-    xy = utils.sky_to_offset(skydir, np.degrees(lon), np.degrees(lat),
+    xy = wcs_utils.sky_to_offset(skydir, np.degrees(lon), np.degrees(lat),
                              coordsys=coordsys)
 
     x = np.radians(xy[:, 0])
@@ -702,8 +703,8 @@ class Source(Model):
     def set_roi_direction(self,roidir):
 
         offset = roidir.separation(self.skydir).deg
-        offset_cel = utils.sky_to_offset(roidir,self['ra'], self['dec'], 'CEL')
-        offset_gal = utils.sky_to_offset(roidir,self['glon'], self['glat'], 'GAL')
+        offset_cel = wcs_utils.sky_to_offset(roidir,self['ra'], self['dec'], 'CEL')
+        offset_gal = wcs_utils.sky_to_offset(roidir,self['glon'], self['glat'], 'GAL')
 
         self['offset'] = offset
         self['offset_ra'] = offset_cel[0, 0]
@@ -808,7 +809,7 @@ class Source(Model):
         else:
             raise Exception('Source name undefined.')
 
-        skydir = utils.get_target_skydir(src_dict, roi_skydir)
+        skydir = wcs_utils.get_target_skydir(src_dict, roi_skydir)
         
         src_dict['RAJ2000'] = skydir.ra.deg
         src_dict['DEJ2000'] = skydir.dec.deg
@@ -1327,7 +1328,7 @@ class ROIModel(fermipy.config.Configurable):
             return ROIModel.create_from_source(selection['target'],
                                                config, **kwargs)
         else:
-            target_skydir = utils.get_target_skydir(selection)
+            target_skydir = wcs_utils.get_target_skydir(selection)
             return ROIModel.create_from_position(target_skydir,
                                                  config, **kwargs)
 
@@ -1571,10 +1572,10 @@ class ROIModel(fermipy.config.Configurable):
         m = (m0 & m1)
         
         offset = self.skydir.separation(cat.skydir).deg
-        offset_cel = utils.sky_to_offset(self.skydir,
+        offset_cel = wcs_utils.sky_to_offset(self.skydir,
                                          cat.radec[:, 0], cat.radec[:, 1],
                                          'CEL')
-        offset_gal = utils.sky_to_offset(self.skydir,
+        offset_gal = wcs_utils.sky_to_offset(self.skydir,
                                          cat.glonlat[:, 0], cat.glonlat[:, 1],
                                          'GAL')
 
@@ -1647,9 +1648,9 @@ class ROIModel(fermipy.config.Configurable):
                              src_skydir.galactic.b.deg)).T
 
         offset = self.skydir.separation(src_skydir).deg
-        offset_cel = utils.sky_to_offset(self.skydir,
+        offset_cel = wcs_utils.sky_to_offset(self.skydir,
                                          radec[:, 0], radec[:, 1], 'CEL')
-        offset_gal = utils.sky_to_offset(self.skydir,
+        offset_gal = wcs_utils.sky_to_offset(self.skydir,
                                          glonlat[:, 0], glonlat[:, 1], 'GAL')
 
         m0 = get_skydir_distance_mask(src_skydir, self.skydir,
