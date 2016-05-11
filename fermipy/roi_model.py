@@ -1718,8 +1718,8 @@ class ROIModel(fermipy.config.Configurable):
         cols_dict['SpatialType'] = dict(dtype='S20', format='%s')
         cols_dict['SourceType'] = dict(dtype='S20', format='%s')
         cols_dict['SpatialModel'] = dict(dtype='S20', format='%s')
-        cols_dict['RA'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['DEC'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['RAJ2000'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['DEJ2000'] = dict(dtype='f8', format='%.3f',unit='deg')
         cols_dict['GLON'] = dict(dtype='f8', format='%.3f',unit='deg')
         cols_dict['GLAT'] = dict(dtype='f8', format='%.3f',unit='deg')
         cols_dict['ts'] = dict(dtype='f8', format='%.3f')
@@ -1745,6 +1745,14 @@ class ROIModel(fermipy.config.Configurable):
         cols_dict['beta'] = dict(dtype='f8', format='%.3f')
         cols_dict['Exp_Index'] = dict(dtype='f8', format='%.3f')
         cols_dict['Cutoff'] = dict(dtype='f8', format='%.3f',unit='MeV')
+
+        cols_dict['Conf_68_PosAng'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['Conf_68_SemiMajor'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['Conf_68_SemiMinor'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['Conf_95_PosAng'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['Conf_95_SemiMajor'] = dict(dtype='f8', format='%.3f',unit='deg')
+        cols_dict['Conf_95_SemiMinor'] = dict(dtype='f8', format='%.3f',unit='deg')
+        
         
         for t in ['eflux','eflux100','eflux1000','eflux10000']:
             cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)',shape=(2,))
@@ -1766,16 +1774,24 @@ class ROIModel(fermipy.config.Configurable):
 
         cols = [Column(name=k, **v) for k,v in cols_dict.items()]
         tab = Table(cols)
+
+        row_dict = {} 
         
         for s in self._srcs:
 
-            row_dict = {} 
             row_dict['Source_Name'] = s['name']
-            row_dict['RA'] = s['ra']
-            row_dict['DEC'] = s['dec']
+            row_dict['RAJ2000'] = s['ra']
+            row_dict['DEJ2000'] = s['dec']
             row_dict['GLON'] = s['glon']
             row_dict['GLAT'] = s['glat']
 
+            cols_dict['Conf_68_PosAng'] = np.nan
+            cols_dict['Conf_68_SemiMajor'] = np.nan
+            cols_dict['Conf_68_SemiMinor'] = np.nan
+            cols_dict['Conf_95_PosAng'] = np.nan
+            cols_dict['Conf_95_SemiMajor'] = np.nan
+            cols_dict['Conf_95_SemiMinor'] = np.nan
+            
             row_dict.update(s.get_catalog_dict())
                             
             for t in s.data.keys():
