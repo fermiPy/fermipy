@@ -118,7 +118,7 @@ def run_gtapp(appname, logger, kw):
     logger.info('Running %s' % appname)
     filter_dict(kw, None)
     kw = utils.unicode_to_str(kw)    
-    gtapp = GtApp.GtApp(appname)
+    gtapp = GtApp.GtApp(str(appname))
 
     for k, v in kw.items():
         gtapp[k] = v
@@ -1430,11 +1430,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         normPar.setScale(value)
         self._sync_params(name)
     
-    def set_norm(self, name, value):
+    def set_norm(self, name, value, update_source=True):
         name = self.get_source_name(name)
-        normPar = self.like.normPar(name)
-        normPar.setValue(value)
-        self._sync_params(name)
+        par = self.like.normPar(name).getName()
+        self.set_parameter(name,par,value,true_value=False,
+                           update_source=update_source)
 
     def free_norm(self, name, free=True):
         """Free/Fix normalization of a source.
@@ -1708,234 +1708,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.info(
             'LogLike: %f Delta-LogLike: %f' % (loglike1, loglike1 - loglike0))
 
-        return o
-
-    def localize(self, name, **kwargs):
-        """Find the best-fit position of a source.  Localization is
-        performed in two steps.  First a TS map is computed centered
-        on the source with half-width set by ``dtheta_max``.  A fit is
-        then performed to the maximum TS peak in this map.  The source
-        position is then further refined by scanning the likelihood in
-        the vicinity of the peak found in the first step.  The size of
-        the scan region is set to encompass the 99% positional
-        uncertainty contour as determined from the peak fit.
-
-        Parameters
-        ----------
-
-        name : str
-            Source name.
-
-        dtheta_max : float
-            Maximum offset in RA/DEC in deg from the nominal source
-            position that will be used to define the boundaries of the
-            TS map search region.
-
-        nstep : int        
-            Number of steps in longitude/latitude that will be taken
-            when refining the source position.  The bounds of the scan
-            range are set to the 99% positional uncertainty as
-            determined from the TS map peak fit.  The total number of
-            sampling points will be nstep**2.
-
-        fix_background : bool
-            Fix background parameters when fitting the source position.
-
-        update : bool
-            Update the model for this source with the best-fit
-            position.  If newname=None this will overwrite the
-            existing source map of this source with one corresponding
-            to its new location.
-
-        newname : str
-            Name that will be assigned to the relocalized source 
-            when update=True.  If newname is None then the existing
-            source name will be used.
-
-        Returns
-        -------
-
-        localize : dict
-            Dictionary containing results of the localization
-            analysis.  This dictionary is also saved to the
-            dictionary of this source in 'localize'.
-
-        """
-
-        name = self.roi.get_source_by_name(name, True).name
-
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['localize'])
-        config.update(kwargs)
-        config.setdefault('newname', name)
-
-        nstep = config['nstep']
-        dtheta_max = config['dtheta_max']
-        update = config['update']
-        newname = config['newname']
-        prefix = kwargs.pop('prefix','')
-        
-        self.logger.info('Running localization for %s' % name)
-
-        saved_state = LikelihoodState(self.like)
-
-        src = self.roi.copy_source(name)
-        skydir = src.skydir
-        skywcs = self._skywcs
-        src_pix = skydir.to_pixel(skywcs)
-
-        tsmap = self.tsmap(utils.join_strings([prefix,name.lower().replace(' ','_')]),
-                           model=src.data,
-                           map_skydir=skydir,
-                           map_size=2.0*dtheta_max,
-                           exclude=[name],make_plots=False)
-
-        ix, iy = np.unravel_index(np.argmax(0.5*tsmap['ts'].counts),tsmap['ts'].counts.shape)        
-        tsmap_fit = utils.fit_parabola(tsmap['ts'].counts, ix, iy, dpix=2)
-                                     
-        peak_skydir = SkyCoord.from_pixel(tsmap_fit['y0'],tsmap_fit['x0'],tsmap['ts'].wcs)
-        peak_sigmax = 2.0**0.5*tsmap_fit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
-        peak_sigmay = 2.0**0.5*tsmap_fit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
-        peak_sigma = (peak_sigmax*peak_sigmay)**0.5
-        peak_pix = peak_skydir.to_pixel(skywcs)
-        peak_r68 = 2.30**0.5*peak_sigma
-        peak_r95 = 5.99**0.5*peak_sigma
-        peak_r99 = 9.21**0.5*peak_sigma        
-        
-        # Fit baseline (point-source) model
-        self.free_norm(name)
-        self.fit(loglevel=logging.DEBUG,update=False)
-
-        # Save likelihood value for baseline fit
-        loglike0 = -self.like()
-
-        self.zero_source(name)
-
-        o = {'config': config,
-             'fit_success': True,
-             'loglike_base': loglike0 }
-
-        cdelt0 = np.abs(skywcs.wcs.cdelt[0])
-        cdelt1 = np.abs(skywcs.wcs.cdelt[1])
-        delta_pix = np.linspace(-peak_r99,peak_r99,nstep)/cdelt0
-        scan_step = 2.0*peak_r99/(nstep-1.0)
-        
-        scan_xpix = delta_pix+peak_pix[0]
-        scan_ypix = delta_pix+peak_pix[1]
-              
-        scan_skydir = SkyCoord.from_pixel(np.ravel(np.ones((nstep, nstep)) * scan_xpix[:,np.newaxis]),
-                                          np.ravel(np.ones((nstep, nstep)) * scan_ypix[np.newaxis,:]),
-                                          skywcs)
-                
-        lnlscan = dict(xpix=scan_xpix,
-                       ypix=scan_ypix,
-                       loglike=np.zeros((nstep, nstep)),
-                       dloglike=np.zeros((nstep, nstep)),
-                       dloglike_fit=np.zeros((nstep, nstep)))
-
-        for i, t in enumerate(scan_skydir):
-
-            model_name = '%s_localize' % (name.replace(' ', '').lower())
-            src.set_name(model_name)
-            src.set_position(t)
-            self.add_source(model_name, src, free=True,
-                            init_source=False, save_source_maps=False,
-                            loglevel=logging.DEBUG)
-            #self.fit(update=False)
-            self.like.optimize(0)
-            
-            loglike1 = -self.like()
-            lnlscan['loglike'].flat[i] = loglike1
-            self.delete_source(model_name,loglevel=logging.DEBUG)
-
-        lnlscan['dloglike'] = lnlscan['loglike'] - np.max(lnlscan['loglike'])
-
-        self.unzero_source(name)
-        saved_state.restore()
-        self._sync_params(name)
-        self._update_roi()
-        
-        ix, iy = np.unravel_index(np.argmax(lnlscan['dloglike']),(nstep,nstep))
-        
-        scan_fit = utils.fit_parabola(lnlscan['dloglike'], ix, iy, dpix=3)
-
-        sigmax = 2.**0.5*scan_fit['sigmax']*scan_step
-        sigmay = 2.**0.5*scan_fit['sigmay']*scan_step
-                
-        lnlscan['dloglike_fit'] = \
-            utils.parabola((np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
-                            np.linspace(0,nstep-1.0,nstep)[np.newaxis,:]),
-                           *scan_fit['popt']).reshape((nstep,nstep))
-            
-        o['lnlscan'] = lnlscan
-
-        # Best fit position and uncertainty from fit to TS map
-        o['peak_theta'] = tsmap_fit['theta']
-        o['peak_sigmax'] = peak_sigmax
-        o['peak_sigmay'] = peak_sigmay
-        o['peak_sigma'] = peak_sigma
-        o['peak_r68'] = peak_r68
-        o['peak_r95'] = peak_r95
-        o['peak_r99'] = peak_r99
-        o['peak_ra'] = peak_skydir.icrs.ra.deg
-        o['peak_dec'] = peak_skydir.icrs.dec.deg
-        o['peak_glon'] = peak_skydir.galactic.l.deg
-        o['peak_glat'] = peak_skydir.galactic.b.deg
-        o['tsmap_fit'] = tsmap_fit
-        o['scan_fit'] = scan_fit
-        
-        # Best fit position and uncertainty from likelihood scan
-        o['xpix'] = scan_fit['x0']*scan_step/cdelt0 + scan_xpix[0]
-        o['ypix'] = scan_fit['y0']*scan_step/cdelt1 + scan_ypix[0]
-        o['deltax'] = (o['xpix']-src_pix[0])*cdelt0
-        o['deltay'] = (o['ypix']-src_pix[1])*cdelt1
-        o['theta'] = scan_fit['theta']
-        o['sigmax'] = sigmax
-        o['sigmay'] = sigmay
-        o['sigma'] = (o['sigmax']*o['sigmay'])**0.5
-        o['r68'] = 2.30**0.5*o['sigma']
-        o['r95'] = 5.99**0.5*o['sigma']
-        o['r99'] = 9.21**0.5*o['sigma']
-
-        new_skydir = SkyCoord.from_pixel(o['xpix'],o['ypix'],skywcs)
-
-        o['offset'] = skydir.separation(new_skydir).deg
-        o['ra'] = new_skydir.icrs.ra.deg
-        o['dec'] = new_skydir.icrs.dec.deg
-        o['glon'] = new_skydir.galactic.l.deg
-        o['glat'] = new_skydir.galactic.b.deg
-        
-        if o['fit_success'] and o['offset'] > dtheta_max:
-            o['fit_success'] = False
-            self.logger.error('Best-fit position outside search region:\n '
-                              'offset = %.3f deltax = %.3f deltay = %.3f '%(o['offset'],
-                                                                            o['deltax'],o['deltay']) +
-                              'dtheta_max = %.3f'%(dtheta_max))
-
-        self.roi[name]['localize'] = copy.deepcopy(o)
-
-        try:
-            self._plotter.make_localization_plot(self, name, tsmap, prefix=prefix,
-                                                 **kwargs)
-        except Exception:
-            self.logger.error('Plot failed.', exc_info=True)
-            
-        if update and o['fit_success']:
-
-            self.logger.info(
-                'Updating position to: '
-                'RA %8.3f DEC %8.3f (offset = %8.3f)' % (o['ra'], o['dec'],
-                                                         o['offset']))
-            src = self.delete_source(name)
-            src.set_position(new_skydir)
-            src.set_name(newname, names=src.names)
-
-            self.add_source(newname, src, free=True)
-            self.fit(loglevel=logging.DEBUG)
-            src = self.roi.get_source_by_name(newname, True)
-            self.roi[name]['localize'] = copy.deepcopy(o)
-            
-        self.logger.info('Finished localization.')
         return o
 
     def extension(self, name, **kwargs):
@@ -2921,11 +2693,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def print_roi(self):
         self.logger.info('\n' + str(self.roi))
 
-    def print_params(self, freeonly=False):
+    def print_params(self, allpars=False):
         """Print information about the model parameters (values,
         errors, bounds, scale)."""
         
-        pars = self.get_params(freeonly=freeonly)
+        pars = self.get_params()
 
         o = '\n'
         o += '%4s %-20s%10s%10s%10s%10s%10s%5s\n' % (
@@ -2940,8 +2712,20 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             src_pars.setdefault(p['src_name'],[])
             src_pars[p['src_name']] += [p]
 
+        free_sources = []
         for k, v in src_pars.items():
 
+            for p in v:
+                if not p['free']:
+                    continue
+
+                free_sources += [k]
+            
+        for k, v in src_pars.items():
+
+            if not allpars and not k in free_sources:
+                continue
+                
             o += '%s\n'%k
             for p in v:
 
