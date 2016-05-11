@@ -1785,12 +1785,12 @@ class ROIModel(fermipy.config.Configurable):
             row_dict['GLON'] = s['glon']
             row_dict['GLAT'] = s['glat']
 
-            cols_dict['Conf_68_PosAng'] = np.nan
-            cols_dict['Conf_68_SemiMajor'] = np.nan
-            cols_dict['Conf_68_SemiMinor'] = np.nan
-            cols_dict['Conf_95_PosAng'] = np.nan
-            cols_dict['Conf_95_SemiMajor'] = np.nan
-            cols_dict['Conf_95_SemiMinor'] = np.nan
+            row_dict['Conf_68_PosAng'] = np.nan
+            row_dict['Conf_68_SemiMajor'] = np.nan
+            row_dict['Conf_68_SemiMinor'] = np.nan
+            row_dict['Conf_95_PosAng'] = np.nan
+            row_dict['Conf_95_SemiMajor'] = np.nan
+            row_dict['Conf_95_SemiMinor'] = np.nan
             
             row_dict.update(s.get_catalog_dict())
                             

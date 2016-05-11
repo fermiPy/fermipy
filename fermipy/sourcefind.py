@@ -13,6 +13,7 @@ from fermipy.utils import Map
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 
+from LikelihoodState import LikelihoodState
 
 def find_peaks(input_map, threshold, min_separation=0.5):
     """Find peaks in a 2-D map object that have amplitude larger than
