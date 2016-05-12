@@ -52,6 +52,9 @@ class Map_Base(object):
     def counts(self):
         return self._counts
 
+    def get_pixel_indices(self,lats,lons):
+        raise NotImplementedError("MapBase.get_pixel_indices)")
+
 
 class Map(Map_Base):
     """ Representation of a 2D or 3D counts map using WCS. """
@@ -150,9 +153,11 @@ class Map(Map_Base):
         if colwise is True (False) this uses columnwise (rowwise) indexing
         """
         if colwise:
-            return xypix[0]*self._wcs._naxis2 + xypix[1]
+            return np.where( (xypix[0] < self._wcs._naxis1)*(xypix[1] < self._wcs._naxis2),
+                              xypix[0]*self._wcs._naxis2 + xypix[1], -1 )
         else:
-            return xypix[1]*self._wcs._naxis1 + xypix[0]
+            return np.where( (xypix[0] < self._wcs._naxis2)*(xypix[1] < self._wcs._naxis1),
+                             xypix[1]*self._wcs._naxis1 + xypix[0], -1 )
     
     def ipix_to_xypix(self,ipix,colwise=False):
         """ Return the pixel xy coordinates from the pixel index
@@ -173,7 +178,51 @@ class Map(Map_Base):
         xy = self.ipix_to_xypix(ipix,colwise)
         return self.xy_pix_to_ipix(xy,not colwise)
 
-    
+    def get_pixel_indices(self,lons,lats):
+        """ Return the indices in the flat array corresponding to a set of coordinates
+
+        Parameters
+        ----------       
+        lons  : array-like
+           'Longitudes' (RA or GLON)
+        
+        lats  : array-like
+           'Latitidues' (DEC or GLAT)
+        
+        Returns
+        ----------
+           idxs : numpy.ndarray((n),'i')
+           Indices of pixels in the flattened map, -1 used to flag coords outside of map    
+        """
+        if len(lats) != len(lons):
+            raise RuntimeError("Map.get_pixel_indices, input lengths do not match %i %i"%(len(lons),len(lats)))
+        pix_x,pix_y = self._wcs.wcs_world2pix(lons,lats,1)
+        pixcrd = [np.floor(pix_x).astype(int),np.floor(pix_y).astype(int)]
+        idxs = self.xy_pix_to_ipix(pixcrd,colwise=False)   
+        return idxs
+
+
+    def get_map_values(self,lons,lats):
+        """ Return the indices in the flat array corresponding to a set of coordinates
+
+        Parameters
+        ----------       
+        lons  : array-like
+           'Longitudes' (RA or GLON)
+        
+        lats  : array-like
+           'Latitidues' (DEC or GLAT)
+        
+        Returns
+        ----------
+           vals : numpy.ndarray((n))
+           Values of pixels in the flattened map, np.nan used to flag coords outside of map    
+        """
+        pix_idxs = self.get_pixel_indices(lons,lats)
+        vals = np.where(pix_idxs>0,self.counts.flat[pix_idxs],np.nan)
+        return vals
+        
+ 
 def join_strings(strings,sep='_'):
 
     if strings is None:
