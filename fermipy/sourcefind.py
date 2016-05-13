@@ -416,24 +416,9 @@ class SourceFinder(object):
         skywcs = self._skywcs
         src_pix = skydir.to_pixel(skywcs)
 
-        tsmap = self.tsmap(utils.join_strings([prefix,name.lower().replace(' ','_')]),
-                           model=src.data,
-                           map_skydir=skydir,
-                           map_size=2.0*dtheta_max,
-                           exclude=[name],make_plots=False)
-
-        ix, iy = np.unravel_index(np.argmax(0.5*tsmap['ts'].counts),tsmap['ts'].counts.shape)        
-        tsmap_fit = utils.fit_parabola(tsmap['ts'].counts, ix, iy, dpix=2)
-                                     
-        peak_skydir = SkyCoord.from_pixel(tsmap_fit['y0'],tsmap_fit['x0'],tsmap['ts'].wcs)
-        peak_sigmax = 2.0**0.5*tsmap_fit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
-        peak_sigmay = 2.0**0.5*tsmap_fit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
-        peak_sigma = (peak_sigmax*peak_sigmay)**0.5
-        peak_pix = peak_skydir.to_pixel(skywcs)
-        peak_r68 = 2.30**0.5*peak_sigma
-        peak_r95 = 5.99**0.5*peak_sigma
-        peak_r99 = 9.21**0.5*peak_sigma        
-        
+        tsmap_fit, tsmap = self._localize_tsmap(name,prefix=prefix,
+                                                dtheta_max=dtheta_max)
+                
         # Fit baseline (point-source) model
         self.free_norm(name)
         self.fit(loglevel=logging.DEBUG,update=False)
@@ -449,11 +434,12 @@ class SourceFinder(object):
 
         cdelt0 = np.abs(skywcs.wcs.cdelt[0])
         cdelt1 = np.abs(skywcs.wcs.cdelt[1])
-        delta_pix = np.linspace(-peak_r99,peak_r99,nstep)/cdelt0
-        scan_step = 2.0*peak_r99/(nstep-1.0)
+        delta_pix = np.linspace(-tsmap_fit['r95'],
+                                 tsmap_fit['r95'],nstep)/cdelt0
+        scan_step = 2.0*tsmap_fit['r95']/(nstep-1.0)
         
-        scan_xpix = delta_pix+peak_pix[0]
-        scan_ypix = delta_pix+peak_pix[1]
+        scan_xpix = delta_pix+tsmap_fit['xpix']
+        scan_ypix = delta_pix+tsmap_fit['ypix']
               
         scan_skydir = SkyCoord.from_pixel(np.ravel(np.ones((nstep, nstep)) * scan_xpix[:,np.newaxis]),
                                           np.ravel(np.ones((nstep, nstep)) * scan_ypix[np.newaxis,:]),
@@ -466,7 +452,7 @@ class SourceFinder(object):
                        dloglike_fit=np.zeros((nstep, nstep)))
 
         for i, t in enumerate(scan_skydir):
-
+            
             model_name = '%s_localize' % (name.replace(' ', '').lower())
             src.set_name(model_name)
             src.set_position(t)
@@ -489,7 +475,7 @@ class SourceFinder(object):
         
         ix, iy = np.unravel_index(np.argmax(lnlscan['dloglike']),(nstep,nstep))
         
-        scan_fit = utils.fit_parabola(lnlscan['dloglike'], ix, iy, dpix=3)
+        scan_fit = utils.fit_parabola(2.0*lnlscan['dloglike'], ix, iy, dpix=3)
 
         sigmax = 2.**0.5*scan_fit['sigmax']*scan_step
         sigmay = 2.**0.5*scan_fit['sigmay']*scan_step
@@ -502,26 +488,25 @@ class SourceFinder(object):
         o['lnlscan'] = lnlscan
 
         # Best fit position and uncertainty from fit to TS map
-        o['peak_theta'] = tsmap_fit['theta']
-        o['peak_sigmax'] = peak_sigmax
-        o['peak_sigmay'] = peak_sigmay
-        o['peak_sigma'] = peak_sigma
-        o['peak_r68'] = peak_r68
-        o['peak_r95'] = peak_r95
-        o['peak_r99'] = peak_r99
-        o['peak_ra'] = peak_skydir.icrs.ra.deg
-        o['peak_dec'] = peak_skydir.icrs.dec.deg
-        o['peak_glon'] = peak_skydir.galactic.l.deg
-        o['peak_glat'] = peak_skydir.galactic.b.deg
         o['tsmap_fit'] = tsmap_fit
-        o['scan_fit'] = scan_fit
+        #o['scan_fit'] = scan_fit
         
         # Best fit position and uncertainty from likelihood scan
         o['xpix'] = scan_fit['x0']*scan_step/cdelt0 + scan_xpix[0]
         o['ypix'] = scan_fit['y0']*scan_step/cdelt1 + scan_ypix[0]
         o['deltax'] = (o['xpix']-src_pix[0])*cdelt0
         o['deltay'] = (o['ypix']-src_pix[1])*cdelt1
-        o['theta'] = scan_fit['theta']
+        o['theta'] = np.fmod(scan_fit['theta'],np.pi)
+
+        if sigmax < sigmay:
+            o['sigma_semimajor'] = sigmay
+            o['sigma_semiminor'] = sigmax
+            o['theta'] = np.fmod(np.pi/2.+scan_fit['theta'],np.pi)
+        else:
+            o['sigma_semimajor'] = sigmax
+            o['sigma_semiminor'] = sigmay
+            o['theta'] = np.fmod(scan_fit['theta'],np.pi)
+        
         o['sigmax'] = sigmax
         o['sigmay'] = sigmay
         o['sigma'] = (o['sigmax']*o['sigmay'])**0.5
@@ -548,6 +533,7 @@ class SourceFinder(object):
 
         try:
             self._plotter.make_localization_plot(self, name, tsmap, prefix=prefix,
+                                                 skydir=scan_skydir,
                                                  **kwargs)
         except Exception:
             self.logger.error('Plot failed.', exc_info=True)
@@ -566,6 +552,17 @@ class SourceFinder(object):
             self.fit(loglevel=logging.DEBUG)
             src = self.roi.get_source_by_name(newname, True)
             self.roi[name]['localize'] = copy.deepcopy(o)
+
+        if o['fit_success']:
+
+            src = self.roi.get_source_by_name(newname, True)
+            src['pos_sigma'] = o['sigma']
+            src['pos_sigma_semimajor'] = o['sigma_semimajor']
+            src['pos_sigma_semiminor'] = o['sigma_semiminor']
+            src['pos_r68'] = o['r68']
+            src['pos_r95'] = o['r95']
+            src['pos_r99'] = o['r99']
+            src['pos_angle'] = np.degrees(o['theta'])
             
         self.logger.info('Finished localization.')
         return o
@@ -619,38 +616,36 @@ class SourceFinder(object):
                            model=src.data,
                            map_skydir=skydir,
                            map_size=2.0*dtheta_max,
-                           exclude=[name],make_plots=False,
-                           multithread=True)
+                           exclude=[name],make_plots=False)
         
         tsmap_renorm = copy.deepcopy(tsmap['ts'])
         tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
-
-        import matplotlib.pyplot as plt
-        from fermipy.plotting import ROIPlotter
-        fig = plt.figure()
         
-        p = ROIPlotter(tsmap_renorm,roi=self.roi)
-
-        p.plot(levels=[-200,-100,-50,-20,-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
-               interpolation='bicubic',cb_label='2$\\times\Delta\ln$L')
-
-        plt.savefig('tsmap_localize.png')
-        
-        ix, iy = np.unravel_index(np.argmax(0.5*tsmap['ts'].counts),tsmap['ts'].counts.shape)        
-        tsmap_fit = utils.fit_parabola(tsmap['ts'].counts, ix, iy, dpix=2)        
+        ix, iy = np.unravel_index(np.argmax(0.5*tsmap['ts'].counts.T),
+                                  tsmap['ts'].counts.shape)        
+        pbfit = utils.fit_parabola(tsmap['ts'].counts.T, ix, iy, dpix=2)        
 
                 
-        skydir = SkyCoord.from_pixel(tsmap_fit['y0'],tsmap_fit['x0'],tsmap['ts'].wcs)
-        sigmax = 2.0**0.5*tsmap_fit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
-        sigmay = 2.0**0.5*tsmap_fit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
+        skydir = SkyCoord.from_pixel(pbfit['x0'],pbfit['y0'],tsmap['ts'].wcs)
+        sigmax = 2.0**0.5*pbfit['sigmax']*np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
+        sigmay = 2.0**0.5*pbfit['sigmay']*np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
         sigma = (sigmax*sigmay)**0.5
         pix = skydir.to_pixel(skywcs)
         r68 = 2.30**0.5*sigma
         r95 = 5.99**0.5*sigma
         r99 = 9.21**0.5*sigma    
-
+        
         o = {}
-        o['theta'] = tsmap_fit['theta']
+
+        if sigmax < sigmay:
+            o['sigma_semimajor'] = sigmay
+            o['sigma_semiminor'] = sigmax
+            o['theta'] = np.fmod(np.pi/2.+pbfit['theta'],np.pi)
+        else:
+            o['sigma_semimajor'] = sigmax
+            o['sigma_semiminor'] = sigmay
+            o['theta'] = np.fmod(pbfit['theta'],np.pi)
+        
         o['sigmax'] = sigmax
         o['sigmay'] = sigmay
         o['sigma'] = sigma
@@ -661,8 +656,10 @@ class SourceFinder(object):
         o['dec'] = skydir.icrs.dec.deg
         o['glon'] = skydir.galactic.l.deg
         o['glat'] = skydir.galactic.b.deg
-        o['fit'] = tsmap_fit
-        return o
+        o['xpix'] = pix[0]
+        o['ypix'] = pix[1]
+        o['fit'] = pbfit
+        return o, tsmap
 
     def _localize_pylike(self,name,**kwargs):
 

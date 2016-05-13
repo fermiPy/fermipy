@@ -138,31 +138,8 @@ class Model(object):
 
     def __init__(self, name, data=None):
 
-        self._data = {'SpatialModel': None,
-                      'SpatialWidth': None,
-                      'SpatialType': None,
-                      'SourceType': None,
-                      'SpectrumType': None,
-                      'Spatial_Filename': None,
-                      'filefunction' : None,
-                      'RAJ2000': 0.0,
-                      'DEJ2000': 0.0,
-                      'ra': 0.0,
-                      'dec': 0.0,
-                      'glon': 0.0,
-                      'glat': 0.0,
-                      'offset_ra': 0.0,
-                      'offset_dec': 0.0,
-                      'offset_glon': 0.0,
-                      'offset_glat': 0.0,
-                      'offset': 0.0,
-                      'ts': np.nan,
-                      'npred': 0.0,
-                      'flux' : np.array([np.nan,np.nan]),
-                      'eflux' : np.array([np.nan,np.nan]),
-                      'params': {},
-                      'correlation' : {}
-                      }
+        self._data = defaults.make_default_dict(defaults.source_output)
+
         if data is not None:
             self._data.update(data)
 
@@ -1786,12 +1763,17 @@ class ROIModel(fermipy.config.Configurable):
             row_dict['GLON'] = s['glon']
             row_dict['GLAT'] = s['glat']
 
-            row_dict['Conf_68_PosAng'] = np.nan
-            row_dict['Conf_68_SemiMajor'] = np.nan
-            row_dict['Conf_68_SemiMinor'] = np.nan
-            row_dict['Conf_95_PosAng'] = np.nan
-            row_dict['Conf_95_SemiMajor'] = np.nan
-            row_dict['Conf_95_SemiMinor'] = np.nan
+            r68_semimajor = s['pos_sigma_semimajor']*s['pos_r68']/s['pos_sigma']
+            r68_semiminor = s['pos_sigma_semiminor']*s['pos_r68']/s['pos_sigma']
+            r95_semimajor = s['pos_sigma_semimajor']*s['pos_r95']/s['pos_sigma']
+            r95_semiminor = s['pos_sigma_semiminor']*s['pos_r95']/s['pos_sigma']
+            
+            row_dict['Conf_68_PosAng'] = s['pos_angle']
+            row_dict['Conf_68_SemiMajor'] = r68_semimajor
+            row_dict['Conf_68_SemiMinor'] = r68_semiminor
+            row_dict['Conf_95_PosAng'] = s['pos_angle']
+            row_dict['Conf_95_SemiMajor'] = r95_semimajor
+            row_dict['Conf_95_SemiMinor'] = r95_semiminor
             
             row_dict.update(s.get_catalog_dict())
                             
