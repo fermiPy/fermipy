@@ -1,4 +1,4 @@
-``assoc_xmatch_columns``	['3FGL_Name']	Choose a set of association columns on which to cross-match catalogs.
+``assoc_xmatch_columns``	[u'3FGL_Name']	Choose a set of association columns on which to cross-match catalogs.
 ``catalogs``	None	
 ``diffuse``	None	
 ``extdir``	Extended_archive_v15	

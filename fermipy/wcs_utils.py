@@ -53,8 +53,8 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
 
     cdelt : float
 
-    crpix : float
-        
+    crpix : float or (float,float)
+        In the first case the same value is used for x and y axes
 
     """
 
@@ -73,8 +73,12 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
     else:
         raise Exception('Unrecognized coordinate system.')
 
-    w.wcs.crpix[0] = crpix
-    w.wcs.crpix[1] = crpix
+    try:
+        w.wcs.crpix[0] = crpix[0]
+        w.wcs.crpix[1] = crpix[1]
+    except:
+        w.wcs.crpix[0] = crpix
+        w.wcs.crpix[1] = crpix      
     w.wcs.cdelt[0] = -cdelt
     w.wcs.cdelt[1] = cdelt
 

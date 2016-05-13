@@ -309,12 +309,27 @@ plotting
    :delim: tab
    :widths: 10,10,80
 
+.. _config_residmap:
+            
+residmap
+--------
+
+The options in *residmap* control the default behavior of the
+`~fermipy.gtanalysis.GTAnalysis.residmap` method.  For more
+information about running this method see the :ref:`detection` page.
+
+.. csv-table:: *residmap* Options
+   :header:    Option, Default, Description
+   :file: config/residmap.csv
+   :delim: tab
+   :widths: 10,10,80
+            
 .. _config_sed:
             
 sed
 ---
 
-The options in the *sed* section controls the default behavior of the
+The options in *sed* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.sed` method.  For more information
 about running this method see the :ref:`sed` page.
 
@@ -373,6 +388,10 @@ sourcefind
 tsmap
 ---------
 
+The options in *tsmap* control the default behavior of the
+`~fermipy.gtanalysis.GTAnalysis.tsmap` method.  For more information
+about running this method see the :ref:`detection` page.
+
 .. csv-table:: *tsmap* Options
    :header:    Option, Default, Description
    :file: config/tsmap.csv
@@ -381,6 +400,10 @@ tsmap
             
 tscube
 ---------
+
+The options in *tscube* control the default behavior of the
+`~fermipy.gtanalysis.GTAnalysis.tscube` method.  For more information
+about running this method see the :ref:`detection` page.
 
 .. csv-table:: *tscube* Options
    :header:    Option, Default, Description
