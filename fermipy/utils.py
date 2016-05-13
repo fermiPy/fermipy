@@ -783,10 +783,20 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
     """Recursively merge the contents of python dictionary d0 with
     the contents of another python dictionary, d1.
 
-    add_new_keys : Do not skip keys that only exist in d1.
+    Parameters
+    ----------
+    d0 : dict
+       The input dictionary.
+    
+    d1 : dict
+       Dictionary to be merged with the input dictionary.
+    
+    add_new_keys : str
+       Do not skip keys that only exist in d1.
 
-    append_arrays : If an element is a numpy array set the value of
-    that element by concatenating the two arrays.
+    append_arrays : bool
+       If an element is a numpy array set the value of that element by
+       concatenating the two arrays.
     """
 
     if d1 is None:
@@ -814,6 +824,8 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
             od[k] = merge_dict(d0[k], d1[k], add_new_keys, append_arrays)
         elif isinstance(v, list) and isinstance(d1[k], str):
             od[k] = d1[k].split(',')
+        elif isinstance(v, dict) and d1[k] is None:
+            od[k] = copy.deepcopy(d0[k])
         elif isinstance(v, np.ndarray) and append_arrays:
             od[k] = np.concatenate((v, d1[k]))
         elif (d0[k] is not None and d1[k] is not None) and t0 != t1:
