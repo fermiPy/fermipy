@@ -13,7 +13,7 @@ except KeyError:
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
-from matplotlib.patches import Circle, Ellipse
+from matplotlib.patches import Circle, Ellipse, Rectangle
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
 
 import astropy.io.fits as pyfits
@@ -1165,6 +1165,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
                 
         prefix = kwargs.get('prefix','')
+        skydir = kwargs.get('skydir',None)
         src = gta.roi[name]
         o = src['localize']
         
@@ -1174,49 +1175,67 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p = ROIPlotter(tsmap_renorm,roi=gta.roi)
         fig = plt.figure()
 
-        p.plot(levels=[-200,-100,-50,-20,-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
+        p.plot(levels=[-200,-100,-50,-20,-9.21,-5.99,-2.3,-1.0],
+               cmap='BuGn',vmin=-50.0,
                interpolation='bicubic',cb_label='2$\\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
-        
-        peak_skydir = SkyCoord(o['peak_glon'],o['peak_glat'],frame='galactic',unit='deg')
-        peak_pix = peak_skydir.to_pixel(tsmap_renorm.wcs)
 
+        tsmap_fit = o['tsmap_fit']
+        
+        peak_skydir = SkyCoord(tsmap_fit['glon'],tsmap_fit['glat'],
+                               frame='galactic',unit='deg')
+        peak_pix = peak_skydir.to_pixel(tsmap_renorm.wcs)
+        peak_r68 = tsmap_fit['r68']
+        peak_r99 = tsmap_fit['r99']
+        
         scan_skydir = SkyCoord(o['glon'],o['glat'],frame='galactic',unit='deg')
         scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
 
+        if skydir is not None:
+            pix = skydir.to_pixel(tsmap_renorm.wcs)
+            plt.gca().plot(pix[0],pix[1],linestyle='None',
+                           marker='+',color='r')
+        
         if np.isfinite(float(peak_pix[0])):
+
+            sigma = tsmap_fit['sigma']
+            sigmax = tsmap_fit['sigma_semimajor']
+            sigmay = tsmap_fit['sigma_semiminor']
+            theta = tsmap_fit['theta']
             
             e0 = Ellipse(xy=(float(peak_pix[0]),float(peak_pix[1])),
-                         width=o['peak_sigmay']/cdelt0*o['peak_r68']/o['peak_sigma'],
-                         height=o['peak_sigmax']/cdelt1*o['peak_r68']/o['peak_sigma'],
-                         angle=np.degrees(o['peak_theta']),
+                         width=2.0*sigmax/cdelt0*peak_r68/sigma,
+                         height=2.0*sigmay/cdelt1*peak_r68/sigma,
+                         angle=np.degrees(theta),
                          facecolor='None',edgecolor='k')
 
             e1 = Ellipse(xy=(float(peak_pix[0]),float(peak_pix[1])),
-                         width=o['peak_sigmay']/cdelt1*3.0,
-                         height=o['peak_sigmax']/cdelt0*3.0,
-                         angle=np.degrees(o['peak_theta']),
+                         width=2.0*sigmax/cdelt0*peak_r99/sigma,
+                         height=2.0*sigmay/cdelt1*peak_r99/sigma,
+                         angle=np.degrees(theta),
                          facecolor='None',edgecolor='k')
 
             plt.gca().add_artist(e0)
             plt.gca().add_artist(e1)
-            
             plt.gca().plot(float(peak_pix[0]),float(peak_pix[1]),
                            marker='x',color='k')
 
         if np.isfinite(float(scan_pix[0])):
 
+            sigmax = o['sigma_semimajor']
+            sigmay = o['sigma_semiminor']
+            
             e0 = Ellipse(xy=(float(scan_pix[0]),float(scan_pix[1])),
-                         width=o['sigmay']/cdelt0*o['r68']/o['sigma'],
-                         height=o['sigmax']/cdelt1*o['r68']/o['sigma'],
+                         width=2.0*sigmax/cdelt0*o['r68']/o['sigma'],
+                         height=2.0*sigmay/cdelt1*o['r68']/o['sigma'],
                          angle=np.degrees(o['theta']),
                          facecolor='None',edgecolor='r')
 
             e1 = Ellipse(xy=(float(scan_pix[0]),float(scan_pix[1])),
-                         width=o['sigmay']/cdelt1*3.0,
-                         height=o['sigmax']/cdelt0*3.0,
+                         width=2.0*sigmax/cdelt0*o['r99']/o['sigma'],
+                         height=2.0*sigmay/cdelt1*o['r99']/o['sigma'],
                          angle=np.degrees(o['theta']),
                          facecolor='None',edgecolor='r')
 
