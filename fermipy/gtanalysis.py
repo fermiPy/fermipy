@@ -2768,7 +2768,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         """
         
-        infile = resolve_path(infile, workdir=self.workdir)
+        infile = utils.resolve_path(infile, workdir=self.workdir)
         roi_file, roi_data = utils.load_data(infile, workdir=self.workdir)
 
         self.logger.info('Loading ROI file: %s'%roi_file)
@@ -4275,8 +4275,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         name, ext = os.path.splitext(name)
         ext = '.xml'
         xmlfile = name + self.config['file_suffix'] + ext
-        xmlfile = resolve_path(xmlfile,
-                               workdir=self.config['fileio']['workdir'])
+        xmlfile = utils.resolve_path(xmlfile,
+                                     workdir=self.config['fileio']['workdir'])
 
         return xmlfile
 
