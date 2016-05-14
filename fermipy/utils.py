@@ -60,7 +60,13 @@ def load_data(infile, workdir=None):
         raise Exception('Unrecognized extension.')
 
     
-
+def resolve_path(path, workdir=None):
+    if os.path.isabs(path):
+        return path
+    elif workdir is None:
+        return os.path.abspath(path)
+    else:
+        return os.path.join(workdir, path)
             
  
 def join_strings(strings,sep='_'):

@@ -119,15 +119,6 @@ def filter_dict(d, val):
             del d[k]
 
             
-def resolve_path(path, workdir=None):
-    if os.path.isabs(path):
-        return path
-    elif workdir is None:
-        return os.path.abspath(path)
-    else:
-        return os.path.join(workdir, path)
-
-
 class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
                  SourceFinder):
