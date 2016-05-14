@@ -7,10 +7,36 @@ import numpy as np
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 
+import fermipy
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
-from fermipy.utils import Map, read_energy_bounds
-from fermipy.hpx_utils import HpxMap, HPX
+from fermipy.hpx_utils import HPX
+
+
+def read_energy_bounds(hdu):
+    """ Reads and returns the energy bin edges from a FITs HDU
+    """
+    nebins = len(hdu.data)
+    ebin_edges = np.ndarray((nebins+1))
+    ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
+    ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
+    return ebin_edges
+
+
+def read_spectral_data(hdu):
+    """ Reads and returns the energy bin edges, fluxes and npreds from
+    a FITs HDU
+    """
+    ebins = read_energy_bounds(hdu)
+    fluxes = np.ndarray((len(ebins)))
+    try:
+        fluxes[0:-1] = hdu.data.field("E_MIN_FL")
+        fluxes[-1] = hdu.data.field("E_MAX_FL")[-1]
+        npreds = hdu.data.field("NPRED")
+    except:
+        fluxes =  np.ones((len(ebins)))
+        npreds =  np.ones((len(ebins)))
+    return ebins,fluxes,npreds
 
 
 def write_maps(primary_map, maps, outfile):
@@ -20,22 +46,11 @@ def write_maps(primary_map, maps, outfile):
         hdu_images += [v.create_image_hdu(k)]
 
     hdulist = pyfits.HDUList(hdu_images)
+    for h in hdulist:    
+        h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
     hdulist.writeto(outfile, clobber=True)
 
     
-def read_map_from_fits(fitsfile, extname=None):
-    """
-    """
-    proj, f, hdu = read_projection_from_fits(fitsfile, extname)
-    if isinstance(proj, pywcs.WCS):
-        m = Map(hdu.data, proj)
-    elif isinstance(proj, HPX):
-        m = HpxMap.create_from_hdu(hdu,proj.ebins)
-    else:
-        raise Exception("Did not recognize projection type %s" % type(proj))
-    return m,f
-
-
 def read_projection_from_fits(fitsfile, extname=None):
     """
     Load a WCS or HPX projection.
@@ -83,24 +98,4 @@ def read_projection_from_fits(fitsfile, extname=None):
     return None,f,None
 
 
-def make_coadd_map(maps, proj, shape):
-    # this is a hack
-    from fermipy.hpx_utils import make_coadd_hpx, HPX
-    if isinstance(proj, pywcs.WCS):
-        return make_coadd_wcs(maps, proj, shape)
-    elif isinstance(proj, HPX):
-        return make_coadd_hpx(maps, proj, shape)
-    else:
-        raise Exception("Can't co-add map of unknown type %s" % type(proj))
 
-
-def make_coadd_wcs(maps, wcs, shape):
-    data = np.zeros(shape)
-    axes = wcs_utils.wcs_to_axes(wcs, shape)
-
-    for m in maps:
-        c = wcs_utils.wcs_to_coords(m.wcs, m.counts.shape)
-        o = np.histogramdd(c.T, bins=axes[::-1], weights=np.ravel(m.counts))[0]
-        data += o
-
-    return utils.Map(data, copy.deepcopy(wcs))

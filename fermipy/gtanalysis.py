@@ -8,13 +8,10 @@ import collections
 import logging
 import tempfile
 
-import yaml
 import numpy as np
 import scipy
 import scipy.optimize
-# for some reason a matplotlib import needs to come before the
-# pyLikelihood import or else font-related errors may come up
-# import matplotlib.pyplot
+
 # pyLikelihood needs to be imported before astropy to avoid CFITSIO
 # header error
 import pyLikelihood as pyLike
@@ -28,6 +25,7 @@ import fermipy.wcs_utils as wcs_utils
 import fermipy.gtutils as gtutils
 import fermipy.fits_utils as fits_utils
 import fermipy.srcmap_utils as srcmap_utils
+import fermipy.skymap as skymap
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 import fermipy.sed as sed
@@ -35,9 +33,9 @@ from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
 from fermipy.utils import merge_dict, tolist
-from fermipy.utils import Map
 from fermipy.utils import create_hpx_disk_region_string
-from fermipy.hpx_utils import HpxMap, HPX
+from fermipy.skymap import Map, HpxMap
+from fermipy.hpx_utils import HPX
 from fermipy.roi_model import ROIModel, Model
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
@@ -81,25 +79,6 @@ index_parameters = {
     'ExpCutoff': ['Index1'],
     'FileFunction': [],
 }
-
-def interpolate_function_min(x, y):
-    sp = scipy.interpolate.splrep(x, y, k=2, s=0)
-
-    def fn(t):
-        return scipy.interpolate.splev(t, sp, der=1)
-
-    if np.sign(fn(x[0])) == np.sign(fn(x[-1])):
-
-        if np.sign(fn(x[0])) == -1:
-            return x[-1]
-        else:
-            return x[0]
-
-    x0 = scipy.optimize.brentq(fn,
-                               x[0], x[-1],
-                               xtol=1e-10 * np.median(x))
-
-    return x0
 
 
 def get_spectral_index(src,egy):
@@ -147,34 +126,6 @@ def resolve_path(path, workdir=None):
         return os.path.abspath(path)
     else:
         return os.path.join(workdir, path)
-
-def load_roi_data(infile, workdir=None):
-    infile = resolve_path(infile, workdir=workdir)
-    infile, ext = os.path.splitext(infile)
-
-    if os.path.isfile(infile + '.npy'):
-        infile += '.npy'
-    elif os.path.isfile(infile + '.yaml'):
-        infile += '.yaml'
-    else:
-        raise Exception('Input file does not exist.')
-
-    ext = os.path.splitext(infile)[1]
-
-    if ext == '.npy':
-        return infile, load_npy(infile)
-    elif ext == '.yaml':
-        return infile, load_yaml(infile)
-    else:
-        raise Exception('Unrecognized extension.')
-
-
-def load_yaml(infile):
-    return yaml.load(open(infile))
-
-
-def load_npy(infile):
-    return np.load(infile).flat[0]
 
 
 class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
@@ -439,7 +390,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
 
         infile = os.path.abspath(infile)
-        roi_file, roi_data = load_roi_data(infile)
+        roi_file, roi_data = utils.load_data(infile)
 
         if config is None:
             config = roi_data['config']
@@ -949,10 +900,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
        
         if self.projtype == "HPX":
             shape = (self.enumbins, self._proj.npix)
-            cmap = fits_utils.make_coadd_map(maps, self._proj, shape)
+            cmap = skymap.make_coadd_map(maps, self._proj, shape)
         elif self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            cmap = fits_utils.make_coadd_map(maps, self._proj, shape)
+            cmap = skymap.make_coadd_map(maps, self._proj, shape)
         else:
             raise Exception(
                 "Did not recognize projection type %s" % self.projtype)
@@ -1424,7 +1375,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         for (idx, par_name) in zip(par_indices, par_names):
             self.like[idx].setFree(free)
-        self._sync_params(name)
+        self._sync_params_state(name)
 
     def set_norm_scale(self, name, value):
         name = self.get_source_name(name)
@@ -1496,7 +1447,21 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.roi[name].set_spectral_pars(spectral_pars)
         for c in self.components:
             c.roi[name].set_spectral_pars(spectral_pars)
-        
+
+    def _sync_params_state(self,name):
+        self.like.syncSrcParams(str(name))
+        src = self.components[0].like.logLike.getSource(str(name))
+        spectral_pars = gtutils.get_pars_dict_from_source(src)
+
+        for parname, par in spectral_pars.items():
+            for k,v in par.items():
+                if k != 'free':
+                    del spectral_pars[parname][k]
+                    
+        self.roi[name].update_spectral_pars(spectral_pars)
+        for c in self.components:
+            c.roi[name].update_spectral_pars(spectral_pars)            
+            
     def get_params(self, freeonly=False):
 
         params = {}
@@ -2681,11 +2646,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if self.projtype == "HPX":
             shape = (self.enumbins, self._proj.npix)
-            model_counts = fits_utils.make_coadd_map(maps, self._proj, shape)
+            model_counts = skymap.make_coadd_map(maps, self._proj, shape)
             utils.write_hpx_image(model_counts.counts, self._proj, outfile)
         elif self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            model_counts = fits_utils.make_coadd_map(maps, self._proj, shape)
+            model_counts = skymap.make_coadd_map(maps, self._proj, shape)
             utils.write_fits_image(model_counts.counts, self._proj, outfile)
         else:
             raise Exception(
@@ -2813,7 +2778,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
         
         infile = resolve_path(infile, workdir=self.workdir)
-        roi_file, roi_data = load_roi_data(infile, workdir=self.workdir)
+        roi_file, roi_data = utils.load_data(infile, workdir=self.workdir)
 
         self.logger.info('Loading ROI file: %s'%roi_file)
         
@@ -2925,7 +2890,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
             if fmt == 'yaml':
                 self.logger.info('Writing %s...' % (ymlfile))
-                yaml.dump(tolist(o), open(ymlfile, 'w'))
+                utils.write_yaml(o,ymlfile)
             elif fmt == 'npy':                
                 self.logger.info('Writing %s...' % (npyfile))
                 np.save(npyfile, o)
@@ -3004,7 +2969,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['dfde_ferr'] = (fhi - flo) / dfde
         
         try:
-            o['pivot_energy'] = interpolate_function_min(energies,o['dfde_ferr'])
+            o['pivot_energy'] = utils.interpolate_function_min(energies,o['dfde_ferr'])
         except Exception:
             self.logger.error('Failed to compute pivot energy',
                               exc_info=True)
@@ -3017,14 +2982,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         if self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
-            self._ccube = fits_utils.make_coadd_map(cmaps, self._proj, shape)
+            self._ccube = skymap.make_coadd_map(cmaps, self._proj, shape)
             utils.write_fits_image(self._ccube.counts, self._ccube.wcs,
                                    self._ccube_file)
             rm['counts'] += np.squeeze(
                 np.apply_over_axes(np.sum, self._ccube.counts,
                                    axes=[1, 2]))
         elif self.projtype == "HPX":
-            self._ccube = fits_utils.make_coadd_map(cmaps, self._proj, shape)
+            self._ccube = skymap.make_coadd_map(cmaps, self._proj, shape)
             utils.write_hpx_image(self._ccube.counts, self._ccube.hpx,
                                   self._ccube_file)
             rm['counts'] += np.squeeze(

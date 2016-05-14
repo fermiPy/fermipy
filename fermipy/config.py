@@ -120,7 +120,7 @@ class Configurable(object):
     
     def write_config(self, outfile):
         """Write the configuration dictionary to an output file."""
-        yaml.dump(self.config, open(outfile, 'w'), default_flow_style=False)
+        utils.write_yaml(self.config, outfile, default_flow_style=False)
 
     def print_config(self, logger, loglevel=None):
 

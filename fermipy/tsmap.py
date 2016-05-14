@@ -21,7 +21,7 @@ import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
-from fermipy.utils import Map
+from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
@@ -609,9 +609,12 @@ class TSMapGenerator(object):
         make_plots : bool
            Write image files.
 
-        make_fits : bool
-           Write FITS files.
-
+        write_fits : bool
+           Write a FITS file.
+           
+        write_npy : bool
+           Write a numpy file.
+        
         Returns
         -------
 
@@ -663,7 +666,8 @@ class TSMapGenerator(object):
 
         """
         
-        make_fits = kwargs.get('make_fits', True)
+        write_fits = kwargs.get('write_fits', True)
+        write_npy = kwargs.get('write_npy', True)
         map_skydir = kwargs.get('map_skydir',None)
         map_size = kwargs.get('map_size',1.0)
         exclude = kwargs.get('exclude', None)
@@ -822,12 +826,13 @@ class TSMapGenerator(object):
              'amplitude': amp_map,
              'config' : config
              }
-        
-        if make_fits:
 
-            fits_file = utils.format_filename(self.config['fileio']['workdir'],
-                                                'tsmap.fits',
-                                                prefix=[prefix,modelname])            
+        fits_file = utils.format_filename(self.config['fileio']['workdir'],
+                                          'tsmap.fits',
+                                          prefix=[prefix,modelname])
+        
+        if write_fits:
+                        
             fits_utils.write_maps(ts_map,
                              {'SQRT_TS_MAP': sqrt_ts_map,
                               'NPRED_MAP': npred_map,
@@ -835,6 +840,9 @@ class TSMapGenerator(object):
                              fits_file)
             o['file'] = os.path.basename(fits_file)            
 
+        if write_npy:
+            np.save(os.path.splitext(fits_file)[0] + '.npy', o)
+            
         return o
 
     def _tsmap_pylike(self, prefix, **kwargs):
@@ -958,8 +966,8 @@ class TSCubeGenerator(object):
         make_plots : bool
            Write image files.
 
-        make_fits : bool
-           Write FITS files.       
+        write_fits : bool
+           Write a FITS file with the results of the analysis.       
 
         Returns
         -------
@@ -990,7 +998,7 @@ class TSCubeGenerator(object):
         
     def _make_ts_cube(self, prefix, config, **kwargs):
 
-        make_fits = kwargs.get('make_fits', True)
+        write_fits = kwargs.get('write_fits', True)
         skywcs = kwargs.get('wcs',self._skywcs)
         npix = kwargs.get('npix',self.npix)
         
