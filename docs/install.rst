@@ -6,18 +6,44 @@ Installation
 .. note:: 
 
    fermiPy is only compatible with ST v10r0p5 or later.  If you are
-   using an earlier version, it is recommended to download and install
-   the latest version from the FSSC.
+   using an earlier version, you will need to download and install the
+   latest version from the `FSSC
+   <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  Note
+   that it is recommended to only use the *non-ROOT* binary
+   distributions.
 
 These instructions assume that you already have a local installation
-of the Fermi STs.  Instructions for downloading and installing the STs
-are provided through the `FSSC
-<http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  If you
-are running at SLAC you can follow the `Running at SLAC`_
-instructions.  For Unix/Linux users we currently recommend following
-the :ref:`condainstall` instructions.  For OSX users we recommend
-following the :ref:`pipinstall` instructions.
+of the Fermi Science Tools (STs).  For more information about setting
+up the STs see :ref:`stinstall`.  If you are running at SLAC you can
+follow the `Running at SLAC`_ instructions.  For Unix/Linux users we
+currently recommend following the :ref:`condainstall` instructions.
+For OSX users we recommend following the :ref:`pipinstall`
+instructions.
 
+.. _stinstall:
+
+Installing the Fermi Science Tools
+----------------------------------
+
+The Fermi STs are a prerequisite for fermipy.  To install the STs we
+recommend using one of the non-ROOT binary distributions available
+from the `FSSC
+<http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  The
+following example illustrates how to install the binary distribution
+for a Linux machine running Ubuntu Trusty:
+
+.. code-block:: bash
+
+   $ curl -OL http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/tar/ScienceTools-v10r0p5-fssc-20150518-x86_64-unknown-linux-gnu-libc2.19-10-without-rootA.tar.gz
+   $ tar xzf ScienceTools-v10r0p5-fssc-20150518-x86_64-unknown-linux-gnu-libc2.19-10-without-rootA.tar.gz
+   $ export FERMI_DIR=ScienceTools-v10r0p5-fssc-20150518-x86_64-unknown-linux-gnu-libc2.19-10-without-rootA/x86_64-unknown-linux-gnu-libc2.19-10
+   $ source $FERMI_DIR/fermi-init.sh
+
+More information about installing the STs as well as the complete list
+of the available binary distributions are available on the `FSSC
+software page
+<http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.
+   
 .. _pipinstall:
 
 Installing with pip
@@ -162,7 +188,7 @@ provide the release tag as an argument to ``slacsetup``:
 
 .. code-block:: bash
 
-   $ slacsetup 10-XX-XX
+   $ slacsetup XX-XX-XX
 
 Because users don't have write access to the ST python installation
 all pip commands that install or uninstall packages must be executed
@@ -232,9 +258,9 @@ Building from Source
 --------------------
 
 These instructions describe how to install fermipy from its git source
-code repository.  This is necessary if you want to locally develop
-fermipy or you want to use features in a development version of the
-fermipy code.  Note that for non-expert users it is recommended to
+code repository using ``setup.py``.  Installing from source is
+necessary if you want to do local development or test features in an
+untagged release.  Note that for non-expert users it is recommended to
 install fermipy with ``pip`` following the instructions above.  First
 clone the fermipy repository:
 

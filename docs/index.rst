@@ -35,6 +35,7 @@ Documentation Contents
    model
    advanced/index
    fermipy
+   changelog
 
 Indices and tables
 ==================
