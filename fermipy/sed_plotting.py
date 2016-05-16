@@ -14,15 +14,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
-NORM_LABEL = [r'Flux Normalization [a.u.]',
-              r'E dN/dE [ph $cm^{-2} s^{-1}$]',
-              r'$E^2$ dN/dE [MeV $cm^{-2} s^{-1}]$',
-              r'$n_{\rm pred}$ [ph]',
-              r'dN/dE [ph $cm^{-2} s^{-1} MeV^{-1}$]',
-              r'E dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]']
+NORM_LABEL = {'NORM':r'Flux Normalization [a.u.]',
+              'FLUX':r'E dN/dE [ph $cm^{-2} s^{-1}$]',
+              'EFLUX':r'$E^2$ dN/dE [MeV $cm^{-2} s^{-1}]$',
+              'NPRED':r'$n_{\rm pred}$ [ph]',
+              'DFDE':r'dN/dE [ph $cm^{-2} s^{-1} MeV^{-1}$]',
+              'EDFDE':r'E dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]'}
               
 
-def plotNLL_v_Flux(nll,nstep=25,xlims=None):
+def plotNLL_v_Flux(nll,fluxType,nstep=25,xlims=None):
     """ Plot the (negative) log-likelihood as a function of normalization
 
     nll   : a LnLFN object
@@ -40,7 +40,7 @@ def plotNLL_v_Flux(nll,nstep=25,xlims=None):
     y1 = nll.interp(xmin)
     y2 = nll.interp(xmax)
 
-    ymin = min(y1,y2)
+    ymin = min(y1,y2,0.0)
     ymax = max(y1,y2,0.5)    
 
     xvals = np.linspace(xmin,xmax,nstep)
@@ -52,7 +52,7 @@ def plotNLL_v_Flux(nll,nstep=25,xlims=None):
     ax.set_xlim((xmin,xmax))
     ax.set_ylim((ymin,ymax))
     
-    ax.set_xlabel(NORM_LABEL[nll.fluxType])
+    ax.set_xlabel(NORM_LABEL[fluxType])
     ax.set_ylabel(r'$\Delta \log\mathcal{L}$')
     ax.plot(xvals,yvals)
     return fig,ax
@@ -74,8 +74,8 @@ def plotCastro(castroData,ylims,nstep=25,zlims=None):
     ymin = ylims[0]
     ymax = ylims[1]
     if zlims is None:
-        zmin = -10.
-        zmax = 0.
+        zmin = 0
+        zmax = 10.
     else:
         zmin = zlims[0]
         zmax = zlims[1]
@@ -88,7 +88,7 @@ def plotCastro(castroData,ylims,nstep=25,zlims=None):
     ax.set_ylim((ymin,ymax))
     
     ax.set_xlabel("log(Energy/GeV)")
-    ax.set_ylabel(NORM_LABEL[castroData.fluxType])
+    ax.set_ylabel(NORM_LABEL[castroData.norm_type])
 
     normVals = np.logspace(np.log10(ymin),np.log10(ymax),nstep)
     ztmp = []
@@ -105,7 +105,7 @@ def plotCastro(castroData,ylims,nstep=25,zlims=None):
     ebin_centers = (castroData.specData.ebins[0:-1]+castroData.specData.ebins[1:])/2.
     ax.errorbar(ebin_centers,limits)
 
-    return fig,ax,im
+    return fig,ax,im,ztmp
 
 
 
@@ -134,7 +134,7 @@ def plotSED(castroData,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
     ax.set_ylim((ymin,ymax))
     
     ax.set_xlabel("Energy [GeV]")
-    ax.set_ylabel(NORM_LABEL[castroData.fluxType])
+    ax.set_ylabel(NORM_LABEL[castroData.norm_type])
 
     ts_vals = castroData.ts_vals()
     mles = castroData.mles()
@@ -176,58 +176,54 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) == 1:
-        flux_type = 0
-    elif sys.argv[1] == "norm":
-        flux_type = 0
-    elif sys.argv[1] == "flux":
-        flux_type = 1
-    elif sys.argv[1] == "eflux":
-        flux_type = 2
-    elif sys.argv[1] == "npred":
-        flux_type = 3
-    elif sys.argv[1] == "d_flux":
-        flux_type = 4
-    elif sys.argv[1] == "d_eflux":
-        flux_type = 5
+        flux_type = "FLUX"
     else:
-        print "Didn't reconginize flux type %s, choose from norm | flux | eflux | npred"%sys.argv[1]
+        flux_type = sys.argv[1]
+        
 
-    if flux_type == 0:
+    if flux_type == 'NORM':
         xlims = (0.,1.)
-        ylims = (1e-5,1e-1)
-    elif flux_type == 1:
+        flux_lims = (1e-5,1e-1)
+    elif flux_type == "FLUX":
         xlims = (0.,1.)
-        ylims = (1e-13,1e-9)
-    elif flux_type == 2:
+        flux_lims = (1e-13,1e-9)
+    elif flux_type == "EFLUX":
         xlims = (0.,1.)
-        ylims = (1e-8,1e-4)
-    elif flux_type == 3:
+        flux_lims = (1e-8,1e-4)
+    elif flux_type == "NPRED":
         xlims = (0.,1.)
-        ylims = (1e-1,1e3)
-    elif flux_type == 4:
+        flux_lims = (1e-1,1e3)
+    elif flux_type == "DFDE":
         xlims = (0.,1.)
-        ylims = (1e-18,1e-11)
-    elif flux_type == 5:
+        flux_lims = (1e-18,1e-11)
+    elif flux_type == "EDFDE":
         xlims = (0.,1.)
-        ylims = (1e-13,1e-9)
-
+        flux_lims = (1e-13,1e-9)
+    else:
+        print ("Didn't reconginize flux type %s, choose from NORM | FLUX | EFLUX | NPRED | DFDE | EDFDE"%sys.argv[1])
+        sys.exit()
         
     tscube = sed.TSCube.create_from_fits("tscube_test.fits",flux_type)
-    peaks = tscube.find_and_refine_peaks(10.0,1.0,use_cumul=True)
+    resultDict = tscube.find_sources(10.0,1.0,use_cumul=False,
+                                     output_peaks=True,
+                                     output_specInfo=True,
+                                     output_srcs=True)
+
+    peaks = resultDict["Peaks"]
 
     max_ts = tscube.tsmap.counts.max()
     (castro,test_dict) = tscube.test_spectra_of_peak(peaks[0])
 
     nll = castro[2]
-    fig,ax = plotNLL_v_Flux(nll)
+    fig,ax = plotNLL_v_Flux(nll,flux_type)
 
-    fig2,ax2,im2 = plotCastro(castro,ylims=ylims,nstep=100)
+    fig2,ax2,im2,ztmp2 = plotCastro(castro,ylims=flux_lims,nstep=100)
         
     spec_pl = test_dict["PowerLaw"]["Spectrum"]
     spec_lp = test_dict["LogParabola"]["Spectrum"]
     spec_pc = test_dict["PLExpCutoff"]["Spectrum"]
 
-    fig3,ax3 = plotSED(castro,ylims=ylims,TS_thresh=4.0,specVals=[spec_pl])        
+    fig3,ax3 = plotSED(castro,ylims=flux_lims,TS_thresh=2.0,specVals=[spec_pl])        
 
     result_pl = test_dict["PowerLaw"]["Result"]
     result_lp = test_dict["LogParabola"]["Result"]
