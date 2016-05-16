@@ -1574,8 +1574,8 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict['SpatialType'] = 'SpatialMap'
                 src_dict['SpatialModel'] = 'SpatialMap'
 
-                search_dirs = [row['extdir'],
-                               os.path.join(row['extdir'], 'Templates')]
+                search_dirs = [extdir,
+                               os.path.join(extdir, 'Templates')]
 
                 src_dict['Spatial_Filename'] = resolve_file_path(
                     row['Spatial_Filename'],
