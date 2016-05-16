@@ -41,7 +41,7 @@ def create_default_config(defaults):
 def cast_config(config, defaults):
     for key, item in config.items():
 
-        if not key in defaults:
+        if key not in defaults:
             continue
         
         if isinstance(item, dict):

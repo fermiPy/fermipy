@@ -62,7 +62,7 @@ class Logger(object):
 #                'version': 1,              
 #                'disable_existing_loggers': False})
         
-        if not logfile is None:
+        if logfile is not None:
             logfile = logfile.replace('.log','') + '.log'
         
         logger = logging.getLogger(name)
@@ -81,7 +81,7 @@ class Logger(object):
             formatter = logging.Formatter(format,datefmt)
 
             # Add a file handler
-            if not logfile is None:
+            if logfile is not None:
                 fh = logging.FileHandler(logfile)
                 fh.setLevel(logging.DEBUG)
                 fh.setFormatter(logging.Formatter(format_file,datefmt))

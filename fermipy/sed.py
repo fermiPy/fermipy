@@ -49,7 +49,7 @@ PAR_NAMES = {"PowerLaw":["Prefactor","Index"],
              "PLExpCutoff":["Prefactor","Index1","Cutoff"]}
 
 class SEDGenerator(object):
-    """Mixin class which provides SED functionality to
+    """Mixin class that provides SED functionality to
     `~fermipy.gtanalysis.GTAnalysis`."""
     
     def sed(self, name, profile=True, energies=None, **kwargs):
