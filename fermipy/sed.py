@@ -141,7 +141,7 @@ class SEDGenerator(object):
         
         # Write a FITS file
         cols = [Column(name='E_MIN',dtype='f8',data=10**sed['emin'],unit='MeV'),
-                Column(name='E_CTR',dtype='f8',data=10**sed['ecenter'],unit='MeV'),
+                Column(name='E_REF',dtype='f8',data=10**sed['ecenter'],unit='MeV'),
                 Column(name='E_MAX',dtype='f8',data=10**sed['emax'],unit='MeV'),
                 Column(name='REF_DFDE_E_MIN',dtype='f8',
                        data=sed['ref_dfde_emin'],unit='ph / (MeV cm2 s)'),
