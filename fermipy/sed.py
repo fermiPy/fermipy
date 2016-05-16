@@ -31,8 +31,8 @@ import fermipy.defaults as defaults
 import fermipy.utils as utils
 import fermipy.gtutils as gtutils
 import fermipy.roi_model as roi_model
-from fermipy.utils import read_energy_bounds, read_spectral_data
-from fermipy.fits_utils import read_map_from_fits
+from fermipy.fits_utils import read_energy_bounds, read_spectral_data
+from fermipy.skymap import read_map_from_fits
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 from fermipy.sourcefind import find_peaks, refine_peak
@@ -103,6 +103,10 @@ class SEDGenerator(object):
             sources.  If this parameter is None then no gaussian prior
             will be applied.
 
+        write_fits : bool
+
+        write_npy : bool
+            
         Returns
         -------
         sed : dict 
@@ -115,6 +119,7 @@ class SEDGenerator(object):
         name = self.roi.get_source_by_name(name, True).name
 
         prefix = kwargs.get('prefix','')
+        write_fits = kwargs.get('write_fits',True)
         
         self.logger.info('Computing SED for %s' % name)
         
@@ -122,7 +127,8 @@ class SEDGenerator(object):
         
         self._plotter.make_sed_plot(self, name, **kwargs)
 
-        self._make_sed_fits(o,name,**kwargs)
+        if write_fits:
+            self._make_sed_fits(o,name,**kwargs)
         self.logger.info('Finished SED')
         
         return o

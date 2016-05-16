@@ -8,6 +8,6 @@
 ``limbdiff``	None	
 ``merge_sources``	True	Merge properties of sources that appear in multiple source catalogs.  If merge_sources=false then subsequent sources with the same name will be ignored.
 ``sources``	None	
-``src_radius``	None	Set the maximum distance for inclusion of sources in the ROI model.  Selects all sources within a circle of this radius centered on the ROI.  If none then no selection is applied.  This selection will be ORed with sources passing the cut on src_roiwidth.
-``src_radius_roi``	None	Half-width of the ROI selection.  This parameter can be used in lieu of src_roiwidth.
-``src_roiwidth``	None	Select sources within a box of RxR centered on the ROI.  If none then no cut is applied.
+``src_radius``	None	Radius of circular selection cut for inclusion of catalog sources in the model.  Includes sources within a circle of this radius centered on the ROI.  If this parameter is none then no selection is applied.  This selection will be ORed with the ``src_roiwidth`` selection.
+``src_radius_roi``	None	Half-width of ``src_roiwidth`` selection.  This parameter can be used in lieu of ``src_roiwidth``.
+``src_roiwidth``	None	Width of square selection cut for inclusion of catalog sources in the model.  Includes sources within a square region with side ``src_roiwidth`` centered on the ROI.  If this parameter is none then no selection is applied.  This selection will be ORed with the ``src_radius`` selection.

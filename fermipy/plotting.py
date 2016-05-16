@@ -30,8 +30,8 @@ import fermipy.fits_utils as fits_utils
 import fermipy.defaults as defaults
 import fermipy.roi_model as roi_model
 import fermipy.catalog as catalog
-from fermipy.utils import merge_dict, Map
-from fermipy.hpx_utils import HpxMap
+from fermipy.utils import merge_dict
+from fermipy.skymap import Map, HpxMap
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 

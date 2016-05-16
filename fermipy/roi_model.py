@@ -333,6 +333,11 @@ class Model(object):
 
         self._data['spectral_pars'] = copy.deepcopy(spectral_pars)
         self._sync_params()
+
+    def update_spectral_pars(self,spectral_pars):
+
+        self._data['spectral_pars'] = utils.merge_dict(self.spectral_pars,spectral_pars)
+        self._sync_params()
         
     def set_name(self, name, names=None):
         self._data['name'] = name
@@ -1784,8 +1789,13 @@ class ROIModel(fermipy.config.Configurable):
             row  = [row_dict[k] for k in cols_dict.keys()]
             tab.add_row(row)
 
-        tab.write(fitsfile,format='fits',overwrite=True)
             
+        tab.write(fitsfile,format='fits',overwrite=True)
+
+        hdulist = pyfits.open(fitsfile)
+        for h in hdulist:
+            h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+        hdulist.writeto(fitsfile, clobber=True)
         
 if __name__ == '__main__':
     roi = ROIModel()

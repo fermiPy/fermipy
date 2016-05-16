@@ -6,222 +6,68 @@ import re
 import copy
 from collections import OrderedDict
 
+import yaml
 import numpy as np
+import scipy
 import xml.etree.cElementTree as et
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
-import scipy.special as specialfn
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
 import scipy.special as special
 
-def read_energy_bounds(hdu):
-    """ Reads and returns the energy bin edges from a FITs HDU
-    """
-    nebins = len(hdu.data)
-    ebin_edges = np.ndarray((nebins+1))
-    ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
-    ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
-    return ebin_edges
 
-def read_spectral_data(hdu):
-    """ Reads and returns the energy bin edges, fluxes and npreds from
-    a FITs HDU
-    """
-    ebins = read_energy_bounds(hdu)
-    fluxes = np.ndarray((len(ebins)))
-    try:
-        fluxes[0:-1] = hdu.data.field("E_MIN_FL")
-        fluxes[-1] = hdu.data.field("E_MAX_FL")[-1]
-        npreds = hdu.data.field("NPRED")
-    except:
-        fluxes =  np.ones((len(ebins)))
-        npreds =  np.ones((len(ebins)))
-    return ebins,fluxes,npreds
+def unicode_representer(dumper, uni):
+    node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
+    return node
+
+yaml.add_representer(unicode, unicode_representer)
+
+
+def load_yaml(infile,**kwargs):
+    return yaml.load(open(infile),**kwargs)
+
+
+def write_yaml(o,outfile,**kwargs):
+    yaml.dump(tolist(o), open(outfile, 'w'),**kwargs)
+
+
+def load_npy(infile):
+    return np.load(infile).flat[0]
+
+
+def load_data(infile, workdir=None):
+    """Load python data structure from either a YAML or numpy file. """
+    infile = resolve_path(infile, workdir=workdir)
+    infile, ext = os.path.splitext(infile)
+
+    if os.path.isfile(infile + '.npy'):
+        infile += '.npy'
+    elif os.path.isfile(infile + '.yaml'):
+        infile += '.yaml'
+    else:
+        raise Exception('Input file does not exist.')
+
+    ext = os.path.splitext(infile)[1]
+
+    if ext == '.npy':
+        return infile, load_npy(infile)
+    elif ext == '.yaml':
+        return infile, load_yaml(infile)
+    else:
+        raise Exception('Unrecognized extension.')
+
     
-
-class Map_Base(object):
-    """ Abstract representation of a 2D or 3D counts map."""
-
-    def __init__(self, counts):
-        self._counts = counts
-
-    @property
-    def counts(self):
-        return self._counts
-
-    def get_pixel_indices(self,lats,lons):
-        raise NotImplementedError("MapBase.get_pixel_indices)")
-
-
-class Map(Map_Base):
-    """ Representation of a 2D or 3D counts map using WCS. """
-
-    def __init__(self, counts, wcs):
-        """
-        Parameters
-        ----------
-        counts : `~numpy.ndarray`
-          Counts array.
-        """
-        Map_Base.__init__(self, counts)
-        self._wcs = wcs
-
-        self._npix = counts.shape
-
-        if len(self._npix) == 3:
-            xindex = 2
-            yindex = 1
-        elif len(self._npix) == 2:
-            xindex = 1
-            yindex = 0
-        else:
-            raise Exception('Wrong number of dimensions for Map object.')
-
-        self._width = \
-            np.array([np.abs(self.wcs.wcs.cdelt[0])*self._npix[xindex],
-                      np.abs(self.wcs.wcs.cdelt[1])*self._npix[yindex]])
-        self._pix_center = np.array([(self._npix[xindex]-1.0)/2.,
-                                     (self._npix[yindex]-1.0)/2.])
-        self._pix_size = np.array([np.abs(self.wcs.wcs.cdelt[0]),
-                                   np.abs(self.wcs.wcs.cdelt[1])])
-
-        
-        self._skydir = SkyCoord.from_pixel(self._pix_center[0],
-                                           self._pix_center[1],
-                                           self.wcs)
-        
-    @property
-    def wcs(self):
-        return self._wcs
-
-    @property
-    def skydir(self):
-        """Return the sky coordinate of the Map center."""
-        return self._skydir
-
-    @property
-    def width(self):
-        """Return the sky coordinate of the Map center."""
-        return self._width
-
-    @property
-    def pix_size(self):
-        """Return the pixel size along the two image dimensions."""
-        return self._pix_size
-
-    @property
-    def pix_center(self):
-        """Return the ROI center in pixel coordinates."""
-        return self._pix_center
-    
-    @staticmethod
-    def create_from_hdu(hdu, wcs):
-        return Map(hdu.data.T, wcs)
-
-    @staticmethod
-    def create_from_fits(fitsfile, **kwargs):
-        hdu = kwargs.get('hdu', 0)
-
-        hdulist = pyfits.open(fitsfile)
-        header = hdulist[hdu].header
-        data = hdulist[hdu].data
-        header = pyfits.Header.fromstring(header.tostring())
-        wcs = pywcs.WCS(header)
-        return Map(data, wcs)
-
-    def create_image_hdu(self,name=None):
-        return pyfits.ImageHDU(self.counts,header=self.wcs.to_header(),
-                               name=name)
-    
-    def create_primary_hdu(self):
-        return pyfits.PrimaryHDU(self.counts,header=self.wcs.to_header())
-    
-
-    def sum_over_energy(self):
-        """ Reduce a 3D counts cube to a 2D counts map
-        """
-        # Note that the array is using the opposite convention from WCS
-        # so we sum over axis 0 in the array, but drop axis 2 in the WCS object
-        return Map(self.counts.sum(0),self.wcs.dropaxis(2))
-
-    def xy_pix_to_ipix(self,xypix,colwise=False):
-        """ Return the pixel index from the pixel xy coordinates 
-
-        if colwise is True (False) this uses columnwise (rowwise) indexing
-        """
-        if colwise:
-            return np.where( (xypix[0] < self._wcs._naxis1)*(xypix[1] < self._wcs._naxis2),
-                              xypix[0]*self._wcs._naxis2 + xypix[1], -1 )
-        else:
-            return np.where( (xypix[0] < self._wcs._naxis2)*(xypix[1] < self._wcs._naxis1),
-                             xypix[1]*self._wcs._naxis1 + xypix[0], -1 )
-    
-    def ipix_to_xypix(self,ipix,colwise=False):
-        """ Return the pixel xy coordinates from the pixel index
-
-        if colwise is True (False) this uses columnwise (rowwise) indexing
-        """
-        if colwise:
-            return (ipix / self._wcs._naxis2, ipix % self._wcs._naxis2)
-        else:
-            return (ipix % self._wcs._naxis1, ipix / self._wcs._naxis1)
-    
-    def ipix_swap_axes(self,ipix,colwise=False):
-        """ Return the transposed pixel index from the pixel xy coordinates 
-
-        if colwise is True (False) this assumes the original index was
-        in column wise scheme
-        """        
-        xy = self.ipix_to_xypix(ipix,colwise)
-        return self.xy_pix_to_ipix(xy,not colwise)
-
-    def get_pixel_indices(self,lons,lats):
-        """ Return the indices in the flat array corresponding to a set of coordinates
-
-        Parameters
-        ----------       
-        lons  : array-like
-           'Longitudes' (RA or GLON)
-        
-        lats  : array-like
-           'Latitidues' (DEC or GLAT)
-        
-        Returns
-        ----------
-           idxs : numpy.ndarray((n),'i')
-           Indices of pixels in the flattened map, -1 used to flag coords outside of map    
-        """
-        if len(lats) != len(lons):
-            raise RuntimeError("Map.get_pixel_indices, input lengths do not match %i %i"%(len(lons),len(lats)))
-        pix_x,pix_y = self._wcs.wcs_world2pix(lons,lats,1)
-        pixcrd = [np.floor(pix_x).astype(int),np.floor(pix_y).astype(int)]
-        idxs = self.xy_pix_to_ipix(pixcrd,colwise=False)   
-        return idxs
-
-
-    def get_map_values(self,lons,lats):
-        """ Return the indices in the flat array corresponding to a set of coordinates
-
-        Parameters
-        ----------       
-        lons  : array-like
-           'Longitudes' (RA or GLON)
-        
-        lats  : array-like
-           'Latitidues' (DEC or GLAT)
-        
-        Returns
-        ----------
-           vals : numpy.ndarray((n))
-           Values of pixels in the flattened map, np.nan used to flag coords outside of map    
-        """
-        pix_idxs = self.get_pixel_indices(lons,lats)
-        vals = np.where(pix_idxs>0,self.counts.flat[pix_idxs],np.nan)
-        return vals
-        
+def resolve_path(path, workdir=None):
+    if os.path.isabs(path):
+        return path
+    elif workdir is None:
+        return os.path.abspath(path)
+    else:
+        return os.path.join(workdir, path)
+            
  
 def join_strings(strings,sep='_'):
 
@@ -449,6 +295,26 @@ def cl_to_dlnl(cl):
     the given confidence level."""
     alpha = 1.0 - cl
     return 0.5 * np.power(np.sqrt(2.) * special.erfinv(1 - 2 * alpha), 2.)
+
+
+def interpolate_function_min(x, y):
+    sp = scipy.interpolate.splrep(x, y, k=2, s=0)
+
+    def fn(t):
+        return scipy.interpolate.splev(t, sp, der=1)
+
+    if np.sign(fn(x[0])) == np.sign(fn(x[-1])):
+
+        if np.sign(fn(x[0])) == -1:
+            return x[-1]
+        else:
+            return x[0]
+
+    x0 = scipy.optimize.brentq(fn,
+                               x[0], x[-1],
+                               xtol=1e-10 * np.median(x))
+
+    return x0
 
 
 def find_function_root(fn, x0, xb, delta = 0.0):    
@@ -1082,11 +948,11 @@ def convolve2d_gauss(fn, r, sig, nstep=200):
     if 'je_fn' not in convolve2d_gauss.__dict__:
         t = 10 ** np.linspace(-8, 8, 1000)
         t = np.insert(t, 0, [0])
-        je = specialfn.ive(0, t)
+        je = special.ive(0, t)
         convolve2d_gauss.je_fn = UnivariateSpline(t, je, k=2, s=0)
 
     je = convolve2d_gauss.je_fn(x.flat).reshape(x.shape)
-    #    je2 = specialfn.ive(0,x)
+    #    je2 = special.ive(0,x)
     v = (
     rp * fnv / (sig2) * je * np.exp(x - (r * r + rp * rp) / (2 * sig2)) * dr)
     s = np.sum(v, axis=saxis)
