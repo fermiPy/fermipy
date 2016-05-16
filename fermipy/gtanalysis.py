@@ -851,12 +851,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         return self._erange
 
     def counts_map(self):
-        """Return a `~fermipy.utils.Map` representation of the counts map.
+        """Return a `~fermipy.skymap.Map` representation of the counts map.
 
         Returns
         -------
 
-        map : `~fermipy.utils.Map`
+        map : `~fermipy.skymap.Map`
 
         """
         return self._ccube
@@ -883,7 +883,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         Returns
         -------
 
-        map : `~fermipy.utils.Map`
+        map : `~fermipy.skymap.Map`
         """
 
         maps = [c.model_counts_map(name, exclude) for c in self.components]
@@ -3622,7 +3622,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         Returns
         -------
-        map : `~fermipy.utils.MapBase`
+        map : `~fermipy.skymap.MapBase`
 
         """
         try:
@@ -3663,7 +3663,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         Returns
         -------
-        map : `~fermipy.utils.Map`
+        map : `~fermipy.skymap.Map`
 
            A map object containing the counts and WCS projection.
 
