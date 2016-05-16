@@ -33,6 +33,7 @@ import fermipy.gtutils as gtutils
 import fermipy.roi_model as roi_model
 from fermipy.utils import read_energy_bounds, read_spectral_data
 from fermipy.fits_utils import read_map_from_fits
+from fermipy.wcs_utils import wcs_add_energy_axis
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 from fermipy.sourcefind import find_peaks, refine_peak
@@ -546,11 +547,11 @@ class LnLFn(object):
     def _compute_mle(self):
         """ compute the maximum likelihood estimate, using the scipy.optimize.brentq method
         """
-        if self._interp.y[0] == np.max(self._interp.y):
+        if self._interp.y[0] == np.min(self._interp.y):
             self._mle = self._interp.x[0]
         else:
-            ix0 = max(np.argmax(self._interp.y)-4,0)
-            ix1 = min(np.argmax(self._interp.y)+4,len(self._interp.x)-1)            
+            ix0 = max(np.argmin(self._interp.y)-4,0)
+            ix1 = min(np.argmin(self._interp.y)+4,len(self._interp.x)-1)            
 
             while np.sign(self._interp.derivative(self._interp.x[ix0])) == np.sign(self._interp.derivative(self._interp.x[ix1])):
                 ix0 += 1
@@ -576,7 +577,7 @@ class LnLFn(object):
 
     def TS(self):
         """ return the Test Statistic """
-        return 2. * (self._interp(self.mle()) - self._interp(0.))
+        return 2. * (self._interp(0.) - self._interp(self.mle()))
 
     
     def getLimit(self,alpha,upper=True):
@@ -776,26 +777,27 @@ class CastroData(object):
         return self._nll_null
 
     @staticmethod
-    def create_from_fits(fitsfile,norm_type='FLUX',hdu=0):
+    def create_from_fits(fitsfile,norm_type='FLUX',
+                         hdu_scan="SCANDATA",
+                         hdu_energies="EBOUNDS"):
 
-        tab = Table.read(fitsfile,hdu=hdu)
+        tab_s = Table.read(fitsfile,hdu=hdu_scan)
+        tab_e = Table.read(fitsfile,hdu=hdu_energies)
 
         if norm_type == 'FLUX':        
-            norm_vals = np.array(tab['NORM_SCAN']*tab['REF_FLUX'][:,np.newaxis])
+            norm_vals = np.array(tab_s['NORM_SCAN']*tab_e['REF_FLUX'][:,np.newaxis])
         elif norm_type == 'EFLUX':
-            norm_vals = np.array(tab['NORM_SCAN']*tab['REF_EFLUX'][:,np.newaxis])
+            norm_vals = np.array(tab_s['NORM_SCAN']*tab_e['REF_EFLUX'][:,np.newaxis])
         else:
             raise Exception('Unrecognized normalization type: %s'%norm_type)
             
-        nll_vals = -np.array(tab['DLOGLIKE_SCAN'])
-        emin = np.array(tab['E_MIN'])
-        emax = np.array(tab['E_MAX'])
-        npred = np.array(tab['NORM']*tab['REF_NPRED'])
-        dfde_emin = np.array(tab['NORM']*tab['REF_DFDE_E_MIN'])
-        dfde_emax = np.array(tab['NORM']*tab['REF_DFDE_E_MAX'])
-        dfde = np.array(tab['NORM']*tab['REF_DFDE'])
-        flux = np.array(tab['NORM']*tab['REF_FLUX'])
-        eflux = np.array(tab['NORM']*tab['REF_EFLUX'])
+        nll_vals = -np.array(tab_s['DLOGLIKE_SCAN'])
+        emin = np.array(tab_e['E_MIN'])
+        emax = np.array(tab_e['E_MAX'])
+        npred = np.array(tab_s['NORM']*tab_e['REF_NPRED'])
+        dfde = np.array(tab_s['NORM']*tab_e['REF_DFDE'])
+        flux = np.array(tab_s['NORM']*tab_e['REF_FLUX'])
+        eflux = np.array(tab_s['NORM']*tab_e['REF_EFLUX'])
         
         sd = SpecData(emin,emax,dfde,flux,eflux,npred)
     
@@ -1116,27 +1118,39 @@ class TSCube(object):
         
         """
         m,f = read_map_from_fits(fitsfile)
-        n,f = read_map_from_fits(fitsfile,"N_MAP")
-        c,f = read_map_from_fits(fitsfile,"TSCUBE")
+ 
+        tab_e = Table.read(fitsfile,'EBOUNDS')
+        tab_s = Table.read(fitsfile,'SCANDATA')
 
-        tab = Table.read(fitsfile,'EBOUNDS')
+        emin = np.array(tab_e['E_MIN']/1E3)
+        emax = np.array(tab_e['E_MAX']/1E3)
+        nebins = len(tab_e)
+        npred = tab_e['REF_NPRED']
+        
+        ndim = len(m.counts.shape)
 
-        emin = np.array(tab['E_MIN']/1E3)
-        emax = np.array(tab['E_MAX']/1E3)
-        npred = tab['REF_NPRED']
-                
+        if ndim == 2:
+            cube_shape = (m.counts.shape[0],m.counts.shape[1],nebins)
+        elif ndim == 1:
+            cube_shape = (m.counts.shape[0],nebins)
+        else:
+            raise RuntimeError("Counts map has dimension %i"%(ndim))
+
         specData = SpecData(emin,emax,
-                            np.array(tab['REF_DFDE']),
-                            np.array(tab['REF_FLUX']),
-                            np.array(tab['REF_EFLUX']),
+                            np.array(tab_e['REF_DFDE']),
+                            np.array(tab_e['REF_FLUX']),
+                            np.array(tab_e['REF_EFLUX']),
                             npred)
-        cube_data_hdu = f['SCANDATA']
-        nll_vals = -np.array(cube_data_hdu.data.field("DLOGLIKE_SCAN"))
-        norm_vals = cube_data_hdu.data.field("NORM_SCAN")
-
+        nll_vals =  -np.array(tab_s["DLOGLIKE_SCAN"])
+        norm_vals = np.array(tab_s["NORM_SCAN"])
+        
+        wcs_3d = wcs_add_energy_axis(m.wcs,emin)
+        c = utils.Map(tab_s["TS"].reshape(cube_shape),wcs_3d)
+        n = utils.Map(tab_s["NORM"].reshape(cube_shape),wcs_3d)
+        
         ref_colname = 'REF_%s'%norm_type
-        norm_vals *= tab[ref_colname][np.newaxis,:,np.newaxis]
-            
+        norm_vals *= tab_e[ref_colname][np.newaxis,:,np.newaxis]
+        
         return TSCube(m,n,c,norm_vals,nll_vals,specData,
                       norm_type)
 
@@ -1148,7 +1162,7 @@ class TSCube(object):
         norm_d = self._norm_vals[ipix]
         nll_d = self._nll_vals[ipix]
         return CastroData(norm_d,nll_d,self._specData,self._norm_type)
-     
+    
     def castroData_from_pix_xy(self,xy,colwise=False):
         """ Build a CastroData object for a particular pixel """
         ipix = self._tsmap.xy_pix_to_ipix(xy,colwise)
@@ -1161,7 +1175,7 @@ class TSCube(object):
             theMap = self._ts_cumul
         else:
             theMap = self._tsmap
-                    
+            
         peaks = find_peaks(theMap,threshold,min_separation)
         for peak in peaks:
             o =  utils.fit_parabola(theMap.counts,peak['iy'],peak['ix'],dpix=2)
@@ -1196,7 +1210,7 @@ class TSCube(object):
         castros = []
         specInfo = []
         names = []
-        peaks = self.find_and_refine_peaks(threshold,min_separation,use_cumul=True)
+        peaks = self.find_and_refine_peaks(threshold,min_separation,use_cumul=use_cumul)
         for i,peak in enumerate(peaks):
             (castro,test_dict) = self.test_spectra_of_peak(peak,["PowerLaw"])
             src_name = utils.create_source_name(peak['fit_skydir'])
@@ -1242,10 +1256,10 @@ def build_source_dict(src_name,peak_dict,spec_dict,spec_type):
                     Index=-1.*spec_results["Result"][1],
                     Scale=spec_results["ScaleEnergy"])
     return src_dict
-                    
 
 
-        
+
+
 if __name__ == "__main__":
 
 
@@ -1256,28 +1270,18 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) == 1:
-        flux_type = 0
-    elif sys.argv[1] == "norm":
-        flux_type = 0
-    elif sys.argv[1] == "flux":
-        flux_type = 1
-    elif sys.argv[1] == "eflux":
-        flux_type = 2
-    elif sys.argv[1] == "npred":
-        flux_type = 3
-    elif sys.argv[1] == "d_flux":
-        flux_type = 4
-    elif sys.argv[1] == "d_eflux":
-        flux_type = 5
+        flux_type = "FLUX"
     else:
-        print("Didn't reconginize flux type %s, choose from norm | flux | eflux | npred"%sys.argv[1])
+        flux_type = sys.argv[1]
 
 
     tscube = sed.TSCube.create_from_fits("tscube_test.fits",flux_type)
 
-    resultDict = tscube.find_sources(10.0,1.0,use_cumul=True,
+    resultDict = tscube.find_sources(10.0,1.0,use_cumul=False,
                                      output_peaks=True,
-                                     output_specInfo=True)
+                                     output_specInfo=True,
+                                     output_srcs=True)
+
     figList = []
     peaks = resultDict["Peaks"]
     specInfos = resultDict["Spectral"]
@@ -1289,7 +1293,15 @@ if __name__ == "__main__":
     for src in sources:
         src.write_xml(root)
 
-        """
+    output_file = open("sed_sources.xml", 'w!')
+    output_file.write(utils.prettify_xml(root))
+
+    """
+    idx_off = -2
+
+    for peak in peaks:
+        castro,test_dict = tscube.test_spectra_of_peak(peak)
+
         result_pl = test_dict["PowerLaw"]["Result"]
         result_lp = test_dict["LogParabola"]["Result"]
         result_pc = test_dict["PLExpCutoff"]["Result"]
@@ -1297,13 +1309,10 @@ if __name__ == "__main__":
         ts_lp = test_dict["LogParabola"]["TS"]
         ts_pc = test_dict["PLExpCutoff"]["TS"]
 
-        print "TS for PL index = 2:  %.1f"%max_ts
-        print "Cumulative TS:        %.1f"%castro.ts_vals().sum()
-        print "TS for PL index free: %.1f (Index = %.2f)"%(ts_pl[0],idx_off-result_pl[1])
-        print "TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)"%(ts_lp[0],idx_off-result_lp[1],result_lp[2])
-        print "TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)"%(ts_pc[0],idx_off-result_pc[1],result_pc[2])
-        """
+        print ("Cumulative TS:        %.1f"%castro.ts_vals().sum())
+        print ("TS for PL index free: %.1f (Index = %.2f)"%(ts_pl[0],idx_off-result_pl[1]))
+        print ("TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)"%(ts_lp[0],idx_off-result_lp[1],result_lp[2]))
+        print ("TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)"%(ts_pc[0],idx_off-result_pc[1],result_pc[2]))
 
-    output_file = open("sed_sources.xml", 'w!')
-    output_file.write(utils.prettify_xml(root))
-
+    """
+        
