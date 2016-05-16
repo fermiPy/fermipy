@@ -35,8 +35,14 @@ MAX_NITER = 100
 def convert_tscube(infile,outfile):
     """Convert between old and new TSCube formats."""
     hdulist = pyfits.open(infile)
-    hdulist.writeto(outfile,clobber=True)
 
+    # If already in the new-style format just write and exit
+    if 'DLOGLIKE_SCAN' in hdulist['SCANDATA'].columns.names:
+        if infile != outfile:
+            hdulist.writeto(outfile,clobber=True)
+        return
+
+    # EBOUNDS
     columns = hdulist['EBOUNDS'].columns
     shape = hdulist['EBOUNDS'].data.field('E_MIN').shape
 
@@ -52,7 +58,7 @@ def convert_tscube(infile,outfile):
     eflux = PowerLaw.eval_eflux(emin,emax,[dfde_emin,index],emin)
     dfde = PowerLaw.eval_dfde(np.sqrt(emin*emax),[dfde_emin,index],emin)
 
-    columns.add_col(pyfits.Column(name=str('E_CTR'),
+    columns.add_col(pyfits.Column(name=str('E_REF'),
                                   format='E', array=ectr*1E3,
                                   unit='keV'))    
     columns.add_col(pyfits.Column(name=str('REF_FLUX'),
@@ -72,6 +78,8 @@ def convert_tscube(infile,outfile):
     columns.change_name('NPRED',str('REF_NPRED'))
     
     hdulist['EBOUNDS'] = pyfits.BinTableHDU.from_columns(columns,name='EBOUNDS')
+
+    # SCANDATA
     columns = hdulist['SCANDATA'].columns
 
     columns.change_name('NORMSCAN',str('NORM_SCAN'))
@@ -95,38 +103,30 @@ def convert_tscube(infile,outfile):
     columns.add_col(pyfits.Column(name=str('DLOGLIKE_SCAN'), format='%iE'%(nebins*npts),
                                   dim=str('(%i,%i)'%(npts,nebins))))
 
-    columns.add_col(pyfits.Column(name=str('E_MIN'), format='%iE'%nebins,
-                                  unit='keV',
-                                  dim=str('(%i)'%nebins)))
-
-    columns.add_col(pyfits.Column(name=str('E_CTR'), format='%iE'%nebins,
-                                  unit='keV',
-                                  dim=str('(%i)'%nebins)))
-
-    columns.add_col(pyfits.Column(name=str('E_MAX'), format='%iE'%nebins,
-                                  unit='keV',
-                                  dim=str('(%i)'%nebins)))
-    
-    columns.add_col(pyfits.Column(name=str('REF_DFDE'), format='%iE'%nebins,
-                                  unit='ph / (MeV cm2 s)',
-                                  dim=str('(%i)'%nebins)))
-
-    columns.add_col(pyfits.Column(name=str('REF_DFDE_E_MIN'), format='%iE'%nebins,
-                                  unit='ph / (MeV cm2 s)',
-                                  dim=str('(%i)'%nebins)))
-
-    columns.add_col(pyfits.Column(name=str('REF_DFDE_E_MAX'), format='%iE'%nebins,
-                                  unit='ph / (MeV cm2 s)',
-                                  dim=str('(%i)'%nebins)))
-    
-    columns.add_col(pyfits.Column(name=str('REF_FLUX'), format='%iE'%nebins,
-                                  unit='ph / (cm2 s)',
-                                  dim=str('(%i)'%nebins)))
-
-    columns.add_col(pyfits.Column(name=str('REF_EFLUX'), format='%iE'%nebins,
-                                  unit='MeV / (cm2 s)',
-                                  dim=str('(%i)'%nebins)))
-
+#    columns.add_col(pyfits.Column(name=str('E_MIN'), format='%iE'%nebins,
+#                                  unit='keV',
+#                                  dim=str('(%i)'%nebins)))
+#    columns.add_col(pyfits.Column(name=str('E_REF'), format='%iE'%nebins,
+#                                  unit='keV',
+#                                  dim=str('(%i)'%nebins)))
+#    columns.add_col(pyfits.Column(name=str('E_MAX'), format='%iE'%nebins,
+#                                  unit='keV',
+#                                  dim=str('(%i)'%nebins)))    
+#    columns.add_col(pyfits.Column(name=str('REF_DFDE'), format='%iE'%nebins,
+#                                  unit='ph / (MeV cm2 s)',
+#                                  dim=str('(%i)'%nebins)))
+#    columns.add_col(pyfits.Column(name=str('REF_DFDE_E_MIN'), format='%iE'%nebins,
+#                                  unit='ph / (MeV cm2 s)',
+#                                  dim=str('(%i)'%nebins)))
+#    columns.add_col(pyfits.Column(name=str('REF_DFDE_E_MAX'), format='%iE'%nebins,
+#                                  unit='ph / (MeV cm2 s)',
+#                                  dim=str('(%i)'%nebins)))    
+#    columns.add_col(pyfits.Column(name=str('REF_FLUX'), format='%iE'%nebins,
+#                                  unit='ph / (cm2 s)',
+#                                  dim=str('(%i)'%nebins)))
+#    columns.add_col(pyfits.Column(name=str('REF_EFLUX'), format='%iE'%nebins,
+#                                  unit='MeV / (cm2 s)',
+#                                  dim=str('(%i)'%nebins)))
     columns.add_col(pyfits.Column(name=str('REF_NPRED'), format='%iE'%nebins,
                                   dim=str('(%i)'%nebins)))
         
@@ -148,9 +148,11 @@ def convert_tscube(infile,outfile):
     columns.add_col(pyfits.Column(name=str('TS'), format='%iE'%nebins,
                                   dim=str('(%i)'%nebins)))
 
-    columns.add_col(pyfits.Column(name=str('LOGLIKE'), format='%iE'%nebins,
+    columns.add_col(pyfits.Column(name=str('LOGLIKE'), format='%iD'%nebins,
                                   dim=str('(%i)'%nebins)))
-
+    
+    columns.add_col(pyfits.Column(name=str('BIN_OK'), format='%iE'%nebins,
+                                  dim=str('(%i)'%nebins)))
     
     
     hdulist['SCANDATA'] = pyfits.BinTableHDU.from_columns(columns,name='SCANDATA',
@@ -165,6 +167,7 @@ def convert_tscube(infile,outfile):
     errncube = np.rollaxis(hdulist['ERRNCUBE'].data,0,3).reshape((nrows,nebins))
     tscube = np.rollaxis(hdulist['TSCUBE'].data,0,3).reshape((nrows,nebins))
     nll_cube = np.rollaxis(hdulist['NLL_CUBE'].data,0,3).reshape((nrows,nebins))
+    ok_cube = np.rollaxis(hdulist['TSCUBE_OK'].data,0,3).reshape((nrows,nebins))
     n_map = hdulist['N_MAP'].data.reshape((nrows))
     errp_map = hdulist['ERRP_MAP'].data.reshape((nrows))
     errn_map = hdulist['ERRN_MAP'].data.reshape((nrows))
@@ -176,18 +179,17 @@ def convert_tscube(infile,outfile):
     scandata['NORM_ERRN'][...] = errncube
     scandata['TS'][...] = tscube
     scandata['LOGLIKE'][...] = nll_cube
-
+    scandata['BIN_OK'][...] = ok_cube
     
-    scandata['E_MIN'][...] = hdulist['EBOUNDS'].data['E_MIN']
-    scandata['E_CTR'][...] = hdulist['EBOUNDS'].data['E_CTR']
-    scandata['E_MAX'][...] = hdulist['EBOUNDS'].data['E_MAX']
-    
-    scandata['REF_DFDE'][...] = hdulist['EBOUNDS'].data['REF_DFDE']
-    scandata['REF_DFDE_E_MIN'][...] = hdulist['EBOUNDS'].data['REF_DFDE_E_MIN']
-    scandata['REF_DFDE_E_MAX'][...] = hdulist['EBOUNDS'].data['REF_DFDE_E_MAX']
-    scandata['REF_EFLUX'][...] = hdulist['EBOUNDS'].data['REF_EFLUX']
-    scandata['REF_FLUX'][...] = hdulist['EBOUNDS'].data['REF_FLUX']
-    scandata['REF_NPRED'][...] = hdulist['EBOUNDS'].data['REF_NPRED']    
+#    scandata['E_MIN'][...] = hdulist['EBOUNDS'].data['E_MIN']
+#    scandata['E_REF'][...] = hdulist['EBOUNDS'].data['E_REF']
+#    scandata['E_MAX'][...] = hdulist['EBOUNDS'].data['E_MAX']    
+#    scandata['REF_DFDE'][...] = hdulist['EBOUNDS'].data['REF_DFDE']
+#    scandata['REF_DFDE_E_MIN'][...] = hdulist['EBOUNDS'].data['REF_DFDE_E_MIN']
+#    scandata['REF_DFDE_E_MAX'][...] = hdulist['EBOUNDS'].data['REF_DFDE_E_MAX']
+#    scandata['REF_EFLUX'][...] = hdulist['EBOUNDS'].data['REF_EFLUX']
+#    scandata['REF_FLUX'][...] = hdulist['EBOUNDS'].data['REF_FLUX']
+#    scandata['REF_NPRED'][...] = hdulist['EBOUNDS'].data['REF_NPRED']    
     
     m = scandata['NORM_ERRN'] > 0
     scandata['NORM_ERR'][m] = 0.5*(scandata['NORM_ERRP'][m]+scandata['NORM_ERRN'][m])
@@ -196,6 +198,8 @@ def convert_tscube(infile,outfile):
 
     hdulist['SCANDATA'].header['UL_CONFIDENCE'] = 0.95
 
+    # FITDATA
+    
     columns = pyfits.ColDefs([])
 
     columns.add_col(pyfits.Column(name=str('NORM'), format='E'))
@@ -220,6 +224,16 @@ def convert_tscube(infile,outfile):
     fitdata['NORM_UL'][...] = fitdata['NORM'] + 2.0*fitdata['NORM_ERR']
 
     fitdata['TS'] = ts_map
+
+#    del hdulist['N_MAP']
+#    del hdulist['ERRP_MAP']
+#    del hdulist['ERRN_MAP']
+#    del hdulist['TSMAP_OK']
+    
+#    del hdulist['NLL_CUBE']
+#    del hdulist['ERRPCUBE']
+#    del hdulist['ERRNCUBE']
+#    del hdulist['TSCUBE_OK']
     
     hdulist.writeto(outfile,clobber=True)
 
@@ -569,7 +583,7 @@ class TSMapGenerator(object):
         """Generate a spatial TS map for a source component with
         properties defined by the `model` argument.  The TS map will
         have the same geometry as the ROI.  The output of this method
-        is a dictionary containing `~fermipy.utils.Map` objects with
+        is a dictionary containing `~fermipy.skymap.Map` objects with
         the TS and amplitude of the best-fit test source.  By default
         this method will also save maps to FITS files and render them
         as image files.
@@ -619,7 +633,7 @@ class TSMapGenerator(object):
         -------
 
         maps : dict
-           A dictionary containing the `~fermipy.utils.Map` objects
+           A dictionary containing the `~fermipy.skymap.Map` objects
            for TS and source amplitude.
 
         """
@@ -924,7 +938,7 @@ class TSCubeGenerator(object):
         simultaneously fit the test source normalization as well as
         the normalizations of any background components that are
         currently free.  The output of this method is a dictionary
-        containing `~fermipy.utils.Map` objects with the TS and
+        containing `~fermipy.skymap.Map` objects with the TS and
         amplitude of the best-fit test source.  By default this method
         will also save maps to FITS files and render them as image
         files.
@@ -973,7 +987,7 @@ class TSCubeGenerator(object):
         -------
         
         maps : dict
-           A dictionary containing the `~fermipy.utils.Map` objects
+           A dictionary containing the `~fermipy.skymap.Map` objects
            for TS and source amplitude.
 
         """
