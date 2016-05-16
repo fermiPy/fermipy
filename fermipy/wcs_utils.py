@@ -92,6 +92,26 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
     return w
 
 
+def wcs_add_energy_axis(wcs,energies):
+    """ Copy a WCS object, and add on the energy axis
+    """
+    if wcs.naxis != 2:
+        raise Exception('wcs_add_energy_axis, input WCS naxis != 2 %i'%wcs.naxis)
+    w = pywcs.WCS(naxis=3)
+    w.wcs.ctype[0] = wcs.wcs.ctype[0]
+    w.wcs.ctype[1] = wcs.wcs.ctype[1]
+    w.wcs.crval[0] = wcs.wcs.crval[0]
+    w.wcs.crval[1] = wcs.wcs.crval[1]
+    w.wcs.cdelt[0] = wcs.wcs.cdelt[0]
+    w.wcs.cdelt[1] = wcs.wcs.cdelt[1]
+    w = pywcs.WCS(w.to_header())
+    w.wcs.crpix[2] = 1
+    w.wcs.crval[2] = 10 ** energies[0]
+    w.wcs.cdelt[2] = 10 ** energies[1] - 10 ** energies[0]
+    w.wcs.ctype[2] = 'Energy'
+    return w
+
+
 def offset_to_sky(skydir, offset_lon, offset_lat,
                   coordsys='CEL', projection='AIT'):
     """Convert a cartesian offset (X,Y) in the given projection into
