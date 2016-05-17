@@ -17,10 +17,13 @@ def test_load_3fgl_catalog_fits():
     rm = roi_model.ROIModel(catalogs=['3FGL'])
     assert(len(rm.sources) == 3034)
 
+    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.fit'])
+    assert(len(rm.sources) == 3034)
 
 def test_load_3fgl_catalog_xml():
 
-    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.xml'])
+    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.xml'],
+                            extdir='Extended_archive_v15')
     assert(len(rm.sources) == 3034)
 
 
