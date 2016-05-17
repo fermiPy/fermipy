@@ -964,7 +964,7 @@ class ROIModel(fermipy.config.Configurable):
                                  ll(self.config['logging']['verbosity']))
 
         if self.config['extdir'] is not None and \
-                not os.path.isdir(self.config['extdir']):
+                not os.path.isdir(os.path.expandvars(self.config['extdir'])):
             self._config['extdir'] = \
                 os.path.join('$FERMIPY_DATA_DIR',
                              'catalogs', self.config['extdir'])
@@ -1574,9 +1574,13 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict['SpatialType'] = 'SpatialMap'
                 src_dict['SpatialModel'] = 'SpatialMap'
 
-                search_dirs = [extdir,
-                               os.path.join(extdir, 'Templates')]
-
+                search_dirs = []
+                if extdir is not None:
+                    search_dirs += [extdir, os.path.join(extdir, 'Templates')]
+                
+                search_dirs += [row['extdir'],
+                                os.path.join(row['extdir'], 'Templates')]
+                
                 src_dict['Spatial_Filename'] = resolve_file_path(
                     row['Spatial_Filename'],
                     search_dirs=search_dirs)
