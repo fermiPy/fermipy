@@ -33,7 +33,7 @@ import fermipy.gtutils as gtutils
 import fermipy.roi_model as roi_model
 from fermipy.wcs_utils import wcs_add_energy_axis
 from fermipy.fits_utils import read_energy_bounds, read_spectral_data
-from fermipy.skymap import read_map_from_fits
+from fermipy.skymap import read_map_from_fits, Map
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
 from fermipy.sourcefind import find_peaks, refine_peak
@@ -1034,12 +1034,12 @@ class TSCube(object):
 
         Parameters
         ----------
-        tsmap       : `~fermipy.utils.Map`
+        tsmap       : `~fermipy.skymap.Map`
            A Map object with the TestStatistic values in each pixel
 
-        normmap     : `~fermipy.utils.Map`
+        normmap     : `~fermipy.skymap.Map`
            
-        tscube      : `~fermipy.utils.Map`
+        tscube      : `~fermipy.skymap.Map`
            A Map object with the TestStatistic values in each pixel & energy bin
            
         norm_vals   : `~numpy.ndarray`        
@@ -1151,8 +1151,8 @@ class TSCube(object):
         norm_vals = np.array(tab_s["NORM_SCAN"])
         
         wcs_3d = wcs_add_energy_axis(m.wcs,emin)
-        c = utils.Map(tab_s["TS"].reshape(cube_shape),wcs_3d)
-        n = utils.Map(tab_s["NORM"].reshape(cube_shape),wcs_3d)
+        c = Map(tab_s["TS"].reshape(cube_shape),wcs_3d)
+        n = Map(tab_s["NORM"].reshape(cube_shape),wcs_3d)
         
         ref_colname = 'REF_%s'%norm_type
         norm_vals *= tab_e[ref_colname][np.newaxis,:,np.newaxis]
