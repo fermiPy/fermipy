@@ -5,8 +5,8 @@ Changelog
 
 This page is a changelog for releases of Fermipy.
 
-0.7.1 (May 15, 2016)
----------------------
+0.8.0 (05/17/2016)
+------------------
 
 * Added new variables to source dictionary:
   
@@ -18,7 +18,8 @@ This page is a changelog for releases of Fermipy.
     `~fermipy.gtanalysis.GTAnalysis.find_sources`.
     
 * Removed camel-case in some source variable names.
-* Add option to disable caching FT1 files (``cacheft1``).
+* Add ``cacheft1`` option to :ref:`config_data` disable caching FT1
+  files.  Caching is now disabled by default.
 * Support FITS file format for preliminary releases of the 4FGL
   catalog.
 * Add ``__future__`` statements throughout to ensure
@@ -26,9 +27,9 @@ This page is a changelog for releases of Fermipy.
 * Reorganize utility modules including those for manipulation of WCS
   and healpix images.
 * Various improvements and refactoring in
-  `~fermipy.gtanalysis.GTAnalysis.localize`.  This method moved to
-  `~fermipy.sourcefind` module.
-* Add new global parameter ``llscan_pts`` to define the number of
+  `~fermipy.gtanalysis.GTAnalysis.localize`.  This method now moved to
+  the `~fermipy.sourcefind` module.
+* Add new global parameter ``llscan_pts`` in :ref:`config_gtlike` to define the number of
   likelihood evaluation points.
 * Write output of `~fermipy.gtanalysis.GTAnalysis.sed` to a FITS file
   in the Likelihood SED format.  More information about the
@@ -43,9 +44,12 @@ This page is a changelog for releases of Fermipy.
 * Reorganize classes and methods in `~fermipy.sed` for manipulating
   and fitting bin-by-bin likelihoods.  Spectral functions moved to a
   dedicated `~fermipy.spectrum` module.
+* Write return dictionary to a numpy file in
+  `~fermipy.gtanalysis.GTAnalysis.residmap` and
+  `~fermipy.gtanalysis.GTAnalysis.tsmap`.
   
   
-0.7.0 (April 19, 2016)
-----------------------
+0.7.0 (04/19/2016)
+------------------
 
 * some features

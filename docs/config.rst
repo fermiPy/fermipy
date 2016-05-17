@@ -162,6 +162,8 @@ file_back.fits).
      front : { selection : { evtype : 1 } } # Front
      back  : { selection : { evtype : 2 } } # Back
 
+.. _config_data:
+     
 data
 ----
 

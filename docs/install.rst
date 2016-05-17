@@ -5,20 +5,20 @@ Installation
 
 .. note:: 
 
-   fermiPy is only compatible with ST v10r0p5 or later.  If you are
-   using an earlier version, you will need to download and install the
-   latest version from the `FSSC
+   Fermipy is only compatible with Science Tools v10r0p5 or later.  If
+   you are using an earlier version, you will need to download and
+   install the latest version from the `FSSC
    <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  Note
-   that it is recommended to only use the *non-ROOT* binary
-   distributions.
+   that it is recommended to use the *non-ROOT* binary distributions
+   of the Science Tools.
 
 These instructions assume that you already have a local installation
-of the Fermi Science Tools (STs).  For more information about setting
-up the STs see :ref:`stinstall`.  If you are running at SLAC you can
-follow the `Running at SLAC`_ instructions.  For Unix/Linux users we
-currently recommend following the :ref:`condainstall` instructions.
-For OSX users we recommend following the :ref:`pipinstall`
-instructions.
+of the Fermi Science Tools (STs).  For more information about
+installing and setting up the STs see :ref:`stinstall`.  If you are
+running at SLAC you can follow the `Running at SLAC`_ instructions.
+For Unix/Linux users we currently recommend following the
+:ref:`condainstall` instructions.  For OSX users we recommend
+following the :ref:`pipinstall` instructions.
 
 .. _stinstall:
 
@@ -30,7 +30,7 @@ recommend using one of the non-ROOT binary distributions available
 from the `FSSC
 <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  The
 following example illustrates how to install the binary distribution
-for a Linux machine running Ubuntu Trusty:
+on a Linux machine running Ubuntu Trusty:
 
 .. code-block:: bash
 
@@ -40,7 +40,7 @@ for a Linux machine running Ubuntu Trusty:
    $ source $FERMI_DIR/fermi-init.sh
 
 More information about installing the STs as well as the complete list
-of the available binary distributions are available on the `FSSC
+of the available binary distributions is available on the `FSSC
 software page
 <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.
    
