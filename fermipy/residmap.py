@@ -11,7 +11,7 @@ import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
-from fermipy.utils import Map
+from fermipy.skymap import Map
 from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 
@@ -160,7 +160,7 @@ class ResidMapGenerator(object):
         make_plots : bool        
             Write image files.
 
-        make_fits : bool
+        write_fits : bool
             Write FITS files.
 
         Returns
@@ -199,7 +199,8 @@ class ResidMapGenerator(object):
         
     def _make_residual_map(self, prefix, config, **kwargs):
 
-        make_fits = kwargs.get('make_fits', True)
+        write_fits = kwargs.get('write_fits', True)
+        write_npy = kwargs.get('write_npy', True)
         
         src_dict = copy.deepcopy(config.setdefault('model',{}))        
         exclude = config.setdefault('exclude', None)
@@ -318,12 +319,12 @@ class ResidMapGenerator(object):
              'data': data_map,
              'excess': excess_map,
              'config' : config }
-        
-        if make_fits:
 
-            fits_file = utils.format_filename(self.config['fileio']['workdir'],
-                                              'residmap.fits',
-                                              prefix=[prefix,modelname])            
+        fits_file = utils.format_filename(self.config['fileio']['workdir'],
+                                          'residmap.fits',
+                                          prefix=[prefix,modelname])
+        
+        if write_fits:            
             fits_utils.write_maps(sigma_map,
                                   {'DATA_MAP': data_map,
                                    'MODEL_MAP': model_map,
@@ -331,4 +332,7 @@ class ResidMapGenerator(object):
                                   fits_file)
             o['file'] = os.path.basename(fits_file)
 
+        if write_npy:
+            np.save(os.path.splitext(fits_file)[0] + '.npy', o)
+            
         return o

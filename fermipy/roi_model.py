@@ -138,31 +138,8 @@ class Model(object):
 
     def __init__(self, name, data=None):
 
-        self._data = {'SpatialModel': None,
-                      'SpatialWidth': None,
-                      'SpatialType': None,
-                      'SourceType': None,
-                      'SpectrumType': None,
-                      'Spatial_Filename': None,
-                      'filefunction' : None,
-                      'RAJ2000': 0.0,
-                      'DEJ2000': 0.0,
-                      'ra': 0.0,
-                      'dec': 0.0,
-                      'glon': 0.0,
-                      'glat': 0.0,
-                      'offset_ra': 0.0,
-                      'offset_dec': 0.0,
-                      'offset_glon': 0.0,
-                      'offset_glat': 0.0,
-                      'offset': 0.0,
-                      'ts': np.nan,
-                      'npred': 0.0,
-                      'flux' : np.array([np.nan,np.nan]),
-                      'eflux' : np.array([np.nan,np.nan]),
-                      'params': {},
-                      'correlation' : {}
-                      }
+        self._data = defaults.make_default_dict(defaults.source_output)
+
         if data is not None:
             self._data.update(data)
 
@@ -355,6 +332,11 @@ class Model(object):
     def set_spectral_pars(self,spectral_pars):
 
         self._data['spectral_pars'] = copy.deepcopy(spectral_pars)
+        self._sync_params()
+
+    def update_spectral_pars(self,spectral_pars):
+
+        self._data['spectral_pars'] = utils.merge_dict(self.spectral_pars,spectral_pars)
         self._sync_params()
         
     def set_name(self, name, names=None):
@@ -982,7 +964,7 @@ class ROIModel(fermipy.config.Configurable):
                                  ll(self.config['logging']['verbosity']))
 
         if self.config['extdir'] is not None and \
-                not os.path.isdir(self.config['extdir']):
+                not os.path.isdir(os.path.expandvars(self.config['extdir'])):
             self._config['extdir'] = \
                 os.path.join('$FERMIPY_DATA_DIR',
                              'catalogs', self.config['extdir'])
@@ -1592,9 +1574,13 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict['SpatialType'] = 'SpatialMap'
                 src_dict['SpatialModel'] = 'SpatialMap'
 
-                search_dirs = [row['extdir'],
-                               os.path.join(row['extdir'], 'Templates')]
-
+                search_dirs = []
+                if extdir is not None:
+                    search_dirs += [extdir, os.path.join(extdir, 'Templates')]
+                
+                search_dirs += [row['extdir'],
+                                os.path.join(row['extdir'], 'Templates')]
+                
                 src_dict['Spatial_Filename'] = resolve_file_path(
                     row['Spatial_Filename'],
                     search_dirs=search_dirs)
@@ -1786,12 +1772,17 @@ class ROIModel(fermipy.config.Configurable):
             row_dict['GLON'] = s['glon']
             row_dict['GLAT'] = s['glat']
 
-            row_dict['Conf_68_PosAng'] = np.nan
-            row_dict['Conf_68_SemiMajor'] = np.nan
-            row_dict['Conf_68_SemiMinor'] = np.nan
-            row_dict['Conf_95_PosAng'] = np.nan
-            row_dict['Conf_95_SemiMajor'] = np.nan
-            row_dict['Conf_95_SemiMinor'] = np.nan
+            r68_semimajor = s['pos_sigma_semimajor']*s['pos_r68']/s['pos_sigma']
+            r68_semiminor = s['pos_sigma_semiminor']*s['pos_r68']/s['pos_sigma']
+            r95_semimajor = s['pos_sigma_semimajor']*s['pos_r95']/s['pos_sigma']
+            r95_semiminor = s['pos_sigma_semiminor']*s['pos_r95']/s['pos_sigma']
+            
+            row_dict['Conf_68_PosAng'] = s['pos_angle']
+            row_dict['Conf_68_SemiMajor'] = r68_semimajor
+            row_dict['Conf_68_SemiMinor'] = r68_semiminor
+            row_dict['Conf_95_PosAng'] = s['pos_angle']
+            row_dict['Conf_95_SemiMajor'] = r95_semimajor
+            row_dict['Conf_95_SemiMinor'] = r95_semiminor
             
             row_dict.update(s.get_catalog_dict())
                             
@@ -1802,8 +1793,13 @@ class ROIModel(fermipy.config.Configurable):
             row  = [row_dict[k] for k in cols_dict.keys()]
             tab.add_row(row)
 
-        tab.write(fitsfile,format='fits',overwrite=True)
             
+        tab.write(fitsfile,format='fits',overwrite=True)
+
+        hdulist = pyfits.open(fitsfile)
+        for h in hdulist:
+            h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+        hdulist.writeto(fitsfile, clobber=True)
         
 if __name__ == '__main__':
     roi = ROIModel()

@@ -22,7 +22,7 @@ import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
-from fermipy.utils import Map
+from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.logger import Logger
 from fermipy.logger import logLevel
@@ -77,6 +77,12 @@ def extract_images_from_tscube(infile,outfile):
 def convert_tscube(infile,outfile):
     """Convert between old and new TSCube formats."""
     inhdulist = pyfits.open(infile)
+
+    # If already in the new-style format just write and exit
+    if 'DLOGLIKE_SCAN' in inhdulist['SCANDATA'].columns.names:
+        if infile != outfile:
+            hdulist.writeto(outfile,clobber=True)
+        return
     
     # Get stuff out of the input file
     nrows = inhdulist['SCANDATA']._nrows
@@ -549,7 +555,7 @@ class TSMapGenerator(object):
         """Generate a spatial TS map for a source component with
         properties defined by the `model` argument.  The TS map will
         have the same geometry as the ROI.  The output of this method
-        is a dictionary containing `~fermipy.utils.Map` objects with
+        is a dictionary containing `~fermipy.skymap.Map` objects with
         the TS and amplitude of the best-fit test source.  By default
         this method will also save maps to FITS files and render them
         as image files.
@@ -589,14 +595,17 @@ class TSMapGenerator(object):
         make_plots : bool
            Write image files.
 
-        make_fits : bool
-           Write FITS files.
-
+        write_fits : bool
+           Write a FITS file.
+           
+        write_npy : bool
+           Write a numpy file.
+        
         Returns
         -------
 
         maps : dict
-           A dictionary containing the `~fermipy.utils.Map` objects
+           A dictionary containing the `~fermipy.skymap.Map` objects
            for TS and source amplitude.
 
         """
@@ -643,7 +652,8 @@ class TSMapGenerator(object):
 
         """
         
-        make_fits = kwargs.get('make_fits', True)
+        write_fits = kwargs.get('write_fits', True)
+        write_npy = kwargs.get('write_npy', True)
         map_skydir = kwargs.get('map_skydir',None)
         map_size = kwargs.get('map_size',1.0)
         exclude = kwargs.get('exclude', None)
@@ -802,12 +812,13 @@ class TSMapGenerator(object):
              'amplitude': amp_map,
              'config' : config
              }
-        
-        if make_fits:
 
-            fits_file = utils.format_filename(self.config['fileio']['workdir'],
-                                                'tsmap.fits',
-                                                prefix=[prefix,modelname])            
+        fits_file = utils.format_filename(self.config['fileio']['workdir'],
+                                          'tsmap.fits',
+                                          prefix=[prefix,modelname])
+        
+        if write_fits:
+                        
             fits_utils.write_maps(ts_map,
                              {'SQRT_TS_MAP': sqrt_ts_map,
                               'NPRED_MAP': npred_map,
@@ -815,6 +826,9 @@ class TSMapGenerator(object):
                              fits_file)
             o['file'] = os.path.basename(fits_file)            
 
+        if write_npy:
+            np.save(os.path.splitext(fits_file)[0] + '.npy', o)
+            
         return o
 
     def _tsmap_pylike(self, prefix, **kwargs):
@@ -896,7 +910,7 @@ class TSCubeGenerator(object):
         simultaneously fit the test source normalization as well as
         the normalizations of any background components that are
         currently free.  The output of this method is a dictionary
-        containing `~fermipy.utils.Map` objects with the TS and
+        containing `~fermipy.skymap.Map` objects with the TS and
         amplitude of the best-fit test source.  By default this method
         will also save maps to FITS files and render them as image
         files.
@@ -938,14 +952,14 @@ class TSCubeGenerator(object):
         make_plots : bool
            Write image files.
 
-        make_fits : bool
-           Write FITS files.       
+        write_fits : bool
+           Write a FITS file with the results of the analysis.       
 
         Returns
         -------
         
         maps : dict
-           A dictionary containing the `~fermipy.utils.Map` objects
+           A dictionary containing the `~fermipy.skymap.Map` objects
            for TS and source amplitude.
 
         """
@@ -970,7 +984,7 @@ class TSCubeGenerator(object):
         
     def _make_ts_cube(self, prefix, config, **kwargs):
 
-        make_fits = kwargs.get('make_fits', True)
+        write_fits = kwargs.get('write_fits', True)
         skywcs = kwargs.get('wcs',self._skywcs)
         npix = kwargs.get('npix',self.npix)
         
@@ -1045,7 +1059,7 @@ class TSCubeGenerator(object):
                                         
         fitScanner.writeFitsFile(str(outfile), str("gttscube"))
 
-        #convert_tscube(str(outfile),str(outfile))
+        convert_tscube(str(outfile),str(outfile))
         
         tscube = sed.TSCube.create_from_fits(outfile)
         ts_map = tscube.tsmap        

@@ -10,7 +10,6 @@ from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
 
 import fermipy
-import fermipy.utils as utils
 import fermipy.spectrum as spectrum
 
 def add_columns(t0, t1):
@@ -81,7 +80,7 @@ class Catalog(object):
         self._glonlat = np.vstack((self._src_skydir.galactic.l.deg,
                                    self._src_skydir.galactic.b.deg)).T
 
-        if not 'Spatial_Filename' in self.table.columns:
+        if 'Spatial_Filename' not in self.table.columns:
             self.table['Spatial_Filename'] = Column(dtype='S20',length=len(self.table))
             
         m = self.table['Spatial_Filename'] != ''
@@ -242,3 +241,4 @@ class Catalog4FGLP(Catalog):
         self.table['SpectrumType'][m] = 'PLSuperExpCutoff'
 
         table['TS'] = table['Test_Statistic']
+        table['Cutoff'] = table['Cutoff_Energy']

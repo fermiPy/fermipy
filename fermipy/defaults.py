@@ -22,6 +22,7 @@ data = {
     'evfile': (None, 'Path to FT1 file or list of FT1 files.', str),
     'scfile': (None, 'Path to FT2 (spacecraft) file.', str),
     'ltcube': (None, 'Path to livetime cube.  If none a livetime cube will be generated with ``gtmktime``.', str),
+    'cacheft1': (False, 'Cache FT1 files when performing binned analysis.  If false then only the counts cube is retained.', bool),
 }
 
 # Options for data selection.
@@ -50,27 +51,28 @@ selection = {
 # Options for ROI model.
 model = {
     'src_radius':
-        (None, 'Set the maximum distance for inclusion of sources in the ROI '
-               'model.  Selects all sources within a circle of this radius '
-               'centered '
-               'on the ROI.  If none then no selection is applied.  This '
-               'selection '
-               'will be ORed with sources passing the cut on src_roiwidth.',
+        (None,
+         'Radius of circular selection cut for inclusion of catalog sources in the model.  Includes sources within a circle of this radius '
+         'centered on the ROI.  If this parameter is none then no selection is applied.  This selection '
+         'will be ORed with the ``src_roiwidth`` selection.',
          float),
     'src_roiwidth':
-        (None, 'Select sources within a box of RxR centered on the ROI.  If '
-               'none then no cut is applied.', float),
+        (None,
+         'Width of square selection cut for inclusion of catalog sources in the model.  Includes sources within a square region with '
+         'side ``src_roiwidth`` centered on the ROI.  If this parameter is '
+         'none then no selection is applied.  This selection will be ORed with the ``src_radius`` selection.', float),
     'src_radius_roi':
         (None,
-         'Half-width of the ROI selection.  This parameter can be used in '
-         'lieu of src_roiwidth.',
+         'Half-width of ``src_roiwidth`` selection.  This parameter can be used in '
+         'lieu of ``src_roiwidth``.',
          float),
     'isodiff': (None, 'Set the isotropic template.', list),
     'galdiff': (None, 'Set the galactic IEM mapcube.', list),
     'limbdiff': (None, '', list),
     'diffuse': (None, '', list),
     'sources': (None, '', list),
-    'extdir': ('Extended_archive_v15', '', str),
+    'extdir': (None, 'Set a directory that will be searched for extended source FITS templates.  Template files in this directory '
+               'will take precendence over catalog source templates with the same name.', str),
     'catalogs': (None, '', list),
     'merge_sources' :
         (True, 'Merge properties of sources that appear in multiple '
@@ -348,48 +350,83 @@ plotting = {
 
 # Source dictionary
 source_output = OrderedDict((
+    ('name', (None,'Name of the source.',str,'str')),
+    ('SpatialModel', (None,'Spatial model.',str,'str')),
+    ('SpatialWidth', (None,'Spatial size',float,'float')),
+    ('SpatialType', (None,'Spatial type',str,'str')),
+    ('SourceType', (None,'Source size',str,'str')),
+    ('SpectrumType', (None,'Spectrum type',str,'str')),
+    ('Spatial_Filename', (None,'Path to spatial template associated to this source.',str,'str')),
+    ('filefunction' , (None,'Path to file function associated to this source.',str,'str')),        
     ('ra', (np.nan,'Right ascension.',float,'float')),
     ('dec', (np.nan,'Declination.',float,'float')),
     ('glon', (np.nan,'Galactic Longitude.',float,'float')),
     ('glat', (np.nan,'Galactic Latitude.',float,'float')),
+    ('offset_ra', (np.nan,'Angular offset from ROI center along RA.',float,'float')),
+    ('offset_dec', (np.nan,'Angular offset from ROI center along DEC',float,'float')),
+    ('offset_glon', (np.nan,'Angular offset from ROI center along GLON.',float,'float')),
+    ('offset_glat', (np.nan,'Angular offset from ROI center along GLAT.',float,'float')),
+    ('offset', (np.nan,'Angular offset from ROI center.',float,'float')),
+    ('pos_sigma', (np.nan,'1-sigma uncertainty (deg) on the source position.',float,'float')),
+    ('pos_sigma_semimajor', (np.nan,'1-sigma uncertainty (deg) on the source position along major axis.',float,'float')),
+    ('pos_sigma_semiminor', (np.nan,'1-sigma uncertainty (deg) on the source position along minor axis.',float,'float')),
+    ('pos_angle', (np.nan,'Position angle (deg) of the positional uncertainty ellipse.',float,'float')),
+    ('pos_r68', (np.nan,'68% uncertainty (deg) on the source position.',float,'float')),
+    ('pos_r95', (np.nan,'95% uncertainty (deg) on the source position.',float,'float')),
+    ('pos_r99', (np.nan,'99% uncertainty (deg) on the source position.',float,'float')),    
     ('ts', (np.nan,'Source test statistic.',float,'float')),
-    ('params', (None,'Dictionary of spectral parameters.',dict,'dict')),
+    ('loglike', (np.nan,'Log-likelihood of the model evaluated at the best-fit normalization of the source.',float,'float')),
+    ('ts', (np.nan,'Source test statistic.',float,'float')),
+    ('dloglike_scan', (np.array([np.nan]), 'Delta Log-likelihood values for likelihood scan of source normalization.',np.ndarray, '`~numpy.ndarray`')),
+    ('eflux_scan', (np.array([np.nan]), 'Energy flux values for likelihood scan of source normalization.',np.ndarray, '`~numpy.ndarray`')),
+    ('flux_scan', (np.array([np.nan]), 'Flux values for likelihood scan of source normalization.',np.ndarray, '`~numpy.ndarray`')),
     ('npred', (np.nan,'Number of predicted counts from this source integrated over the analysis energy range.',float,'float')),
+    ('params', (None,'Dictionary of spectral parameters.',dict,'dict')),
+    ('correlation', ({},'Dictionary of correlation coefficients.',dict,'dict')),    
     ('model_counts', (None,'Vector of predicted counts for this source in each analysis energy bin.',np.ndarray, '`~numpy.ndarray`')),
     ('sed', (None,'Output of SED analysis.  See :ref:`sed` for more information.',dict,'dict')),
     ('extension', (None,'Output of extension analysis.  See :ref:`extension` for more information.',dict,'dict')),
     ('localize', (None,'Output of localization analysis.  See :ref:`localization` for more information.',dict,'dict')),
-    ('flux', (None, 'Photon flux and uncertainty (%s) integrated over analysis energy range'%FLUX_UNIT,
+    ('pivot_energy', (np.nan,'Decorrelation energy.',float,'float')),
+    ('flux', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated over analysis energy range'%FLUX_UNIT,
              np.ndarray, '`~numpy.ndarray`')),
-    ('flux100', (None, 'Photon flux and uncertainty (%s) integrated from 100 MeV to 316 GeV.'%FLUX_UNIT,
+    ('flux100', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated from 100 MeV to 316 GeV.'%FLUX_UNIT,
                 np.ndarray, '`~numpy.ndarray`')),
-    ('flux1000', (None, 'Photon flux and uncertainty (%s) integrated from 1 GeV to 316 GeV.'%FLUX_UNIT,
+    ('flux1000', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated from 1 GeV to 316 GeV.'%FLUX_UNIT,
                  np.ndarray, '`~numpy.ndarray`')),
-    ('flux10000', (None, 'Photon flux and uncertainty (%s) integrated from 10 GeV to 316 GeV.'%FLUX_UNIT,
+    ('flux10000', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated from 10 GeV to 316 GeV.'%FLUX_UNIT,
                   np.ndarray, '`~numpy.ndarray`')),
-    ('eflux', (None, 'Energy flux and uncertainty (%s) integrated over analysis energy range'%ENERGY_FLUX_UNIT,
+    ('eflux', (np.array([np.nan,np.nan]), 'Energy flux and uncertainty (%s) integrated over analysis energy range'%ENERGY_FLUX_UNIT,
              np.ndarray, '`~numpy.ndarray`')),
-    ('eflux100', (None, 'Energy flux and uncertainty (%s) integrated from 100 MeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+    ('eflux100', (np.array([np.nan,np.nan]), 'Energy flux and uncertainty (%s) integrated from 100 MeV to 316 GeV.'%ENERGY_FLUX_UNIT,
                 np.ndarray, '`~numpy.ndarray`')),
-    ('eflux1000', (None, 'Energy flux and uncertainty (%s) integrated from 1 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+    ('eflux1000', (np.array([np.nan,np.nan]), 'Energy flux and uncertainty (%s) integrated from 1 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
                  np.ndarray, '`~numpy.ndarray`')),
-    ('eflux10000', (None, 'Energy flux and uncertainty (%s) integrated from 10 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+    ('eflux10000', (np.array([np.nan,np.nan]), 'Energy flux and uncertainty (%s) integrated from 10 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
                   np.ndarray, '`~numpy.ndarray`')),    
-    ('dfde', (None, 'Differential photon flux and uncertainty (%s) evaluated at the pivot energy.'%DIFF_FLUX_UNIT,
+    ('dfde', (np.array([np.nan,np.nan]), 'Differential photon flux and uncertainty (%s) evaluated at the pivot energy.'%DIFF_FLUX_UNIT,
              np.ndarray, '`~numpy.ndarray`')),
-    ('dfde100', (None, 'Differential photon flux and uncertainty (%s) evaluated at 100 MeV.'%DIFF_FLUX_UNIT,
+    ('dfde100', (np.array([np.nan,np.nan]), 'Differential photon flux and uncertainty (%s) evaluated at 100 MeV.'%DIFF_FLUX_UNIT,
                 np.ndarray, '`~numpy.ndarray`')),
-    ('dfde1000', (None, 'Differential photon flux and uncertainty (%s) evaluated at 1 GeV.'%DIFF_FLUX_UNIT,
+    ('dfde1000', (np.array([np.nan,np.nan]), 'Differential photon flux and uncertainty (%s) evaluated at 1 GeV.'%DIFF_FLUX_UNIT,
                  np.ndarray, '`~numpy.ndarray`')),
-    ('dfde10000', (None, 'Differential photon flux and uncertainty (%s) evaluated at 10 GeV.'%DIFF_FLUX_UNIT,
+    ('dfde10000', (np.array([np.nan,np.nan]), 'Differential photon flux and uncertainty (%s) evaluated at 10 GeV.'%DIFF_FLUX_UNIT,
                   np.ndarray, '`~numpy.ndarray`')),
-    ('e2dfde', (None, 'E^2 times the differential photon flux and uncertainty (%s) evaluated at the pivot energy.'%ENERGY_FLUX_UNIT,
+    ('dfde_index', (np.array([np.nan,np.nan]), 'Logarithmic slope of the differential photon spectrum evaluated at the pivot energy.',
              np.ndarray, '`~numpy.ndarray`')),
-    ('e2dfde100', (None, 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 100 MeV.'%ENERGY_FLUX_UNIT,
+    ('dfde100_index', (np.array([np.nan,np.nan]), 'Logarithmic slope of the differential photon spectrum evaluated at 100 MeV.',
                 np.ndarray, '`~numpy.ndarray`')),
-    ('e2dfde1000', (None, 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 1 GeV.'%ENERGY_FLUX_UNIT,
+    ('dfde1000_index', (np.array([np.nan,np.nan]), 'Logarithmic slope of the differential photon spectrum evaluated evaluated at 1 GeV.',
                  np.ndarray, '`~numpy.ndarray`')),
-    ('e2dfde10000', (None, 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 10 GeV.'%ENERGY_FLUX_UNIT,
+    ('dfde10000_index', (np.array([np.nan,np.nan]), 'Logarithmic slope of the differential photon spectrum evaluated at 10 GeV.',
+                  np.ndarray, '`~numpy.ndarray`')),    
+    ('e2dfde', (np.array([np.nan,np.nan]), 'E^2 times the differential photon flux and uncertainty (%s) evaluated at the pivot energy.'%ENERGY_FLUX_UNIT,
+             np.ndarray, '`~numpy.ndarray`')),
+    ('e2dfde100', (np.array([np.nan,np.nan]), 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 100 MeV.'%ENERGY_FLUX_UNIT,
+                np.ndarray, '`~numpy.ndarray`')),
+    ('e2dfde1000', (np.array([np.nan,np.nan]), 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 1 GeV.'%ENERGY_FLUX_UNIT,
+                 np.ndarray, '`~numpy.ndarray`')),
+    ('e2dfde10000', (np.array([np.nan,np.nan]), 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 10 GeV.'%ENERGY_FLUX_UNIT,
                   np.ndarray, '`~numpy.ndarray`')),  
 ))
 

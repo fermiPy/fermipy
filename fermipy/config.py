@@ -41,7 +41,7 @@ def create_default_config(defaults):
 def cast_config(config, defaults):
     for key, item in config.items():
 
-        if not key in defaults:
+        if key not in defaults:
             continue
         
         if isinstance(item, dict):
@@ -77,18 +77,23 @@ class Configurable(object):
     def __init__(self, config, **kwargs):
 
         self._config = self.get_config()
+        self._configdir = None
 
-        if isinstance(config,str) and not os.path.isfile(config):
+        if isinstance(config,str) and os.path.isfile(config):
+            self._configdir = os.path.abspath(os.path.dirname(config))
+            config_dict = yaml.load(open(config))            
+        elif isinstance(config, dict) or config is None:
+            config_dict = config
+        elif isinstance(config,str) and not os.path.isfile(config):
             raise Exception('Invalid path to configuration file: %s'%config)
-        
-        if isinstance(config, dict) or config is None:
-            pass
-        elif os.path.isfile(config) and 'fileio' in self._config:
-            self._config['fileio']['outdir'] = os.path.abspath(
-                os.path.dirname(config))
-            config = yaml.load(open(config))
+        else:
+            raise Exception('Invalid config argument.')
+            
+        self.configure(config_dict, **kwargs)
 
-        self.configure(config, **kwargs)
+        if self.configdir and 'fileio' in self.config and \
+                self.config['fileio']['outdir'] is None:
+            self.config['fileio']['outdir'] = self.configdir
 
     def configure(self, config, **kwargs):
 
@@ -109,9 +114,13 @@ class Configurable(object):
         """Return the configuration dictionary of this class."""
         return self._config
 
+    @property
+    def configdir(self):
+        return self._configdir
+    
     def write_config(self, outfile):
         """Write the configuration dictionary to an output file."""
-        yaml.dump(self.config, open(outfile, 'w'), default_flow_style=False)
+        utils.write_yaml(self.config, outfile, default_flow_style=False)
 
     def print_config(self, logger, loglevel=None):
 
