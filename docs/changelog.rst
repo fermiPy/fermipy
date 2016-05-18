@@ -20,7 +20,7 @@ This page is a changelog for releases of Fermipy.
     
 * Removed camel-case in some source variable names.
 * Add ``cacheft1`` option to :ref:`config_data` disable caching FT1
-  files.  Caching is now disabled by default.
+  files.  Cacheing is still enabled by default.
 * Support FITS file format for preliminary releases of the 4FGL
   catalog.
 * Add ``__future__`` statements throughout to ensure

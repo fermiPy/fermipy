@@ -22,7 +22,7 @@ data = {
     'evfile': (None, 'Path to FT1 file or list of FT1 files.', str),
     'scfile': (None, 'Path to FT2 (spacecraft) file.', str),
     'ltcube': (None, 'Path to livetime cube.  If none a livetime cube will be generated with ``gtmktime``.', str),
-    'cacheft1': (False, 'Cache FT1 files when performing binned analysis.  If false then only the counts cube is retained.', bool),
+    'cacheft1': (True, 'Cache FT1 files when performing binned analysis.  If false then only the counts cube is retained.', bool),
 }
 
 # Options for data selection.
