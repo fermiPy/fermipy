@@ -139,17 +139,15 @@ class Model(object):
     def __init__(self, name, data=None):
 
         self._data = defaults.make_default_dict(defaults.source_output)
-
-        if data is not None:
-            self._data.update(data)
-
-        self._data['name'] = name
-        self._data['assoc'] = {}
-        
         self._data.setdefault('spectral_pars', {})
         self._data.setdefault('spatial_pars', {})
         self._data.setdefault('catalog', {})
-
+        self._data['assoc'] = {}
+        self._data['name'] = name
+        
+        if data is not None:
+            self._data.update(data)
+            
         if not self.spectral_pars:
             pdict = gtutils.get_function_pars_dict(self['SpectrumType'])
             self._data['spectral_pars'] = pdict
@@ -241,7 +239,8 @@ class Model(object):
     def create_from_dict(src_dict, roi_skydir=None):
 
         src_dict.setdefault('SpatialModel','PointSource')
-        src_dict.setdefault('SpatialType','SkyDirFunction')
+        src_dict.setdefault('SpatialType',
+                            gtutils.get_spatial_type(src_dict['SpatialModel']))
 
         if 'spectral_pars' in src_dict:
             src_dict['spectral_pars'] = gtutils.cast_pars_dict(src_dict['spectral_pars'])
@@ -381,13 +380,9 @@ class IsoSource(Model):
                                   'free': False }}
         
         super(IsoSource, self).__init__(name, data)
-            
 
-        self['spatial_pars'] = {
-            'Value': {'name': 'Value', 'scale': '1',
-                      'value': '1', 'min': '0', 'max': '10',
-                      'free': '0'}}
-
+        self._init_spatial_pars()
+        
     @property
     def filefunction(self):
         return self._data['filefunction']
@@ -396,6 +391,13 @@ class IsoSource(Model):
     def diffuse(self):
         return True
 
+    def _init_spatial_pars(self):
+
+        self['spatial_pars'] = {
+            'Value': {'name': 'Value', 'scale': '1',
+                      'value': '1', 'min': '0', 'max': '10',
+                      'free': '0'}}
+    
     def write_xml(self, root):
 
         source_element = utils.create_xml_element(root, 'source',
@@ -442,11 +444,7 @@ class MapCubeSource(Model):
         
         super(MapCubeSource, self).__init__(name, data)
 
-        self['spatial_pars'] = {
-            'Normalization':
-                {'name': 'Normalization', 'scale': '1',
-                 'value': '1', 'min': '0', 'max': '10',
-                 'free': '0'}}
+        self._init_spatial_pars()
 
     @property
     def mapcube(self):
@@ -456,6 +454,14 @@ class MapCubeSource(Model):
     def diffuse(self):
         return True
 
+    def _init_spatial_pars(self):
+
+        self['spatial_pars'] = {
+            'Normalization':
+                {'name': 'Normalization', 'scale': '1',
+                 'value': '1', 'min': '0', 'max': '10',
+                 'free': '0'}}
+    
     def write_xml(self, root):
 
         source_element = utils.create_xml_element(root, 'source',
@@ -491,7 +497,13 @@ class Source(Model):
     >>> print src.skydir
     """
 
-    def __init__(self, name, data=None, radec=None):
+    def __init__(self, name, data, radec=None):
+
+        data.setdefault('SpatialModel','PointSource')
+        data.setdefault('SpectrumType','PowerLaw')
+        data.setdefault('SpatialType',gtutils.get_spatial_type(data['SpatialModel']))
+        data.setdefault('SourceType',gtutils.get_source_type(data['SpatialType']))
+        
         super(Source, self).__init__(name, data)
 
         catalog = self.data.get('catalog', {})
@@ -505,15 +517,8 @@ class Source(Model):
         else:
             raise Exception('Failed to infer RADEC for source: %s' % name)
 
-        if self['SpatialModel'] is None:
-            self._data['SpatialModel'] = self['SpatialType']
-
-        self.set_spatial_model(self.data['SpatialModel'],
-                               self.data['SpatialWidth'])
-
-        if not self.spatial_pars:
-            self._init_spatial_pars()
-
+        self._init_spatial_pars()
+        
     def __str__(self):
 
         data = copy.deepcopy(self.data)
@@ -558,9 +563,39 @@ class Source(Model):
         self['dec'] = radec[1]        
         glonlat = utils.eq2gal(radec[0], radec[1])
         self['glon'], self['glat'] = glonlat[0][0], glonlat[1][0]
-    
+        if 'RA' in self.spatial_pars:
+            self.spatial_pars['RA']['value'] = radec[0]
+            self.spatial_pars['DEC']['value'] = radec[1]
+
+    def _set_spatial_width(self):
+
+         if self['SpatialModel'] in ['GaussianSource','RadialGaussian']:
+
+            if self['SpatialWidth'] is None:
+                self.data.setdefault('Sigma',0.5)                
+                self['SpatialWidth'] = self['Sigma']*1.5095921854516636
+            else:
+                self.data.setdefault('Sigma',self['SpatialWidth']/1.5095921854516636)   
+
+         elif self['SpatialModel'] in ['DiskSource','RadialDisk']:
+
+            if self['SpatialWidth'] is None:
+                self.data.setdefault('Radius',0.5)                
+                self['SpatialWidth'] = self['Radius']*0.8246211251235321
+            else:
+                self.data.setdefault('Radius',self['SpatialWidth']/0.8246211251235321)   
+            
     def _init_spatial_pars(self):
 
+        if self['SpatialType'] == 'SkyDirFunction':
+            self._extended = False
+            self._data['SourceType'] = 'PointSource'
+        else:
+            self._extended = True
+            self._data['SourceType'] = 'DiffuseSource'
+        
+        self._set_spatial_width()
+        
         if self['SpatialType'] == 'SpatialMap':
             self._data['spatial_pars'] = {
                 'Prefactor': {'name': 'Prefactor', 'value': 1.0,
@@ -568,25 +603,25 @@ class Source(Model):
                               'scale': 1.0}
                 }
         else:
-            self._data['spatial_pars'] = {
-                'RA': {'name': 'RA', 'value': self['RAJ2000'],
-                       'free': False,
-                       'min': -360.0, 'max': 360.0, 'scale': 1.0},
-                'DEC': {'name': 'DEC', 'value': self['DEJ2000'],
-                        'free': False,
-                        'min': -90.0, 'max': 90.0, 'scale': 1.0}
-                }
+            self.spatial_pars.setdefault('RA',
+                                         {'name': 'RA', 'value': self['ra'],
+                                          'free': False,
+                                          'min': -360.0, 'max': 360.0, 'scale': 1.0})
+            self.spatial_pars.setdefault('DEC',
+                                         {'name': 'DEC', 'value': self['dec'],
+                                          'free': False,
+                                          'min': -90.0, 'max': 90.0, 'scale': 1.0})
             
-        if self['SpatialType'] == 'SpatialGaussian':
-            self._data['spatial_pars']['Sigma'] = {
-                'name': 'Sigma', 'value': self['SpatialWidth'],
-                'free': False, 'min': 0.001, 'max': 10,
-                'scale': '1.0'}
-        elif self['SpatialType'] == 'SpatialDisk':
-            self._data['spatial_pars']['Radius'] = {
-                'name': 'Radius', 'value': self['SpatialWidth'],
-                'free': False, 'min': 0.001, 'max': 10,
-                'scale': 1.0}
+        if self['SpatialType'] == 'RadialGaussian':
+            self.spatial_pars.setdefault('Sigma',
+                                         {'name': 'Sigma', 'value': self['Sigma'],
+                                          'free': False, 'min': 0.001, 'max': 10,
+                                          'scale': '1.0'})
+        elif self['SpatialType'] == 'RadialDisk':            
+            self.spatial_pars.setdefault('Radius',
+                                         {'name': 'Radius', 'value': self['Radius'],
+                                          'free': False, 'min': 0.001, 'max': 10,
+                                          'scale': 1.0})
        
 
     def load_from_catalog(self):
@@ -674,14 +709,9 @@ class Source(Model):
         if not skydir.isscalar:
             skydir = np.ravel(skydir)[0]
 
-        self['radec'] = np.array([skydir.icrs.ra.deg, skydir.icrs.dec.deg])
-        self['RAJ2000'] = self.radec[0]
-        self['DEJ2000'] = self.radec[1]
-        self['ra'] = self.radec[0]
-        self['dec'] = self.radec[1]
-        self['glon'] = skydir.galactic.l.deg
-        self['glat'] = skydir.galactic.b.deg
-        
+        radec = np.array([skydir.icrs.ra.deg, skydir.icrs.dec.deg])
+        self._set_radec(radec)
+                
     def set_roi_direction(self,roidir):
 
         offset = roidir.separation(self.skydir).deg
@@ -698,23 +728,8 @@ class Source(Model):
 
         self._data['SpatialModel'] = spatial_model
         self._data['SpatialWidth'] = spatial_width
-
-        if self['SpatialModel'] in ['PointSource', 'Gaussian', 'PSFSource']:
-            self._extended = False
-            self._data['SpatialType'] = 'SkyDirFunction'
-            self._data['SourceType'] = 'PointSource'
-        elif self['SpatialModel'] in ['GaussianSource', 'DiskSource','SpatialMap']:
-            self._extended = True
-            self._data['SpatialType'] = 'SpatialMap'
-            self._data['SourceType'] = 'DiffuseSource'
-        elif self['SpatialModel'] in ['SpatialGaussian','SpatialDisk']:
-            self._extended = True
-            self._data['SpatialType'] = self['SpatialModel']
-            self._data['SourceType'] = 'DiffuseSource'
-        else:
-            raise Exception(
-                'Unrecognized SpatialModel: ' + self['SpatialModel'])
-
+        self._data['SpatialType'] = gtutils.get_spatial_type(self['SpatialModel'])
+        self._data['spatial_pars'] = {}
         self._init_spatial_pars()
 
     def separation(self, src):
@@ -756,16 +771,34 @@ class Source(Model):
 
     @staticmethod
     def create_from_dict(src_dict, roi_skydir=None):
-        """Create a source object from a python dictionary."""
+        """Create a source object from a python dictionary.
+
+        Parameters
+        ----------
+        src_dict : dict
+           Dictionary defining the properties of the source.
+
+        """
 
         src_dict = copy.deepcopy(src_dict)
         src_dict.setdefault('SpatialModel','PointSource')
-        src_dict.setdefault('SpatialWidth',0.5)
         spectrum_type = src_dict.setdefault('SpectrumType','PowerLaw')
+        spatial_type = \
+            src_dict.setdefault('SpatialType',
+                                gtutils.get_spatial_type(src_dict['SpatialModel']))
+        
         spectral_pars = \
             src_dict.setdefault('spectral_pars',
                                 gtutils.get_function_pars_dict(spectrum_type))
-        
+
+        spatial_pars = \
+            src_dict.setdefault('spatial_pars',
+                                gtutils.get_function_pars_dict(src_dict['SpatialType']))
+
+        for k in ['RA','DEC','Prefactor']:
+            if k in spatial_pars:
+                del spatial_pars[k]
+            
         for k, v in spectral_pars.items():
 
             if k not in src_dict: 
@@ -777,10 +810,27 @@ class Source(Model):
             else:
                 spectral_pars[k].update(src_dict.pop(k))
 
+
+        for k, v in spatial_pars.items():
+
+            if k not in src_dict: 
+                continue
+
+            if not isinstance(src_dict[k], dict):
+                spatial_pars[k].update({'name': k, 'value': src_dict[k]})
+            else:
+                spatial_pars[k].update(src_dict.pop(k))
+                
+                
         for k, v in spectral_pars.items():
             spectral_pars[k] = gtutils.make_parameter_dict(spectral_pars[k])
 
+        for k, v in spatial_pars.items():
+            spatial_pars[k] = gtutils.make_parameter_dict(spatial_pars[k],
+                                                          rescale=False)
+            
         src_dict['spectral_pars'] = gtutils.cast_pars_dict(spectral_pars)
+        src_dict['spatial_pars'] = gtutils.cast_pars_dict(spatial_pars)
         #        validate_config(src_dict,default_src_dict)
             
         if 'name' in src_dict:
@@ -884,7 +934,7 @@ class Source(Model):
             spat_el = ElementTree.SubElement(source_element, 'spatialModel')
             spat_el.set('type', 'SkyDirFunction')
 
-        else:
+        elif self['SpatialType'] == 'SpatialMap':
             source_element = utils.create_xml_element(root, 'source',
                                                       dict(name=self[
                                                           'Source_Name'],
@@ -897,7 +947,14 @@ class Source(Model):
                                                dict(map_based_integral='True',
                                                     type='SpatialMap',
                                                     file=filename))
+        else:
+            source_element = utils.create_xml_element(root, 'source',
+                                                      dict(name=self['Source_Name'],
+                                                           type='DiffuseSource'))
+            spat_el = utils.create_xml_element(source_element, 'spatialModel',
+                                               dict(type=self['SpatialType']))
 
+            
         for k, v in self.spatial_pars.items():
             utils.create_xml_element(spat_el, 'parameter', v)
 
@@ -985,7 +1042,7 @@ class ROIModel(fermipy.config.Configurable):
         return key in self._src_dict.keys()
         
     def __getitem__(self, key):
-        return self.get_source_by_name(key, True)
+        return self.get_source_by_name(key)
 
     def __iter__(self):
         return iter(self._srcs + self._diffuse_srcs)
@@ -1143,10 +1200,10 @@ class ROIModel(fermipy.config.Configurable):
         self.load_source(src, build_index=build_index,
                          merge_sources=merge_sources)
         
-        return self.get_source_by_name(name, True)
+        return self.get_source_by_name(name)
 
     def copy_source(self, name):
-        src = self.get_source_by_name(name, True)
+        src = self.get_source_by_name(name)
         return copy.deepcopy(src)
     
     def load_sources(self, sources):
@@ -1368,7 +1425,7 @@ class ROIModel(fermipy.config.Configurable):
         coordsys = kwargs.pop('coordsys', 'CEL')
 
         roi = ROIModel(config, src_radius=None, src_roiwidth=None, **kwargs)
-        src = roi.get_source_by_name(name, True)
+        src = roi.get_source_by_name(name)
 
         return ROIModel.create_from_position(src.skydir, config,
                                              coordsys=coordsys, **kwargs)
@@ -1387,26 +1444,54 @@ class ROIModel(fermipy.config.Configurable):
         else:
             return False
 
-    def get_source_by_name(self, name, unique=False):
-        """Return a source in the ROI by name.  The input name string
-        can match any of the strings in the names property of the
-        source object.  Case and whitespace are ignored when matching
-        name strings.
+    def get_source_by_name(self, name):
+        """Return a single source in the ROI with the given name.  The
+        input name string can match any of the strings in the names
+        property of the source object.  Case and whitespace are
+        ignored when matching name strings.  If no sources are found
+        or multiple sources then an exception is thrown.
+
+        Parameters
+        ----------
+        name : str 
+           Name string.
+        
+        Returns
+        -------
+        srcs : `~fermipy.roi_model.Model`
+           A source object.
+        
+        """
+        srcs = self.get_sources_by_name(name)
+
+        if len(srcs) == 1:
+            return srcs[0]        
+        elif len(srcs) == 0:
+            raise Exception('No source matching name: ' + name)
+        elif len(srcs) > 1:
+            raise Exception('Multiple sources matching name: ' + name)
+        
+    def get_sources_by_name(self, name):
+        """Return a list of sources in the ROI matching the given
+        name.  The input name string can match any of the strings in
+        the names property of the source object.  Case and whitespace
+        are ignored when matching name strings.
 
         Parameters
         ----------
         name : str 
 
-        unique : bool
-           Require a unique match.  If more than one source exists
-           with this name an exception is raised.
+        Returns
+        -------
+        srcs : list
+           A list of `~fermipy.roi_model.Model` objects.        
         """
 
         index_name = name.replace(' ', '').lower()
 
         if index_name in self._src_dict:
 
-            srcs = list(self._src_dict[index_name])
+            return list(self._src_dict[index_name])
 
             if len(srcs) == 1 and unique:
                 return srcs[0]
@@ -1420,7 +1505,7 @@ class ROIModel(fermipy.config.Configurable):
     def get_nearby_sources(self, name, dist, min_dist=None,
                            square=False):
 
-        src = self.get_source_by_name(name, True)
+        src = self.get_source_by_name(name)
         return self.get_sources_by_position(src.skydir,
                                             dist, min_dist,
                                             square)

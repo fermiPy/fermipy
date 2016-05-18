@@ -245,7 +245,7 @@ class ResidMapGenerator(object):
 
         self.add_source('residmap_testsource', src_dict, free=True,
                        init_source=False,save_source_maps=False)
-        src = self.roi.get_source_by_name('residmap_testsource', True)
+        src = self.roi.get_source_by_name('residmap_testsource')
 
         modelname = utils.create_model_name(src)
         npix = self.components[0].npix

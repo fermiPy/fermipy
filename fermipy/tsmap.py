@@ -867,7 +867,7 @@ class TSMapGenerator(object):
             'SpatialModel': 'PSFSource',
         }
 
-        #        src = self.roi.get_source_by_name('tsmap_testsource',True)
+        #        src = self.roi.get_source_by_name('tsmap_testsource')
 
         for i, (ra, dec) in enumerate(zip(radec[0], radec[1])):
             testsource_dict['ra'] = ra

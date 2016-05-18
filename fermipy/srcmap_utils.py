@@ -27,10 +27,10 @@ def make_srcmap(skydir, psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
     energies = psf.energies
     nebin = len(energies)
 
-    if spatial_model == 'GaussianSource' or spatial_model == 'SpatialGaussian':
+    if spatial_model == 'GaussianSource' or spatial_model == 'RadialGaussian':
         k = utils.make_cgauss_kernel(psf, sigma, npix * rebin, cdelt / rebin,
                                xpix * rebin, ypix * rebin)
-    elif spatial_model == 'DiskSource' or spatial_model == 'SpatialDisk':
+    elif spatial_model == 'DiskSource' or spatial_model == 'RadialDisk':
         k = utils.make_cdisk_kernel(psf, sigma, npix * rebin, cdelt / rebin,
                               xpix * rebin, ypix * rebin)
     elif spatial_model == 'PSFSource' or spatial_model == 'PointSource':

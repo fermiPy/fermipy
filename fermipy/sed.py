@@ -117,7 +117,7 @@ class SEDGenerator(object):
 
         """
 
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
 
         prefix = kwargs.get('prefix','')
         write_fits = kwargs.get('write_fits',True)
@@ -345,7 +345,7 @@ class SEDGenerator(object):
             self.free_norm(name)
             self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
                               (name, 10 ** emin, 10 ** emax))
-            self.setEnergyRange(emin, emax)
+            self.set_energy_range(emin, emax)
 
             fit_output = self.fit(loglevel=logging.DEBUG,update=False)
             free_params = self.get_params(True)
@@ -410,7 +410,7 @@ class SEDGenerator(object):
             o['%s_ul95'%t] = o['norm_ul95']*o['ref_%s'%t]
             o['%s_ul'%t] = o['norm_ul']*o['ref_%s'%t]
         
-        self.setEnergyRange(erange[0], erange[1])
+        self.set_energy_range(erange[0], erange[1])
         self.like.setSpectrum(name, old_spectrum)
         saved_state.restore()
         self._sync_params(name)
@@ -418,7 +418,7 @@ class SEDGenerator(object):
         if cov_scale is not None:
             self.remove_priors()
         
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         src.update_data({'sed': copy.deepcopy(o)})
         
         return o
