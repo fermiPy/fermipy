@@ -71,7 +71,8 @@ model = {
     'limbdiff': (None, '', list),
     'diffuse': (None, '', list),
     'sources': (None, '', list),
-    'extdir': ('Extended_archive_v15', '', str),
+    'extdir': (None, 'Set a directory that will be searched for extended source FITS templates.  Template files in this directory '
+               'will take precendence over catalog source templates with the same name.', str),
     'catalogs': (None, '', list),
     'merge_sources' :
         (True, 'Merge properties of sources that appear in multiple '

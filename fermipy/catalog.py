@@ -241,3 +241,4 @@ class Catalog4FGLP(Catalog):
         self.table['SpectrumType'][m] = 'PLSuperExpCutoff'
 
         table['TS'] = table['Test_Statistic']
+        table['Cutoff'] = table['Cutoff_Energy']

@@ -996,6 +996,28 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self._init_source(name)
             self._update_roi()
 
+
+    def add_sources_from_roi(self, names, roi, free=False, **kwargs):
+        """Add multiple sources to the current ROI model copied from another ROI model.
+
+        Parameters
+        ----------
+        
+        names : list
+            List of str source names to add.
+
+        roi : `~fermipy.roi_model.ROIModel` object
+            The roi model from which to add sources.
+
+        free : bool
+            Initialize the source with a free normalization paramter.
+
+        """
+
+        for name in names:
+            self.add_source(name, roi[name].data, free=free, **kwargs)
+
+
     def delete_source(self, name, save_template=True, delete_source_map=False,
                       build_fixed_wts=True, **kwargs):
         """Delete a source from the ROI model.

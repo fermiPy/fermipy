@@ -55,6 +55,30 @@ fermipy.utils module
     :undoc-members:
     :show-inheritance:
 
+fermipy.sed module
+------------------
+
+.. automodule:: fermipy.sed
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+fermipy.sourcefind module
+-------------------------
+
+.. automodule:: fermipy.sourcefind
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+fermipy.skymap module
+---------------------
+
+.. automodule:: fermipy.skymap
+    :members:
+    :undoc-members:
+    :show-inheritance:
+       
 fermipy.tsmap module
 --------------------
 
@@ -67,14 +91,6 @@ fermipy.residmap module
 -----------------------
 
 .. automodule:: fermipy.residmap
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-fermipy.sed module
-------------------
-
-.. automodule:: fermipy.sed
     :members:
     :undoc-members:
     :show-inheritance:
