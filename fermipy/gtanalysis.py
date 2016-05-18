@@ -3713,7 +3713,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         excluded_srcnames = []
         for i, t in enumerate(exclude):
-            srcs = self.roi.get_source_by_name(t)
+            srcs = self.roi.get_sources_by_name(t)
             excluded_srcnames += [s.name for s in srcs]
             
         if not hasattr(self.like.logLike, 'loadSourceMaps'):

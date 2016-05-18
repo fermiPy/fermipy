@@ -277,8 +277,9 @@ def get_spatial_type(spatial_model):
         else:
             return 'SpatialMap'
     else:
-        raise Exception('Unrecognized SpatialModel: ' + spatial_model)
+        return spatial_model
 
+    
 def get_source_type(spatial_type):
     """Translate a spatial type string to a source type."""
     
@@ -286,7 +287,8 @@ def get_source_type(spatial_type):
         return 'PointSource'
     else:
         return 'DiffuseSource'
-        
+
+    
 def gtlike_spectrum_to_dict(spectrum):
     """ Convert a pyLikelihood object to a python dictionary which can
         be easily saved to a file."""

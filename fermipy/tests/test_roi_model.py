@@ -153,11 +153,11 @@ def test_load_source_from_xml(tmppath):
     
     src = roi['galdiff']
     assert(src['SpatialType'] == 'MapCubeFunction')
-    assert(src['SpatialModel'] == 'DiffuseSource')
+    assert(src['SpatialModel'] == 'MapCubeFunction')
 
     src = roi['isodiff']
     assert(src['SpatialType'] == 'ConstantValue')
-    assert(src['SpatialModel'] == 'DiffuseSource')
+    assert(src['SpatialModel'] == 'ConstantValue')
 
 
 def test_create_source_from_dict(tmppath):

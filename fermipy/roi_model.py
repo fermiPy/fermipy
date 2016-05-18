@@ -237,10 +237,15 @@ class Model(object):
 
     @staticmethod
     def create_from_dict(src_dict, roi_skydir=None):
-
+        
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialType',
                             gtutils.get_spatial_type(src_dict['SpatialModel']))
+
+        # Need this to handle old convention for
+        # MapCubeFunction/ConstantValue sources
+        if src_dict['SpatialModel'] == 'DiffuseSource':            
+            src_dict['SpatialModel'] = src_dict['SpatialType']
 
         if 'spectral_pars' in src_dict:
             src_dict['spectral_pars'] = gtutils.cast_pars_dict(src_dict['spectral_pars'])
@@ -248,9 +253,9 @@ class Model(object):
         if 'spatial_pars' in src_dict:
             src_dict['spatial_pars'] = gtutils.cast_pars_dict(src_dict['spatial_pars'])
         
-        if src_dict['SpatialModel'] == 'DiffuseSource' and src_dict['SpatialType'] == 'ConstantValue':
+        if src_dict['SpatialModel'] == 'ConstantValue':
             return IsoSource(src_dict['name'],src_dict)
-        elif src_dict['SpatialModel'] == 'DiffuseSource' and src_dict['SpatialType'] == 'MapCubeFunction':
+        elif src_dict['SpatialModel'] == 'MapCubeFunction':
             return MapCubeSource(src_dict['name'],src_dict)
         else:
             return Source.create_from_dict(src_dict,roi_skydir)
@@ -369,7 +374,7 @@ class IsoSource(Model):
 
         data['SpectrumType'] = 'FileFunction'
         data['SpatialType'] = 'ConstantValue'
-        data['SpatialModel'] = 'DiffuseSource'
+        data['SpatialModel'] = 'ConstantValue'
         data['SourceType'] = 'DiffuseSource'
 
         if not 'spectral_pars' in data:        
@@ -425,7 +430,7 @@ class MapCubeSource(Model):
 
         data['SpectrumType'] = 'PowerLaw'
         data['SpatialType'] = 'MapCubeFunction'
-        data['SpatialModel'] = 'DiffuseSource'
+        data['SpatialModel'] = 'MapCubeFunction'
         data['SourceType'] = 'DiffuseSource'
 
         if not 'spectral_pars' in data:
