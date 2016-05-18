@@ -980,7 +980,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         src = self.roi.create_source(name,src_dict)
 
         for c in self.components:
-            c.add_source(name, src_dict, free=free,
+            c.add_source(name, src_dict, free=True,
                          save_source_maps=save_source_maps)
 
         if self._like is None:
@@ -992,6 +992,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.like.syncSrcParams(str(name))
         self.like.model = self.like.components[0].model
+        self.free_norm(name,free)
+
         if init_source:
             self._init_source(name)
             self._update_roi()
@@ -3535,7 +3537,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._update_srcmap_file([src], True)
 
-        pylike_src = self._create_source(src,free=free)        
+        pylike_src = self._create_source(src,free=True)        
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(str(name))
         self.like.logLike.buildFixedModelWts()
