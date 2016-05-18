@@ -472,7 +472,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.like.setSpectrum(name,fn)
 
         # Get parameters
-        src = self.components[0].like.logLike.getSource(name)
+        src = self.components[0].like.logLike.getSource(str(name))
         pars_dict = gtutils.get_pars_dict_from_source(src)
         
         self.roi[name].set_spectral_pars(pars_dict)
@@ -511,7 +511,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             raise Exception(msg)
         
         for c in self.components:
-            src = c.like.logLike.getSource(name)
+            src = c.like.logLike.getSource(str(name))
             spectrum = src.spectrum()
             file_function = pyLike.FileFunction_cast(spectrum)
             file_function.setSpectrum(10**xy[0],dfde)
@@ -539,7 +539,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if self.roi[name]['SpectrumType'] != 'FileFunction':
         
-            src = self.components[0].like.logLike.getSource(name)
+            src = self.components[0].like.logLike.getSource(str(name))
             spectrum = src.spectrum()
             file_function = pyLike.FileFunction_cast(spectrum)
             loge = file_function.log_energy()
@@ -591,7 +591,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.roi[name]['filefunction'] = filename
         # Update
         for c in self.components:
-            src = c.like.logLike.getSource(name)
+            src = c.like.logLike.getSource(str(name))
             spectrum = src.spectrum()
 
             spectrum.getParam('Normalization').setBounds(1E-3,1E3)
@@ -1482,7 +1482,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for srcName in self.like.sourceNames():
 
             par_names = pyLike.StringVector()
-            src = self.components[0].like.logLike.getSource(srcName)
+            src = self.components[0].like.logLike.getSource(str(srcName))
             src.spectrum().getParamNames(par_names)
             
 #            for parName in self.get_free_source_params(srcName):
