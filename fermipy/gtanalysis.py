@@ -469,7 +469,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         else:
             fn = gtutils.create_spectrum_from_dict(spectrum_type,
                                                    spectrum_pars)
-            self.like.setSpectrum(name,fn)
+            self.like.setSpectrum(str(name),fn)
 
         # Get parameters
         src = self.components[0].like.logLike.getSource(str(name))
