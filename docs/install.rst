@@ -239,7 +239,7 @@ of fermipy with ``pip show``:
    Requires: wcsaxes, astropy, matplotlib, healpy, scipy, numpy, pyyaml
 
 To upgrade your fermipy installation to the latest version run the pip
-installation command with ``--upgrade --no-deps``:
+installation command with ``--upgrade --no-deps`` (remember to also include the ``--user`` option if you're running at SLAC):
    
 .. code-block:: bash
    
