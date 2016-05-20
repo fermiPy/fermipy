@@ -115,7 +115,7 @@ def wcs_add_energy_axis(wcs,energies):
 def offset_to_sky(skydir, offset_lon, offset_lat,
                   coordsys='CEL', projection='AIT'):
     """Convert a cartesian offset (X,Y) in the given projection into
-    a spherical coordinate."""
+    a pair of spherical coordinates."""
 
     offset_lon = np.array(offset_lon, ndmin=1)
     offset_lat = np.array(offset_lat, ndmin=1)
@@ -124,18 +124,6 @@ def offset_to_sky(skydir, offset_lon, offset_lat,
     pixcrd = np.vstack((offset_lon, offset_lat)).T
 
     return w.wcs_pix2world(pixcrd, 0)
-
-
-def offset_to_skydir(skydir, offset_lon, offset_lat,
-                     coordsys='CEL', projection='AIT'):
-    """Convert a cartesian offset (X,Y) in the given projection into
-    a spherical coordinate."""
-
-    offset_lon = np.array(offset_lon, ndmin=1)
-    offset_lat = np.array(offset_lat, ndmin=1)
-
-    w = create_wcs(skydir, coordsys, projection)
-    return SkyCoord.from_pixel(offset_lon, offset_lat, w, 0)
 
 
 def sky_to_offset(skydir, lon, lat, coordsys='CEL', projection='AIT'):
@@ -151,32 +139,63 @@ def sky_to_offset(skydir, lon, lat, coordsys='CEL', projection='AIT'):
     return w.wcs_world2pix(skycrd, 0)
 
 
+def offset_to_skydir(skydir, offset_lon, offset_lat,
+                     coordsys='CEL', projection='AIT'):
+    """Convert a cartesian offset (X,Y) in the given projection into
+    a SkyCoord."""
+
+    offset_lon = np.array(offset_lon, ndmin=1)
+    offset_lat = np.array(offset_lat, ndmin=1)
+
+    w = create_wcs(skydir, coordsys, projection)
+    return SkyCoord.from_pixel(offset_lon, offset_lat, w, 0)
+
+
 def skydir_to_pix(skydir, wcs):
-    """Convert skydir object to pixel coordinates."""
+    """Convert skydir object to pixel coordinates.  Gracefully handles
+    0-d coordinate arrays.
 
-    if 'RA' in wcs.wcs.ctype[0]:
-        xpix, ypix = wcs.wcs_world2pix(skydir.ra.deg, skydir.dec.deg, 0)
-    elif 'GLON' in wcs.wcs.ctype[0]:
-        xpix, ypix = wcs.wcs_world2pix(skydir.galactic.l.deg,
-                                       skydir.galactic.b.deg, 0)
-    else:
-        raise Exception('Unrecognized WCS coordinate system.')
+    Parameters
+    ----------
+    skydir : `~astropy.coordinates.SkyCOord`
 
-    return [xpix, ypix]
+    wcs : `~astropy.wcs.WCS`
+
+    Returns
+    -------
+    xp, yp : `numpy.ndarray`
+       The pixel coordinates
+    
+    """
+    if len(skydir.shape) > 0 and len(skydir) == 0:
+        return [np.empty(0),np.empty(0)]
+
+    return skydir.to_pixel(wcs,origin=0)
 
 
 def pix_to_skydir(xpix, ypix, wcs):
-    """Convert pixel coordinates to a skydir object."""
+    """Convert pixel coordinates to a skydir object.  Gracefully
+    handles 0-d coordinate arrays.  Always returns a celestial
+    coordinate.
 
-    if 'RA' in wcs.wcs.ctype[0]:
-        ra, dec = wcs.wcs_pix2world(xpix, ypix, 0)
-        return SkyCoord(ra, dec, unit=u.deg)
-    elif 'GLON' in wcs.wcs.ctype[0]:
-        glon, glat = wcs.wcs_pix2world(xpix, ypix, 0)
-        return SkyCoord(glon, glat, unit=u.deg,
-                        frame='galactic').transform_to('icrs')
-    else:
-        raise Exception('Unrecognized WCS coordinate system.')
+    Parameters
+    ----------
+    xpix : `numpy.ndarray`
+    
+    ypix : `numpy.ndarray`
+
+    wcs : `~astropy.wcs.WCS`
+    
+    """
+    xpix = np.array(xpix)
+    ypix = np.array(ypix)
+    
+    if xpix.ndim > 0 and len(xpix) == 0:
+        return SkyCoord(np.empty(0),np.empty(0),unit='deg',
+                        frame='icrs')
+
+    return SkyCoord.from_pixel(xpix,ypix,wcs,
+                               origin=0).transform_to('icrs')
 
 
 def get_coordsys(wcs):

@@ -454,7 +454,7 @@ class SourceFinder(object):
 
         """
 
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
 
         # Extract options from kwargs
         config = copy.deepcopy(self.config['localize'])
@@ -582,12 +582,12 @@ class SourceFinder(object):
 
             self.add_source(newname, src, free=True)
             self.fit(loglevel=logging.DEBUG)
-            src = self.roi.get_source_by_name(newname, True)
+            src = self.roi.get_source_by_name(newname)
             self.roi[name]['localize'] = copy.deepcopy(o)
 
         if o['fit_success']:
 
-            src = self.roi.get_source_by_name(newname, True)
+            src = self.roi.get_source_by_name(newname)
             src['pos_sigma'] = o['sigma']
             src['pos_sigma_semimajor'] = o['sigma_semimajor']
             src['pos_sigma_semiminor'] = o['sigma_semiminor']

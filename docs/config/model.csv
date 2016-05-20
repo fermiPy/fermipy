@@ -1,7 +1,7 @@
 ``assoc_xmatch_columns``	[u'3FGL_Name']	Choose a set of association columns on which to cross-match catalogs.
 ``catalogs``	None	
 ``diffuse``	None	
-``extdir``	Extended_archive_v15	
+``extdir``	None	Set a directory that will be searched for extended source FITS templates.  Template files in this directory will take precendence over catalog source templates with the same name.
 ``extract_diffuse``	False	Extract a copy of all mapcube components centered on the ROI.
 ``galdiff``	None	Set the galactic IEM mapcube.
 ``isodiff``	None	Set the isotropic template.

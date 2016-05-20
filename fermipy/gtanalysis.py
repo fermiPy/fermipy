@@ -410,7 +410,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         for name in self.like.sourceNames():
 
-            src = self.roi.get_source_by_name(name, True)
+            src = self.roi.get_source_by_name(name)
             rm['model_counts'] += src['model_counts']
             rm['npred'] += np.sum(src['model_counts'])
             mc = self.model_counts_spectrum(name)
@@ -462,17 +462,17 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
            using the new spectral model of the source.
            
         """
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
         
         if spectrum_type == 'FileFunction':
             self._create_filefunction(name,spectrum_pars)
         else:
             fn = gtutils.create_spectrum_from_dict(spectrum_type,
                                                    spectrum_pars)
-            self.like.setSpectrum(name,fn)
+            self.like.setSpectrum(str(name),fn)
 
         # Get parameters
-        src = self.components[0].like.logLike.getSource(name)
+        src = self.components[0].like.logLike.getSource(str(name))
         pars_dict = gtutils.get_pars_dict_from_source(src)
         
         self.roi[name].set_spectral_pars(pars_dict)
@@ -496,7 +496,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         dfde : `~numpy.ndarray`
            Array of differential flux values (cm^{-2} s^{-1} MeV^{-1}).
         """
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
         
         if self.roi[name]['SpectrumType'] != 'FileFunction':
             msg = 'Wrong spectral type: %s'%self.roi[name]['SpectrumType']
@@ -511,7 +511,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             raise Exception(msg)
         
         for c in self.components:
-            src = c.like.logLike.getSource(name)
+            src = c.like.logLike.getSource(str(name))
             spectrum = src.spectrum()
             file_function = pyLike.FileFunction_cast(spectrum)
             file_function.setSpectrum(10**xy[0],dfde)
@@ -535,11 +535,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
            evaluated at energies in ``loge``.
         
         """
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
 
         if self.roi[name]['SpectrumType'] != 'FileFunction':
         
-            src = self.components[0].like.logLike.getSource(name)
+            src = self.components[0].like.logLike.getSource(str(name))
             spectrum = src.spectrum()
             file_function = pyLike.FileFunction_cast(spectrum)
             loge = file_function.log_energy()
@@ -591,7 +591,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.roi[name]['filefunction'] = filename
         # Update
         for c in self.components:
-            src = c.like.logLike.getSource(name)
+            src = c.like.logLike.getSource(str(name))
             spectrum = src.spectrum()
 
             spectrum.getParam('Normalization').setBounds(1E-3,1E3)
@@ -769,7 +769,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     def _init_source(self, name):
         
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         src.update_data({'sed': None,
                          'extension': None,
                          'localize': None,
@@ -802,7 +802,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             # If all model maps have the same spatial/energy binning we
             # could generate a co-added model map here
 
-    def setEnergyRange(self, emin, emax):
+    def set_energy_range(self, emin, emax):
         """Set the energy bounds of the analysis.  This restricts the
         evaluation of the likelihood to the data that falls in this
         range.  Input values will be rounded to the closest bin edge
@@ -846,7 +846,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._erange = np.array([emin,emax])
         self._roi_model['erange'] = np.copy(self.erange)
         for c in self.components:
-            c.setEnergyRange(emin, emax)
+            c.set_energy_range(emin, emax)
 
         return self._erange
 
@@ -980,7 +980,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         src = self.roi.create_source(name,src_dict)
 
         for c in self.components:
-            c.add_source(name, src_dict, free=free,
+            c.add_source(name, src_dict, free=True,
                          save_source_maps=save_source_maps)
 
         if self._like is None:
@@ -992,6 +992,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.like.syncSrcParams(str(name))
         self.like.model = self.like.components[0].model
+        self.free_norm(name,free)
+
         if init_source:
             self._init_source(name)
             self._update_roi()
@@ -1061,7 +1063,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                             delete_source_map=delete_source_map,
                             build_fixed_wts=build_fixed_wts)
 
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         self.roi.delete_sources([src])
         self.like.model = self.like.components[0].model
         self._update_roi()
@@ -1205,7 +1207,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def set_edisp_flag(self, name, flag=True):
         """Enable or disable the energy dispersion correction for the
         given source."""
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         name = src.name
 
         for c in self.components:
@@ -1245,7 +1247,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             Update the source dictionary for the object.            
 
         """
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
         idx = self.like.par_index(name, par)
         current_bounds = list(self.like.model[idx].getBounds())
 
@@ -1280,7 +1282,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     def set_parameter_scale(self,name,par,scale):
         """Update the scale of a parameter while keeping its value constant."""
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
         idx = self.like.par_index(name, par)
         current_bounds = list(self.like.model[idx].getBounds())
         current_scale = self.like.model[idx].getScale()
@@ -1340,7 +1342,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         free_pars = self.get_free_param_vector()
 
         # Find the source
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         name = src.name
 
         if pars is None:
@@ -1432,7 +1434,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             Choose whether to free (free=True) or fix (free=False).
 
         """
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         self.free_source(name, free=free,
                          pars=index_parameters[src['SpectrumType']])
 
@@ -1448,7 +1450,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         free : bool        
             Choose whether to free (free=True) or fix (free=False).
         """
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         self.free_source(name, free=free,
                          pars=shape_parameters[src['SpectrumType']])
 
@@ -1480,7 +1482,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for srcName in self.like.sourceNames():
 
             par_names = pyLike.StringVector()
-            src = self.components[0].like.logLike.getSource(srcName)
+            src = self.components[0].like.logLike.getSource(str(srcName))
             src.spectrum().getParamNames(par_names)
             
 #            for parName in self.get_free_source_params(srcName):
@@ -1537,7 +1539,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """Return the name of a source as it is defined in the
         pyLikelihood model object."""
         if name not in self.like.sourceNames():
-            name = self.roi.get_source_by_name(name, True).name
+            name = self.roi.get_source_by_name(name).name
         return name
 
     def zero_source(self, name):
@@ -1745,7 +1747,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             'extension'.
         """
 
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
 
         # Extract options from kwargs
         config = copy.deepcopy(self.config['extension'])
@@ -1880,7 +1882,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.add_source(name,src,free=True)
             self.fit(loglevel=logging.DEBUG)
         
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         src['extension'] = copy.deepcopy(o)
 
         self.logger.info('Finished')
@@ -1961,12 +1963,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.free_sources(False,pars='shape')
             
         # Find the source
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
         parName = self.like.normPar(name).getName()
 
         erange = self.erange
         if emin is not None or emax is not None:
-            self.setEnergyRange(emin,emax)
+            self.set_energy_range(emin,emax)
 
             
         # Find a sequence of values for the normalization scan
@@ -2001,7 +2003,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             saved_state.restore() 
         
         if emin is not None or emax is not None:
-            self.setEnergyRange(*erange)
+            self.set_energy_range(*erange)
 
         self.logger.debug('Finished')
             
@@ -2155,7 +2157,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
         
         # Find the source
-        name = self.roi.get_source_by_name(name, True).name
+        name = self.roi.get_source_by_name(name).name
 
         par = self.like.normPar(name)
         parName = self.like.normPar(name).getName()
@@ -2171,7 +2173,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         par.setFree(True)
 
         if emin is not None or emax is not None:
-            eminmax = self.setEnergyRange(emin, emax)
+            eminmax = self.set_energy_range(emin, emax)
         else:
             eminmax = self.erange
             
@@ -2251,7 +2253,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
         self.like[idx].setBounds(*bounds)
         if emin is not None or emax is not None:
-            self.setEnergyRange(*erange)
+            self.set_energy_range(*erange)
         
         return o
 
@@ -2810,7 +2812,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             c.roi.load_sources(sources.values())
 
         self._create_likelihood(infile)
-        self.setEnergyRange(self.erange[0], self.erange[1])
+        self.set_energy_range(self.erange[0], self.erange[1])
 
         if reload_sources:
 
@@ -3030,11 +3032,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         npts = self.config['gtlike']['llscan_npts']
         
         sd = self.get_src_model(name, paramsonly, reoptimize, npts)
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         src.update_data(sd)
 
         for c in self.components:
-            src = c.roi.get_source_by_name(name, True)            
+            src = c.roi.get_source_by_name(name)
             src.update_data(sd)            
 
     def get_src_model(self, name, paramsonly=False, reoptimize=False,
@@ -3477,7 +3479,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def reload_source(self, name):
         """Delete and reload a source in the model."""
 
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         
         if hasattr(self.like.logLike, 'loadSourceMap'):
 
@@ -3535,7 +3537,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._update_srcmap_file([src], True)
 
-        pylike_src = self._create_source(src,free=free)        
+        pylike_src = self._create_source(src,free=True)        
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(str(name))
         self.like.logLike.buildFixedModelWts()
@@ -3555,8 +3557,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
-        elif src['SpatialType'] == 'SpatialGaussian':
-            sm = pyLike.SpatialGaussian(src.skydir.ra.deg, src.skydir.dec.deg,
+        elif src['SpatialType'] == 'RadialGaussian':
+            sm = pyLike.RadialGaussian(src.skydir.ra.deg, src.skydir.dec.deg,
+                                        src['SpatialWidth'])
+            pylike_src = pyLike.DiffuseSource(sm,
+                                              self.like.logLike.observation(),
+                                              False)
+
+        elif src['SpatialType'] == 'RadialDisk':
+            sm = pyLike.RadialDisk(src.skydir.ra.deg, src.skydir.dec.deg,
                                         src['SpatialWidth'])
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
@@ -3583,7 +3592,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def delete_source(self, name, save_template=True, delete_source_map=False,
                       build_fixed_wts=True):
 
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
 
         self.logger.debug('Deleting source %s', name)
 
@@ -3614,11 +3623,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def set_edisp_flag(self, name, flag=True):
         """Enable/Disable the energy dispersion correction for a
         source."""
-        src = self.roi.get_source_by_name(name, True)
+        src = self.roi.get_source_by_name(name)
         name = src.name
         self.like[name].src.set_edisp_flag(flag)
 
-    def setEnergyRange(self, emin, emax):
+    def set_energy_range(self, emin, emax):
         """Set the energy range of the analysis.
         
         """
@@ -3704,7 +3713,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         excluded_srcnames = []
         for i, t in enumerate(exclude):
-            srcs = self.roi.get_source_by_name(t)
+            srcs = self.roi.get_sources_by_name(t)
             excluded_srcnames += [s.name for s in srcs]
             
         if not hasattr(self.like.logLike, 'loadSourceMaps'):
@@ -3730,12 +3739,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 src_names += [src.name]
         elif isinstance(name, list):
             for n in name:
-                src = self.roi.get_source_by_name(n, True)
+                src = self.roi.get_source_by_name(n)
                 if src.name in excluded_srcnames:
                     continue
                 src_names += [src.name]
         elif name is not None:
-            src = self.roi.get_source_by_name(name, True)
+            src = self.roi.get_source_by_name(name)
             src_names += [src.name]
 
         if len(src_names) == 0:
@@ -4159,21 +4168,25 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if 'SpatialModel' not in src:
             return
-        elif src['SpatialModel'] == 'GaussianSource':
+        if src['SpatialType'] != 'SpatialMap':
+            return
+        
+        if src['SpatialModel'] in ['GaussianSource','RadialGaussian']:
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_gauss_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
                                              suffix))
-            srcmap_utils.make_gaussian_spatial_map(src.skydir, src['SpatialWidth'],
-                                            template_file, npix=500)
+            srcmap_utils.make_gaussian_spatial_map(src.skydir,
+                                                   src['SpatialWidth'],
+                                                   template_file, npix=500)
             src['Spatial_Filename'] = template_file
-        elif src['SpatialModel'] == 'DiskSource':
+        elif src['SpatialModel'] in ['DiskSource','RadialDisk']:
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_disk_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
                                              suffix))
             srcmap_utils.make_disk_spatial_map(src.skydir, src['SpatialWidth'],
-                                        template_file, npix=500)
+                                               template_file, npix=500)
             src['Spatial_Filename'] = template_file        
 
     def _update_srcmap_file(self, sources=None, overwrite=False):
@@ -4198,8 +4211,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if 'SpatialModel' not in s:
                 continue
             if s['SpatialModel'] in ['PointSource', 'Gaussian',
-                                     'SpatialMap','SpatialGaussian',
-                                     'SpatialDisk']:
+                                     'SpatialMap','RadialGaussian',
+                                     'RadialDisk']:
                 continue
             if s.name.upper() in hdunames and not overwrite:
                 continue

@@ -754,8 +754,6 @@ class TSMapGenerator(object):
 
         if map_skydir is not None:
             map_offset = wcs_utils.skydir_to_pix(map_skydir, self._skywcs)
-            map_offset[0] = map_offset[0]
-            map_offset[1] = map_offset[1]
             map_delta = 0.5*map_size/self.components[0].binsz
             xmin = max(int(np.ceil(map_offset[1]-map_delta)),0)
             xmax = min(int(np.floor(map_offset[1]+map_delta))+1,self.npix)
@@ -869,7 +867,7 @@ class TSMapGenerator(object):
             'SpatialModel': 'PSFSource',
         }
 
-        #        src = self.roi.get_source_by_name('tsmap_testsource',True)
+        #        src = self.roi.get_source_by_name('tsmap_testsource')
 
         for i, (ra, dec) in enumerate(zip(radec[0], radec[1])):
             testsource_dict['ra'] = ra

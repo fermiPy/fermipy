@@ -75,7 +75,7 @@ FUNCTION_DEFAULT_PARS = {
                            'Prefactor' : DEFAULT_NORM_DICT,
                            },
     'LogParabola' : {'norm' : DEFAULT_NORM_DICT,
-                     'alpha': {'value': 0.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
+                     'alpha': {'value': 2.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
                      'beta' : {'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0},
                      'Eb' : DEFAULT_SCALE_DICT },
     'ConstantValue' : {'norm' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 100.0} }
@@ -158,7 +158,7 @@ def get_function_pars_dict(function_type):
             
     return copy.deepcopy(FUNCTION_DEFAULT_PARS[function_type])
 
-def make_parameter_dict(pdict, fixed_par=False):
+def make_parameter_dict(pdict, fixed_par=False, rescale=True):
     """
     Prepare a parameter dictionary.  This function will automatically
     set the parameter scale and bounds if they are not defined.
@@ -168,7 +168,12 @@ def make_parameter_dict(pdict, fixed_par=False):
     o = copy.deepcopy(pdict)
 
     if 'scale' not in o or o['scale'] is None:
-        value, scale = utils.scale_parameter(o['value'])
+
+        if rescale:        
+            value, scale = utils.scale_parameter(o['value'])
+        else:
+            value, scale = o['value'], 1.0
+            
         o['value'] = value
         o['scale'] = scale
         if 'error' in o:
@@ -257,6 +262,33 @@ def create_spectrum_from_dict(spectrum_type,spectral_pars=None):
 
     return fn
 
+
+def get_spatial_type(spatial_model):
+    """Translate a spatial model string to a spatial type."""
+    
+    if spatial_model in ['SkyDirFunction', 'PointSource',
+                         'Gaussian', 'PSFSource']:
+        return 'SkyDirFunction'
+    elif spatial_model in ['GaussianSource', 'DiskSource', 'SpatialMap']:
+        return 'SpatialMap'
+    elif spatial_model in ['RadialGaussian','RadialDisk']:
+        if hasattr(pyLike,'RadialGaussian'):
+            return spatial_model
+        else:
+            return 'SpatialMap'
+    else:
+        return spatial_model
+
+    
+def get_source_type(spatial_type):
+    """Translate a spatial type string to a source type."""
+    
+    if spatial_type == 'SkyDirFunction':
+        return 'PointSource'
+    else:
+        return 'DiffuseSource'
+
+    
 def gtlike_spectrum_to_dict(spectrum):
     """ Convert a pyLikelihood object to a python dictionary which can
         be easily saved to a file."""

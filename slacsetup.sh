@@ -10,18 +10,18 @@ else
 fi
 
 # default ST version
-export FERMI_RELEASE_TAG=10-01-01
+export FERMI_RELEASE_TAG=11-01-01
 
 function slacsetup
 {
-    # Setup CVS
-    export CVSROOT=/nfs/slac/g/glast/ground/cvs    
     export GLAST_EXT=/afs/slac/g/glast/ground/GLAST_EXT/${BLDARCH}
     export BUILDS=/nfs/farm/g/glast/u35/ReleaseManagerBuild
-    export LD_LIBRARY_PATH=$GLAST_EXT/cfitsio/v3290-gl1/lib
+    export PATH=/usr/lib64/qt-3.3/bin:/opt/lsf-openmpi/1.8.1/bin/:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin
+    #export LD_LIBRARY_PATH=$GLAST_EXT/cfitsio/v3290-gl1/lib
 
     unset PFILES 
     unset PYTHONPATH
+    unset LD_LIBRARY_PATH
 
     if [ -e "${BUILDS}/${BLDARCH}/Optimized/ScienceTools/$1/bin/${BLDARCH}-Optimized/_setup.sh" ]; then
 	export INST_DIR=${BUILDS}/${BLDARCH}/Optimized/ScienceTools/$1
@@ -44,7 +44,6 @@ function slacsetup
     fi
     
     export PYTHONROOT=$GLAST_EXT/python/2.7.10
-
     export PATH=$PYTHONROOT/bin:$PATH
     export GLASTSETUP=1
 }

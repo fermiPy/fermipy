@@ -4,6 +4,7 @@ import xml.etree.cElementTree as ElementTree
 from numpy.testing import assert_allclose
 
 from fermipy import roi_model
+from fermipy.roi_model import Source
 
 
 @pytest.fixture(scope='module')
@@ -33,7 +34,7 @@ def test_load_2fhl_catalog_fits():
     assert(len(rm.sources) == 360)
 
 
-def test_load_source_from_dict(tmppath):
+def test_load_roi_from_dict(tmppath):
 
     sources = [{'name': 'ptsrc0', 'SpectrumType': 'PowerLaw',
                 'ra': 121.0, 'dec': 32.56,
@@ -152,10 +153,102 @@ def test_load_source_from_xml(tmppath):
     
     src = roi['galdiff']
     assert(src['SpatialType'] == 'MapCubeFunction')
-    assert(src['SpatialModel'] == 'DiffuseSource')
+    assert(src['SpatialModel'] == 'MapCubeFunction')
 
     src = roi['isodiff']
     assert(src['SpatialType'] == 'ConstantValue')
-    assert(src['SpatialModel'] == 'DiffuseSource')
+    assert(src['SpatialModel'] == 'ConstantValue')
 
 
+def test_create_source_from_dict(tmppath):
+
+    ra = 252.367
+    dec = 52.6356
+    
+    src = Source.create_from_dict({'name' : 'testsrc',
+                                   'SpatialModel' : 'PointSource',
+                                   'SpectrumType' : 'PowerLaw',
+                                   'Index' : 2.3,
+                                   'ra' : ra, 'dec' : dec})
+
+    assert_allclose(src['ra'],ra)
+    assert_allclose(src['dec'],dec)
+    assert(src['SpatialModel'] == 'PointSource')
+    assert(src['SpatialType'] == 'SkyDirFunction')
+    assert(src['SourceType'] == 'PointSource')
+    assert(src.extended is False)
+    
+    src = Source.create_from_dict({'name' : 'testsrc',
+                                   'SpatialModel' : 'GaussianSource',
+                                   'SpectrumType' : 'PowerLaw',
+                                   'Index' : 2.3,
+                                   'ra' : ra, 'dec' : dec})
+
+    assert_allclose(src['ra'],ra)
+    assert_allclose(src['dec'],dec)
+    assert(src['SpatialModel'] == 'GaussianSource')
+    assert(src['SpatialType'] == 'SpatialMap')
+    assert(src['SourceType'] == 'DiffuseSource')
+    assert(src.extended is True)
+    
+    src = Source.create_from_dict({'name' : 'testsrc',
+                                   'SpatialModel' : 'RadialGaussian',
+                                   'SpectrumType' : 'PowerLaw',
+                                   'Index' : 2.3, 'Sigma' : 0.5,
+                                   'ra' : ra, 'dec' : dec})
+
+    assert_allclose(src['ra'],ra)
+    assert_allclose(src['dec'],dec)
+    assert_allclose(src['Sigma'],0.5)
+    if src['SpatialType'] == 'RadialGaussian':
+        assert_allclose(src.spatial_pars['Sigma']['value'],0.5)
+    
+    assert(src['SpatialModel'] == 'RadialGaussian')
+    assert(src['SourceType'] == 'DiffuseSource')
+    assert(src.extended is True)
+
+    src = Source.create_from_dict({'name' : 'testsrc',
+                                   'SpatialModel' : 'RadialDisk',
+                                   'SpectrumType' : 'PowerLaw',
+                                   'Index' : 2.3, 'Radius' : 0.5,
+                                   'ra' : ra, 'dec' : dec})
+
+    assert_allclose(src['ra'],ra)
+    assert_allclose(src['dec'],dec)
+    assert_allclose(src['Radius'],0.5)
+    if src['SpatialType'] == 'RadialDisk':
+        assert_allclose(src.spatial_pars['Radius']['value'],0.5)
+    
+    assert(src['SpatialModel'] == 'RadialDisk')
+    assert(src['SourceType'] == 'DiffuseSource')
+    assert(src.extended is True)
+    
+
+def test_create_source(tmppath):
+
+    ra = 252.367
+    dec = 52.6356
+    sigma = 0.5
+    
+    src_dict = {'SpatialModel' : 'GaussianSource', 'ra' : ra, 'dec' : dec, 'Sigma' : sigma}    
+    src = Source('testsrc',src_dict)
+
+    assert_allclose(src['ra'],ra)
+    assert_allclose(src['dec'],dec)
+    assert_allclose(src['Sigma'],sigma)
+    assert(src['SpatialModel'] == 'GaussianSource')
+
+
+def test_set_spatial_model(tmppath):
+
+    ra = 252.367
+    dec = 52.6356
+    
+    src_dict = {'SpatialModel' : 'GaussianSource', 'ra' : ra, 'dec' : dec}    
+    src = Source('testsrc',src_dict)
+
+    src.set_spatial_model('PointSource')
+    assert(src['SpatialModel'] == 'PointSource')
+    assert(src['SpatialType'] == 'SkyDirFunction')
+    assert(src['SourceType'] == 'PointSource')
+    
