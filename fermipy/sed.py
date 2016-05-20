@@ -1029,7 +1029,8 @@ class CastroData(object):
 class TSCube(object):
     """ 
     """
-    def __init__(self,tsmap,normmap,tscube,norm_vals,nll_vals,specData,norm_type):
+    def __init__(self,tsmap,normmap,tscube,normcube,
+                 norm_vals,nll_vals,specData,norm_type):
         """C'tor
 
         Parameters
@@ -1038,9 +1039,13 @@ class TSCube(object):
            A Map object with the TestStatistic values in each pixel
 
         normmap     : `~fermipy.skymap.Map`
-           
+           A Map object with the normalization values in each pixel
+        
         tscube      : `~fermipy.skymap.Map`
            A Map object with the TestStatistic values in each pixel & energy bin
+
+        normcube    : `~fermipy.skymap.Map`
+           A Map object with the normalization values in each pixel & energy bin
            
         norm_vals   : `~numpy.ndarray`        
            The normalization values ( nEBins X N array, where N is the
@@ -1066,6 +1071,7 @@ class TSCube(object):
         self._tsmap = tsmap
         self._normmap = normmap
         self._tscube = tscube
+        self._normcube = normcube
         self._ts_cumul = tscube.sum_over_energy()
         self._specData = specData
         self._norm_vals = norm_vals
@@ -1088,6 +1094,11 @@ class TSCube(object):
     def tscube(self):
         """ return the Cube of the TestStatistic value per pixel / energy bin """
         return self._tscube
+
+    @property
+    def normcube(self):
+        """ return the Cube of the normalization value per pixel / energy bin """
+        return self._normcube
 
     @property
     def ts_cumul(self):
@@ -1123,22 +1134,24 @@ class TSCube(object):
            String specifying the quantity used for the normalization
         
         """
-        m,f = read_map_from_fits(fitsfile)
+        tsmap,f = read_map_from_fits(fitsfile)
  
         tab_e = Table.read(fitsfile,'EBOUNDS')
         tab_s = Table.read(fitsfile,'SCANDATA')
+        tab_f = Table.read(fitsfile,'FITDATA')
 
         emin = np.array(tab_e['E_MIN']/1E3)
         emax = np.array(tab_e['E_MAX']/1E3)
         nebins = len(tab_e)
         npred = tab_e['REF_NPRED']
         
-        ndim = len(m.counts.shape)
+        ndim = len(tsmap.counts.shape)
 
         if ndim == 2:
-            cube_shape = (m.counts.shape[0],m.counts.shape[1],nebins)
+            cube_shape = (tsmap.counts.shape[0],
+                          tsmap.counts.shape[1],nebins)
         elif ndim == 1:
-            cube_shape = (m.counts.shape[0],nebins)
+            cube_shape = (tsmap.counts.shape[0],nebins)
         else:
             raise RuntimeError("Counts map has dimension %i"%(ndim))
 
@@ -1150,14 +1163,16 @@ class TSCube(object):
         nll_vals =  -np.array(tab_s["DLOGLIKE_SCAN"])
         norm_vals = np.array(tab_s["NORM_SCAN"])
         
-        wcs_3d = wcs_add_energy_axis(m.wcs,emin)
-        c = Map(tab_s["TS"].reshape(cube_shape),wcs_3d)
-        n = Map(tab_s["NORM"].reshape(cube_shape),wcs_3d)
+        wcs_3d = wcs_add_energy_axis(tsmap.wcs,emin)
+        tscube = Map(tab_s["TS"].reshape(cube_shape),wcs_3d)
+        ncube = Map(tab_s["NORM"].reshape(cube_shape),wcs_3d)
+        nmap = Map(tab_f['FIT_NORM'].reshape(tsmap.counts.shape),
+                   tsmap.wcs)
         
         ref_colname = 'REF_%s'%norm_type
         norm_vals *= tab_e[ref_colname][np.newaxis,:,np.newaxis]
         
-        return TSCube(m,n,c,norm_vals,nll_vals,specData,
+        return TSCube(tsmap,nmap,tscube,ncube,norm_vals,nll_vals,specData,
                       norm_type)
 
     def castroData_from_ipix(self,ipix,colwise=False):
