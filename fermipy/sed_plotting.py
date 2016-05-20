@@ -15,11 +15,14 @@ import matplotlib.pyplot as plt
 import matplotlib
 
 NORM_LABEL = {'NORM':r'Flux Normalization [a.u.]',
-              'FLUX':r'E dN/dE [ph $cm^{-2} s^{-1}$]',
-              'EFLUX':r'$E^2$ dN/dE [MeV $cm^{-2} s^{-1}]$',
+              'FLUX':r'$F_{\rm min}^{\rm max} [ph $cm^{-2} s^{-1}$]',
+              'EFLUX':r'$E F_{\rm min}^{\rm max}$ [MeV $cm^{-2} s^{-1}]$',
               'NPRED':r'$n_{\rm pred}$ [ph]',
               'DFDE':r'dN/dE [ph $cm^{-2} s^{-1} MeV^{-1}$]',
-              'EDFDE':r'E dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]'}
+              'EDFDE':r'E dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
+              'E2DFDE':r'%E^2% dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
+              'SIGVJ':r'$J\langle \sigma v \rangle$ [$GeV^{2} cm^{-2} s^{-1}$]',
+              'SIGV':r'$\langle \sigma v \rangle$ [$cm^{3} s^{-1}$]'}
               
 
 def plotNLL_v_Flux(nll,fluxType,nstep=25,xlims=None):
@@ -58,19 +61,22 @@ def plotNLL_v_Flux(nll,fluxType,nstep=25,xlims=None):
     return fig,ax
 
 
-def plotCastro(castroData,ylims,nstep=25,zlims=None):
+def plotCastro_base(castroData,xlims,ylims,xlabel,ylabel,nstep=25,zlims=None):
     """ Make a color plot (castro plot) of the (negative) log-likelihood as a function of 
     energy and flux normalization
 
-    castroData : A CastroData object, with the log-likelihood v. normalization for each energy bin
+    castroData : A CastroData_Base object, with the log-likelihood v. normalization for each energy bin
+    xlims      : x-axis limits
     ylims      : y-axis limits
+    xlabel     : x-axis title
+    ylabel     : y-axis title
     nstep      : Number of y-axis steps to plot for each energy bin
     zlims      : z-axis limits
 
     returns fig,ax,im which are matplotlib figure, axes and image objects
     """
-    xmin = castroData.specData.log_ebins[0]
-    xmax = castroData.specData.log_ebins[-1]
+    xmin = xlims[0]
+    xmax = xlims[1]
     ymin = ylims[0]
     ymax = ylims[1]
     if zlims is None:
@@ -83,16 +89,17 @@ def plotCastro(castroData,ylims,nstep=25,zlims=None):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
+    ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_xlim((xmin,xmax))
     ax.set_ylim((ymin,ymax))
     
-    ax.set_xlabel("log(Energy/GeV)")
-    ax.set_ylabel(NORM_LABEL[castroData.norm_type])
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
 
     normVals = np.logspace(np.log10(ymin),np.log10(ymax),nstep)
     ztmp = []
-    for i in range(castroData.specData.nE):
+    for i in range(castroData.nx):
         ztmp.append(castroData[i].interp(normVals))
         pass
     ztmp = np.asarray(ztmp).T
@@ -101,11 +108,24 @@ def plotCastro(castroData,ylims,nstep=25,zlims=None):
                    origin='lower', aspect='auto',interpolation='nearest',
                    vmin=zmin, vmax=zmax,cmap=matplotlib.cm.jet_r)
     
-    limits = castroData.getLimits(0.05)
-    ebin_centers = (castroData.specData.ebins[0:-1]+castroData.specData.ebins[1:])/2.
-    ax.errorbar(ebin_centers,limits)
+    return fig,ax,im,ztmp   
 
-    return fig,ax,im,ztmp
+
+def plotCastro(castroData,ylims,nstep=25,zlims=None):
+    """ Make a color plot (castro plot) of the (negative) log-likelihood as a function of 
+    energy and flux normalization
+
+    castroData : A CastroData object, with the log-likelihood v. normalization for each energy bin
+    ylims      : y-axis limits
+    nstep      : Number of y-axis steps to plot for each energy bin
+    zlims      : z-axis limits
+
+    returns fig,ax,im which are matplotlib figure, axes and image objects
+    """
+    xlims = (castroData.specData.log_ebins[0],castroData.specData.log_ebins[-1])
+    xlabel = "log(Energy/GeV)"
+    ylabel = NORM_LABEL[castroData.norm_type]
+    return plotCastro_base(castroData,xlims,ylims,xlabel,ylabel,nstep,zlims)
 
 
 
