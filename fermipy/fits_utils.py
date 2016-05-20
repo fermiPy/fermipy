@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
+import os
 import copy
 import numpy as np
 
@@ -99,3 +100,32 @@ def read_projection_from_fits(fitsfile, extname=None):
 
 
 
+def write_tables_to_fits(filepath,tablelist,clobber=False,
+                         namelist=None,cardslist=None):
+    """
+    Write some astropy.table.Table objects to a single fits file
+    """
+    outhdulist = [pyfits.PrimaryHDU()]
+    rmlist = []
+    for i,table in enumerate(tablelist):
+        ft_name = "%s._%i"%(filepath,i)
+        rmlist.append(ft_name)
+        try:
+            os.unlink(ft_name)
+        except:
+            pass
+        ft = table.write(ft_name,format="fits")
+        ft_in = pyfits.open(ft_name)
+        if namelist:
+            ft_in[1].name = namelist[i]
+        if cardslist:
+            for k,v in cardslist[i].items():
+                ft_in[1].header[k] = v
+        ft_in[1].update()
+        outhdulist += [ft_in[1]]
+        pass
+
+    pyfits.HDUList(outhdulist).writeto(filepath,clobber=clobber)
+    for rm in rmlist:
+        os.unlink(rm)
+        
