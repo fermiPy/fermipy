@@ -159,7 +159,7 @@ class SEDGenerator(object):
                 Column(name='NORM_ERR',dtype='f8',data=sed['norm_err']),
                 Column(name='NORM_ERRP',dtype='f8',data=sed['norm_err_hi']),
                 Column(name='NORM_ERRN',dtype='f8',data=sed['norm_err_lo']),
-                Column(name='NORM_UL95',dtype='f8',data=sed['norm_ul95']),
+                Column(name='NORM_UL',dtype='f8',data=sed['norm_ul95']),
                 Column(name='TS',dtype='f8',data=sed['ts']),
                 Column(name='LOGLIKE',dtype='f8', data=sed['loglike']),
                 Column(name='NORM_SCAN',dtype='f8',data=sed['norm_scan']),
