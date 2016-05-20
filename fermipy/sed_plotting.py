@@ -191,7 +191,7 @@ def plotSED(castroData,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
 if __name__ == "__main__":
 
     
-    from fermipy import sed
+    from fermipy import castro
     from fermipy import roi_model
     import sys
 
@@ -223,7 +223,7 @@ if __name__ == "__main__":
         print ("Didn't reconginize flux type %s, choose from NORM | FLUX | EFLUX | NPRED | DFDE | EDFDE"%sys.argv[1])
         sys.exit()
         
-    tscube = sed.TSCube.create_from_fits("tscube_test.fits",flux_type)
+    tscube = castro.TSCube.create_from_fits("tscube_test.fits",flux_type)
     resultDict = tscube.find_sources(10.0,1.0,use_cumul=False,
                                      output_peaks=True,
                                      output_specInfo=True,
