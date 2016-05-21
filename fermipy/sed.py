@@ -190,7 +190,7 @@ class SEDGenerator(object):
         cov_scale = config['cov_scale']        
 
         if energies is None:
-            energies = self.energies
+            energies = self.log_energies
         else:
             energies = np.array(energies)
 
@@ -198,7 +198,7 @@ class SEDGenerator(object):
         max_index = 5.0
         min_flux = 1E-30
         npts = self.config['gtlike']['llscan_npts']
-        erange = self.erange
+        loge_bounds = self.loge_bounds
         
         # Output Dictionary
         o = {'emin': energies[:-1],
@@ -398,7 +398,8 @@ class SEDGenerator(object):
 
             o['norm_ul95'][i] = ul_data['ul']/ref_flux
 
-            ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dloglike'], 
+            ul_data = utils.get_parameter_limits(lnlp['flux'],
+                                                 lnlp['dloglike'], 
                                                  ul_confidence=ul_confidence)
             o['norm_ul'][i] = ul_data['ul']/ref_flux
 
@@ -410,7 +411,7 @@ class SEDGenerator(object):
             o['%s_ul95'%t] = o['norm_ul95']*o['ref_%s'%t]
             o['%s_ul'%t] = o['norm_ul']*o['ref_%s'%t]
         
-        self.set_energy_range(erange[0], erange[1])
+        self.set_energy_range(loge_bounds[0], loge_bounds[1])
         self.like.setSpectrum(name, old_spectrum)
         saved_state.restore()
         self._sync_params(name)

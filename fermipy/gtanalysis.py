@@ -228,18 +228,18 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 if s.name not in self.roi:
                     self.roi.load_source(s)
             
-        energies = np.zeros(0)
+        ebin_edges = np.zeros(0)
         roiwidths = np.zeros(0)
         binsz = np.zeros(0)
         for c in self.components:
-            energies = np.concatenate((energies, c.energies))
+            ebin_edges = np.concatenate((ebin_edges, c.log_energies))
             roiwidths = np.insert(roiwidths, 0, c.roiwidth)
             binsz = np.insert(binsz, 0, c.binsz)
 
-        self._ebin_edges = np.sort(np.unique(energies.round(5)))
+        self._ebin_edges = np.sort(np.unique(ebin_edges.round(5)))
         self._enumbins = len(self._ebin_edges) - 1
-        self._erange = np.array([self._ebin_edges[0],
-                                 self._ebin_edges[-1]])
+        self._loge_bounds = np.array([self._ebin_edges[0],
+                                      self._ebin_edges[-1]])
         
         self._roi_model = {
             'loglike': np.nan,
@@ -247,7 +247,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             'counts': np.zeros(self.enumbins),
             'model_counts': np.zeros(self.enumbins),
             'energies': np.copy(self.energies),
-            'erange': np.copy(self.erange),
+            'log_energies': np.copy(self.log_energies),
+            'loge_bounds': np.copy(self.loge_bounds),
             'components': []
         }
 
@@ -256,7 +257,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                            'npred': 0.0,
                            'counts': np.zeros(c.enumbins),
                            'model_counts': np.zeros(c.enumbins),
-                           'energies': np.copy(c.energies)}]
+                           'energies': np.copy(c.energies),
+                           'log_energies': np.copy(c.log_energies),
+                           }]
 
             self._roi_model['components'] += comp_model
 
@@ -280,7 +283,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                     self.config['binning']['coordsys'],
                                     self.config['binning']['hpx_order'],
                                     self._hpx_region,
-                                    self._ebin_edges)
+                                    self.energies)
 
         else:
             self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
@@ -298,13 +301,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                     crpix=1.0 + 0.5 * (self._npix - 1),
                                     naxis=3,
                                     energies=self.energies)
-            """
-            self._proj.wcs.crpix[2] = 1
-            self._proj.wcs.crval[2] = 10 ** self.energies[0]
-            self._proj.wcs.cdelt[2] = 10 ** self.energies[1] - 10 ** \
-                                                               self.energies[0]
-            self._proj.wcs.ctype[2] = 'Energy'
-            """
 
     def __del__(self):
         self.stage_output()
@@ -337,7 +333,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     @property
     def energies(self):
-        """Return the energy bin edges."""
+        """Return the energy bin edges in MeV."""
+        return 10**self._ebin_edges
+
+    @property
+    def log_energies(self):
+        """Return the energy bin edges in log10(E/MeV)."""
         return self._ebin_edges
     
     @property
@@ -351,8 +352,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         return self._npix
 
     @property
-    def erange(self):
-        return self._erange
+    def loge_bounds(self):
+        """Current analysis energy bounds in log10(E/MeV)."""
+        return self._loge_bounds
     
     @property
     def projtype(self):
@@ -551,8 +553,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             return loge, dfde
 
         else:
-            ebinsz = (self.energies[-1]-self.energies[0])/self.enumbins
-            loge = utils.extend_array(self.energies,ebinsz,0.5,6.5)
+            ebinsz = (self.log_energies[-1]-
+                      self.log_energies[0])/self.enumbins
+            loge = utils.extend_array(self.log_energies,ebinsz,0.5,6.5)
 
             dfde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
                              for egy in loge])
@@ -566,26 +569,26 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         spectrum_pars = {} if spectrum_pars is None else spectrum_pars
 
         if 'loge' in spectrum_pars:
-            energies = spectrum_pars.get('loge')
+            loge = spectrum_pars.get('loge')
         else:            
-            ebinsz = (self.energies[-1]-self.energies[0])/self.enumbins
-            energies = utils.extend_array(self.energies,ebinsz,0.5,6.5)
+            ebinsz = (self.log_energies[-1]-self.log_energies[0])/self.enumbins
+            loge = utils.extend_array(self.log_energies,ebinsz,0.5,6.5)
             
         # Get the values
-        dfde = np.zeros(len(energies))
+        dfde = np.zeros(len(loge))
         if 'dfde' in spectrum_pars:
             dfde = spectrum_pars.get('dfde')
         else:
             dfde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
-                             for egy in energies])
+                             for egy in loge])
             
         filename = \
             os.path.join(self.workdir,
                          '%s_filespectrum.txt'%(name.lower().replace(' ','_')))
             
         # Create file spectrum txt file
-        np.savetxt(filename,np.vstack((10**energies,dfde)).T)
-#                   np.stack((10**energies,dfde),axis=1))
+        np.savetxt(filename,np.vstack((10**loge,dfde)).T)
+#                   np.stack((10**loge,dfde),axis=1))
         self.like.setSpectrum(name, 'FileFunction')
 
         self.roi[name]['filefunction'] = filename
@@ -802,7 +805,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             # If all model maps have the same spatial/energy binning we
             # could generate a co-added model map here
 
-    def set_energy_range(self, emin, emax):
+    def set_energy_range(self, logemin, logemax):
         """Set the energy bounds of the analysis.  This restricts the
         evaluation of the likelihood to the data that falls in this
         range.  Input values will be rounded to the closest bin edge
@@ -812,43 +815,43 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         Parameters
         ----------
 
-        emin : float
+        logemin : float
            Lower energy bound in log10(E/MeV).
 
-        emax : float
+        logemax : float
            Upper energy bound in log10(E/MeV).
 
         Returns
         -------
 
         eminmax : array
-           Minimum and maximum energy.
+           Minimum and maximum energy in log10(E/MeV).
 
         """
 
-        if emin is None:
-            emin = self.energies[0]
+        if logemin is None:
+            logemin = self.log_energies[0]
         else:
-            imin = int(utils.val_to_edge(self.energies, emin)[0])
-            emin = self.energies[imin]
+            imin = int(utils.val_to_edge(self.log_energies, logemin)[0])
+            logemin = self.log_energies[imin]
             
-        if emax is None:
-            emax = self.energies[-1]
+        if logemax is None:
+            logemax = self.log_energies[-1]
         else:
-            imax = int(utils.val_to_edge(self.energies, emax)[0])
-            emax = self.energies[imax]
+            imax = int(utils.val_to_edge(self.log_energies, logemax)[0])
+            logemax = self.log_energies[imax]
 
-        erange = np.array([emin,emax])
+        loge_bounds = np.array([logemin,logemax])
         
-        if np.allclose(erange,self._erange):
-            return self._erange
+        if np.allclose(loge_bounds,self._loge_bounds):
+            return self._loge_bounds
         
-        self._erange = np.array([emin,emax])
-        self._roi_model['erange'] = np.copy(self.erange)
+        self._loge_bounds = np.array([logemin,logemax])
+        self._roi_model['loge_bounds'] = np.copy(self.loge_bounds)
         for c in self.components:
-            c.set_energy_range(emin, emax)
+            c.set_energy_range(logemin, logemax)
 
-        return self._erange
+        return self._loge_bounds
 
     def counts_map(self):
         """Return a `~fermipy.skymap.Map` representation of the counts map.
@@ -899,39 +902,43 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 "Did not recognize projection type %s", self.projtype)
         return cmap
 
-    def model_counts_spectrum(self, name, emin=None, emax=None, summed=False):
+    def model_counts_spectrum(self, name, logemin=None, logemax=None,
+                              summed=False):
         """Return the predicted number of model counts versus energy
         for a given source and energy range.  If summed=True return
         the counts spectrum summed over all components otherwise
         return a list of model spectra."""
 
-        if emin is None:
-            emin = self.energies[0]
-        if emax is None:
-            emax = self.energies[-1]
+        if logemin is None:
+            logemin = self.log_energies[0]
+        if logemax is None:
+            logemax = self.log_energies[-1]
 
         if summed:
             cs = np.zeros(self.enumbins)
-            imin = utils.val_to_bin_bounded(self.energies, emin + 1E-7)[0]
-            imax = utils.val_to_bin_bounded(self.energies, emax - 1E-7)[0] + 1
+            imin = utils.val_to_bin_bounded(self.log_energies,
+                                            logemin + 1E-7)[0]
+            imax = utils.val_to_bin_bounded(self.log_energies,
+                                            logemax - 1E-7)[0] + 1
 
             for c in self.components:
-                ecenter = 0.5 * (c.energies[:-1] + c.energies[1:])
-                counts = c.model_counts_spectrum(name, self.energies[0],
-                                                 self.energies[-1])
+                ecenter = 0.5 * (c.log_energies[:-1] + c.log_energies[1:])
+                counts = c.model_counts_spectrum(name, self.log_energies[0],
+                                                 self.log_energies[-1])
 
                 cs += np.histogram(ecenter,
                                    weights=counts,
-                                   bins=self.energies)[0]
+                                   bins=self.log_energies)[0]
 
             return cs[imin:imax]
         else:
             cs = []
             for c in self.components:
-                cs += [c.model_counts_spectrum(name, emin, emax)]
+                cs += [c.model_counts_spectrum(name, logemin, logemax)]
             return cs
 
-    def get_sources(self, cuts=None, distance=None, minmax_ts=None, minmax_npred=None,
+    def get_sources(self, cuts=None, distance=None,
+                    minmax_ts=None, minmax_npred=None,
                     square=False):
         """Retrieve list of sources in the ROI satisfying the given
         selections.
@@ -1938,7 +1945,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         return np.array(logLike)
     
-    def profile_norm(self, name, emin=None, emax=None, reoptimize=False,
+    def profile_norm(self, name, logemin=None, logemax=None, reoptimize=False,
                      xvals=None, npts=20, fix_shape=True, savestate=True):
         """Profile the normalization of a source.
 
@@ -1966,9 +1973,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         name = self.roi.get_source_by_name(name).name
         parName = self.like.normPar(name).getName()
 
-        erange = self.erange
-        if emin is not None or emax is not None:
-            self.set_energy_range(emin,emax)
+        loge_bounds = self.loge_bounds
+        if logemin is not None or logemax is not None:
+            self.set_energy_range(logemin,logemax)
 
             
         # Find a sequence of values for the normalization scan
@@ -1979,7 +1986,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 xvals = self._find_scan_pts(name,npts=npts)
                 lnlp = self.profile(name, parName, 
                                     reoptimize=False,xvals=xvals)
-                lims = utils.get_parameter_limits(lnlp['xvals'], lnlp['dloglike'],
+                lims = utils.get_parameter_limits(lnlp['xvals'],
+                                                  lnlp['dloglike'],
                                                   ul_confidence=0.99)
                 
                 if np.isfinite(lims['ll']):
@@ -1989,7 +1997,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     xvals = np.insert(xvals, 0, 0.0)
                 elif np.abs(lnlp['dloglike'][0]) > 0.1:                    
                     lims['ll'] = 0.0
-                    xhi = np.linspace(lims['x0'], lims['ul'], (npts+1) - (npts+1)//2)
+                    xhi = np.linspace(lims['x0'], lims['ul'],
+                                      (npts+1) - (npts+1)//2)
                     xlo = np.linspace(lims['ll'], lims['x0'], (npts+1)//2)
                     xvals = np.concatenate((xlo[:-1],xhi))
                 else:
@@ -2002,20 +2011,20 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if savestate:
             saved_state.restore() 
         
-        if emin is not None or emax is not None:
-            self.set_energy_range(*erange)
+        if logemin is not None or logemax is not None:
+            self.set_energy_range(*loge_bounds)
 
         self.logger.debug('Finished')
             
         return o
 
-    def _find_scan_pts(self,name,emin=None,emax=None,npts=20):
+    def _find_scan_pts(self,name,logemin=None,logemax=None,npts=20):
 
         
         par = self.like.normPar(name)
         
-        eminmax = [self.erange[0] if emin is None else emin,
-                   self.erange[1] if emax is None else emax]
+        loge_bounds = [self.loge_bounds[0] if logemin is None else logemin,
+                   self.loge_bounds[1] if logemax is None else logemax]
         
         val = par.getValue()
         
@@ -2023,8 +2032,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             par.setValue(1.0)
             self.like.syncSrcParams(str(name))
             cs = self.model_counts_spectrum(name,
-                                            eminmax[0],
-                                            eminmax[1],
+                                            loge_bounds[0],
+                                            loge_bounds[1],
                                             summed=True)
             npred = np.sum(cs)
             val = 1./npred
@@ -2033,8 +2042,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.like.syncSrcParams(str(name))
         else:
             cs = self.model_counts_spectrum(name,
-                                            eminmax[0],
-                                            eminmax[1],
+                                            loge_bounds[0],
+                                            loge_bounds[1],
                                             summed=True)
             npred = np.sum(cs)
 
@@ -2054,21 +2063,23 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
         return xvals
     
-    def _find_scan_pts_reopt(self,name,emin=None,emax=None,npts=20,
+    def _find_scan_pts_reopt(self,name,logemin=None,logemax=None,npts=20,
                              dloglike_thresh = 3.0):
         
         parName = self.like.normPar(name).getName()
         
         npts = max(npts,5)
-        xvals = self._find_scan_pts(name,emin=emin, emax=emax, npts=20)
-        lnlp0 = self.profile(name, parName, emin=emin, emax=emax, 
+        xvals = self._find_scan_pts(name,logemin=logemin, logemax=logemax,
+                                    npts=20)
+        lnlp0 = self.profile(name, parName, logemin=logemin, logemax=logemax, 
                              reoptimize=False,xvals=xvals)
         xval0 = self.like.normPar(name).getValue()
         lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dloglike'],
                                            ul_confidence=0.99)
 
         if not np.isfinite(lims0['ll']) and lims0['x0'] > 1E-6:
-            xvals = np.array([0.0,lims0['x0'],lims0['x0']+lims0['err_hi'],lims0['ul']])
+            xvals = np.array([0.0,lims0['x0'],
+                              lims0['x0']+lims0['err_hi'],lims0['ul']])
         elif not np.isfinite(lims0['ll']) and lims0['x0'] < 1E-6:
             xvals = np.array([0.0,lims0['x0']+lims0['err_hi'],lims0['ul']])
         else:
@@ -2076,7 +2087,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                               lims0['x0']-lims0['err_lo'],lims0['x0'],
                               lims0['x0']+lims0['err_hi'],lims0['ul']])
             
-        lnlp1 = self.profile(name, parName, emin=emin, emax=emax, 
+        lnlp1 = self.profile(name, parName, logemin=logemin, logemax=logemax, 
                              reoptimize=True,xvals=xvals)
 
         dlogLike = copy.deepcopy(lnlp1['dloglike'])
@@ -2096,7 +2107,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             else:
                 xup = lims1['ul']
                                                     
-            lnlp = self.profile(name, parName, emin=emin, emax=emax,
+            lnlp = self.profile(name, parName, logemin=logemin,
+                                logemax=logemax,
                                 reoptimize=True,xvals=[xup])
             dloglike0 = lnlp['dloglike']
                 
@@ -2130,7 +2142,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         xvals = np.concatenate((xlo,xhi))
         return xvals
     
-    def profile(self, name, parName, emin=None, emax=None, reoptimize=False,
+    def profile(self, name, parName, logemin=None, logemax=None,
+                reoptimize=False,
                 xvals=None, npts=None, savestate=True):
         """Profile the likelihood for the given source and parameter.
 
@@ -2164,7 +2177,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         idx = self.like.par_index(name, parName)
         bounds = self.like.model[idx].getBounds()
         value = self.like.model[idx].getValue()
-        erange = self.erange
+        loge_bounds = self.loge_bounds
         
         if savestate:
             saved_state = LikelihoodState(self.like)
@@ -2172,10 +2185,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # If parameter is fixed temporarily free it
         par.setFree(True)
 
-        if emin is not None or emax is not None:
-            eminmax = self.set_energy_range(emin, emax)
+        if logemin is not None or logemax is not None:
+            loge_bounds = self.set_energy_range(logemin, logemax)
         else:
-            eminmax = self.erange
+            loge_bounds = self.loge_bounds
             
         loglike0 = -self.like()
 
@@ -2225,9 +2238,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             else:
                 loglike1 = -self.like()
             
-            flux = self.like[name].flux(10 ** eminmax[0], 10 ** eminmax[1])
-            eflux = self.like[name].energyFlux(10 ** eminmax[0],
-                                               10 ** eminmax[1])
+            flux = self.like[name].flux(10 ** loge_bounds[0],
+                                        10 ** loge_bounds[1])
+            eflux = self.like[name].energyFlux(10 ** loge_bounds[0],
+                                               10 ** loge_bounds[1])
             prefactor = self.like[idx]
 
             o['dloglike'][i] = loglike1 - loglike0
@@ -2237,8 +2251,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             o['eflux'][i] = eflux
 
             cs = self.model_counts_spectrum(name,
-                                            eminmax[0],
-                                            eminmax[1], summed=True)
+                                            loge_bounds[0],
+                                            loge_bounds[1], summed=True)
             o['npred'][i] += np.sum(cs)
 
         if reoptimize and hasattr(self.like.components[0].logLike,
@@ -2252,8 +2266,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             saved_state.restore()        
             
         self.like[idx].setBounds(*bounds)
-        if emin is not None or emax is not None:
-            self.set_energy_range(*erange)
+        if logemin is not None or logemax is not None:
+            self.set_energy_range(*loge_bounds)
         
         return o
 
@@ -2800,7 +2814,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                             {'Npred':'npred',
                                              'logLike' : 'loglike',
                                              'dlogLike' : 'dloglike'})
-        self._erange = self._roi_model.setdefault('erange',self.erange)
+
+        if 'erange' in self._roi_model:
+            self._roi_model['loge_bounds'] = self._roi_model.pop('erange')
+        
+        self._loge_bounds = self._roi_model.setdefault('loge_bounds',
+                                                       self.loge_bounds)
                 
         sources = roi_data.pop('sources')
         sources = utils.update_keys(sources,{'Npred':'npred',
@@ -2812,7 +2831,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             c.roi.load_sources(sources.values())
 
         self._create_likelihood(infile)
-        self.set_energy_range(self.erange[0], self.erange[1])
+        self.set_energy_range(self.loge_bounds[0], self.loge_bounds[1])
 
         if reload_sources:
 
@@ -2951,9 +2970,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
 
         if energies is None:
-            emin = self.energies[0]
-            emax = self.energies[-1]
-            energies = np.linspace(emin, emax, 50)
+            logemin = self.log_energies[0]
+            logemax = self.log_energies[-1]
+            energies = np.linspace(logemin, logemax, 50)
         
         o = {'ecenter': energies,
              'dfde': np.zeros(len(energies)) * np.nan,
@@ -3115,14 +3134,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         # Get the Model Fluxes
         try:
-            src_dict['flux'][0] = self.like.flux(name, 10 ** self.energies[0],
-                                                 10 ** self.energies[-1])
+            src_dict['flux'][0] = self.like.flux(name, self.energies[0],
+                                                 self.energies[-1])
             src_dict['flux100'][0] = self.like.flux(name, 100., 10 ** 5.5)
             src_dict['flux1000'][0] = self.like.flux(name, 1000., 10 ** 5.5)
             src_dict['flux10000'][0] = self.like.flux(name, 10000., 10 ** 5.5)
             src_dict['eflux'][0] = self.like.energyFlux(name,
-                                                        10 ** self.energies[0],
-                                                        10 ** self.energies[-1])
+                                                        self.energies[0],
+                                                        self.energies[-1])
             src_dict['eflux100'][0] = self.like.energyFlux(name, 100.,
                                                            10 ** 5.5)
             src_dict['eflux1000'][0] = self.like.energyFlux(name, 1000.,
@@ -3180,15 +3199,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         try:
             src_dict['flux'][1] = self.like.fluxError(name,
-                                                      10 ** self.energies[0],
-                                                      10 ** self.energies[-1])
+                                                      self.energies[0],
+                                                      self.energies[-1])
             src_dict['flux100'][1] = self.like.fluxError(name, 100., emax)
             src_dict['flux1000'][1] = self.like.fluxError(name, 1000., emax)
             src_dict['flux10000'][1] = self.like.fluxError(name, 10000., emax)
-            src_dict['eflux'][1] = self.like.energyFluxError(name, 10 **
-                                                             self.energies[0],
-                                                             10 **
-                                                             self.energies[-1])
+            src_dict['eflux'][1] = \
+                self.like.energyFluxError(name, self.energies[0],
+                                          self.energies[-1])
             src_dict['eflux100'][1] = self.like.energyFluxError(name, 100.,
                                                                 emax)
             src_dict['eflux1000'][1] = self.like.energyFluxError(name, 1000.,
@@ -3215,11 +3233,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if normPar.getValue() == 0:
             normPar.setValue(1.0)
-            flux = self.like.flux(name, 10 ** self.energies[0], 10 ** self.energies[-1])
+            flux = self.like.flux(name, self.energies[0], self.energies[-1])
             flux100 = self.like.flux(name, 100., emax)
             flux1000 = self.like.flux(name, 1000., emax)
             flux10000 = self.like.flux(name, 10000., emax)
-            eflux = self.like.energyFlux(name, 10 ** self.energies[0], 10 ** self.energies[-1])
+            eflux = self.like.energyFlux(name, self.energies[0],
+                                         self.energies[-1])
             eflux100 = self.like.energyFlux(name, 100., emax)
             eflux1000 = self.like.energyFlux(name, 1000., emax)
             eflux10000 = self.like.energyFlux(name, 10000., emax)
@@ -3263,7 +3282,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Extract bowtie
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
-            energies = np.linspace(self.energies[0], self.energies[-1], 50)
+            energies = np.linspace(self.log_energies[0],
+                                   self.log_energies[-1], 50)
             src_dict['model_flux'] = self.bowtie(name, fd=fd, energies=energies)
             src_dict['dfde100'][1] = fd.error(100.)
             src_dict['dfde1000'][1] = fd.error(1000.)
@@ -3400,7 +3420,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                      self._coordsys,
                                      self.config['binning']['hpx_order'],
                                      self._hpx_region,
-                                     self._ebin_edges)
+                                     self.energies)
         elif self.projtype == "WCS":
             self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
                                       coordsys=self._coordsys,
@@ -3437,8 +3457,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
     @property
     def energies(self):
-        return self._ebin_edges
+        """Return the energy bin edges in MeV."""
+        return 10**self._ebin_edges
 
+    @property
+    def log_energies(self):
+        """Return the energy bin edges in log10(E/MeV)."""
+        return self._ebin_edges
+    
     @property
     def enumbins(self):
         return len(self._ebin_edges) - 1
@@ -3627,26 +3653,34 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         name = src.name
         self.like[name].src.set_edisp_flag(flag)
 
-    def set_energy_range(self, emin, emax):
+    def set_energy_range(self, logemin, logemax):
         """Set the energy range of the analysis.
+
+        Parameters
+        ----------
+        logemin: float
+           Lower end of energy range in log10(E/MeV).
+
+        logemax : float
+           Upper end of energy range in log10(E/MeV).
         
         """
         
-        if emin is None:
-            emin = self.energies[0]
+        if logemin is None:
+            logemin = self.log_energies[0]
 
-        if emax is None:
-            emax = self.energies[-1]
+        if logemax is None:
+            logemax = self.log_energies[-1]
             
-        imin = int(utils.val_to_edge(self.energies, emin)[0])
-        imax = int(utils.val_to_edge(self.energies, emax)[0])
+        imin = int(utils.val_to_edge(self.log_energies, logemin)[0])
+        imax = int(utils.val_to_edge(self.log_energies, logemax)[0])
 
         if imin - imax == 0:
-            imin = len(self.energies) - 1
-            imax = len(self.energies) - 1
+            imin = len(self.log_energies) - 1
+            imax = len(self.log_energies) - 1
 
         self.like.selectEbounds(int(imin), int(imax))
-        return np.array([self.energies[imin], self.energies[imax]])
+        return np.array([self.log_energies[imin], self.log_energies[imax]])
 
     def counts_map(self):
         """Return 3-D counts map for this component as a Map object.
@@ -3771,7 +3805,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
 
-    def model_counts_spectrum(self, name, emin, emax):
+    def model_counts_spectrum(self, name, logemin, logemax):
         """Return the model counts spectrum of a source.
 
         Parameters
@@ -3782,8 +3816,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         """
         
         cs = np.array(self.like.logLike.modelCountsSpectrum(str(name)))
-        imin = utils.val_to_edge(self.energies, emin)[0]
-        imax = utils.val_to_edge(self.energies, emax)[0]
+        imin = utils.val_to_edge(self.log_energies, logemin)[0]
+        imax = utils.val_to_edge(self.log_energies, logemax)[0]
         if imax <= imin: raise Exception('Invalid energy range.')
         return cs[imin:imax]
 
@@ -3831,7 +3865,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._psf = irfs.PSFModel(self.roi.skydir, self._ltc,
                                   self.config['gtlike']['irfs'],
                                   self.config['selection']['evtype'],
-                                  self.energies)
+                                  self.log_energies)
 
         # Run gtbin
         if self.projtype == "WCS":

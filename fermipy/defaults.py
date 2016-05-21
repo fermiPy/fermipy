@@ -195,7 +195,7 @@ roiopt_output = {
 # Residual Maps
 residmap = {
     'model': (None, 'Dictionary defining the properties of the test source.  By default the test source will be a PointSource with an Index 2 power-law specturm.', dict),
-    'erange': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
+    'loge_bounds': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
 }
 
 # TS Map
@@ -203,7 +203,7 @@ tsmap = {
     'model': (None, 'Dictionary defining the properties of the test source.', dict),
     'multithread': (False, '', bool),
     'max_kernel_radius': (3.0, '', float),
-    'erange': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
+    'loge_bounds': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
 }
 
 # TS Cube
@@ -339,7 +339,7 @@ localize_output  = {
 
 # Options for plotting
 plotting = {
-    'erange': (None, '', list),
+    'loge_bounds': (None, '', list),
     'catalogs': (None, '', list),
     'graticule_radii': (None, 'Define a list of radii at which circular graticules will be drawn.', list),
     'format': ('png', '', str),

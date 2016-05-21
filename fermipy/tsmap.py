@@ -51,7 +51,7 @@ def extract_images_from_tscube(infile,outfile):
 
     cube_shape = (n_ebin,map_shape[1],map_shape[0])
 
-    wcs_cube = wcs_utils.wcs_add_energy_axis(wcs,np.log10(energies))
+    wcs_cube = wcs_utils.wcs_add_energy_axis(wcs,energies)
 
     outhdulist = [inhdulist[0],inhdulist["EBOUNDS"]]
     
@@ -581,7 +581,7 @@ class TSMapGenerator(object):
             Source or sources that will be removed from the model when
             computing the TS map.
 
-        erange : list
+        loge_bounds : list
            Restrict the analysis to an energy range (emin,emax) in
            log10(E/MeV) that is a subset of the analysis energy range.
            By default the full analysis energy range will be used.  If
@@ -663,17 +663,17 @@ class TSMapGenerator(object):
         multithread = config.setdefault('multithread',False)
         threshold = config.setdefault('threshold',1E-2)
         max_kernel_radius = config.get('max_kernel_radius')
-        erange = config.setdefault('erange', None)        
+        loge_bounds = config.setdefault('loge_bounds', None)        
 
-        if erange is not None:            
-            if len(erange) == 0: erange = [None,None]
-            elif len(erange) == 1: erange += [None]            
-            erange[0] = (erange[0] if erange[0] is not None 
-                         else self.energies[0])
-            erange[1] = (erange[1] if erange[1] is not None 
-                         else self.energies[-1])
+        if loge_bounds is not None:            
+            if len(loge_bounds) == 0: loge_bounds = [None,None]
+            elif len(loge_bounds) == 1: loge_bounds += [None]            
+            loge_bounds[0] = (loge_bounds[0] if loge_bounds[0] is not None 
+                         else self.log_energies[0])
+            loge_bounds[1] = (loge_bounds[1] if loge_bounds[1] is not None 
+                         else self.log_energies[-1])
         else:
-            erange = [self.energies[0],self.energies[-1]]
+            loge_bounds = [self.log_energies[0],self.log_energies[-1]]
         
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
@@ -701,8 +701,8 @@ class TSMapGenerator(object):
         model_npred = 0
         for c in self.components:
 
-            imin = utils.val_to_edge(c.energies,erange[0])[0]
-            imax = utils.val_to_edge(c.energies,erange[1])[0]
+            imin = utils.val_to_edge(c.log_energies,loge_bounds[0])[0]
+            imax = utils.val_to_edge(c.log_energies,loge_bounds[1])[0]
 
             eslice = slice(imin,imax)
             bm = c.model_counts_map(exclude=exclude).counts.astype('float')[eslice,...]
