@@ -734,7 +734,7 @@ class SEDPlotter(object):
 
         SEDPlotter.plot_sed(sed)
 
-        if src['ts'] > 9.:
+        if np.any(sed['ts'] > 9.):
         
             if 'model_flux' in sed:
                 SEDPlotter.plot_model(sed['model_flux'], noband=showlnl)        
