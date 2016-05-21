@@ -24,6 +24,7 @@ from astropy.table import Table, Column
 
 import fermipy.utils as utils
 import fermipy.roi_model as roi_model
+import fermipy.sourcefind as sourcefind
 
 from fermipy.wcs_utils import wcs_add_energy_axis
 from fermipy.fits_utils import read_energy_bounds, read_spectral_data
@@ -856,8 +857,10 @@ class TSCube(object):
         norm_vals = np.array(tab_s["NORM_SCAN"])
         
         wcs_3d = wcs_add_energy_axis(tsmap.wcs,emin)
-        tscube = Map(tab_s["TS"].reshape(cube_shape),wcs_3d)
-        ncube = Map(tab_s["NORM"].reshape(cube_shape),wcs_3d)
+        tscube = Map(np.rollaxis(tab_s["TS"].reshape(cube_shape),2,0),
+                     wcs_3d)
+        ncube = Map(np.rollaxis(tab_s["NORM"].reshape(cube_shape),2,0),
+                    wcs_3d)
         nmap = Map(tab_f['FIT_NORM'].reshape(tsmap.counts.shape),
                    tsmap.wcs)
         
@@ -891,9 +894,12 @@ class TSCube(object):
             
         peaks = find_peaks(theMap,threshold,min_separation)
         for peak in peaks:
-            o =  utils.fit_parabola(theMap.counts,peak['iy'],peak['ix'],dpix=2)
+            #o =  utils.fit_parabola(theMap.counts,peak['iy'],peak['ix'],dpix=2)
+            o, skydir = sourcefind.fit_error_ellipse(theMap,
+                                                     (peak['ix'],peak['iy']),
+                                                     dpix=2)
             peak['fit_loc'] = o
-            peak['fit_skydir'] = SkyCoord.from_pixel(o['y0'],o['x0'],theMap.wcs)
+            peak['fit_skydir'] = skydir
             if o['fit_success']:            
                 skydir = peak['fit_skydir']
             else:
@@ -968,6 +974,15 @@ def build_source_dict(src_name,peak_dict,spec_dict,spec_type):
                     Prefactor=spec_results["Result"][0],
                     Index=-1.*spec_results["Result"][1],
                     Scale=spec_results["ScaleEnergy"])
+
+    src_dict['pos_sigma'] = peak_dict['fit_loc']['sigma']
+    src_dict['pos_sigma_semimajor'] = peak_dict['fit_loc']['sigma_semimajor']
+    src_dict['pos_sigma_semiminor'] = peak_dict['fit_loc']['sigma_semiminor']
+    src_dict['pos_r68'] = peak_dict['fit_loc']['r68']
+    src_dict['pos_r95'] = peak_dict['fit_loc']['r95']
+    src_dict['pos_r99'] = peak_dict['fit_loc']['r99']
+    src_dict['pos_angle'] = np.degrees(peak_dict['fit_loc']['theta'])
+    
     return src_dict
 
 
