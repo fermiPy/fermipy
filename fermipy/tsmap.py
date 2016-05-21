@@ -29,6 +29,7 @@ from fermipy.logger import logLevel
 
 import fermipy.sed as sed
 from fermipy.spectrum import PowerLaw
+from fermipy.castro import TSCube
 
 MAX_NITER = 100
 
