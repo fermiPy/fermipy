@@ -611,7 +611,7 @@ def create_xml_element(root, name, attrib):
 
         if isinstance(v,bool):
             el.set(k,str(int(v)))
-        elif isstr(v,str):
+        elif isstr(v):
              el.set(k, v)
         elif np.isfinite(v):        
             el.set(k, str(v))
