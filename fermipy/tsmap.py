@@ -22,6 +22,7 @@ import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
+import fermipy.castro as castro
 from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.logger import Logger
@@ -29,7 +30,6 @@ from fermipy.logger import logLevel
 
 import fermipy.sed as sed
 from fermipy.spectrum import PowerLaw
-from fermipy.castro import TSCube
 
 MAX_NITER = 100
 
@@ -1060,7 +1060,7 @@ class TSCubeGenerator(object):
 
         convert_tscube(str(outfile),str(outfile))
         
-        tscube = sed.TSCube.create_from_fits(outfile)
+        tscube = castro.TSCube.create_from_fits(outfile)
         ts_map = tscube.tsmap        
         norm_map = tscube.normmap
         npred_map = copy.deepcopy(norm_map)
