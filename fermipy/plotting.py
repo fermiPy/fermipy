@@ -289,7 +289,7 @@ class ROIPlotter(fermipy.config.Configurable):
         self._data_map = data_map
         self._catalogs = []
         for c in self.config['catalogs']:
-            if isinstance(c,str):            
+            if utils.isstr(c):            
                 self._catalogs += [catalog.Catalog.create(c)]
             else:
                 self._catalogs += [c]

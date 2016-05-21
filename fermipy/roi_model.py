@@ -1128,11 +1128,13 @@ class ROIModel(fermipy.config.Configurable):
 
         for i, t in enumerate(srcs):
 
-            if isinstance(t, str):
+            if utils.isstr(t):
                 src_dict = {'file': t}
             elif isinstance(t, dict):
                 src_dict = copy.deepcopy(t)
-
+            else:
+                raise Exception('Invalid type in diffuse mode list: %s'%str(type(t)))
+                
             src_dict['file'] = \
                 resolve_file_path(src_dict['file'],
                                   search_dirs=['$FERMIPY_WORKDIR',

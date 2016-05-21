@@ -224,7 +224,7 @@ def get_target_skydir(config,ref_skydir=None):
     
     radec = config.get('radec', None)
 
-    if isinstance(radec, str):
+    if utils.isstr(radec):
         return SkyCoord(radec, unit=u.deg)
     elif isinstance(radec, list):
         return SkyCoord(radec[0], radec[1], unit=u.deg)

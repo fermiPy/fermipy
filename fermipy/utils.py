@@ -222,7 +222,8 @@ def project(lon0, lat0, lon1, lat1):
 
 
 def scale_parameter(p):
-    if isinstance(p, str): p = float(p)
+    if isstr(p):
+        p = float(p)
 
     if p > 0:
         scale = 10 ** -np.round(np.log10(1. / p))
@@ -592,7 +593,17 @@ def unicode_to_str(args):
             o[k] = v
 
     return o
+
+
+def isstr(s):
+    """String instance testing method that works under both Python 2.X
+    and 3.X.  Returns true if the input is a string."""
     
+    try:
+        return isinstance(s, basestring)
+    except NameError:
+        return isinstance(s, str)
+
 
 def create_xml_element(root, name, attrib):
     el = et.SubElement(root, name)
@@ -600,7 +611,7 @@ def create_xml_element(root, name, attrib):
 
         if isinstance(v,bool):
             el.set(k,str(int(v)))
-        elif isinstance(v,str) or isinstance(v,unicode):
+        elif isstr(v,str):
              el.set(k, v)
         elif np.isfinite(v):        
             el.set(k, str(v))
@@ -688,7 +699,7 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
             od[k] = copy.deepcopy(d0[k])
         elif isinstance(v, dict) and isinstance(d1[k], dict):
             od[k] = merge_dict(d0[k], d1[k], add_new_keys, append_arrays)
-        elif isinstance(v, list) and isinstance(d1[k], str):
+        elif isinstance(v, list) and isstr(d1[k]):
             od[k] = d1[k].split(',')
         elif isinstance(v, dict) and d1[k] is None:
             od[k] = copy.deepcopy(d0[k])
