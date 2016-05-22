@@ -93,7 +93,7 @@ def test_gtanalysis_sed(setup):
     emin = gta.energies[:-1]
     emax = gta.energies[1:]
     
-    flux_true = spectrum.PowerLaw.eval_flux(10**emin,10**emax,
+    flux_true = spectrum.PowerLaw.eval_flux(emin, emax,
                                             [prefactor,-index],scale)
     
     gta.simulate_source({'SpatialModel': 'PointSource',
@@ -110,7 +110,8 @@ def test_gtanalysis_sed(setup):
     params = gta.roi['draco'].params
     assert(np.all(flux_resid<3.0))
     assert(np.abs(-params['Index'][0]-index)/params['Index'][1] < 3.0)
-    assert(np.abs(params['Prefactor'][0]-prefactor)/params['Prefactor'][1] < 3.0)
+    assert(np.abs(params['Prefactor'][0]-prefactor)/
+           params['Prefactor'][1] < 3.0)
     
     gta.simulate_roi(restore=True)
     
