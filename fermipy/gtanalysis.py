@@ -2946,7 +2946,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                            logging=self.config['logging'])
         plotter.run(self, mcube_map, prefix=prefix, **kwargs)
 
-    def bowtie(self, name, fd=None, energies=None):
+    def bowtie(self, name, fd=None, loge=None):
         """Generate a spectral uncertainty band (bowtie) for the given
         source.  This will create an uncertainty band on the
         differential flux as a function of energy by propagating the
@@ -2964,21 +2964,23 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
            Flux density object.  If this parameter is None then one
            will be created.
         
-        energies : array-like
-           Sequence of energies at which the flux band will be evaluated.
+        loge : array-like        
+           Sequence of energies in log10(E/MeV) at which the flux band
+           will be evaluated.
         
         """
 
-        if energies is None:
+        if loge is None:
             logemin = self.log_energies[0]
             logemax = self.log_energies[-1]
-            energies = np.linspace(logemin, logemax, 50)
+            loge = np.linspace(logemin, logemax, 50)
         
-        o = {'ecenter': energies,
-             'dfde': np.zeros(len(energies)) * np.nan,
-             'dfde_lo': np.zeros(len(energies)) * np.nan,
-             'dfde_hi': np.zeros(len(energies)) * np.nan,
-             'dfde_ferr' : np.zeros(len(energies)) * np.nan,
+        o = {'energies': 10**loge,
+             'log_energies': loge,
+             'dfde': np.zeros(len(loge)) * np.nan,
+             'dfde_lo': np.zeros(len(loge)) * np.nan,
+             'dfde_hi': np.zeros(len(loge)) * np.nan,
+             'dfde_ferr' : np.zeros(len(loge)) * np.nan,
              'pivot_energy' : np.nan }
 
         try:        
@@ -2989,8 +2991,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                               exc_info=True)
             return o
 
-        dfde = [fd.value(10 ** x) for x in energies]
-        dfde_err = [fd.error(10 ** x) for x in energies]
+        dfde = [fd.value(10 ** x) for x in loge]
+        dfde_err = [fd.error(10 ** x) for x in loge]
 
         dfde = np.array(dfde)
         dfde_err = np.array(dfde_err)
@@ -3003,7 +3005,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['dfde_ferr'] = (fhi - flo) / dfde
         
         try:
-            o['pivot_energy'] = utils.interpolate_function_min(energies,o['dfde_ferr'])
+            o['pivot_energy'] = 10 ** utils.interpolate_function_min(loge,o['dfde_ferr'])
         except Exception:
             self.logger.error('Failed to compute pivot energy',
                               exc_info=True)
@@ -3112,7 +3114,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     'eflux100_ul95': np.nan,
                     'eflux1000_ul95': np.nan,
                     'eflux10000_ul95': np.nan,
-                    'pivot_energy': 3.,
+                    'pivot_energy': 1000.,
                     'ts': np.nan,
                     'loglike' : np.nan,
                     'npred': 0.0,
@@ -3149,7 +3151,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             src_dict['eflux10000'][0] = self.like.energyFlux(name, 10000.,
                                                              10 ** 5.5)
             src_dict['dfde'][0] = self.like[name].spectrum()(
-                pyLike.dArg(10 ** src_dict['pivot_energy']))
+                pyLike.dArg(src_dict['pivot_energy']))
             src_dict['dfde100'][0] = self.like[name].spectrum()(
                 pyLike.dArg(100.))
             src_dict['dfde1000'][0] = self.like[name].spectrum()(
@@ -3161,7 +3163,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 normPar.setValue(1.0)
 
                 dfde_index = -get_spectral_index(self.like[name],
-                                                 10 ** src_dict['pivot_energy'])
+                                                 src_dict['pivot_energy'])
                 
                 dfde100_index = -get_spectral_index(self.like[name],
                                                     100.)
@@ -3173,7 +3175,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 normPar.setValue(0.0)
             else:
                 dfde_index = -get_spectral_index(self.like[name],
-                                                 10 ** src_dict['pivot_energy'])
+                                                 src_dict['pivot_energy'])
                 
                 dfde100_index = -get_spectral_index(self.like[name],
                                                     100.)
@@ -3282,9 +3284,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Extract bowtie
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
-            energies = np.linspace(self.log_energies[0],
-                                   self.log_energies[-1], 50)
-            src_dict['model_flux'] = self.bowtie(name, fd=fd, energies=energies)
+            loge = np.linspace(self.log_energies[0],
+                               self.log_energies[-1], 50)
+            src_dict['model_flux'] = self.bowtie(name, fd=fd, loge=loge)
             src_dict['dfde100'][1] = fd.error(100.)
             src_dict['dfde1000'][1] = fd.error(1000.)
             src_dict['dfde10000'][1] = fd.error(10000.)
@@ -3292,8 +3294,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             src_dict['pivot_energy'] = src_dict['model_flux']['pivot_energy']
             
             e0 = src_dict['pivot_energy']
-            src_dict['dfde'][0] = self.like[name].spectrum()(pyLike.dArg(10 ** e0))
-            src_dict['dfde'][1] = fd.error(10 ** e0)
+            src_dict['dfde'][0] = self.like[name].spectrum()(pyLike.dArg(e0))
+            src_dict['dfde'][1] = fd.error(e0)
 
         if not reoptimize:
             src_dict['ts'] = self.like.Ts2(name, reoptimize=reoptimize)

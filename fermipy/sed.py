@@ -53,12 +53,12 @@ class SEDGenerator(object):
     """Mixin class that provides SED functionality to
     `~fermipy.gtanalysis.GTAnalysis`."""
     
-    def sed(self, name, profile=True, energies=None, **kwargs):
+    def sed(self, name, profile=True, loge_bins=None, **kwargs):
         """Generate a spectral energy distribution (SED) for a source.  This
         function will fit the normalization of the source in each
         energy bin.  By default the SED will be generated with the
         analysis energy bins but a custom binning can be defined with
-        the ``energies`` parameter.  
+        the ``loge_bins`` parameter.  
 
         Parameters
         ----------
@@ -72,7 +72,7 @@ class SEDGenerator(object):
         profile : bool
             Profile the likelihood in each energy bin.
 
-        energies : `~numpy.ndarray`
+        loge_bins : `~numpy.ndarray`
             Sequence of energies in log10(E/MeV) defining the edges of
             the energy bins.  If this argument is None then the
             analysis energy bins will be used.  The energies in this
@@ -124,7 +124,7 @@ class SEDGenerator(object):
         
         self.logger.info('Computing SED for %s' % name)
         
-        o = self._make_sed(name,profile,energies,**kwargs)
+        o = self._make_sed(name,profile,loge_bins,**kwargs)
         
         self._plotter.make_sed_plot(self, name, **kwargs)
 
@@ -141,9 +141,9 @@ class SEDGenerator(object):
         name = name.lower().replace(' ', '_')
         
         # Write a FITS file
-        cols = [Column(name='E_MIN',dtype='f8',data=10**sed['emin'],unit='MeV'),
-                Column(name='E_REF',dtype='f8',data=10**sed['ecenter'],unit='MeV'),
-                Column(name='E_MAX',dtype='f8',data=10**sed['emax'],unit='MeV'),
+        cols = [Column(name='E_MIN',dtype='f8',data=sed['logemin'],unit='MeV'),
+                Column(name='E_REF',dtype='f8',data=sed['logectr'],unit='MeV'),
+                Column(name='E_MAX',dtype='f8',data=sed['logemax'],unit='MeV'),
                 Column(name='REF_DFDE_E_MIN',dtype='f8',
                        data=sed['ref_dfde_emin'],unit='ph / (MeV cm2 s)'),
                 Column(name='REF_DFDE_E_MAX',dtype='f8',
@@ -177,7 +177,7 @@ class SEDGenerator(object):
         
         tab.write(filename,format='fits',overwrite=True)
         
-    def _make_sed(self, name, profile=True, energies=None, **kwargs):
+    def _make_sed(self, name, profile=True, loge_bins=None, **kwargs):
 
         # Extract options from kwargs
         config = copy.deepcopy(self.config['sed'])
@@ -189,21 +189,24 @@ class SEDGenerator(object):
         ul_confidence = config['ul_confidence']
         cov_scale = config['cov_scale']        
 
-        if energies is None:
-            energies = self.log_energies
+        if loge_bins is None:
+            loge_bins = self.log_energies
         else:
-            energies = np.array(energies)
+            loge_bins = np.array(loge_bins)
 
-        nbins = len(energies) - 1
+        nbins = len(loge_bins) - 1
         max_index = 5.0
         min_flux = 1E-30
         npts = self.config['gtlike']['llscan_npts']
         loge_bounds = self.loge_bounds
         
         # Output Dictionary
-        o = {'emin': energies[:-1],
-             'emax': energies[1:],
-             'ecenter': 0.5 * (energies[:-1] + energies[1:]),
+        o = {'logemin': loge_bins[:-1],
+             'logemax': loge_bins[1:],
+             'logectr': 0.5 * (loge_bins[:-1] + loge_bins[1:]),
+             'emin' : 10 ** loge_bins[:-1],
+             'emax' : 10 ** loge_bins[1:],
+             'ectr' : 10 ** (0.5 * (loge_bins[:-1] + loge_bins[1:])),
              'ref_flux': np.zeros(nbins),
              'ref_eflux': np.zeros(nbins),
              'ref_dfde': np.zeros(nbins),
@@ -272,17 +275,18 @@ class SEDGenerator(object):
         # Precompute fluxes in each bin from global fit
         gf_bin_flux = []
         gf_bin_index = []
-        for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
+        for i, (logemin, logemax) in enumerate(zip(loge_bins[:-1],
+                                                   loge_bins[1:])):
 
+            emin = 10 ** logemin
+            emax = 10 ** logemax
             delta = 1E-5
-            f = self.like[name].flux(10 ** emin, 10 ** emax)
-            f0 = self.like[name].flux(10 ** emin * (1 - delta),
-                                      10 ** emin * (1 + delta))
-            f1 = self.like[name].flux(10 ** emax * (1 - delta),
-                                      10 ** emax * (1 + delta))
+            f = self.like[name].flux(emin, emax)
+            f0 = self.like[name].flux(emin * (1 - delta), emin * (1 + delta))
+            f1 = self.like[name].flux(emax * (1 - delta), emax * (1 + delta))
 
             if f0 > min_flux:
-                g = 1 - np.log10(f0 / f1) / np.log10(10 ** emin / 10 ** emax)
+                g = 1 - np.log10(f0 / f1) / np.log10(emin / emax)
                 gf_bin_index += [g]
                 gf_bin_flux += [f]
             else:
@@ -309,10 +313,16 @@ class SEDGenerator(object):
             
             o['correlation'][p['src_name']] =  np.zeros(nbins) * np.nan
         
-        for i, (emin, emax) in enumerate(zip(energies[:-1], energies[1:])):
+        for i, (logemin, logemax) in enumerate(zip(loge_bins[:-1],
+                                                   loge_bins[1:])):
 
-            ectr = 0.5 * (emin + emax)
-            self.set_parameter(name, 'Scale', 10 ** ectr, scale=1.0,
+            logectr = 0.5 * (logemin + logemax)
+            emin = 10 ** logemin
+            emax = 10 ** logemax
+            ectr = 10 ** logectr
+            ectr2 = ectr**2
+            
+            self.set_parameter(name, 'Scale', ectr, scale=1.0,
                                bounds=[1, 1E6], update_source=False)
 
             if use_local_index:
@@ -325,15 +335,15 @@ class SEDGenerator(object):
                                update_source=False)
             self.like.syncSrcParams(name)
 
-            ref_flux = self.like[name].flux(10 ** emin, 10 ** emax)
+            ref_flux = self.like[name].flux(emin, emax)
             
-            o['ref_flux'][i] = self.like[name].flux(10 ** emin, 10 ** emax)
-            o['ref_eflux'][i] = self.like[name].energyFlux(10 ** emin, 10 ** emax)
-            o['ref_dfde'][i] = self.like[name].spectrum()(pyLike.dArg(10 ** ectr))
-            o['ref_dfde_emin'][i] = self.like[name].spectrum()(pyLike.dArg(10 ** emin))
-            o['ref_dfde_emax'][i] = self.like[name].spectrum()(pyLike.dArg(10 ** emax))
-            o['ref_e2dfde'][i] = o['ref_dfde'][i]*10**(2.0*ectr)
-            cs = self.model_counts_spectrum(name, emin, emax, summed=True)
+            o['ref_flux'][i] = self.like[name].flux(emin, emax)
+            o['ref_eflux'][i] = self.like[name].energyFlux(emin, emax)
+            o['ref_dfde'][i] = self.like[name].spectrum()(pyLike.dArg(ectr))
+            o['ref_dfde_emin'][i] = self.like[name].spectrum()(pyLike.dArg(emin))
+            o['ref_dfde_emax'][i] = self.like[name].spectrum()(pyLike.dArg(emax))
+            o['ref_e2dfde'][i] = o['ref_dfde'][i]*ectr2
+            cs = self.model_counts_spectrum(name, logemin, logemax, summed=True)
             o['ref_npred'][i] = np.sum(cs)
                                    
             normVal = self.like.normPar(name).getValue()
@@ -344,8 +354,8 @@ class SEDGenerator(object):
             self.like.syncSrcParams(name)
             self.free_norm(name)
             self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
-                              (name, 10 ** emin, 10 ** emax))
-            self.set_energy_range(emin, emax)
+                              (name, emin, emax))
+            self.set_energy_range(logemin, logemax)
 
             fit_output = self.fit(loglevel=logging.DEBUG,update=False)
             free_params = self.get_params(True)
@@ -361,23 +371,24 @@ class SEDGenerator(object):
 
             prefactor = self.like[self.like.par_index(name, 'Prefactor')]
 
-            flux = self.like[name].flux(10 ** emin, 10 ** emax)
-            eflux = self.like[name].energyFlux(10 ** emin, 10 ** emax)
-            dfde = self.like[name].spectrum()(pyLike.dArg(10 ** ectr))
+            flux = self.like[name].flux(emin, emax)
+            eflux = self.like[name].energyFlux(emin, emax)
+            dfde = self.like[name].spectrum()(pyLike.dArg(ectr))
             #prefactor.getTrueValue()
 
             o['norm'][i] = flux/o['ref_flux'][i]
             o['flux'][i] = flux
             o['eflux'][i] = eflux
             o['dfde'][i] = dfde
-            o['e2dfde'][i] = dfde * 10 ** (2 * ectr)
+            o['e2dfde'][i] = dfde * ectr2
 
-            cs = self.model_counts_spectrum(name, emin, emax, summed=True)
+            cs = self.model_counts_spectrum(name, logemin,
+                                            logemax, summed=True)
             o['npred'][i] = np.sum(cs)
             o['ts'][i] = max(self.like.Ts2(name, reoptimize=False), 0.0)
             o['loglike'][i] = -self.like()
             
-            lnlp = self.profile_norm(name, emin=emin, emax=emax,
+            lnlp = self.profile_norm(name, logemin=logemin, logemax=logemax,
                                     savestate=False, reoptimize=True,
                                     npts=20)
 
@@ -392,7 +403,8 @@ class SEDGenerator(object):
             o['norm_err_lo'][i] = ul_data['err_lo']/ref_flux
             
             if np.isfinite(ul_data['err_lo']):
-                o['norm_err'][i] = 0.5*(ul_data['err_lo'] + ul_data['err_hi'])/ref_flux
+                o['norm_err'][i] = 0.5*(ul_data['err_lo'] +
+                                        ul_data['err_hi'])/ref_flux
             else:
                 o['norm_err'][i] = ul_data['err_hi']/ref_flux
 

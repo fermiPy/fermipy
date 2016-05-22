@@ -43,8 +43,8 @@ def draw_arrows(x, y, color='k'):
 
 
 def get_xerr(sed):
-    delo = 10 ** sed['ecenter'] - 10 ** sed['emin']
-    dehi = 10 ** sed['emax'] - 10 ** sed['ecenter']
+    delo = sed['ectr'] - sed['emin']
+    dehi = sed['emax'] - sed['ectr']
     xerr = np.vstack((delo, dehi))
     return xerr
 
@@ -593,21 +593,20 @@ class SEDPlotter(object):
 
         fluxM = np.arange(fmin, fmax, 0.01)
         fbins = len(fluxM)
-        llhMatrix = np.zeros((len(sed['ecenter']), fbins))
+        llhMatrix = np.zeros((len(sed['ectr']), fbins))
 
         # loop over energy bins
         for i in range(len(lhProf)):
             m = lhProf[i]['dfde'] > 0
-            flux = np.log10(
-                lhProf[i]['dfde'][m] * (10 ** sed['ecenter'][i]) ** 2)
+            flux = np.log10(lhProf[i]['dfde'][m] * sed['ectr'][i] ** 2)
             logl = lhProf[i]['dloglike'][m]
             logli = np.interp(fluxM, flux, logl)
             logli[fluxM > flux[-1]] = logl[-1]
             logli[fluxM < flux[0]] = logl[0]
             llhMatrix[i, :] = logli
 
-        xedge = np.logspace(sed['emin'][0], sed['emax'][-1],
-                            len(sed['ecenter']) + 1)
+        xedge = np.logspace(sed['logemin'][0], sed['logemax'][-1],
+                            len(sed['logectr']) + 1)
         yedge = np.logspace(fmin, fmax, fbins)
         xedge, yedge = np.meshgrid(xedge, yedge)
         im = ax.pcolormesh(xedge, yedge, llhMatrix.T,
@@ -618,7 +617,7 @@ class SEDPlotter(object):
         plt.gca().set_ylim(10 ** fmin, 10 ** fmax)
         plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
-        plt.gca().set_xlim(10 ** sed['emin'][0], 10 ** sed['emax'][-1])
+        plt.gca().set_xlim(sed['emin'][0], sed['emax'][-1])
 
     @staticmethod
     def plot_sed(sed, **kwargs):
@@ -631,7 +630,7 @@ class SEDPlotter(object):
 
         m = sed['ts'] < ts_thresh
 
-        x = 10 ** sed['ecenter']
+        x = sed['ectr']
         y = sed['e2dfde']
         yerr = sed['e2dfde_err']
         yerr_lo = sed['e2dfde_err_lo']
@@ -643,8 +642,8 @@ class SEDPlotter(object):
         yerr_lo[m] = 0
         yerr_hi[m] = 0
 
-        delo = 10 ** sed['ecenter'] - 10 ** sed['emin']
-        dehi = 10 ** sed['emax'] - 10 ** sed['ecenter']
+        delo = sed['ectr'] - sed['emin']
+        dehi = sed['emax'] - sed['ectr']
         xerr0 = np.vstack((delo[m], dehi[m]))
         xerr1 = np.vstack((delo[~m], dehi[~m]))
 
@@ -653,7 +652,7 @@ class SEDPlotter(object):
 
         plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
-        plt.gca().set_xlim(10 ** sed['emin'][0], 10 ** sed['emax'][-1])
+        plt.gca().set_xlim(sed['emin'][0], sed['emax'][-1])
         plt.gca().set_ylim(min(1E-8,np.min(y)*0.5),max(1E-5,np.max(y)*1.5))
         
 
@@ -664,7 +663,7 @@ class SEDPlotter(object):
 
         m = sed['ts'] < 4
 
-        x = 10 ** sed['ecenter']
+        x = sed['ectr']
         y = sed['e2dfde']
         yerr = sed['e2dfde_err']
         yul = sed['e2dfde_ul95']
@@ -672,13 +671,13 @@ class SEDPlotter(object):
         y[m] = yul[m]
         yerr[m] = 0
 
-        delo = 10 ** sed['ecenter'] - 10 ** sed['emin']
-        dehi = 10 ** sed['emax'] - 10 ** sed['ecenter']
+        delo = sed['ectr'] - sed['emin']
+        dehi = sed['emax'] - sed['ectr']
         xerr = np.vstack((delo, dehi))
 
-        ym = np.interp(sed['ecenter'],
-                       model_flux['ecenter'],
-                       10 ** (2 * model_flux['ecenter']) * model_flux['dfde'])
+        ym = np.interp(sed['ectr'],
+                       model_flux['log_energies'],
+                       10 ** (2 * model_flux['log_energies']) * model_flux['dfde'])
 
         plt.errorbar(x, (y - ym) / ym, xerr=xerr, yerr=yerr / ym, **kwargs)
 
@@ -689,20 +688,20 @@ class SEDPlotter(object):
         color = kwargs.pop('color', 'k')
         noband = kwargs.pop('noband', False)
 
-        e2 = 10 ** (2 * model_flux['ecenter'])
+        e2 = 10 ** (2 * model_flux['log_energies'])
 
-        ax.plot(10 ** model_flux['ecenter'],
+        ax.plot(10 ** model_flux['log_energies'],
                 model_flux['dfde'] * e2, color=color, **kwargs)
 
-        ax.plot(10 ** model_flux['ecenter'],
+        ax.plot(10 ** model_flux['log_energies'],
                 model_flux['dfde_lo'] * e2, color=color,
                 linestyle='--', **kwargs)
-        ax.plot(10 ** model_flux['ecenter'],
+        ax.plot(10 ** model_flux['log_energies'],
                 model_flux['dfde_hi'] * e2, color=color,
                 linestyle='--', **kwargs)
 
         if not noband:
-            ax.fill_between(10 ** model_flux['ecenter'],
+            ax.fill_between(10 ** model_flux['log_energies'],
                             model_flux['dfde_lo'] * e2,
                             model_flux['dfde_hi'] * e2,
                             alpha=0.5, color=color, zorder=-1)
