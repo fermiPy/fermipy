@@ -1,6 +1,9 @@
-``emin``	`~numpy.ndarray`	Lower edges of SED energy bins (log10(E/MeV)).
-``emax``	`~numpy.ndarray`	Upper edges of SED energy bins (log10(E/MeV)).
-``ecenter``	`~numpy.ndarray`	Centers of SED energy bins (log10(E/MeV)).
+``logemin``	`~numpy.ndarray`	Lower edges of SED energy bins (log10(E/MeV)).
+``logemax``	`~numpy.ndarray`	Upper edges of SED energy bins (log10(E/MeV)).
+``logectr``	`~numpy.ndarray`	Centers of SED energy bins (log10(E/MeV)).
+``emin``	`~numpy.ndarray`	Lower edges of SED energy bins (MeV).
+``emax``	`~numpy.ndarray`	Upper edges of SED energy bins (MeV).
+``ectr``	`~numpy.ndarray`	Centers of SED energy bins (MeV).
 ``flux``	`~numpy.ndarray`	Flux in each bin (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
 ``eflux``	`~numpy.ndarray`	Energy flux in each bin (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
 ``dfde``	`~numpy.ndarray`	Differential flux in each bin (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
