@@ -78,9 +78,9 @@ def main():
                         'time older than this parameter will be restarted.')
     parser.add_argument('--dry_run', default = False, action='store_true')
     parser.add_argument('--overwrite', default = False, action='store_true',
-                        'Force all jobs to be re-run even if the job has completed successfully.')
+                        help='Force all jobs to be re-run even if the job has completed successfully.')
     parser.add_argument('--runscript', default = None, required=True,
-                        'Set the name of the job execution script.  A script with '
+                        help='Set the name of the job execution script.  A script with '
                         'this name must be located in each analysis subdirectory.')
 
     parser.add_argument('dirs', nargs='+', default = None,
