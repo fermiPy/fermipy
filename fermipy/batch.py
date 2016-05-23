@@ -20,13 +20,6 @@ def check_log(logfile, exited='Exited with exit code',
         return 'None' 
 
 def get_lsf_status():
-    
-    p = subprocess.Popen(['bjobs'],
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-    p.stderr.close()
-
-    output = p.stdout.readlines()
 
     status_count = {'RUN' : 0,
                     'PEND' : 0,
@@ -35,6 +28,13 @@ def get_lsf_status():
                     'NJOB' : 0,
                     'UNKNWN' : 0}
     
+    p = subprocess.Popen(['bjobs'],
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    p.stderr.close()
+
+    output = p.stdout.readlines()
+
     for line in output[1:]:
         line = line.strip().split()
 

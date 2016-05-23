@@ -68,7 +68,36 @@ def resolve_path(path, workdir=None):
     else:
         return os.path.join(workdir, path)
             
- 
+
+def collect_dirs(path, max_depth=1, followlinks=True):
+    """Recursively find directories under the given path."""
+
+    if not os.path.isdir(path):
+        return []
+
+    o = [path]
+
+    if max_depth == 0:
+        return o
+
+    for subdir in os.listdir(path):
+
+        subdir = os.path.join(path,subdir)
+
+        if not os.path.isdir(subdir):
+            continue
+
+        o += [subdir]
+
+        if os.path.islink(subdir) and not followlinks:
+            continue
+
+        if max_depth > 0:
+            o += collect_dirs(subdir,max_depth=max_depth-1)
+
+    return list(set(o))
+        
+    
 def join_strings(strings,sep='_'):
 
     if strings is None:

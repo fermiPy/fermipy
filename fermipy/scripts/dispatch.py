@@ -1,27 +1,24 @@
-import glob
-
-import yaml
-from fermipy.utils import *
-
-from fermipy.roi_model import ROIModel
-from fermipy.batch import check_log, get_lsf_status
-#from haloanalysis.utils import *
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import sys
 import time, os, stat
 import datetime
 import argparse
+import glob
+import pprint
+import yaml
 
-def check_num_jobs():
-    pass
+import fermipy.utils as utils
+from fermipy.batch import check_log, get_lsf_status
 
 def file_age_in_seconds(pathname):
     return time.time() - os.stat(pathname)[stat.ST_MTIME]
 
     #return string in open(logfile).read()
 
-def collect_jobs(dirs,runscript,overwrite=False): 
-
+def collect_jobs(dirs, runscript, overwrite=False, max_job_age=90): 
+    """Construct a list of job dictionaries."""
+    
     jobs = []
     
     for dirname in sorted(dirs):        
@@ -41,54 +38,81 @@ def collect_jobs(dirs,runscript,overwrite=False):
             continue
             
         age = file_age_in_seconds(o['logfile'])/60.
-
-        print dirname, check_log(o['logfile']), age
+        job_status = check_log(o['logfile'])
         
-        if overwrite or (check_log(o['logfile'])=='Exited'): 
-            print "Job Exited, resending command:"
+        print(dirname, job_status, age)
+
+        if job_status is False or overwrite:
             jobs.append(o)
-        elif (check_log(o['logfile'])=='None') and age > 90:
-            print "Job did not exit, but no activity on log file for > 90 min. Resending command:"
+        elif job_status == 'Exited':
+            print("Job Exited. Resending command.")
             jobs.append(o)
-        elif not check_log(o['logfile']):
+        elif job_status == 'None' and age > max_job_age:
+            print("Job did not exit, but no activity on log file for > %.2f min. Resending command."%max_job_age)
             jobs.append(o)
+#        elif job_status is True:
+#            print("Job Completed. Resending command.")
+#            jobs.append(o)
+
 
     return jobs
 
-def __main__():
+def main():
 
     usage = "usage: %(prog)s [config file]"
-    description = "Dispatch analysis jobs."
+    description = "Dispatch analysis jobs to LSF."
     parser = argparse.ArgumentParser(usage=usage,description=description)
 
     parser.add_argument('--config', default = 'sample_config.yaml')
-    parser.add_argument('--max_jobs', default = 500, type=int)
-    parser.add_argument('--jobs_per_cycle', default = 20, type=int)
+    parser.add_argument('--max_jobs', default = 500, type=int,
+                        help='Limit on the number of running or queued jobs.  New jobs will '
+                        'only be dispatched if the number of existing jobs is '
+                        'smaller than this parameter.')
+    parser.add_argument('--jobs_per_cycle', default = 20, type=int,
+                        help='Maximum number of jobs to submit in each cycle.')
     parser.add_argument('--time_per_cycle', default = 15, type=float,
                         help='Time per submission cycle in seconds.')
     parser.add_argument('--max_job_age', default = 90, type=float,
-                        help='Max job age in minutes.')
+                        help='Max job age in minutes.  Incomplete jobs without '
+                        'a return code and a logfile modification '
+                        'time older than this parameter will be restarted.')
     parser.add_argument('--dry_run', default = False, action='store_true')
-    parser.add_argument('--overwrite', default = False, action='store_true')
-    parser.add_argument('--runscript', default = None, required=True)
+    parser.add_argument('--overwrite', default = False, action='store_true',
+                        'Force all jobs to be re-run even if the job has completed successfully.')
+    parser.add_argument('--runscript', default = None, required=True,
+                        'Set the name of the job execution script.  A script with '
+                        'this name must be located in each analysis subdirectory.')
 
     parser.add_argument('dirs', nargs='+', default = None,
-                        help='Run analyses in all subdirectories of this '
-                        'directory.')
+                        help='List of directories in which the analysis will be run.')
 
     args = parser.parse_args()
 
-    dirs = collect_dirs(args.dirs)
+    from itertools import chain
+    
+    dirs = [d for argdir in args.dirs for d in utils.collect_dirs(argdir)]
+    jobs = collect_jobs(dirs, args.runscript,
+                        args.overwrite, args.max_job_age)
 
-    jobs = collect_jobs(dirs,args.runscript,args.overwrite)
+    print(dirs)
+    print(jobs)
+    
+    lsf_opts = {'W' : 1500,
+                'R' : 'bullet,hequ,kiso'}
 
+    lsf_opt_string = ''
+    for optname, optval in lsf_opts.items():
+
+        if utils.isstr(optval):
+            optval = '\"%s\"'%optval
+            
+        lsf_opt_string += '-%s %s '%(optname,optval)
+    
     while(1):
 
-        print '-'*80
-        print datetime.datetime.now()
-        print len(jobs), 'jobs in queue'
-
-        print args.dry_run
+        print('-'*80)
+        print(datetime.datetime.now())
+        print(len(jobs), 'jobs in queue')
 
         if len(jobs) == 0:
             break
@@ -98,27 +122,30 @@ def __main__():
         njob_to_submit = min(args.max_jobs - status['NJOB'],
                              args.jobs_per_cycle)
 
-        import pprint
+
         pprint.pprint(status)    
-        print 'njob_to_submit ', njob_to_submit
+        print('njob_to_submit ', njob_to_submit)
 
         if njob_to_submit > 0:
 
-            print 'Submitting ', njob_to_submit, 'jobs'
+            print('Submitting ', njob_to_submit, 'jobs')
 
             for job in jobs[:njob_to_submit]:
-                cmd = 'bsub -W 1500 -R "bullet,hequ,kiso" -oo %s bash %s'%(job['logfile'],
-                                                                           job['runscript'])
-                print cmd
+                cmd = 'bsub %s -oo %s bash %s'%(lsf_opt_string,
+                                                job['logfile'],
+                                                job['runscript'])
+                print(cmd)
                 if not args.dry_run:
-                    print 'submitting'
+                    print('submitting')
                     os.system(cmd)
 
             del jobs[:njob_to_submit]
 
-        print 'Sleeping %f seconds'%args.time_per_cycle
+        print('Sleeping %f seconds'%args.time_per_cycle)
         sys.stdout.flush()
         time.sleep(args.time_per_cycle)
 
 
 
+if __name__ == "__main__":
+    main()
