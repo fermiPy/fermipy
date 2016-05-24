@@ -1,7 +1,13 @@
 """
 Utilities for dealing with 'castro data', i.e., 2D table of likelihood values.
 
-For example as a function of Energy and Energy Flux.
+Castro data can be tabluated in terms of a variety of variables.  
+The most common example is probably a simple SED, where
+we have the likelihood as a function of Energy and Energy Flux.
+
+However, we could easily convert to the likelihood as a function 
+of other variables, such as the Flux normalization and the spectral index, 
+or the mass and cross-section of a putative dark matter particle.
 """
 
 from __future__ import absolute_import, division, print_function, \
@@ -139,12 +145,7 @@ class LnLFn(object):
         """ C'tor, take input array of x and y value   
 
         norm_type :  code specifying the quantity used for the flux 
-           0: Normalization w.r.t. to test source
-           1: Flux of the test source ( ph cm^-2 s^-1 )
-           2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-           3: Number of predicted photons
-           4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
-           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
+
         """
         self._interp = Interpolator(x,y)
         self._mle = None
@@ -160,12 +161,18 @@ class LnLFn(object):
     def norm_type(self):
         """ return a code specifying the quantity used for the flux 
 
-           0: Normalization w.r.t. to test source
-           1: Flux of the test source ( ph cm^-2 s^-1 )
-           2: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-           3: Number of predicted photons
-           4: Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
-           5: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-1 )           
+        This isn't actually used in this class, but it is carried so that 
+        the class is self-describing.   
+
+        The possible values are open-ended.  The implementation here can 
+        deal with the following options
+
+           NORM : Normalization w.r.t. to test source
+           FLUX : Flux of the test source ( ph cm^-2 s^-1 )
+           EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+           NPRED: Number of predicted photons
+           DFDE : Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
+           EDFDE: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^-                
         """
         return self._norm_type        
 
@@ -235,7 +242,7 @@ class LnLFn(object):
             x = np.linspace(self._mle,self._interp.xmin,100) 
             #return opt.brentq(rf,self._interp.xmin,self._mle,xtol=1e-10*np.abs(self._mle))
             
-        retVal =  np.interp(dlnl,lnl_max-self.interp(x),x)
+        retVal =  np.interp(dlnl,self.interp(x)-lnl_max,x)
         return retVal
 
 
@@ -343,7 +350,7 @@ class SpecData(object):
 
 
 class CastroData_Base(object):
-    """This class wraps the data needed to make a "Castro" plot,
+    """ This class wraps the data needed to make a "Castro" plot,
     namely the log-likelihood as a function of normalization.
 
     In this case the x-axes and y-axes are generic
@@ -377,7 +384,7 @@ class CastroData_Base(object):
         self._ny = self._norm_vals.shape[1]
 
         for i,(normv,nllv) in enumerate(zip(self._norm_vals,self._nll_vals)):            
-            nllfunc = LnLFn(normv,nllv,self._norm_type)
+            nllfunc = self._buildLnLFn(normv,nllv)
             self._nll_null += self._nll_vals[i][0]
             self._loglikes.append(nllfunc)
 
@@ -565,14 +572,31 @@ class CastroData_Base(object):
         
     def TS_spectrum(self,spec_vals):
         """ Calculate and the TS for a given set of spectral values
-        """
-        
+        """        
         return 2. * (self._nll_null - self.__call__(spec_vals))
 
 
     @staticmethod
     def stack_nll(shape,components,weights=None):
-        """
+        """ Combine the log-likelihoods from a number of components.
+        
+        Parameters
+        ----------
+        shape    :  tuple
+           The shape of the return array
+
+        components : [~fermipy.castro.CastroData_Base]
+           The components to be stacked
+
+        weights : array-like
+
+        Returns
+        -------
+        norm_vals : 'numpy.ndarray'
+           N X M array of Normalization values
+
+        nll_vals  : 'numpy.ndarray'
+           N X M array of log-likelihood values
         """
         n_bins = shape[0]
         n_vals = shape[1]
@@ -586,13 +610,18 @@ class CastroData_Base(object):
             norm_mins = np.array( [c._norm_vals[i][1] for c in components] )
             norm_maxs = np.array( [c._norm_vals[i][-1] for c in components] )
             log_norm_min = np.log10(norm_mins.min())
-            log_norm_max = np.log10(norm_maxs.max())
-            norm_vals[i][1:] = np.logspace(log_norm_min,log_norm_max,n_vals-1)
+            log_norm_max = np.log10(norm_maxs.min())
+            norm_vals[i,1:] = np.logspace(log_norm_min,log_norm_max,n_vals-1)
+            for c,w in zip(components,weights):
+                nll_vals[i] += w*c[i].interp(norm_vals[i])
+                pass
+            # reset the zeros
+            nll_obj = LnLFn(norm_vals[i],nll_vals[i])
+            nll_min = nll_obj.fn_mle()
+            nll_vals[i] = nll_min - nll_vals[i]
             pass
  
-        for c,w in zip(components,weights):
-            nll_vals += w*c(norm_vals)
-            
+        nll_vals *= -1.
         return norm_vals,nll_vals
 
 
@@ -631,11 +660,13 @@ class CastroData(CastroData_Base):
  
     @property
     def nE(self):
+        """ Return the number of energy bins.  This is also the number of x-axis bins.
+        """
         return self._nx
 
     @property
     def specData(self):
-        """ Return the Spectral Data object """
+        """ Return a '~fermipy.castro.SpecData' with the spectral data """
         return self._specData
 
     @staticmethod
@@ -643,11 +674,12 @@ class CastroData(CastroData_Base):
                          hdu_scan="SCANDATA",
                          hdu_energies="EBOUNDS",
                          irow = None):
-
+        """ Create a CastroData object from a fits file
+        """
         if irow:
             tab_s = Table.read(fitsfile,hdu=hdu_scan)[irow]
         else:
-            tab_s = Table.read(fitsfile,hdu=hdu_scan)[irow]
+            tab_s = Table.read(fitsfile,hdu=hdu_scan)
         tab_e = Table.read(fitsfile,hdu=hdu_energies)
 
         if norm_type in ['FLUX','EFLUX','DFDE']:        
@@ -669,6 +701,21 @@ class CastroData(CastroData_Base):
     
         return CastroData(norm_vals,nll_vals,sd,norm_type)
         
+    @staticmethod
+    def create_from_stack(shape,components,weights=None):
+        """
+        """
+        if len(components) == 0:
+            return None
+        norm_vals,nll_vals = CastroData_Base.stack_nll(shape,components,weights)
+        return CastroData(norm_vals,nll_vals,components[0].specData,components[0].norm_type)
+
+    
+    def _buildLnLFn(self,normv,nllv):
+        """
+        """
+        return LnLFn(normv,nllv,self._norm_type)
+
     def spectrum_loglike(self,specType,params,scale=1E3):
 
         sfn = self.create_functor(specType,scale)[0]
@@ -693,8 +740,29 @@ class CastroData(CastroData_Base):
         return retDict
 
     def create_functor(self,specType,scale=1E3):
-        """Create a functor object that computes normalizations in a
+        """ Create a functor object that computes normalizations in a
         sequence of energy bins for a given spectral model.
+      
+        Parameters
+        ----------
+        specType   : str
+            The type of spectrum to use.  'PowerLaw','LogParabola','PLExpCutoff' are implemented.
+
+        scale      : float
+            The 'pivot energy' or energy scale to use for the spectrum        
+
+            
+        Returns:
+        ----------
+        fn         : 'fermiy.spectrum.SpectralFunction'
+            The functor
+
+        initPars   :  '~np.array'
+            Default set of initial parameter for this spectral type
+
+        scale      : float
+            Energy scale (same as input) 
+        
         """
 
         emin = self._specData.emin
