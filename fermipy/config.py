@@ -53,7 +53,7 @@ def cast_config(config, defaults):
             if item_type is None or isinstance(item_type, tuple):
                 continue
 
-            if isinstance(item, str) and item_type == list:
+            if utils.isstr(item) and item_type == list:
                 config[key] = [item]
             else:
                 config[key] = item_type(config[key])
@@ -79,12 +79,12 @@ class Configurable(object):
         self._config = self.get_config()
         self._configdir = None
 
-        if isinstance(config,str) and os.path.isfile(config):
+        if utils.isstr(config) and os.path.isfile(config):
             self._configdir = os.path.abspath(os.path.dirname(config))
             config_dict = yaml.load(open(config))            
         elif isinstance(config, dict) or config is None:
             config_dict = config
-        elif isinstance(config,str) and not os.path.isfile(config):
+        elif utils.isstr(config) and not os.path.isfile(config):
             raise Exception('Invalid path to configuration file: %s'%config)
         else:
             raise Exception('Invalid config argument.')

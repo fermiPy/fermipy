@@ -41,6 +41,8 @@ setup(name='fermipy',
           'Development Status :: 4 - Beta',
       ],
       scripts = [],
+      entry_points= {'console_scripts': [
+          'fermipy-dispatch = fermipy.scripts.dispatch:main']},
       install_requires=['numpy >= 1.6.1',
                         'matplotlib >= 1.4.0',
                         'scipy >= 0.14',

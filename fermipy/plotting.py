@@ -43,8 +43,8 @@ def draw_arrows(x, y, color='k'):
 
 
 def get_xerr(sed):
-    delo = 10 ** sed['ecenter'] - 10 ** sed['emin']
-    dehi = 10 ** sed['emax'] - 10 ** sed['ecenter']
+    delo = sed['ectr'] - sed['emin']
+    dehi = sed['emax'] - sed['ectr']
     xerr = np.vstack((delo, dehi))
     return xerr
 
@@ -151,7 +151,7 @@ def load_bluered_cmap():
 
 def annotate(**kwargs):
     ax = kwargs.pop('ax', plt.gca())
-    erange = kwargs.pop('erange', None)
+    loge_bounds = kwargs.pop('loge_bounds', None)
     src = kwargs.pop('src', None)
 
     text = []
@@ -163,9 +163,9 @@ def annotate(**kwargs):
         else:
             text += [src['name']]
 
-    if erange:
-        text += ['E = %.3f - %.3f GeV' % (10 ** erange[0] / 1E3,
-                                          10 ** erange[1] / 1E3)]
+    if loge_bounds:
+        text += ['E = %.3f - %.3f GeV' % (10 ** loge_bounds[0] / 1E3,
+                                          10 ** loge_bounds[1] / 1E3)]
 
     if not text: return
 
@@ -274,7 +274,7 @@ class ImagePlotter(object):
 
 class ROIPlotter(fermipy.config.Configurable):
     defaults = {
-        'erange': (None, '', list),
+        'loge_bounds': (None, '', list),
         'catalogs': (None, '', list),
         'graticule_radii': (None, '', list),
         'label_ts_threshold': (0.0, '', float),
@@ -289,7 +289,7 @@ class ROIPlotter(fermipy.config.Configurable):
         self._data_map = data_map
         self._catalogs = []
         for c in self.config['catalogs']:
-            if isinstance(c,str):            
+            if utils.isstr(c):            
                 self._catalogs += [catalog.Catalog.create(c)]
             else:
                 self._catalogs += [c]
@@ -309,12 +309,12 @@ class ROIPlotter(fermipy.config.Configurable):
         else:
             raise Exception("Can't make ROIPlotter of unknown projection type %s"%type(data_map))
     
-        self._erange = self.config['erange']
+        self._loge_bounds = self.config['loge_bounds']
 
-        if self._erange:
+        if self._loge_bounds:
             axes = wcs_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
-            i0 = utils.val_to_edge(axes[2], self._erange[0])
-            i1 = utils.val_to_edge(axes[2], self._erange[1])
+            i0 = utils.val_to_edge(axes[2], self._loge_bounds[0])
+            i1 = utils.val_to_edge(axes[2], self._loge_bounds[1])
             imdata = self._data[:, :, i0:i1]
         else:
             imdata = self._data
@@ -371,7 +371,8 @@ class ROIPlotter(fermipy.config.Configurable):
         x = utils.edge_to_center(axes[iaxis])
         w = utils.edge_to_width(axes[iaxis])
 
-        c = self.get_data_projection(data, axes, iaxis, erange=self._erange)
+        c = self.get_data_projection(data, axes, iaxis,
+                                     loge_bounds=self._loge_bounds)
 
         if noerror:
             plt.errorbar(x, c, **kwargs)
@@ -379,7 +380,7 @@ class ROIPlotter(fermipy.config.Configurable):
             plt.errorbar(x, c, yerr=c ** 0.5, xerr=w / 2., **kwargs)
 
     @staticmethod
-    def get_data_projection(data, axes, iaxis, xmin=-1, xmax=1, erange=None):
+    def get_data_projection(data, axes, iaxis, xmin=-1, xmax=1, loge_bounds=None):
 
         s0 = slice(None, None)
         s1 = slice(None, None)
@@ -396,9 +397,9 @@ class ROIPlotter(fermipy.config.Configurable):
             s0 = slice(i0, i1)
             saxes = [0, 2]
 
-        if erange is not None:
-            j0 = utils.val_to_edge(axes[2], erange[0])
-            j1 = utils.val_to_edge(axes[2], erange[1])
+        if loge_bounds is not None:
+            j0 = utils.val_to_edge(axes[2], loge_bounds[0])
+            j1 = utils.val_to_edge(axes[2], loge_bounds[1])
             s2 = slice(j0, j1)
             
         c = np.apply_over_axes(np.sum, data[s0, s1, s2], axes=saxes)
@@ -406,7 +407,7 @@ class ROIPlotter(fermipy.config.Configurable):
         return c
 
     @staticmethod
-    def setup_projection_axis(iaxis, erange=None):
+    def setup_projection_axis(iaxis, loge_bounds=None):
 
         plt.gca().legend(frameon=False, prop={'size': 10})
         plt.gca().set_ylabel('Counts')
@@ -592,21 +593,20 @@ class SEDPlotter(object):
 
         fluxM = np.arange(fmin, fmax, 0.01)
         fbins = len(fluxM)
-        llhMatrix = np.zeros((len(sed['ecenter']), fbins))
+        llhMatrix = np.zeros((len(sed['ectr']), fbins))
 
         # loop over energy bins
         for i in range(len(lhProf)):
             m = lhProf[i]['dfde'] > 0
-            flux = np.log10(
-                lhProf[i]['dfde'][m] * (10 ** sed['ecenter'][i]) ** 2)
+            flux = np.log10(lhProf[i]['dfde'][m] * sed['ectr'][i] ** 2)
             logl = lhProf[i]['dloglike'][m]
             logli = np.interp(fluxM, flux, logl)
             logli[fluxM > flux[-1]] = logl[-1]
             logli[fluxM < flux[0]] = logl[0]
             llhMatrix[i, :] = logli
 
-        xedge = np.logspace(sed['emin'][0], sed['emax'][-1],
-                            len(sed['ecenter']) + 1)
+        xedge = np.logspace(sed['logemin'][0], sed['logemax'][-1],
+                            len(sed['logectr']) + 1)
         yedge = np.logspace(fmin, fmax, fbins)
         xedge, yedge = np.meshgrid(xedge, yedge)
         im = ax.pcolormesh(xedge, yedge, llhMatrix.T,
@@ -617,7 +617,7 @@ class SEDPlotter(object):
         plt.gca().set_ylim(10 ** fmin, 10 ** fmax)
         plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
-        plt.gca().set_xlim(10 ** sed['emin'][0], 10 ** sed['emax'][-1])
+        plt.gca().set_xlim(sed['emin'][0], sed['emax'][-1])
 
     @staticmethod
     def plot_sed(sed, **kwargs):
@@ -630,7 +630,7 @@ class SEDPlotter(object):
 
         m = sed['ts'] < ts_thresh
 
-        x = 10 ** sed['ecenter']
+        x = sed['ectr']
         y = sed['e2dfde']
         yerr = sed['e2dfde_err']
         yerr_lo = sed['e2dfde_err_lo']
@@ -642,8 +642,8 @@ class SEDPlotter(object):
         yerr_lo[m] = 0
         yerr_hi[m] = 0
 
-        delo = 10 ** sed['ecenter'] - 10 ** sed['emin']
-        dehi = 10 ** sed['emax'] - 10 ** sed['ecenter']
+        delo = sed['ectr'] - sed['emin']
+        dehi = sed['emax'] - sed['ectr']
         xerr0 = np.vstack((delo[m], dehi[m]))
         xerr1 = np.vstack((delo[~m], dehi[~m]))
 
@@ -652,7 +652,7 @@ class SEDPlotter(object):
 
         plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
-        plt.gca().set_xlim(10 ** sed['emin'][0], 10 ** sed['emax'][-1])
+        plt.gca().set_xlim(sed['emin'][0], sed['emax'][-1])
         plt.gca().set_ylim(min(1E-8,np.min(y)*0.5),max(1E-5,np.max(y)*1.5))
         
 
@@ -663,7 +663,7 @@ class SEDPlotter(object):
 
         m = sed['ts'] < 4
 
-        x = 10 ** sed['ecenter']
+        x = sed['ectr']
         y = sed['e2dfde']
         yerr = sed['e2dfde_err']
         yul = sed['e2dfde_ul95']
@@ -671,13 +671,13 @@ class SEDPlotter(object):
         y[m] = yul[m]
         yerr[m] = 0
 
-        delo = 10 ** sed['ecenter'] - 10 ** sed['emin']
-        dehi = 10 ** sed['emax'] - 10 ** sed['ecenter']
+        delo = sed['ectr'] - sed['emin']
+        dehi = sed['emax'] - sed['ectr']
         xerr = np.vstack((delo, dehi))
 
-        ym = np.interp(sed['ecenter'],
-                       model_flux['ecenter'],
-                       10 ** (2 * model_flux['ecenter']) * model_flux['dfde'])
+        ym = np.interp(sed['ectr'],
+                       model_flux['log_energies'],
+                       10 ** (2 * model_flux['log_energies']) * model_flux['dfde'])
 
         plt.errorbar(x, (y - ym) / ym, xerr=xerr, yerr=yerr / ym, **kwargs)
 
@@ -688,20 +688,20 @@ class SEDPlotter(object):
         color = kwargs.pop('color', 'k')
         noband = kwargs.pop('noband', False)
 
-        e2 = 10 ** (2 * model_flux['ecenter'])
+        e2 = 10 ** (2 * model_flux['log_energies'])
 
-        ax.plot(10 ** model_flux['ecenter'],
+        ax.plot(10 ** model_flux['log_energies'],
                 model_flux['dfde'] * e2, color=color, **kwargs)
 
-        ax.plot(10 ** model_flux['ecenter'],
+        ax.plot(10 ** model_flux['log_energies'],
                 model_flux['dfde_lo'] * e2, color=color,
                 linestyle='--', **kwargs)
-        ax.plot(10 ** model_flux['ecenter'],
+        ax.plot(10 ** model_flux['log_energies'],
                 model_flux['dfde_hi'] * e2, color=color,
                 linestyle='--', **kwargs)
 
         if not noband:
-            ax.fill_between(10 ** model_flux['ecenter'],
+            ax.fill_between(10 ** model_flux['log_energies'],
                             model_flux['dfde_lo'] * e2,
                             model_flux['dfde_hi'] * e2,
                             alpha=0.5, color=color, zorder=-1)
@@ -734,7 +734,7 @@ class SEDPlotter(object):
 
         SEDPlotter.plot_sed(sed)
 
-        if src['ts'] > 9.:
+        if np.any(sed['ts'] > 9.):
         
             if 'model_flux' in sed:
                 SEDPlotter.plot_model(sed['model_flux'], noband=showlnl)        
@@ -751,7 +751,7 @@ class SEDPlotter(object):
 
 
 class ExtensionPlotter(object):
-    def __init__(self, src, roi, suffix, workdir, erange=None):
+    def __init__(self, src, roi, suffix, workdir, loge_bounds=None):
 
         self._src = copy.deepcopy(src)
 
@@ -769,14 +769,14 @@ class ExtensionPlotter(object):
             self._files += [os.path.join(workdir, 'mcube_%s_ext%02i%s.fits' % (
                 name, i, suffix))]
         self._roi = roi
-        self._erange = erange
+        self._loge_bounds = loge_bounds
 
     def plot(self, iaxis):
 
         p0 = ROIPlotter.create_from_fits(self._file2, roi=self._roi,
-                                         erange=self._erange)
+                                         loge_bounds=self._loge_bounds)
         p1 = ROIPlotter.create_from_fits(self._file1, roi=self._roi,
-                                         erange=self._erange)
+                                         loge_bounds=self._loge_bounds)
         p0.plot_projection(iaxis, color='k', label='Data', marker='s',
                            linestyle='None')
         p1.plot_projection(iaxis, color='b', noerror=True, label='Background')
@@ -790,7 +790,8 @@ class ExtensionPlotter(object):
             cf = float(i) / float(len(fw) - 1.0)
             cf = 0.2 + cf * 0.8
 
-            p = ROIPlotter.create_from_fits(f, roi=self._roi, erange=self._erange)
+            p = ROIPlotter.create_from_fits(f, roi=self._roi,
+                                            loge_bounds=self._loge_bounds)
             p._data += p1.data
             p.plot_projection(iaxis, color=matplotlib.cm.Reds(cf),
                               noerror=True, label='%.4f$^\circ$' % w)
@@ -818,12 +819,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
         prefix = kwargs.get('prefix', 'test')
         format = kwargs.get('format', gta.config['plotting']['format'])
 
-        erange = [None] + gta.config['plotting']['erange']
+        loge_bounds = [None] + gta.config['plotting']['loge_bounds']
 
-        for x in erange:
-            self.make_roi_plots(gta, mcube_map, prefix, erange=x,
+        for x in loge_bounds:
+            self.make_roi_plots(gta, mcube_map, prefix, loge_bounds=x,
                                 format=format)
-        # self.make_extension_plots(gta,prefix, erange=x,
+        # self.make_extension_plots(gta,prefix, loge_bounds=x,
         # format=format)
 
         self.make_sed_plots(gta, prefix, format=format)
@@ -832,7 +833,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                        'counts_spectrum', prefix=[prefix],
                                        extension=format)
 
-        make_counts_spectrum_plot(gta._roi_model, gta.roi, gta.energies,
+        make_counts_spectrum_plot(gta._roi_model, gta.roi,
+                                  gta.log_energies,
                                   imfile)
 
     def make_residual_plots(self, gta, maps, **kwargs):
@@ -931,7 +933,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=format))
         plt.close(fig)
 
-    def make_roi_plots(self, gta, mcube_map, prefix, erange=None, **kwargs):
+    def make_roi_plots(self, gta, mcube_map, prefix, loge_bounds=None, **kwargs):
         """Make various diagnostic plots for the 1D and 2D
         counts/model distributions.
 
@@ -946,16 +948,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
         format = kwargs.get('format', gta.config['plotting']['format'])
 
         roi_kwargs = {}
-        roi_kwargs.setdefault('erange',erange)
+        roi_kwargs.setdefault('loge_bounds',loge_bounds)
         roi_kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
         roi_kwargs.setdefault('label_ts_threshold',
                               self.config['label_ts_threshold'])
         roi_kwargs.setdefault('cmap',self.config['cmap'])
         roi_kwargs.setdefault('catalogs',self._catalogs)
         
-        if erange is None:
-            erange = (gta.energies[0], gta.energies[-1])
-        esuffix = '_%.3f_%.3f' % (erange[0], erange[1])
+        if loge_bounds is None:
+            loge_bounds = (gta.log_energies[0], gta.log_energies[-1])
+        esuffix = '_%.3f_%.3f' % (loge_bounds[0], loge_bounds[1])
 
         mcube_diffuse = gta.model_counts_map('diffuse')
 
@@ -1000,7 +1002,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LON Offset [deg]')
         plt.gca().legend(frameon=False)
-        annotate(erange=erange)
+        annotate(loge_bounds=loge_bounds)
         #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                  '%s_counts_map_xproj%s.%s' % (
@@ -1016,7 +1018,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LAT Offset [deg]')
         plt.gca().legend(frameon=False)
-        annotate(erange=erange)
+        annotate(loge_bounds=loge_bounds)
         #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                  '%s_counts_map_yproj%s.%s' % (
@@ -1033,7 +1035,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         data_style = {'marker': 's', 'linestyle': 'None'}
 
         roi_kwargs = {}
-        roi_kwargs.setdefault('erange',erange)
+        roi_kwargs.setdefault('loge_bounds',loge_bounds)
         roi_kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
         roi_kwargs.setdefault('cmap',self.config['cmap'])
         roi_kwargs.setdefault('catalogs',self.config['catalogs'])
@@ -1071,14 +1073,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         plt.figure(figx.number)
         ROIPlotter.setup_projection_axis(0)
-        annotate(erange=erange)
+        annotate(loge_bounds=loge_bounds)
         figx.savefig(os.path.join(gta.config['fileio']['workdir'],
                                   '%s_counts_map_comp_xproj%s.%s' % (
                                       prefix, esuffix, format)))
 
         plt.figure(figy.number)
         ROIPlotter.setup_projection_axis(1)
-        annotate(erange=erange)
+        annotate(loge_bounds=loge_bounds)
         figy.savefig(os.path.join(gta.config['fileio']['workdir'],
                                   '%s_counts_map_comp_yproj%s.%s' % (
                                       prefix, esuffix, format)))
@@ -1086,7 +1088,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(figy)
         
         
-    def make_extension_plots(self, prefix, erange=None, **kwargs):
+    def make_extension_plots(self, prefix, loge_bounds=None, **kwargs):
 
         format = kwargs.get('format', self.config['plotting']['format'])
 
@@ -1099,7 +1101,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
             if not s['extension']['config']['save_model_map']: 
                 continue
 
-            self._plot_extension(prefix, s, erange=erange, format=format)
+            self._plot_extension(prefix, s, loge_bounds=loge_bounds, format=format)
 
     def make_sed_plots(self, gta, prefix='', **kwargs):
 
@@ -1263,28 +1265,28 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.savefig(outfile)
         plt.close(fig)
         
-    def _plot_extension(self, gta, prefix, src, erange=None, **kwargs):
+    def _plot_extension(self, gta, prefix, src, loge_bounds=None, **kwargs):
         """Utility function for generating diagnostic plots for the
         extension analysis."""
 
         format = kwargs.get('format', self.config['plotting']['format'])
 
-        if erange is None:
-            erange = (self.energies[0], self.energies[-1])
+        if loge_bounds is None:
+            loge_bounds = (self.energies[0], self.energies[-1])
 
         name = src['name'].lower().replace(' ', '_')
 
-        esuffix = '_%.3f_%.3f' % (erange[0], erange[1])
+        esuffix = '_%.3f_%.3f' % (loge_bounds[0], loge_bounds[1])
 
         p = ExtensionPlotter(src, self.roi, '',
                              self.config['fileio']['workdir'],
-                             erange=erange)
+                             loge_bounds=loge_bounds)
 
         fig = plt.figure()
         p.plot(0)
         plt.gca().set_xlim(-2, 2)
         ROIPlotter.setup_projection_axis(0)
-        annotate(src=src, erange=erange)
+        annotate(src=src, loge_bounds=loge_bounds)
         plt.savefig(os.path.join(self.config['fileio']['workdir'],
                                  '%s_%s_extension_xproj%s.png' % (
                                      prefix, name, esuffix)))
@@ -1294,7 +1296,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p.plot(1)
         plt.gca().set_xlim(-2, 2)
         ROIPlotter.setup_projection_axis(1)
-        annotate(src=src, erange=erange)
+        annotate(src=src, loge_bounds=loge_bounds)
         plt.savefig(os.path.join(self.config['fileio']['workdir'],
                                  '%s_%s_extension_yproj%s.png' % (
                                      prefix, name, esuffix)))
@@ -1305,12 +1307,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
             p = ExtensionPlotter(src, self.roi, suffix,
                                  self.config['fileio']['workdir'],
-                                 erange=erange)
+                                 loge_bounds=loge_bounds)
 
             fig = plt.figure()
             p.plot(0)
-            ROIPlotter.setup_projection_axis(0, erange=erange)
-            annotate(src=src, erange=erange)
+            ROIPlotter.setup_projection_axis(0, loge_bounds=loge_bounds)
+            annotate(src=src, loge_bounds=loge_bounds)
             plt.gca().set_xlim(-2, 2)
             plt.savefig(os.path.join(self.config['fileio']['workdir'],
                                      '%s_%s_extension_xproj%s%s.png' % (
@@ -1320,8 +1322,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
             fig = plt.figure()
             p.plot(1)
             plt.gca().set_xlim(-2, 2)
-            ROIPlotter.setup_projection_axis(1, erange=erange)
-            annotate(src=src, erange=erange)
+            ROIPlotter.setup_projection_axis(1, loge_bounds=loge_bounds)
+            annotate(src=src, loge_bounds=loge_bounds)
             plt.savefig(os.path.join(self.config['fileio']['workdir'],
                                      '%s_%s_extension_yproj%s%s.png' % (
                                          prefix, name, esuffix, suffix)))

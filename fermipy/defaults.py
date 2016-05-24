@@ -195,7 +195,7 @@ roiopt_output = {
 # Residual Maps
 residmap = {
     'model': (None, 'Dictionary defining the properties of the test source.  By default the test source will be a PointSource with an Index 2 power-law specturm.', dict),
-    'erange': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
+    'loge_bounds': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
 }
 
 # TS Map
@@ -203,7 +203,7 @@ tsmap = {
     'model': (None, 'Dictionary defining the properties of the test source.', dict),
     'multithread': (False, '', bool),
     'max_kernel_radius': (3.0, '', float),
-    'erange': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
+    'loge_bounds': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
 }
 
 # TS Cube
@@ -248,9 +248,12 @@ sed = {
 
 # Output for SED analysis
 sed_output = OrderedDict((
-    ('emin', (None, 'Lower edges of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
-    ('emax', (None, 'Upper edges of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
-    ('ecenter', (None, 'Centers of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
+    ('logemin', (None, 'Lower edges of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
+    ('logemax', (None, 'Upper edges of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
+    ('logectr', (None, 'Centers of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
+    ('emin', (None, 'Lower edges of SED energy bins (MeV).', np.ndarray, '`~numpy.ndarray`')),
+    ('emax', (None, 'Upper edges of SED energy bins (MeV).', np.ndarray, '`~numpy.ndarray`')),
+    ('ectr', (None, 'Centers of SED energy bins (MeV).', np.ndarray, '`~numpy.ndarray`')),    
     ('flux', (None, 'Flux in each bin (%s).'%FLUX_UNIT,np.ndarray, '`~numpy.ndarray`')),
     ('eflux', (None, 'Energy flux in each bin (%s).'%ENERGY_FLUX_UNIT,np.ndarray,'`~numpy.ndarray`')),
     ('dfde', (None, 'Differential flux in each bin (%s).'%DIFF_FLUX_UNIT,np.ndarray,'`~numpy.ndarray`')),
@@ -339,7 +342,7 @@ localize_output  = {
 
 # Options for plotting
 plotting = {
-    'erange': (None, '', list),
+    'loge_bounds': (None, '', list),
     'catalogs': (None, '', list),
     'graticule_radii': (None, 'Define a list of radii at which circular graticules will be drawn.', list),
     'format': ('png', '', str),
@@ -387,7 +390,7 @@ source_output = OrderedDict((
     ('sed', (None,'Output of SED analysis.  See :ref:`sed` for more information.',dict,'dict')),
     ('extension', (None,'Output of extension analysis.  See :ref:`extension` for more information.',dict,'dict')),
     ('localize', (None,'Output of localization analysis.  See :ref:`localization` for more information.',dict,'dict')),
-    ('pivot_energy', (np.nan,'Decorrelation energy.',float,'float')),
+    ('pivot_energy', (np.nan,'Decorrelation energy in MeV.',float,'float')),
     ('flux', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated over analysis energy range'%FLUX_UNIT,
              np.ndarray, '`~numpy.ndarray`')),
     ('flux100', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated from 100 MeV to 316 GeV.'%FLUX_UNIT,

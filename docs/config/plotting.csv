@@ -1,6 +1,6 @@
 ``catalogs``	None	
 ``cmap``	ds9_b	Set the colormap for 2D plots.
-``erange``	None	
 ``format``	png	
 ``graticule_radii``	None	Define a list of radii at which circular graticules will be drawn.
 ``label_ts_threshold``	0.0	TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.
+``loge_bounds``	None	

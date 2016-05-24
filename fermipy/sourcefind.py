@@ -56,11 +56,11 @@ def fit_error_ellipse(tsmap,xy=None,dpix=3):
     if sigmax < sigmay:
         o['sigma_semimajor'] = sigmay
         o['sigma_semiminor'] = sigmax
-        o['theta'] = np.fmod(np.pi/2.+pbfit['theta'],np.pi)
+        o['theta'] = np.fmod(2*np.pi + np.pi/2.+pbfit['theta'],np.pi)
     else:
         o['sigma_semimajor'] = sigmax
         o['sigma_semiminor'] = sigmay
-        o['theta'] = np.fmod(pbfit['theta'],np.pi)
+        o['theta'] = np.fmod(2*np.pi + pbfit['theta'],np.pi)
         
     o['sigmax'] = sigmax
     o['sigmay'] = sigmay
@@ -73,6 +73,12 @@ def fit_error_ellipse(tsmap,xy=None,dpix=3):
     o['glon'] = skydir.galactic.l.deg
     o['glat'] = skydir.galactic.b.deg
     o['fit_success'] = pbfit['fit_success']
+
+    a = o['sigma_semimajor']
+    b = o['sigma_semiminor']
+    
+    o['eccentricity'] = np.sqrt(1-b**2/a**2)
+    o['eccentricity2'] = np.sqrt(a**2/b**2-1)
     
     return o, skydir
 
@@ -289,8 +295,6 @@ class SourceFinder(object):
         for p in peaks:
 
             o, skydir = fit_error_ellipse(tsmap,(p['ix'],p['iy']),dpix=2)
-            
-#            o = utils.fit_parabola(tsmap.counts,p['iy'],p['ix'],dpix=2)
             p['fit_loc'] = o
             p['fit_skydir'] = skydir
 
@@ -303,7 +307,7 @@ class SourceFinder(object):
                 
             name = utils.create_source_name(skydir)
             src_dict = copy.deepcopy(src_dict_template)
-            src_dict.update({'Prefactor': amp.counts[p['iy'], p['ix']],                        
+            src_dict.update({'Prefactor': amp.counts[p['iy'], p['ix']],
                              'ra': skydir.icrs.ra.deg,
                              'dec': skydir.icrs.dec.deg})
 
@@ -352,14 +356,14 @@ class SourceFinder(object):
             raise Exception('Unrecognized option for fitter: %s.'%tsmap_fitter)
             
         amp = m['amplitude']
- 
+
         if tsmap_fitter == 'tsmap':
             peaks = find_peaks(m['sqrt_ts'], threshold, min_separation)
             (names,src_dicts) = self._build_src_dicts_from_peaks(peaks,
                                                                  m,src_dict_template)
         elif tsmap_fitter == 'tscube':
             sd = m['tscube'].find_sources(threshold**2, min_separation,
-                                          use_cumul=True,output_src_dicts=True,
+                                          use_cumul=False,output_src_dicts=True,
                                           output_peaks=True)
             peaks = sd['Peaks']
             names = sd['Names']

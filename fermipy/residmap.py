@@ -150,7 +150,7 @@ class ResidMapGenerator(object):
             Source or sources that will be removed from the model when
             computing the residual map.
 
-        erange : list
+        loge_bounds : list
            Restrict the analysis to an energy range (emin,emax) in
            log10(E/MeV) that is a subset of the analysis energy range.
            By default the full analysis energy range will be used.  If
@@ -204,19 +204,19 @@ class ResidMapGenerator(object):
         
         src_dict = copy.deepcopy(config.setdefault('model',{}))        
         exclude = config.setdefault('exclude', None)
-        erange = config.setdefault('erange', None)
+        loge_bounds = config.setdefault('loge_bounds', None)
         
-        if erange is not None:            
-            if len(erange) == 0:
-                erange = [None,None]
-            elif len(erange) == 1:
-                erange += [None]            
-            erange[0] = (erange[0] if erange[0] is not None 
+        if loge_bounds is not None:            
+            if len(loge_bounds) == 0:
+                loge_bounds = [None,None]
+            elif len(loge_bounds) == 1:
+                loge_bounds += [None]            
+            loge_bounds[0] = (loge_bounds[0] if loge_bounds[0] is not None 
                          else self.energies[0])
-            erange[1] = (erange[1] if erange[1] is not None 
+            loge_bounds[1] = (loge_bounds[1] if loge_bounds[1] is not None 
                          else self.energies[-1])
         else:
-            erange = [self.energies[0],self.energies[-1]]
+            loge_bounds = [self.energies[0],self.energies[-1]]
 
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
@@ -263,8 +263,8 @@ class ResidMapGenerator(object):
 
         for i, c in enumerate(self.components):
 
-            imin = utils.val_to_edge(c.energies,erange[0])[0]
-            imax = utils.val_to_edge(c.energies,erange[1])[0]
+            imin = utils.val_to_edge(c.energies,loge_bounds[0])[0]
+            imax = utils.val_to_edge(c.energies,loge_bounds[1])[0]
 
             mc = c.model_counts_map(exclude=exclude).counts.astype('float')
             cc = c.counts_map().counts.astype('float')

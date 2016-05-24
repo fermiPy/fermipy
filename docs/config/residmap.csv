@@ -1,2 +1,2 @@
-``erange``	None	Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.
+``loge_bounds``	None	Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.
 ``model``	None	Dictionary defining the properties of the test source.  By default the test source will be a PointSource with an Index 2 power-law specturm.

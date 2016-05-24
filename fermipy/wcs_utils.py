@@ -56,6 +56,12 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
     crpix : float or (float,float)
         In the first case the same value is used for x and y axes
 
+    naxis : 2
+       Number of dimensions of the projection.  Valid inputs are 2 or 3. 
+        
+    energies : array-like   
+       Array of energies that defines the third dimension if naxis=3.
+        
     """
 
     w = pywcs.WCS(naxis=naxis)
@@ -85,19 +91,31 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
     w = pywcs.WCS(w.to_header())
     if naxis == 3 and energies is not None:
         w.wcs.crpix[2] = 1
-        w.wcs.crval[2] = 10 ** energies[0]
-        w.wcs.cdelt[2] = 10 ** energies[1] - 10 ** energies[0]
+        w.wcs.crval[2] = energies[0]
+        w.wcs.cdelt[2] = energies[1] - energies[0]
         w.wcs.ctype[2] = 'Energy'
+        w.wcs.cunit[2] = 'MeV'
 
     return w
 
 
 def wcs_add_energy_axis(wcs,energies):
     """ Copy a WCS object, and add on the energy axis
+
+    Parameters
+    ----------
+
+    wcs : `~astropy.wcs.WCS`
+
+    energies : array-like
+       Array of energies.
+    
     """
     if wcs.naxis != 2:
         raise Exception('wcs_add_energy_axis, input WCS naxis != 2 %i'%wcs.naxis)
     w = pywcs.WCS(naxis=3)
+    w.wcs.crpix[0] = wcs.wcs.crpix[0]
+    w.wcs.crpix[1] = wcs.wcs.crpix[1]
     w.wcs.ctype[0] = wcs.wcs.ctype[0]
     w.wcs.ctype[1] = wcs.wcs.ctype[1]
     w.wcs.crval[0] = wcs.wcs.crval[0]
@@ -106,8 +124,8 @@ def wcs_add_energy_axis(wcs,energies):
     w.wcs.cdelt[1] = wcs.wcs.cdelt[1]
     w = pywcs.WCS(w.to_header())
     w.wcs.crpix[2] = 1
-    w.wcs.crval[2] = 10 ** energies[0]
-    w.wcs.cdelt[2] = 10 ** energies[1] - 10 ** energies[0]
+    w.wcs.crval[2] = energies[0]
+    w.wcs.cdelt[2] = energies[1] - energies[0]
     w.wcs.ctype[2] = 'Energy'
     return w
 
@@ -206,16 +224,6 @@ def get_coordsys(wcs):
     else:
         raise Exception('Unrecognized WCS coordinate system.')
 
-
-def get_projection(wcs):
-
-    if 'RA' in wcs.wcs.ctype[0]:
-        return 'CEL'
-    elif 'GLON' in wcs.wcs.ctype[0]:
-        return 'GAL'
-    else:
-        raise Exception('Unrecognized WCS coordinate system.')
-
     
 def get_target_skydir(config,ref_skydir=None):
 
@@ -224,7 +232,7 @@ def get_target_skydir(config,ref_skydir=None):
     
     radec = config.get('radec', None)
 
-    if isinstance(radec, str):
+    if utils.isstr(radec):
         return SkyCoord(radec, unit=u.deg)
     elif isinstance(radec, list):
         return SkyCoord(radec[0], radec[1], unit=u.deg)
@@ -312,7 +320,8 @@ def wcs_to_skydir(wcs):
     coordsys = get_coordsys(wcs)
 
     if coordsys == 'GAL':
-        return SkyCoord(lon,lat,unit='deg',frame='galactic').transform_to('icrs')
+        return SkyCoord(lon,lat,unit='deg',
+                        frame='galactic').transform_to('icrs')
     else:
         return SkyCoord(lon,lat,unit='deg',frame='icrs')
 

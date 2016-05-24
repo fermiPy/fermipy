@@ -34,7 +34,7 @@
 ``sed``	dict	Output of SED analysis.  See :ref:`sed` for more information.
 ``extension``	dict	Output of extension analysis.  See :ref:`extension` for more information.
 ``localize``	dict	Output of localization analysis.  See :ref:`localization` for more information.
-``pivot_energy``	float	Decorrelation energy.
+``pivot_energy``	float	Decorrelation energy in MeV.
 ``flux``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
 ``flux100``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
 ``flux1000``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
