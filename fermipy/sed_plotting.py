@@ -40,6 +40,7 @@ def plotNLL_v_Flux(nll,fluxType,nstep=25,xlims=None):
     else:
         xmin = xlims[0]
         xmax = xlims[1]
+
     y1 = nll.interp(xmin)
     y2 = nll.interp(xmax)
 
