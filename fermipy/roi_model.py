@@ -1827,7 +1827,8 @@ class ROIModel(fermipy.config.Configurable):
                     cols_dict[k] = dict(dtype='S20', format='%s')
 
         cols_dict['param_names'] = dict(dtype='S20', format='%s',shape=(6,))
-        cols_dict['params'] = dict(dtype='f8', format='%f',shape=(6,2))
+        cols_dict['param_values'] = dict(dtype='f8', format='%f',shape=(6,))
+        cols_dict['param_errors'] = dict(dtype='f8', format='%f',shape=(6,))
 
         # Catalog Parameters
         cols_dict['Flux_Density'] = dict(dtype='f8', format='%.5g',unit='1 / (MeV cm2 s)')
@@ -1878,7 +1879,8 @@ class ROIModel(fermipy.config.Configurable):
 
             row_dict['param_names'] = np.empty(6,dtype='S20')
             row_dict['param_names'].fill('')
-            row_dict['params'] = np.empty((6,2),dtype=float)*np.nan
+            row_dict['param_values'] = np.empty(6,dtype=float)*np.nan
+            row_dict['param_errors'] = np.empty(6,dtype=float)*np.nan
 
             params = copy.deepcopy(s['params'])
             if 'spectrum_type' in params:
@@ -1888,8 +1890,8 @@ class ROIModel(fermipy.config.Configurable):
             for i, k in enumerate(param_names[:6]):
 
                 row_dict['param_names'][i] = k
-                row_dict['params'][i,0] = params[k][0]
-                row_dict['params'][i,1] = params[k][1]
+                row_dict['param_values'][i] = params[k][0]
+                row_dict['param_errors'][i] = params[k][1]
 
             r68_semimajor = s['pos_sigma_semimajor']*s['pos_r68']/s['pos_sigma']
             r68_semiminor = s['pos_sigma_semiminor']*s['pos_r68']/s['pos_sigma']
