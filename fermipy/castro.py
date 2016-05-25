@@ -1226,7 +1226,7 @@ if __name__ == "__main__":
 
 
     castro_sed = CastroData.create_from_sedfile("sed.fits")
-    test_dict_sed = castro.test_spectra()
+    test_dict_sed = castro_sed.test_spectra()
 
     """
     tscube = TSCube.create_from_fits("tscube_test.fits",flux_type)
