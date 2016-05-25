@@ -35,10 +35,10 @@ default configuration of the method:
    >>> sed = gta.sed('sourceA')
 
    # Override the energy binning for the SED
-   >>> sed = gta.sed('sourceA',energies=[2.0,2.5,3.0,3.5,4.0,4.5,5.0], bin_index=2)
+   >>> sed = gta.sed('sourceA',loge_bins=[2.0,2.5,3.0,3.5,4.0,4.5,5.0], bin_index=2)
 
 By default the method will use the energy bins of the underlying
-analysis.  The ``energies`` keyword argument can be used to override
+analysis.  The ``loge_bins`` keyword argument can be used to override
 the default binning with the restriction that the SED energy bins
 most align with the analysis bins.
 
@@ -59,6 +59,9 @@ from the method return value or later accessed from the
    # Get the sed results from the source object
    >>> sed = gta.roi['sourceA']
 
+   # Print the SED flux values
+   >>> print(sed['flux'])
+   
 The contents of the output dictionary are described below:
 
 .. csv-table:: *sed* Output Dictionary

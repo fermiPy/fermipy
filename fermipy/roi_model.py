@@ -1817,6 +1817,19 @@ class ROIModel(fermipy.config.Configurable):
         cols_dict['dloglike_scan'] = dict(dtype='f8', format='%.3f',
                                           shape=scan_shape)
 
+        # Add source dictionary columns
+        for k, v in sorted(self._srcs[0].data.items()):
+            if not k in cols_dict.keys():
+
+                if isinstance(v,float):
+                    cols_dict[k] = dict(dtype='f8', format='%f')
+                elif utils.isstr(v):
+                    cols_dict[k] = dict(dtype='S20', format='%s')
+
+        cols_dict['param_names'] = dict(dtype='S20', format='%s',shape=(6,))
+        cols_dict['param_values'] = dict(dtype='f8', format='%f',shape=(6,))
+        cols_dict['param_errors'] = dict(dtype='f8', format='%f',shape=(6,))
+
         # Catalog Parameters
         cols_dict['Flux_Density'] = dict(dtype='f8', format='%.5g',unit='1 / (MeV cm2 s)')
         cols_dict['Spectral_Index'] = dict(dtype='f8', format='%.3f')
@@ -1864,6 +1877,22 @@ class ROIModel(fermipy.config.Configurable):
             row_dict['GLON'] = s['glon']
             row_dict['GLAT'] = s['glat']
 
+            row_dict['param_names'] = np.empty(6,dtype='S20')
+            row_dict['param_names'].fill('')
+            row_dict['param_values'] = np.empty(6,dtype=float)*np.nan
+            row_dict['param_errors'] = np.empty(6,dtype=float)*np.nan
+
+            params = copy.deepcopy(s['params'])
+            if 'spectrum_type' in params:
+                del params['spectrum_type']
+
+            param_names = gtutils.get_function_par_names(s['SpectrumType'])
+            for i, k in enumerate(param_names[:6]):
+
+                row_dict['param_names'][i] = k
+                row_dict['param_values'][i] = params[k][0]
+                row_dict['param_errors'][i] = params[k][1]
+
             r68_semimajor = s['pos_sigma_semimajor']*s['pos_r68']/s['pos_sigma']
             r68_semiminor = s['pos_sigma_semiminor']*s['pos_r68']/s['pos_sigma']
             r95_semimajor = s['pos_sigma_semimajor']*s['pos_r95']/s['pos_sigma']
@@ -1879,6 +1908,9 @@ class ROIModel(fermipy.config.Configurable):
             row_dict.update(s.get_catalog_dict())
                             
             for t in s.data.keys():
+
+                if t == 'params':
+                    continue
                 if t in cols_dict.keys():
                     row_dict[t] = s[t]
             

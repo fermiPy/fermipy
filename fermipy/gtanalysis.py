@@ -155,8 +155,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # Setup directories
         self._rootdir = os.getcwd()
         self._savedir = None
+        validate = kwargs.pop('validate',True)
         
-        super(GTAnalysis, self).__init__(config, validate=True,**kwargs)
+        super(GTAnalysis, self).__init__(config, validate=validate,
+                                         **kwargs)
 
         self._projtype = self.config['binning']['projtype']
 
@@ -387,8 +389,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if config is None:
             config = roi_data['config']
+            validate = False
+        else:
+            validate = True
 
-        gta = GTAnalysis(config)
+        gta = GTAnalysis(config, validate=validate)
         gta.setup(init_sources=False)
         gta.load_roi(infile)
         return gta

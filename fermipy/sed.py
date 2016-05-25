@@ -242,7 +242,7 @@ class SEDGenerator(object):
             o['%s_ul'%t] = np.zeros(nbins)*np.nan
         
         saved_state = LikelihoodState(self.like)
-        source = self.components[0].like.logLike.getSource(name)
+        source = self.components[0].like.logLike.getSource(str(name))
         
         # Perform global spectral fit
         self._latch_free_params()
@@ -294,7 +294,7 @@ class SEDGenerator(object):
                 gf_bin_flux += [min_flux]
 
         old_spectrum = source.spectrum()
-        self.like.setSpectrum(name, str('PowerLaw'))
+        self.like.setSpectrum(str(name), str('PowerLaw'))
         self.free_parameter(name, 'Index', False)
         self.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
                           true_value=False,
@@ -310,7 +310,7 @@ class SEDGenerator(object):
                 continue
             if p['is_norm'] and p['src_name'] == name:
                 src_norm_idx = j
-            
+
             o['correlation'][p['src_name']] =  np.zeros(nbins) * np.nan
         
         for i, (logemin, logemax) in enumerate(zip(loge_bins[:-1],
@@ -333,7 +333,7 @@ class SEDGenerator(object):
             self.set_norm(name, 1.0, update_source=False)
             self.set_parameter(name, 'Index', o['index'][i], scale=1.0,
                                update_source=False)
-            self.like.syncSrcParams(name)
+            self.like.syncSrcParams(str(name))
 
             ref_flux = self.like[name].flux(emin, emax)
             
@@ -351,7 +351,7 @@ class SEDGenerator(object):
             newVal = max(normVal * flux_ratio, 1E-10)
             self.set_norm(name, newVal, update_source=False)
             
-            self.like.syncSrcParams(name)
+            self.like.syncSrcParams(str(name))
             self.free_norm(name)
             self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
                               (name, emin, emax))
@@ -424,7 +424,7 @@ class SEDGenerator(object):
             o['%s_ul'%t] = o['norm_ul']*o['ref_%s'%t]
         
         self.set_energy_range(loge_bounds[0], loge_bounds[1])
-        self.like.setSpectrum(name, old_spectrum)
+        self.like.setSpectrum(str(name), old_spectrum)
         saved_state.restore()
         self._sync_params(name)
 
