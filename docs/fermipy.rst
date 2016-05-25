@@ -78,6 +78,14 @@ fermipy.skymap module
     :members:
     :undoc-members:
     :show-inheritance:
+
+fermipy.castro module
+---------------------
+
+.. automodule:: fermipy.castro
+    :members:
+    :undoc-members:
+    :show-inheritance:
        
 fermipy.tsmap module
 --------------------
