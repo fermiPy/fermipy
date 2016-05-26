@@ -1602,6 +1602,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             Maximum number of sources that will be fit simultaneously
             in the first optimization step.
 
+        skip : list
+            List of str source names to skip while optimizing.
+
         """
 
         self.logger.info('Starting')
@@ -1618,6 +1621,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         npred_threshold = config['npred_threshold']
         shape_ts_threshold = config['shape_ts_threshold']
         max_free_sources = config['max_free_sources']
+        skip = config['skip']
         
         o = defaults.make_default_dict(defaults.roiopt_output)
         o['config'] = config
@@ -1632,9 +1636,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # Free norms of sources for which the sum of npred is a
         # fraction > npred_frac of the total model counts in the ROI
         npred_sum = 0
-        skip_sources = []
+        skip_sources = skip if skip != None else []
         for s in sorted(self.roi.sources, key=lambda t: t['npred'],
                         reverse=True):
+            
+            if s.name in skip_sources:
+                continue
             
             npred_sum += s['npred']
             npred_frac = npred_sum / self._roi_model['npred']
@@ -1676,6 +1683,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for s in sorted(self.roi.sources,
                         key=lambda t: t['ts'] if np.isfinite(t['ts']) else 0,
                         reverse=True):
+
+            if s.name in skip_sources:
+                continue
 
             if s['ts'] < shape_ts_threshold \
                     or not np.isfinite(s['ts']): continue

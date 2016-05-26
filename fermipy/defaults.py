@@ -182,7 +182,9 @@ roiopt = {
          'that will be fit in the third optimization step.', float),
     'max_free_sources' :
         (5, 'Maximum number of sources that will be fit simultaneously in '
-         'the first optimization step.', int)
+         'the first optimization step.', int),
+    'skip' :
+        (None, 'List of str source names to skip while optimizing.', list)
 }
 
 roiopt_output = {
