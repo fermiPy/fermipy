@@ -141,12 +141,23 @@ class LnLFn(object):
     """
     Helper class for interpolating a 1-D log-likelihood function from a
     set of tabulated values.  
+
     """
     def __init__(self,x,y,norm_type=0):
-        """ C'tor, take input array of x and y value   
+        """ C'tor, takes input arrays of x and y values   
 
+        Parameters
+        ----------
+        x : array-like 
+          Set of values of the free parameter 
+
+        y : array-like
+          Set of values for the _negative_ log-likelhood
+          
         norm_type :  code specifying the quantity used for the flux 
 
+        Note that class takes and returns the _negative log-likelihood as fitters 
+        typically minimize rather than maximize.  
         """
         self._interp = Interpolator(x,y)
         self._mle = None
@@ -178,7 +189,8 @@ class LnLFn(object):
         return self._norm_type        
 
     def _compute_mle(self):
-        """ compute the maximum likelihood estimate, using the scipy.optimize.brentq method
+        """ compute the maximum likelihood estimate.
+        By using the scipy.optimize.brentq method to find the roots of the derivative.       
         """
         if self._interp.y[0] == np.min(self._interp.y):
             self._mle = self._interp.x[0]
@@ -274,7 +286,19 @@ class SpecData(object):
 
         emax :  `~numpy.ndarray`
            Array of upper bin edges.
-        
+ 
+        dfde :  `~numpy.ndarray`
+           Array of differential photon flux values.  
+           Typically evaluated at the geometric mean of the energy bins
+
+        flux :  `~numpy.ndarray`
+           Array of integral photon flux values.
+ 
+        eflux :  `~numpy.ndarray`
+           Array of integral energy flux values.
+
+        npred :  `~numpy.ndarray`
+           Array of predicted number of photons in each energy bin.
         """
         self._ebins = np.append(emin,emax[-1])
         self._emin = emin
@@ -368,7 +392,7 @@ class CastroData_Base(object):
            number of sampled values for each bin )
            
         nll_vals : `~numpy.ndarray`  
-           The log-likelihood values ( N X M array, 
+           The _negative_ log-likelihood values ( N X M array, 
            where N is the number for bins and M
            number of sampled values for each bin )
            
@@ -671,6 +695,54 @@ class CastroData(CastroData_Base):
         return self._specData
 
     @staticmethod
+    def create_from_tables(norm_type='EFLUX',
+                           tab_s="SCANDATA",
+                           tab_e="EBOUNDS"):
+        """ Create a CastroData object from two tables
+
+        Parameters
+        ----------
+        norm_type : str
+           Type of normalization to use, options are:
+           NORM : Normalization w.r.t. to test source
+           FLUX : Flux of the test source ( ph cm^-2 s^-1 )
+           EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+           NPRED: Number of predicted photons (Not implemented)
+           DFDE : Differential flux of the test source ( ph cm^-2 s^-1 MeV^-1 )
+           EDFDE: Differential energy flux of the test source ( MeV cm^-2 s^-1 MeV^- ) (Not Implemented)
+
+        tab_s   : str
+           table scan data
+ 
+        tab_e   : str
+           table energy binning and normalization data
+
+        Returns
+        -------
+          A '~fermipy.castro.CastroData' object
+        """ 
+        if norm_type in ['FLUX','EFLUX','DFDE']:        
+            norm_vals = np.array(tab_s['NORM_SCAN']*tab_e['REF_%s'%norm_type][:,np.newaxis])
+        elif norm_type == "NORM":
+            norm_vals = np.array(tab_s['NORM_SCAN'])
+        else:
+            raise Exception('Unrecognized normalization type: %s'%norm_type)
+            
+        nll_vals = -np.array(tab_s['DLOGLIKE_SCAN'])
+        emin = np.array(tab_e['E_MIN'])
+        emax = np.array(tab_e['E_MAX'])
+        npred = np.array(tab_s['NORM']*tab_e['REF_NPRED'])
+        dfde = np.array(tab_s['NORM']*tab_e['REF_DFDE'])
+        flux = np.array(tab_s['NORM']*tab_e['REF_FLUX'])
+        eflux = np.array(tab_s['NORM']*tab_e['REF_EFLUX'])
+        
+        sd = SpecData(emin,emax,dfde,flux,eflux,npred)
+    
+        return CastroData(norm_vals,nll_vals,sd,norm_type)
+         
+
+
+    @staticmethod
     def create_from_fits(fitsfile,norm_type='EFLUX',
                          hdu_scan="SCANDATA",
                          hdu_energies="EBOUNDS",
@@ -710,26 +782,8 @@ class CastroData(CastroData_Base):
         else:
             tab_s = Table.read(fitsfile,hdu=hdu_scan)
         tab_e = Table.read(fitsfile,hdu=hdu_energies)
-
-        if norm_type in ['FLUX','EFLUX','DFDE']:        
-            norm_vals = np.array(tab_s['NORM_SCAN']*tab_e['REF_%s'%norm_type][:,np.newaxis])
-        elif norm_type == "NORM":
-            norm_vals = np.array(tab_s['NORM_SCAN'])
-        else:
-            raise Exception('Unrecognized normalization type: %s'%norm_type)
-            
-        nll_vals = -np.array(tab_s['DLOGLIKE_SCAN'])
-        emin = np.array(tab_e['E_MIN'])
-        emax = np.array(tab_e['E_MAX'])
-        npred = np.array(tab_s['NORM']*tab_e['REF_NPRED'])
-        dfde = np.array(tab_s['NORM']*tab_e['REF_DFDE'])
-        flux = np.array(tab_s['NORM']*tab_e['REF_FLUX'])
-        eflux = np.array(tab_s['NORM']*tab_e['REF_EFLUX'])
-        
-        sd = SpecData(emin,emax,dfde,flux,eflux,npred)
-    
-        return CastroData(norm_vals,nll_vals,sd,norm_type)
-        
+        return CastroData.create_from_tables(norm_type,tab_s,tab_e)
+      
 
     @staticmethod
     def create_from_sedfile(fitsfile,norm_type='EFLUX'):
@@ -843,7 +897,7 @@ class CastroData(CastroData_Base):
               "TS"          : float, the TS for the best-fit spectrum 
         """
         retDict = {}
-        for specType in spec_types:            
+        for specType in spec_types:     
             spec_func,init_pars,scaleEnergy = self.create_functor(specType)
             fit_result,fit_spec,fit_ts = self.fit_spectrum(spec_func,init_pars)
        
