@@ -141,9 +141,9 @@ class SEDGenerator(object):
         name = name.lower().replace(' ', '_')
         
         # Write a FITS file
-        cols = [Column(name='E_MIN',dtype='f8',data=sed['logemin'],unit='MeV'),
-                Column(name='E_REF',dtype='f8',data=sed['logectr'],unit='MeV'),
-                Column(name='E_MAX',dtype='f8',data=sed['logemax'],unit='MeV'),
+        cols = [Column(name='E_MIN',dtype='f8',data=sed['emin'],unit='MeV'),
+                Column(name='E_REF',dtype='f8',data=sed['ectr'],unit='MeV'),
+                Column(name='E_MAX',dtype='f8',data=sed['emax'],unit='MeV'),
                 Column(name='REF_DFDE_E_MIN',dtype='f8',
                        data=sed['ref_dfde_emin'],unit='ph / (MeV cm2 s)'),
                 Column(name='REF_DFDE_E_MAX',dtype='f8',

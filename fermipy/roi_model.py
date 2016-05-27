@@ -1818,12 +1818,11 @@ class ROIModel(fermipy.config.Configurable):
                                           shape=scan_shape)
 
         # Add source dictionary columns
-        for k, v in sorted(self._srcs[0].data.items()):
+        for k, v in sorted(defaults.source_output.items()):
             if not k in cols_dict.keys():
-
-                if isinstance(v,float):
+                if v[2] == float:
                     cols_dict[k] = dict(dtype='f8', format='%f')
-                elif utils.isstr(v):
+                elif v[2] == str:
                     cols_dict[k] = dict(dtype='S20', format='%s')
 
         cols_dict['param_names'] = dict(dtype='S20', format='%s',shape=(6,))

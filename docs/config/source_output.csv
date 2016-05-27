@@ -1,15 +1,16 @@
 ``name``	str	Name of the source.
+``Source_Name``	str	Name of the source.
 ``SpatialModel``	str	Spatial model.
-``SpatialWidth``	float	Spatial size
-``SpatialType``	str	Spatial type
-``SourceType``	str	Source size
-``SpectrumType``	str	Spectrum type
+``SpatialWidth``	float	Spatial size parameter.
+``SpatialType``	str	Spatial type string.  This corresponds to the type attribute of the spatialModel component in the XML model.
+``SourceType``	str	Source type string (PointSource or DiffuseSource).
+``SpectrumType``	str	Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).
 ``Spatial_Filename``	str	Path to spatial template associated to this source.
 ``filefunction``	str	Path to file function associated to this source.
-``ra``	float	Right ascension.
-``dec``	float	Declination.
-``glon``	float	Galactic Longitude.
-``glat``	float	Galactic Latitude.
+``ra``	float	Right ascension of the source in deg.
+``dec``	float	Declination of the source in deg.
+``glon``	float	Galactic Longitude of the source in deg.
+``glat``	float	Galactic Latitude of the source in deg.
 ``offset_ra``	float	Angular offset from ROI center along RA.
 ``offset_dec``	float	Angular offset from ROI center along DEC
 ``offset_glon``	float	Angular offset from ROI center along GLON.
@@ -39,10 +40,18 @@
 ``flux100``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
 ``flux1000``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
 ``flux10000``	`~numpy.ndarray`	Photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``flux_ul95``	float	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``flux100_ul95``	float	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``flux1000_ul95``	float	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``flux10000_ul95``	float	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
 ``eflux``	`~numpy.ndarray`	Energy flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
 ``eflux100``	`~numpy.ndarray`	Energy flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
 ``eflux1000``	`~numpy.ndarray`	Energy flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
 ``eflux10000``	`~numpy.ndarray`	Energy flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``eflux_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``eflux100_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``eflux1000_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``eflux10000_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
 ``dfde``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at the pivot energy.
 ``dfde100``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 100 MeV.
 ``dfde1000``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 1 GeV.
