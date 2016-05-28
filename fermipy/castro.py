@@ -777,7 +777,7 @@ class CastroData(CastroData_Base):
         -------
           A '~fermipy.castro.CastroData' object
         """
-        if irow:
+        if irow is not None:
             tab_s = Table.read(fitsfile,hdu=hdu_scan)[irow]
         else:
             tab_s = Table.read(fitsfile,hdu=hdu_scan)
@@ -1279,8 +1279,10 @@ if __name__ == "__main__":
         flux_type = sys.argv[1]
 
 
-    castro_sed = CastroData.create_from_sedfile("sed.fits")
+    #castro_sed = CastroData.create_from_sedfile("sed.fits")
+    castro_sed = CastroData.create_from_fits("castro.fits",irow=0)
     test_dict_sed = castro_sed.test_spectra()
+    print (test_dict_sed)
 
     """
     tscube = TSCube.create_from_fits("tscube_test.fits",flux_type)
