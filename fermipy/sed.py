@@ -390,7 +390,7 @@ class SEDGenerator(object):
             
             lnlp = self.profile_norm(name, logemin=logemin, logemax=logemax,
                                     savestate=False, reoptimize=True,
-                                    npts=20)
+                                    npts=npts)
 
             o['loglike_scan'][i] = lnlp['loglike']
             o['dloglike_scan'][i] = lnlp['dloglike']
