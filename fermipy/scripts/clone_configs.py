@@ -62,7 +62,7 @@ def main():
     parser.add_argument('--source_list', default = None, required=True,
                         help='YAML file containing a list of sources to be '
                         'analyzed.')
-    parser.add_argument('--script', default = None, required=True,
+    parser.add_argument('--script', action='append', required=True,
                         help='The python script.')
     parser.add_argument('configs', nargs='*', default = None,
                         help='One or more configuration files that will be merged '
