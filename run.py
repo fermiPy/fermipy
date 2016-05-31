@@ -16,8 +16,8 @@ gta.setup()
 # Iteratively optimize all components in the ROI
 gta.optimize()
 
-# Fix sources w/ significance < 10
-gta.free_sources(cuts=('Detection_Significance',0,10),free=False)
+# Fix sources w/ TS < 10
+gta.free_sources(minmax_ts=[None,10],free=False)
 
 # Free sources within 3 degrees of ROI center
 gta.free_sources(distance=3.0)

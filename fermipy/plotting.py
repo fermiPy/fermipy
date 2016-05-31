@@ -229,8 +229,7 @@ class ImagePlotter(object):
 
         fig = plt.gcf()
         
-        ax = fig.add_subplot(subplot,
-                             projection=wcsaxes.WCS(self._wcs.to_header()))
+        ax = fig.add_subplot(subplot,projection=self._wcs)
 
         load_ds9_cmap()
         colormap = matplotlib.cm.get_cmap(cmap)

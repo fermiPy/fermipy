@@ -65,9 +65,9 @@ def main():
 
     parser.add_argument('--config', default = 'sample_config.yaml')
     parser.add_argument('--max_jobs', default = 500, type=int,
-                        help='Limit on the number of running or queued jobs.  New jobs will '
-                        'only be dispatched if the number of existing jobs is '
-                        'smaller than this parameter.')
+                        help='Limit on the number of running or queued jobs.  '
+                        'New jobs will only be dispatched if the number of '
+                        'existing jobs is smaller than this parameter.')
     parser.add_argument('--jobs_per_cycle', default = 20, type=int,
                         help='Maximum number of jobs to submit in each cycle.')
     parser.add_argument('--time_per_cycle', default = 15, type=float,
@@ -78,13 +78,16 @@ def main():
                         'time older than this parameter will be restarted.')
     parser.add_argument('--dry_run', default = False, action='store_true')
     parser.add_argument('--overwrite', default = False, action='store_true',
-                        help='Force all jobs to be re-run even if the job has completed successfully.')
+                        help='Force all jobs to be re-run even if the job has '
+                        'completed successfully.')
     parser.add_argument('--runscript', default = None, required=True,
-                        help='Set the name of the job execution script.  A script with '
-                        'this name must be located in each analysis subdirectory.')
+                        help='Set the name of the job execution script.  A '
+                        'script with this name must be located in each '
+                        'analysis subdirectory.')
 
     parser.add_argument('dirs', nargs='+', default = None,
-                        help='List of directories in which the analysis will be run.')
+                        help='List of directories in which the analysis will '
+                        'be run.')
 
     args = parser.parse_args()
 
@@ -93,9 +96,6 @@ def main():
     dirs = [d for argdir in args.dirs for d in utils.collect_dirs(argdir)]
     jobs = collect_jobs(dirs, args.runscript,
                         args.overwrite, args.max_job_age)
-
-    print(dirs)
-    print(jobs)
     
     lsf_opts = {'W' : 1500,
                 'R' : 'bullet,hequ,kiso'}
