@@ -32,7 +32,7 @@ def fit_error_ellipse(tsmap,xy=None,dpix=3):
 
     if xy is None:    
         ix, iy = np.unravel_index(np.argmax(tsmap.counts.T),
-                                  tsmap.counts.shape)
+                                  tsmap.counts.T.shape)
     else:
         ix, iy = xy
         
