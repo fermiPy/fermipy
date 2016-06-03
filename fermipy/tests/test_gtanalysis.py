@@ -22,7 +22,8 @@ def setup(request, tmpdir_factory):
 #    dirname = os.path.abspath(os.path.dirname(__file__))
     outfile = path.join('fermipy_test0_small.tar.gz')
     dirname = path.join()
-    os.system('wget -nc %s -O %s' % (url, outfile))
+    #os.system('wget -nc %s -O %s' % (url, outfile))
+    os.system('curl -o %s -OL %s'%(outfile,url))
     os.system('cd %s;tar xzf %s' % (dirname, outfile))
 
     os.system('touch %s' % path.join('test.txt'))
