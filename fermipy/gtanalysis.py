@@ -1994,6 +1994,18 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 lims = utils.get_parameter_limits(lnlp['xvals'],
                                                   lnlp['dloglike'],
                                                   ul_confidence=0.99)
+
+                if not np.isfinite(lims['ul']):
+                    self.logger.warning('Upper limit not found.  '
+                                        'Refitting normalization.')                    
+                    self.like.optimize(0)
+                    xvals = self._find_scan_pts(name,npts=npts)
+                    lnlp = self.profile(name, parName, 
+                                        reoptimize=False,
+                                        xvals=xvals)
+                    lims = utils.get_parameter_limits(lnlp['xvals'],
+                                                      lnlp['dloglike'],
+                                                      ul_confidence=0.99)
                 
                 if np.isfinite(lims['ll']):
                     xhi = np.linspace(lims['x0'], lims['ul'], npts - npts//2)
