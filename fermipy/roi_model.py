@@ -26,6 +26,90 @@ from fermipy.logger import Logger
 from fermipy.logger import logLevel as ll
 
 
+def create_source_table(scan_shape):
+    """Create an empty source table.
+
+    Returns
+    -------
+    tab : `~astropy.table.Table`
+    """
+    
+    cols_dict = collections.OrderedDict()
+    cols_dict['Source_Name'] = dict(dtype='S48', format='%s')
+    cols_dict['name'] = dict(dtype='S48', format='%s')
+    cols_dict['class'] = dict(dtype='S32', format='%s')
+    cols_dict['SpectrumType'] = dict(dtype='S32', format='%s')
+    cols_dict['SpatialType'] = dict(dtype='S32', format='%s')
+    cols_dict['SourceType'] = dict(dtype='S32', format='%s')
+    cols_dict['SpatialModel'] = dict(dtype='S32', format='%s')
+    cols_dict['RAJ2000'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['DEJ2000'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['GLON'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['GLAT'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['ts'] = dict(dtype='f8', format='%.3f')
+    cols_dict['loglike'] = dict(dtype='f8', format='%.3f')
+    cols_dict['npred'] = dict(dtype='f8', format='%.3f')
+    cols_dict['offset'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['offset_ra'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['offset_dec'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['offset_glon'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['offset_glat'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['pivot_energy'] = dict(dtype='f8', format='%.3f',unit='MeV')
+    cols_dict['flux_scan'] = dict(dtype='f8', format='%.3f',
+                                  shape=scan_shape)
+    cols_dict['eflux_scan'] = dict(dtype='f8', format='%.3f',
+                                   shape=scan_shape)
+    cols_dict['dloglike_scan'] = dict(dtype='f8', format='%.3f',
+                                      shape=scan_shape)
+
+    # Add source dictionary columns
+    for k, v in sorted(defaults.source_output.items()):
+        if not k in cols_dict.keys():
+            if v[2] == float:
+                cols_dict[k] = dict(dtype='f8', format='%f')
+            elif v[2] == str:
+                cols_dict[k] = dict(dtype='S32', format='%s')
+
+    cols_dict['param_names'] = dict(dtype='S32', format='%s',shape=(6,))
+    cols_dict['param_values'] = dict(dtype='f8', format='%f',shape=(6,))
+    cols_dict['param_errors'] = dict(dtype='f8', format='%f',shape=(6,))
+
+    # Catalog Parameters
+    cols_dict['Flux_Density'] = dict(dtype='f8', format='%.5g',unit='1 / (MeV cm2 s)')
+    cols_dict['Spectral_Index'] = dict(dtype='f8', format='%.3f')
+    cols_dict['Pivot_Energy'] = dict(dtype='f8', format='%.3f',unit='MeV')
+    cols_dict['beta'] = dict(dtype='f8', format='%.3f')
+    cols_dict['Exp_Index'] = dict(dtype='f8', format='%.3f')
+    cols_dict['Cutoff'] = dict(dtype='f8', format='%.3f',unit='MeV')
+
+    cols_dict['Conf_68_PosAng'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['Conf_68_SemiMajor'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['Conf_68_SemiMinor'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['Conf_95_PosAng'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['Conf_95_SemiMajor'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['Conf_95_SemiMinor'] = dict(dtype='f8', format='%.3f',unit='deg')
+
+
+    for t in ['eflux','eflux100','eflux1000','eflux10000']:
+        cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)',shape=(2,))
+
+    for t in ['eflux_ul95','eflux100_ul95','eflux1000_ul95','eflux10000_ul95']:
+        cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)')
+
+    for t in ['flux','flux100','flux1000','flux10000']:
+        cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (cm2 s)',shape=(2,))
+
+    for t in ['flux_ul95','flux100_ul95','flux1000_ul95','flux10000_ul95']:
+        cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (cm2 s)')
+
+    for t in ['dfde','dfde100','dfde1000','dfde10000']:
+        cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (MeV cm2 s)',shape=(2,))
+
+    cols = [Column(name=k, **v) for k,v in cols_dict.items()]
+    tab = Table(cols)
+    return tab
+
+
 def resolve_file_path(path, **kwargs):
     dirs = kwargs.get('search_dirs', [])
 
@@ -1694,6 +1778,7 @@ class ROIModel(fermipy.config.Configurable):
 
         self._build_src_index()
 
+        
     def load_xml(self, xmlfile, **kwargs):
         """Load sources from an XML file."""
 
@@ -1782,89 +1867,14 @@ class ROIModel(fermipy.config.Configurable):
         output_file = open(xmlfile, 'w')
         output_file.write(utils.prettify_xml(root))
 
-    def write_fits(self,fitsfile):
-        """Write the ROI model to a FITS file."""
 
+    def create_table(self):
+        
         scan_shape = (1,)
         for src in self._srcs:
             scan_shape = max(scan_shape,src['dloglike_scan'].shape)
             
-        cols_dict = collections.OrderedDict()
-        cols_dict['Source_Name'] = dict(dtype='S20', format='%s')
-        cols_dict['name'] = dict(dtype='S20', format='%s')
-        cols_dict['class'] = dict(dtype='S20', format='%s')
-        cols_dict['SpectrumType'] = dict(dtype='S20', format='%s')
-        cols_dict['SpatialType'] = dict(dtype='S20', format='%s')
-        cols_dict['SourceType'] = dict(dtype='S20', format='%s')
-        cols_dict['SpatialModel'] = dict(dtype='S20', format='%s')
-        cols_dict['RAJ2000'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['DEJ2000'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['GLON'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['GLAT'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['ts'] = dict(dtype='f8', format='%.3f')
-        cols_dict['loglike'] = dict(dtype='f8', format='%.3f')
-        cols_dict['npred'] = dict(dtype='f8', format='%.3f')
-        cols_dict['offset'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['offset_ra'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['offset_dec'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['offset_glon'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['offset_glat'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['pivot_energy'] = dict(dtype='f8', format='%.3f',unit='MeV')
-        cols_dict['flux_scan'] = dict(dtype='f8', format='%.3f',
-                                      shape=scan_shape)
-        cols_dict['eflux_scan'] = dict(dtype='f8', format='%.3f',
-                                       shape=scan_shape)
-        cols_dict['dloglike_scan'] = dict(dtype='f8', format='%.3f',
-                                          shape=scan_shape)
-
-        # Add source dictionary columns
-        for k, v in sorted(defaults.source_output.items()):
-            if not k in cols_dict.keys():
-                if v[2] == float:
-                    cols_dict[k] = dict(dtype='f8', format='%f')
-                elif v[2] == str:
-                    cols_dict[k] = dict(dtype='S20', format='%s')
-
-        cols_dict['param_names'] = dict(dtype='S20', format='%s',shape=(6,))
-        cols_dict['param_values'] = dict(dtype='f8', format='%f',shape=(6,))
-        cols_dict['param_errors'] = dict(dtype='f8', format='%f',shape=(6,))
-
-        # Catalog Parameters
-        cols_dict['Flux_Density'] = dict(dtype='f8', format='%.5g',unit='1 / (MeV cm2 s)')
-        cols_dict['Spectral_Index'] = dict(dtype='f8', format='%.3f')
-        cols_dict['Pivot_Energy'] = dict(dtype='f8', format='%.3f',unit='MeV')
-        cols_dict['beta'] = dict(dtype='f8', format='%.3f')
-        cols_dict['Exp_Index'] = dict(dtype='f8', format='%.3f')
-        cols_dict['Cutoff'] = dict(dtype='f8', format='%.3f',unit='MeV')
-
-        cols_dict['Conf_68_PosAng'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['Conf_68_SemiMajor'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['Conf_68_SemiMinor'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['Conf_95_PosAng'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['Conf_95_SemiMajor'] = dict(dtype='f8', format='%.3f',unit='deg')
-        cols_dict['Conf_95_SemiMinor'] = dict(dtype='f8', format='%.3f',unit='deg')
-        
-        
-        for t in ['eflux','eflux100','eflux1000','eflux10000']:
-            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)',shape=(2,))
-
-        for t in ['eflux_ul95','eflux100_ul95','eflux1000_ul95','eflux10000_ul95']:
-            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)')
-            
-        for t in ['flux','flux100','flux1000','flux10000']:
-            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (cm2 s)',shape=(2,))
-
-        for t in ['flux_ul95','flux100_ul95','flux1000_ul95','flux10000_ul95']:
-            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (cm2 s)')
-            
-        for t in ['dfde','dfde100','dfde1000','dfde10000']:
-            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (MeV cm2 s)',shape=(2,))
-
-#        for t in ['e2dfde','e2dfde100','e2dfde1000','e2dfde10000']:
-#            cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)',shape=(2,))
-
-        cols = [Column(name=k, **v) for k,v in cols_dict.items()]
-        tab = Table(cols)
+        tab = create_source_table(scan_shape)
 
         row_dict = {} 
         
@@ -1876,7 +1886,7 @@ class ROIModel(fermipy.config.Configurable):
             row_dict['GLON'] = s['glon']
             row_dict['GLAT'] = s['glat']
 
-            row_dict['param_names'] = np.empty(6,dtype='S20')
+            row_dict['param_names'] = np.empty(6,dtype='S32')
             row_dict['param_names'].fill('')
             row_dict['param_values'] = np.empty(6,dtype=float)*np.nan
             row_dict['param_errors'] = np.empty(6,dtype=float)*np.nan
@@ -1910,13 +1920,18 @@ class ROIModel(fermipy.config.Configurable):
 
                 if t == 'params':
                     continue
-                if t in cols_dict.keys():
+                if t in tab.columns:
                     row_dict[t] = s[t]
             
-            row  = [row_dict[k] for k in cols_dict.keys()]
+            row  = [row_dict[k] for k in tab.columns]
             tab.add_row(row)
 
-            
+        return tab
+                
+    def write_fits(self,fitsfile):
+        """Write the ROI model to a FITS file."""
+
+        tab = self.create_table()            
         tab.write(fitsfile,format='fits',overwrite=True)
 
         hdulist = pyfits.open(fitsfile)

@@ -44,6 +44,7 @@ setup(name='fermipy',
       entry_points= {'console_scripts': [
           'fermipy-dispatch = fermipy.scripts.dispatch:main',
           'fermipy-clone-configs = fermipy.scripts.clone_configs:main',
+          'fermipy-collect-sources = fermipy.scripts.collect_sources:main',
           ]},
       install_requires=['numpy >= 1.6.1',
                         'matplotlib >= 1.4.0',
