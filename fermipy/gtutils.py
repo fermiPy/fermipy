@@ -340,7 +340,7 @@ def cast_pars_dict(pars_dict):
         for k,v in pdict.items():
 
             if k == 'free':
-                o[pname][k] = bool(v)
+                o[pname][k] = bool(int(v))
             elif k == 'name':
                 o[pname][k] = v
             else:
