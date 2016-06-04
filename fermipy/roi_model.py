@@ -706,7 +706,7 @@ class Source(Model):
                                          {'name': 'Sigma', 'value': self['Sigma'],
                                           'free': False, 'min': 0.001, 'max': 10,
                                           'scale': '1.0'})
-        elif self['SpatialType'] == 'RadialDisk':            
+        elif self['SpatialType'] == 'RadialDisk':
             self.spatial_pars.setdefault('Radius',
                                          {'name': 'Radius', 'value': self['Radius'],
                                           'free': False, 'min': 0.001, 'max': 10,
@@ -967,8 +967,11 @@ class Source(Model):
             src_dict['SpatialModel'] = 'PointSource'
         elif spatial_type == 'SpatialMap':
             src_dict['SpatialModel'] = 'SpatialMap'
-
-        if src_type == 'PointSource' or spatial_type == 'SpatialMap':
+        else:
+            src_dict['SpatialModel'] = spatial_type
+                        
+        if src_type == 'PointSource' or \
+                spatial_type in ['SpatialMap','RadialGaussian','RadialDisk']:
 
             if 'file' in spat:
                 src_dict['Spatial_Filename'] = spat['file']
@@ -993,7 +996,7 @@ class Source(Model):
             radec = np.array([src_dict['RAJ2000'], src_dict['DEJ2000']])
 
             src_dict['spectral_pars'] = spectral_pars
-            src_dict['spatial_pars'] = spatial_pars            
+            src_dict['spatial_pars'] = spatial_pars
             return Source(src_dict['Source_Name'],
                           src_dict, radec=radec)
 
