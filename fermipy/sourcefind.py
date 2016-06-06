@@ -41,7 +41,9 @@ def fit_error_ellipse(tsmap,xy=None,dpix=3):
     wcs = tsmap.wcs
     cdelt0 = tsmap.wcs.wcs.cdelt[0]
     cdelt1 = tsmap.wcs.wcs.cdelt[1]
-
+    npix0 = tsmap.counts.T.shape[0]
+    npix1 = tsmap.counts.T.shape[1]
+    
     skydir = SkyCoord.from_pixel(pbfit['x0'],pbfit['y0'],wcs)
     
     sigmax = 2.0**0.5*pbfit['sigmax']*np.abs(cdelt0)
@@ -72,7 +74,17 @@ def fit_error_ellipse(tsmap,xy=None,dpix=3):
     o['dec'] = skydir.icrs.dec.deg
     o['glon'] = skydir.galactic.l.deg
     o['glat'] = skydir.galactic.b.deg
-    o['fit_success'] = pbfit['fit_success']
+
+    pix = skydir.to_pixel(wcs)        
+    o['xpix'] = float(pix[0])
+    o['ypix'] = float(pix[1])
+
+    if o['xpix'] < 0 or o['xpix'] > npix0-1:
+        o['fit_success'] = False
+    elif o['ypix'] < 0 or o['ypix'] > npix1-1:
+        o['fit_success'] = False
+    else:
+        o['fit_success'] = pbfit['fit_success']
 
     a = o['sigma_semimajor']
     b = o['sigma_semiminor']
