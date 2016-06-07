@@ -83,7 +83,7 @@ class Catalog(object):
         if 'Spatial_Filename' not in self.table.columns:
             self.table['Spatial_Filename'] = Column(dtype='S20',length=len(self.table))
             
-        m = self.table['Spatial_Filename'] != ''
+        m = (self.table['Spatial_Filename'] != '') & (self.table['Spatial_Filename'] != 'None')
         self.table['extended'] = False
         self.table['extended'][m] = True
         self.table['extdir'] = extdir
