@@ -2,11 +2,13 @@ from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
 import os
+import re
 import copy
 import shutil
 import collections
 import logging
 import tempfile
+import filecmp
 
 import numpy as np
 import scipy
@@ -154,7 +156,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Setup directories
         self._rootdir = os.getcwd()
-        self._savedir = None
+        self._outdir = None
         validate = kwargs.pop('validate',True)
         
         super(GTAnalysis, self).__init__(config, validate=validate,
@@ -167,19 +169,19 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Destination directory for output data products
         if self.config['fileio']['outdir'] is not None:
-            self._savedir = os.path.join(self._rootdir,
+            self._outdir = os.path.join(self._rootdir,
                                          self.config['fileio']['outdir'])
-            utils.mkdir(self._savedir)
+            utils.mkdir(self._outdir)
         else:
             raise Exception('Save directory not defined.')
 
         # put pfiles into savedir
         os.environ['PFILES'] = \
-            self._savedir + ';' + os.environ['PFILES'].split(';')[-1]
+            self.outdir + ';' + os.environ['PFILES'].split(';')[-1]
 
         if self.config['fileio']['logfile'] is None:
-            self._config['fileio']['logfile'] = os.path.join(self._savedir,
-                                                             'fermipy')
+            self.config['fileio']['logfile'] = os.path.join(self.outdir,
+                                                            'fermipy')
 
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
@@ -191,15 +193,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Working directory (can be the same as savedir)
         if self.config['fileio']['usescratch']:
-            self._config['fileio']['workdir'] = tempfile.mkdtemp(
+            self.config['fileio']['workdir'] = tempfile.mkdtemp(
                 prefix=os.environ['USER'] + '.',
                 dir=self.config['fileio']['scratchdir'])
-            self.logger.info(
-                'Created working directory: %s', self.config['fileio'][
-                    'workdir'])
-            self.stage_input()
+            self.logger.info('Created working directory: %s',
+                             self.config['fileio']['workdir'])
         else:
-            self._config['fileio']['workdir'] = self._savedir
+            self._config['fileio']['workdir'] = self._outdir
 
         if 'FERMIPY_WORKDIR' not in os.environ:
             os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
@@ -304,6 +304,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                     naxis=3,
                                     energies=self.energies)
 
+        if self.config['fileio']['usescratch']:
+            self.stage_input()
+            
+
     def __del__(self):
         self.stage_output()
         self.cleanup()
@@ -316,7 +320,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     @property
     def outdir(self):
         """Return the analysis output directory."""
-        return self._savedir
+        return self._outdir
     
     @property
     def roi(self):
@@ -653,44 +657,78 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def stage_output(self):
         """Copy data products to final output directory."""
 
-        extensions = ['.xml', '.par', '.yaml', '.png', '.pdf', '.npy']
-        if self.config['fileio']['savefits']:
-            extensions += ['.fits', '.fit']
-
-        if self.workdir == self._savedir:
+        if self.workdir == self.outdir:
             return
-        elif os.path.isdir(self.workdir):
-            self.logger.info('Staging files to %s', self._savedir)
-            for f in os.listdir(self.workdir):
-
-                if not os.path.splitext(f)[1] in extensions: continue
-
-                self.logger.info('Copying ' + f)
-                shutil.copy(os.path.join(self.workdir, f),
-                            self._savedir)
-
-        else:
+        elif not os.path.isdir(self.workdir):
             self.logger.error('Working directory does not exist.')
+            return
+
+        regex = copy.deepcopy(self.config['fileio']['outdir_regex'])
+        files = os.listdir(self.workdir)
+        self.logger.info('Staging files to %s', self.outdir)
+
+        fitsfiles = []
+        for c in self.components:
+            for f in c.files.values():
+                fitsfiles += [os.path.basename(f)]
+        
+        for f in files:
+
+            wpath = os.path.join(self.workdir,f)
+            opath = os.path.join(self.outdir,f)
+
+            if not re.findall(regex, os.path.basename(f)):
+                continue            
+            if os.path.isfile(opath) and filecmp.cmp(wpath,opath,False):
+                continue
+            if not savefits and f in fitsfiles:
+                continue
+
+            self.logger.debug('Copying ' + f)
+            shutil.copy(wpath,self.outdir)
+
+        self.logger.info('Finished.')
 
     def stage_input(self):
-        """Copy data products to intermediate working directory."""
+        """Copy input files to working directory."""
 
-        extensions = ['.fits', '.fit', '.xml', '.npy']
-
-        if self.workdir == self._savedir:
+        if self.workdir == self.outdir:
             return
-        elif os.path.isdir(self.workdir):
-            self.logger.info('Staging files to %s', self.workdir)
-            #            for f in glob.glob(os.path.join(self._savedir,'*')):
-            for f in os.listdir(self._savedir):
-                if not os.path.splitext(f)[1] in extensions:
-                    continue
-                self.logger.debug('Copying ' + f)
-                shutil.copy(os.path.join(self._savedir, f),
-                            self.workdir)
-        else:
+        elif not os.path.isdir(self.workdir):
             self.logger.error('Working directory does not exist.')
+            return
+        
+        self.logger.info('Staging files to %s', self.workdir)
 
+        files = [os.path.join(self.outdir, f)
+                 for f in os.listdir(self.outdir)]
+
+        regex = copy.deepcopy(self.config['fileio']['workdir_regex'])
+        
+        for f in files:
+            
+            if not os.path.isfile(f):
+                continue                        
+            if not re.findall(regex, os.path.basename(f)):
+                continue
+
+            self.logger.debug('Copying ' + os.path.basename(f))
+            shutil.copy(f,self.workdir)
+
+        for c in self.components:
+            for f in c.files.values():
+
+                wpath = os.path.join(self.workdir,os.path.basename(f))
+                opath = os.path.join(self.outdir,os.path.basename(f))
+                
+                if os.path.isfile(wpath):
+                    continue
+                elif os.path.isfile(opath):
+                    self.logger.debug('Copying ' + os.path.basename(f))
+                    shutil.copy(opath,self.workdir)
+
+        self.logger.info('Finished.')
+                
     def setup(self, init_sources=True, overwrite=False):
         """Run pre-processing for each analysis component and
         construct a joint likelihood object.  This function performs
@@ -791,7 +829,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
     def cleanup(self):
 
-        if self.workdir == self._savedir:
+        if self.workdir == self.outdir:
             return
         elif os.path.isdir(self.workdir):
             self.logger.info('Deleting working directory: ' +
@@ -2933,7 +2971,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.roi.write_fits(fitsfile)
                 
         for c in self.components:
-            c.like.logLike.saveSourceMaps(str(c._srcmap_file))
+            c.like.logLike.saveSourceMaps(str(c.files['srcmap']))
         
         mcube_maps = None
         if save_model_map:
@@ -3362,42 +3400,32 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
 
-        from os.path import join
+        self._files = {}
+        self._files['ft1'] = 'ft1%s.fits'
+        self._files['ft1_filtered'] = 'ft1_filtered%s.fits'
+        self._files['ccube'] = 'ccube%s.fits'
+        self._files['ccubemc'] = 'ccubemc%s.fits' 
+        self._files['srcmap'] = 'srcmap%s.fits'
+        self._files['bexpmap'] = 'bexpmap%s.fits'
+        self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
+        self._files['srcmdl'] = 'srcmdl%s.xml' 
 
-        self._ft1_file = join(workdir,
-                              'ft1%s.fits' % self.config['file_suffix'])
-        self._ft1_filtered_file = join(workdir,
-                                       'ft1_filtered%s.fits' % self.config[
-                                           'file_suffix'])
+        for k, v in self._files.items():
+            self._files[k] = os.path.join(workdir,v%self.config['file_suffix'])
 
         if self.config['data']['ltcube'] is not None:
             self._ext_ltcube = True
-            self._ltcube_file = os.path.expandvars(self.config['data']['ltcube'])
-            if not os.path.isfile(self._ltcube_file):
-                self._ltcube_file = os.path.join(workdir,self._ltcube_file)
-            if not os.path.isfile(self._ltcube_file):
-                raise Exception('Invalid livetime cube: %s' % self._ltcube_file)
+            self._files['ltcube'] = os.path.expandvars(self.config['data']['ltcube'])
+            if not os.path.isfile(self._files['ltcube']):
+                self.files['ltcube'] = os.path.join(workdir,self.files['ltcube'])
+            if not os.path.isfile(self.files['ltcube']):
+                raise Exception('Invalid livetime cube: %s' % self.files['ltcube'])
         else:
             self._ext_ltcube = False
-            self._ltcube_file = join(workdir,
-                                'ltcube%s.fits' % self.config['file_suffix'])
+            self.files['ltcube'] = os.path.join(workdir,
+                                             'ltcube%s.fits' %
+                                             self.config['file_suffix'])
             
-        self._ccube_file = join(workdir,
-                                'ccube%s.fits' % self.config['file_suffix'])
-        self._ccubemc_file = join(workdir,
-                                  'ccubemc%s.fits' % self.config['file_suffix'])
-        self._mcube_file = join(workdir,
-                                'mcube%s.fits' % self.config['file_suffix'])
-        self._srcmap_file = join(workdir,
-                                 'srcmap%s.fits' % self.config['file_suffix'])
-        self._bexpmap_file = join(workdir,
-                                  'bexpmap%s.fits' % self.config['file_suffix'])
-        self._bexpmap_roi_file = join(workdir,
-                                      'bexpmap_roi%s.fits' % self.config[
-                                          'file_suffix'])
-        self._srcmdl_file = join(workdir,
-                                 'srcmdl%s.xml' % self.config['file_suffix'])
-
         if self.config['binning']['enumbins'] is not None:
             self._enumbins = int(self.config['binning']['enumbins'])
         else:
@@ -3471,7 +3499,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
 
         self.print_config(self.logger, loglevel=logging.DEBUG)
-
+        
     @property
     def roi(self):
         return self._roi
@@ -3531,6 +3559,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def coordsys(self):
         return self._coordsys
 
+    @property
+    def files(self):
+        return self._files
+    
     def reload_source(self, name):
         """Delete and reload a source in the model."""
 
@@ -3545,8 +3577,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             else:
                 self.like.logLike.loadSourceMap(name, True, False)
 
-            srcmap_utils.delete_source_map(self._srcmap_file,name)
-            self.like.logLike.saveSourceMaps(self._srcmap_file)
+            srcmap_utils.delete_source_map(self.files['srcmap'],name)
+            self.like.logLike.saveSourceMaps(self.files['srcmap'])
             self.like.logLike.buildFixedModelWts()
         else:
             self.write_xml('tmp')
@@ -3582,7 +3614,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.logger.error(msg)
             raise Exception(msg)
 
-        srcmap_utils.delete_source_map(self._srcmap_file,name)
+        srcmap_utils.delete_source_map(self.files['srcmap'],name)
 
         src = self.roi.create_source(name,src_dict)
         self.make_template(src, self.config['file_suffix'])
@@ -3597,7 +3629,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.syncSrcParams(str(name))
         self.like.logLike.buildFixedModelWts()
         if save_source_maps:
-            self.like.logLike.saveSourceMaps(str(self._srcmap_file))
+            self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
 
     def _create_source(self, src, free=False):
         """Create a pyLikelihood Source object from a
@@ -3671,7 +3703,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.roi.delete_sources([src])
 
         if delete_source_map:
-            srcmap_utils.delete_source_map(self._srcmap_file,name)
+            srcmap_utils.delete_source_map(self.files['srcmap'],name)
             
         return src
 
@@ -3866,29 +3898,29 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.info("Running setup for Analysis Component: " +
                          self.name)
 
-        srcmdl_file = self._srcmdl_file
+        srcmdl_file = self.files['srcmdl']
         roi_center = self.roi.skydir
 
         # If ltcube or ccube do not exist then rerun data selection
-        if not os.path.isfile(self._ccube_file) or \
-                not os.path.isfile(self._ltcube_file):
+        if not os.path.isfile(self.files['ccube']) or \
+                not os.path.isfile(self.files['ltcube']):
             self._select_data()
 
         # Run gtltcube
-        kw = dict(evfile=self._ft1_file,
+        kw = dict(evfile=self.files['ft1'],
                   scfile=self.config['data']['scfile'],
-                  outfile=self._ltcube_file,
+                  outfile=self.files['ltcube'],
                   zmax=self.config['selection']['zmax'])
 
         if self._ext_ltcube:
             self.logger.debug('Using external LT cube.')
-        elif not os.path.isfile(self._ltcube_file) or overwrite:
+        elif not os.path.isfile(self.files['ltcube']) or overwrite:
             run_gtapp('gtltcube', self.logger, kw)
         else:
             self.logger.debug('Skipping gtltcube')
 
-        self.logger.debug('Loading LT Cube %s',self._ltcube_file)
-        self._ltc = irfs.LTCube.create(self._ltcube_file)
+        self.logger.debug('Loading LT Cube %s',self.files['ltcube'])
+        self._ltc = irfs.LTCube.create(self.files['ltcube'])
 
         self.logger.debug('Creating PSF model')
         self._psf = irfs.PSFModel(self.roi.skydir, self._ltc,
@@ -3901,8 +3933,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             kw = dict(algorithm='ccube',
                       nxpix=self.npix, nypix=self.npix,
                       binsz=self.config['binning']['binsz'],
-                      evfile=self._ft1_file,
-                      outfile=self._ccube_file,
+                      evfile=self.files['ft1'],
+                      outfile=self.files['ccube'],
                       scfile=self.config['data']['scfile'],
                       xref=self._xref,
                       yref=self._yref,
@@ -3918,8 +3950,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             hpx_region = "DISK(%.3f,%.3f,%.3f)" % (
             self._xref, self._yref, 0.5 * self.config['binning']['roiwidth'])
             kw = dict(algorithm='healpix',
-                      evfile=self._ft1_file,
-                      outfile=self._ccube_file,
+                      evfile=self.files['ft1'],
+                      outfile=self.files['ccube'],
                       scfile=self.config['data']['scfile'],
                       xref=self._xref,
                       yref=self._yref,
@@ -3940,7 +3972,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 'Unknown projection type, %s. Choices are WCS or HPX',
                 self.projtype)
 
-        if not os.path.isfile(self._ccube_file) or overwrite:
+        if not os.path.isfile(self.files['ccube']) or overwrite:
             run_gtapp('gtbin', self.logger, kw)
         else:
             self.logger.debug('Skipping gtbin')
@@ -3951,17 +3983,17 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if self.projtype == "HPX":
                 cmap = None
             else:
-                cmap = self._ccube_file
+                cmap = self.files['ccube']
         else:
             cmap = 'none'
 
         # Run gtexpcube2
-        kw = dict(infile=self._ltcube_file, cmap=cmap,
+        kw = dict(infile=self.files['ltcube'], cmap=cmap,
                   ebinalg='LOG',
                   emin=self.config['selection']['emin'],
                   emax=self.config['selection']['emax'],
                   enumbins=self._enumbins,
-                  outfile=self._bexpmap_file, proj='CAR',
+                  outfile=self.files['bexpmap'], proj='CAR',
                   nxpix=360, nypix=180, binsz=1,
                   xref=0.0, yref=0.0,
                   evtype=evtype,
@@ -3969,18 +4001,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
         
-        if not os.path.isfile(self._bexpmap_file) or overwrite:
+        if not os.path.isfile(self.files['bexpmap']) or overwrite:
             run_gtapp('gtexpcube2', self.logger, kw)
         else:
             self.logger.debug('Skipping gtexpcube')
 
         if self.projtype == "WCS":
-            kw = dict(infile=self._ltcube_file, cmap='none',
+            kw = dict(infile=self.files['ltcube'], cmap='none',
                       ebinalg='LOG',
                       emin=self.config['selection']['emin'],
                       emax=self.config['selection']['emax'],
                       enumbins=self._enumbins,
-                      outfile=self._bexpmap_roi_file, proj='CAR',
+                      outfile=self.files['bexpmap_roi'], proj='CAR',
                       nxpix=self.npix, nypix=self.npix,
                       binsz=self.config['binning']['binsz'],
                       xref=self._xref, yref=self._yref,
@@ -3988,7 +4020,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       irfs=self.config['gtlike']['irfs'],
                       coordsys=self.config['binning']['coordsys'],
                       chatter=self.config['logging']['chatter'])
-            if not os.path.isfile(self._bexpmap_roi_file) or overwrite:
+            if not os.path.isfile(self.files['bexpmap_roi']) or overwrite:
                 run_gtapp('gtexpcube2', self.logger, kw)
             else:
                 self.logger.debug('Skipping local gtexpcube')
@@ -4012,11 +4044,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         # Run gtsrcmaps
         kw = dict(scfile=self.config['data']['scfile'],
-                  expcube=self._ltcube_file,
-                  cmap=self._ccube_file,
+                  expcube=self.files['ltcube'],
+                  cmap=self.files['ccube'],
                   srcmdl=srcmdl_file,
-                  bexpmap=self._bexpmap_file,
-                  outfile=self._srcmap_file,
+                  bexpmap=self.files['bexpmap'],
+                  outfile=self.files['srcmap'],
                   irfs=self.config['gtlike']['irfs'],
                   evtype=evtype,
                   rfactor=self.config['gtlike']['rfactor'],
@@ -4025,7 +4057,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no')
 
-        if not os.path.isfile(self._srcmap_file) or overwrite:
+        if not os.path.isfile(self.files['srcmap']) or overwrite:
             if self.config['gtlike']['srcmap'] and self.config['gtlike']['bexpmap']:
                 self._make_scaled_srcmap()
             else:
@@ -4038,9 +4070,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._create_binned_analysis()
 
-        if not self.config['data']['cacheft1'] and os.path.isfile(self._ft1_file):
+        if not self.config['data']['cacheft1'] and os.path.isfile(self.files['ft1']):
             self.logger.debug('Deleting FT1 file.')
-            os.remove(self._ft1_file)
+            os.remove(self.files['ft1'])
         
         self.logger.info('Finished setup for Analysis Component: %s',
                          self.name)
@@ -4049,7 +4081,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         # Run gtselect and gtmktime
         kw_gtselect = dict(infile=self.config['data']['evfile'],
-                           outfile=self._ft1_file,
+                           outfile=self.files['ft1'],
                            ra=self.roi.skydir.ra.deg,
                            dec=self.roi.skydir.dec.deg,
                            rad=self.config['selection']['radius'],
@@ -4063,32 +4095,32 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                            zmax=self.config['selection']['zmax'],
                            chatter=self.config['logging']['chatter'])
 
-        kw_gtmktime = dict(evfile=self._ft1_file,
-                           outfile=self._ft1_filtered_file,
+        kw_gtmktime = dict(evfile=self.files['ft1'],
+                           outfile=self.files['ft1_filtered'],
                            scfile=self.config['data']['scfile'],
                            roicut=self.config['selection']['roicut'],
                            filter=self.config['selection']['filter'])
 
-        if not os.path.isfile(self._ft1_file) or overwrite:
+        if not os.path.isfile(self.files['ft1']) or overwrite:
             run_gtapp('gtselect', self.logger, kw_gtselect)
             if self.config['selection']['roicut'] == 'yes' or \
                             self.config['selection']['filter'] is not None:
                 run_gtapp('gtmktime', self.logger, kw_gtmktime)
-                os.system(
-                    'mv %s %s' % (self._ft1_filtered_file, self._ft1_file))
+                os.system('mv %s %s' % (self.files['ft1_filtered'],
+                                        self.files['ft1']))
         else:
             self.logger.debug('Skipping gtselect')
         
     def _create_binned_analysis(self, xmlfile=None):
 
-        srcmdl_file = self._srcmdl_file
+        srcmdl_file = self.files['srcmdl']
         if xmlfile is not None:
             srcmdl_file = self.get_model_path(xmlfile)
             
         # Create BinnedObs
         self.logger.debug('Creating BinnedObs')
-        kw = dict(srcMaps=self._srcmap_file, expCube=self._ltcube_file,
-                  binnedExpMap=self._bexpmap_file,
+        kw = dict(srcMaps=self.files['srcmap'], expCube=self.files['ltcube'],
+                  binnedExpMap=self.files['bexpmap'],
                   irfs=self.config['gtlike']['irfs'])
         self.logger.debug(kw)
 
@@ -4127,14 +4159,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Computing fixed weights')
         self.like.logLike.buildFixedModelWts()
         self.logger.debug('Updating source maps')
-        self.like.logLike.saveSourceMaps(str(self._srcmap_file))
+        self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
 
     def _make_scaled_srcmap(self):
         """Make an exposure cube with the same binning as the counts map."""
 
         self.logger.info('Computing scaled source map.')
 
-        bexp0 = pyfits.open(self._bexpmap_roi_file)
+        bexp0 = pyfits.open(self.files['bexpmap_roi'])
         bexp1 = pyfits.open(self.config['gtlike']['bexpmap'])
         srcmap = pyfits.open(self.config['gtlike']['srcmap'])
 
@@ -4155,16 +4187,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if hdu.name == 'EBOUNDS': continue
             hdu.data *= bexp_ratio
 
-        srcmap.writeto(self._srcmap_file, clobber=True)
+        srcmap.writeto(self.files['srcmap'], clobber=True)
 
     def restore_counts_maps(self):
 
-        cmap = Map.create_from_fits(self._ccube_file)
+        cmap = Map.create_from_fits(self.files['ccube'])
 
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(cmap.counts.astype(float)))
 
-        srcmap_utils.update_source_maps(self._srcmap_file, {'PRIMARY': cmap.counts},
+        srcmap_utils.update_source_maps(self.files['srcmap'], {'PRIMARY': cmap.counts},
                                  logger=self.logger)
 
     def simulate_roi(self, name=None, clear=True, randomize=True):
@@ -4197,9 +4229,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(data))
 
-        srcmap_utils.update_source_maps(self._srcmap_file, {'PRIMARY': data},
-                                 logger=self.logger)
-        utils.write_fits_image(data, self.wcs, self._ccubemc_file)
+        srcmap_utils.update_source_maps(self.files['srcmap'], {'PRIMARY': data},
+                                        logger=self.logger)
+        utils.write_fits_image(data, self.wcs, self.files['ccubemc'])
         
     def write_model_map(self, model_name=None, name=None):
         """Save counts model map to a FITS file.
@@ -4243,7 +4275,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                                    src['SpatialWidth'],
                                                    template_file, npix=500)
             src['Spatial_Filename'] = template_file
-        elif src['SpatialModel'] in ['DiskSource','RadialDisk']:
+        elif src['SpatialModel'] in ['DiskSource','RadialDisk'] :
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_disk_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
@@ -4256,10 +4288,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         """Check the contents of the source map file and generate
         source maps for any components that are not present."""
 
-        if not os.path.isfile(self._srcmap_file):
+        if not os.path.isfile(self.files['srcmap']):
             return
 
-        hdulist = pyfits.open(self._srcmap_file)
+        hdulist = pyfits.open(self.files['srcmap'])
         hdunames = [hdu.name.upper() for hdu in hdulist]
 
         srcmaps = {}
@@ -4300,7 +4332,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if srcmaps:
             self.logger.debug(
                 'Updating source map file for component %s.', self.name)
-            srcmap_utils.update_source_maps(self._srcmap_file, srcmaps,
+            srcmap_utils.update_source_maps(self.files['srcmap'], srcmaps,
                                             logger=self.logger)
 
     def _update_srcmap(self, name, skydir, spatial_model, spatial_width):
@@ -4342,7 +4374,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             model_name = os.path.splitext(model_name)[0]
 
         if model_name is None or model_name == '':
-            srcmdl = self._srcmdl_file
+            srcmdl = self.files['srcmdl']
         else:
             srcmdl = self.get_model_path(model_name)
 
@@ -4360,11 +4392,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # May consider generating a custom source model file
         if not os.path.isfile(outfile):
 
-            kw = dict(srcmaps=self._srcmap_file,
+            kw = dict(srcmaps=self.files['srcmap'],
                       srcmdl=srcmdl,
-                      bexpmap=self._bexpmap_file,
+                      bexpmap=self.files['bexpmap'],
                       outfile=outfile,
-                      expcube=self._ltcube_file,
+                      expcube=self.files['ltcube'],
                       irfs=self.config['gtlike']['irfs'],
                       evtype=self.config['selection']['evtype'],
                       edisp=bool(self.config['gtlike']['edisp']),
@@ -4409,9 +4441,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'tscube%s.fits' % (self.config['file_suffix']))
 
-        kw = dict(cmap=self._ccube_file,
-                  expcube=self._ltcube_file,
-                  bexpmap=self._bexpmap_file,
+        kw = dict(cmap=self.files['ccube'],
+                  expcube=self.files['ltcube'],
+                  bexpmap=self.files['bexpmap'],
                   irfs=self.config['gtlike']['irfs'],
                   evtype=self.config['selection']['evtype'],
                   srcmdl=xmlfile,

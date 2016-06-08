@@ -130,12 +130,19 @@ binning = {
 # Options related to I/O and output file bookkeeping
 fileio = {
     'outdir': (None, 'Path of the output directory.  If none this will default to the directory containing the configuration file.', str),
-    'scratchdir': ('/scratch', 'Path to the scratch directory.', str),
-    'workdir': (None, 'Override the working directory.', str),
+    'scratchdir': ('/scratch', 'Path to the scratch directory.  If ``usescratch`` is True then a temporary working directory '
+                   'will be created under this directory.', str),
+    'workdir': (None, 'Path to the working directory.', str),
     'logfile': (None, 'Path to log file.  If None then log will be written to fermipy.log.', str),
     'savefits': (True, 'Save intermediate FITS files.', bool),
+    'workdir_regex' : ('\.fits$|\.fit$|\.xml$|\.npy$',
+                       'Stage files to the working directory that match this regular expression.  '
+                       'This option only takes effect when ``usescratch`` is True.', str),
+    'outdir_regex' : ('\.fits$|\.fit$|\.xml$|\.npy$|\.png$|\.pdf$|\.yaml$',
+                      'Stage files to the output directory that match this regular expression.  '
+                      'This option only takes effect when ``usescratch`` is True.', str),
     'usescratch': (
-        False, 'Run analysis in a temporary directory under ``scratchdir``.', bool),
+        False, 'Run analysis in a temporary working directory under ``scratchdir``.', bool),
 }
 
 logging = {

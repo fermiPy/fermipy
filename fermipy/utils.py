@@ -97,7 +97,7 @@ def collect_dirs(path, max_depth=1, followlinks=True):
 
     return list(set(o))
         
-    
+
 def join_strings(strings,sep='_'):
 
     if strings is None:
