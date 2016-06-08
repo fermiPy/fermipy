@@ -105,7 +105,7 @@ sets the value and scale properties:
 Spatial Models
 --------------
 
-Fermipy supports three types of pre-defined spatial templates which
+Fermipy supports three types of pre-defined spatial models which
 can be defined by setting the ``SpatialModel`` property: PointSource
 (the default), RadialDisk, and RadialGaussian.  The spatial extension
 of RadialDisk and RadialGaussian can be controlled with the
@@ -118,10 +118,10 @@ type.
    
    model:
      sources  : 
-       - { name: 'MyRadialDisk', glon : 120.0, glat : 0.0, 
+       - { name: 'DiskSource', glon : 120.0, glat : 0.0, 
         SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
         SpatialModel: 'RadialDisk', SpatialWidth: 1.0 }
-       - { name: 'MyGaussSource', glon : 120.0, glat : 0.0, 
+       - { name: 'GaussSource', glon : 120.0, glat : 0.0, 
         SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
         SpatialModel: 'RadialGaussian', SpatialWidth: 1.0 }
 
