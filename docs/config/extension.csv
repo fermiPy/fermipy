@@ -1,7 +1,8 @@
 ``fix_background``	False	Fix any background parameters that are currently free in the model when performing the likelihood scan over extension.
 ``save_model_map``	False	
 ``save_templates``	False	
-``spatial_model``	GaussianSource	Spatial model use for extension test.
+``spatial_model``	RadialGaussian	Spatial model use for extension test.
+``sqrt_ts_threshold``	None	Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then nothreshold is applied.
 ``update``	False	Update the source model with the best-fit spatial extension.
 ``width``	None	Parameter vector for scan over spatial extent.  If none then the parameter vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.
 ``width_max``	1.0	Maximum value in degrees for the likelihood scan over spatial extent.

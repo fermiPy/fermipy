@@ -2,3 +2,4 @@
 ``npred_frac``	0.95	
 ``npred_threshold``	1.0	
 ``shape_ts_threshold``	25.0	Threshold on source TS used for determining the sources that will be fit in the third optimization step.
+``skip``	None	List of str source names to skip while optimizing.
