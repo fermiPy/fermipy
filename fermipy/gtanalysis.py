@@ -2963,7 +2963,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             raise Exception('Unrecognized output format: %s'%fmt)
 
         if make_plots:
-            self.make_plots(prefix, mcube_maps[0],
+            self.make_plots(prefix, None,
                             **kwargs.get('plotting',{}))
 
     def make_plots(self, prefix, mcube_map=None, **kwargs):
