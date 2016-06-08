@@ -283,7 +283,7 @@ sed_output = OrderedDict((
 
 # Options for extension analysis
 extension = {
-    'spatial_model': ('GaussianSource', 'Spatial model use for extension test.', str),
+    'spatial_model': ('RadialGaussian', 'Spatial model use for extension test.', str),
     'width': (None, 'Parameter vector for scan over spatial extent.  If none then the parameter '
               'vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.', str),
     'width_min': (0.01, 'Minimum value in degrees for the likelihood scan over spatial extent.', float),

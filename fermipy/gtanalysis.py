@@ -1721,8 +1721,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             Source name.
 
         spatial_model : str
-            Spatial model that will be used when testing extension
-            (e.g. DiskSource, GaussianSource).
+        
+            Spatial model that will be used when testing extension.
+            Currently two spatial models are supported:
+
+            * RadialDisk : Azimuthally symmetric 2D disk.
+            * RadialGaussian : Azimuthally symmetric 2D gaussian.
 
         width_min : float
             Minimum value in degrees for the spatial extension scan.
@@ -1951,7 +1955,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         return np.array(logLike)
     
     def profile_norm(self, name, logemin=None, logemax=None, reoptimize=False,
-                     xvals=None, npts=20, fix_shape=True, savestate=True):
+                     xvals=None, npts=None, fix_shape=True, savestate=True):
         """Profile the normalization of a source.
 
         Parameters
@@ -1973,6 +1977,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if fix_shape:
             self.free_sources(False,pars='shape')
+
+        if npts is None:
+            npts = self.config['gtlike']['llscan_npts']
             
         # Find the source
         name = self.roi.get_source_by_name(name).name
@@ -1994,7 +2001,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 lims = utils.get_parameter_limits(lnlp['xvals'],
                                                   lnlp['dloglike'],
                                                   ul_confidence=0.99)
-
+                
                 if not np.isfinite(lims['ul']):
                     self.logger.warning('Upper limit not found.  '
                                         'Refitting normalization.')                    
@@ -2012,7 +2019,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     xlo = np.linspace(lims['ll'], lims['x0'], npts//2)
                     xvals = np.concatenate((xlo[:-1],xhi))
                     xvals = np.insert(xvals, 0, 0.0)
-                elif np.abs(lnlp['dloglike'][0]) > 0.1:                    
+                elif np.abs(lnlp['dloglike'][0]-lims['lnlmax']) > 0.1:                    
                     lims['ll'] = 0.0
                     xhi = np.linspace(lims['x0'], lims['ul'],
                                       (npts+1) - (npts+1)//2)
@@ -2859,26 +2866,25 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         self.logger.info('Finished Loading ROI')
 
-    def write_roi(self, outfile=None, make_residuals=False, 
-                  save_model_map=True, format=None, **kwargs):
-        """Write current model to a file.  This function will write an
-        XML model file and an ROI dictionary in both YAML and npy
-        formats.
+    def write_roi(self, outfile=None, 
+                  save_model_map=False, format='npy', **kwargs):
+        """Write current state of the analysis to a file.  This method
+        writes an XML model definition, a ROI dictionary, and a FITS
+        source catalog file.  A previously saved analysis state can be
+        reloaded from the ROI dictionary file with the
+        `~fermipy.gtanalysis.GTAnalysis.load_roi` method.
 
         Parameters
         ----------
 
-        outfile : str
-            Name of the output file.  The extension of this string
-            will be stripped when generating the XML, YAML and
-            Numpy filenames.
+        outfile : str        
+            String prefix of the output files.  The extension of this
+            string will be stripped when generating the XML, YAML and
+            npy filenames.
 
         make_plots : bool
             Generate diagnostic plots.
             
-        make_residuals : bool
-            Run residual analysis.
-
         save_model_map : bool
             Save the current counts model to a FITS file.
 
@@ -2910,17 +2916,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         ymlfile = pathprefix + '.yaml'
         
         self.write_xml(xmlfile)
+        self.logger.info('Writing %s...', fitsfile)
         self.roi.write_fits(fitsfile)
-        
+                
         for c in self.components:
             c.like.logLike.saveSourceMaps(str(c._srcmap_file))
         
         mcube_maps = None
         if save_model_map:
             mcube_maps = self.write_model_map(prefix)
-
-        if make_residuals:
-            resid_maps = self.residmap(prefix, make_plots=make_plots)
 
         o = {}
         o['roi'] = copy.deepcopy(self._roi_model)
@@ -2931,21 +2935,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for s in self.roi.sources:
             o['sources'][s.name] = copy.deepcopy(s.data)
 
-        if format is None:
-            format = ['npy','yaml']
-        elif not isinstance(format,list):
-            format = [format]
-            
-        for fmt in format:
-
-            if fmt == 'yaml':
-                self.logger.info('Writing %s...', ymlfile)
-                utils.write_yaml(o,ymlfile)
-            elif fmt == 'npy':                
-                self.logger.info('Writing %s...', npyfile)
-                np.save(npyfile, o)
-            else:
-                raise Exception('Unrecognized format.')
+        if fmt == 'yaml':
+            self.logger.info('Writing %s...', ymlfile)
+            utils.write_yaml(o,ymlfile)
+        elif fmt == 'npy':                
+            self.logger.info('Writing %s...', npyfile)
+            np.save(npyfile, o)
+        else:
+            raise Exception('Unrecognized output format: %s'%fmt)
 
         if make_plots:
             self.make_plots(prefix, mcube_maps[0],
@@ -4257,34 +4254,35 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if sources is None:
             sources = self.roi.sources
 
-        for s in sources:
+        for src in sources:
 
-            if s.diffuse:
+            if src.diffuse:
                 continue
-            if 'SpatialModel' not in s:
+            if 'SpatialModel' not in src:
                 continue
-            if s['SpatialModel'] in ['PointSource', 'Gaussian',
-                                     'SpatialMap','RadialGaussian',
-                                     'RadialDisk']:
+            if src['SpatialModel'] in ['PointSource', 'Gaussian', 'SpatialMap']:
                 continue
-            if s.name.upper() in hdunames and not overwrite:
+            if src.name.upper() in hdunames and not overwrite:
+                continue
+            if src['SpatialModel'] in ['RadialGaussian','RadialDisk'] and \
+                    hasattr(pyLike,'RadialGaussian'):
                 continue
 
-            self.logger.debug('Creating source map for %s', s.name)
+            self.logger.debug('Creating source map for %s', src.name)
 
-            xpix, ypix = wcs_utils.skydir_to_pix(s.skydir, self._skywcs)
+            xpix, ypix = wcs_utils.skydir_to_pix(src.skydir, self._skywcs)
             xpix -= (self.npix-1.0)/2.
             ypix -= (self.npix-1.0)/2.
             
-            k = srcmap_utils.make_srcmap(s.skydir, self._psf,
-                                         s['SpatialModel'],
-                                         s['SpatialWidth'],
+            k = srcmap_utils.make_srcmap(src.skydir, self._psf,
+                                         src['SpatialModel'],
+                                         src['SpatialWidth'],
                                          npix=self.npix,
                                          xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
                                          rebin=8)
             
-            srcmaps[s.name] = k
+            srcmaps[src.name] = k
 
         if srcmaps:
             self.logger.debug(
