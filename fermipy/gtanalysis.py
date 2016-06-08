@@ -1730,10 +1730,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         name : str
             Source name.
 
-        spatial_model : str
-        
-            Spatial model that will be used when testing extension.
-            Currently two spatial models are supported:
+        spatial_model : str        
+            Spatial model that will be used to test the source
+            extension.  The spatial scale parameter of the respective
+            model will be set such that the 68% containment radius of
+            the model is equal to the width parameter.  The following
+            spatial models are supported:
 
             * RadialDisk : Azimuthally symmetric 2D disk.
             * RadialGaussian : Azimuthally symmetric 2D gaussian.
@@ -1759,10 +1761,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         update : bool        
             Update this source with the best-fit model for spatial
-            extension.
+            extension if TS_ext > ``tsext_threshold``.
+
+        sqrt_ts_threshold : float        
+            Threshold on sqrt(TS_ext) that will be applied when ``update``
+            is true.  If None then no threshold will be applied.
             
         save_model_map : bool
-            Save model maps for all steps in the likelihood scan.
+            Save model maps for all steps in the likelihood scan.            
             
         Returns
         -------
@@ -1788,6 +1794,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         fix_background = config['fix_background']
         save_model_map = config['save_model_map']
         update = config['update']
+        sqrt_ts_threshold = config['sqrt_ts_threshold']
 
         self.logger.info('Starting')
         self.logger.info('Running analysis for %s', name)
@@ -1900,7 +1907,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._sync_params(name)
         self._update_roi()
         
-        if update and src_ext is not None:
+        if update and np.sqrt(o['ts_ext']) > sqrt_ts_threshold \
+                and src_ext is not None:
             src = self.delete_source(name)
             src.set_spectral_pars(src_ext.spectral_pars)
             src.set_spatial_model(src_ext['SpatialModel'],
@@ -2877,7 +2885,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.info('Finished Loading ROI')
 
     def write_roi(self, outfile=None, 
-                  save_model_map=False, format='npy', **kwargs):
+                  save_model_map=False, fmt='npy', **kwargs):
         """Write current state of the analysis to a file.  This method
         writes an XML model definition, a ROI dictionary, and a FITS
         source catalog file.  A previously saved analysis state can be
@@ -2898,7 +2906,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         save_model_map : bool
             Save the current counts model to a FITS file.
 
-        format : str
+        fmt : str
             Set the output file format (yaml or npy).
 
         """

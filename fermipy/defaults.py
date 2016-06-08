@@ -295,7 +295,9 @@ extension = {
     'fix_background': (False, 'Fix any background parameters that are currently free in the model when '
                        'performing the likelihood scan over extension.', bool),
     'save_model_map': (False, '', bool),
-    'update': (False, 'Update the source model with the best-fit spatial extension.', bool)
+    'update': (False, 'Update the source model with the best-fit spatial extension.', bool),
+    'sqrt_ts_threshold': (None, 'Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then no'
+                          'threshold is applied.', float),
 }
 
 extension_output = OrderedDict((
