@@ -1879,27 +1879,22 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
                          % (o['ext'], o['ext_err_lo'], o['ext_err_hi']))
         self.logger.info('TS_ext:        %.3f' % o['ts_ext'])
-        self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
-        
-        if np.isfinite(o['ext']):
+        self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])        
 
-            # Fit with the best-fit extension model
-            model_name = ext_model_name
-            src.set_name(model_name)
-            src.set_spatial_model(spatial_model, max(o['ext'],10**-2.5))
+        # Fit with the best-fit extension model
+        model_name = ext_model_name
+        src.set_name(model_name)
+        src.set_spatial_model(spatial_model, max(o['ext'],10**-2.5))
 
-            self.logger.info('Refitting extended model')
-            self.add_source(model_name, src, free=True)
-            self.fit(loglevel=logging.DEBUG,update=False)
-            self.update_source(model_name,reoptimize=True)
-            
-            o['source_fit'] = self.get_src_model(model_name)
-            o['loglike_ext'] = -self.like()
-            
-#            self.write_model_map(model_name=model_name,
-#                                    name=model_name)
+        self.logger.info('Refitting extended model')
+        self.add_source(model_name, src, free=True)
+        self.fit(loglevel=logging.DEBUG,update=False)
+        self.update_source(model_name,reoptimize=True)
 
-            src_ext = self.delete_source(model_name, save_template=False)
+        o['source_fit'] = self.get_src_model(model_name)
+        o['loglike_ext'] = -self.like()
+
+        src_ext = self.delete_source(model_name, save_template=False)
             
         # Restore ROI to previous state
         self.unzero_source(name)
@@ -1907,8 +1902,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._sync_params(name)
         self._update_roi()
         
-        if update and np.sqrt(o['ts_ext']) > sqrt_ts_threshold \
-                and src_ext is not None:
+        if update and (sqrt_ts_threshold is None or
+                       np.sqrt(o['ts_ext']) > sqrt_ts_threshold):
             src = self.delete_source(name)
             src.set_spectral_pars(src_ext.spectral_pars)
             src.set_spatial_model(src_ext['SpatialModel'],
