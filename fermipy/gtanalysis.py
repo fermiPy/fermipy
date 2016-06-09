@@ -175,10 +175,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         else:
             raise Exception('Save directory not defined.')
 
-        # put pfiles into savedir
-        os.environ['PFILES'] = \
-            self.outdir + ';' + os.environ['PFILES'].split(';')[-1]
-
         if self.config['fileio']['logfile'] is None:
             self.config['fileio']['logfile'] = os.path.join(self.outdir,
                                                             'fermipy')
@@ -204,6 +200,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if 'FERMIPY_WORKDIR' not in os.environ:
             os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
 
+        # put pfiles into savedir
+        os.environ['PFILES'] = \
+            self.workdir + ';' + os.environ['PFILES'].split(';')[-1]
+            
         # Create Plotter
         self._plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                  fileio=self.config['fileio'],
@@ -663,7 +663,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.logger.error('Working directory does not exist.')
             return
 
-        regex = copy.deepcopy(self.config['fileio']['outdir_regex'])
+        regex = self.config['fileio']['outdir_regex']
+        savefits = self.config['fileio']['savefits']
         files = os.listdir(self.workdir)
         self.logger.info('Staging files to %s', self.outdir)
 
@@ -677,7 +678,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             wpath = os.path.join(self.workdir,f)
             opath = os.path.join(self.outdir,f)
 
-            if not re.findall(regex, os.path.basename(f)):
+            if not utils.match_regex_list(regex, os.path.basename(f)):
                 continue            
             if os.path.isfile(opath) and filecmp.cmp(wpath,opath,False):
                 continue
@@ -709,7 +710,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
             if not os.path.isfile(f):
                 continue                        
-            if not re.findall(regex, os.path.basename(f)):
+            if not utils.match_regex_list(regex, os.path.basename(f)):
                 continue
 
             self.logger.debug('Copying ' + os.path.basename(f))

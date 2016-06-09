@@ -98,6 +98,19 @@ def collect_dirs(path, max_depth=1, followlinks=True):
     return list(set(o))
         
 
+def match_regex_list(patterns, string):
+    """Perform a regex match of a string against a list of patterns.
+    Returns true if the string matches at least one pattern in the
+    list."""
+    
+    for p in patterns:
+
+        if re.findall(p,string):
+            return True
+
+    return False
+
+
 def join_strings(strings,sep='_'):
 
     if strings is None:
@@ -106,7 +119,8 @@ def join_strings(strings,sep='_'):
         if not isinstance(strings,list):
             strings = [strings]        
         return sep.join([s for s in strings if s])
-        
+
+    
 def format_filename(outdir, basename, prefix=None, extension=None):
     filename = join_strings(prefix)
     filename = join_strings([filename,basename])
