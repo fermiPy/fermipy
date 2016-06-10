@@ -36,8 +36,8 @@ def bitmask_to_bits(mask):
     return bits
 
 DEFAULT_SCALE_DICT =  {'value': 1000.0, 'scale' : None, 'min': 0.001, 'max': 1000.0}
-DEFAULT_NORM_DICT = {'value': 1E-12, 'scale' : None, 'min': 1E-5, 'max': 100.0}
-DEFAULT_INTEGRAL_DICT = {'value': 1E-6, 'scale' : None, 'min': 1E-5, 'max': 100.0}
+DEFAULT_NORM_DICT = {'value': 1E-12, 'scale' : None, 'min': 1E-5, 'max': 1000.0}
+DEFAULT_INTEGRAL_DICT = {'value': 1E-6, 'scale' : None, 'min': 1E-5, 'max': 1000.0}
 DEFAULT_INDEX_DICT = {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0 }
 
 FUNCTION_NORM_PARS = {}
@@ -78,7 +78,11 @@ FUNCTION_DEFAULT_PARS = {
                      'alpha': {'value': 2.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
                      'beta' : {'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0},
                      'Eb' : DEFAULT_SCALE_DICT },
-    'ConstantValue' : {'norm' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 100.0} }
+    'ConstantValue' : {'Normalization' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 1000.0} },
+    'FileFunction' : {'Normalization' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 1000.0} },
+    'Gaussian' : { 'Mean': {'value': 1000.0, 'scale' : 1.0, 'min': 1E-5, 'max': 1E5},
+                   'Sigma':{'value': 100.0, 'scale' : 1.0, 'min': 10., 'max': 1E5},
+                   'Prefactor' : DEFAULT_NORM_DICT },
 
     }
 
@@ -225,7 +229,7 @@ def create_spectral_pars_dict(spectrum_type,spectral_pars=None):
 
     return pars_dict
 
-def create_spectrum_from_dict(spectrum_type,spectral_pars=None):
+def create_spectrum_from_dict(spectrum_type,spectral_pars=None, fn=None):
     """Create a Function object from a parameter dictionary.
 
     Parameters
@@ -239,7 +243,9 @@ def create_spectrum_from_dict(spectrum_type,spectral_pars=None):
     """
 
     pars = create_spectral_pars_dict(spectrum_type,spectral_pars)
-    fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
+
+    if fn is None:
+        fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
 
     for k, v in pars.items():
 

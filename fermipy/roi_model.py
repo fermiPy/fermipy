@@ -231,7 +231,7 @@ class Model(object):
         
         if data is not None:
             self._data.update(data)
-            
+
         if not self.spectral_pars:
             pdict = gtutils.get_function_pars_dict(self['SpectrumType'])
             self._data['spectral_pars'] = pdict
@@ -326,11 +326,17 @@ class Model(object):
         src_dict.setdefault('SpatialType',
                             gtutils.get_spatial_type(src_dict['SpatialModel']))
 
-        # Need this to handle old convention for
+        # Need this to handle old conventions for
         # MapCubeFunction/ConstantValue sources
         if src_dict['SpatialModel'] == 'DiffuseSource':            
             src_dict['SpatialModel'] = src_dict['SpatialType']
 
+            if 'filefunction' in src_dict:
+                src_dict['Spectrum_Filename'] = src_dict.pop('filefunction')
+
+            if 'mapcube' in src_dict:
+                src_dict['Spatial_Filename'] = src_dict.pop('mapcube')
+                
         if 'spectral_pars' in src_dict:
             src_dict['spectral_pars'] = gtutils.cast_pars_dict(src_dict['spectral_pars'])
 
@@ -474,7 +480,7 @@ class IsoSource(Model):
         
     @property
     def filefunction(self):
-        return self._data['filefunction']
+        return self._data['Spectrum_Filename']
 
     @property
     def diffuse(self):
@@ -537,7 +543,7 @@ class MapCubeSource(Model):
 
     @property
     def mapcube(self):
-        return self._data['mapcube']
+        return self._data['Spatial_Filename']
 
     @property
     def diffuse(self):
@@ -871,6 +877,7 @@ class Source(Model):
 
         src_dict = copy.deepcopy(src_dict)
         src_dict.setdefault('SpatialModel','PointSource')
+        src_dict.setdefault('Spectrum_Filename',None)
         spectrum_type = src_dict.setdefault('SpectrumType','PowerLaw')
         spatial_type = \
             src_dict.setdefault('SpatialType',
@@ -884,6 +891,13 @@ class Source(Model):
             src_dict.setdefault('spatial_pars',
                                 gtutils.get_function_pars_dict(src_dict['SpatialType']))
 
+        if 'file' in src_dict:
+            src_dict['Spectrum_Filename'] = src_dict.pop('file')
+
+        if spectrum_type == 'DMFitFunction' and src_dict['Spectrum_Filename'] is None:
+            src_dict['Spectrum_Filename'] = os.path.join('$FERMIPY_DATA_DIR',
+                                                         'gammamc_dif.dat')
+            
         for k in ['RA','DEC','Prefactor']:
             if k in spatial_pars:
                 del spatial_pars[k]
@@ -962,7 +976,19 @@ class Source(Model):
         src_dict['SpectrumType'] = spec['type']
         src_dict['SpatialType'] = spatial_type
         src_dict['SourceType'] = src_type
-
+        src_dict['Spatial_Filename'] = None
+        src_dict['Spectrum_Filename'] = None
+        if 'file' in spat:
+            src_dict['Spatial_Filename'] = spat['file']
+            if not os.path.isfile(src_dict['Spatial_Filename']) \
+                    and extdir is not None:
+                src_dict['Spatial_Filename'] = \
+                    os.path.join(extdir, 'Templates',
+                                 src_dict['Spatial_Filename'])
+        
+        if 'file' in spec:
+            src_dict['Spectrum_Filename'] = spec['file']
+                    
         if src_type == 'PointSource':
             src_dict['SpatialModel'] = 'PointSource'
         elif spatial_type == 'SpatialMap':
@@ -972,14 +998,6 @@ class Source(Model):
                         
         if src_type == 'PointSource' or \
                 spatial_type in ['SpatialMap','RadialGaussian','RadialDisk']:
-
-            if 'file' in spat:
-                src_dict['Spatial_Filename'] = spat['file']
-                if not os.path.isfile(src_dict['Spatial_Filename']) \
-                        and extdir is not None:
-                    src_dict['Spatial_Filename'] = \
-                        os.path.join(extdir, 'Templates',
-                                     src_dict['Spatial_Filename'])
 
             if 'RA' in src_dict:
                 src_dict['RAJ2000'] = float(xml_dict['RA'])
@@ -1002,12 +1020,12 @@ class Source(Model):
 
         elif src_type == 'DiffuseSource' and spatial_type == 'ConstantValue':
             return IsoSource(src_dict['Source_Name'],
-                             {'filefunction' : spec['file'],
+                             {'Spectrum_Filename' : spec['file'],
                               'spectral_pars' : spectral_pars,
                               'spatial_pars' : spatial_pars})
         elif src_type == 'DiffuseSource' and spatial_type == 'MapCubeFunction':
             return MapCubeSource(src_dict['Source_Name'],
-                                 {'mapcube' : spat['file'],
+                                 {'Spatial_Filename' : spat['file'],
                                   'spectral_pars' : spectral_pars,
                                   'spatial_pars' : spatial_pars})
         else:
@@ -1054,6 +1072,11 @@ class Source(Model):
 
         stype = self['SpectrumType'].strip()
         el.set('type', stype)
+
+        if self['Spectrum_Filename'] is not None:
+            filename = self['Spectrum_Filename']
+            filename = re.sub(r'\$([a-zA-Z\_]+)', r'$(\1)', filename)
+            el.set('file',filename)
 
         for k, v in self.spectral_pars.items():
             utils.create_xml_element(el, 'parameter', v)
@@ -1246,14 +1269,12 @@ class ROIModel(fermipy.config.Configurable):
                         'file'])
 
             # Extract here
-
-
             if src_type == 'FileFunction':
-                src = IsoSource(src_dict['name'], {'filefunction' : src_dict['file']})
+                src = IsoSource(src_dict['name'], {'Spectrum_Filename' : src_dict['file']})
                 altname = os.path.basename(src_dict['file'])
                 altname = re.sub(r'(\.txt$)', '', altname)
             else:
-                src = MapCubeSource(src_dict['name'], {'mapcube' : src_dict['file']})
+                src = MapCubeSource(src_dict['name'], {'Spatial_Filename' : src_dict['file']})
                 altname = os.path.basename(src_dict['file'])
                 altname = re.sub(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',
                                  '', altname)
