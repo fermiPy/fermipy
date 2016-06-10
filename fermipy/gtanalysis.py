@@ -598,7 +598,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # Create file spectrum txt file
         np.savetxt(filename,np.vstack((10**loge,dfde)).T)
 #                   np.stack((10**loge,dfde),axis=1))
-        self.like.setSpectrum(name, 'FileFunction')
+        self.like.setSpectrum(name, str('FileFunction'))
 
         self.roi[name]['filefunction'] = filename
         # Update
@@ -606,10 +606,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             src = c.like.logLike.getSource(str(name))
             spectrum = src.spectrum()
 
-            spectrum.getParam('Normalization').setBounds(1E-3,1E3)
+            spectrum.getParam(str('Normalization')).setBounds(1E-3,1E3)
             
             file_function = pyLike.FileFunction_cast(spectrum)
-            file_function.readFunction(filename)
+            file_function.readFunction(str(filename))
             c.roi[name]['filefunction'] = filename 
             
     def _create_component_configs(self):
