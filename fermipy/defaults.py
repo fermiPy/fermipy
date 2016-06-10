@@ -372,7 +372,7 @@ source_output = OrderedDict((
     ('SourceType', (None,'Source type string (PointSource or DiffuseSource).',str,'str')),
     ('SpectrumType', (None,'Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).',str,'str')),
     ('Spatial_Filename', (None,'Path to spatial template associated to this source.',str,'str')),
-    ('filefunction' , (None,'Path to file function associated to this source.',str,'str')),        
+    ('Spectrum_Filename' , (None,'Path to file associated to the spectral model of this source.',str,'str')),
     ('ra', (np.nan,'Right ascension of the source in deg.',float,'float')),
     ('dec', (np.nan,'Declination of the source in deg.',float,'float')),
     ('glon', (np.nan,'Galactic Longitude of the source in deg.',float,'float')),

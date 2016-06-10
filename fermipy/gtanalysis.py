@@ -58,6 +58,8 @@ norm_parameters = {
     'PLSuperExpCutoff': ['Prefactor'],
     'ExpCutoff': ['Prefactor'],
     'FileFunction': ['Normalization'],
+    'DMFitFunction': ['sigmav'],
+    'Gaussian': ['Prefactor'],
 }
 
 shape_parameters = {
@@ -69,6 +71,8 @@ shape_parameters = {
     'PLSuperExpCutoff': ['Index1', 'Cutoff'],
     'ExpCutoff': ['Index1', 'Cutoff'],
     'FileFunction': [],
+    'DMFitFunction': ['mass'],
+    'Gaussian': ['Mean','Sigma'],
 }
 
 index_parameters = {
@@ -80,7 +84,28 @@ index_parameters = {
     'PLSuperExpCutoff': ['Index1', 'Index2'],
     'ExpCutoff': ['Index1'],
     'FileFunction': [],
+    'DMFitFunction': [],
+    'Gaussian': [],
 }
+
+
+def get_fitcache_pars(fit_cache):
+
+    pars = pyLike.FloatVector()
+    cov = pyLike.FloatVector()
+
+    pyLike.Vector_Hep_to_Stl(fit_cache.currentPars(),pars)
+    pyLike.Matrix_Hep_to_Stl(fit_cache.currentCov(),cov)
+
+    pars = np.array(pars)
+    cov = np.array(cov)
+
+    npar = len(pars)
+    
+    cov = cov.reshape((npar,npar))
+    err = np.sqrt(np.diag(cov))
+    
+    return pars, err, cov
 
 
 def get_spectral_index(src,egy):
@@ -597,10 +622,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
         # Create file spectrum txt file
         np.savetxt(filename,np.vstack((10**loge,dfde)).T)
-#                   np.stack((10**loge,dfde),axis=1))
         self.like.setSpectrum(name, str('FileFunction'))
 
-        self.roi[name]['filefunction'] = filename
+        self.roi[name]['Spectrum_Filename'] = filename
         # Update
         for c in self.components:
             src = c.like.logLike.getSource(str(name))
@@ -610,8 +634,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
             file_function = pyLike.FileFunction_cast(spectrum)
             file_function.readFunction(str(filename))
-            c.roi[name]['filefunction'] = filename 
-            
+            c.roi[name]['Spectrum_Filename'] = filename
+
     def _create_component_configs(self):
         configs = []
 
@@ -1398,14 +1422,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if pars is None:
             pars = []
-            pars += norm_parameters[src['SpectrumType']]
-            pars += shape_parameters[src['SpectrumType']]
+            pars += norm_parameters.get(src['SpectrumType'],[])
+            pars += shape_parameters.get(src['SpectrumType'],[])
         elif pars == 'norm':
             pars = []
-            pars += norm_parameters[src['SpectrumType']]
+            pars += norm_parameters.get(src['SpectrumType'],[])
         elif pars == 'shape':
             pars = []
-            pars += shape_parameters[src['SpectrumType']]
+            pars += shape_parameters.get(src['SpectrumType'],[])
         elif isinstance(pars, list):
             pass
         else:
@@ -1487,7 +1511,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
         src = self.roi.get_source_by_name(name)
         self.free_source(name, free=free,
-                         pars=index_parameters[src['SpectrumType']])
+                         pars=index_parameters.get(src['SpectrumType'],[]))
 
     def free_shape(self, name, free=True):
         """Free/Fix shape parameters of a source.
@@ -2561,6 +2585,92 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                         "DeltaLogLike: %12.3f"%o['dloglike'])
         return o
 
+
+    def _fit_newton_fast(self,fc=None):
+        """Fast fitting method using newton fitter."""
+
+        if fc is None:
+            mw = pyLike.FitScanModelWrapper_Summed(self.like.logLike)
+            fc = pyLike.FitScanCache(mw,str('testsource'),0.001,30,False)
+
+        free_params = self.get_params(True)
+        free_norm_params = [p for p in free_params if p['is_norm'] is True]
+        num_free = len(free_params)
+                
+        norm_vals = []
+        norm_idxs = []
+        for i, p in enumerate(free_norm_params):                
+            norm_vals += [p['value']]
+            norm_idxs += [p['idx']]
+
+        norm_vals = np.array(norm_vals)            
+        pars, errs, cov = get_fitcache_pars(fc)
+        pars *= norm_vals
+        for idx, val in zip(norm_idxs,pars):
+            self.like[idx].setValue(val)
+
+        self.like.syncSrcParams()
+    
+    def _fit_newton(self,fc=None):
+        """Fast fitting method using newton fitter."""
+
+        if fc is None:
+            mw = pyLike.FitScanModelWrapper_Summed(self.like.logLike)
+            fc = pyLike.FitScanCache(mw,str('testsource'),0.001,30,False)
+
+        free_params = self.get_params(True)
+        free_norm_params = [p for p in free_params if p['is_norm'] is True]
+        num_free = len(free_params)
+
+        o = {'fit_status' : 0,
+             'loglike' : None, 'dloglike' : None,
+             'values' : np.ones(num_free)*np.nan,
+             'errors' : np.ones(num_free)*np.nan,
+             'indices': np.zeros(num_free,dtype=int),
+             'is_norm' : np.empty(num_free,dtype=bool),
+             'src_names' : num_free*[None],
+             'par_names' : num_free*[None],
+             }
+                
+        norm_vals = []
+        norm_idxs = []
+        for i, p in enumerate(free_norm_params):
+                
+            norm_vals += [p['value']]
+            norm_idxs += [p['idx']]
+
+            o['indices'][i] = p['idx']
+            o['src_names'][i] = p['src_name']
+            o['par_names'][i] = p['par_name']
+            o['is_norm'][i] = p['is_norm']
+
+        norm_vals = np.array(norm_vals)
+            
+        o['fit_status'] = fc.fitCurrent()            
+        pars, errs, cov = get_fitcache_pars(fc)
+        pars *= norm_vals
+        errs *= norm_vals
+        cov = cov*norm_vals[:,np.newaxis]*norm_vals[np.newaxis,:]
+        
+        o['values'] = pars
+        o['errors'] = errs
+        o['covariance'] = cov
+
+        errinv = 1./o['errors']
+        o['correlation'] = \
+            o['covariance']*errinv[:,np.newaxis]*errinv[np.newaxis,:]
+        
+        o['loglike'] = fc.currentLogLike()
+        
+        for idx, val in zip(norm_idxs,pars):
+            self.like[idx].setValue(val)
+
+        self.like.syncSrcParams()
+
+        
+        
+        return o
+        
     def fit_correlation(self):
 
         saved_state = LikelihoodState(self.like)
@@ -3579,7 +3689,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 self.like.logLike.loadSourceMap(name, True, False)
 
             srcmap_utils.delete_source_map(self.files['srcmap'],name)
-            self.like.logLike.saveSourceMaps(self.files['srcmap'])
+            self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
             self.like.logLike.buildFixedModelWts()
         else:
             self.write_xml('tmp')
@@ -3667,8 +3777,26 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             raise Exception('Unrecognized spatial type: %s', src['SpatialType'])
 
-        fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
-                                               src.spectral_pars)
+        
+
+        if src['SpectrumType'] == 'FileFunction':
+            fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
+                                                   src.spectral_pars)
+            
+            file_function = pyLike.FileFunction_cast(fn)
+            filename = str(os.path.expandvars(src['Spectrum_Filename']))
+            file_function.readFunction(filename)
+        elif src['SpectrumType'] == 'DMFitFunction':
+
+            fn = pyLike.DMFitFunction()
+            fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
+                                                   src.spectral_pars,fn)
+            filename = str(os.path.expandvars(src['Spectrum_Filename']))
+            fn.readFunction(filename)
+        else:
+            fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
+                                                   src.spectral_pars)
+            
         pylike_src.setSpectrum(fn)
         pylike_src.setName(str(src.name))
 
