@@ -356,6 +356,20 @@ def cast_pars_dict(pars_dict):
 
 class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 
+    def optimize(self, verbosity=3, tol=None, optimizer=None, optObject=None):
+        self._syncParams()
+        if optimizer is None:
+            optimizer = self.optimizer
+        if tol is None:
+            tol = self.tol
+        if optObject is None:
+            optFactory = pyLike.OptimizerFactory_instance()
+            myOpt = optFactory.create(optimizer, self.logLike)
+        else:
+            myOpt = optObject
+        myOpt.find_min_only(verbosity, tol, self.tolType)
+        self.saveBestFit()
+    
     def Ts2(self, srcName, reoptimize=False, approx=True,
            tol=None, MaxIterations=10, verbosity=0):
 
