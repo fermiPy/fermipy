@@ -189,6 +189,9 @@ class SEDGenerator(object):
         ul_confidence = config['ul_confidence']
         cov_scale = config['cov_scale']        
 
+        optimizer = kwargs.get('optimizer',
+                               self.config['optimizer']['optimizer'])
+        
         if loge_bins is None:
             loge_bins = self.log_energies
         else:
@@ -300,6 +303,7 @@ class SEDGenerator(object):
                           true_value=False,
                           bounds=[1E-10, 1E10],
                           update_source=False)
+        self.free_parameter(name, 'Prefactor', True)
         self.set_parameter(name, 'Scale', 1E3, scale=1.0,
                            bounds=[1, 1E6], update_source=False)
         
@@ -312,6 +316,8 @@ class SEDGenerator(object):
                 src_norm_idx = j
 
             o['correlation'][p['src_name']] =  np.zeros(nbins) * np.nan
+
+        self._fitcache = None
         
         for i, (logemin, logemax) in enumerate(zip(loge_bins[:-1],
                                                    loge_bins[1:])):
@@ -322,9 +328,6 @@ class SEDGenerator(object):
             ectr = 10 ** logectr
             ectr2 = ectr**2
             
-            self.set_parameter(name, 'Scale', ectr, scale=1.0,
-                               bounds=[1, 1E6], update_source=False)
-
             if use_local_index:
                 o['index'][i] = -min(gf_bin_index[i], max_index)
             else:
@@ -357,7 +360,7 @@ class SEDGenerator(object):
                               (name, emin, emax))
             self.set_energy_range(logemin, logemax)
 
-            fit_output = self.fit(loglevel=logging.DEBUG,update=False)
+            fit_output = self._fit(optimizer=optimizer)
             free_params = self.get_params(True)
             for j, p in enumerate(free_params):
                 
@@ -374,8 +377,7 @@ class SEDGenerator(object):
             flux = self.like[name].flux(emin, emax)
             eflux = self.like[name].energyFlux(emin, emax)
             dfde = self.like[name].spectrum()(pyLike.dArg(ectr))
-            #prefactor.getTrueValue()
-
+            
             o['norm'][i] = flux/o['ref_flux'][i]
             o['flux'][i] = flux
             o['eflux'][i] = eflux
@@ -389,8 +391,8 @@ class SEDGenerator(object):
             o['loglike'][i] = -self.like()
             
             lnlp = self.profile_norm(name, logemin=logemin, logemax=logemax,
-                                    savestate=False, reoptimize=True,
-                                    npts=npts)
+                                     savestate=False, reoptimize=True,
+                                     npts=npts, optimizer=optimizer)
 
             o['loglike_scan'][i] = lnlp['loglike']
             o['dloglike_scan'][i] = lnlp['dloglike']
