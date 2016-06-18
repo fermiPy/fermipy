@@ -157,7 +157,7 @@ optimizer = {
                    'likelihood function.', str),
     'tol': (1E-4, 'Set the optimizer tolerance.', float),
     'retries': (3, 'Set the number of times to retry the fit when the fit quality is less than ``min_fit_quality``.', int),
-    'min_fit_quality': (3, 'Set the minimum fit quality.', int),
+    'min_fit_quality': (2, 'Set the minimum fit quality.', int),
     'verbosity': (0, '', int)
 }
 
