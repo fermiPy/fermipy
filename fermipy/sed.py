@@ -264,7 +264,7 @@ class SEDGenerator(object):
         self.free_norm(name)
 
         if fix_background:
-            self.free_sources(free=False)
+            self.free_sources(free=False,loglevel=logging.DEBUG)
         elif cov_scale is not None:
             self._latch_free_params()
             self.zero_source(name)
@@ -387,14 +387,14 @@ class SEDGenerator(object):
 
             cs = self.model_counts_spectrum(name, logemin,
                                             logemax, summed=True)
-            o['npred'][i] = np.sum(cs)
-            o['ts'][i] = max(self.like.Ts2(name, reoptimize=False), 0.0)
-            o['loglike'][i] = -self.like()
+            o['npred'][i] = np.sum(cs)            
+            o['loglike'][i] = fit_output['loglike']
             
             lnlp = self.profile_norm(name, logemin=logemin, logemax=logemax,
                                      savestate=False, reoptimize=True,
                                      npts=npts, optimizer=optimizer)
 
+            o['ts'][i] = max(2.0*(fit_output['loglike'] - lnlp['loglike'][0]),0.0)
             o['loglike_scan'][i] = lnlp['loglike']
             o['dloglike_scan'][i] = lnlp['dloglike']
             o['norm_scan'][i] = lnlp['flux']/ref_flux            
