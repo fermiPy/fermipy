@@ -2888,7 +2888,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         o['fit_status'] = fitcache.fit(verbose=0)
 
-         pars, errs, cov = fitcache.get_pars()        
+        pars, errs, cov = fitcache.get_pars()        
         pars *= norm_vals
         errs *= norm_vals
         cov = cov*np.outer(norm_vals,norm_vals)
