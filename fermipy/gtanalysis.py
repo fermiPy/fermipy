@@ -94,7 +94,6 @@ class FitCache(object):
         self._fitcache = fitcache
         self._params = params
         self._like = like
-        self._has_priors = False
 
         free_params = [p for p in params if p['free'] is True] 
         free_norm_params = [p for p in free_params if p['is_norm'] is True]
@@ -106,7 +105,8 @@ class FitCache(object):
         self._prior_vals = np.ones(npar)
         self._prior_errs = np.ones(npar)
         self._prior_cov = np.ones((npar,npar))
-        self._prior_free = np.array([False]*npar)
+        self._has_prior = np.array([False]*npar)
+
         
     @property
     def fitcache(self):
@@ -121,6 +121,9 @@ class FitCache(object):
 
     def check_params(self,params):
 
+        if len(params) != len(self._params):
+            return False
+        
         free_params = [p for p in params if p['free'] is True] 
         free_norm_params = [p for p in free_params if p['is_norm'] is True]   
         
@@ -128,69 +131,85 @@ class FitCache(object):
             if p['idx'] not in self._cache_param_idxs:
                 return False
 
+        for i, p in enumerate(params):
+
+            if p['is_norm']:
+                continue
+            
+            if not np.isclose(p['value'],self._params[i]['value']):
+                return False
+
+            if not np.isclose(p['scale'],self._params[i]['scale']):
+                return False
+            
         return True
             
     def refactor(self):
 
         npar = len(self.params)        
-        free_pars = [True]*npar
+        self._free_pars = [True]*npar
         par_scales = np.ones(npar)
         ref_vals = np.array(self.fitcache.refValues())
         
         for i, p in enumerate(self.params):
-            free_pars[i] = self._like[p['idx']].isFree()
+            self._free_pars[i] = self._like[p['idx']].isFree()
             par_scales[i] = self._like[p['idx']].getValue()/ref_vals[i]
-            
-        self.fitcache.refactorModel(free_pars,par_scales,False)
+        
+        self.fitcache.refactorModel(self._free_pars,par_scales,False)
         # Set priors
         self._set_priors_from_like()
-        if np.any(self._prior_free):
+        if np.any(self._has_prior):
             self._build_priors()
         
     def _set_priors_from_like(self):
         
-        prior_vals,prior_errs,prior_free = get_priors(self._like)
-        if not np.any(prior_free):
-            self._has_priors = False
+        prior_vals,prior_errs,has_prior = get_priors(self._like)
+        if not np.any(has_prior):
+            self._has_prior.fill(False)
             return
         
         for i, p in enumerate(self.params):
             self._prior_vals[i] = prior_vals[p['idx']]
             self._prior_errs[i] = prior_errs[p['idx']]
-            self._prior_free[i] = prior_free[p['idx']]
-                
+            self._has_prior[i] = True #has_prior[p['idx']]
+
+            if not has_prior[p['idx']]:
+                self._prior_errs[i] = 1E3
+                        
         self._prior_cov  = np.diag(np.array(self._prior_errs)**2)
-        self._has_priors = True
         
     def set_priors(self,vals,err):
 
         self._prior_vals = np.array(vals,ndmin=1)
         self._prior_errs = err
         self._prior_cov = np.diag(np.array(err)**2)
-        self._prior_free = np.array([True]*len(vals))
-        self._has_priors = True
+        self._has_prior = np.array([True]*len(vals))
         
     def _build_priors(self):
 
+#        print('build_priors')
+        
+        free_pars = np.array(self._free_pars)        
         ref_vals = np.array(self.fitcache.refValues())
         
-        npar = self.fitcache.nFreeCurrent()
+#        npar = self.fitcache.nFreeCurrent()
         pars = self._prior_vals/ref_vals
         cov = np.ravel(self._prior_cov/np.outer(ref_vals,ref_vals))
-        self.fitcache.buildPriorsFromExternal(pars,cov,self._prior_free.tolist())
+
+        pars = pars[free_pars]
+        cov = cov[np.ravel(np.outer(free_pars,free_pars))]
+        has_prior = self._has_prior[free_pars]
+        
+        self.fitcache.buildPriorsFromExternal(pars,cov,has_prior.tolist())
 
     def fit(self,verbose=0):
-        return self.fitcache.fitCurrent(self._has_priors,False,verbose)
-        
-        
-#    pars = fit_cache.currentPars()
-#    cov = fit_cache.currentCov()    
-#    pyLike.Vector_Stl_to_Hep(np.ones(npar),pars)
-#    pyLike.Matrix_Stl_to_Hep(np.ravel(np.diag(np.ones(npar))),cov)
-        
+        return self.fitcache.fitCurrent(bool(np.any(self._has_prior)),
+                                        False,verbose)
+
 
 def get_priors(like):
-
+    """Extract priors from a likelihood object."""
+    
     npar = len(like.params())
     
     vals = np.ones(npar)
@@ -210,6 +229,9 @@ def get_priors(like):
 
         if not 'Mean' in par_names:
             raise Exception('Failed to find Mean in prior parameters.')
+
+        if not 'Sigma' in par_names:
+            raise Exception('Failed to find Sigma in prior parameters.')
         
         for t in par_names:
 
@@ -223,13 +245,13 @@ def get_priors(like):
                 
     return vals,errs,has_prior
     
-def get_fitcache_pars(fit_cache):
+def get_fitcache_pars(fitcache):
 
     pars = pyLike.FloatVector()
     cov = pyLike.FloatVector()
 
-    pyLike.Vector_Hep_to_Stl(fit_cache.currentPars(),pars)
-    pyLike.Matrix_Hep_to_Stl(fit_cache.currentCov(),cov)
+    pyLike.Vector_Hep_to_Stl(fitcache.currentPars(),pars)
+    pyLike.Matrix_Hep_to_Stl(fitcache.currentCov(),cov)
 
     pars = np.array(pars)
     cov = np.array(cov)
@@ -923,10 +945,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._ccube_file = os.path.join(self.workdir,
                                         'ccube.fits')
 
-        self._fs_model_wrapper = None
-        if hasattr(pyLike,'FitScanModelWrapper'):
-           self._fs_model_wrapper = pyLike.FitScanModelWrapper_Summed(self.like.logLike)
+        self._fs_wrapper = None
         self._fitcache = None
+        if hasattr(pyLike,'FitScanModelWrapper'):
+           self._fs_wrapper = \
+               pyLike.FitScanModelWrapper_Summed(self.like.logLike)
            
         self._init_roi_model()
 
@@ -947,6 +970,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
         self.like.model = self.like.components[0].model
         self._init_roi_model()
+
+        self._fs_wrapper = None
+        self._fitcache = None
+        if hasattr(pyLike,'FitScanModelWrapper'):
+           self._fs_wrapper = \
+               pyLike.FitScanModelWrapper_Summed(self.like.logLike)
         
     def _init_roi_model(self):
 
@@ -1433,6 +1462,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.like[idx].setScale(self.like[idx].getScale() * scale)
         self._sync_params(name)
 
+    def _set_value_bounded(self, idx, value):
+        bounds = list(self.like.model[idx].getBounds())
+        value = max(value,bounds[0])
+        value = min(value,bounds[1])
+        self.like[idx].setValue(value)
+        
     def set_parameter(self, name, par, value, true_value=True, scale=None,
                       bounds=None, update_source=True):
         """
@@ -2494,8 +2529,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             if self.like.logLike.getNumFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
-                self._fit(optimizer=optimizer)
-                loglike1 = -self.like()
+                fit_output = self._fit(optimizer=optimizer)
+                loglike1 = fit_output['loglike']
                 self.like.thaw(idx)
             else:
                 loglike1 = -self.like()
@@ -2776,15 +2811,17 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                         "DeltaLogLike: %12.3f"%o['dloglike'])
         return o
 
-    def _create_fitscan_cache(self,tol=0.001):
+    def _create_fitcache(self,**kwargs):
 
+        tol = kwargs.get('tol',self.config['optimizer']['tol'])
+        max_iter = kwargs.get('tol',self.config['optimizer']['max_iter'])
+        
         params = self.get_params()
         if self._fitcache is not None and self._fitcache.check_params(params):
             return self._fitcache
         
-        fc = pyLike.FitScanCache(self._fs_model_wrapper,
-                                 str('testsource'),
-                                 tol,30,False)
+        fc = pyLike.FitScanCache(self._fs_wrapper,str('fitscan_testsource'),
+                                 tol,max_iter,False)
 
         self._fitcache = FitCache(fc,self.like,params)
         
@@ -2793,10 +2830,18 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def _fit_newton(self,fitcache=None,ebin=None,**kwargs):
         """Fast fitting method using newton fitter."""        
 
-        use_prior = kwargs.get('use_prior',False)
+        free_params = self.get_params(True)
+        free_norm_params = [p for p in free_params if p['is_norm'] is True]
+
+        if len(free_params) != len(free_norm_params):
+            msg = 'Executing Newton fitter with one ' + \
+            'or more free shape parameters.' 
+            self.logger.error(msg)
+            raise Exception(msg)
         
+        use_prior = kwargs.get('use_prior',False)        
         if fitcache is None:
-            fitcache = self._create_fitscan_cache()
+            fitcache = self._create_fitcache()
 
         fitcache.refactor()
 
@@ -2811,14 +2856,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             fitcache.fitcache.setEnergyBin(-1)
         else:
             fitcache.fitcache.setEnergyBin(imin)
-            
-        free_params = self.get_params(True)
-        free_norm_params = [p for p in free_params if p['is_norm'] is True]
-
-        if len(free_params) != len(free_norm_params):
-            self.logger.warning('Executing Newton fitter with one '
-                                'or more free shape parameters.  '
-                                'Only normalizations will be fit.')
             
         num_free = len(free_norm_params)
 
@@ -2849,9 +2886,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             o['par_names'][i] = p['par_name']
             o['is_norm'][i] = p['is_norm']
 
-        o['fit_status'] = fitcache.fit()            
-        pars, errs, cov = fitcache.get_pars()
-        
+        o['fit_status'] = fitcache.fit(verbose=0)
+
+         pars, errs, cov = fitcache.get_pars()        
         pars *= norm_vals
         errs *= norm_vals
         cov = cov*np.outer(norm_vals,norm_vals)
@@ -2861,13 +2898,22 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['covariance'] = cov
         errinv = 1./o['errors']
         o['correlation'] = o['covariance']*np.outer(errinv,errinv)        
-        o['loglike'] = fitcache.fitcache.currentLogLike()
-        
-        for idx, val, err in zip(norm_idxs,pars,errs):
-            self.like[idx].setValue(val)
-            self.like[idx].setError(err)
 
-        self.like.syncSrcParams()
+        if o['fit_status'] == 0:
+            for idx, val, err in zip(norm_idxs,pars,errs):
+                self._set_value_bounded(idx,val)
+                self.like[idx].setError(err)
+            self.like.syncSrcParams()
+        else:
+            self.logger.error('Error in NEWTON fit. Fit Status: %i',
+                              o['fit_status'])
+
+        loglike = fitcache.fitcache.currentLogLike()
+
+        prior_vals,prior_errs,has_prior = get_priors(self.like)        
+        loglike -= np.sum(has_prior)*np.log(np.sqrt(2*np.pi))
+        o['loglike'] = loglike
+        
         return o
         
     def fit_correlation(self):
