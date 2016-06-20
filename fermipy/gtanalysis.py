@@ -2529,7 +2529,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             if self.like.logLike.getNumFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
-                fit_output = self._fit(optimizer=optimizer)
+                fit_output = self._fit(optimizer=optimizer,
+                                       errors=False)
                 loglike1 = fit_output['loglike']
                 self.like.thaw(idx)
             else:
