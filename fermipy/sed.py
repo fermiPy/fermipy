@@ -249,8 +249,8 @@ class SEDGenerator(object):
         
         # Perform global spectral fit
         self._latch_free_params()
-        self.free_sources(False,pars='shape')
-        self.free_source(name)
+        self.free_sources(False,pars='shape',loglevel=logging.DEBUG)
+        self.free_source(name,loglevel=logging.DEBUG)
         self.fit(loglevel=logging.DEBUG,update=False,
                  min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
@@ -327,7 +327,8 @@ class SEDGenerator(object):
             emax = 10 ** logemax
             ectr = 10 ** logectr
             ectr2 = ectr**2
-            
+
+            saved_state_bin = LikelihoodState(self.like)
             if use_local_index:
                 o['index'][i] = -min(gf_bin_index[i], max_index)
             else:
@@ -416,6 +417,8 @@ class SEDGenerator(object):
                                                  lnlp['dloglike'], 
                                                  ul_confidence=ul_confidence)
             o['norm_ul'][i] = ul_data['ul']/ref_flux
+
+            saved_state_bin.restore()
 
         for t in ['flux','eflux','dfde','e2dfde']:
             
