@@ -579,6 +579,18 @@ class SEDPlotter(object):
         self._sed = copy.deepcopy(self._src['sed'])
 
     @staticmethod
+    def get_ylims(sed):
+
+        fmin = np.log10(np.min(sed['e2dfde_ul95'])) - 0.5
+        fmax = np.log10(np.max(sed['e2dfde_ul95'])) + 0.5
+        fdelta = fmax-fmin
+        if fdelta < 2.0:
+            fmin -= 0.5*(2.0-fdelta)
+            fmax += 0.5*(2.0-fdelta)
+
+        return fmin, fmax
+        
+    @staticmethod
     def plot_lnlscan(sed, **kwargs):
 
         ax = kwargs.pop('ax', plt.gca())
@@ -587,17 +599,17 @@ class SEDPlotter(object):
 
         lhProf = sed['lnlprofile']
 
-        fmin = min(-8, np.log10(np.min(sed['e2dfde_ul95'])) - 0.5)
-        fmax = max(-5, np.log10(np.max(sed['e2dfde_ul95'])) + 0.5)
-
+        fmin,fmax = SEDPlotter.get_ylims(sed)
+                
         fluxM = np.arange(fmin, fmax, 0.01)
         fbins = len(fluxM)
-        llhMatrix = np.zeros((len(sed['ectr']), fbins))
-
+        llhMatrix = np.zeros((len(sed['ectr']), fbins))        
+        
         # loop over energy bins
         for i in range(len(lhProf)):
             m = lhProf[i]['dfde'] > 0
-            flux = np.log10(lhProf[i]['dfde'][m] * sed['ectr'][i] ** 2)
+            e2dfde_scan = sed['norm_scan'][i][m]*sed['ref_e2dfde'][i]            
+            flux = np.log10(e2dfde_scan)
             logl = lhProf[i]['dloglike'][m]
             logli = np.interp(fluxM, flux, logl)
             logli[fluxM > flux[-1]] = logl[-1]
@@ -627,6 +639,8 @@ class SEDPlotter(object):
         kwargs.setdefault('color', 'k')
         color = kwargs.get('color', 'k')
 
+        fmin,fmax = SEDPlotter.get_ylims(sed)
+        
         m = sed['ts'] < ts_thresh
 
         x = sed['ectr']
@@ -652,7 +666,7 @@ class SEDPlotter(object):
         plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
         plt.gca().set_xlim(sed['emin'][0], sed['emax'][-1])
-        plt.gca().set_ylim(min(1E-8,np.min(y)*0.5),max(1E-5,np.max(y)*1.5))
+        plt.gca().set_ylim(10**fmin,10**fmax)
         
 
     @staticmethod
