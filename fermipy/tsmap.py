@@ -1053,7 +1053,7 @@ class TSCubeGenerator(object):
                               config['cov_scale_bb'],config['cov_scale'],
                               config['tol'], config['max_iter'],
                               config['tol_type'], config['remake_test_source'],
-                              config['st_scan_level'])
+                              config['st_scan_level'],str(''),0.0)
         self.logger.info("Writing FITS output")
                                         
         fitScanner.writeFitsFile(str(outfile), str("gttscube"))

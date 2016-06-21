@@ -2815,14 +2815,20 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def _create_fitcache(self,**kwargs):
 
         tol = kwargs.get('tol',self.config['optimizer']['tol'])
-        max_iter = kwargs.get('tol',self.config['optimizer']['max_iter'])
+        max_iter = kwargs.get('max_iter',self.config['optimizer']['max_iter'])
+        init_lambda = kwargs.get('init_lambda',self.config['optimizer']['init_lambda'])
+        use_reduced = kwargs.get('use_reduced',True)
         
         params = self.get_params()
         if self._fitcache is not None and self._fitcache.check_params(params):
             return self._fitcache
+
+        self.logger.debug('Creating FitCache')
+        self.logger.debug('\ntol: %.5g\nmax_iter: %i\ninit_lambda: %.5g',
+                          tol,max_iter,init_lambda)
         
         fc = pyLike.FitScanCache(self._fs_wrapper,str('fitscan_testsource'),
-                                 tol,max_iter,False)
+                                 tol,max_iter,init_lambda,use_reduced)
 
         self._fitcache = FitCache(fc,self.like,params)
         
@@ -2840,9 +2846,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.logger.error(msg)
             raise Exception(msg)
         
-        use_prior = kwargs.get('use_prior',False)        
+        verbosity = kwargs.get('verbosity',0)
         if fitcache is None:
-            fitcache = self._create_fitcache()
+            fitcache = self._create_fitcache(**kwargs)
 
         fitcache.refactor()
 
@@ -2851,12 +2857,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         imin = int(utils.val_to_edge(self.log_energies, logemin)[0])
         imax = int(utils.val_to_edge(self.log_energies, logemax)[0])
         
-        if ebin is not None:
+        if ebin is not None:            
             fitcache.fitcache.setEnergyBin(ebin)
         elif imin == 0 and imax == self.enumbins:
             fitcache.fitcache.setEnergyBin(-1)
         else:
-            fitcache.fitcache.setEnergyBin(imin)
+            fitcache.fitcache.setEnergyBins(imin,imax)
             
         num_free = len(free_norm_params)
 
@@ -2887,7 +2893,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             o['par_names'][i] = p['par_name']
             o['is_norm'][i] = p['is_norm']
 
-        o['fit_status'] = fitcache.fit(verbose=0)
+        o['fit_status'] = fitcache.fit(verbose=verbosity)
 
         pars, errs, cov = fitcache.get_pars()        
         pars *= norm_vals

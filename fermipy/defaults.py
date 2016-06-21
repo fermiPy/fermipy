@@ -157,6 +157,8 @@ optimizer = {
                    'likelihood function.', str),
     'tol': (1E-4, 'Set the optimizer tolerance.', float),
     'max_iter': (30, 'Maximum number of iterations for the Newtons method fitter.', int),
+    'init_lambda': (1E-4, 'Initial value of damping parameter for step size calculation '
+                    'when using the NEWTON fitter.', float),
     'retries': (3, 'Set the number of times to retry the fit when the fit quality is less than ``min_fit_quality``.', int),
     'min_fit_quality': (2, 'Set the minimum fit quality.', int),
     'verbosity': (0, '', int)
@@ -231,6 +233,7 @@ tscube = {
     'tol_type': (0, 'Absoulte (0) or relative (1) criteria for convergence.', int),
     'remake_test_source': (False, 'If true, recomputes the test source image (otherwise just shifts it)', bool),
     'st_scan_level': (0, 'Level to which to do ST-based fitting (for testing)', int),
+    'init_lambda': (1E-4, 'Initial value of damping parameter for newton step size calculation.', float),
 }
 
 # Options for Source Finder
