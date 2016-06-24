@@ -233,7 +233,7 @@ tscube = {
     'tol_type': (0, 'Absoulte (0) or relative (1) criteria for convergence.', int),
     'remake_test_source': (False, 'If true, recomputes the test source image (otherwise just shifts it)', bool),
     'st_scan_level': (0, 'Level to which to do ST-based fitting (for testing)', int),
-    'init_lambda': (1E-4, 'Initial value of damping parameter for newton step size calculation.', float),
+    'init_lambda': (0, 'Initial value of damping parameter for newton step size calculation.', float),
 }
 
 # Options for Source Finder
