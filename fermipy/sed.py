@@ -206,30 +206,18 @@ class SEDGenerator(object):
 
         columns = pyfits.ColDefs([])
 
-        
-        param_names = gtutils.get_function_par_names(sed['SpectrumType'])
-        npar = len(param_names)
-        
-        param_names_array = np.empty(npar,dtype='S32')
-        param_names_array.fill('')
-        param_values = np.empty(npar,dtype=float)*np.nan
-        param_errors = np.empty(npar,dtype=float)*np.nan
-        param_cov = sed['param_covariance']
-        
-        for i, k in enumerate(param_names):
-            param_names_array[i] = k
-            param_values[i] = sed['params'][k][0]
-            param_errors[i] = sed['params'][k][1]
-        
+        npar = len(sed['param_names'])        
         columns.add_col(pyfits.Column(name=str('NAME'),
                                       format='A32',
-                                      array=param_names_array))
+                                      array=sed['param_names']))
         columns.add_col(pyfits.Column(name=str('VALUE'), format='E',
-                                      array=param_values))
+                                      array=sed['param_values']))
         columns.add_col(pyfits.Column(name=str('ERROR'), format='E',
-                                      array=param_errors))
+                                      array=sed['param_errors']))
         columns.add_col(pyfits.Column(name=str('COVARIANCE'), format='%iE'%npar,
-                                      dim=str('(%i)'%npar),array=param_cov))
+                                      dim=str('(%i)'%npar),array=sed['param_covariance']))
+        columns.add_col(pyfits.Column(name=str('CORRELATION'), format='%iE'%npar,
+                                      dim=str('(%i)'%npar),array=sed['param_correlation']))
         
         hdu_p = pyfits.BinTableHDU.from_columns(columns,name='PARAMS')
         
@@ -268,7 +256,8 @@ class SEDGenerator(object):
         loge_bounds = self.loge_bounds
         
         # Output Dictionary
-        o = {'logemin': loge_bins[:-1],
+        o = {'name' : name,
+             'logemin': loge_bins[:-1],
              'logemax': loge_bins[1:],
              'logectr': 0.5 * (loge_bins[:-1] + loge_bins[1:]),
              'emin' : 10 ** loge_bins[:-1],
@@ -325,13 +314,19 @@ class SEDGenerator(object):
         
         param_names = gtutils.get_function_par_names(o['SpectrumType'])        
         npar = len(param_names)
-        cov = np.empty((npar,npar),dtype=float)*np.nan
-
+        o['param_covariance'] = np.empty((npar,npar),dtype=float)*np.nan
+        o['param_names'] = np.array(param_names)
+        o['param_values'] = np.empty(npar,dtype=float)*np.nan
+        o['param_errors'] = np.empty(npar,dtype=float)*np.nan
+        
         pmask0 = np.empty(len(fit_output['par_names']),dtype=bool)
         pmask0.fill(False)
         pmask1 = np.empty(npar,dtype=bool)
         pmask1.fill(False)
         for i, pname in enumerate(param_names):
+            
+            o['param_values'][i] = o['params'][pname][0]
+            o['param_errors'][i] = o['params'][pname][1]            
             for j, pname2 in enumerate(fit_output['par_names']):            
                 if name != fit_output['src_names'][j]:
                     continue
@@ -341,13 +336,12 @@ class SEDGenerator(object):
                 pmask1[i] = True
                 
         src_cov = fit_output['covariance'][pmask0,:][:,pmask0]
-        cov[np.ix_(pmask1,pmask1)] = src_cov
-
-        for i, pname in enumerate(param_names):
-            cov[i,:] *= spectral_pars[pname]['scale']
-            cov[:,i] *= spectral_pars[pname]['scale']
+        o['param_covariance'][np.ix_(pmask1,pmask1)] = src_cov
+        o['param_correlation'] = utils.cov_to_correlation(o['param_covariance'])
         
-        o['param_covariance'] = cov
+        for i, pname in enumerate(param_names):
+            o['param_covariance'][i,:] *= spectral_pars[pname]['scale']
+            o['param_covariance'][:,i] *= spectral_pars[pname]['scale']
                 
         self._restore_free_params()
 

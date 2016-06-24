@@ -334,6 +334,13 @@ def create_model_name(src):
     return o
 
 
+def cov_to_correlation(cov):
+
+    err = np.sqrt(np.diag(cov))
+    corr = np.array(cov)
+    corr *= np.outer(1/err,1/err)
+    return corr
+
 def cl_to_dlnl(cl):
     """Compute the delta-log-likehood corresponding to an upper limit of
     the given confidence level."""
