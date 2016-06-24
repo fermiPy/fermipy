@@ -121,6 +121,7 @@ class SEDGenerator(object):
 
         prefix = kwargs.get('prefix','')
         write_fits = kwargs.get('write_fits',True)
+        write_npy = kwargs.get('write_npy',True)
         
         self.logger.info('Computing SED for %s' % name)
         
@@ -128,18 +129,25 @@ class SEDGenerator(object):
         
         self._plotter.make_sed_plot(self, name, **kwargs)
 
+        filename = \
+            utils.format_filename(self.workdir,'sed',
+                                  prefix=[prefix,
+                                          name.lower().replace(' ', '_')])
+
+        o['file'] = None            
         if write_fits:
-            self._make_sed_fits(o,name,**kwargs)
+            o['file'] = os.path.basename(filename) + '.fits'
+            self._make_sed_fits(o,filename + '.fits',**kwargs)
+
+        if write_npy:            
+            np.save(filename + '.npy', o)
+            
         self.logger.info('Finished SED')
         
         return o
 
-    def _make_sed_fits(self,sed,name,**kwargs):
+    def _make_sed_fits(self,sed,filename,**kwargs):
 
-        prefix = kwargs.get('prefix',None)
-
-        name = name.lower().replace(' ', '_')
-        
         # Write a FITS file
         cols = [Column(name='E_MIN',dtype='f8',data=sed['emin'],unit='MeV'),
                 Column(name='E_REF',dtype='f8',data=sed['ectr'],unit='MeV'),
@@ -169,11 +177,7 @@ class SEDGenerator(object):
                 ]
                 
         tab = Table(cols)
-        filename = utils.format_filename(self.config['fileio']['workdir'],
-                                         'sed', prefix=[prefix,name],
-                                         extension='.fits')
 
-        sed['file'] = os.path.basename(filename)
         
         tab.write(filename,format='fits',overwrite=True)
 
@@ -231,6 +235,10 @@ class SEDGenerator(object):
         
         hdulist = pyfits.open(filename)
         hdulist = pyfits.HDUList([hdulist[0],hdu_f,hdu_p])
+
+        for h in hdulist:
+            h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+        
         hdulist.writeto(filename,clobber=True)
 
     def _make_sed(self, name, profile=True, loge_bins=None, **kwargs):
