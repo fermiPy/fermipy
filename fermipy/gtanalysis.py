@@ -186,8 +186,6 @@ class FitCache(object):
         self._has_prior = np.array([True]*len(vals))
         
     def _build_priors(self):
-
-#        print('build_priors')
         
         free_pars = np.array(self._free_pars)        
         ref_vals = np.array(self.fitcache.refValues())
@@ -1078,9 +1076,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             logemax = self.log_energies[imax]
 
         loge_bounds = np.array([logemin,logemax])
-        
-        if np.allclose(loge_bounds,self._loge_bounds):
-            return self._loge_bounds
         
         self._loge_bounds = np.array([logemin,logemax])
         self._roi_model['loge_bounds'] = np.copy(self.loge_bounds)
@@ -2906,12 +2901,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         errinv = 1./o['errors']
         o['correlation'] = o['covariance']*np.outer(errinv,errinv)        
 
-        if o['fit_status'] == 0:
+        if o['fit_status'] in [-2,0]:
             for idx, val, err in zip(norm_idxs,pars,errs):
                 self._set_value_bounded(idx,val)
                 self.like[idx].setError(err)
             self.like.syncSrcParams()
-        else:
+
+        if o['fit_status']:
             self.logger.error('Error in NEWTON fit. Fit Status: %i',
                               o['fit_status'])
 
@@ -4118,10 +4114,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         imax = int(utils.val_to_edge(self.log_energies, logemax)[0])
 
         if imin - imax == 0:
-            imin = len(self.log_energies) - 1
-            imax = len(self.log_energies) - 1
+            imin = int(len(self.log_energies) - 1)
+            imax = int(len(self.log_energies) - 1)
 
-        self.like.selectEbounds(int(imin), int(imax))
+        klims = self.like.logLike.klims()        
+        if imin != klims[0] or imax != klims[1]:
+            self.like.selectEbounds(imin, imax)
+
         return np.array([self.log_energies[imin], self.log_energies[imax]])
 
     def counts_map(self):
