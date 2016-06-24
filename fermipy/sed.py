@@ -210,7 +210,7 @@ class SEDGenerator(object):
         param_names_array.fill('')
         param_values = np.empty(npar,dtype=float)*np.nan
         param_errors = np.empty(npar,dtype=float)*np.nan
-        param_cov = np.empty((npar,npar),dtype=float)*np.nan
+        param_cov = sed['param_covariance']
         
         for i, k in enumerate(param_names):
             param_names_array[i] = k
@@ -314,9 +314,32 @@ class SEDGenerator(object):
         o['params'] = roi_model.get_params_dict(spectral_pars)
         o['SpectrumType'] = self.roi[name]['SpectrumType']
         
-        param_names = gtutils.get_function_par_names(o['SpectrumType'])
+        param_names = gtutils.get_function_par_names(o['SpectrumType'])        
         npar = len(param_names)
-        cov = np.empty((npar,npar),dtype=float)*np.nan        
+        cov = np.empty((npar,npar),dtype=float)*np.nan
+
+        pmask0 = np.empty(len(fit_output['par_names']),dtype=bool)
+        pmask0.fill(False)
+        pmask1 = np.empty(npar,dtype=bool)
+        pmask1.fill(False)
+        for i, pname in enumerate(param_names):
+            for j, pname2 in enumerate(fit_output['par_names']):            
+                if name != fit_output['src_names'][j]:
+                    continue
+                if pname != pname2:
+                    continue
+                pmask0[j] = True
+                pmask1[i] = True
+                
+        src_cov = fit_output['covariance'][pmask0,:][:,pmask0]
+        cov[np.ix_(pmask1,pmask1)] = src_cov
+
+        for i, pname in enumerate(param_names):
+            cov[i,:] *= spectral_pars[pname]['scale']
+            cov[:,i] *= spectral_pars[pname]['scale']
+        
+        o['param_covariance'] = cov
+                
         self._restore_free_params()
 
         # Setup background parameters for SED
