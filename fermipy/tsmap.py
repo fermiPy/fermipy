@@ -1047,13 +1047,25 @@ class TSCubeGenerator(object):
         # tolType       : Absoulte (0) or relative (1) criteria for convergence
         # remakeTestSource : If true, recomputes the test source image (otherwise just shifts it)
         # ST_scan_level : Level to which to do ST-based fitting (for testing)
-        fitScanner.run_tscube(True,
-                              config['do_sed'], config['nnorm'],
-                              config['norm_sigma'], 
-                              config['cov_scale_bb'],config['cov_scale'],
-                              config['tol'], config['max_iter'],
-                              config['tol_type'], config['remake_test_source'],
-                              config['st_scan_level'],str(''),0.0)
+        try:
+            fitScanner.run_tscube(True,
+                                  config['do_sed'], config['nnorm'],
+                                  config['norm_sigma'], 
+                                  config['cov_scale_bb'],config['cov_scale'],
+                                  config['tol'], config['max_iter'],
+                                  config['tol_type'], config['remake_test_source'],
+                                  config['st_scan_level'],
+                                  str(''),
+                                  config['init_lambda'])
+        except Exception:
+            fitScanner.run_tscube(True,
+                                  config['do_sed'], config['nnorm'],
+                                  config['norm_sigma'], 
+                                  config['cov_scale_bb'],config['cov_scale'],
+                                  config['tol'], config['max_iter'],
+                                  config['tol_type'], config['remake_test_source'],
+                                  config['st_scan_level'])
+        
         self.logger.info("Writing FITS output")
                                         
         fitScanner.writeFitsFile(str(outfile), str("gttscube"))
