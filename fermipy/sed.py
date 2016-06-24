@@ -286,6 +286,7 @@ class SEDGenerator(object):
              'dloglike_scan' : np.zeros((nbins,npts)),
              'loglike_scan' : np.zeros((nbins,npts)),
              'fit_quality': np.zeros(nbins),
+             'fit_status': np.zeros(nbins),
              'lnlprofile': [],
              'correlation' : {},
              'model_flux' : {},
