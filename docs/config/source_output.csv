@@ -6,7 +6,7 @@
 ``SourceType``	str	Source type string (PointSource or DiffuseSource).
 ``SpectrumType``	str	Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).
 ``Spatial_Filename``	str	Path to spatial template associated to this source.
-``filefunction``	str	Path to file function associated to this source.
+``Spectrum_Filename``	str	Path to file associated to the spectral model of this source.
 ``ra``	float	Right ascension of the source in deg.
 ``dec``	float	Declination of the source in deg.
 ``glon``	float	Galactic Longitude of the source in deg.

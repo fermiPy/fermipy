@@ -1,4 +1,4 @@
-``fit_quality``	int	Fit quality parameter (3 - Full accurate covariance matrix, 2 - Full matrix, but forced positive-definite (i.e. not accurate), 1 - Diagonal approximation only, not accurate, 0 - Error matrix not calculated at all)
+``fit_quality``	int	Fit quality parameter for MINUIT and NEWMINUIT optimizers (3 - Full accurate covariance matrix, 2 - Full matrix, but forced positive-definite (i.e. not accurate), 1 - Diagonal approximation only, not accurate, 0 - Error matrix not calculated at all)
 ``errors``	`~numpy.ndarray`	Vector of parameter errors (unscaled).
 ``loglike``	float	Post-fit log-likehood value.
 ``correlation``	`~numpy.ndarray`	Correlation matrix between free parameters of the fit.

@@ -1,4 +1,6 @@
-``min_fit_quality``	3	Set the minimum fit quality.
+``init_lambda``	0.0001	Initial value of damping parameter for step size calculation when using the NEWTON fitter.
+``max_iter``	30	Maximum number of iterations for the Newtons method fitter.
+``min_fit_quality``	2	Set the minimum fit quality.
 ``optimizer``	MINUIT	Set the optimization algorithm to use when maximizing the likelihood function.
 ``retries``	3	Set the number of times to retry the fit when the fit quality is less than ``min_fit_quality``.
 ``tol``	0.0001	Set the optimizer tolerance.

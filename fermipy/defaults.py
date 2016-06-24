@@ -165,7 +165,7 @@ optimizer = {
 }
 
 fit_output = {
-    'fit_quality' : (None, 'Fit quality parameter (3 - Full accurate covariance matrix, '
+    'fit_quality' : (None, 'Fit quality parameter for MINUIT and NEWMINUIT optimizers (3 - Full accurate covariance matrix, '
                      '2 - Full matrix, but forced positive-definite (i.e. not accurate), '
                      '1 - Diagonal approximation only, not accurate, '
                      '0 - Error matrix not calculated at all)',int,'int'),
@@ -266,7 +266,15 @@ sed_output = OrderedDict((
     ('logectr', (None, 'Centers of SED energy bins (log10(E/MeV)).', np.ndarray, '`~numpy.ndarray`')),
     ('emin', (None, 'Lower edges of SED energy bins (MeV).', np.ndarray, '`~numpy.ndarray`')),
     ('emax', (None, 'Upper edges of SED energy bins (MeV).', np.ndarray, '`~numpy.ndarray`')),
-    ('ectr', (None, 'Centers of SED energy bins (MeV).', np.ndarray, '`~numpy.ndarray`')),    
+    ('ectr', (None, 'Centers of SED energy bins (MeV).', np.ndarray, '`~numpy.ndarray`')),
+    ('ref_flux', (None, 'Flux of the reference model in each bin (%s).'%FLUX_UNIT,  np.ndarray, '`~numpy.ndarray`')),
+    ('ref_eflux', (None, 'Energy flux of the reference model in each bin (%s).'%ENERGY_FLUX_UNIT,  np.ndarray, '`~numpy.ndarray`')), 
+    ('ref_dfde', (None, 'Differential flux of the reference model evaluated at the bin center (%s)'%DIFF_FLUX_UNIT,  np.ndarray, '`~numpy.ndarray`')), 
+    ('ref_dfde_emin', (None, 'Differential flux of the reference model evaluated at the lower bin edge (%s)'%DIFF_FLUX_UNIT,  np.ndarray, '`~numpy.ndarray`')), 
+    ('ref_dfde_emax', (None, 'Differential flux of the reference model evaluated at the upper bin edge (%s)'%DIFF_FLUX_UNIT,  np.ndarray, '`~numpy.ndarray`')), 
+    ('ref_e2dfde', (None, 'E^2 x the differential flux of the reference model evaluated at the bin center (%s)'%ENERGY_FLUX_UNIT,  np.ndarray, '`~numpy.ndarray`')), 
+    ('ref_npred', (None, 'Number of predicted counts in the reference model in each bin.',  np.ndarray, '`~numpy.ndarray`')), 
+    ('norm', (None, 'Normalization in each bin in units of the reference model.',  np.ndarray, '`~numpy.ndarray`')),     
     ('flux', (None, 'Flux in each bin (%s).'%FLUX_UNIT,np.ndarray, '`~numpy.ndarray`')),
     ('eflux', (None, 'Energy flux in each bin (%s).'%ENERGY_FLUX_UNIT,np.ndarray,'`~numpy.ndarray`')),
     ('dfde', (None, 'Differential flux in each bin (%s).'%DIFF_FLUX_UNIT,np.ndarray,'`~numpy.ndarray`')),
@@ -284,13 +292,31 @@ sed_output = OrderedDict((
     ('ts', (None, 'Test statistic.',np.ndarray,'`~numpy.ndarray`')),
     ('loglike', (None, 'Log-likelihood of model for the best-fit amplitude.',np.ndarray,'`~numpy.ndarray`')),
     ('npred', (None, 'Number of model counts.',np.ndarray,'`~numpy.ndarray`')),
-    ('fit_quality', (None, 'Fit quality parameter.',np.ndarray,'`~numpy.ndarray`')),
+    ('fit_quality', (None, 'Fit quality parameter for MINUIT and NEWMINUIT optimizers (3 - Full accurate covariance matrix, '
+                     '2 - Full matrix, but forced positive-definite (i.e. not accurate), '
+                     '1 - Diagonal approximation only, not accurate, '
+                     '0 - Error matrix not calculated at all).',np.ndarray,'`~numpy.ndarray`')),
+    ('fit_status', (None, 'Fit status parameter (0=ok).',np.ndarray,'`~numpy.ndarray`')),
     ('index', (None, 'Spectral index of the power-law model used to fit this bin.',np.ndarray,'`~numpy.ndarray`')),
     ('lnlprofile', (None, 'Likelihood scan for each energy bin.',dict,'dict')),
-    ('norm_scan', (None, 'Array of NxM normalization values for likelihood scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
-    ('dloglike_scan', (None, 'Array of NxM delta-loglikelihood values for likelihood scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
-    ('loglike_scan', (None, 'Array of NxM loglikelihood values for likelihood scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
-    ('params', (None, 'Best-fit spectral parameters with 1-sigma uncertainties.',dict,'dict')),
+    ('norm_scan', (None, 'Array of NxM normalization values for the profile likelihood scan in N '
+                   'energy bins and M scan points.  A row-wise multiplication with '
+                   'any of ``ref`` columns can be used to convert this matrix to the '
+                   'respective unit.',
+                   np.ndarray,'`~numpy.ndarray`')),
+    ('dloglike_scan', (None, 'Array of NxM delta-loglikelihood values for the profile likelihood '
+                       'scan in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
+    ('loglike_scan', (None, 'Array of NxM loglikelihood values for the profile likelihood scan '
+                      'in N energy bins and M scan points.',np.ndarray,'`~numpy.ndarray`')),
+    ('params', (None, 'Dictionary of best-fit spectral parameters with 1-sigma uncertainties.',dict,'dict')),
+    ('param_covariance', (None, 'Covariance matrix for the best-fit spectral parameters of the source.'
+                          ,np.ndarray,'`~numpy.ndarray`')),
+    ('param_names', (None, 'Array of names for the parameters in the global spectral parameterization of this source.',np.ndarray,'`~numpy.ndarray`')),
+    ('param_values', (None, 'Array of parameter values.',np.ndarray,'`~numpy.ndarray`')),
+    ('param_errors', (None, 'Array of parameter errors.',np.ndarray,'`~numpy.ndarray`')),
+    ('model_flux', (None, 'Dictionary containing the differential flux uncertainty '
+                    'band of the best-fit global spectral parameterization for the '
+                    'source.',dict,'dict')),
     ('config', (None, 'Copy of input configuration to this method.',dict,'dict')),
 ))
 
