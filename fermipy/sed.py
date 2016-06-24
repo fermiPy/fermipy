@@ -22,7 +22,7 @@ import scipy
 
 import pyLikelihood as pyLike
 
-import astropy.io.fits as pf
+import astropy.io.fits as pyfits
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, Column
 
@@ -176,7 +176,63 @@ class SEDGenerator(object):
         sed['file'] = os.path.basename(filename)
         
         tab.write(filename,format='fits',overwrite=True)
+
+        columns = pyfits.ColDefs([])
+
+        columns.add_col(pyfits.Column(name=str('ENERGY'), format='E',
+                                      array=sed['model_flux']['energies'],
+                                      unit='MeV'))
+        columns.add_col(pyfits.Column(name=str('DFDE'), format='E',
+                                      array=sed['model_flux']['dfde'],
+                                      unit='ph / (MeV cm2 s)'))
+        columns.add_col(pyfits.Column(name=str('DFDE_LO'), format='E',
+                                      array=sed['model_flux']['dfde_lo'],
+                                      unit='ph / (MeV cm2 s)'))
+        columns.add_col(pyfits.Column(name=str('DFDE_HI'), format='E',
+                                      array=sed['model_flux']['dfde_hi'],
+                                      unit='ph / (MeV cm2 s)'))
+        columns.add_col(pyfits.Column(name=str('DFDE_ERR'), format='E',
+                                      array=sed['model_flux']['dfde_err'],
+                                      unit='ph / (MeV cm2 s)'))
+        columns.add_col(pyfits.Column(name=str('DFDE_FERR'), format='E',
+                                      array=sed['model_flux']['dfde_ferr']))
         
+        hdu_f = pyfits.BinTableHDU.from_columns(columns,name='MODEL_FLUX')
+
+
+        columns = pyfits.ColDefs([])
+
+        
+        param_names = gtutils.get_function_par_names(sed['SpectrumType'])
+        npar = len(param_names)
+        
+        param_names_array = np.empty(npar,dtype='S32')
+        param_names_array.fill('')
+        param_values = np.empty(npar,dtype=float)*np.nan
+        param_errors = np.empty(npar,dtype=float)*np.nan
+        param_cov = np.empty((npar,npar),dtype=float)*np.nan
+        
+        for i, k in enumerate(param_names):
+            param_names_array[i] = k
+            param_values[i] = sed['params'][k][0]
+            param_errors[i] = sed['params'][k][1]
+        
+        columns.add_col(pyfits.Column(name=str('NAME'),
+                                      format='A32',
+                                      array=param_names_array))
+        columns.add_col(pyfits.Column(name=str('VALUE'), format='E',
+                                      array=param_values))
+        columns.add_col(pyfits.Column(name=str('ERROR'), format='E',
+                                      array=param_errors))
+        columns.add_col(pyfits.Column(name=str('COVARIANCE'), format='%iE'%npar,
+                                      dim=str('(%i)'%npar),array=param_cov))
+        
+        hdu_p = pyfits.BinTableHDU.from_columns(columns,name='PARAMS')
+        
+        hdulist = pyfits.open(filename)
+        hdulist = pyfits.HDUList([hdulist[0],hdu_f,hdu_p])
+        hdulist.writeto(filename,clobber=True)
+
     def _make_sed(self, name, profile=True, loge_bins=None, **kwargs):
 
         # Extract options from kwargs
@@ -251,12 +307,16 @@ class SEDGenerator(object):
         self._latch_free_params()
         self.free_sources(False,pars='shape',loglevel=logging.DEBUG)
         self.free_source(name,loglevel=logging.DEBUG)
-        self.fit(loglevel=logging.DEBUG,update=False,
-                 min_fit_quality=2)
+        fit_output = self.fit(loglevel=logging.DEBUG,update=False,
+                              min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
         spectral_pars = gtutils.get_pars_dict_from_source(source)
         o['params'] = roi_model.get_params_dict(spectral_pars)
+        o['SpectrumType'] = self.roi[name]['SpectrumType']
         
+        param_names = gtutils.get_function_par_names(o['SpectrumType'])
+        npar = len(param_names)
+        cov = np.empty((npar,npar),dtype=float)*np.nan        
         self._restore_free_params()
 
         # Setup background parameters for SED

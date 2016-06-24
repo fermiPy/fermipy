@@ -2821,8 +2821,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.debug('Creating FitCache')
         self.logger.debug('\ntol: %.5g\nmax_iter: %i\ninit_lambda: %.5g',
                           tol,max_iter,init_lambda)
-        
-        fc = pyLike.FitScanCache(self._fs_wrapper,str('fitscan_testsource'),
+
+        fs_wrapper = pyLike.FitScanModelWrapper_Summed(self.like.logLike)        
+        fc = pyLike.FitScanCache(fs_wrapper,str('fitscan_testsource'),
                                  tol,max_iter,init_lambda,use_reduced)
 
         self._fitcache = FitCache(fc,self.like,params)
@@ -3011,6 +3012,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         
         """
 
+        self._fitcache = None
+        
         if src_dict is None:
             src_dict = {}
         else:
@@ -3064,6 +3067,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
 
         self.logger.info('Simulating ROI')
+
+        self._fitcache = None
         
         if restore:
             self.logger.info('Restoring')
@@ -3404,6 +3409,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
              'dfde': np.zeros(len(loge)) * np.nan,
              'dfde_lo': np.zeros(len(loge)) * np.nan,
              'dfde_hi': np.zeros(len(loge)) * np.nan,
+             'dfde_err' : np.zeros(len(loge)) * np.nan,
              'dfde_ferr' : np.zeros(len(loge)) * np.nan,
              'pivot_energy' : np.nan }
 
@@ -3426,7 +3432,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['dfde'] = dfde
         o['dfde_lo'] = flo
         o['dfde_hi'] = fhi
-        o['dfde_ferr'] = (fhi - flo) / dfde
+        o['dfde_err'] = dfde_err
+        o['dfde_ferr'] = 0.5*(fhi - flo) / dfde
         
         try:
             o['pivot_energy'] = 10 ** utils.interpolate_function_min(loge,o['dfde_ferr'])
