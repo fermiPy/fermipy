@@ -95,10 +95,10 @@ class FitCache(object):
         self._params = params
         self._like = like
 
-        free_params = [p for p in params if p['free'] is True] 
+        free_params = [p for p in params if p['free'] is True]
         free_norm_params = [p for p in free_params if p['is_norm'] is True]
 
-        self._cache_params = free_norm_params        
+        self._cache_params = free_norm_params
         self._cache_param_idxs = [p['idx'] for p in self._cache_params]
 
         npar = len(self.params)
@@ -131,17 +131,18 @@ class FitCache(object):
             if p['idx'] not in self._cache_param_idxs:
                 return False
 
-        for i, p in enumerate(params):
+        # Check if any fixed parameters changed
+        for i, p in enumerate(self._params):
 
-            if p['is_norm']:
+            if p['free']:
                 continue
             
-            if not np.isclose(p['value'],self._params[i]['value']):
+            if not np.isclose(p['value'],params[i]['value']):
                 return False
 
-            if not np.isclose(p['scale'],self._params[i]['scale']):
+            if not np.isclose(p['scale'],params[i]['scale']):
                 return False
-            
+                        
         return True
             
     def refactor(self):
@@ -1649,6 +1650,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.set_parameter(name,par,value,true_value=False,
                            update_source=update_source)
 
+    def set_norm_bounds(self,name,bounds):
+        name = self.get_source_name(name)
+        par = self.like.normPar(name).getName()
+        self.set_parameter_bounds(name,par,bounds)
+        
     def free_norm(self, name, free=True, **kwargs):
         """Free/Fix normalization of a source.
 
@@ -2312,7 +2318,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         par = self.like.normPar(name)
         
         loge_bounds = [self.loge_bounds[0] if logemin is None else logemin,
-                   self.loge_bounds[1] if logemax is None else logemax]
+                       self.loge_bounds[1] if logemax is None else logemax]
         
         val = par.getValue()
         
@@ -2334,7 +2340,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                             loge_bounds[1],
                                             summed=True)
             npred = np.sum(cs)
-
             
         if npred < 10:
             val *= 1. / min(1.0, npred)
@@ -2359,6 +2364,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         npts = max(npts,5)
         xvals = self._find_scan_pts(name,logemin=logemin, logemax=logemax,
                                     npts=20)
+        
         lnlp0 = self.profile(name, parName, logemin=logemin, logemax=logemax, 
                              reoptimize=False,xvals=xvals, **kwargs)
         xval0 = self.like.normPar(name).getValue()
@@ -2374,25 +2380,27 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             xvals = np.array([lims0['ll'],
                               lims0['x0']-lims0['err_lo'],lims0['x0'],
                               lims0['x0']+lims0['err_hi'],lims0['ul']])
-            
+
         lnlp1 = self.profile(name, parName, logemin=logemin, logemax=logemax, 
                              reoptimize=True, xvals=xvals, **kwargs)
 
-        dlogLike = copy.deepcopy(lnlp1['dloglike'])
-        dloglike0 = dlogLike[-1]
+        loglike = copy.deepcopy(lnlp1['loglike'])
+        dloglike = copy.deepcopy(lnlp1['dloglike'])
+        dloglike0 = dloglike[-1]
         xup = xvals[-1]
         
         for i in range(20):
             
-            lims1 = utils.get_parameter_limits(xvals, dlogLike,
+            lims1 = utils.get_parameter_limits(xvals, dloglike,
                                                ul_confidence=0.99)
 
 #            print('iter',i,np.abs(np.abs(dloglike0) - utils.cl_to_dlnl(0.99)),xup)
+#            print(loglike)
             
             if np.abs(np.abs(dloglike0) - utils.cl_to_dlnl(0.99)) < 0.1:
                 break
                 
-            if not np.isfinite(lims1['ul']) or np.abs(dlogLike[-1]) < 1.0:
+            if not np.isfinite(lims1['ul']) or np.abs(dloglike[-1]) < 1.0:
                 xup = 2.0*xvals[-1]
             else:
                 xup = lims1['ul']
@@ -2401,25 +2409,28 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                 logemax=logemax,
                                 reoptimize=True,xvals=[xup],**kwargs)
             dloglike0 = lnlp['dloglike']
-                
-            dlogLike = np.concatenate((dlogLike,dloglike0))
+            loglike0 = lnlp['loglike']
+            
+            loglike = np.concatenate((loglike,loglike0))
+            dloglike = np.concatenate((dloglike,dloglike0))
             xvals = np.concatenate((xvals,[xup]))
             isort = np.argsort(xvals)
-            dlogLike = dlogLike[isort]
+            dloglike = dloglike[isort]
+            loglike = loglike[isort]
             xvals = xvals[isort]
 
 #        from scipy.interpolate import UnivariateSpline
-#        s = UnivariateSpline(xvals,dlogLike,k=2,s=1E-4)        
+#        s = UnivariateSpline(xvals,dloglike,k=2,s=1E-4)        
 #        import matplotlib.pyplot as plt
 #        plt.figure()
-#        plt.plot(xvals,dlogLike,marker='o')
+#        plt.plot(xvals,dloglike,marker='o')
 #        plt.plot(np.linspace(xvals[0],xvals[-1],100),s(np.linspace(xvals[0],xvals[-1],100)))
 #        plt.gca().set_ylim(-5,1)
 #        plt.gca().axhline(-utils.cl_to_dlnl(0.99))
         
         if np.isfinite(lims1['ll']):
             xlo = np.concatenate(([0.0],np.linspace(lims1['ll'],xval0,(npts+1)//2-1)))            
-        elif np.abs(dlogLike[0]) > 0.1:
+        elif np.abs(dloglike[0]) > 0.1:
             xlo = np.linspace(0.0,xval0,(npts+1)//2)
         else:
             xlo = np.array([0.0,xval0])
@@ -2446,10 +2457,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         parName : str
            Parameter name.
         
-        reoptimize : bool
+        reoptimize : bool        
            Re-fit nuisance parameters at each step in the scan.  Note
-           that this will only re-fit parameters that were free when
-           the method was executed.
+           that enabling this option will only re-fit parameters that
+           were free when the method was executed.
 
         Returns
         -------
@@ -2476,7 +2487,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             
         # If parameter is fixed temporarily free it
         par.setFree(True)
-
+        if optimizer == 'NEWTON':
+            self._create_fitcache()
+        
         if logemin is not None or logemax is not None:
             loge_bounds = self.set_energy_range(logemin, logemax)
         else:
@@ -2619,14 +2632,17 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         min_fit_quality = kwargs.get('min_fit_quality',3)
         retries = kwargs.get('retries',3)
         covar = kwargs.get('covar',True)
+
+        #saved_state = LikelihoodState(self.like)
         
         quality = 0
         niter = 0
         while niter < retries:
             self.logger.debug("Fit iteration: %i" % niter)
             niter += 1
-            quality = self._fit_optimizer(**kwargs)
-            if quality >= min_fit_quality:
+            quality, status, edm, loglike = self._fit_optimizer(**kwargs)
+            
+            if quality >= min_fit_quality and status == 0:
                 break
 
         num_free = self.like.logLike.getNumFreeParams()
@@ -2638,8 +2654,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
               'par_names' : num_free*[None] }
            
         o['fit_quality'] = quality
+        o['fit_status'] = status
+        o['edm'] = edm
         o['niter'] = niter
-        o['loglike'] = -self.like()
+        o['loglike'] = loglike
         
         if covar:
             o['covariance'] = np.array(self.like.covariance)
@@ -2666,6 +2684,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                                                 'MINUIT'))
 
         kw = {}
+
+        quality = 3
+        status = 0
+        edm = 0
+        loglike = 0
         
         try:
             if errors:
@@ -2680,17 +2703,24 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 kw['optObject'] = optObject
                 self.like.optimize(**kw)
 
-            if isinstance(self.like.optObject, pyLike.Minuit) or \
-                isinstance(self.like.optObject, pyLike.NewMinuit):
-                quality = self.like.optObject.getQuality()
+            status = optObject.getRetCode()
+                
+            if isinstance(optObject, pyLike.Minuit) or \
+                isinstance(optObject, pyLike.NewMinuit):
+                quality = optObject.getQuality()
+                edm = optObject.getDistance()
             else:
                 quality = 3
+                status = 0
+
+            loglike = optObject.stat().value()
                 
         except Exception:
             self.logger.error('Likelihood optimization failed.', exc_info=True)
             quality = 0
+            status = 1
             
-        return quality
+        return quality, status, edm, loglike
 
     def _fit(self,**kwargs):
 
@@ -2782,12 +2812,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.debug("Fit complete.")        
         o['dloglike'] = o['loglike'] - loglike0
 
-        if o['fit_quality'] < config['min_fit_quality']:
-            self.logger.error('Failed to converge with %s',
-                              self.like.optimizer)
+        if o['fit_status'] or o['fit_quality'] < config['min_fit_quality']:
+            self.logger.error('%s failed with status code %i fit quality %i',
+                              config['optimizer'],o['fit_status'],
+                              o['fit_quality'])
             saved_state.restore()
             return o
-
+        
         if update:
 
             free_params = self.get_params(True)
@@ -2864,6 +2895,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         o = {'fit_status' : 0,
              'fit_quality' : 3,
+             'edm' : 0,
              'loglike' : None, 
              'values' : np.ones(num_free)*np.nan,
              'errors' : np.ones(num_free)*np.nan,
@@ -3309,7 +3341,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
         # extract the results in a convenient format
 
-        make_plots = kwargs.get('make_plots',True)
+        make_plots = kwargs.get('make_plots',False)
 
         if outfile is None:
             pathprefix = os.path.join(self.config['fileio']['workdir'],

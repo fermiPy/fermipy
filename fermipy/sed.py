@@ -105,8 +105,11 @@ class SEDGenerator(object):
             will be applied.
 
         write_fits : bool
-
-        write_npy : bool
+            Write a FITS file containing the SED analysis results.
+        
+        write_npy : bool        
+            Write a numpy file with the contents of the output
+            dictionary.
             
         Returns
         -------
@@ -440,6 +443,7 @@ class SEDGenerator(object):
             flux_ratio = gf_bin_flux[i] / ref_flux
             newVal = max(normVal * flux_ratio, 1E-10)
             self.set_norm(name, newVal, update_source=False)
+            self.set_norm_bounds(name, [newVal*1E-6,newVal*1E4])
             
             self.like.syncSrcParams(str(name))
             self.free_norm(name)
@@ -458,7 +462,8 @@ class SEDGenerator(object):
                     fit_output['correlation'][src_norm_idx,j]
             
             o['fit_quality'][i] = fit_output['fit_quality']
-
+            o['fit_status'][i] = fit_output['fit_status']
+            
             prefactor = self.like[self.like.par_index(name, 'Prefactor')]
 
             flux = self.like[name].flux(emin, emax)

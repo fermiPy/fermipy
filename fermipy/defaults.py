@@ -165,6 +165,8 @@ optimizer = {
 }
 
 fit_output = {
+    'edm' : (None, 'Estimated distance to maximum of log-likelihood function.',float,'float'),
+    'fit_status' : (None, 'Optimizer return code (0 = ok).',int,'int'),
     'fit_quality' : (None, 'Fit quality parameter for MINUIT and NEWMINUIT optimizers (3 - Full accurate covariance matrix, '
                      '2 - Full matrix, but forced positive-definite (i.e. not accurate), '
                      '1 - Diagonal approximation only, not accurate, '
