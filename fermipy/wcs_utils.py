@@ -19,23 +19,79 @@ class WCSProj(object):
     def __init__(self,wcs,npix):
 
         self._wcs = wcs
-        self._npix = npix
+        self._npix = np.array(npix,ndmin=1)
+        self._coordsys = get_coordsys(wcs)
 
+        cdelt0 = np.abs(self.wcs.wcs.cdelt[0])
+        cdelt1 = np.abs(self.wcs.wcs.cdelt[1])
+
+        xindex = 0
+        yindex = 1
+        
+        self._width = np.array([cdelt0*self._npix[xindex],
+                                cdelt1*self._npix[yindex]])
+        self._pix_center = np.array([(self._npix[xindex]-1.0)/2.,
+                                     (self._npix[yindex]-1.0)/2.])
+        self._pix_size = np.array([cdelt0,cdelt1])        
+        self._skydir = SkyCoord.from_pixel(self._pix_center[0],
+                                           self._pix_center[1],
+                                           self.wcs)
+        
     @property
     def wcs(self):
         return self._wcs
 
+    @property
+    def coordsys(self):
+        return self._coordsys
+    
+    @property
+    def skydir(self):
+        """Return the sky coordinate of the image center."""
+        return self._skydir
+
+    @property
+    def width(self):
+        """Return the dimensions of the image."""
+        return self._width
+    
     @property
     def npix(self):
         return self._npix
 
     @staticmethod
     def create(skydir,cdelt,npix,coordsys='CEL',projection='AIT'):
+
+        npix = np.array(npix,ndmin=1)        
         crpix = npix/2.+0.5
         wcs = create_wcs(skydir,coordsys,projection,
                          cdelt,crpix)
         return WCSProj(wcs,npix)
 
+    def distance_to_edge(self,skydir):
+        """Return the angular distance from the given direction and
+        the edge of the projection."""
+
+        xpix, ypix = skydir.to_pixel(self.wcs,origin=0)
+        deltax = np.array((xpix-self._pix_center[0])*self._pix_size[0],
+                          ndmin=1)
+        deltay = np.array((ypix-self._pix_center[1])*self._pix_size[1],
+                          ndmin=1)
+        
+        deltax = np.abs(deltax) - 0.5*self._width[0]
+        deltay = np.abs(deltay) - 0.5*self._width[1]
+
+        m0 = (deltax < 0) & (deltay < 0)
+        m1 = (deltax > 0) & (deltay < 0)
+        m2 = (deltax < 0) & (deltay > 0)
+        m3 = (deltax > 0) & (deltay > 0)        
+        mx = np.abs(deltax) <= np.abs(deltay)
+        my = np.abs(deltay) < np.abs(deltax)
+
+        delta = np.zeros(len(deltax))
+        delta[(m0&mx)|(m3&my)|m1] = deltax[(m0&mx)|(m3&my)|m1]
+        delta[(m0&my)|(m3&mx)|m2] = deltay[(m0&my)|(m3&mx)|m2]
+        return delta
     
 def create_wcs(skydir, coordsys='CEL', projection='AIT',
                cdelt=1.0, crpix=1., naxis=2, energies=None):
@@ -226,7 +282,7 @@ def get_coordsys(wcs):
 
     
 def get_target_skydir(config,ref_skydir=None):
-
+    
     if ref_skydir is None:
         ref_skydir = SkyCoord(0.0,0.0,unit=u.deg)
     
@@ -262,7 +318,7 @@ def get_target_skydir(config,ref_skydir=None):
     
     if offset_glon is not None and offset_glat is not None:
         return offset_to_skydir(ref_skydir, offset_glon, offset_glat,
-                                coordsys='GAL')[0]
+                                coordsys='GAL')[0].transform_to('icrs')
         
     return ref_skydir
 

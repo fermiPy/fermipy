@@ -413,6 +413,8 @@ source_output = OrderedDict((
     ('offset_dec', (np.nan,'Angular offset from ROI center along DEC',float,'float')),
     ('offset_glon', (np.nan,'Angular offset from ROI center along GLON.',float,'float')),
     ('offset_glat', (np.nan,'Angular offset from ROI center along GLAT.',float,'float')),
+    ('offset_roi_edge', (np.nan,'Distance from the edge of the ROI in deg.  Negative (positive) values '
+                         'indicate locations inside (outside) the ROI.',float,'float')),
     ('offset', (np.nan,'Angular offset from ROI center.',float,'float')),
     ('pos_sigma', (np.nan,'1-sigma uncertainty (deg) on the source position.',float,'float')),
     ('pos_sigma_semimajor', (np.nan,'1-sigma uncertainty (deg) on the source position along major axis.',float,'float')),

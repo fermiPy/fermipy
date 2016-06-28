@@ -484,6 +484,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                     naxis=3,
                                     energies=self.energies)
 
+            # Update projection of ROI object
+            proj = wcs_utils.WCSProj(self._proj,
+                                     np.array([self.npix,self.npix]))
+            self._roi.set_projection(proj)
+            
         if self.config['fileio']['usescratch']:
             self.stage_input()
             

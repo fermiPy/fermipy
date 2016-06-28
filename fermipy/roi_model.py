@@ -54,6 +54,7 @@ def create_source_table(scan_shape):
     cols_dict['offset_dec'] = dict(dtype='f8', format='%.3f',unit='deg')
     cols_dict['offset_glon'] = dict(dtype='f8', format='%.3f',unit='deg')
     cols_dict['offset_glat'] = dict(dtype='f8', format='%.3f',unit='deg')
+    cols_dict['offset_roi_edge'] = dict(dtype='f8', format='%.3f',unit='deg')
     cols_dict['pivot_energy'] = dict(dtype='f8', format='%.3f',unit='MeV')
     cols_dict['flux_scan'] = dict(dtype='f8', format='%.3f',
                                   shape=scan_shape)
@@ -819,6 +820,13 @@ class Source(Model):
         self['offset_glon'] = offset_gal[0, 0]
         self['offset_glat'] = offset_gal[0, 1]
 
+    def set_roi_projection(self,proj):
+
+        if proj is None:
+            return
+        
+        self['offset_roi_edge'] = proj.distance_to_edge(self.skydir)
+        
     def set_spatial_model(self, spatial_model, spatial_width=None):
 
         self._data['SpatialModel'] = spatial_model
@@ -1127,8 +1135,10 @@ class ROIModel(fermipy.config.Configurable):
 
     def __init__(self, config=None, **kwargs):
         # Coordinate for ROI center (defaults to 0,0)
-        self._skydir = kwargs.pop('skydir', SkyCoord(0.0, 0.0, unit=u.deg))
+        self._skydir = kwargs.pop('skydir', SkyCoord(0.0, 0.0, unit=u.deg))        
+        self._projection = kwargs.get('projection',None)
         coordsys = kwargs.pop('coordsys', 'CEL')
+        
         super(ROIModel, self).__init__(config, **kwargs)
 
         self.logger = Logger.get(self.__class__.__name__,
@@ -1190,10 +1200,14 @@ class ROIModel(fermipy.config.Configurable):
 
     @property
     def skydir(self):
-        """Return the sky direction objection corresponding to the
-        center of the ROI."""
+        """Return the sky direction corresponding to the center of the
+        ROI."""
         return self._skydir
 
+    @property
+    def projection(self):
+        return self._projection
+    
     @property
     def sources(self):
         return self._srcs + self._diffuse_srcs
@@ -1206,6 +1220,11 @@ class ROIModel(fermipy.config.Configurable):
     def diffuse_sources(self):
         return self._diffuse_srcs
 
+    def set_projection(self,proj):
+        self._projection = proj
+        for s in self._srcs:
+            s.set_roi_projection(proj)
+    
     def clear(self):
         """Clear the contents of the ROI."""
         self._srcs = []
@@ -1310,7 +1329,8 @@ class ROIModel(fermipy.config.Configurable):
 
         if isinstance(src,Source):
             src.set_roi_direction(self.skydir)
-
+            src.set_roi_projection(self.projection)
+            
         self.logger.debug('Creating source ' + src.name)
         self.load_source(src, build_index=build_index,
                          merge_sources=merge_sources)
@@ -1500,7 +1520,7 @@ class ROIModel(fermipy.config.Configurable):
         config : dict
             Model configuration dictionary.
         """
-
+        
         coordsys = kwargs.pop('coordsys', 'CEL')
         roi = ROIModel(config, skydir=skydir, coordsys=coordsys, **kwargs)
         return roi
