@@ -14,7 +14,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
-from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import UnivariateSpline, InterpolatedUnivariateSpline
 from scipy.optimize import brentq
 import scipy.special as special
 
@@ -432,9 +432,9 @@ def get_parameter_limits(xval, logLike, ul_confidence=0.95):
     """
 
     deltalnl = cl_to_dlnl(ul_confidence)
-    
-    s = UnivariateSpline(xval, logLike, k=2, s=1E-4)
-    sd = s.derivative()
+    #s = UnivariateSpline(xval, logLike, k=2, s=1E-4)
+    spline = InterpolatedUnivariateSpline(xval, logLike, k=2)
+    sd = spline.derivative()
         
     imax = np.argmax(logLike)
     ilo = max(imax-2,0)
@@ -447,9 +447,9 @@ def get_parameter_limits(xval, logLike, ul_confidence=0.95):
     if np.sign(sd(xval[ilo])) != np.sign(sd(xval[ihi])):
         x0 = find_function_root(sd, xval[ilo], xval[ihi])
                 
-    lnlmax = float(s(x0))
+    lnlmax = float(spline(x0))
 
-    fn = lambda t: s(t)-lnlmax
+    fn = lambda t: spline(t)-lnlmax
     ul = find_function_root(fn,x0,xval[-1],deltalnl)
     ll = find_function_root(fn,x0,xval[0],deltalnl)
     err_lo = np.abs(x0 - find_function_root(fn,x0,xval[0],0.5))
