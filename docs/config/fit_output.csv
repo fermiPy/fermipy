@@ -2,7 +2,9 @@
 ``errors``	`~numpy.ndarray`	Vector of parameter errors (unscaled).
 ``loglike``	float	Post-fit log-likehood value.
 ``correlation``	`~numpy.ndarray`	Correlation matrix between free parameters of the fit.
-``values``	`~numpy.ndarray`	Vector of best-fit parameter values (unscaled).
 ``config``	dict	Copy of input configuration to this method.
-``covariance``	`~numpy.ndarray`	Covariance matrix between free parameters of the fit.
+``values``	`~numpy.ndarray`	Vector of best-fit parameter values (unscaled).
 ``dloglike``	float	Improvement in log-likehood value.
+``fit_status``	int	Optimizer return code (0 = ok).
+``covariance``	`~numpy.ndarray`	Covariance matrix between free parameters of the fit.
+``edm``	float	Estimated distance to maximum of log-likelihood function.

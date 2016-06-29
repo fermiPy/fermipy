@@ -1,6 +1,4 @@
 ``fix_background``	False	Fix any background parameters that are currently free in the model when performing the likelihood scan over extension.
-``save_model_map``	False	
-``save_templates``	False	
 ``spatial_model``	RadialGaussian	Spatial model use for extension test.
 ``sqrt_ts_threshold``	None	Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then nothreshold is applied.
 ``update``	False	Update the source model with the best-fit spatial extension.
