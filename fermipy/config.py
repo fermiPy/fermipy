@@ -59,12 +59,25 @@ def cast_config(config, defaults):
                 config[key] = item_type(config[key])
 
 
-def validate_config(config, defaults, block='root'):
+def validate_config(config, defaults, section=None):
     for key, item in config.items():
 
+        if (key in defaults and isinstance(defaults[key],dict)
+            and not isinstance(item,dict)):
+
+            type0 = type(defaults[key])
+            type1 = type(item)
+            
+            raise Exception('Wrong type for configuration key: '
+                            '%s\ntype: %s required type: %s'%(key,type1,type0))
+            
         if key not in defaults:
-            raise Exception('Invalid key in \'%s\' block of configuration: %s' %
-                            (block, key))
+
+            if section is None:
+                raise Exception('Invalid key in configuration: %s'%key)
+            else:
+                raise Exception('Invalid key in \'%s\' section of configuration: %s' %
+                                (section, key))
 
         if isinstance(item, dict):
             validate_config(config[key], defaults[key], key)
