@@ -234,7 +234,7 @@ class Model(object):
             self._data.update(data)
 
         if not self.spectral_pars:
-            pdict = gtutils.get_function_pars_dict(self['SpectrumType'])
+            pdict = gtutils.get_function_defaults(self['SpectrumType'])
             self._data['spectral_pars'] = pdict
             for k, v in self.spectral_pars.items():
                 self._data['spectral_pars'][k] = gtutils.make_parameter_dict(v)
@@ -724,7 +724,7 @@ class Source(Model):
         """Load spectral parameters from catalog values."""
         
         self._data['spectral_pars'] = \
-            gtutils.get_function_pars_dict(self['SpectrumType'])
+            gtutils.get_function_defaults(self['SpectrumType'])
         sp = self['spectral_pars']
 
         catalog = self.data.get('catalog', {})
@@ -893,11 +893,11 @@ class Source(Model):
         
         spectral_pars = \
             src_dict.setdefault('spectral_pars',
-                                gtutils.get_function_pars_dict(spectrum_type))
+                                gtutils.get_function_defaults(spectrum_type))
 
         spatial_pars = \
             src_dict.setdefault('spatial_pars',
-                                gtutils.get_function_pars_dict(src_dict['SpatialType']))
+                                gtutils.get_function_defaults(src_dict['SpatialType']))
 
         if 'file' in src_dict:
             src_dict['Spectrum_Filename'] = src_dict.pop('file')

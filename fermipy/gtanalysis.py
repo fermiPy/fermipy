@@ -90,11 +90,18 @@ index_parameters = {
 
 class FitCache(object):
 
-    def __init__(self,fitcache,like,params):
-        self._fitcache = fitcache
+    def __init__(self,like,params,tol,max_iter,init_lambda,use_reduced):
+        
+        self._fs_wrapper = pyLike.FitScanModelWrapper_Summed(like.logLike)        
+        self._fitcache = pyLike.FitScanCache(self._fs_wrapper,
+                                             str('fitscan_testsource'),
+                                             tol,max_iter,init_lambda,
+                                             use_reduced)
+
+        self._all_params = gtutils.get_params_dict(like)
         self._params = params
         self._like = like
-
+        
         free_params = [p for p in params if p['free'] is True]
         free_norm_params = [p for p in free_params if p['is_norm'] is True]
 
@@ -123,9 +130,10 @@ class FitCache(object):
 
         if len(params) != len(self._params):
             return False
-        
+
         free_params = [p for p in params if p['free'] is True] 
         free_norm_params = [p for p in free_params if p['is_norm'] is True]   
+        cache_src_names = np.array(self.fitcache.templateSourceNames())
         
         for i, p in enumerate(free_norm_params):
             if p['idx'] not in self._cache_param_idxs:
@@ -136,6 +144,9 @@ class FitCache(object):
 
             if p['free']:
                 continue
+
+            if p['src_name'] in cache_src_names:
+                continue
             
             if not np.isclose(p['value'],params[i]['value']):
                 return False
@@ -144,19 +155,47 @@ class FitCache(object):
                 return False
                         
         return True
-            
+
+    def update_source(self,name):
+        self.fitcache.updateTemplateForSource(str(name))
+    
     def refactor(self):
 
         npar = len(self.params)        
         self._free_pars = [True]*npar
         par_scales = np.ones(npar)
         ref_vals = np.array(self.fitcache.refValues())
+        cache_src_names = np.array(self.fitcache.templateSourceNames())
         
+        update_sources = []
+
+        all_params = gtutils.get_params_dict(self._like)
+        
+        for src_name in cache_src_names:
+
+            pars0 = all_params[src_name]
+            pars1 = self._all_params[src_name]            
+            for i, (p0,p1) in enumerate(zip(pars0,pars1)):
+
+                if p0['is_norm']:
+                    continue
+                
+                if (np.isclose(p0['value'],p1['value']) and
+                    np.isclose(p0['scale'],p1['scale'])):
+                    continue
+                
+                update_sources += [src_name]
+                
         for i, p in enumerate(self.params):
             self._free_pars[i] = self._like[p['idx']].isFree()
             par_scales[i] = self._like[p['idx']].getValue()/ref_vals[i]
-        
+
+        for src_name in update_sources:
+            self.fitcache.updateTemplateForSource(str(src_name))
+
+        self._all_params = all_params
         self.fitcache.refactorModel(self._free_pars,par_scales,False)
+        
         # Set priors
         self._set_priors_from_like()
         if np.any(self._has_prior):
@@ -620,6 +659,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for c in self.components:
             c._update_srcmap(name, skydir, spatial_model, spatial_width)
 
+        if self._fitcache is not None:
+            self._fitcache.update_source(name)
+
     def reload_source(self, name):
         """Delete and reload a source in the model.  This will refresh
         the spatial model of this source to the one defined in the XML
@@ -669,7 +711,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Get parameters
         src = self.components[0].like.logLike.getSource(str(name))
-        pars_dict = gtutils.get_pars_dict_from_source(src)
+        pars_dict = gtutils.get_function_pars_dict(src.spectrum())
         
         self.roi[name].set_spectral_pars(pars_dict)
         self.roi[name]['SpectrumType'] = spectrum_type
@@ -949,12 +991,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._ccube_file = os.path.join(self.workdir,
                                         'ccube.fits')
 
-        self._fs_wrapper = None
         self._fitcache = None
-        if hasattr(pyLike,'FitScanModelWrapper'):
-           self._fs_wrapper = \
-               pyLike.FitScanModelWrapper_Summed(self.like.logLike)
-           
         self._init_roi_model()
 
         if init_sources:
@@ -973,13 +1010,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self._like.addComponent(c.like)
             
         self.like.model = self.like.components[0].model
-        self._init_roi_model()
-
-        self._fs_wrapper = None
         self._fitcache = None
-        if hasattr(pyLike,'FitScanModelWrapper'):
-           self._fs_wrapper = \
-               pyLike.FitScanModelWrapper_Summed(self.like.logLike)
+        self._init_roi_model()
         
     def _init_roi_model(self):
 
@@ -1716,7 +1748,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def _sync_params(self,name):
         self.like.syncSrcParams(str(name))
         src = self.components[0].like.logLike.getSource(str(name))
-        spectral_pars = gtutils.get_pars_dict_from_source(src)
+        spectral_pars = gtutils.get_function_pars_dict(src.spectrum())
         self.roi[name].set_spectral_pars(spectral_pars)
         for c in self.components:
             c.roi[name].set_spectral_pars(spectral_pars)
@@ -1724,7 +1756,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def _sync_params_state(self,name):
         self.like.syncSrcParams(str(name))
         src = self.components[0].like.logLike.getSource(str(name))
-        spectral_pars = gtutils.get_pars_dict_from_source(src)
+        spectral_pars = gtutils.get_function_pars_dict(src.spectrum())
 
         for parname, par in spectral_pars.items():
             for k,v in par.items():
@@ -2051,7 +2083,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         save_model_map = config['save_model_map']
         update = config['update']
         sqrt_ts_threshold = config['sqrt_ts_threshold']
-
+                
         self.logger.info('Starting')
         self.logger.info('Running analysis for %s', name)
 
@@ -2065,11 +2097,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Fit baseline model
         self.free_norm(name,loglevel=logging.DEBUG)
-        self.fit(loglevel=logging.DEBUG,update=False)
+        fit_output = self.fit(loglevel=logging.DEBUG,update=False)
         src = self.roi.copy_source(name)
         
         # Save likelihood value for baseline fit
-        loglike0 = -self.like()
+        loglike0 = fit_output['loglike']
 
         self.zero_source(name)
         
@@ -2081,7 +2113,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                 width_nstep)
 
         width = np.array(width)
-        width = np.delete(width,0.0)            
+        width = width[width > 0]        
         width = np.concatenate(([0.0],np.array(width)))
             
         o = defaults.make_default_dict(defaults.extension_output)
@@ -2101,8 +2133,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.debug('Testing point-source model.')
         self.add_source(model_name, src, free=True, init_source=False,
                         loglevel=logging.DEBUG)
-        self.fit(loglevel=logging.DEBUG,update=False)
-        o['loglike_ptsrc'] = -self.like()
+        fit_output = self.fit(loglevel=logging.DEBUG,update=False)
+        o['loglike_ptsrc'] = fit_output['loglike']
 
         self.delete_source(model_name, save_template=False,
                            loglevel=logging.DEBUG)
@@ -2144,11 +2176,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.logger.info('Refitting extended model')
         self.add_source(model_name, src, free=True)
-        self.fit(loglevel=logging.DEBUG,update=False)
+        fit_output = self.fit(loglevel=logging.DEBUG,update=False)
         self.update_source(model_name,reoptimize=True)
 
         o['source_fit'] = self.get_src_model(model_name)
-        o['loglike_ext'] = -self.like()
+        o['loglike_ext'] = fit_output['loglike']
 
         src_ext = self.delete_source(model_name, save_template=False)
             
@@ -2181,16 +2213,17 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         src.set_name(ext_model_name)
         src.set_spatial_model('PSFSource', width[-1])
         self.add_source(ext_model_name, src, free=True, init_source=False)
-
+        self._fitcache = None
+        
         par = self.like.normPar(ext_model_name)
         
         logLike = []
-        for i, w in enumerate(width):
-
+        for i, w in enumerate(width):            
             self._update_srcmap(ext_model_name, self.roi[name].skydir,
                                 spatial_model, w)
-            self.like.optimize(0)            
-            logLike += [-self.like()]
+
+            fit_output = self._fit()
+            logLike += [fit_output['loglike']]
 
         self.delete_source(ext_model_name, save_template=False)
             
@@ -2211,13 +2244,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.add_source(ext_model_name, src, free=True, init_source=False,
                             loglevel=logging.DEBUG)
             
-            self.like.optimize(0)
-            logLike += [-self.like()]
-            
-#            if save_model_map:
-#                self.write_model_map(model_name=model_name + '%02i' % i,
-#                                        name=model_name)
-                
+            fit_output = self._fit()
+            logLike += [fit_output['loglike']]
+                            
             self.delete_source(ext_model_name, save_template=False,
                                loglevel=logging.DEBUG)
 
@@ -2849,20 +2878,19 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         max_iter = kwargs.get('max_iter',self.config['optimizer']['max_iter'])
         init_lambda = kwargs.get('init_lambda',self.config['optimizer']['init_lambda'])
         use_reduced = kwargs.get('use_reduced',True)
+        create_fitcache = kwargs.get('create_fitcache',False)
         
         params = self.get_params()
-        if self._fitcache is not None and self._fitcache.check_params(params):
+        if (not create_fitcache and self._fitcache is not None and
+            self._fitcache.check_params(params)):
             return self._fitcache
-
+        
         self.logger.debug('Creating FitCache')
         self.logger.debug('\ntol: %.5g\nmax_iter: %i\ninit_lambda: %.5g',
                           tol,max_iter,init_lambda)
 
-        fs_wrapper = pyLike.FitScanModelWrapper_Summed(self.like.logLike)        
-        fc = pyLike.FitScanCache(fs_wrapper,str('fitscan_testsource'),
-                                 tol,max_iter,init_lambda,use_reduced)
-
-        self._fitcache = FitCache(fc,self.like,params)
+        self._fitcache = FitCache(self.like,params,
+                                  tol,max_iter,init_lambda,use_reduced)
         
         return self._fitcache
         
@@ -2927,7 +2955,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             o['is_norm'][i] = p['is_norm']
 
         o['fit_status'] = fitcache.fit(verbose=verbosity)
-
+        o['edm'] = fitcache.fitcache.currentEDM()
+        
         pars, errs, cov = fitcache.get_pars()        
         pars *= norm_vals
         errs *= norm_vals
@@ -3594,7 +3623,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         src = self.components[0].like.logLike.getSource(str(name))
         src_dict['params'] = gtutils.gtlike_spectrum_to_dict(spectrum)
-        src_dict['spectral_pars'] = gtutils.get_pars_dict_from_source(src)
+        src_dict['spectral_pars'] = gtutils.get_function_pars_dict(spectrum)
         
         # Get Counts Spectrum
         src_dict['model_counts'] = self.model_counts_spectrum(name, summed=True)
@@ -4778,7 +4807,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         normPar = self.like.normPar(name)
         if not normPar.isFree():
             self.like.logLike.buildFixedModelWts()
-            
+  
     def generate_model(self, model_name=None, outfile=None):
         """Generate a counts model map from an XML model file using
         gtmodel.

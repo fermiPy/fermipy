@@ -311,7 +311,7 @@ class SEDGenerator(object):
         fit_output = self.fit(loglevel=logging.DEBUG,update=False,
                               min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
-        spectral_pars = gtutils.get_pars_dict_from_source(source)
+        spectral_pars = gtutils.get_function_pars_dict(source.spectrum())
         o['params'] = roi_model.get_params_dict(spectral_pars)
         o['SpectrumType'] = self.roi[name]['SpectrumType']
         

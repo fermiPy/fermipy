@@ -155,7 +155,7 @@ def get_function_norm_par_name(function_type):
             
     return FUNCTION_NORM_PARS[function_type]
 
-def get_function_pars_dict(function_type):
+def get_function_defaults(function_type):
 
     if not FUNCTION_NORM_PARS:
         init_function_pars()
@@ -207,7 +207,7 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True):
 
 def create_spectral_pars_dict(spectrum_type,spectral_pars=None):
 
-    pars_dict = get_function_pars_dict(spectrum_type)
+    pars_dict = get_function_defaults(spectrum_type)
 
     if spectral_pars is None:
         spectral_pars = {}
@@ -313,27 +313,106 @@ def gtlike_spectrum_to_dict(spectrum):
             d['file'] = ff.filename()
     return d
 
-def get_pars_dict_from_source(src):
 
-    pars_dict = {}
+def get_function_pars_dict(fn):
 
+    pars = get_function_pars(fn)
+    pars_dict = { p['name'] : p for p in pars } 
+    return pars_dict
+    
+def get_function_pars(fn):
+    """Extract the parameters of a pyLikelihood function object
+    (value, scale, bounds).
+
+    Parameters
+    ----------
+
+    fn : pyLikelihood.Function
+
+    Returns
+    -------
+
+    pars : list
+    
+    """
+    
+    pars = []
     par_names = pyLike.StringVector()
-    src.spectrum().getParamNames(par_names)
+    fn.getParamNames(par_names)
 
     for pname in par_names:
 
-        par = src.spectrum().getParam(pname)
+        par = fn.getParam(pname)
         bounds = par.getBounds()
         perr = par.error() if par.isFree() else np.nan
-        pars_dict[pname] = dict(name = pname,
-                                value = par.getValue(),
-                                error = perr,
-                                min = bounds[0],
-                                max = bounds[1],
-                                free = par.isFree(),
-                                scale = par.getScale())
+        pars += [dict(name = pname,
+                      value = par.getValue(),
+                      error = perr,
+                      min = bounds[0],
+                      max = bounds[1],
+                      free = par.isFree(),
+                      scale = par.getScale())]
+        
+    return pars
 
-    return pars_dict
+
+def get_params_dict(like):
+
+    params = get_params(like)
+
+    params_dict = {}
+    for p in params:
+        params_dict.setdefault(p['src_name'],[])
+        params_dict[p['src_name']] += [p]
+
+    return params_dict
+        
+def get_params(like):
+
+    params = []    
+    for src_name in like.sourceNames():
+
+        src = like[src_name].src
+        spars, ppars = get_source_pars(src)
+
+        for p in spars:
+            p['src_name'] = src_name            
+            params += [p]
+
+        for p in ppars:
+            p['src_name'] = src_name
+            params += [p]
+
+    return params
+
+def get_source_pars(src):
+
+    fnmap = src.getSrcFuncs()
+    
+    keys = fnmap.keys()
+
+    if 'Position' in keys:    
+        ppars = get_function_pars(src.getSrcFuncs()[str('Position')])
+    elif 'SpatialDist' in keys:
+        ppars = get_function_pars(src.getSrcFuncs()[str('SpatialDist')])
+    else:
+        raise Exception('Failed to extract spatial parameters.')
+
+    fn = src.getSrcFuncs()[str('Spectrum')]
+    spars = get_function_pars(fn)
+
+    for i, p in enumerate(ppars):
+        ppars[i]['is_norm'] = False
+        
+    for i, p in enumerate(spars):
+
+        if fn.normPar().getName() == p['name']:
+            spars[i]['is_norm'] = True
+        else:
+            spars[i]['is_norm'] = False
+        
+    return spars, ppars
+    
 
 def cast_pars_dict(pars_dict):
 
