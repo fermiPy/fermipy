@@ -131,6 +131,7 @@ def init_function_pars():
                             value = p.getValue(),
                             min = bounds[0],
                             max = bounds[1],
+                            scale = None,
                             free = False)
 
             par_dict.update(copy.deepcopy(FUNCTION_DEFAULT_PARS[fname][pname]))
@@ -147,20 +148,23 @@ def get_function_par_names(function_type):
         raise Exception('Invalid Function Type: %s'%function_type)
     
     return copy.deepcopy(FUNCTION_PAR_NAMES[function_type])
-            
+
+
 def get_function_norm_par_name(function_type):
 
     if not FUNCTION_NORM_PARS:
         init_function_pars()
-            
+
     return FUNCTION_NORM_PARS[function_type]
+
 
 def get_function_defaults(function_type):
 
     if not FUNCTION_NORM_PARS:
         init_function_pars()
-            
+
     return copy.deepcopy(FUNCTION_DEFAULT_PARS[function_type])
+
 
 def make_parameter_dict(pdict, fixed_par=False, rescale=True):
     """
@@ -221,7 +225,7 @@ def create_spectral_pars_dict(spectrum_type,spectral_pars=None):
         
         if not isinstance(v,dict):
             spectral_pars[k] = {'name' : k, 'value' : v}
-    
+
     pars_dict = utils.merge_dict(pars_dict,spectral_pars)
 
     for k, v in pars_dict.items():
