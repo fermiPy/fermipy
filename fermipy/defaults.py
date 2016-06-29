@@ -330,10 +330,8 @@ extension = {
     'width_min': (0.01, 'Minimum value in degrees for the likelihood scan over spatial extent.', float),
     'width_max': (1.0, 'Maximum value in degrees for the likelihood scan over spatial extent.', float),
     'width_nstep': (21, 'Number of steps for the spatial likelihood scan.', int),
-    'save_templates': (False, '', bool),
     'fix_background': (False, 'Fix any background parameters that are currently free in the model when '
                        'performing the likelihood scan over extension.', bool),
-    'save_model_map': (False, '', bool),
     'update': (False, 'Update the source model with the best-fit spatial extension.', bool),
     'sqrt_ts_threshold': (None, 'Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then no'
                           'threshold is applied.', float),

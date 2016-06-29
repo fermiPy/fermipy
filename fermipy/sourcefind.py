@@ -460,6 +460,9 @@ class SourceFinder(object):
             when update=True.  If newname is None then the existing
             source name will be used.
 
+        optimizer : dict
+            Dictionary that overrides the default optimizer settings.
+            
         Returns
         -------
 
@@ -474,14 +477,17 @@ class SourceFinder(object):
 
         # Extract options from kwargs
         config = copy.deepcopy(self.config['localize'])
-        config.update(kwargs)
+        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
         config.setdefault('newname', name)
+        config.setdefault('prefix', '')        
+        fermipy.config.validate_config(kwargs, config)
+        config = utils.merge_dict(config,kwargs)
 
         nstep = config['nstep']
         dtheta_max = config['dtheta_max']
         update = config['update']
         newname = config['newname']
-        prefix = kwargs.pop('prefix','')
+        prefix = config['prefix']
         
         self.logger.info('Running localization for %s' % name)
 
@@ -532,10 +538,9 @@ class SourceFinder(object):
             self.add_source(model_name, src, free=True,
                             init_source=False, save_source_maps=False,
                             loglevel=logging.DEBUG)
-            #self.fit(update=False)
-            self.like.optimize(0)
+            fit_output = self._fit(loglevel=logging.DEBUG,**config['optimizer'])
             
-            loglike1 = -self.like()
+            loglike1 = fit_output['loglike']
             lnlscan['loglike'].flat[i] = loglike1
             self.delete_source(model_name,loglevel=logging.DEBUG)
 
