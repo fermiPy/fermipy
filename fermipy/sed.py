@@ -53,7 +53,7 @@ class SEDGenerator(object):
     """Mixin class that provides SED functionality to
     `~fermipy.gtanalysis.GTAnalysis`."""
     
-    def sed(self, name, profile=True, loge_bins=None, **kwargs):
+    def sed(self, name, **kwargs):
         """Generate a spectral energy distribution (SED) for a source.  This
         function will fit the normalization of the source in each
         energy bin.  By default the SED will be generated with the
@@ -69,9 +69,6 @@ class SEDGenerator(object):
            Optional string that will be prepended to all output files
            (FITS and rendered images).
             
-        profile : bool
-            Profile the likelihood in each energy bin.
-
         loge_bins : `~numpy.ndarray`
             Sequence of energies in log10(E/MeV) defining the edges of
             the energy bins.  If this argument is None then the
@@ -110,6 +107,9 @@ class SEDGenerator(object):
         write_npy : bool        
             Write a numpy file with the contents of the output
             dictionary.
+
+        optimizer : dict
+            Dictionary that overrides the default optimizer settings.
             
         Returns
         -------
@@ -122,15 +122,21 @@ class SEDGenerator(object):
 
         name = self.roi.get_source_by_name(name).name
 
-        prefix = kwargs.get('prefix','')
-        write_fits = kwargs.get('write_fits',True)
-        write_npy = kwargs.get('write_npy',True)
+        # Extract options from kwargs
+        config = copy.deepcopy(self.config['sed'])
+        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
+        prefix = config.setdefault('prefix','')
+        write_fits = config.setdefault('write_fits',True)
+        write_npy = config.setdefault('write_npy',True)
+        loge_bins = config.setdefault('loge_bins',None)
+        fermipy.config.validate_config(kwargs, config)
+        config = utils.merge_dict(config,kwargs)
         
         self.logger.info('Computing SED for %s' % name)
         
-        o = self._make_sed(name,profile,loge_bins,**kwargs)
+        o = self._make_sed(name, **config)
         
-        self._plotter.make_sed_plot(self, name, **kwargs)
+        self._plotter.make_sed_plot(self, name, **config)
 
         filename = \
             utils.format_filename(self.workdir,'sed',
@@ -140,7 +146,7 @@ class SEDGenerator(object):
         o['file'] = None            
         if write_fits:
             o['file'] = os.path.basename(filename) + '.fits'
-            self._make_sed_fits(o,filename + '.fits',**kwargs)
+            self._make_sed_fits(o,filename + '.fits',**config)
 
         if write_npy:            
             np.save(filename + '.npy', o)
@@ -232,20 +238,14 @@ class SEDGenerator(object):
         
         hdulist.writeto(filename,clobber=True)
 
-    def _make_sed(self, name, profile=True, loge_bins=None, **kwargs):
-
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['sed'])
-        config.update(kwargs)
-
+    def _make_sed(self, name, **config):
+        
         bin_index = config['bin_index']
         use_local_index = config['use_local_index']
         fix_background = config['fix_background']
         ul_confidence = config['ul_confidence']
         cov_scale = config['cov_scale']        
-
-        optimizer = kwargs.get('optimizer',
-                               self.config['optimizer']['optimizer'])
+        loge_bins = config['loge_bins']
         
         if loge_bins is None:
             loge_bins = self.log_energies
@@ -451,7 +451,7 @@ class SEDGenerator(object):
                               (name, emin, emax))
             self.set_energy_range(logemin, logemax)
 
-            fit_output = self._fit(optimizer=optimizer)
+            fit_output = self._fit(**config['optimizer'])
             free_params = self.get_params(True)
             for j, p in enumerate(free_params):
                 
@@ -483,7 +483,7 @@ class SEDGenerator(object):
             
             lnlp = self.profile_norm(name, logemin=logemin, logemax=logemax,
                                      savestate=False, reoptimize=True,
-                                     npts=npts, optimizer=optimizer)
+                                     npts=npts, optimizer=config['optimizer'])
 
             o['ts'][i] = max(2.0*(fit_output['loglike'] - lnlp['loglike'][0]),0.0)
             o['loglike_scan'][i] = lnlp['loglike']
