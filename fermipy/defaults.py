@@ -158,7 +158,7 @@ optimizer = {
     'tol': (1E-4, 'Set the optimizer tolerance.', float),
     'max_iter': (30, 'Maximum number of iterations for the Newtons method fitter.', int),
     'init_lambda': (1E-4, 'Initial value of damping parameter for step size calculation '
-                    'when using the NEWTON fitter.', float),
+                    'when using the NEWTON fitter.  A value of zero disables damping.', float),
     'retries': (3, 'Set the number of times to retry the fit when the fit quality is less than ``min_fit_quality``.', int),
     'min_fit_quality': (2, 'Set the minimum fit quality.', int),
     'verbosity': (0, '', int)

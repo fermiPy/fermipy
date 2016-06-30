@@ -493,6 +493,9 @@ class SourceFinder(object):
 
         saved_state = LikelihoodState(self.like)
 
+        if config['fix_background']:
+            self.free_sources(free=False,loglevel=logging.DEBUG)
+        
         src = self.roi.copy_source(name)
         skydir = src.skydir
         skywcs = self._skywcs
@@ -503,10 +506,10 @@ class SourceFinder(object):
                 
         # Fit baseline (point-source) model
         self.free_norm(name)
-        self.fit(loglevel=logging.DEBUG,update=False)
+        fit_output = self._fit(loglevel=logging.DEBUG,**config['optimizer'])
 
         # Save likelihood value for baseline fit
-        loglike0 = -self.like()
+        loglike0 = fit_output['loglike']
 
         self.zero_source(name)
 
