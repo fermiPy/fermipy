@@ -439,6 +439,15 @@ def cast_pars_dict(pars_dict):
 
 class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 
+    def nFreeParams(self):        
+        '''Count the number of free parameters in the active model.'''
+        nF = 0
+        pars = self.params()
+        for par in pars:
+            if par.isFree():
+                nF += 1
+        return nF
+    
     def optimize(self, verbosity=3, tol=None, optimizer=None, optObject=None):
         self._syncParams()
         if optimizer is None:
