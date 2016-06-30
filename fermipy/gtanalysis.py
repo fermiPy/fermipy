@@ -2583,7 +2583,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.like[idx] = x
             self.like.syncSrcParams(str(name))
             
-            if self.like.nFreeParams() > 1 and reoptimize:
+            if self.components[0].like.nFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
                 fit_output = self._fit(errors=False,**optimizer)
@@ -2695,7 +2695,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             if quality >= min_fit_quality and status == 0:
                 break
 
-        num_free = self.like.nFreeParams()
+        num_free = self.components[0].like.nFreeParams()
         o = { 'values' : np.ones(num_free)*np.nan,
               'errors' : np.ones(num_free)*np.nan,
               'indices': np.zeros(num_free,dtype=int),
@@ -2851,7 +2851,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         config.setdefault('reoptimize',False)
         config = utils.merge_dict(config,kwargs)
 
-        num_free = self.like.nFreeParams()
+        num_free = self.components[0].like.nFreeParams()
         
         loglike0 = -self.like()
         
