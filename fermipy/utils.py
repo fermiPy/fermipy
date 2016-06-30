@@ -655,6 +655,22 @@ def isstr(s):
         return isinstance(s, str)
 
 
+def xmlpath_to_path(path):
+
+    if path is None:
+        return path
+    
+    return re.sub(r'\$\(([a-zA-Z\_]+)\)',r'$\1',path)
+
+
+def path_to_xmlpath(path):
+
+    if path is None:
+        return path
+    
+    return re.sub(r'\$([a-zA-Z\_]+)', r'$(\1)', path)
+
+    
 def create_xml_element(root, name, attrib):
     el = et.SubElement(root, name)
     for k, v in attrib.iteritems():

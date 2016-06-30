@@ -22,8 +22,7 @@ import fermipy.wcs_utils as wcs_utils
 import fermipy.gtutils as gtutils
 import fermipy.catalog as catalog
 import fermipy.defaults as defaults
-from fermipy.logger import Logger
-from fermipy.logger import logLevel as ll
+from fermipy.logger import Logger, log_level
 
 
 def create_source_table(scan_shape):
@@ -500,7 +499,7 @@ class IsoSource(Model):
                                                   dict(name=self.name,
                                                        type='DiffuseSource'))
 
-        filename = re.sub(r'\$([a-zA-Z\_]+)', r'$(\1)', self.filefunction)
+        filename = utils.path_to_xmlpath(self.filefunction)
         spec_el = utils.create_xml_element(source_element, 'spectrum',
                                            dict(file=filename,
                                                 type='FileFunction',
@@ -567,7 +566,7 @@ class MapCubeSource(Model):
         spec_el = utils.create_xml_element(source_element, 'spectrum',
                                            dict(type='PowerLaw'))
 
-        filename = re.sub(r'\$([a-zA-Z\_]+)', r'$(\1)', self.mapcube)
+        filename = utils.path_to_xmlpath(self.mapcube)
         spat_el = utils.create_xml_element(source_element, 'spatialModel',
                                            dict(type='MapCubeFunction',
                                                 file=filename))
@@ -987,15 +986,15 @@ class Source(Model):
         src_dict['Spatial_Filename'] = None
         src_dict['Spectrum_Filename'] = None
         if 'file' in spat:
-            src_dict['Spatial_Filename'] = spat['file']
+            src_dict['Spatial_Filename'] = utils.xmlpath_to_path(spat['file'])
             if not os.path.isfile(src_dict['Spatial_Filename']) \
                     and extdir is not None:
                 src_dict['Spatial_Filename'] = \
                     os.path.join(extdir, 'Templates',
                                  src_dict['Spatial_Filename'])
-        
+                    
         if 'file' in spec:
-            src_dict['Spectrum_Filename'] = spec['file']
+            src_dict['Spectrum_Filename'] = utils.xmlpath_to_path(spec['file'])
                     
         if src_type == 'PointSource':
             src_dict['SpatialModel'] = 'PointSource'
@@ -1013,7 +1012,7 @@ class Source(Model):
             elif 'RA' in spatial_pars:
                 src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
                 src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
-            else:
+            else:                
                 hdu = pyfits.open(
                     os.path.expandvars(src_dict['Spatial_Filename']))
                 src_dict['RAJ2000'] = float(hdu[0].header['CRVAL1'])
@@ -1058,9 +1057,7 @@ class Source(Model):
                                                           'Source_Name'],
                                                            type='DiffuseSource'))
 
-            filename = self['Spatial_Filename']
-            filename = re.sub(r'\$([a-zA-Z\_]+)', r'$(\1)', filename)
-
+            filename = utils.path_to_xmlpath(self['Spatial_Filename'])
             spat_el = utils.create_xml_element(source_element, 'spatialModel',
                                                dict(map_based_integral='True',
                                                     type='SpatialMap',
@@ -1082,8 +1079,7 @@ class Source(Model):
         el.set('type', stype)
 
         if self['Spectrum_Filename'] is not None:
-            filename = self['Spectrum_Filename']
-            filename = re.sub(r'\$([a-zA-Z\_]+)', r'$(\1)', filename)
+            filename = utils.path_to_xmlpath(self['Spectrum_Filename'])
             el.set('file',filename)
 
         for k, v in self.spectral_pars.items():
@@ -1143,7 +1139,7 @@ class ROIModel(fermipy.config.Configurable):
 
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['logfile'],
-                                 ll(self.config['logging']['verbosity']))
+                                 log_level(self.config['logging']['verbosity']))
 
         if self.config['extdir'] is not None and \
                 not os.path.isdir(os.path.expandvars(self.config['extdir'])):
