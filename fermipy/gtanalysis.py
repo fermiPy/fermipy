@@ -1211,7 +1211,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 cs += [c.model_counts_spectrum(name, logemin, logemax)]
             return cs
 
-    def get_sources(self, cuts=None, distance=None,
+    def get_sources(self, cuts=None, distance=None, skydir=None,
                     minmax_ts=None, minmax_npred=None,
                     square=False):
         """Retrieve list of sources in the ROI satisfying the given
@@ -1225,8 +1225,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         """
 
-        return self.roi.get_sources(cuts,distance,
-                                    minmax_ts,minmax_npred,square)
+        return self.roi.get_sources(skydir,distance,cuts,
+                                    minmax_ts,minmax_npred,square,
+                                    coordsys=self.config['binning']['coordsys'])
 
 
     def add_source(self, name, src_dict, free=False, init_source=True,
@@ -1354,11 +1355,40 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         return src
     
     def delete_sources(self, cuts=None, distance=None,
-                       minmax_ts=None, minmax_npred=None,
+                       skydir=None, minmax_ts=None, minmax_npred=None,
                        square=False, exclude_diffuse=True):
         """Delete sources in the ROI model satisfying the given
         selection criteria.
 
+        cuts : dict
+            Dictionary of [min,max] selections on source properties.
+
+        distance : float        
+            Cut on angular distance from ``skydir``.  If None then no
+            selection will be applied.
+
+        skydir : `~astropy.coordinates.SkyCoord`        
+            Reference sky coordinate for ``distance`` selection.  If
+            None then the distance selection will be applied with
+            respect to the ROI center.
+            
+        minmax_ts : list
+            Free sources that have TS in the range [min,max].  If
+            either min or max are None then only a lower (upper) bound
+            will be applied.  If this parameter is none no selection
+            will be applied.
+
+        minmax_npred : list        
+            Free sources that have npred in the range [min,max].  If
+            either min or max are None then only a lower (upper) bound
+            will be applied.  If this parameter is none no selection
+            will be applied.
+                    
+        square : bool
+            Switch between applying a circular or square (ROI-like)
+            selection on the maximum projected distance from the ROI
+            center.
+        
         Returns
         -------
 
@@ -1367,8 +1397,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         """
 
-        srcs = self.roi.get_sources(cuts, distance,
-                                    minmax_ts,minmax_npred,
+        srcs = self.roi.get_sources(skydir=skydir, distance=distance, cuts=cuts,
+                                    minmax_ts=minmax_ts,minmax_npred=minmax_npred,
                                     square=square,exclude_diffuse=exclude_diffuse,
                                     coordsys=self.config['binning']['coordsys'])
 
@@ -1384,7 +1414,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         return srcs
 
     def free_sources(self, free=True, pars=None, cuts=None,
-                     distance=None, minmax_ts=None, minmax_npred=None, 
+                     distance=None, skydir=None, minmax_ts=None, minmax_npred=None, 
                      square=False, exclude_diffuse=False, **kwargs):
         """Free or fix sources in the ROI model satisfying the given
         selection.  When multiple selections are defined, the selected
@@ -1400,7 +1430,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             source parameters.
 
         pars : list        
-            Set a list of parameters to be freed/fixed for this
+            Set a list of parameters to be freed/fixed for each
             source.  If none then all source parameters will be
             freed/fixed.  If pars='norm' then only normalization
             parameters will be freed.
@@ -1409,9 +1439,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             Dictionary of [min,max] selections on source properties.
 
         distance : float        
-            Distance out to which sources should be freed or fixed.
-            If this parameter is none no selection will be applied.
+            Cut on angular distance from ``skydir``.  If None then no
+            selection will be applied.
 
+        skydir : `~astropy.coordinates.SkyCoord`        
+            Reference sky coordinate for ``distance`` selection.  If
+            None then the distance selection will be applied with
+            respect to the ROI center.
+            
         minmax_ts : list
             Free sources that have TS in the range [min,max].  If
             either min or max are None then only a lower (upper) bound
@@ -1431,18 +1466,17 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         exclude_diffuse : bool
             Exclude diffuse sources.
-            
+        
         Returns
         -------
 
         srcs : list 
             A list of `~fermipy.roi_model.Model` objects.
-
         
         """
 
-        srcs = self.roi.get_sources(cuts, distance,
-                                    minmax_ts,minmax_npred,
+        srcs = self.roi.get_sources(skydir=skydir, distance=distance, cuts=cuts, 
+                                    minmax_ts=minmax_ts,minmax_npred=minmax_npred,
                                     square=square,exclude_diffuse=exclude_diffuse,
                                     coordsys=self.config['binning']['coordsys'])
 
@@ -1450,43 +1484,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.free_source(s.name, free=free, pars=pars, **kwargs)
 
         return srcs
-
-    def free_sources_by_position(self, free=True, pars=None,
-                                 distance=None, square=False, **kwargs):
-        """Free/Fix all sources within a certain distance of the given sky
-        coordinate.  By default it will use the ROI center.
-
-        Parameters
-        ----------
-
-        free : bool        
-            Choose whether to free (free=True) or fix (free=False)
-            source parameters.
-
-        pars : list        
-            Set a list of parameters to be freed/fixed for this
-            source.  If none then all source parameters will be
-            freed/fixed.  If pars='norm' then only normalization
-            parameters will be freed.
-
-        distance : float        
-            Distance in degrees out to which sources should be freed
-            or fixed.  If none then all sources will be selected.
-
-        square : bool        
-            Apply a square (ROI-like) selection on the maximum distance in
-            either X or Y in projected cartesian coordinates.   
-
-        Returns
-        -------
-
-        srcs : list 
-            A list of `~fermipy.roi_model.Source` objects.
-     
-        """
-
-        return self.free_sources(free, pars, cuts=None, distance=distance,
-                                 square=square, **kwargs)
 
     def set_edisp_flag(self, name, flag=True):
         """Enable or disable the energy dispersion correction for the

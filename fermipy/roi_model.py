@@ -1645,7 +1645,7 @@ class ROIModel(fermipy.config.Configurable):
                                             dist, min_dist,
                                             square)
 
-    def get_sources(self, cuts=None, distance=None,
+    def get_sources(self, skydir=None, distance=None, cuts=None, 
                     minmax_ts=None, minmax_npred=None, square=False,
                     exclude_diffuse=False,
                     coordsys='CEL'):
@@ -1657,7 +1657,11 @@ class ROIModel(fermipy.config.Configurable):
         srcs : list
             List of source objects.
         """
-        rsrc, srcs = self.get_sources_by_position(self.skydir,
+
+        if skydir is None:
+            skydir = self.skydir
+        
+        rsrc, srcs = self.get_sources_by_position(skydir,
                                                   distance,
                                                   square=square,
                                                   coordsys=coordsys)
