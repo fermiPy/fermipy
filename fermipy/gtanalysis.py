@@ -39,8 +39,7 @@ from fermipy.utils import create_hpx_disk_region_string
 from fermipy.skymap import Map, HpxMap
 from fermipy.hpx_utils import HPX
 from fermipy.roi_model import ROIModel, Model
-from fermipy.logger import Logger
-from fermipy.logger import logLevel as ll
+from fermipy.logger import Logger, log_level
 
 # pylikelihood
 import GtApp
@@ -405,7 +404,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
-                                 ll(self.config['logging']['verbosity']))
+                                 log_level(self.config['logging']['verbosity']))
 
         self.logger.info('\n' + '-' * 80 + '\n' + "This is fermipy version {}.".
                          format(fermipy.__version__))
@@ -1003,6 +1002,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
             self.logger.info('Initializing source properties')
             for name in self.like.sourceNames():
+                self.logger.debug('Initializing source %s',name)
                 self._init_source(name)
             self._update_roi()
 
@@ -1058,7 +1058,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if 'CLASS1' in src['catalog']:
             src['class'] = src['catalog']['CLASS1'].strip()
 
-        src.update_data(self.get_src_model(name, False))
+        src.update_data(self.get_src_model(name, True))
         return src
 
     def cleanup(self):
@@ -1758,20 +1758,25 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for c in self.components:
             c.roi[name].set_spectral_pars(spectral_pars)
 
-    def _sync_params_state(self,name):
-        self.like.syncSrcParams(str(name))
-        src = self.components[0].like.logLike.getSource(str(name))
-        spectral_pars = gtutils.get_function_pars_dict(src.spectrum())
+    def _sync_params_state(self,name=None):
 
-        for parname, par in spectral_pars.items():
-            for k,v in par.items():
-                if k != 'free':
-                    del spectral_pars[parname][k]
-                    
-        self.roi[name].update_spectral_pars(spectral_pars)
-        for c in self.components:
-            c.roi[name].update_spectral_pars(spectral_pars)            
-            
+        if name is None:
+            self.like.syncSrcParams()
+            names = self.like.sourceNames()
+        else:
+            self.like.syncSrcParams(str(name))
+            names = [name]
+
+        for name in names:
+
+            src = self.like[name].src
+            pars = gtutils.get_function_pars(src.spectrum())
+
+            for p in pars:
+                self.roi[name].spectral_pars[p['name']]['free'] = p['free']
+                for c in self.components:
+                    c.roi[name].spectral_pars[p['name']]['free'] = p['free']
+                            
     def get_params(self, freeonly=False):
 
         params = {}
@@ -1817,6 +1822,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 self.like.thaw(i)
             else:
                 self.like.freeze(i)
+
+        self._sync_params_state()
 
     def _latch_free_params(self):
         self._free_params = self.get_free_param_vector()
@@ -1981,8 +1988,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                               s['npred'], s['ts'])
             self.free_norm(s.name, free=False,loglevel=logging.DEBUG)
 
-            # Refit spectral shape parameters for sources with TS >
-            # shape_ts_threshold
+        # Refit spectral shape parameters for sources with TS >
+        # shape_ts_threshold
         for s in sorted(self.roi.sources,
                         key=lambda t: t['ts'] if np.isfinite(t['ts']) else 0,
                         reverse=True):
@@ -2576,7 +2583,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.like[idx] = x
             self.like.syncSrcParams(str(name))
             
-            if self.like.logLike.getNumFreeParams() > 1 and reoptimize:
+            if self.like.nFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
                 fit_output = self._fit(errors=False,**optimizer)
@@ -2688,7 +2695,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             if quality >= min_fit_quality and status == 0:
                 break
 
-        num_free = self.like.logLike.getNumFreeParams()
+        num_free = self.like.nFreeParams()
         o = { 'values' : np.ones(num_free)*np.nan,
               'errors' : np.ones(num_free)*np.nan,
               'indices': np.zeros(num_free,dtype=int),
@@ -2844,7 +2851,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         config.setdefault('reoptimize',False)
         config = utils.merge_dict(config,kwargs)
 
-        num_free = self.like.logLike.getNumFreeParams()
+        num_free = self.like.nFreeParams()
+        
         loglike0 = -self.like()
         
         # Initialize output dict
@@ -3600,12 +3608,18 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         name : str
 
         paramsonly : bool
-
+           Skip computing TS and likelihood profile.
+        
         reoptimize : bool
            Re-fit background parameters in likelihood scan.
 
         npts : int
            Number of points for likelihood scan.
+
+        Returns
+        -------
+        src_dict : dict
+           
         """
 
         self.logger.debug('Generating source dict for ' + name)
@@ -3855,7 +3869,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
-                                 ll(self.config['logging']['verbosity']))
+                                 log_level(self.config['logging']['verbosity']))
 
         self._roi = ROIModel.create(self.config['selection'],
                                     self.config['model'],
