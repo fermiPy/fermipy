@@ -33,7 +33,7 @@ import fermipy.catalog as catalog
 from fermipy.utils import merge_dict
 from fermipy.skymap import Map, HpxMap
 from fermipy.logger import Logger
-from fermipy.logger import logLevel
+from fermipy.logger import log_level
 
 
 def draw_arrows(x, y, color='k'):
@@ -824,7 +824,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
-                                 logLevel(self.config['logging']['verbosity']))
+                                 log_level(self.config['logging']['verbosity']))
 
     def run(self, gta, mcube_map, **kwargs):
         """Make all plots."""

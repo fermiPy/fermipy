@@ -26,7 +26,6 @@ import fermipy.castro as castro
 from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.logger import Logger
-from fermipy.logger import logLevel
 
 import fermipy.sed as sed
 from fermipy.spectrum import PowerLaw

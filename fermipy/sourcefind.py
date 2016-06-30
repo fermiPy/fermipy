@@ -16,7 +16,6 @@ import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 from fermipy.skymap import Map
 from fermipy.logger import Logger
-from fermipy.logger import logLevel
 
 from LikelihoodState import LikelihoodState
 

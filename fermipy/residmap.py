@@ -13,7 +13,6 @@ import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 from fermipy.skymap import Map
 from fermipy.logger import Logger
-from fermipy.logger import logLevel as ll
 
 
 def poisson_lnl(nc, mu):

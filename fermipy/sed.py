@@ -35,7 +35,6 @@ from fermipy.wcs_utils import wcs_add_energy_axis
 from fermipy.fits_utils import read_energy_bounds, read_spectral_data
 from fermipy.skymap import read_map_from_fits, Map
 from fermipy.logger import Logger
-from fermipy.logger import logLevel
 from fermipy.sourcefind import find_peaks, refine_peak
 from fermipy.spectrum import SpectralFunction
 

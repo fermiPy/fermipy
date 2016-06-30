@@ -6,7 +6,7 @@ import logging.config
 import yaml
 import fermipy
 
-def logLevel(level):
+def log_level(level):
     '''This is a function that returns a python like
     level from a HEASOFT like level.'''
 
