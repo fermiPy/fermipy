@@ -588,9 +588,9 @@ class SourceFinder(object):
         self.roi[name]['localize'] = copy.deepcopy(o)
 
         try:
-            self._plotter.make_localization_plot(self, name, tsmap, prefix=prefix,
-                                                 skydir=scan_skydir,
-                                                 **kwargs)
+            self._plotter.make_localization_plot(self, name, tsmap,
+                                                 prefix=prefix,
+                                                 skydir=scan_skydir)
         except Exception:
             self.logger.error('Plot failed.', exc_info=True)
             

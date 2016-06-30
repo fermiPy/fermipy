@@ -2658,7 +2658,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def _create_optObject(self,**kwargs):
         """ Make MINUIT or NewMinuit type optimizer object """
         
-        optimizer = kwargs.get('optimizer',self.config['optimizer']['optimizer'])
+        optimizer = kwargs.get('optimizer',
+                               self.config['optimizer']['optimizer'])
+        
         if optimizer.upper() == 'MINUIT':
             optObject = pyLike.Minuit(self.like.logLike)
         elif optimizer.upper == 'NEWMINUIT':
@@ -4038,9 +4040,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if src['SpatialModel'] in ['PSFSource','GaussianSource',
                                        'DiskSource']:
                 self._update_srcmap_file([src], True)
-                self.like.logLike.loadSourceMap(name, False, False)
+                self.like.logLike.loadSourceMap(str(name), False, False)
             else:
-                self.like.logLike.loadSourceMap(name, True, False)
+                self.like.logLike.loadSourceMap(str(name), True, False)
 
             srcmap_utils.delete_source_map(self.files['srcmap'],name)
             self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
