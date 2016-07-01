@@ -90,19 +90,28 @@ index_parameters = {
 class FitCache(object):
 
     def __init__(self,like,params,tol,max_iter,init_lambda,use_reduced):
+
+
+        free_params = [p for p in params if p['free'] is True]
+        free_norm_params = [p for p in free_params if p['is_norm'] is True]
         
+        for p in free_norm_params:
+            like[p['idx']] = 1.0
+        like.syncSrcParams()
+
         self._fs_wrapper = pyLike.FitScanModelWrapper_Summed(like.logLike)        
         self._fitcache = pyLike.FitScanCache(self._fs_wrapper,
                                              str('fitscan_testsource'),
                                              tol,max_iter,init_lambda,
                                              use_reduced)
 
+        for p in free_norm_params:
+            like[p['idx']] = p['value']
+        like.syncSrcParams()
+        
         self._all_params = gtutils.get_params_dict(like)
         self._params = params
         self._like = like
-        
-        free_params = [p for p in params if p['free'] is True]
-        free_norm_params = [p for p in free_params if p['is_norm'] is True]
 
         self._cache_params = free_norm_params
         self._cache_param_idxs = [p['idx'] for p in self._cache_params]
@@ -172,7 +181,6 @@ class FitCache(object):
         cache_src_names = np.array(self.fitcache.templateSourceNames())
         
         update_sources = []
-
         all_params = gtutils.get_params_dict(self._like)
         
         for src_name in cache_src_names:
@@ -189,14 +197,20 @@ class FitCache(object):
                     continue
                 
                 update_sources += [src_name]
-                
+                        
         for i, p in enumerate(self.params):
             self._free_pars[i] = self._like[p['idx']].isFree()
             par_scales[i] = self._like[p['idx']].getValue()/ref_vals[i]
 
         for src_name in update_sources:
+            
+            norm_val = self._like.normPar(src_name).getValue()
+            par_name = self._like.normPar(src_name).getName()
+            idx = self._like.par_index(src_name, par_name)
+            self._like[idx] = 1.0
             self.fitcache.updateTemplateForSource(str(src_name))
-
+            self._like[idx] = norm_val
+            
         self._all_params = all_params
         self.fitcache.refactorModel(self._free_pars,par_scales,False)
         
@@ -1776,7 +1790,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 self.roi[name].spectral_pars[p['name']]['free'] = p['free']
                 for c in self.components:
                     c.roi[name].spectral_pars[p['name']]['free'] = p['free']
-                            
+
+    def get_norm(self, name):
+        name = self.get_source_name(name)
+        return self.like.normPar(name).getValue()
+                    
     def get_params(self, freeonly=False):
 
         params = {}
@@ -2708,6 +2726,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['edm'] = edm
         o['niter'] = niter
         o['loglike'] = loglike
+        o['fit_success'] = True
+        
+        if quality < min_fit_quality or o['fit_status']:
+            o['fit_success'] = False
         
         if covar:
             o['covariance'] = np.array(self.like.covariance)
@@ -2858,6 +2880,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # Initialize output dict
         o = {'fit_quality' : 3,
              'fit_status' : 0,
+             'fit_success' : True,
              'dloglike' : 0.0,
              'edm' : 0.0,
              'loglike' : loglike0,
@@ -2884,7 +2907,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.logger.debug("Fit complete.")        
         o['dloglike'] = o['loglike'] - loglike0
 
-        if o['fit_status'] or o['fit_quality'] < config['min_fit_quality']:
+        if not o['fit_success']:
             self.logger.error('%s failed with status code %i fit quality %i',
                               config['optimizer'],o['fit_status'],
                               o['fit_quality'])
@@ -2904,10 +2927,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             # Update roi model counts
             self._update_roi()
 
-        self.logger.log(loglevel,"Fit returned successfully.")
-        self.logger.log(loglevel,"Fit Quality: %i "%o['fit_quality'] + 
-                        "LogLike: %12.3f "%o['loglike'] + 
-                        "DeltaLogLike: %12.3f"%o['dloglike'])
+        self.logger.log(loglevel,"Fit returned successfully. " +
+                        "Quality: %3i Status: %3i",
+                        o['fit_quality'],o['fit_status'])
+        self.logger.log(loglevel,"LogLike: %12.3f DeltaLogLike: %12.3f ",
+                        o['loglike'],o['dloglike'])
         return o
 
     def _create_fitcache(self,**kwargs):
@@ -2966,6 +2990,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         o = {'fit_status' : 0,
              'fit_quality' : 3,
+             'fit_success' : True,
              'edm' : 0,
              'loglike' : None, 
              'values' : np.ones(num_free)*np.nan,
@@ -3011,6 +3036,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 self._set_value_bounded(idx,val)
                 self.like[idx].setError(err)
             self.like.syncSrcParams()
+            o['fit_success'] = True
+        else:
+            o['fit_success'] = False
 
         if o['fit_status']:
             self.logger.error('Error in NEWTON fit. Fit Status: %i',
