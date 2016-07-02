@@ -275,6 +275,10 @@ def scale_parameter(p):
         return p, 1.0
 
 
+def update_bounds(val,bounds):
+    return min(val,bounds[0]),max(val,bounds[1])
+
+
 def apply_minmax_selection(val, val_minmax):
     if val_minmax is None:
         return True

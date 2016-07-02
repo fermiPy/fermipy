@@ -96,6 +96,8 @@ class FitCache(object):
         free_norm_params = [p for p in free_params if p['is_norm'] is True]
         
         for p in free_norm_params:
+            bounds = like[p['idx']].getBounds()
+            like[p['idx']].setBounds(*utils.update_bounds(1.0,bounds))
             like[p['idx']] = 1.0
         like.syncSrcParams()
 
@@ -107,6 +109,7 @@ class FitCache(object):
 
         for p in free_norm_params:
             like[p['idx']] = p['value']
+            like[p['idx']].setBounds(*p['bounds'])
         like.syncSrcParams()
         
         self._all_params = gtutils.get_params_dict(like)
@@ -203,13 +206,15 @@ class FitCache(object):
             par_scales[i] = self._like[p['idx']].getValue()/ref_vals[i]
 
         for src_name in update_sources:
-            
             norm_val = self._like.normPar(src_name).getValue()
             par_name = self._like.normPar(src_name).getName()
+            bounds = self._like.normPar(src_name).getBounds()
             idx = self._like.par_index(src_name, par_name)
+            self._like[idx].setBounds(*utils.update_bounds(1.0,bounds))
             self._like[idx] = 1.0
             self.fitcache.updateTemplateForSource(str(src_name))
             self._like[idx] = norm_val
+            self._like[idx].setBounds(*bounds)
             
         self._all_params = all_params
         self.fitcache.refactorModel(self._free_pars,par_scales,False)
@@ -2578,8 +2583,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 xvals = val * 10 ** xvals
 
         # Update parameter bounds to encompass scan range
-        self.like[idx].setBounds(min(min(xvals),value),
-                                 max(max(xvals),value))
+        self.like[idx].setBounds(min(min(xvals),value,bounds[0]),
+                                 max(max(xvals),value,bounds[1]))
 
         o = {'xvals': xvals,
              'npred': np.zeros(len(xvals)),
@@ -2599,8 +2604,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for i, x in enumerate(xvals):
 
             self.like[idx] = x
-            self.like.syncSrcParams(str(name))
-            
             if self.like.nFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
@@ -2627,6 +2630,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                             loge_bounds[1], summed=True)
             o['npred'][i] += np.sum(cs)
 
+        self.like[idx] = value
+            
         if reoptimize and hasattr(self.like.components[0].logLike,
                                   'setUpdateFixedWeights'):
 

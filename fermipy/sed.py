@@ -481,7 +481,7 @@ class SEDGenerator(object):
             o['loglike'][i] = fit_output['loglike']
             
             lnlp = self.profile_norm(name, logemin=logemin, logemax=logemax,
-                                     savestate=False, reoptimize=True,
+                                     savestate=True, reoptimize=True,
                                      npts=npts, optimizer=config['optimizer'])
 
             o['ts'][i] = max(2.0*(fit_output['loglike'] - lnlp['loglike'][0]),0.0)
