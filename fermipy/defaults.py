@@ -254,11 +254,13 @@ sed = {
     'use_local_index': (False, 'Use a power-law approximation to the shape of the global spectrum in '
                         'each bin.  If this is false then a constant index set to `bin_index` '
                         'will be used.', bool),
-    'fix_background': (True, 'Fix background parameters when fitting the '
-                       'source flux in each energy bin.', bool),
+    'fix_background': (True, 'Fix background normalization parameters when fitting the '
+                       'source flux in each energy bin.  If True background normalizations will be profiled '
+                       'with a prior on their value with strength set by ``cov_scale``.', bool),
     'ul_confidence': (0.95, 'Confidence level for upper limit calculation.',
                       float),
-    'cov_scale' : (3.0,'',float)
+    'cov_scale' : (3.0,'Scale factor that sets the strength of the prior on nuisance '
+                   'parameters when ``fix_background``=True.  Setting this to None disables the prior.',float)
 }
 
 # Output for SED analysis
