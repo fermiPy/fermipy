@@ -1,14 +1,19 @@
-``glon``	float	Galactic Longitude of best-fit position in deg.
-``glat``	float	Galactic Latitude of best-fit position in deg.
-``sigmay``	float	1-sigma uncertainty in deg in latitude.
-``sigmax``	float	1-sigma uncertainty in deg in longitude.
-``offset``	float	Angular offset in deg between the current and localized source position.
-``theta``	float	Position angle of uncertainty ellipse.
 ``r68``	float	68% positional uncertainty in deg.
-``xpix``	float	Longitude pixel coordinate of best-fit position.
-``dec``	float	Declination of best-fit position in deg.
-``ra``	float	Right ascension of best-fit position in deg.
-``r99``	float	99% positional uncertainty in deg.
-``ypix``	float	Latitude pixel coordinate of best-fit position.
 ``r95``	float	95% positional uncertainty in deg.
+``glon``	float	Galactic Longitude of best-fit position in deg.
 ``config``	dict	Copy of the input parameters to this method.
+``sigma_semiminor``	float	1-sigma uncertainty in deg along minor axis of error ellipse.
+``r99``	float	99% positional uncertainty in deg.
+``xpix``	float	Longitude pixel coordinate of best-fit position.
+``glat``	float	Galactic Latitude of best-fit position in deg.
+``sigma_semimajor``	float	1-sigma uncertainty in deg along major axis of error ellipse.
+``eccentricity2``	float	Eccentricity of uncertainty ellipse defined as sqrt(a**2/b**2-1).
+``sigmay``	float	1-sigma uncertainty in deg in latitude.
+``ra``	float	Right ascension of best-fit position in deg.
+``offset``	float	Angular offset in deg between the old and new (localized) source positions.
+``eccentricity``	float	Eccentricity of uncertainty ellipse defined as sqrt(1-b**2/a**2).
+``ypix``	float	Latitude pixel coordinate of best-fit position.
+``dec``	float	Declination of best-fit position in deg.
+``sigma``	float	1-sigma positional uncertainty in deg.
+``theta``	float	Position angle of uncertainty ellipse.
+``sigmax``	float	1-sigma uncertainty in deg in longitude.
