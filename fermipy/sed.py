@@ -232,9 +232,11 @@ class SEDGenerator(object):
         hdu_p = pyfits.BinTableHDU.from_columns(columns,name='PARAMS')
         
         hdulist = pyfits.open(filename)
-        hdulist = pyfits.HDUList([hdulist[0],hdu_f,hdu_p])
+        hdulist[1].name = 'SED'
+        hdulist = pyfits.HDUList([hdulist[0],hdulist[1],hdu_f,hdu_p])
 
         for h in hdulist:
+            h.header['SRCNAME'] = sed['name']
             h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
         
         hdulist.writeto(filename,clobber=True)
