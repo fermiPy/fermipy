@@ -3261,10 +3261,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 "Did not recognize projection type %s", self.projtype)
         return [model_counts] + maps
 
-    def print_roi(self):
-        self.logger.info('\n' + str(self.roi))
+    def print_roi(self, loglevel=logging.INFO):
+        """Print information about the spectral and spatial properties
+        of the ROI (sources, diffuse components)."""
+        self.logger.log(loglevel,'\n' + str(self.roi))
 
-    def print_params(self, allpars=False):
+    def print_params(self, allpars=False, loglevel=logging.INFO):
         """Print information about the model parameters (values,
         errors, bounds, scale)."""
         
@@ -3312,9 +3314,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
                 o += '\n'
             
-        self.logger.info(o)
+        self.logger.log(loglevel,o)
             
-    def print_model(self):
+    def print_model(self, loglevel=logging.INFO):
 
         o = '\n'
         o += '%-20s%8s%8s%7s%10s%10s%12s%5s\n' % (
@@ -3364,7 +3366,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             s['name'], 
             '---', normVal, s['eflux'][0], index, s['ts'], s['npred'],free_str)
                         
-        self.logger.info(o)
+        self.logger.log(loglevel,o)
                     
     def load_roi(self, infile, reload_sources=False):
         """This function reloads the analysis state from a previously
