@@ -22,10 +22,10 @@ This page is a changelog for releases of Fermipy.
 * Various refactoring and improvements in code for dealing with castro
   data.
 * Add ``MODEL_FLUX`` and ``PARAMS`` HDUs to SED FITS file.  Many new
-  elements in SED output dictionary.
+  elements added SED output dictionary.
 * Support NEWTON fitter with the same interface as MINUIT and
   NEWMINUIT.  Running `~fermipy.gtanalysis.GTAnalysis.fit` with
-  ``optimizer``=NEWTON will use the NEWTON fitter where applicable
+  ``optimizer`` = NEWTON will use the NEWTON fitter where applicable
   (only free norms) and MINUIT otherwise.  The ``optimizer`` argument
   to `~fermipy.gtanalysis.GTAnalysis.sed`,
   `~fermipy.gtanalysis.GTAnalysis.extension`, and
