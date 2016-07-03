@@ -366,27 +366,27 @@ localize = {
 }
 
 # Output for localization analysis
-localize_output  = {
-    'ra': (np.nan,'Right ascension of best-fit position in deg.',float,'float'),
-    'dec': (np.nan,'Declination of best-fit position in deg.',float,'float'),
-    'glon': (np.nan,'Galactic Longitude of best-fit position in deg.',float,'float'),
-    'glat': (np.nan,'Galactic Latitude of best-fit position in deg.',float,'float'),
-    'offset': (np.nan,'Angular offset in deg between the old and new (localized) source positions.',float,'float'),
-    'sigma': (np.nan,'1-sigma positional uncertainty in deg.',float,'float'),
-    'r68': (np.nan,'68% positional uncertainty in deg.',float,'float'),
-    'r95': (np.nan,'95% positional uncertainty in deg.',float,'float'),
-    'r99': (np.nan,'99% positional uncertainty in deg.',float,'float'),
-    'sigmax': (np.nan,'1-sigma uncertainty in deg in longitude.',float,'float'),
-    'sigmay': (np.nan,'1-sigma uncertainty in deg in latitude.',float,'float'),
-    'sigma_semimajor': (np.nan,'1-sigma uncertainty in deg along major axis of error ellipse.',float,'float'),
-    'sigma_semiminor': (np.nan,'1-sigma uncertainty in deg along minor axis of error ellipse.',float,'float'),
-    'xpix': (np.nan,'Longitude pixel coordinate of best-fit position.',float,'float'),
-    'ypix': (np.nan,'Latitude pixel coordinate of best-fit position.',float,'float'),
-    'theta': (np.nan,'Position angle of uncertainty ellipse.',float,'float'),
-    'eccentricity': (np.nan,'Eccentricity of uncertainty ellipse defined as sqrt(1-b**2/a**2).',float,'float'),
-    'eccentricity2': (np.nan,'Eccentricity of uncertainty ellipse defined as sqrt(a**2/b**2-1).',float,'float'),    
-    'config': (None, 'Copy of the input parameters to this method.',dict,'dict')
-}
+localize_output  = OrderedDict((
+    ('ra', (np.nan,'Right ascension of best-fit position in deg.',float,'float')),
+    ('dec', (np.nan,'Declination of best-fit position in deg.',float,'float')),
+    ('glon', (np.nan,'Galactic Longitude of best-fit position in deg.',float,'float')),
+    ('glat', (np.nan,'Galactic Latitude of best-fit position in deg.',float,'float')),
+    ('offset', (np.nan,'Angular offset in deg between the old and new (localized) source positions.',float,'float')),
+    ('sigma', (np.nan,'1-sigma positional uncertainty in deg.',float,'float')),
+    ('r68', (np.nan,'68% positional uncertainty in deg.',float,'float')),
+    ('r95', (np.nan,'95% positional uncertainty in deg.',float,'float')),
+    ('r99', (np.nan,'99% positional uncertainty in deg.',float,'float')),
+    ('sigmax', (np.nan,'1-sigma uncertainty in deg in longitude.',float,'float')),
+    ('sigmay', (np.nan,'1-sigma uncertainty in deg in latitude.',float,'float')),
+    ('sigma_semimajor', (np.nan,'1-sigma uncertainty in deg along major axis of uncertainty ellipse.',float,'float')),
+    ('sigma_semiminor', (np.nan,'1-sigma uncertainty in deg along minor axis of uncertainty ellipse.',float,'float')),
+    ('xpix', (np.nan,'Longitude pixel coordinate of best-fit position.',float,'float')),
+    ('ypix', (np.nan,'Latitude pixel coordinate of best-fit position.',float,'float')),
+    ('theta', (np.nan,'Position angle of uncertainty ellipse.',float,'float')),
+    ('eccentricity', (np.nan,'Eccentricity of uncertainty ellipse defined as sqrt(1-b**2/a**2).',float,'float')),
+    ('eccentricity2', (np.nan,'Eccentricity of uncertainty ellipse defined as sqrt(a**2/b**2-1).',float,'float')),    
+    ('config', (None, 'Copy of the input parameters to this method.',dict,'dict')),
+))
 
 # Options for plotting
 plotting = {
