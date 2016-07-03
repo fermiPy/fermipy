@@ -2821,13 +2821,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             return self._fit_optimizer_iter(**kwargs)
             
     def fit(self, update=True, **kwargs):
-        """Run the likelihood optimization.  This will execute a fit
-        of all parameters that are currently free in the model and
-        update the charateristics of the corresponding model
-        components (TS, npred, etc.).  The fit will be repeated N
-        times (set with the `retries` parameter) until a fit quality
-        greater than or equal to `min_fit_quality` is obtained.  If
-        the requested fit quality is not obtained then all parameter
+        """Run the likelihood optimization.  This will execute a fit of all
+        parameters that are currently free in the model and update the
+        charateristics of the corresponding model components (TS,
+        npred, etc.).  The fit will be repeated N times (set with the
+        `retries` parameter) until a fit quality greater than or equal
+        to `min_fit_quality` and a fit status code of 0 is obtained.
+        If the fit does not succeed after N retries then all parameter
         values will be reverted to their state prior to the execution
         of the fit.
 
