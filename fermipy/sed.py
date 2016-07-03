@@ -124,31 +124,33 @@ class SEDGenerator(object):
         # Extract options from kwargs
         config = copy.deepcopy(self.config['sed'])
         config['optimizer'] = copy.deepcopy(self.config['optimizer'])
-        prefix = config.setdefault('prefix','')
-        write_fits = config.setdefault('write_fits',True)
-        write_npy = config.setdefault('write_npy',True)
-        loge_bins = config.setdefault('loge_bins',None)
+        config.setdefault('prefix','')
+        config.setdefault('write_fits',True)
+        config.setdefault('write_npy',True)
+        config.setdefault('loge_bins',None)
         fermipy.config.validate_config(kwargs, config)
         config = utils.merge_dict(config,kwargs)
         
         self.logger.info('Computing SED for %s' % name)
         
         o = self._make_sed(name, **config)
-        
-        self._plotter.make_sed_plot(self, name, **config)
-
         filename = \
             utils.format_filename(self.workdir,'sed',
-                                  prefix=[prefix,
+                                  prefix=[config['prefix'],
                                           name.lower().replace(' ', '_')])
 
         o['file'] = None            
-        if write_fits:
+        if config['write_fits']:
             o['file'] = os.path.basename(filename) + '.fits'
             self._make_sed_fits(o,filename + '.fits',**config)
 
-        if write_npy:            
+        if config['write_npy']:
             np.save(filename + '.npy', o)
+
+        try:
+            self._plotter.make_sed_plot(self, name, **config)
+        except Exception:
+            self.logger.error('SED plotting failed.',exc_info=True)
             
         self.logger.info('Finished SED')
         
