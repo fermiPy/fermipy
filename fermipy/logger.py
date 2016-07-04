@@ -28,7 +28,7 @@ def log_level(level):
 class Logger(object):
     """This class provides helper functions which facilitate creating
     instances of the built-in logger class."""
-    
+
     @staticmethod
     def setup(config=None,logfile=None):
         """This method sets up the default configuration of the
@@ -46,7 +46,7 @@ class Logger(object):
             for name, h in config['handlers'].items():
                 if 'file_handler' in name:
                     config['handlers'][name]['filename'] = logfile
-            
+
         logging.config.dictConfig(config)
 
         # get the root logger
@@ -54,17 +54,17 @@ class Logger(object):
 #        for h in logger.handlers:
 #            if 'file_handler' in h.name:
 #                print h.name
-        
+
     @staticmethod
     def get(name, logfile, loglevel=logging.DEBUG):
 
 #        logging.config.dictConfig({
 #                'version': 1,              
 #                'disable_existing_loggers': False})
-        
+
         if logfile is not None:
             logfile = logfile.replace('.log','') + '.log'
-        
+
         logger = logging.getLogger(name)
 
         # Don't propagate to root logger
@@ -75,7 +75,7 @@ class Logger(object):
         format_stream = '%(asctime)s %(levelname)-8s %(name)s.%(funcName)s(): %(message)s'
         format_file = '%(asctime)s %(levelname)-8s %(name)s.%(funcName)s(): %(message)s' 
 #        format_file = '%(asctime)s %(levelname)-8s %(name)s.%(funcName)s() [%(filename)s:%(lineno)d]: %(message)s' 
-        
+
         if not logger.handlers:
 
             formatter = logging.Formatter(format,datefmt)
@@ -86,7 +86,7 @@ class Logger(object):
                 fh.setLevel(logging.DEBUG)
                 fh.setFormatter(logging.Formatter(format_file,datefmt))
                 logger.addHandler(fh)
-            
+
             # Add a stream handler
             ch = logging.StreamHandler()
             ch.setLevel(loglevel)
@@ -94,7 +94,7 @@ class Logger(object):
             logger.addHandler(ch)
         else:
             logger.handlers[-1].setLevel(loglevel)
-            
+
         return logger
 
 class StreamLogger(object):
@@ -132,7 +132,7 @@ class StreamLogger(object):
         self.flush()
         sys.stdout = self.stdout
         self.logger.handlers = []
-        
+
     def write(self, msg, level=logging.DEBUG):
         msg = msg.rstrip('\n')
         if len(msg) > 0:

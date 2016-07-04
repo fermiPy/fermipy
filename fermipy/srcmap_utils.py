@@ -129,7 +129,7 @@ def make_disk_spatial_map(skydir, sigma, outfile, npix=501, cdelt=0.01):
 
 def delete_source_map(srcmap_file, name, logger=None):
     """Delete a map from a binned analysis source map file if it exists.
-    
+
     Parameters
     ----------
 

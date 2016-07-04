@@ -38,11 +38,11 @@ def convolve_map(m, k, cpix, threshold=0.001,imin=0,imax=None):
 
     Parameters
     ----------
-    
+
     m : `~numpy.ndarray`
        3-D map containing a sequence of 2-D spatial maps.  First
        dimension should be energy.
-    
+
     k : `~numpy.ndarray`
        3-D map containing a sequence of convolution kernels (PSF) for
        each slice in m.  This map should have the same dimension as m.
@@ -181,7 +181,7 @@ class ResidMapGenerator(object):
         config['model'].setdefault('SpectrumType', 'PowerLaw')
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
-        
+
         make_plots = kwargs.get('make_plots', True)
         maps = self._make_residual_map(prefix,config,**kwargs)
 
@@ -189,22 +189,22 @@ class ResidMapGenerator(object):
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
-            
+
             plotter.make_residual_plots(self, maps)
-            
+
         self.logger.info('Finished residual maps')
-                
+
         return maps
-        
+
     def _make_residual_map(self, prefix, config, **kwargs):
 
         write_fits = kwargs.get('write_fits', True)
         write_npy = kwargs.get('write_npy', True)
-        
+
         src_dict = copy.deepcopy(config.setdefault('model',{}))        
         exclude = config.setdefault('exclude', None)
         loge_bounds = config.setdefault('loge_bounds', None)
-        
+
         if loge_bounds is not None:            
             if len(loge_bounds) == 0:
                 loge_bounds = [None,None]
@@ -322,7 +322,7 @@ class ResidMapGenerator(object):
         fits_file = utils.format_filename(self.config['fileio']['workdir'],
                                           'residmap.fits',
                                           prefix=[prefix,modelname])
-        
+
         if write_fits:            
             fits_utils.write_maps(sigma_map,
                                   {'DATA_MAP': data_map,
@@ -333,5 +333,5 @@ class ResidMapGenerator(object):
 
         if write_npy:
             np.save(os.path.splitext(fits_file)[0] + '.npy', o)
-            
+
         return o

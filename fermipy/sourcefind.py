@@ -34,7 +34,7 @@ def fit_error_ellipse(tsmap,xy=None,dpix=3):
                                   tsmap.counts.T.shape)
     else:
         ix, iy = xy
-        
+
     pbfit = utils.fit_parabola(tsmap.counts.T, ix, iy, dpix=dpix)        
 
     wcs = tsmap.wcs
@@ -42,18 +42,18 @@ def fit_error_ellipse(tsmap,xy=None,dpix=3):
     cdelt1 = tsmap.wcs.wcs.cdelt[1]
     npix0 = tsmap.counts.T.shape[0]
     npix1 = tsmap.counts.T.shape[1]
-    
+
     skydir = SkyCoord.from_pixel(pbfit['x0'],pbfit['y0'],wcs)
-    
+
     sigmax = 2.0**0.5*pbfit['sigmax']*np.abs(cdelt0)
     sigmay = 2.0**0.5*pbfit['sigmay']*np.abs(cdelt1)
     sigma = (sigmax*sigmay)**0.5
     r68 = 2.30**0.5*sigma
     r95 = 5.99**0.5*sigma
     r99 = 9.21**0.5*sigma    
-    
+
     o = {}
-     
+
     if sigmax < sigmay:
         o['sigma_semimajor'] = sigmay
         o['sigma_semiminor'] = sigmax
@@ -62,7 +62,7 @@ def fit_error_ellipse(tsmap,xy=None,dpix=3):
         o['sigma_semimajor'] = sigmax
         o['sigma_semiminor'] = sigmay
         o['theta'] = np.fmod(2*np.pi + pbfit['theta'],np.pi)
-        
+
     o['sigmax'] = sigmax
     o['sigmay'] = sigmay
     o['sigma'] = sigma
@@ -87,10 +87,10 @@ def fit_error_ellipse(tsmap,xy=None,dpix=3):
 
     a = o['sigma_semimajor']
     b = o['sigma_semiminor']
-    
+
     o['eccentricity'] = np.sqrt(1-b**2/a**2)
     o['eccentricity2'] = np.sqrt(a**2/b**2-1)
-    
+
     return o, skydir
 
 
@@ -118,10 +118,10 @@ def find_peaks(input_map, threshold, min_separation=0.5):
     """
 
     data = input_map.counts
-    
+
     cdelt = max(input_map.wcs.wcs.cdelt) 
     min_separation = max(min_separation,2*cdelt)
-    
+
     region_size_pix = int(min_separation/cdelt)
     region_size_pix = max(3,region_size_pix)
 
@@ -155,7 +155,7 @@ def estimate_pos_and_err_parabolic(tsvals):
     ----------
     tsvals  :  `~numpy.ndarray`
        The TS values at the maximum TS, and for each pixel on either side
-    
+
     Returns
     -------
     The position and uncertainty of the source, in pixel units w.r.t. the center of the maximum pixel         
@@ -184,7 +184,7 @@ def refine_peak(tsmap,pix):
     # Note the annoying WCS convention
     nx = tsmap.shape[1]
     ny = tsmap.shape[0]
-    
+
     if pix[0] == 0 or pix[0] == (nx-1):
         xval = float(pix[0])
         xerr = -1
@@ -207,7 +207,7 @@ def refine_peak(tsmap,pix):
 class SourceFinder(object):
     """Mixin class which provides source-finding functionality to
     `~fermipy.gtanalysis.GTAnalysis`."""
-    
+
     def find_sources(self, prefix='', **kwargs):
         """An iterative source-finding algorithm.
 
@@ -217,7 +217,7 @@ class SourceFinder(object):
         model : dict        
            Dictionary defining the properties of the test source.
            This is the model that will be used for generating TS maps.
-        
+
         sqrt_ts_threshold : float
            Source threshold in sqrt(TS).  Only peaks with sqrt(TS)
            exceeding this threshold will be used as seeds for new
@@ -253,8 +253,8 @@ class SourceFinder(object):
 
         tscube : dict
            Keyword arguments dictionary for tscube method.
-           
-           
+
+
         Returns
         -------
 
@@ -267,7 +267,7 @@ class SourceFinder(object):
         """
 
         self.logger.info('Starting.')
-        
+
         # Extract options from kwargs
         config = copy.deepcopy(self.config['sourcefind'])
         config.update(kwargs) 
@@ -277,22 +277,22 @@ class SourceFinder(object):
         config['model'].setdefault('SpectrumType', 'PowerLaw')
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
-        
+
         o = {'sources': [], 'peaks' : []}
-        
-        
+
+
         for i in range(config['max_iter']):
             srcs, peaks = self._find_sources_iterate(prefix, i, **config)
 
             self.logger.info('Found %i sources in iteration %i.'%(len(srcs),i))
-            
+
             o['sources'] += srcs
             o['peaks'] += peaks
             if len(srcs) == 0:
                 break
 
         self.logger.info('Done.')
-            
+
         return o
 
     def _build_src_dicts_from_peaks(self,peaks,maps,src_dict_template):
@@ -310,12 +310,12 @@ class SourceFinder(object):
             p['fit_skydir'] = skydir
 
             p.update(o)
-                        
+
             if o['fit_success']:            
                 skydir = p['fit_skydir']
             else:
                 skydir = p['skydir']
-                
+
             name = utils.create_source_name(skydir)
             src_dict = copy.deepcopy(src_dict_template)
             src_dict.update({'Prefactor': amp.counts[p['iy'], p['ix']],
@@ -329,11 +329,11 @@ class SourceFinder(object):
             src_dict['pos_r95'] = o['r95']
             src_dict['pos_r99'] = o['r99']
             src_dict['pos_angle'] = np.degrees(o['theta'])            
-            
+
             self.logger.info('Found source\n' +
                              'name: %s\n'%name +
                              'ts: %f'%p['amp']**2)
-           
+
             names.append(name)
             src_dicts.append(src_dict)
             pass
@@ -344,17 +344,17 @@ class SourceFinder(object):
     def _find_sources_iterate(self, prefix, iiter, **kwargs):
 
         src_dict_template = kwargs.pop('model')
-        
+
         threshold = kwargs.get('sqrt_ts_threshold')
         min_separation = kwargs.get('min_separation')
         sources_per_iter = kwargs.get('sources_per_iter')
         search_skydir = kwargs.get('search_skydir',None)
         search_minmax_radius = kwargs.get('search_minmax_radius',[None,1.0])
-        
+
         tsmap_fitter = kwargs.get('tsmap_fitter')
         tsmap_kwargs = kwargs.get('tsmap',{})
         tscube_kwargs = kwargs.get('tscube',{})
-        
+
         if tsmap_fitter == 'tsmap':
             m = self.tsmap('%s_sourcefind_%02i'%(prefix,iiter),
                           model=src_dict_template, 
@@ -365,7 +365,7 @@ class SourceFinder(object):
                           **tscube_kwargs)            
         else:
             raise Exception('Unrecognized option for fitter: %s.'%tsmap_fitter)
-            
+
         amp = m['amplitude']
 
         if tsmap_fitter == 'tsmap':
@@ -379,7 +379,7 @@ class SourceFinder(object):
             peaks = sd['Peaks']
             names = sd['Names']
             src_dicts = sd['SrcDicts']
-            
+
         # Loop over the seeds and add them to the model
         new_src_names = []
         for name,src_dict in zip(names,src_dicts):    
@@ -392,11 +392,11 @@ class SourceFinder(object):
 
                 skydir = SkyCoord(src_dict['ra'],src_dict['dec'],unit='deg')                
                 separation = search_skydir.separation(skydir).deg
-                
+
                 if not utils.apply_minmax_selection(separation,search_minmax_radius):
                     self.logger.info('Source %s outside of search region.  Ignoring it.'%name)
                     continue
-                
+
             self.add_source(name, src_dict, free=True)
             self.free_source(name,False)
             new_src_names.append(name)
@@ -409,14 +409,14 @@ class SourceFinder(object):
             self.free_source(name,True)
             self.fit()
             self.free_source(name,False)
-                    
+
         srcs = []
         for name in new_src_names:
             srcs.append(self.roi[name])
 
         return srcs, peaks
-            
-    
+
+
     def localize(self, name, **kwargs):
         """Find the best-fit position of a source.  Localization is
         performed in two steps.  First a TS map is computed centered
@@ -461,7 +461,7 @@ class SourceFinder(object):
 
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
-            
+
         Returns
         -------
 
@@ -487,14 +487,14 @@ class SourceFinder(object):
         update = config['update']
         newname = config['newname']
         prefix = config['prefix']
-        
+
         self.logger.info('Running localization for %s' % name)
 
         saved_state = LikelihoodState(self.like)
 
         if config['fix_background']:
             self.free_sources(free=False,loglevel=logging.DEBUG)
-        
+
         src = self.roi.copy_source(name)
         skydir = src.skydir
         skywcs = self._skywcs
@@ -502,7 +502,7 @@ class SourceFinder(object):
 
         tsmap_fit, tsmap = self._localize_tsmap(name,prefix=prefix,
                                                 dtheta_max=dtheta_max)
-                
+
         # Fit baseline (point-source) model
         self.free_norm(name)
         fit_output = self._fit(loglevel=logging.DEBUG,**config['optimizer'])
@@ -519,21 +519,21 @@ class SourceFinder(object):
         cdelt0 = np.abs(skywcs.wcs.cdelt[0])
         cdelt1 = np.abs(skywcs.wcs.cdelt[1])
         scan_step = 2.0*tsmap_fit['r95']/(nstep-1.0)        
-        
+
         scan_map = Map.create(SkyCoord(tsmap_fit['ra'],tsmap_fit['dec'],unit='deg'),
                               scan_step,(nstep,nstep),
                               coordsys=wcs_utils.get_coordsys(skywcs))
 
         scan_skydir = scan_map.get_pixel_skydirs()
-        
-        
+
+
         lnlscan = dict(wcs=scan_map.wcs.to_header().items(),
                        loglike=np.zeros((nstep, nstep)),
                        dloglike=np.zeros((nstep, nstep)),
                        dloglike_fit=np.zeros((nstep, nstep)))
 
         for i, t in enumerate(scan_skydir):
-            
+
             model_name = '%s_localize' % (name.replace(' ', '').lower())
             src.set_name(model_name)
             src.set_position(t)
@@ -541,14 +541,14 @@ class SourceFinder(object):
                             init_source=False, save_source_maps=False,
                             loglevel=logging.DEBUG)
             fit_output = self._fit(loglevel=logging.DEBUG,**config['optimizer'])
-            
+
             loglike1 = fit_output['loglike']
             lnlscan['loglike'].flat[i] = loglike1
             self.delete_source(model_name,loglevel=logging.DEBUG)
 
         lnlscan['dloglike'] = lnlscan['loglike'] - np.max(lnlscan['loglike'])
         scan_tsmap = Map(2.0*lnlscan['dloglike'].T,scan_map.wcs)
-        
+
         self.unzero_source(name)
         saved_state.restore()
         self._sync_params(name)
@@ -556,12 +556,12 @@ class SourceFinder(object):
 
         scan_fit, new_skydir = fit_error_ellipse(scan_tsmap, dpix=3)
         o.update(scan_fit)
-                        
+
 #        lnlscan['dloglike_fit'] = \
 #            utils.parabola((np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
 #                            np.linspace(0,nstep-1.0,nstep)[np.newaxis,:]),
 #                           *scan_fit['popt']).reshape((nstep,nstep))
-            
+
         o['lnlscan'] = lnlscan
 
         # Best fit position and uncertainty from fit to TS map
@@ -576,7 +576,7 @@ class SourceFinder(object):
         o['deltay'] = (o['ypix']-src_pix[1])*cdelt1
 
         o['offset'] = skydir.separation(new_skydir).deg
-        
+
         if o['fit_success'] and o['offset'] > dtheta_max:
             o['fit_success'] = False
             self.logger.error('Best-fit position outside search region:\n '
@@ -592,7 +592,7 @@ class SourceFinder(object):
                                                  skydir=scan_skydir)
         except Exception:
             self.logger.error('Plot failed.', exc_info=True)
-            
+
         if update and o['fit_success']:
 
             self.logger.info(
@@ -618,7 +618,7 @@ class SourceFinder(object):
             src['pos_r95'] = o['r95']
             src['pos_r99'] = o['r99']
             src['pos_angle'] = np.degrees(o['theta'])
-            
+
         self.logger.info('Finished localization.')
         return o
 
@@ -630,38 +630,38 @@ class SourceFinder(object):
 
         src = self.roi.copy_source(name)
         skydir = src.skydir
-        
+
         wp = wcs_utils.WCSProj.create(skydir,0.0125,20,coordsys='GAL')
-        
+
         self.zero_source(name)
         tscube = self.tscube(utils.join_strings([prefix,name.lower().replace(' ','_')]),
                              wcs=wp.wcs,npix=wp.npix,remake_test_source=False)
         self.unzero_source(name)
 
-        
-        
+
+
         tsmap_renorm = copy.deepcopy(tscube['ts'])
         tsmap_renorm._counts -= np.max(tsmap_renorm._counts)        
-        
+
         import matplotlib.pyplot as plt
         from fermipy.plotting import ROIPlotter
         fig = plt.figure()
-        
+
         p = ROIPlotter(tsmap_renorm,roi=self.roi)
 
         p.plot(levels=[-200,-100,-50,-20,-9.21,-5.99,-2.3],cmap='BuGn',vmin=-50.0,
                interpolation='bicubic',cb_label='2$\\times\Delta\ln$L')
 
         plt.savefig('tscube_localize.png')
-        
 
-        
+
+
     def _localize_tsmap(self,name,**kwargs):
         """Localize a source from its TS map."""
-        
+
         prefix = kwargs.get('prefix','')
         dtheta_max = kwargs.get('dtheta_max',0.5)
-        
+
         src = self.roi.copy_source(name)
         skydir = src.skydir
         skywcs = self._skywcs
@@ -670,10 +670,10 @@ class SourceFinder(object):
                            map_skydir=skydir,
                            map_size=2.0*dtheta_max,
                            exclude=[name],make_plots=False)
-        
+
         posfit, skydir = fit_error_ellipse(tsmap['ts'],dpix=2)
         pix = skydir.to_pixel(skywcs)
-        
+
         o = {}
         o.update(posfit)
         o['xpix'] = float(pix[0])
@@ -684,13 +684,13 @@ class SourceFinder(object):
 
         scan_dtheta = kwargs.get('scan_dtheta',0.15)
         nstep = kwargs.get('nstep',5)
-        
+
         o = {}
-        
+
         saved_state = LikelihoodState(self.like)
 
         skywcs = self._skywcs
-        
+
         # Fit baseline (point-source) model
         self.free_norm(name)
         self.fit(loglevel=logging.DEBUG,update=False)
@@ -702,14 +702,14 @@ class SourceFinder(object):
         cdelt1 = np.abs(skywcs.wcs.cdelt[1])
         delta_pix = np.linspace(-scan_dtheta,scan_dtheta,nstep)/cdelt0
         scan_step = 2.0*scan_dtheta/(nstep-1.0)
-        
+
         scan_xpix = delta_pix+peak_pix[0]
         scan_ypix = delta_pix+peak_pix[1]
-              
+
         scan_skydir = SkyCoord.from_pixel(np.ravel(np.ones((nstep, nstep)) * scan_xpix[:,np.newaxis]),
                                           np.ravel(np.ones((nstep, nstep)) * scan_ypix[np.newaxis,:]),
                                           skywcs)
-                
+
         lnlscan = dict(xpix=scan_xpix,
                        ypix=scan_ypix,
                        loglike=np.zeros((nstep, nstep)),
@@ -726,13 +726,13 @@ class SourceFinder(object):
                             loglevel=logging.DEBUG)
             #self.fit(update=False)
             self.like.optimize(0)
-            
+
             loglike1 = -self.like()
             lnlscan['loglike'].flat[i] = loglike1
             self.delete_source(model_name,loglevel=logging.DEBUG)
 
         lnlscan['dloglike'] = lnlscan['loglike'] - np.max(lnlscan['loglike'])
-        
+
 
         self.unzero_source(name)
         saved_state.restore()
@@ -740,17 +740,17 @@ class SourceFinder(object):
         self._update_roi()
 
         ix, iy = np.unravel_index(np.argmax(lnlscan['dloglike']),(nstep,nstep))
-        
+
         scan_fit = utils.fit_parabola(lnlscan['dloglike'], ix, iy, dpix=3)
 
         sigmax = 2.**0.5*scan_fit['sigmax']*scan_step
         sigmay = 2.**0.5*scan_fit['sigmay']*scan_step
-                
+
         lnlscan['dloglike_fit'] = \
             utils.parabola((np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
                             np.linspace(0,nstep-1.0,nstep)[np.newaxis,:]),
                            *scan_fit['popt']).reshape((nstep,nstep))
-            
+
         o['lnlscan'] = lnlscan
 
         # Best fit position and uncertainty from fit to TS map        

@@ -39,6 +39,6 @@ def test_castro_test_spectra_castro(tmpdir):
     assert( np.abs(test_dict['LogParabola']['TS'][0] -  3.72) < 0.01)
     assert( np.abs(test_dict['PLExpCutoff']['TS'][0] -  3.70) < 0.01)
 
-    
+
 
 

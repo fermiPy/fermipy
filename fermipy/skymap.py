@@ -95,11 +95,11 @@ class Map(Map_Base):
         self._pix_size = np.array([np.abs(self.wcs.wcs.cdelt[0]),
                                    np.abs(self.wcs.wcs.cdelt[1])])
 
-        
+
         self._skydir = SkyCoord.from_pixel(self._pix_center[0],
                                            self._pix_center[1],
                                            self.wcs)
-        
+
     @property
     def wcs(self):
         return self._wcs
@@ -123,7 +123,7 @@ class Map(Map_Base):
     def pix_center(self):
         """Return the ROI center in pixel coordinates."""
         return self._pix_center
-    
+
     @staticmethod
     def create_from_hdu(hdu, wcs):
         return Map(hdu.data.T, wcs)
@@ -145,14 +145,14 @@ class Map(Map_Base):
         wcs = wcs_utils.create_wcs(skydir,coordsys,projection,
                                    cdelt,crpix)
         return Map(np.zeros(npix),wcs)
-    
+
     def create_image_hdu(self,name=None):
         return pyfits.ImageHDU(self.counts,header=self.wcs.to_header(),
                                name=name)
-    
+
     def create_primary_hdu(self):
         return pyfits.PrimaryHDU(self.counts,header=self.wcs.to_header())
-    
+
 
     def sum_over_energy(self):
         """ Reduce a 3D counts cube to a 2D counts map
@@ -172,7 +172,7 @@ class Map(Map_Base):
         else:
             return np.where( (xypix[0] < self._wcs._naxis2)*(xypix[1] < self._wcs._naxis1),
                              xypix[1]*self._wcs._naxis1 + xypix[0], -1 )
-    
+
     def ipix_to_xypix(self,ipix,colwise=False):
         """ Return the pixel xy coordinates from the pixel index
 
@@ -182,7 +182,7 @@ class Map(Map_Base):
             return (ipix / self._wcs._naxis2, ipix % self._wcs._naxis2)
         else:
             return (ipix % self._wcs._naxis1, ipix / self._wcs._naxis1)
-    
+
     def ipix_swap_axes(self,ipix,colwise=False):
         """ Return the transposed pixel index from the pixel xy coordinates 
 
@@ -199,7 +199,7 @@ class Map(Map_Base):
         ypix = np.linspace(0,self.counts.shape[1]-1.,self.counts.shape[1])
         xypix = np.meshgrid(xpix,ypix,indexing='ij')
         return SkyCoord.from_pixel(np.ravel(xypix[0]),np.ravel(xypix[1]),self.wcs)
-        
+
     def get_pixel_indices(self,lons,lats):
         """ Return the indices in the flat array corresponding to a set of coordinates
 
@@ -207,10 +207,10 @@ class Map(Map_Base):
         ----------       
         lons  : array-like
            'Longitudes' (RA or GLON)
-        
+
         lats  : array-like
            'Latitidues' (DEC or GLAT)
-        
+
         Returns
         ----------
            idxs : numpy.ndarray((n),'i')
@@ -231,10 +231,10 @@ class Map(Map_Base):
         ----------       
         lons  : array-like
            'Longitudes' (RA or GLON)
-        
+
         lats  : array-like
            'Latitidues' (DEC or GLAT)
-        
+
         Returns
         ----------
            vals : numpy.ndarray((n))
@@ -244,7 +244,7 @@ class Map(Map_Base):
         vals = np.where(pix_idxs>0,self.counts.flat[pix_idxs],np.nan)
         return vals
 
-    
+
 class HpxMap(Map_Base):
     """ Representation of a 2D or 3D counts map using HEALPix. """
 
@@ -350,7 +350,7 @@ class HpxMap(Map_Base):
                 loop_ebins = True
         else:
             raise Exception('Wrong dimension for HpxMap %i' % len(hpx_in.shape))
-        
+
         if loop_ebins:
             for i in range(hpx_data.shape[0]):
                 self._hpx2wcs.fill_wcs_map_from_hpx_data(hpx_data[i],wcs_data[i],normalize)

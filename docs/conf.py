@@ -24,7 +24,7 @@ from mock import Mock as MagicMock
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
-            return Mock()
+        return Mock()
 
 MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
@@ -198,7 +198,7 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 html_static_path = ['_static']
 
 def setup(app):
-   app.add_stylesheet("theme_overrides.css")
+    app.add_stylesheet("theme_overrides.css")
 
 #html_context = {
 #    'css_files': [
@@ -289,7 +289,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'Fermipy.tex', u'Fermipy Documentation',
+    (master_doc, 'Fermipy.tex', u'Fermipy Documentation',
    u'Matthew Wood', 'manual'),
 ]
 
@@ -333,7 +333,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'Fermipy', u'Fermipy Documentation',
+    (master_doc, 'Fermipy', u'Fermipy Documentation',
    author, 'Fermipy', 'One line description of project.',
    'Miscellaneous'),
 ]
