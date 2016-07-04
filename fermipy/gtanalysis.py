@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
 import os
-import re
 import copy
 import shutil
 import collections
@@ -11,21 +10,17 @@ import tempfile
 import filecmp
 
 import numpy as np
-import scipy
-import scipy.optimize
 
 # pyLikelihood needs to be imported before astropy to avoid CFITSIO
 # header error
 import pyLikelihood as pyLike
 import astropy.io.fits as pyfits
-from astropy.coordinates import SkyCoord
 
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.gtutils as gtutils
-import fermipy.fits_utils as fits_utils
 import fermipy.srcmap_utils as srcmap_utils
 import fermipy.skymap as skymap
 import fermipy.plotting as plotting
@@ -34,11 +29,11 @@ import fermipy.sed as sed
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
-from fermipy.utils import merge_dict, tolist
+from fermipy.utils import merge_dict
 from fermipy.utils import create_hpx_disk_region_string
 from fermipy.skymap import Map, HpxMap
 from fermipy.hpx_utils import HPX
-from fermipy.roi_model import ROIModel, Model
+from fermipy.roi_model import ROIModel
 from fermipy.logger import Logger, log_level
 
 # pylikelihood

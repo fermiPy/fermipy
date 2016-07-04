@@ -11,11 +11,9 @@ from scipy.ndimage.filters import maximum_filter
 from astropy.coordinates import SkyCoord
 
 import fermipy.config
-import fermipy.defaults as defaults
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 from fermipy.skymap import Map
-from fermipy.logger import Logger
 
 from LikelihoodState import LikelihoodState
 

@@ -4,9 +4,7 @@ import sys
 import time, os, stat
 import datetime
 import argparse
-import glob
 import pprint
-import yaml
 
 import fermipy.utils as utils
 from fermipy.batch import check_log, get_lsf_status

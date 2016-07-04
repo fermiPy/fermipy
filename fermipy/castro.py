@@ -13,30 +13,18 @@ or the mass and cross-section of a putative dark matter particle.
 from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
-import copy
-import logging
-import os
-
 import numpy as np
 from scipy.interpolate import UnivariateSpline, splrep, splev
 import scipy.optimize as opt
-import scipy.special as spf
-from scipy.integrate import quad
 import scipy
 
-import astropy.io.fits as pf
-from astropy.coordinates import SkyCoord
-from astropy.table import Table, Column
+from astropy.table import Table
 
-import fermipy.utils as utils
-import fermipy.roi_model as roi_model
 import fermipy.sourcefind as sourcefind
 
 from fermipy.wcs_utils import wcs_add_energy_axis
-from fermipy.fits_utils import read_energy_bounds, read_spectral_data
 from fermipy.skymap import read_map_from_fits, Map
-from fermipy.logger import Logger
-from fermipy.sourcefind import find_peaks, refine_peak
+from fermipy.sourcefind import find_peaks
 from fermipy.spectrum import SpectralFunction
 
 # Some useful functions

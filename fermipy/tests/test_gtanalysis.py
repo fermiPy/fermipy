@@ -1,11 +1,8 @@
 from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
-from numpy.testing import assert_allclose
-import astropy.units as u
 import numpy as np
 from .. import gtanalysis
-from .. import utils
 from .. import spectrum
 import pytest
 import os

@@ -3,9 +3,7 @@ from __future__ import absolute_import, division, print_function, \
 
 import numpy as np
 
-from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
-import astropy.wcs as pywcs
 
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils

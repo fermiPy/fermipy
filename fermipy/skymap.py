@@ -6,7 +6,6 @@ import numpy as np
 
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
-from astropy import units as u
 from astropy.coordinates import SkyCoord
 
 import fermipy.utils as utils

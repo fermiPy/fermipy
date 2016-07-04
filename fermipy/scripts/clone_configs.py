@@ -1,8 +1,6 @@
 import os
 import copy
 import yaml
-import numpy as np
-import healpy as hp
 import fermipy.utils as utils
 import argparse
 import subprocess

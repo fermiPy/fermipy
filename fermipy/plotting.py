@@ -13,22 +13,19 @@ except KeyError:
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
-from matplotlib.patches import Circle, Ellipse, Rectangle
+from matplotlib.patches import Circle, Ellipse
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
 
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 from astropy.coordinates import SkyCoord
-import wcsaxes
 import numpy as np
 
 import fermipy
 import fermipy.config
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
-import fermipy.fits_utils as fits_utils
 import fermipy.defaults as defaults
-import fermipy.roi_model as roi_model
 import fermipy.catalog as catalog
 from fermipy.utils import merge_dict
 from fermipy.skymap import Map, HpxMap
