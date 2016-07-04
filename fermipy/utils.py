@@ -417,7 +417,7 @@ def find_function_root(fn, x0, xb, delta = 0.0):
     return brentq(lambda t: fn(t)+delta,x0, xb, xtol=xtol)
 
 
-def get_parameter_limits(xval, loglike, ul_confidence=0.95, delta_tol=0.05):
+def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     """Compute upper/lower limits, peak position, and 1-sigma errors
     from a 1-D likelihood function.  This function uses the
     delta-loglikelihood method to evaluate parameter limits by
@@ -438,20 +438,19 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, delta_tol=0.05):
     ul_confidence : float
        Confidence level to use for limit calculation.  
 
-    delta_tol : float    
-       Mask sequential points in the profile that have a
-       log-likelihood differences smaller than this threshold.
-       
+    tol : float    
+       Tolerance parameter for spline.
+              
     """
 
     deltalnl = cl_to_dlnl(ul_confidence)
     
-    #spline = UnivariateSpline(xval, loglike, k=2, s=1E-4)
-    m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
-    xval = np.concatenate((xval[:1],xval[1:][m]))
-    loglike = np.concatenate((loglike[:1],loglike[1:][m]))
+    spline = UnivariateSpline(xval, loglike, k=2, s=tol)
+    #m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
+    #xval = np.concatenate((xval[:1],xval[1:][m]))
+    #loglike = np.concatenate((loglike[:1],loglike[1:][m]))    
+    #spline = InterpolatedUnivariateSpline(xval, loglike, k=2)
     
-    spline = InterpolatedUnivariateSpline(xval, loglike, k=2)
     sd = spline.derivative()
         
     imax = np.argmax(loglike)
