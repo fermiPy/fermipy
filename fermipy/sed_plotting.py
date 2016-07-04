@@ -23,7 +23,7 @@ NORM_LABEL = {'NORM':r'Flux Normalization [a.u.]',
               'E2DFDE':r'%E^2% dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
               'SIGVJ':r'$J\langle \sigma v \rangle$ [$GeV^{2} cm^{-2} s^{-1}$]',
               'SIGV':r'$\langle \sigma v \rangle$ [$cm^{3} s^{-1}$]'}
-              
+
 
 def plotNLL_v_Flux(nll,fluxType,nstep=25,xlims=None):
     """ Plot the (negative) log-likelihood as a function of normalization
@@ -55,7 +55,7 @@ def plotNLL_v_Flux(nll,fluxType,nstep=25,xlims=None):
 
     ax.set_xlim((xmin,xmax))
     ax.set_ylim((ymin,ymax))
-    
+
     ax.set_xlabel(NORM_LABEL[fluxType])
     ax.set_ylabel(r'$-\Delta \log\mathcal{L}$')
     ax.plot(xvals,yvals)
@@ -86,7 +86,7 @@ def plotCastro_base(castroData,xlims,ylims,xlabel,ylabel,nstep=25,zlims=None):
     else:
         zmin = zlims[0]
         zmax = zlims[1]
-  
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
@@ -94,7 +94,7 @@ def plotCastro_base(castroData,xlims,ylims,xlabel,ylabel,nstep=25,zlims=None):
     ax.set_yscale('log')
     ax.set_xlim((xmin,xmax))
     ax.set_ylim((ymin,ymax))
-    
+
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
@@ -109,7 +109,7 @@ def plotCastro_base(castroData,xlims,ylims,xlabel,ylabel,nstep=25,zlims=None):
     im = ax.imshow(ztmp, extent=[xmin,xmax,ymin,ymax],
                    origin='lower', aspect='auto',interpolation='nearest',
                    vmin=zmin, vmax=zmax,cmap=matplotlib.cm.jet_r)
-    
+
     return fig,ax,im,ztmp   
 
 
@@ -146,7 +146,7 @@ def plotSED(castroData,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
     xmax = castroData.specData.ebins[-1]
     ymin = ylims[0]
     ymax = ylims[1]
-  
+
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
@@ -154,7 +154,7 @@ def plotSED(castroData,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
     ax.set_yscale('log')
     ax.set_xlim((xmin,xmax))
     ax.set_ylim((ymin,ymax))
-    
+
     ax.set_xlabel("Energy [GeV]")
     ax.set_ylabel(NORM_LABEL[castroData.norm_type])
 
@@ -164,7 +164,7 @@ def plotSED(castroData,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
     has_point = ts_vals > TS_thresh
     has_limit = ~has_point
     ul_vals = castroData.getLimits(0.05)
-    
+
     err_pos = castroData.getLimits(0.32) - mles
     err_neg = mles - castroData.getLimits(0.32,upper=False) 
 
@@ -192,7 +192,7 @@ def plotSED(castroData,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
 
 if __name__ == "__main__":
 
-    
+
     from fermipy import castro
     from fermipy import roi_model
     import sys
@@ -201,7 +201,7 @@ if __name__ == "__main__":
         flux_type = "FLUX"
     else:
         flux_type = sys.argv[1]
-        
+
 
     if flux_type == 'NORM':
         xlims = (0.,1.)
@@ -224,7 +224,7 @@ if __name__ == "__main__":
     else:
         print ("Didn't reconginize flux type %s, choose from NORM | FLUX | EFLUX | NPRED | DFDE | EDFDE"%sys.argv[1])
         sys.exit()
-        
+
     tscube = castro.TSCube.create_from_fits("tscube_test.fits",flux_type)
     resultDict = tscube.find_sources(10.0,1.0,use_cumul=False,
                                      output_peaks=True,
@@ -240,7 +240,7 @@ if __name__ == "__main__":
     fig,ax = plotNLL_v_Flux(nll,flux_type)
 
     fig2,ax2,im2,ztmp2 = plotCastro(castro,ylims=flux_lims,nstep=100)
-        
+
     spec_pl = test_dict["PowerLaw"]["Spectrum"]
     spec_lp = test_dict["LogParabola"]["Spectrum"]
     spec_pc = test_dict["PLExpCutoff"]["Spectrum"]
@@ -260,4 +260,4 @@ if __name__ == "__main__":
     print "TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)"%(ts_lp,result_lp[1],result_lp[2])
     print "TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)"%(ts_pc,result_pc[1],result_pc[2])
 
-     
+

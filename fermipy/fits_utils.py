@@ -41,7 +41,7 @@ def read_spectral_data(hdu):
 
 
 def write_maps(primary_map, maps, outfile):
-    
+
     hdu_images = [primary_map.create_primary_hdu()]
     for k, v in sorted(maps.items()):
         hdu_images += [v.create_image_hdu(k)]
@@ -51,7 +51,7 @@ def write_maps(primary_map, maps, outfile):
         h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
     hdulist.writeto(outfile, clobber=True)
 
-    
+
 def read_projection_from_fits(fitsfile, extname=None):
     """
     Load a WCS or HPX projection.
@@ -63,7 +63,7 @@ def read_projection_from_fits(fitsfile, extname=None):
         ebins = read_energy_bounds(f['EBOUNDS'])
     except:
         ebins = None
-    
+
     if extname is None:
         # If there is an image in the Primary HDU we can return a WCS-based projection
         if f[0].header['NAXIS'] != 0:
@@ -81,7 +81,7 @@ def read_projection_from_fits(fitsfile, extname=None):
             except:
                 pass
         return None,f,None 
-            
+
     # Loop on HDU and look for either an image or a table with HEALPix data
     for i in range(1,nhdu):
         # if there is an image we can return a WCS-based projection
@@ -128,4 +128,4 @@ def write_tables_to_fits(filepath,tablelist,clobber=False,
     pyfits.HDUList(outhdulist).writeto(filepath,clobber=clobber)
     for rm in rmlist:
         os.unlink(rm)
-        
+

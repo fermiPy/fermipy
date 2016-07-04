@@ -79,7 +79,7 @@ def test_gtanalysis_residmap(setup):
     gta.load_roi('fit1')
     gta.residmap(model={})
 
-    
+
 def test_gtanalysis_sed(setup):
 
     gta = setup
@@ -93,10 +93,10 @@ def test_gtanalysis_sed(setup):
 
     emin = gta.energies[:-1]
     emax = gta.energies[1:]
-    
+
     flux_true = spectrum.PowerLaw.eval_flux(emin, emax,
                                             [prefactor,-index],scale)
-    
+
     gta.simulate_source({'SpatialModel': 'PointSource',
                          'Index' : index,
                          'Scale' : scale,
@@ -104,7 +104,7 @@ def test_gtanalysis_sed(setup):
 
     gta.free_source('draco')
     gta.fit()
-    
+
     o = gta.sed('draco')
 
     flux_resid = np.abs((flux_true - o['flux'])/o['flux_err'])
@@ -113,9 +113,9 @@ def test_gtanalysis_sed(setup):
     assert(np.abs(-params['Index'][0]-index)/params['Index'][1] < 3.0)
     assert(np.abs(params['Prefactor'][0]-prefactor)/
            params['Prefactor'][1] < 3.0)
-    
+
     gta.simulate_roi(restore=True)
-    
+
 
 def test_gtanalysis_extension_gaussian(setup):
 

@@ -18,15 +18,15 @@ def file_age_in_seconds(pathname):
 
 def collect_jobs(dirs, runscript, overwrite=False, max_job_age=90): 
     """Construct a list of job dictionaries."""
-    
+
     jobs = []
-    
+
     for dirname in sorted(dirs):        
-        
+
         o = dict(cfgfile = os.path.join(dirname,'config.yaml'),
                  logfile = os.path.join(dirname,os.path.splitext(runscript)[0] + '.log'),
                  runscript = os.path.join(dirname,runscript))
-        
+
         if not os.path.isfile(o['cfgfile']):
             continue
 
@@ -36,10 +36,10 @@ def collect_jobs(dirs, runscript, overwrite=False, max_job_age=90):
         if not os.path.isfile(o['logfile']):
             jobs.append(o)
             continue
-            
+
         age = file_age_in_seconds(o['logfile'])/60.
         job_status = check_log(o['logfile'])
-        
+
         print(dirname, job_status, age)
 
         if job_status is False or overwrite:
@@ -92,11 +92,11 @@ def main():
     args = parser.parse_args()
 
     from itertools import chain
-    
+
     dirs = [d for argdir in args.dirs for d in utils.collect_dirs(argdir)]
     jobs = collect_jobs(dirs, args.runscript,
                         args.overwrite, args.max_job_age)
-    
+
     lsf_opts = {'W' : 1500,
                 'R' : 'bullet,hequ,kiso'}
 
@@ -105,9 +105,9 @@ def main():
 
         if utils.isstr(optval):
             optval = '\"%s\"'%optval
-            
+
         lsf_opt_string += '-%s %s '%(optname,optval)
-    
+
     while(1):
 
         print('-'*80)

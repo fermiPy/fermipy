@@ -51,7 +51,7 @@ def coords_to_vec(lon, lat):
 
 def get_pixel_size_from_nside(nside):
     """ Returns an estimate of the pixel size from the HEALPix nside coordinate
-    
+
     This just uses a lookup table to provide a nice round number for each
     HEALPix order. 
     """
@@ -134,7 +134,7 @@ def make_hpx_to_wcs_mapping(hpx, wcs):
     for i,ipix in enumerate(ipixs):
         mult_val[i] /= d_count[ipix]
         pass
-    
+
     ipixs = ipixs.reshape(npix).T.flatten()
     mult_val = mult_val.reshape(npix).T.flatten()
     return ipixs,mult_val,npix
@@ -199,7 +199,7 @@ class HPX(object):
             self._evals = np.sqrt(self._ebins[0:-1]*self._ebins[1:])
         else:
             self._evals = None
-            
+
         if self._ipix is not None:
             for i, ipixel in enumerate(self._ipix.flat):
                 self._rmap[ipixel] = i
@@ -215,7 +215,7 @@ class HPX(object):
         indices in the input array, and -1 for those pixels that are outside the 
         selected region.
         """
-        
+
         if self._rmap is not None:
             retval = np.zeros((sliced.size),'i')
             for i, v in enumerate(sliced.flat):
@@ -226,7 +226,7 @@ class HPX(object):
             retval = retval.reshape(sliced.shape)
             return retval
         return sliced
-            
+
     @property
     def ordering(self):
         if self._nest: 
@@ -328,10 +328,10 @@ class HPX(object):
                  pf.Card("LASTPIX",self._maxpix-1)]
         if self._coordsys=="CEL":
             cards.append(pf.Card("EQUINOX", 2000.0,"Equinox of RA & DEC specifications"))
-            
+
         if self._region:
             cards.append(pf.Card("HPX_REG", self._region))
-            
+
         header = pf.Header(cards)
         return header
 
@@ -358,7 +358,7 @@ class HPX(object):
         header = self.make_header()
         hdu = pf.BinTableHDU.from_columns(cols,header=header,name=extname)
         return hdu
-    
+
     def make_energy_bounds_hdu(self,extname="EBOUNDS"):
         """ Builds and returns a FITs HDU with the energy bin boundries
 
@@ -420,7 +420,7 @@ class HPX(object):
             raise Exception("HPX.get_index_list did not recognize region type %s"%tokens[0])
         return ilist
 
-        
+
     @staticmethod
     def get_ref_dir(region,coordsys):
         """ Finds and returns the reference direction for a given 
@@ -500,7 +500,7 @@ class HPX(object):
             w.wcs.crval[1] = skydir.galactic.b.deg
         else:
             raise Exception('Unrecognized coordinate system.')
-    
+
         pixsize = get_pixel_size_from_nside(self.nside)
         roisize = min(self.get_region_size(self._region),90)
 
@@ -511,7 +511,7 @@ class HPX(object):
         w.wcs.crpix[1] = crpix
         w.wcs.cdelt[0] = -pixsize/oversample
         w.wcs.cdelt[1] = pixsize/oversample
-        
+
         if naxis == 3:
             w.wcs.crpix[2] = 1
             w.wcs.ctype[2] = 'Energy'   
@@ -592,9 +592,9 @@ class HpxToWcsMapping(object):
             wcs_data_flat *= self._mult_val
         wcs_data.flat = wcs_data_flat
 
-        
+
 if __name__ == "__main__":
-    
+
 
     from utils import write_fits_image
 
@@ -603,7 +603,7 @@ if __name__ == "__main__":
     hpx.write_fits(n,"test_hpx.fits",clobber=True)
 
     ebins = np.logspace(2,5,8)
-    
+
     hpx_2 = HPX(1024,False,"GAL",region="DISK(110.,75.,2.)",ebins=ebins)
     #hpx_2 = HPX(1024,False,"GAL",region="HPX_PIXEL(RING,16,500)",ebins=ebins)
     npixels = hpx_2.npix
@@ -619,4 +619,4 @@ if __name__ == "__main__":
 
     wcs_out = hpx_2.make_wcs(3)   
     write_fits_image(wcs_data,wcs_out,"test_hpx_2_wcs.fits")
-    
+

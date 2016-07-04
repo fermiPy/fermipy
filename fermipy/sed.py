@@ -51,7 +51,7 @@ PAR_NAMES = {"PowerLaw":["Prefactor","Index"],
 class SEDGenerator(object):
     """Mixin class that provides SED functionality to
     `~fermipy.gtanalysis.GTAnalysis`."""
-    
+
     def sed(self, name, **kwargs):
         """Generate a spectral energy distribution (SED) for a source.  This
         function will fit the normalization of the source in each
@@ -67,7 +67,7 @@ class SEDGenerator(object):
         prefix : str
            Optional string that will be prepended to all output files
            (FITS and rendered images).
-            
+
         loge_bins : `~numpy.ndarray`
             Sequence of energies in log10(E/MeV) defining the edges of
             the energy bins.  If this argument is None then the
@@ -102,14 +102,14 @@ class SEDGenerator(object):
 
         write_fits : bool
             Write a FITS file containing the SED analysis results.
-        
+
         write_npy : bool        
             Write a numpy file with the contents of the output
             dictionary.
 
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
-            
+
         Returns
         -------
         sed : dict 
@@ -130,9 +130,9 @@ class SEDGenerator(object):
         config.setdefault('loge_bins',None)
         fermipy.config.validate_config(kwargs, config)
         config = utils.merge_dict(config,kwargs)
-        
+
         self.logger.info('Computing SED for %s' % name)
-        
+
         o = self._make_sed(name, **config)
         filename = \
             utils.format_filename(self.workdir,'sed',
@@ -151,9 +151,9 @@ class SEDGenerator(object):
             self._plotter.make_sed_plot(self, name, **config)
         except Exception:
             self.logger.error('SED plotting failed.',exc_info=True)
-            
+
         self.logger.info('Finished SED')
-        
+
         return o
 
     def _make_sed_fits(self,sed,filename,**kwargs):
@@ -183,12 +183,12 @@ class SEDGenerator(object):
                 Column(name='NORM_SCAN',dtype='f8',data=sed['norm_scan']),
                 Column(name='DLOGLIKE_SCAN',dtype='f8',
                        data=sed['dloglike_scan']),
-                
+
                 ]
-                
+
         tab = Table(cols)
 
-        
+
         tab.write(filename,format='fits',overwrite=True)
 
         columns = pyfits.ColDefs([])
@@ -210,7 +210,7 @@ class SEDGenerator(object):
                                       unit='ph / (MeV cm2 s)'))
         columns.add_col(pyfits.Column(name=str('DFDE_FERR'), format='E',
                                       array=sed['model_flux']['dfde_ferr']))
-        
+
         hdu_f = pyfits.BinTableHDU.from_columns(columns,name='MODEL_FLUX')
 
 
@@ -228,9 +228,9 @@ class SEDGenerator(object):
                                       dim=str('(%i)'%npar),array=sed['param_covariance']))
         columns.add_col(pyfits.Column(name=str('CORRELATION'), format='%iE'%npar,
                                       dim=str('(%i)'%npar),array=sed['param_correlation']))
-        
+
         hdu_p = pyfits.BinTableHDU.from_columns(columns,name='PARAMS')
-        
+
         hdulist = pyfits.open(filename)
         hdulist[1].name = 'SED'
         hdulist = pyfits.HDUList([hdulist[0],hdulist[1],hdu_f,hdu_p])
@@ -238,18 +238,18 @@ class SEDGenerator(object):
         for h in hdulist:
             h.header['SRCNAME'] = sed['name']
             h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
-        
+
         hdulist.writeto(filename,clobber=True)
 
     def _make_sed(self, name, **config):
-        
+
         bin_index = config['bin_index']
         use_local_index = config['use_local_index']
         fix_background = config['fix_background']
         ul_confidence = config['ul_confidence']
         cov_scale = config['cov_scale']        
         loge_bins = config['loge_bins']
-        
+
         if loge_bins is None:
             loge_bins = self.log_energies
         else:
@@ -260,7 +260,7 @@ class SEDGenerator(object):
         min_flux = 1E-30
         npts = self.config['gtlike']['llscan_npts']
         loge_bounds = self.loge_bounds
-        
+
         # Output Dictionary
         o = {'name' : name,
              'logemin': loge_bins[:-1],
@@ -303,10 +303,10 @@ class SEDGenerator(object):
             o['%s_err_lo'%t] = np.zeros(nbins)*np.nan
             o['%s_ul95'%t] = np.zeros(nbins)*np.nan
             o['%s_ul'%t] = np.zeros(nbins)*np.nan
-        
+
         saved_state = LikelihoodState(self.like)
         source = self.components[0].like.logLike.getSource(str(name))
-        
+
         # Perform global spectral fit
         self._latch_free_params()
         self.free_sources(False,pars='shape',loglevel=logging.DEBUG)
@@ -317,20 +317,20 @@ class SEDGenerator(object):
         spectral_pars = gtutils.get_function_pars_dict(source.spectrum())
         o['params'] = roi_model.get_params_dict(spectral_pars)
         o['SpectrumType'] = self.roi[name]['SpectrumType']
-        
+
         param_names = gtutils.get_function_par_names(o['SpectrumType'])        
         npar = len(param_names)
         o['param_covariance'] = np.empty((npar,npar),dtype=float)*np.nan
         o['param_names'] = np.array(param_names)
         o['param_values'] = np.empty(npar,dtype=float)*np.nan
         o['param_errors'] = np.empty(npar,dtype=float)*np.nan
-        
+
         pmask0 = np.empty(len(fit_output['par_names']),dtype=bool)
         pmask0.fill(False)
         pmask1 = np.empty(npar,dtype=bool)
         pmask1.fill(False)
         for i, pname in enumerate(param_names):
-            
+
             o['param_values'][i] = o['params'][pname][0]
             o['param_errors'][i] = o['params'][pname][1]            
             for j, pname2 in enumerate(fit_output['par_names']):            
@@ -340,15 +340,15 @@ class SEDGenerator(object):
                     continue
                 pmask0[j] = True
                 pmask1[i] = True
-                
+
         src_cov = fit_output['covariance'][pmask0,:][:,pmask0]
         o['param_covariance'][np.ix_(pmask1,pmask1)] = src_cov
         o['param_correlation'] = utils.cov_to_correlation(o['param_covariance'])
-        
+
         for i, pname in enumerate(param_names):
             o['param_covariance'][i,:] *= spectral_pars[pname]['scale']
             o['param_covariance'][:,i] *= spectral_pars[pname]['scale']
-                
+
         self._restore_free_params()
 
         # Setup background parameters for SED
@@ -366,7 +366,7 @@ class SEDGenerator(object):
             self.constrain_norms(srcNames, cov_scale)
             self.unzero_source(name)
             self._restore_free_params()
-                                    
+
         # Precompute fluxes in each bin from global fit
         gf_bin_flux = []
         gf_bin_index = []
@@ -398,7 +398,7 @@ class SEDGenerator(object):
         self.free_parameter(name, 'Prefactor', True)
         self.set_parameter(name, 'Scale', 1E3, scale=1.0,
                            bounds=[1, 1E6], update_source=False)
-        
+
         src_norm_idx = -1        
         free_params = self.get_params(True)
         for j, p in enumerate(free_params):
@@ -410,7 +410,7 @@ class SEDGenerator(object):
             o['correlation'][p['src_name']] =  np.zeros(nbins) * np.nan
 
         self._fitcache = None
-        
+
         for i, (logemin, logemax) in enumerate(zip(loge_bins[:-1],
                                                    loge_bins[1:])):
 
@@ -432,7 +432,7 @@ class SEDGenerator(object):
             self.like.syncSrcParams(str(name))
 
             ref_flux = self.like[name].flux(emin, emax)
-            
+
             o['ref_flux'][i] = self.like[name].flux(emin, emax)
             o['ref_eflux'][i] = self.like[name].energyFlux(emin, emax)
             o['ref_dfde'][i] = self.like[name].spectrum()(pyLike.dArg(ectr))
@@ -441,13 +441,13 @@ class SEDGenerator(object):
             o['ref_e2dfde'][i] = o['ref_dfde'][i]*ectr2
             cs = self.model_counts_spectrum(name, logemin, logemax, summed=True)
             o['ref_npred'][i] = np.sum(cs)
-                                   
+
             normVal = self.like.normPar(name).getValue()
             flux_ratio = gf_bin_flux[i] / ref_flux
             newVal = max(normVal * flux_ratio, 1E-10)
             self.set_norm(name, newVal, update_source=False)
             self.set_norm_bounds(name, [newVal*1E-6,newVal*1E4])
-            
+
             self.like.syncSrcParams(str(name))
             self.free_norm(name)
             self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
@@ -457,22 +457,22 @@ class SEDGenerator(object):
             fit_output = self._fit(**config['optimizer'])
             free_params = self.get_params(True)
             for j, p in enumerate(free_params):
-                
+
                 if not p['is_norm']:
                     continue
-                
+
                 o['correlation'][p['src_name']][i] = \
                     fit_output['correlation'][src_norm_idx,j]
-            
+
             o['fit_quality'][i] = fit_output['fit_quality']
             o['fit_status'][i] = fit_output['fit_status']
-            
+
             prefactor = self.like[self.like.par_index(name, 'Prefactor')]
 
             flux = self.like[name].flux(emin, emax)
             eflux = self.like[name].energyFlux(emin, emax)
             dfde = self.like[name].spectrum()(pyLike.dArg(ectr))
-            
+
             o['norm'][i] = flux/o['ref_flux'][i]
             o['flux'][i] = flux
             o['eflux'][i] = eflux
@@ -483,7 +483,7 @@ class SEDGenerator(object):
                                             logemax, summed=True)
             o['npred'][i] = np.sum(cs)            
             o['loglike'][i] = fit_output['loglike']
-            
+
             lnlp = self.profile_norm(name, logemin=logemin, logemax=logemax,
                                      savestate=True, reoptimize=True,
                                      npts=npts, optimizer=config['optimizer'])
@@ -498,7 +498,7 @@ class SEDGenerator(object):
 
             o['norm_err_hi'][i] = ul_data['err_hi']/ref_flux
             o['norm_err_lo'][i] = ul_data['err_lo']/ref_flux
-            
+
             if np.isfinite(ul_data['err_lo']):
                 o['norm_err'][i] = 0.5*(ul_data['err_lo'] +
                                         ul_data['err_hi'])/ref_flux
@@ -515,13 +515,13 @@ class SEDGenerator(object):
             saved_state_bin.restore()
 
         for t in ['flux','eflux','dfde','e2dfde']:
-            
+
             o['%s_err'%t] = o['norm_err']*o['ref_%s'%t]
             o['%s_err_hi'%t] = o['norm_err_hi']*o['ref_%s'%t]
             o['%s_err_lo'%t] = o['norm_err_lo']*o['ref_%s'%t]
             o['%s_ul95'%t] = o['norm_ul95']*o['ref_%s'%t]
             o['%s_ul'%t] = o['norm_ul']*o['ref_%s'%t]
-        
+
         self.set_energy_range(loge_bounds[0], loge_bounds[1])
         self.like.setSpectrum(str(name), old_spectrum)
         saved_state.restore()
@@ -529,12 +529,12 @@ class SEDGenerator(object):
 
         if cov_scale is not None:
             self.remove_priors()
-        
+
         src = self.roi.get_source_by_name(name)
         src.update_data({'sed': copy.deepcopy(o)})
-        
+
         return o
-        
+
 
 
 if __name__ == "__main__":
