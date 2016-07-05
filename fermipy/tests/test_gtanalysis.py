@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
+import os
 import numpy as np
+from astropy.tests.helper import pytest
 from .. import gtanalysis
 from .. import spectrum
-import pytest
-import os
 
 
 @pytest.fixture(scope='module')

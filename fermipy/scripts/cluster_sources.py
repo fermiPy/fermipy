@@ -225,8 +225,6 @@ def select_from_cluster(idx_key,idx_list,measure_vect):
       where best_idx is the index of the best source in the cluster and
             out_list is the list of all the other indices
     """
-
-    #print idx_key,idx_list,measure_vect
     best_idx = idx_key
     best_measure = measure_vect[idx_key]
     out_list = [idx_key] + idx_list
@@ -250,7 +248,6 @@ def select_from_clusters(cluster_dict,measure_vect):
     returns dict(int:[int,...])  
        New dictionary of clusters keyed by the best source in each cluster
     """
-    #print cluster_dict,measure_vect
     out_dict = {}
     for idx_key,idx_list in cluster_dict.items():
         out_idx,out_list = select_from_cluster(idx_key,idx_list,measure_vect)
@@ -272,7 +269,7 @@ def make_reverse_dict(in_dict):
     for k,v in in_dict.items():
         for vv in v:
             if out_dict.has_key(vv):
-                print "Dictionary collision %i"%vv
+                print("Dictionary collision %i"%vv)
             out_dict[vv] = k
     return out_dict
 
@@ -331,7 +328,7 @@ def main():
     args = parser.parse_args()
 
     if args.dist and args.sigma:
-        print "Specify only one of --dist and --sigma"
+        print("Specify only one of --dist and --sigma")
         sys.exit()
 
     if args.dist:
@@ -341,7 +338,7 @@ def main():
         use_dist = False
         match_cut = args.sigma
     else:
-        print "Specify either --dist or --sigma"
+        print("Specify either --dist or --sigma")
         sys.exit()
 
     # read table and get relevant columns
@@ -375,7 +372,7 @@ def main():
     # Select the best source from each cluster
     #sel_dict = select_from_clusters(cDict,offset_vect)
     sel_dict = select_from_clusters(cDict,-TS_vect)
-    print cDict,offset_vect,sel_dict
+    print(cDict,offset_vect,sel_dict)
 
     # This is a map you can use to replace sources
     # It maps duplicate -> original
