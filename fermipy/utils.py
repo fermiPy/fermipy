@@ -10,8 +10,6 @@ import yaml
 import numpy as np
 import scipy
 import xml.etree.cElementTree as et
-from astropy import units as u
-from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 from scipy.interpolate import UnivariateSpline, InterpolatedUnivariateSpline

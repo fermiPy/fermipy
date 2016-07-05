@@ -5,7 +5,7 @@ import os
 import copy
 import itertools
 import functools
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool
 
 import numpy as np
 import warnings
@@ -16,8 +16,6 @@ import astropy.io.fits as pyfits
 from astropy.table import Table
 import astropy.wcs as pywcs
 
-import fermipy.config
-import fermipy.defaults as defaults
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
@@ -25,9 +23,7 @@ import fermipy.plotting as plotting
 import fermipy.castro as castro
 from fermipy.skymap import Map
 from fermipy.roi_model import Source
-from fermipy.logger import Logger
 
-import fermipy.sed as sed
 from fermipy.spectrum import PowerLaw
 
 MAX_NITER = 100

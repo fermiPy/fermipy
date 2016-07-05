@@ -3,12 +3,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-import collections
 import argparse
 
 import numpy as np
 
-import astropy.io.fits as pyfits
 from astropy.table import Table, Column, vstack
 
 from fermipy.roi_model import ROIModel

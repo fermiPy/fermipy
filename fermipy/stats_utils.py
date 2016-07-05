@@ -5,16 +5,11 @@
 Utilities to fit dark matter spectra to castro data
 """
 
-import os
 import numpy as np
-import collections
 
-from scipy.integrate import quad
-from scipy.interpolate import UnivariateSpline
 import scipy.stats as stats
 import scipy.optimize as opt
 
-from fermipy import spectrum
 from fermipy import castro
 
 

@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 
-import os
 import sys
-import collections
 import argparse
 import yaml
 
 import numpy as np
 
-import astropy.io.fits as pyfits
-from astropy.table import Table, Column
+from astropy.table import Table
 from scipy.sparse import csgraph
 
 

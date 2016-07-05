@@ -14,29 +14,16 @@ import logging
 import os
 
 import numpy as np
-from scipy.interpolate import UnivariateSpline, splrep, splev
-import scipy.optimize as opt
-import scipy.special as spf
-from scipy.integrate import quad
-import scipy
 
 import pyLikelihood as pyLike
 
 import astropy.io.fits as pyfits
-from astropy.coordinates import SkyCoord
 from astropy.table import Table, Column
 
 import fermipy.config
-import fermipy.defaults as defaults
 import fermipy.utils as utils
 import fermipy.gtutils as gtutils
 import fermipy.roi_model as roi_model
-from fermipy.wcs_utils import wcs_add_energy_axis
-from fermipy.fits_utils import read_energy_bounds, read_spectral_data
-from fermipy.skymap import read_map_from_fits, Map
-from fermipy.logger import Logger
-from fermipy.sourcefind import find_peaks, refine_peak
-from fermipy.spectrum import SpectralFunction
 
 from LikelihoodState import LikelihoodState
 

@@ -5,14 +5,11 @@ import copy
 import os
 import numpy as np
 import scipy.signal
-import fermipy.config
-import fermipy.defaults as defaults
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 from fermipy.skymap import Map
-from fermipy.logger import Logger
 
 
 def poisson_lnl(nc, mu):

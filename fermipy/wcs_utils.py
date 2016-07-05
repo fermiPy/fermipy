@@ -2,10 +2,8 @@
 from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
-import copy
 import numpy as np
 
-import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 from astropy import units as u
 from astropy.coordinates import SkyCoord
