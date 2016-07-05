@@ -59,7 +59,7 @@ def load_data(infile, workdir=None):
     else:
         raise Exception('Unrecognized extension.')
 
-    
+
 def resolve_path(path, workdir=None):
     if os.path.isabs(path):
         return path
@@ -67,7 +67,7 @@ def resolve_path(path, workdir=None):
         return os.path.abspath(path)
     else:
         return os.path.join(workdir, path)
-            
+
 
 def collect_dirs(path, max_depth=1, followlinks=True):
     """Recursively find directories under the given path."""
@@ -96,13 +96,13 @@ def collect_dirs(path, max_depth=1, followlinks=True):
             o += collect_dirs(subdir,max_depth=max_depth-1)
 
     return list(set(o))
-        
+
 
 def match_regex_list(patterns, string):
     """Perform a regex match of a string against a list of patterns.
     Returns true if the string matches at least one pattern in the
     list."""
-    
+
     for p in patterns:
 
         if re.findall(p,string):
@@ -120,7 +120,7 @@ def join_strings(strings,sep='_'):
             strings = [strings]        
         return sep.join([s for s in strings if s])
 
-    
+
 def format_filename(outdir, basename, prefix=None, extension=None):
     filename = join_strings(prefix)
     filename = join_strings([filename,basename])
@@ -141,15 +141,15 @@ def strip_suffix(filename,suffix):
         filename = re.sub(r'\.%s$'%s, '', filename)
 
     return filename
-        
+
 RA_NGP = np.radians(192.8594812065348)
 DEC_NGP = np.radians(27.12825118085622)
 L_CP = np.radians(122.9319185680026)
 
 def gal2eq(l, b):
-    
+
     global RA_NGP, DEC_NGP, L_CP
-    
+
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.
 
@@ -185,7 +185,7 @@ def gal2eq(l, b):
 def eq2gal(ra, dec):
 
     global RA_NGP, DEC_NGP, L_CP
-    
+
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.
     DEC_0 = np.pi / 2. - DEC_NGP
@@ -334,7 +334,7 @@ def create_model_name(src):
         o += '_powerlaw_%04.2f' % float(src.spectral_pars['Index']['value'])
     else:
         o += '_%s'%(src['SpectrumType'].lower())
-        
+
     return o
 
 
@@ -395,7 +395,7 @@ def find_function_root(fn, x0, xb, delta = 0.0):
 
     if x0 == xb:
         return np.nan
-    
+
     for i in range(10):
         if np.sign(fn(xb) + delta) != np.sign(fn(x0) + delta):
             break
@@ -404,7 +404,7 @@ def find_function_root(fn, x0, xb, delta = 0.0):
             xb *= 0.5
         else:
             xb *= 2.0
-            
+
     # Failed to find a root
     if np.sign(fn(xb) + delta) == np.sign(fn(x0) + delta):
         return np.nan
@@ -413,7 +413,7 @@ def find_function_root(fn, x0, xb, delta = 0.0):
         xtol = 1e-10*xb
     else:
         xtol = 1e-10*(xb+x0)
-            
+
     return brentq(lambda t: fn(t)+delta,x0, xb, xtol=xtol)
 
 
@@ -440,30 +440,30 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
 
     tol : float    
        Tolerance parameter for spline.
-              
+
     """
 
     deltalnl = cl_to_dlnl(ul_confidence)
-    
+
     spline = UnivariateSpline(xval, loglike, k=2, s=tol)
     #m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
     #xval = np.concatenate((xval[:1],xval[1:][m]))
     #loglike = np.concatenate((loglike[:1],loglike[1:][m]))    
     #spline = InterpolatedUnivariateSpline(xval, loglike, k=2)
-    
+
     sd = spline.derivative()
-        
+
     imax = np.argmax(loglike)
     ilo = max(imax-2,0)
     ihi = min(imax+2,len(xval)-1)
-        
+
     # Find the peak
     x0 = xval[imax]        
 
     # Refine the peak position
     if np.sign(sd(xval[ilo])) != np.sign(sd(xval[ihi])):
         x0 = find_function_root(sd, xval[ilo], xval[ihi])
-                
+
     lnlmax = float(spline(x0))
 
     fn = lambda t: spline(t)-lnlmax
@@ -471,17 +471,17 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     ll = find_function_root(fn,x0,xval[0],deltalnl)
     err_lo = np.abs(x0 - find_function_root(fn,x0,xval[0],0.5))
     err_hi = np.abs(x0 - find_function_root(fn,x0,xval[-1],0.5))
-    
+
     if np.isfinite(err_lo):
         err = 0.5*(err_lo+err_hi)
     else:
         err = err_hi
-        
+
     o = {'x0' : x0, 'ul' : ul, 'll' : ll,
          'err_lo' : err_lo, 'err_hi' : err_hi, 'err' : err,
          'lnlmax' : lnlmax }
     return o
-    
+
 
 def poly_to_parabola(coeff):
 
@@ -514,19 +514,19 @@ def fit_parabola(z,ix,iy,dpix=2,zmin=None):
 
     ymin = max(0,iy-dpix)
     ymax = min(z.shape[1],iy+dpix+1)
-    
+
     sx = slice(xmin,xmax)
     sy = slice(ymin,ymax)
 
     nx = sx.stop-sx.start
     ny = sy.stop-sy.start
-    
+
     x = np.arange(sx.start,sx.stop)
     y = np.arange(sy.start,sy.stop)
 
     x = x[:,np.newaxis]*np.ones((nx,ny))
     y = y[np.newaxis,:]*np.ones((nx,ny))
-        
+
     coeffx = poly_to_parabola(np.polyfit(np.arange(sx.start,sx.stop),z[sx,iy],2))
     coeffy = poly_to_parabola(np.polyfit(np.arange(sy.start,sy.stop),z[ix,sy],2))
     p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
@@ -535,7 +535,7 @@ def fit_parabola(z,ix,iy,dpix=2,zmin=None):
         m = z[sx,sy] > zmin
 
     o = { 'fit_success': True, 'p0' : p0 }
-    
+
     try:
         popt, pcov = scipy.optimize.curve_fit(parabola,
                                               (np.ravel(x[m]),np.ravel(y[m])),
@@ -544,11 +544,11 @@ def fit_parabola(z,ix,iy,dpix=2,zmin=None):
         popt = copy.deepcopy(p0)
         o['fit_success'] = False
 #        self.logger.error('Localization failed.', exc_info=True)
-        
+
     fm = parabola((x[m],y[m]),*popt)
     df = fm - z[sx,sy][m].flat
     rchi2 = np.sum(df**2)/len(fm)
-        
+
     o['rchi2'] = rchi2
     o['x0'] = popt[1]
     o['y0'] = popt[2]
@@ -561,10 +561,10 @@ def fit_parabola(z,ix,iy,dpix=2,zmin=None):
 
     a = max(o['sigmax'],o['sigmay'])
     b = min(o['sigmax'],o['sigmay'])
-    
+
     o['eccentricity'] = np.sqrt(1-b**2/a**2)
     o['eccentricity2'] = np.sqrt(a**2/b**2-1)
-    
+
     return o
 
 
@@ -603,7 +603,7 @@ def val_to_bin_bounded(edges, x):
 
 def extend_array(edges,binsz,lo,hi):
     """Extend an array to encompass lo and hi values."""
-    
+
     numlo = int(np.ceil((edges[0]-lo)/binsz))
     numhi = int(np.ceil((hi-edges[-1])/binsz))
 
@@ -611,13 +611,13 @@ def extend_array(edges,binsz,lo,hi):
     if numlo > 0:
         edges_lo = np.linspace(edges[0]-numlo*binsz, edges[0], numlo+1)
         edges = np.concatenate((edges_lo[:-1],edges))
-        
+
     if numhi > 0:
         edges_hi = np.linspace(edges[-1],edges[-1]+numhi*binsz,numhi+1)
         edges = np.concatenate((edges,edges_hi[1:]))
 
     return edges
-        
+
 
 def mkdir(dir):
     if not os.path.exists(dir):
@@ -665,7 +665,7 @@ def unicode_to_str(args):
 def isstr(s):
     """String instance testing method that works under both Python 2.X
     and 3.X.  Returns true if the input is a string."""
-    
+
     try:
         return isinstance(s, basestring)
     except NameError:
@@ -676,7 +676,7 @@ def xmlpath_to_path(path):
 
     if path is None:
         return path
-    
+
     return re.sub(r'\$\(([a-zA-Z\_]+)\)',r'$\1',path)
 
 
@@ -684,10 +684,10 @@ def path_to_xmlpath(path):
 
     if path is None:
         return path
-    
+
     return re.sub(r'\$([a-zA-Z\_]+)', r'$(\1)', path)
 
-    
+
 def create_xml_element(root, name, attrib):
     el = et.SubElement(root, name)
     for k, v in attrib.iteritems():
@@ -695,10 +695,10 @@ def create_xml_element(root, name, attrib):
         if isinstance(v,bool):
             el.set(k,str(int(v)))
         elif isstr(v):
-             el.set(k, v)
+            el.set(k, v)
         elif np.isfinite(v):        
             el.set(k, str(v))
-            
+
     return el
 
 
@@ -736,7 +736,7 @@ def update_keys(input_dict,key_map):
             o[k] = update_keys(v,key_map)
         else:
             o[k] = v
-            
+
     return o
 
 def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
@@ -747,10 +747,10 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
     ----------
     d0 : dict
        The input dictionary.
-    
+
     d1 : dict
        Dictionary to be merged with the input dictionary.
-    
+
     add_new_keys : str
        Do not skip keys that only exist in d1.
 
@@ -883,7 +883,7 @@ def extract_mapcube_region(infile, skydir, outfile, maphdu=0):
 
     infile : str
         Path to mapcube file.
-    
+
     skydir : `~astropy.coordinates.SkyCoord`
 
     """
@@ -1092,7 +1092,7 @@ def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
 
 def make_disk_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     """Make kernel for a 2D disk.
-    
+
     Parameters
     ----------
 
@@ -1117,7 +1117,7 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     ----------
 
     psf : `~fermipy.irfs.PSFModel`
-    
+
     sigma : float
       68% containment radius in degrees.
     """
@@ -1136,7 +1136,7 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
 
     if normalize:
         k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
-        
+
     return k
 
 
@@ -1147,7 +1147,7 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     ----------
 
     psf : `~fermipy.irfs.PSFModel`
-    
+
     sigma : float
       68% containment radius in degrees.
     """
@@ -1163,7 +1163,7 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     k = np.zeros((len(egy), npix, npix))
 
     logpsf = np.log10(psf.val)
-    
+
     for i in range(len(egy)):
         fn = lambda t: 10 ** np.interp(t, dtheta, logpsf[:, i])
         psfc = convolve2d_gauss(fn, dtheta, sigma)
@@ -1186,18 +1186,18 @@ def make_psf_kernel(psf, npix, cdelt, xpix, ypix, normalize=False):
 
     npix : int
         Number of pixels in X and Y dimensions.
-    
+
     cdelt : float
         Pixel size in degrees.
-    
+
     """
-     
+
     dtheta = psf.dtheta
     egy = psf.energies
 
     x = make_pixel_offset(npix, xpix, ypix)
     x *= cdelt
-    
+
     k = np.zeros((len(egy), npix, npix))
     for i in range(len(egy)):
         k[i] = 10 ** np.interp(np.ravel(x), dtheta,
@@ -1205,7 +1205,7 @@ def make_psf_kernel(psf, npix, cdelt, xpix, ypix, normalize=False):
 
     if normalize:
         k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
-         
+
     return k
 
 

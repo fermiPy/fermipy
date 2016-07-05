@@ -29,7 +29,7 @@ def clone_configs(basedir,base_configs,opt_configs,scripts):
 cat $0
 {scriptexe} --config={config}
 """
-        
+
         if os.path.isfile(script_in):
             script = os.path.basename(script_in)
             scriptpath = os.path.join(scriptdir,script)
@@ -47,7 +47,7 @@ cat $0
 
         dirname = os.path.abspath(os.path.join(basedir,name))
         utils.mkdir(dirname)
- 
+
         cfgfile = os.path.join(dirname,'config.yaml')
         for script_in,bash_script in zip(scripts,bash_scripts):
 
@@ -60,7 +60,7 @@ cat $0
 
         if not config:
             continue
- 
+
         c = copy.deepcopy(config)
         c = utils.merge_dict(c,vdict,add_new_keys=True)
         yaml.dump(utils.tolist(c),open(cfgfile,'w'),default_flow_style=False)
@@ -87,14 +87,14 @@ def main():
 
     #src_dict = {}
     #src_list = yaml.load(open(args.source_list))
-    
+
     #for src,sdict in src_list.items():
     #    src_dict[src] = sdict
 
     src_dict = yaml.load(open(args.source_list))
-    
+
     clone_configs(args.basedir,args.configs,src_dict,args.script)
 
 if __name__ == "__main__":
     main()
-        
+

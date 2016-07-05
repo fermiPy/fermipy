@@ -157,7 +157,7 @@ def annotate(**kwargs):
     text = []
 
     if src:
-        
+
         if 'ASSOC1' in src['assoc'] and src['assoc']['ASSOC1']:
             text += ['%s (%s)' % (src['name'], src['assoc']['ASSOC1'])]
         else:
@@ -195,7 +195,7 @@ class ImagePlotter(object):
             self._wcs,data = make_wcs_from_hpx(proj,data)
         else:
             raise Exception("Can't co-add map of unknown type %s"%type(proj))
-                
+
         self._data = data
 
 
@@ -228,7 +228,7 @@ class ImagePlotter(object):
             kwargs_imshow['norm'] = Normalize()
 
         fig = plt.gcf()
-        
+
         ax = fig.add_subplot(subplot,projection=self._wcs)
 
         load_ds9_cmap()
@@ -246,7 +246,7 @@ class ImagePlotter(object):
             cs = ax.contour(data.T, **kwargs_contour)
             cs.levels = ['%.0f'%val for val in cs.levels]
             plt.clabel(cs,inline=1,fontsize=8)
-            
+
         coordsys = wcs_utils.get_coordsys(self._proj)
 
         if coordsys == 'CEL':
@@ -292,7 +292,7 @@ class ROIPlotter(fermipy.config.Configurable):
                 self._catalogs += [catalog.Catalog.create(c)]
             else:
                 self._catalogs += [c]
-                
+
         if isinstance(data_map,Map):
             self._projtype = 'WCS'
             self._data = data_map.counts.T
@@ -307,7 +307,7 @@ class ROIPlotter(fermipy.config.Configurable):
             self._data = dataT.T
         else:
             raise Exception("Can't make ROIPlotter of unknown projection type %s"%type(data_map))
-    
+
         self._loge_bounds = self.config['loge_bounds']
 
         if self._loge_bounds:
@@ -317,7 +317,7 @@ class ROIPlotter(fermipy.config.Configurable):
             imdata = self._data[:, :, i0:i1]
         else:
             imdata = self._data
-        
+
         self._implot = ImagePlotter(imdata, self._wcs)
 
     @property
@@ -358,7 +358,7 @@ class ROIPlotter(fermipy.config.Configurable):
             themap = HpxMap.create_from_hdulist(hdulist,ebounds="EBOUNDS")            
         else:
             raise Exception("Unknown projection type %s"%projtype)        
-        
+
         return ROIPlotter(themap, roi=roi, **kwargs)
 
     def plot_projection(self, iaxis, **kwargs):
@@ -400,7 +400,7 @@ class ROIPlotter(fermipy.config.Configurable):
             j0 = utils.val_to_edge(axes[2], loge_bounds[0])
             j1 = utils.val_to_edge(axes[2], loge_bounds[1])
             s2 = slice(j0, j1)
-            
+
         c = np.apply_over_axes(np.sum, data[s0, s1, s2], axes=saxes)
         c = np.squeeze(c)
         return c
@@ -425,9 +425,9 @@ class ROIPlotter(fermipy.config.Configurable):
                                 np.ones(len(labels),dtype=bool))
         if nolabels:
             label_mask.fill(False)
-        
+
         pixcrd = wcs_utils.skydir_to_pix(skydir, self._implot._wcs)
-        
+
         for i, (x,y,label,show_label) in enumerate(zip(pixcrd[0],pixcrd[1],labels,label_mask)):
 
             if show_label:
@@ -435,14 +435,14 @@ class ROIPlotter(fermipy.config.Configurable):
                                 xytext=(5.0, 5.0), textcoords='offset points',
                                 **text_kwargs)            
                 plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
-            
+
             t = ax.plot(x, y, **plot_kwargs)
             plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
-        
+
     def plot_roi(self, roi, **kwargs):
 
         src_color = 'w'
-        
+
         label_ts_threshold = kwargs.get('label_ts_threshold',0.0)
         plot_kwargs = dict(linestyle='None', marker='+',
                            markerfacecolor='None',mew=0.66,ms=8,
@@ -460,7 +460,7 @@ class ROIPlotter(fermipy.config.Configurable):
             m = np.ones(len(ts),dtype=bool)            
         else:
             m = ts > label_ts_threshold
-            
+
         skydir = roi._src_skydir
         labels = [s.name for s in roi.point_sources]        
         self.plot_sources(skydir,labels,plot_kwargs,text_kwargs,
@@ -469,37 +469,37 @@ class ROIPlotter(fermipy.config.Configurable):
     def plot_catalog(self, catalog):
 
         color = 'lime'
-        
+
         plot_kwargs = dict(linestyle='None', marker='x',
                            markerfacecolor='None',
                            markeredgecolor=color, clip_on=True)
 
         text_kwargs = dict(color=color, size=8, clip_on=True,
                            fontweight='normal')
-                
+
         skydir = catalog.skydir
 
         if 'NickName' in catalog.table.columns:
             labels = catalog.table['NickName']
         else:
             labels = catalog.table['Source_Name']
-            
+
         separation = skydir.separation(self.cmap.skydir).deg
         m = separation < max(self.cmap.width)
 
         self.plot_sources(skydir[m],labels[m],plot_kwargs,text_kwargs,
                           nolabels=True)
 
-            
+
     def plot(self, **kwargs):
-        
+
         zoom = kwargs.get('zoom',None)
         graticule_radii = kwargs.get('graticule_radii',
                                      self.config['graticule_radii'])
         label_ts_threshold = kwargs.get('label_ts_threshold',
                                        self.config['label_ts_threshold'])
         cmap = kwargs.setdefault('cmap',self.config['cmap'])
-        
+
         im_kwargs = dict(cmap='ds9_b',
                          interpolation='nearest',
                          vmin=None, vmax=None, levels=None,
@@ -510,24 +510,24 @@ class ROIPlotter(fermipy.config.Configurable):
 
         im_kwargs = merge_dict(im_kwargs, kwargs)
         cb_kwargs = merge_dict(cb_kwargs, kwargs)
-        
+
         im, ax = self._implot.plot(**im_kwargs)
 
         self._ax = ax
-        
+
         for c in self._catalogs:
             self.plot_catalog(c)
-        
+
         if self._roi is not None:
             self.plot_roi(self._roi,
                           label_ts_threshold=label_ts_threshold)        
-            
+
         self._extent = im.get_extent()
         ax.set_xlim(self._extent[0], self._extent[1])
         ax.set_ylim(self._extent[2], self._extent[3])
-        
+
         self.zoom(zoom)
-            
+
         cb_label = cb_kwargs.pop('cb_label', None)
         cb = plt.colorbar(im, **cb_kwargs)
         if cb_label:
@@ -535,7 +535,7 @@ class ROIPlotter(fermipy.config.Configurable):
 
         for r in graticule_radii:            
             self.draw_circle(self.cmap.skydir,r)
-        
+
 
     def draw_circle(self,skydir,radius):
 
@@ -548,10 +548,10 @@ class ROIPlotter(fermipy.config.Configurable):
         #    c = Circle((skydir.fk5.l.deg,skydir.fk5.b.deg),
         #               radius,facecolor='none',edgecolor='w',linestyle='--',
         #               transform=self._ax.get_transform('fk5'))
-        
+
         c = Circle(self.cmap.pix_center,radius/max(self.cmap.pix_size),
                    facecolor='none',edgecolor='w',linestyle='--',linewidth=0.5)
-        
+
         self._ax.add_patch(c)
 
     def zoom(self,zoom):
@@ -560,15 +560,15 @@ class ROIPlotter(fermipy.config.Configurable):
             return
 
         extent = self._extent
-        
+
         xw = extent[1]-extent[0]
         x0 = 0.5*(extent[0]+extent[1])
         yw = extent[1]-extent[0]
         y0 = 0.5*(extent[0]+extent[1])
-                                
+
         xlim = [x0 - 0.5*xw/zoom,x0 + 0.5*xw/zoom]
         ylim = [y0 - 0.5*yw/zoom,y0 + 0.5*yw/zoom]
-        
+
         self._ax.set_xlim(xlim[0],xlim[1])
         self._ax.set_ylim(ylim[0],ylim[1])
 
@@ -589,7 +589,7 @@ class SEDPlotter(object):
             fmax += 0.5*(2.0-fdelta)
 
         return fmin, fmax
-        
+
     @staticmethod
     def plot_lnlscan(sed, **kwargs):
 
@@ -600,11 +600,11 @@ class SEDPlotter(object):
         lhProf = sed['lnlprofile']
 
         fmin,fmax = SEDPlotter.get_ylims(sed)
-                
+
         fluxM = np.arange(fmin, fmax, 0.01)
         fbins = len(fluxM)
         llhMatrix = np.zeros((len(sed['ectr']), fbins))        
-        
+
         # loop over energy bins
         for i in range(len(lhProf)):
             m = lhProf[i]['dfde'] > 0
@@ -640,7 +640,7 @@ class SEDPlotter(object):
         color = kwargs.get('color', 'k')
 
         fmin,fmax = SEDPlotter.get_ylims(sed)
-        
+
         m = sed['ts'] < ts_thresh
 
         x = sed['ectr']
@@ -667,7 +667,7 @@ class SEDPlotter(object):
         plt.gca().set_xscale('log')
         plt.gca().set_xlim(sed['emin'][0], sed['emax'][-1])
         plt.gca().set_ylim(10**fmin,10**fmax)
-        
+
 
     @staticmethod
     def plot_sed_resid(src, model_flux, **kwargs):
@@ -748,7 +748,7 @@ class SEDPlotter(object):
         SEDPlotter.plot_sed(sed)
 
         if np.any(sed['ts'] > 9.):
-        
+
             if 'model_flux' in sed:
                 SEDPlotter.plot_model(sed['model_flux'], noband=showlnl)        
             elif 'model_flux' in src:
@@ -821,14 +821,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
         self._catalogs = []
         for c in self.config['catalogs']:
             self._catalogs += [catalog.Catalog.create(c)]
-        
+
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
                                  log_level(self.config['logging']['verbosity']))
 
     def run(self, gta, mcube_map, **kwargs):
         """Make all plots."""
-        
+
         prefix = kwargs.get('prefix', 'test')
         format = kwargs.get('format', gta.config['plotting']['format'])
 
@@ -866,7 +866,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                           self.config['label_ts_threshold'])
         kwargs.setdefault('cmap',self.config['cmap'])
         kwargs.setdefault('catalogs',self._catalogs)
-                 
+
         load_bluered_cmap()
 
         prefix = maps['name']
@@ -912,7 +912,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         format = kwargs.get('format', gta.config['plotting']['format'])
         suffix = kwargs.get('suffix', 'tsmap')
         zoom = kwargs.get('zoom',None)
-        
+
         if 'ts' not in maps: 
             return
 
@@ -923,7 +923,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                           self.config['label_ts_threshold'])
         kwargs.setdefault('cmap',self.config['cmap'])
         kwargs.setdefault('catalogs',self.config['catalogs'])
-        
+
         prefix = maps['name']
         fig = plt.figure()
         p = ROIPlotter(maps['sqrt_ts'], roi=gta.roi, **kwargs)
@@ -967,7 +967,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                               self.config['label_ts_threshold'])
         roi_kwargs.setdefault('cmap',self.config['cmap'])
         roi_kwargs.setdefault('catalogs',self._catalogs)
-        
+
         if loge_bounds is None:
             loge_bounds = (gta.log_energies[0], gta.log_energies[-1])
         esuffix = '_%.3f_%.3f' % (loge_bounds[0], loge_bounds[1])
@@ -988,7 +988,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(gta.counts_map(), roi=gta.roi, **roi_kwargs)
-        
+
         if p.projtype == "WCS":
             model_data = mcube_map.counts.T
             diffuse_data = mcube_diffuse.counts.T
@@ -1007,7 +1007,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure()
         p.plot_projection(0, label='Data', color='k', **data_style)
 
-        
+
         p.plot_projection(0, data=model_data, label='Model',
                           noerror=True)
         p.plot_projection(0, data=diffuse_data, label='Diffuse',
@@ -1053,9 +1053,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
         roi_kwargs.setdefault('cmap',self.config['cmap'])
         roi_kwargs.setdefault('catalogs',self.config['catalogs'])
 
-        
+
         for i, c in enumerate(gta.components):
-                
+
             fig = plt.figure()
             p = ROIPlotter(mcube_maps[i + 1], roi=gta.roi, **roi_kwargs)
 
@@ -1079,7 +1079,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
             plt.figure(figy.number)
             p.plot_projection(1, color=colors[i % 4], label='Component %i' % i,
                               **data_style)
-           
+
             p.plot_projection(1, data=mcube_data,
                               color=colors[i % 4], noerror=True,
                               label='__nolegend__')
@@ -1099,8 +1099,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                       prefix, esuffix, format)))
         plt.close(figx)
         plt.close(figy)
-        
-        
+
+
     def make_extension_plots(self, prefix, loge_bounds=None, **kwargs):
 
         format = kwargs.get('format', self.config['plotting']['format'])
@@ -1175,15 +1175,15 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
     def make_localization_plot(self,gta,name,tsmap,**kwargs):
-        
+
         tsmap_renorm = copy.deepcopy(tsmap['ts'])
         tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
-                
+
         prefix = kwargs.get('prefix','')
         skydir = kwargs.get('skydir',None)
         src = gta.roi[name]
         o = src['localize']
-        
+
         name = src.name.lower().replace(' ', '_')
         format = kwargs.get('format', gta.config['plotting']['format'])
 
@@ -1198,13 +1198,13 @@ class AnalysisPlotter(fermipy.config.Configurable):
         cdelt1 = np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
 
         tsmap_fit = o['tsmap_fit']
-        
+
         peak_skydir = SkyCoord(tsmap_fit['glon'],tsmap_fit['glat'],
                                frame='galactic',unit='deg')
         peak_pix = peak_skydir.to_pixel(tsmap_renorm.wcs)
         peak_r68 = tsmap_fit['r68']
         peak_r99 = tsmap_fit['r99']
-        
+
         scan_skydir = SkyCoord(o['glon'],o['glat'],frame='galactic',unit='deg')
         scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
 
@@ -1212,14 +1212,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
             pix = skydir.to_pixel(tsmap_renorm.wcs)
             plt.gca().plot(pix[0],pix[1],linestyle='None',
                            marker='+',color='r')
-        
+
         if np.isfinite(float(peak_pix[0])):
 
             sigma = tsmap_fit['sigma']
             sigmax = tsmap_fit['sigma_semimajor']
             sigmay = tsmap_fit['sigma_semiminor']
             theta = tsmap_fit['theta']
-            
+
             e0 = Ellipse(xy=(float(peak_pix[0]),float(peak_pix[1])),
                          width=2.0*sigmax/cdelt0*peak_r68/sigma,
                          height=2.0*sigmay/cdelt1*peak_r68/sigma,
@@ -1241,7 +1241,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
             sigmax = o['sigma_semimajor']
             sigmay = o['sigma_semiminor']
-            
+
             e0 = Ellipse(xy=(float(scan_pix[0]),float(scan_pix[1])),
                          width=2.0*sigmax/cdelt0*o['r68']/o['sigma'],
                          height=2.0*sigmay/cdelt1*o['r68']/o['sigma'],
@@ -1256,10 +1256,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
             plt.gca().add_artist(e0)
             plt.gca().add_artist(e1)
-            
+
             plt.gca().plot(float(scan_pix[0]),float(scan_pix[1]),
                            marker='x',color='r')
-        
+
 #        if gta.config['binning']['coordsys'] == 'GAL':        
 #            plt.gca().scatter(o['peak_glon'], o['peak_glat'],
 #                              transform=plt.gca().get_transform('galactic'),color='k')
@@ -1270,14 +1270,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
 #                              transform=plt.gca().get_transform('fk5'),color='k')
 #            plt.gca().scatter(o['ra'], o['dec'],
 #                              transform=plt.gca().get_transform('fk5'),color='r')
-       
+
         outfile = utils.format_filename(gta.config['fileio']['workdir'],
                                         'localize', prefix=[prefix, name],
                                         extension=format)
 
         plt.savefig(outfile)
         plt.close(fig)
-        
+
     def _plot_extension(self, gta, prefix, src, loge_bounds=None, **kwargs):
         """Utility function for generating diagnostic plots for the
         extension analysis."""
@@ -1341,5 +1341,5 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                      '%s_%s_extension_yproj%s%s.png' % (
                                          prefix, name, esuffix, suffix)))
             plt.close(fig)
-            
-            
+
+

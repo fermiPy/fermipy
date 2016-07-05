@@ -28,7 +28,7 @@ def make_cos_vects(ra_vect,dec_vect):
     ----------
     ra_vect,dec_vect : np.ndarray(nsrc)  
        RA and DEC values
- 
+
     returns (np.ndarray(3,nsrc)) with the directional cosine (i.e., x,y,z component) values
     """
     ra_rad = np.radians(ra_vect)
@@ -39,7 +39,7 @@ def make_cos_vects(ra_vect,dec_vect):
     zvals = np.cos(dec_rad)
     cvects = np.vstack([xvals,yvals,zvals])
     return cvects
-    
+
 
 def find_matches_by_distance(cos_vects,cut_dist):
     """ Find all the pairs of sources within a given distance of each other
@@ -126,8 +126,8 @@ def fill_edge_matrix(nsrcs,match_dict):
     """
     e_matrix = np.zeros((nsrcs,nsrcs))
     for k,v in match_dict.items():
-       e_matrix[k[0],k[1]] = v
-       pass
+        e_matrix[k[0],k[1]] = v
+        pass
     return e_matrix
 
 
@@ -155,7 +155,7 @@ def make_clusters(span_tree,cut_value):
 
     for i0,i1 in zip(iv0,iv1):
         d = span_tree[i0,i1]
-        
+
         # Cut on the link distance
         if d > cut_value: 
             continue                         
@@ -204,10 +204,10 @@ def make_clusters(span_tree,cut_value):
         # Fill the reverse dict
         for vv in v:
             rDict[vv] = k
-        
+
 
     return cDict,rDict
-        
+
 
 
 def select_from_cluster(idx_key,idx_list,measure_vect):
@@ -239,7 +239,7 @@ def select_from_cluster(idx_key,idx_list,measure_vect):
             best_measure = measure
     out_list.remove(best_idx)
     return best_idx,out_list
-    
+
 
 def select_from_clusters(cluster_dict,measure_vect):
     """ Select a single source from each cluster and make it the new cluster key
@@ -249,7 +249,7 @@ def select_from_clusters(cluster_dict,measure_vect):
 
     measure_vect : np.narray((nsrc),float)
       vector of the measure used to select the best source in the cluster
-       
+
     returns dict(int:[int,...])  
        New dictionary of clusters keyed by the best source in each cluster
     """
@@ -259,14 +259,14 @@ def select_from_clusters(cluster_dict,measure_vect):
         out_idx,out_list = select_from_cluster(idx_key,idx_list,measure_vect)
         out_dict[out_idx] = out_list
     return out_dict
-    
+
 
 def make_reverse_dict(in_dict):
     """ Build a reverse dictionary from a cluster dictionary
 
     in_dict : dict(int:[int,])        
        A dictionary of clusters.   Each cluster is a source index and the list of other source in the cluster.    
-  
+
     returns dict(int:int)
        A single valued dictionary pointing from source index to cluster key for each source in a cluster.
        Note that the key does not point to itself.
@@ -278,7 +278,7 @@ def make_reverse_dict(in_dict):
                 print "Dictionary collision %i"%vv
             out_dict[vv] = k
     return out_dict
-    
+
 
 def filter_and_copy_table(tab,to_remove):
     """ Filter and copy a FITS table.
@@ -321,15 +321,15 @@ def main():
     # Argument defintion
     usage = "usage: %(prog)s [input]"    
     description = "Collect all the new source"
-    
+
     parser = argparse.ArgumentParser(usage=usage,description=description)
     parser.add_argument('--output', type=argparse.FileType('w'), help='Output file.')
     parser.add_argument('--clobber', action='store_true', help='Overwrite output file.')
     parser.add_argument('--input', type=argparse.FileType('r'), help='Input fits file.')
     parser.add_argument('--dist', type=float, default=None, help="Maximum clustering distance (degrees)")
     parser.add_argument('--sigma', type=float, default=None, help="Maximum clustering seperation (sigma)")
-    
-    
+
+
     # Argument parsing
     args = parser.parse_args()
 
@@ -354,7 +354,7 @@ def main():
     offset_vect = tab['offset'].data
     src_names = tab['Source_Name'].data
     TS_vect = tab['ts'].data
- 
+
     # Convert everything to directional cosines
     cvects = make_cos_vects(ra_vect,dec_vect)
 
@@ -364,17 +364,17 @@ def main():
     else:
         sigma_vect = tab['loc_err'].data
         matchDict = find_matches_by_sigma(cvects,match_cut)
-    
+
     # Make a histogram of the match measure
     matchHist = make_match_hist(matchDict,match_cut)
 
     # Build a matrix of the edes and apply the MST algorithm
     e_matrix = fill_edge_matrix(len(ra_vect),matchDict)
     span_tree = csgraph.minimum_spanning_tree(e_matrix)
-    
+
     # Turn the MST into a dictionary of clusters
     cDict,rDict = make_clusters(span_tree,match_cut)
-    
+
     # Select the best source from each cluster
     #sel_dict = select_from_clusters(cDict,offset_vect)
     sel_dict = select_from_clusters(cDict,-TS_vect)
@@ -404,27 +404,27 @@ def main():
             fout_idx = open(out_idx,'w')
             fout_rename = open(out_rename,'w')
             fout_hist = open(out_hist,'w')
-        
+
         fout_idx.write(yaml.dump(sel_dict))
         fout_idx.close()
         fout_rename.write(yaml.dump(rename_dict))
         fout_rename.close()
 
     if False:
-        
+
         import __plotting__ as plot
         import pylab as plt
-        
+
         fig = plt.figure(figsize=plot.FIGSIZE,tight_layout=True)
         ax = fig.add_subplot(111)
         ax.set_xlabel("Separation")
         ax.set_ylabel("Pairs / 0.003 deg")
         ax.set_xlim(0.0,0.15)
         ax.set_ylim(0.0,50)
-        
+
         ax.plot(matchHist[1][:-1],matchHist[0])
 
 
 if __name__ == "__main__":
     main()
-    
+

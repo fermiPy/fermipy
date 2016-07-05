@@ -10,7 +10,7 @@ def check_log(logfile, exited='Exited with exit code',
     string  : Value to check for in existing logfile
     """
     if not os.path.exists(logfile):
-	return not exists
+        return not exists
 
     if exited in open(logfile).read():
         return 'Exited'
@@ -27,7 +27,7 @@ def get_lsf_status():
                     'USUSP': 0,
                     'NJOB' : 0,
                     'UNKNWN' : 0}
-    
+
     p = subprocess.Popen(['bjobs'],
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
@@ -39,12 +39,12 @@ def get_lsf_status():
         line = line.strip().split()
 
         status_count['NJOB'] += 1
-        
+
         for k in status_count.keys():
 
             if line[2] == k:
                 status_count[k] += 1
-                
+
     return status_count
 
 
@@ -52,9 +52,9 @@ def dispatch_jobs(exe,args,opts,batch_opts):
 
     batch_opts.setdefault('W',300)
     batch_opts.setdefault('R','rhel60')
-    
+
     #skip_keywords = ['queue','resources','batch','W']
-        
+
     cmd_opts = ''
     for k, v in opts.__dict__.items():
         if isinstance(v,list):
@@ -66,7 +66,7 @@ def dispatch_jobs(exe,args,opts,batch_opts):
             continue
         elif not v is None:
             cmd_opts += ' --%s=\"%s\" '%(k,v)
-        
+
 #    for x in args:
 #            cmd = '%s %s '%(exe,x)
 #            batch_cmd = 'bsub -W %s -R %s '%(W,resources)
@@ -80,7 +80,7 @@ def dispatch_jobs(exe,args,opts,batch_opts):
     batch_optstr = ''
     for k,v in batch_opts.items():
         batch_optstr += ' -%s %s '%(k,v)
-    
+
     batch_cmd = 'bsub %s '%(batch_optstr)
     batch_cmd += ' %s %s '%(cmd,cmd_opts)        
     print(batch_cmd)

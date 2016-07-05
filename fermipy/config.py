@@ -43,7 +43,7 @@ def cast_config(config, defaults):
 
         if key not in defaults:
             continue
-        
+
         if isinstance(item, dict):
             cast_config(config[key], defaults[key])
         elif item is None:
@@ -67,10 +67,10 @@ def validate_config(config, defaults, section=None):
 
             type0 = type(defaults[key])
             type1 = type(item)
-            
+
             raise Exception('Wrong type for configuration key: '
                             '%s\ntype: %s required type: %s'%(key,type1,type0))
-            
+
         if key not in defaults:
 
             if section is None:
@@ -101,7 +101,7 @@ class Configurable(object):
             raise Exception('Invalid path to configuration file: %s'%config)
         else:
             raise Exception('Invalid config argument.')
-            
+
         self.configure(config_dict, **kwargs)
 
         if self.configdir and 'fileio' in self.config and \
@@ -130,7 +130,7 @@ class Configurable(object):
     @property
     def configdir(self):
         return self._configdir
-    
+
     def write_config(self, outfile):
         """Write the configuration dictionary to an output file."""
         utils.write_yaml(self.config, outfile, default_flow_style=False)

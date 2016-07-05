@@ -27,7 +27,7 @@ class WCSProj(object):
 
         xindex = 0
         yindex = 1
-        
+
         self._width = np.array([cdelt0*self._npix[xindex],
                                 cdelt1*self._npix[yindex]])
         self._pix_center = np.array([(self._npix[xindex]-1.0)/2.,
@@ -36,7 +36,7 @@ class WCSProj(object):
         self._skydir = SkyCoord.from_pixel(self._pix_center[0],
                                            self._pix_center[1],
                                            self.wcs)
-        
+
     @property
     def wcs(self):
         return self._wcs
@@ -44,7 +44,7 @@ class WCSProj(object):
     @property
     def coordsys(self):
         return self._coordsys
-    
+
     @property
     def skydir(self):
         """Return the sky coordinate of the image center."""
@@ -54,7 +54,7 @@ class WCSProj(object):
     def width(self):
         """Return the dimensions of the image."""
         return self._width
-    
+
     @property
     def npix(self):
         return self._npix
@@ -77,7 +77,7 @@ class WCSProj(object):
                           ndmin=1)
         deltay = np.array((ypix-self._pix_center[1])*self._pix_size[1],
                           ndmin=1)
-        
+
         deltax = np.abs(deltax) - 0.5*self._width[0]
         deltay = np.abs(deltay) - 0.5*self._width[1]
 
@@ -92,7 +92,7 @@ class WCSProj(object):
         delta[(m0&mx)|(m3&my)|m1] = deltax[(m0&mx)|(m3&my)|m1]
         delta[(m0&my)|(m3&mx)|m2] = deltay[(m0&my)|(m3&mx)|m2]
         return delta
-    
+
 def create_wcs(skydir, coordsys='CEL', projection='AIT',
                cdelt=1.0, crpix=1., naxis=2, energies=None):
     """Create a WCS object.
@@ -114,10 +114,10 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
 
     naxis : 2
        Number of dimensions of the projection.  Valid inputs are 2 or 3. 
-        
+
     energies : array-like   
        Array of energies that defines the third dimension if naxis=3.
-        
+
     """
 
     w = pywcs.WCS(naxis=naxis)
@@ -165,7 +165,7 @@ def wcs_add_energy_axis(wcs,energies):
 
     energies : array-like
        Array of energies.
-    
+
     """
     if wcs.naxis != 2:
         raise Exception('wcs_add_energy_axis, input WCS naxis != 2 %i'%wcs.naxis)
@@ -203,13 +203,13 @@ def offset_to_sky(skydir, offset_lon, offset_lat,
 def sky_to_offset(skydir, lon, lat, coordsys='CEL', projection='AIT'):
     """Convert sky coordinates to a projected offset.  This function
     is the inverse of offset_to_sky."""
-    
+
     w = create_wcs(skydir, coordsys, projection)
     skycrd = np.vstack((lon, lat)).T
-    
+
     if len(skycrd) == 0:
         return skycrd
-    
+
     return w.wcs_world2pix(skycrd, 0)
 
 
@@ -239,7 +239,7 @@ def skydir_to_pix(skydir, wcs):
     -------
     xp, yp : `numpy.ndarray`
        The pixel coordinates
-    
+
     """
     if len(skydir.shape) > 0 and len(skydir) == 0:
         return [np.empty(0),np.empty(0)]
@@ -255,15 +255,15 @@ def pix_to_skydir(xpix, ypix, wcs):
     Parameters
     ----------
     xpix : `numpy.ndarray`
-    
+
     ypix : `numpy.ndarray`
 
     wcs : `~astropy.wcs.WCS`
-    
+
     """
     xpix = np.array(xpix)
     ypix = np.array(ypix)
-    
+
     if xpix.ndim > 0 and len(xpix) == 0:
         return SkyCoord(np.empty(0),np.empty(0),unit='deg',
                         frame='icrs')
@@ -280,12 +280,12 @@ def get_coordsys(wcs):
     else:
         raise Exception('Unrecognized WCS coordinate system.')
 
-    
+
 def get_target_skydir(config,ref_skydir=None):
-    
+
     if ref_skydir is None:
         ref_skydir = SkyCoord(0.0,0.0,unit=u.deg)
-    
+
     radec = config.get('radec', None)
 
     if utils.isstr(radec):
@@ -308,18 +308,18 @@ def get_target_skydir(config,ref_skydir=None):
 
     offset_ra = config.get('offset_ra', None)
     offset_dec = config.get('offset_dec', None)
-    
+
     if offset_ra is not None and offset_dec is not None:
         return offset_to_skydir(ref_skydir, offset_ra, offset_dec,
                                 coordsys='CEL')[0]
 
     offset_glon = config.get('offset_glon', None)
     offset_glat = config.get('offset_glat', None)
-    
+
     if offset_glon is not None and offset_glat is not None:
         return offset_to_skydir(ref_skydir, offset_glon, offset_glat,
                                 coordsys='GAL')[0].transform_to('icrs')
-        
+
     return ref_skydir
 
 
@@ -351,7 +351,7 @@ def wcs_to_coords(w, shape):
         z, y, x = wcs_to_axes(w,shape)
     else:
         raise Exception("Wrong number of WCS axes %i"%w.naxis)
-    
+
     x = 0.5*(x[1:] + x[:-1])
     y = 0.5*(y[1:] + y[:-1])
 
@@ -364,7 +364,7 @@ def wcs_to_coords(w, shape):
     x = np.ravel(np.ones(shape)*x[:,np.newaxis,np.newaxis])
     y = np.ravel(np.ones(shape)*y[np.newaxis,:,np.newaxis])       
     z = np.ravel(np.ones(shape)*z[np.newaxis,np.newaxis,:])
-         
+
     return np.vstack((x,y,z))    
 
 
