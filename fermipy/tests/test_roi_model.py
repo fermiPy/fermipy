@@ -1,4 +1,4 @@
-import pytest
+from astropy.tests.helper import pytest
 import xml.etree.cElementTree as ElementTree
 
 from numpy.testing import assert_allclose
@@ -117,7 +117,6 @@ def test_load_source_from_xml(tmppath):
 
     root = ElementTree.fromstring(xmlmodel)
     xmlfile = str(tmppath.join('test.xml'))
-    print xmlfile
     ElementTree.ElementTree(root).write(xmlfile)
 
     roi = roi_model.ROIModel(config={'catalogs': [xmlfile]})

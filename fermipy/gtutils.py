@@ -626,7 +626,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                 try:
                     myOpt.find_min(0, tol)
                     break
-                except RuntimeError,e:
+                except RuntimeError as e:
                     print(e)
                 if verbosity > 0:
                     print("** Iteration :",Niter)

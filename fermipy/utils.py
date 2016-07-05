@@ -10,6 +10,7 @@ import yaml
 import numpy as np
 import scipy
 import xml.etree.cElementTree as et
+from astropy.extern import six
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
 from scipy.interpolate import UnivariateSpline, InterpolatedUnivariateSpline
@@ -21,7 +22,9 @@ def unicode_representer(dumper, uni):
     node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
     return node
 
-yaml.add_representer(unicode, unicode_representer)
+
+
+yaml.add_representer(six.text_type, unicode_representer)
 
 
 def load_yaml(infile,**kwargs):

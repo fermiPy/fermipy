@@ -254,10 +254,8 @@ if __name__ == "__main__":
     ts_lp = test_dict["LogParabola"]["TS"]
     ts_pc = test_dict["PLExpCutoff"]["TS"]
 
-    print "TS for PL index = 2:  %.1f"%max_ts
-    print "Cumulative TS:        %.1f"%castro.ts_vals().sum()
-    print "TS for PL index free: %.1f (Index = %.2f)"%(ts_pl,result_pl[1])
-    print "TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)"%(ts_lp,result_lp[1],result_lp[2])
-    print "TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)"%(ts_pc,result_pc[1],result_pc[2])
-
-
+    print("TS for PL index = 2:  %.1f"%max_ts)
+    print("Cumulative TS:        %.1f"%castro.ts_vals().sum())
+    print("TS for PL index free: %.1f (Index = %.2f)"%(ts_pl,result_pl[1]))
+    print("TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)"%(ts_lp,result_lp[1],result_lp[2]))
+    print("TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)"%(ts_pc,result_pc[1],result_pc[2]))
