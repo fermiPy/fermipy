@@ -30,7 +30,7 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
                 'SummedLikelihood','FluxDensity','LikelihoodState',
                 'GtApp','astropy',
-                'astropy.coordinates',
+                'astropy.coordinates','astropy.extern',
                 'astropy.io','astropy.wcs','astropy.io.fits',
                 'astropy.table','healpy','wcsaxes']
 
