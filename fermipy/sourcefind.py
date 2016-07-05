@@ -556,8 +556,8 @@ class SourceFinder(object):
         o.update(scan_fit)
 
 #        lnlscan['dloglike_fit'] = \
-#            utils.parabola((np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
-#                            np.linspace(0,nstep-1.0,nstep)[np.newaxis,:]),
+#            utils.parabola(np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
+#                           np.linspace(0,nstep-1.0,nstep)[np.newaxis,:],
 #                           *scan_fit['popt']).reshape((nstep,nstep))
 
         o['lnlscan'] = lnlscan
@@ -745,8 +745,8 @@ class SourceFinder(object):
         sigmay = 2.**0.5*scan_fit['sigmay']*scan_step
 
         lnlscan['dloglike_fit'] = \
-            utils.parabola((np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
-                            np.linspace(0,nstep-1.0,nstep)[np.newaxis,:]),
+            utils.parabola(np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
+                           np.linspace(0,nstep-1.0,nstep)[np.newaxis,:],
                            *scan_fit['popt']).reshape((nstep,nstep))
 
         o['lnlscan'] = lnlscan

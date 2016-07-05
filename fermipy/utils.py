@@ -490,7 +490,7 @@ def poly_to_parabola(coeff):
     return x0, sigma, y0
 
 
-def parabola((x, y), amplitude, x0, y0, sx, sy, theta):
+def parabola(x, y, amplitude, x0, y0, sx, sy, theta):
     cth = np.cos(theta)
     sth = np.sin(theta)
     a = (cth ** 2) / (2 * sx ** 2) + (sth ** 2) / (2 * sy ** 2)
@@ -536,14 +536,14 @@ def fit_parabola(z,ix,iy,dpix=2,zmin=None):
 
     try:
         popt, pcov = scipy.optimize.curve_fit(parabola,
-                                              (np.ravel(x[m]),np.ravel(y[m])),
+                                              np.ravel(x[m]),np.ravel(y[m]),
                                               np.ravel(z[sx,sy][m]), p0)
     except Exception:
         popt = copy.deepcopy(p0)
         o['fit_success'] = False
 #        self.logger.error('Localization failed.', exc_info=True)
 
-    fm = parabola((x[m],y[m]),*popt)
+    fm = parabola(x[m],y[m],*popt)
     df = fm - z[sx,sy][m].flat
     rchi2 = np.sum(df**2)/len(fm)
 
