@@ -343,8 +343,8 @@ def main():
 
     # read table and get relevant columns
     tab = read_table(args.input)
-    ra_vect = tab['RA'].data
-    dec_vect = tab['DEC'].data
+    ra_vect = tab['RAJ2000'].data
+    dec_vect = tab['DEJ2000'].data
     offset_vect = tab['offset'].data
     src_names = tab['Source_Name'].data
     TS_vect = tab['ts'].data

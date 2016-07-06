@@ -62,6 +62,9 @@ def main():
     parser = argparse.ArgumentParser(usage=usage,description=description)
 
     parser.add_argument('--config', default = 'sample_config.yaml')
+    parser.add_argument('--time', default = 1500, type=int,
+                        help='Set the wallclock time allocation for the '
+                        'job in minutes.')
     parser.add_argument('--max_jobs', default = 500, type=int,
                         help='Limit on the number of running or queued jobs.  '
                         'New jobs will only be dispatched if the number of '
@@ -95,7 +98,7 @@ def main():
     jobs = collect_jobs(dirs, args.runscript,
                         args.overwrite, args.max_job_age)
 
-    lsf_opts = {'W' : 1500,
+    lsf_opts = {'W' : args.time,
                 'R' : 'bullet,hequ,kiso'}
 
     lsf_opt_string = ''
