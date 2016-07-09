@@ -86,41 +86,9 @@ class FitCache(object):
 
     def __init__(self,like,params,tol,max_iter,init_lambda,use_reduced):
 
-
-        free_params = [p for p in params if p['free'] is True]
-        free_norm_params = [p for p in free_params if p['is_norm'] is True]
-
-        for p in free_norm_params:
-            bounds = like[p['idx']].getBounds()
-            like[p['idx']].setBounds(*utils.update_bounds(1.0,bounds))
-            like[p['idx']] = 1.0
-        like.syncSrcParams()
-
-        self._fs_wrapper = pyLike.FitScanModelWrapper_Summed(like.logLike)        
-        self._fitcache = pyLike.FitScanCache(self._fs_wrapper,
-                                             str('fitscan_testsource'),
-                                             tol,max_iter,init_lambda,
-                                             use_reduced)
-
-        for p in free_norm_params:
-            like[p['idx']] = p['value']
-            like[p['idx']].setBounds(*p['bounds'])
-        like.syncSrcParams()
-
-        self._all_params = gtutils.get_params_dict(like)
-        self._params = params
         self._like = like
-
-        self._cache_params = free_norm_params
-        self._cache_param_idxs = [p['idx'] for p in self._cache_params]
-
-        npar = len(self.params)
-        self._prior_vals = np.ones(npar)
-        self._prior_errs = np.ones(npar)
-        self._prior_cov = np.ones((npar,npar))
-        self._has_prior = np.array([False]*npar)
-
-
+        self._init_fitcache(params,tol,max_iter,init_lambda,use_reduced)        
+        
     @property
     def fitcache(self):
         return self._fitcache
@@ -129,6 +97,38 @@ class FitCache(object):
     def params(self):
         return self._cache_params
 
+    def _init_fitcache(self,params,tol,max_iter,init_lambda,use_reduced):
+        
+        free_params = [p for p in params if p['free'] is True]
+        free_norm_params = [p for p in free_params if p['is_norm'] is True]
+        
+        for p in free_norm_params:
+            bounds = self._like[p['idx']].getBounds()
+            self._like[p['idx']].setBounds(*utils.update_bounds(1.0,bounds))
+            self._like[p['idx']] = 1.0
+        self._like.syncSrcParams()
+        
+        self._fs_wrapper = pyLike.FitScanModelWrapper_Summed(self._like.logLike)        
+        self._fitcache = pyLike.FitScanCache(self._fs_wrapper,
+                                             str('fitscan_testsource'),
+                                             tol,max_iter,init_lambda,
+                                             use_reduced)
+
+        for p in free_norm_params:
+            self._like[p['idx']] = p['value']
+            self._like[p['idx']].setBounds(*p['bounds'])
+        self._like.syncSrcParams()
+
+        self._all_params = gtutils.get_params_dict(self._like)
+        self._params = params
+        self._cache_params = free_norm_params
+        self._cache_param_idxs = [p['idx'] for p in self._cache_params]
+        npar = len(self.params)
+        self._prior_vals = np.ones(npar)
+        self._prior_errs = np.ones(npar)
+        self._prior_cov = np.ones((npar,npar))
+        self._has_prior = np.array([False]*npar)
+        
     def get_pars(self):
         return get_fitcache_pars(self.fitcache)
 
@@ -210,7 +210,7 @@ class FitCache(object):
             self.fitcache.updateTemplateForSource(str(src_name))
             self._like[idx] = norm_val
             self._like[idx].setBounds(*bounds)
-
+            
         self._all_params = all_params
         self.fitcache.refactorModel(self._free_pars,par_scales,False)
 
@@ -219,6 +219,18 @@ class FitCache(object):
         if np.any(self._has_prior):
             self._build_priors()
 
+    def update(self,params,tol,max_iter,init_lambda,use_reduced):
+
+        try:
+            self.fitcache.update()
+            self.fitcache.setInitLambda(init_lambda)
+            self.fitcache.setTolerance(tol)
+            self.fitcache.setMaxIter(max_iter)
+        except Exception:
+            if not self.check_params(params):            
+                self._init_fitcache(params,tol,max_iter,init_lambda,use_reduced)
+            self.refactor()
+                
     def _set_priors_from_like(self):
 
         prior_vals,prior_errs,has_prior = get_priors(self._like)
@@ -247,8 +259,6 @@ class FitCache(object):
 
         free_pars = np.array(self._free_pars)        
         ref_vals = np.array(self.fitcache.refValues())
-
-#        npar = self.fitcache.nFreeCurrent()
         pars = self._prior_vals/ref_vals
         cov = np.ravel(self._prior_cov/np.outer(ref_vals,ref_vals))
 
@@ -259,8 +269,12 @@ class FitCache(object):
         self.fitcache.buildPriorsFromExternal(pars,cov,has_prior.tolist())
 
     def fit(self,verbose=0):
-        return self.fitcache.fitCurrent(bool(np.any(self._has_prior)),
-                                        False,verbose)
+
+        try:        
+            return self.fitcache.fitCurrent(3,verbose)
+        except Exception:
+            return self.fitcache.fitCurrent(bool(np.any(self._has_prior)),
+                                            False,verbose)
 
 
 def get_priors(like):
@@ -680,7 +694,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if self._fitcache is not None:
             self._fitcache.update_source(name)
 
-    def reload_source(self, name):
+    def reload_source(self, name, init_source=True):
         """Delete and reload a source in the model.  This will refresh
         the spatial model of this source to the one defined in the XML
         model."""
@@ -688,10 +702,23 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for c in self.components:
             c.reload_source(name)
 
-        self._init_source(name)
+        if init_source:
+            self._init_source(name)
 
         self.like.model = self.like.components[0].model
 
+    def reload_sources(self, names, init_source=True):
+
+        for c in self.components:
+            c.reload_sources(names)
+        
+        if init_source:
+            for name in names:
+                self._init_source(name)
+
+        self.like.model = self.like.components[0].model
+                
+            
     def set_source_spectrum(self, name, spectrum_type='PowerLaw',
                             spectrum_pars=None, update_source=True):
         """Set the spectral model of a source.  This function can be
@@ -2019,9 +2046,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     or not np.isfinite(s['ts']): continue
 
             self.logger.debug('Fitting shape %s TS: %10.3f',s.name, s['ts'])
-            self.free_source(s.name)
+            self.free_source(s.name,loglevel=logging.DEBUG)
             self.fit(loglevel=logging.DEBUG,**config['optimizer'])
-            self.free_source(s.name, free=False)
+            self.free_source(s.name, free=False,loglevel=logging.DEBUG)
 
         self.set_free_param_vector(free)
 
@@ -2332,7 +2359,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 xvals = self._find_scan_pts_reopt(name,npts=npts,
                                                   **kwargs)
             else:
-                xvals = self._find_scan_pts(name,npts=npts)
+                xvals = self._find_scan_pts(name,npts=9)
                 lnlp = self.profile(name, parName, 
                                     reoptimize=False,xvals=xvals)
                 lims = utils.get_parameter_limits(lnlp['xvals'],
@@ -2606,8 +2633,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 loglike1 = fit_output['loglike']
                 self.like.thaw(idx)
             else:
-                loglike1 = -self.like()
-
+                loglike1 = -self.like()                
+                
             flux = self.like[name].flux(10 ** loge_bounds[0],
                                         10 ** loge_bounds[1])
             eflux = self.like[name].energyFlux(10 ** loge_bounds[0],
@@ -2686,13 +2713,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         optimizer = kwargs.get('optimizer',
                                self.config['optimizer']['optimizer'])
 
+        self.logger.debug("Creating optimizer: %s",optimizer)
+        
         if optimizer.upper() == 'MINUIT':
             optObject = pyLike.Minuit(self.like.logLike)
-        elif optimizer.upper == 'NEWMINUIT':
+        elif optimizer.upper() == 'NEWMINUIT':
             optObject = pyLike.NewMinuit(self.like.logLike)
         else:
             optFactory = pyLike.OptimizerFactory_instance()
-            optObject = optFactory.create(optimizer, self.like.logLike)
+            optObject = optFactory.create(str(optimizer), self.like.logLike)
         return optObject
 
     def _fit_optimizer_iter(self, **kwargs):
@@ -2935,22 +2964,23 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         return o
 
     def _create_fitcache(self,**kwargs):
-
-        tol = kwargs.get('tol',self.config['optimizer']['tol'])
-        max_iter = kwargs.get('max_iter',self.config['optimizer']['max_iter'])
-        init_lambda = kwargs.get('init_lambda',self.config['optimizer']['init_lambda'])
-        use_reduced = kwargs.get('use_reduced',True)
+        
         create_fitcache = kwargs.get('create_fitcache',False)
-
-        params = self.get_params()
-        if (not create_fitcache and self._fitcache is not None and
-            self._fitcache.check_params(params)):
+        if self._fitcache is not None and not create_fitcache:
             return self._fitcache
 
+        tol = kwargs.get('tol',self.config['optimizer']['tol'])
+        max_iter = kwargs.get('max_iter',
+                              self.config['optimizer']['max_iter'])
+        init_lambda = kwargs.get('init_lambda',
+                                 self.config['optimizer']['init_lambda'])
+        use_reduced = kwargs.get('use_reduced',True)
+        
         self.logger.debug('Creating FitCache')
         self.logger.debug('\ntol: %.5g\nmax_iter: %i\ninit_lambda: %.5g',
                           tol,max_iter,init_lambda)
 
+        params = self.get_params()
         self._fitcache = FitCache(self.like,params,
                                   tol,max_iter,init_lambda,use_reduced)
 
@@ -2959,6 +2989,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def _fit_newton(self,fitcache=None,ebin=None,**kwargs):
         """Fast fitting method using newton fitter."""        
 
+        tol = kwargs.get('tol',self.config['optimizer']['tol'])
+        max_iter = kwargs.get('max_iter',
+                              self.config['optimizer']['max_iter'])
+        init_lambda = kwargs.get('init_lambda',
+                                 self.config['optimizer']['init_lambda'])
+        use_reduced = kwargs.get('use_reduced',True)
+        
         free_params = self.get_params(True)
         free_norm_params = [p for p in free_params if p['is_norm'] is True]
 
@@ -2972,8 +3009,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if fitcache is None:
             fitcache = self._create_fitcache(**kwargs)
 
-        fitcache.refactor()
-
+        fitcache.update(self.get_params(),
+                        tol,max_iter,init_lambda,use_reduced)
+            
         logemin = self.loge_bounds[0]
         logemax = self.loge_bounds[1]
         imin = int(utils.val_to_edge(self.log_energies, logemin)[0])
@@ -3095,6 +3133,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for name in self.like.sourceNames():
             self.update_source(name)
 
+        self._fitcache = None
+            
         self.logger.info('Finished Loading XML')
 
     def write_xml(self, xmlfile):
@@ -3407,11 +3447,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.set_energy_range(self.loge_bounds[0], self.loge_bounds[1])
 
         if reload_sources:
-
-            for s in self.roi.sources:
-                if s.diffuse:
-                    continue
-                self.reload_source(s.name)
+            names = [ s.name for s in self.roi.sources if not s.diffuse ]
+            self.reload_sources(names,False)
 
         self.logger.info('Finished Loading ROI')
 
@@ -4097,6 +4134,26 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.add_source(name, src, free=True)
             self.load_xml('tmp')
 
+    def reload_sources(self, names):
+
+        try:
+
+            models = ['PSFSource','GaussianSource','DiskSource']
+            
+            srcs = [ self.roi.get_source_by_name(name) for name in names ]
+            names0 = [src.name for src in srcs if src['SpatialModel'] not in models ]
+
+            srcs1 = [src for src in srcs if src['SpatialModel'] in models]
+            names1 = [src.name for src in srcs1]
+            
+            self.like.logLike.loadSourceMaps(names0,True,True)
+            self._update_srcmap_file(srcs1, True)
+            self.like.logLike.loadSourceMaps(names1,False,False)
+                       
+        except:
+            for name in names:
+                self.reload_source(name)
+            
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
         """Add a new source to the model.  Source properties
         (spectrum, spatial model) are set with the src_dict argument.
@@ -4945,7 +5002,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.info('Loading %s' % xmlfile)
         self.like.logLike.reReadXml(str(xmlfile))
         if not self.like.logLike.fixedModelUpdated():
-            self.like.logLike.buildFixedModelWts()
+            self.like.logLike.buildFixedModelWts()       
 
     def write_xml(self, xmlfile):
         """Write the XML model for this analysis component."""
