@@ -43,7 +43,7 @@ function slacsetup
 	source ${INST_DIR}/bin/${BLDARCH}-Optimized/_setup.sh
     fi
     
-    export PYTHONROOT=$GLAST_EXT/python/2.7.10
+    export PYTHONROOT=$GLAST_EXT/python/2.7.12
     export PYTHON_USER_BIN=$(python -c 'import site; print(site.USER_BASE + "/bin")')
     export PATH=$PYTHON_USER_BIN:$PYTHONROOT/bin:$PATH
     export GLASTSETUP=1
