@@ -63,6 +63,24 @@ def test_gtanalysis_optimize(setup):
     gta.optimize()
 
 
+def test_gtanalysis_fit(setup):
+
+    import pprint
+
+    gta = setup
+    gta.load_roi('fit0')
+    gta.free_sources(distance=3.0, pars='norm')
+    gta.write_xml('fit_test')
+    fit_output0 = gta.fit(optimizer='MINUIT')
+    gta.load_xml('fit_test')
+    fit_output1 = gta.fit(optimizer='NEWMINUIT')
+
+    pprint.pprint(fit_output0)
+    pprint.pprint(fit_output1)
+
+    assert(np.abs(fit_output0['loglike']-fit_output1['loglike']) < 0.1)
+
+
 def test_gtanalysis_tsmap(setup):
 
     gta = setup
