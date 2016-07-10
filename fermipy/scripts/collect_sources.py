@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import os
 import argparse
+import yaml
 
 import numpy as np
 
@@ -30,7 +31,7 @@ def read_sources_from_numpy_file(npfile):
     return roi.create_table()
 
 
-def read_sources_from_yaml_file(yamfile):
+def read_sources_from_yaml_file(yamlfile):
     """ Open a yaml file and read all the new sources into a dictionary
 
     Parameters

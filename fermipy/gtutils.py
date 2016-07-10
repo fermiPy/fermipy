@@ -108,7 +108,7 @@ def init_function_pars():
         fn = funcFactory.create(fname)        
         try:
             FUNCTION_NORM_PARS[fname] = fn.normPar().getName()
-        except Exception as e:
+        except Exception:
             FUNCTION_NORM_PARS[fname] = 'Prefactor'
 
         params = pyLike.ParameterVector()

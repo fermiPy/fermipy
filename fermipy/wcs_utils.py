@@ -2,22 +2,27 @@
 from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
+import os
+
 import numpy as np
 
 import astropy.wcs as pywcs
+import astropy.io.fits as pyfits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
 import fermipy.utils as utils
 
+
 class WCSProj(object):
     """Class that encapsulates both a WCS object and the definition of
     the image extent (number of pixels).  Also provides a number of
     helper methods for accessing the properties of the WCS object."""
-    def __init__(self,wcs,npix):
+
+    def __init__(self, wcs, npix):
 
         self._wcs = wcs
-        self._npix = np.array(npix,ndmin=1)
+        self._npix = np.array(npix, ndmin=1)
         self._coordsys = get_coordsys(wcs)
 
         cdelt0 = np.abs(self.wcs.wcs.cdelt[0])
@@ -26,11 +31,11 @@ class WCSProj(object):
         xindex = 0
         yindex = 1
 
-        self._width = np.array([cdelt0*self._npix[xindex],
-                                cdelt1*self._npix[yindex]])
-        self._pix_center = np.array([(self._npix[xindex]-1.0)/2.,
-                                     (self._npix[yindex]-1.0)/2.])
-        self._pix_size = np.array([cdelt0,cdelt1])        
+        self._width = np.array([cdelt0 * self._npix[xindex],
+                                cdelt1 * self._npix[yindex]])
+        self._pix_center = np.array([(self._npix[xindex] - 1.0) / 2.,
+                                     (self._npix[yindex] - 1.0) / 2.])
+        self._pix_size = np.array([cdelt0, cdelt1])
         self._skydir = SkyCoord.from_pixel(self._pix_center[0],
                                            self._pix_center[1],
                                            self.wcs)
@@ -58,38 +63,39 @@ class WCSProj(object):
         return self._npix
 
     @staticmethod
-    def create(skydir,cdelt,npix,coordsys='CEL',projection='AIT'):
+    def create(skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
 
-        npix = np.array(npix,ndmin=1)        
-        crpix = npix/2.+0.5
-        wcs = create_wcs(skydir,coordsys,projection,
-                         cdelt,crpix)
-        return WCSProj(wcs,npix)
+        npix = np.array(npix, ndmin=1)
+        crpix = npix / 2. + 0.5
+        wcs = create_wcs(skydir, coordsys, projection,
+                         cdelt, crpix)
+        return WCSProj(wcs, npix)
 
-    def distance_to_edge(self,skydir):
+    def distance_to_edge(self, skydir):
         """Return the angular distance from the given direction and
         the edge of the projection."""
 
-        xpix, ypix = skydir.to_pixel(self.wcs,origin=0)
-        deltax = np.array((xpix-self._pix_center[0])*self._pix_size[0],
+        xpix, ypix = skydir.to_pixel(self.wcs, origin=0)
+        deltax = np.array((xpix - self._pix_center[0]) * self._pix_size[0],
                           ndmin=1)
-        deltay = np.array((ypix-self._pix_center[1])*self._pix_size[1],
+        deltay = np.array((ypix - self._pix_center[1]) * self._pix_size[1],
                           ndmin=1)
 
-        deltax = np.abs(deltax) - 0.5*self._width[0]
-        deltay = np.abs(deltay) - 0.5*self._width[1]
+        deltax = np.abs(deltax) - 0.5 * self._width[0]
+        deltay = np.abs(deltay) - 0.5 * self._width[1]
 
         m0 = (deltax < 0) & (deltay < 0)
         m1 = (deltax > 0) & (deltay < 0)
         m2 = (deltax < 0) & (deltay > 0)
-        m3 = (deltax > 0) & (deltay > 0)        
+        m3 = (deltax > 0) & (deltay > 0)
         mx = np.abs(deltax) <= np.abs(deltay)
         my = np.abs(deltay) < np.abs(deltax)
 
         delta = np.zeros(len(deltax))
-        delta[(m0&mx)|(m3&my)|m1] = deltax[(m0&mx)|(m3&my)|m1]
-        delta[(m0&my)|(m3&mx)|m2] = deltay[(m0&my)|(m3&mx)|m2]
+        delta[(m0 & mx) | (m3 & my) | m1] = deltax[(m0 & mx) | (m3 & my) | m1]
+        delta[(m0 & my) | (m3 & mx) | m2] = deltay[(m0 & my) | (m3 & mx) | m2]
         return delta
+
 
 def create_wcs(skydir, coordsys='CEL', projection='AIT',
                cdelt=1.0, crpix=1., naxis=2, energies=None):
@@ -111,9 +117,9 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
         In the first case the same value is used for x and y axes
 
     naxis : 2
-       Number of dimensions of the projection.  Valid inputs are 2 or 3. 
+       Number of dimensions of the projection.  Valid inputs are 2 or 3.
 
-    energies : array-like   
+    energies : array-like
        Array of energies that defines the third dimension if naxis=3.
 
     """
@@ -138,7 +144,7 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
         w.wcs.crpix[1] = crpix[1]
     except:
         w.wcs.crpix[0] = crpix
-        w.wcs.crpix[1] = crpix      
+        w.wcs.crpix[1] = crpix
     w.wcs.cdelt[0] = -cdelt
     w.wcs.cdelt[1] = cdelt
 
@@ -153,7 +159,7 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
     return w
 
 
-def wcs_add_energy_axis(wcs,energies):
+def wcs_add_energy_axis(wcs, energies):
     """ Copy a WCS object, and add on the energy axis
 
     Parameters
@@ -166,7 +172,8 @@ def wcs_add_energy_axis(wcs,energies):
 
     """
     if wcs.naxis != 2:
-        raise Exception('wcs_add_energy_axis, input WCS naxis != 2 %i'%wcs.naxis)
+        raise Exception(
+            'wcs_add_energy_axis, input WCS naxis != 2 %i' % wcs.naxis)
     w = pywcs.WCS(naxis=3)
     w.wcs.crpix[0] = wcs.wcs.crpix[0]
     w.wcs.crpix[1] = wcs.wcs.crpix[1]
@@ -240,9 +247,9 @@ def skydir_to_pix(skydir, wcs):
 
     """
     if len(skydir.shape) > 0 and len(skydir) == 0:
-        return [np.empty(0),np.empty(0)]
+        return [np.empty(0), np.empty(0)]
 
-    return skydir.to_pixel(wcs,origin=0)
+    return skydir.to_pixel(wcs, origin=0)
 
 
 def pix_to_skydir(xpix, ypix, wcs):
@@ -263,10 +270,10 @@ def pix_to_skydir(xpix, ypix, wcs):
     ypix = np.array(ypix)
 
     if xpix.ndim > 0 and len(xpix) == 0:
-        return SkyCoord(np.empty(0),np.empty(0),unit='deg',
+        return SkyCoord(np.empty(0), np.empty(0), unit='deg',
                         frame='icrs')
 
-    return SkyCoord.from_pixel(xpix,ypix,wcs,
+    return SkyCoord.from_pixel(xpix, ypix, wcs,
                                origin=0).transform_to('icrs')
 
 
@@ -279,10 +286,10 @@ def get_coordsys(wcs):
         raise Exception('Unrecognized WCS coordinate system.')
 
 
-def get_target_skydir(config,ref_skydir=None):
+def get_target_skydir(config, ref_skydir=None):
 
     if ref_skydir is None:
-        ref_skydir = SkyCoord(0.0,0.0,unit=u.deg)
+        ref_skydir = SkyCoord(0.0, 0.0, unit=u.deg)
 
     radec = config.get('radec', None)
 
@@ -344,26 +351,26 @@ def wcs_to_coords(w, shape):
     """Generate an N x D list of pixel center coordinates where N is
     the number of pixels and D is the dimensionality of the map."""
     if w.naxis == 2:
-        y, x = wcs_to_axes(w,shape)
+        y, x = wcs_to_axes(w, shape)
     elif w.naxis == 3:
-        z, y, x = wcs_to_axes(w,shape)
+        z, y, x = wcs_to_axes(w, shape)
     else:
-        raise Exception("Wrong number of WCS axes %i"%w.naxis)
+        raise Exception("Wrong number of WCS axes %i" % w.naxis)
 
-    x = 0.5*(x[1:] + x[:-1])
-    y = 0.5*(y[1:] + y[:-1])
+    x = 0.5 * (x[1:] + x[:-1])
+    y = 0.5 * (y[1:] + y[:-1])
 
     if w.naxis == 2:
-        x = np.ravel(np.ones(shape)*x[:,np.newaxis])
-        y = np.ravel(np.ones(shape)*y[np.newaxis,:])
-        return np.vstack((x,y))    
+        x = np.ravel(np.ones(shape) * x[:, np.newaxis])
+        y = np.ravel(np.ones(shape) * y[np.newaxis, :])
+        return np.vstack((x, y))
 
-    z = 0.5*(z[1:] + z[:-1])    
-    x = np.ravel(np.ones(shape)*x[:,np.newaxis,np.newaxis])
-    y = np.ravel(np.ones(shape)*y[np.newaxis,:,np.newaxis])       
-    z = np.ravel(np.ones(shape)*z[np.newaxis,np.newaxis,:])
+    z = 0.5 * (z[1:] + z[:-1])
+    x = np.ravel(np.ones(shape) * x[:, np.newaxis, np.newaxis])
+    y = np.ravel(np.ones(shape) * y[np.newaxis, :, np.newaxis])
+    z = np.ravel(np.ones(shape) * z[np.newaxis, np.newaxis, :])
 
-    return np.vstack((x,y,z))    
+    return np.vstack((x, y, z))
 
 
 def wcs_to_skydir(wcs):
@@ -374,10 +381,10 @@ def wcs_to_skydir(wcs):
     coordsys = get_coordsys(wcs)
 
     if coordsys == 'GAL':
-        return SkyCoord(lon,lat,unit='deg',
+        return SkyCoord(lon, lat, unit='deg',
                         frame='galactic').transform_to('icrs')
     else:
-        return SkyCoord(lon,lat,unit='deg',frame='icrs')
+        return SkyCoord(lon, lat, unit='deg', frame='icrs')
 
 
 def is_galactic(wcs):
@@ -388,4 +395,52 @@ def is_galactic(wcs):
     elif coordsys == 'CEL':
         return False
     else:
-        raise Exception('Unsupported coordinate system: %s'%coordsys)
+        raise Exception('Unsupported coordinate system: %s' % coordsys)
+
+
+def extract_mapcube_region(infile, skydir, outfile, maphdu=0):
+    """Extract a region out of an all-sky mapcube file.
+
+    Parameters
+    ----------
+
+    infile : str
+        Path to mapcube file.
+
+    skydir : `~astropy.coordinates.SkyCoord`
+
+    """
+
+    h = pyfits.open(os.path.expandvars(infile))
+
+    npix = 200
+    shape = list(h[maphdu].data.shape)
+    shape[1] = 200
+    shape[2] = 200
+
+    wcs = pywcs.WCS(h[maphdu].header)
+    skywcs = pywcs.WCS(h[maphdu].header, naxis=[1, 2])
+    coordsys = get_coordsys(skywcs)
+
+    region_wcs = wcs.deepcopy()
+
+    if coordsys == 'CEL':
+        region_wcs.wcs.crval[0] = skydir.ra.deg
+        region_wcs.wcs.crval[1] = skydir.dec.deg
+    elif coordsys == 'GAL':
+        region_wcs.wcs.crval[0] = skydir.galactic.l.deg
+        region_wcs.wcs.crval[1] = skydir.galactic.b.deg
+    else:
+        raise Exception('Unrecognized coordinate system.')
+
+    region_wcs.wcs.crpix[0] = npix // 2 + 0.5
+    region_wcs.wcs.crpix[1] = npix // 2 + 0.5
+
+    from reproject import reproject_interp
+    data, footprint = reproject_interp(h, region_wcs.to_header(),
+                                       hdu_in=maphdu,
+                                       shape_out=shape)
+
+    hdu_image = pyfits.PrimaryHDU(data, header=region_wcs.to_header())
+    hdulist = pyfits.HDUList([hdu_image, h['ENERGIES']])
+    hdulist.writeto(outfile, clobber=True)

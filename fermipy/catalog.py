@@ -218,7 +218,7 @@ class Catalog4FGLP(Catalog):
             extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
                                   'Extended_archive_v15')
 
-        hdulist = pyfits.open(fitsfile)
+        #hdulist = pyfits.open(fitsfile)
         table = Table.read(fitsfile)
 
         strip_columns(table)

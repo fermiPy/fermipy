@@ -886,10 +886,9 @@ class Source(Model):
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('Spectrum_Filename',None)
         spectrum_type = src_dict.setdefault('SpectrumType','PowerLaw')
-        spatial_type = \
-            src_dict.setdefault('SpatialType',
-                                gtutils.get_spatial_type(src_dict['SpatialModel']))
-
+        src_dict.setdefault('SpatialType',
+                            gtutils.get_spatial_type(src_dict['SpatialModel']))
+        
         spectral_pars = \
             src_dict.setdefault('spectral_pars',
                                 gtutils.get_function_defaults(spectrum_type))
@@ -980,7 +979,7 @@ class Source(Model):
         src_dict = {'catalog': xml_dict}
 
         src_dict['Source_Name'] = xml_dict['name']
-        src_dict['SpectrumType'] = spec['type']
+        src_dict['SpectrumType'] = spectral_type
         src_dict['SpatialType'] = spatial_type
         src_dict['SourceType'] = src_type
         src_dict['Spatial_Filename'] = None
@@ -1621,15 +1620,7 @@ class ROIModel(fermipy.config.Configurable):
         index_name = name.replace(' ', '').lower()
 
         if index_name in self._src_dict:
-
             return list(self._src_dict[index_name])
-
-            if len(srcs) == 1 and unique:
-                return srcs[0]
-            elif not unique:
-                return srcs
-            else:
-                raise Exception('Multiple sources matching name: ' + name)
         else:
             raise Exception('No source matching name: ' + name)
 

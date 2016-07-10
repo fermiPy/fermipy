@@ -25,6 +25,7 @@ import fermipy
 import fermipy.config
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
+import fermipy.hpx_utils as hpx_utils
 import fermipy.defaults as defaults
 import fermipy.catalog as catalog
 from fermipy.utils import merge_dict
@@ -186,10 +187,10 @@ class ImagePlotter(object):
                 data = copy.deepcopy(data)        
             self._proj = proj
             self._wcs = proj            
-        elif isinstance(proj,HPX):
+        elif isinstance(proj,hpx_utils.HPX):
             self._projtype = 'HPX'
             self._proj = proj
-            self._wcs,data = make_wcs_from_hpx(proj,data)
+            self._wcs,data = proj.make_wcs_from_hpx()
         else:
             raise Exception("Can't co-add map of unknown type %s"%type(proj))
 
@@ -495,9 +496,8 @@ class ROIPlotter(fermipy.config.Configurable):
                                      self.config['graticule_radii'])
         label_ts_threshold = kwargs.get('label_ts_threshold',
                                        self.config['label_ts_threshold'])
-        cmap = kwargs.setdefault('cmap',self.config['cmap'])
 
-        im_kwargs = dict(cmap='ds9_b',
+        im_kwargs = dict(cmap=self.config['cmap'],
                          interpolation='nearest',
                          vmin=None, vmax=None, levels=None,
                          zscale='lin', subplot=111)
@@ -536,7 +536,7 @@ class ROIPlotter(fermipy.config.Configurable):
 
     def draw_circle(self,skydir,radius):
 
-        coordsys = wcs_utils.get_coordsys(self.proj)
+        #coordsys = wcs_utils.get_coordsys(self.proj)
         #if coordsys == 'GAL':            
         #    c = Circle((skydir.galactic.l.deg,skydir.galactic.b.deg),
         #               radius,facecolor='none',edgecolor='w',linestyle='--',
@@ -634,7 +634,6 @@ class SEDPlotter(object):
         kwargs.setdefault('marker', 'o')
         kwargs.setdefault('linestyle', 'None')
         kwargs.setdefault('color', 'k')
-        color = kwargs.get('color', 'k')
 
         fmin,fmax = SEDPlotter.get_ylims(sed)
 
@@ -737,7 +736,6 @@ class SEDPlotter(object):
         sed = self._sed
         src = self._src
         ax = plt.gca()
-        name = src['name']
         cmap = kwargs.get('cmap', 'BuGn')
 
         annotate(src=src, ax=ax)
@@ -980,7 +978,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
 
-        colors = ['k', 'b', 'g', 'r']
+        #colors = ['k', 'b', 'g', 'r']
         data_style = {'marker': 's', 'linestyle': 'None'}
 
         fig = plt.figure()
@@ -1036,7 +1034,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         plt.close(fig)
 
-    def make_components_plots(self):
+    def make_components_plots(self, gta, mcube_maps, prefix, loge_bounds=None, **kwargs):
 
         figx = plt.figure('xproj')
         figy = plt.figure('yproj')
@@ -1044,13 +1042,13 @@ class AnalysisPlotter(fermipy.config.Configurable):
         colors = ['k', 'b', 'g', 'r']
         data_style = {'marker': 's', 'linestyle': 'None'}
 
-        roi_kwargs = {}
-        roi_kwargs.setdefault('loge_bounds',loge_bounds)
-        roi_kwargs.setdefault('graticule_radii',self.config['graticule_radii'])
-        roi_kwargs.setdefault('cmap',self.config['cmap'])
-        roi_kwargs.setdefault('catalogs',self.config['catalogs'])
+        roi_kwargs = copy.deepcopy(self.config)
+        roi_kwargs['loge_bounds'] = loge_bounds
 
-
+        if loge_bounds is None:
+            loge_bounds = (gta.log_energies[0], gta.log_energies[-1])
+        esuffix = '_%.3f_%.3f' % (loge_bounds[0], loge_bounds[1])
+        
         for i, c in enumerate(gta.components):
 
             fig = plt.figure()
@@ -1279,7 +1277,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         """Utility function for generating diagnostic plots for the
         extension analysis."""
 
-        format = kwargs.get('format', self.config['plotting']['format'])
+        #format = kwargs.get('format', self.config['plotting']['format'])
 
         if loge_bounds is None:
             loge_bounds = (self.energies[0], self.energies[-1])

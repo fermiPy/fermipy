@@ -454,8 +454,6 @@ class SEDGenerator(object):
             o['fit_quality'][i] = fit_output['fit_quality']
             o['fit_status'][i] = fit_output['fit_status']
 
-            prefactor = self.like[self.like.par_index(name, 'Prefactor')]
-
             flux = self.like[name].flux(emin, emax)
             eflux = self.like[name].energyFlux(emin, emax)
             dfde = self.like[name].spectrum()(pyLike.dArg(ectr))

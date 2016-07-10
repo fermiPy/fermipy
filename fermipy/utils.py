@@ -11,9 +11,7 @@ import numpy as np
 import scipy
 import xml.etree.cElementTree as et
 from astropy.extern import six
-import astropy.io.fits as pyfits
-import astropy.wcs as pywcs
-from scipy.interpolate import UnivariateSpline, InterpolatedUnivariateSpline
+from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
 import scipy.special as special
 
@@ -23,16 +21,15 @@ def unicode_representer(dumper, uni):
     return node
 
 
-
 yaml.add_representer(six.text_type, unicode_representer)
 
 
-def load_yaml(infile,**kwargs):
-    return yaml.load(open(infile),**kwargs)
+def load_yaml(infile, **kwargs):
+    return yaml.load(open(infile), **kwargs)
 
 
-def write_yaml(o,outfile,**kwargs):
-    yaml.dump(tolist(o), open(outfile, 'w'),**kwargs)
+def write_yaml(o, outfile, **kwargs):
+    yaml.dump(tolist(o), open(outfile, 'w'), **kwargs)
 
 
 def load_npy(infile):
@@ -83,7 +80,7 @@ def collect_dirs(path, max_depth=1, followlinks=True):
 
     for subdir in os.listdir(path):
 
-        subdir = os.path.join(path,subdir)
+        subdir = os.path.join(path, subdir)
 
         if not os.path.isdir(subdir):
             continue
@@ -94,7 +91,7 @@ def collect_dirs(path, max_depth=1, followlinks=True):
             continue
 
         if max_depth > 0:
-            o += collect_dirs(subdir,max_depth=max_depth-1)
+            o += collect_dirs(subdir, max_depth=max_depth - 1)
 
     return list(set(o))
 
@@ -106,25 +103,25 @@ def match_regex_list(patterns, string):
 
     for p in patterns:
 
-        if re.findall(p,string):
+        if re.findall(p, string):
             return True
 
     return False
 
 
-def join_strings(strings,sep='_'):
+def join_strings(strings, sep='_'):
 
     if strings is None:
         return ''
     else:
-        if not isinstance(strings,list):
-            strings = [strings]        
+        if not isinstance(strings, list):
+            strings = [strings]
         return sep.join([s for s in strings if s])
 
 
 def format_filename(outdir, basename, prefix=None, extension=None):
     filename = join_strings(prefix)
-    filename = join_strings([filename,basename])
+    filename = join_strings([filename, basename])
 
     if extension is not None:
 
@@ -136,16 +133,17 @@ def format_filename(outdir, basename, prefix=None, extension=None):
     return os.path.join(outdir, filename)
 
 
-def strip_suffix(filename,suffix):
+def strip_suffix(filename, suffix):
 
-    for s in suffix:    
-        filename = re.sub(r'\.%s$'%s, '', filename)
+    for s in suffix:
+        filename = re.sub(r'\.%s$' % s, '', filename)
 
     return filename
 
 RA_NGP = np.radians(192.8594812065348)
 DEC_NGP = np.radians(27.12825118085622)
 L_CP = np.radians(122.9319185680026)
+
 
 def gal2eq(l, b):
 
@@ -251,8 +249,8 @@ def project(lon0, lat0, lon1, lat1):
     sinphi = np.sin(lon0)
 
     xyz = lonlat_to_xyz(lon1, lat1)
-    x1 = xyz[0];
-    y1 = xyz[1];
+    x1 = xyz[0]
+    y1 = xyz[1]
     z1 = xyz[2]
 
     x1p = x1 * costh * cosphi + y1 * costh * sinphi - z1 * sinth
@@ -276,8 +274,8 @@ def scale_parameter(p):
         return p, 1.0
 
 
-def update_bounds(val,bounds):
-    return min(val,bounds[0]),max(val,bounds[1])
+def update_bounds(val, bounds):
+    return min(val, bounds[0]), max(val, bounds[1])
 
 
 def apply_minmax_selection(val, val_minmax):
@@ -305,9 +303,9 @@ def create_source_name(skydir):
     hms = skydir.icrs.ra.hms
     dms = skydir.icrs.dec.dms
     return 'PS J%02.f%04.1f%+03.f%02.f' % (hms.h,
-                                           hms.m+hms.s/60.,
+                                           hms.m + hms.s / 60.,
                                            dms.d,
-                                           np.abs(dms.m+dms.s/60.))
+                                           np.abs(dms.m + dms.s / 60.))
 
 
 def create_model_name(src):
@@ -334,7 +332,7 @@ def create_model_name(src):
     if src['SpectrumType'] == 'PowerLaw':
         o += '_powerlaw_%04.2f' % float(src.spectral_pars['Index']['value'])
     else:
-        o += '_%s'%(src['SpectrumType'].lower())
+        o += '_%s' % (src['SpectrumType'].lower())
 
     return o
 
@@ -343,8 +341,9 @@ def cov_to_correlation(cov):
 
     err = np.sqrt(np.diag(cov))
     corr = np.array(cov)
-    corr *= np.outer(1/err,1/err)
+    corr *= np.outer(1 / err, 1 / err)
     return corr
+
 
 def cl_to_dlnl(cl):
     """Compute the delta-log-likehood corresponding to an upper limit of
@@ -373,7 +372,7 @@ def interpolate_function_min(x, y):
     return x0
 
 
-def find_function_root(fn, x0, xb, delta = 0.0):    
+def find_function_root(fn, x0, xb, delta=0.0):
     """Find the root of a function: f(x)+delta in the interval encompassed
     by x0 and xb.
 
@@ -411,11 +410,11 @@ def find_function_root(fn, x0, xb, delta = 0.0):
         return np.nan
 
     if x0 == 0:
-        xtol = 1e-10*xb
+        xtol = 1e-10 * xb
     else:
-        xtol = 1e-10*(xb+x0)
+        xtol = 1e-10 * (xb + x0)
 
-    return brentq(lambda t: fn(t)+delta,x0, xb, xtol=xtol)
+    return brentq(lambda t: fn(t) + delta, x0, xb, xtol=xtol)
 
 
 def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
@@ -437,9 +436,9 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
        Array of log-likelihood values.
 
     ul_confidence : float
-       Confidence level to use for limit calculation.  
+       Confidence level to use for limit calculation.
 
-    tol : float    
+    tol : float
        Tolerance parameter for spline.
 
     """
@@ -449,17 +448,17 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     spline = UnivariateSpline(xval, loglike, k=2, s=tol)
     #m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
     #xval = np.concatenate((xval[:1],xval[1:][m]))
-    #loglike = np.concatenate((loglike[:1],loglike[1:][m]))    
+    #loglike = np.concatenate((loglike[:1],loglike[1:][m]))
     #spline = InterpolatedUnivariateSpline(xval, loglike, k=2)
 
     sd = spline.derivative()
 
     imax = np.argmax(loglike)
-    ilo = max(imax-2,0)
-    ihi = min(imax+2,len(xval)-1)
+    ilo = max(imax - 2, 0)
+    ihi = min(imax + 2, len(xval) - 1)
 
     # Find the peak
-    x0 = xval[imax]        
+    x0 = xval[imax]
 
     # Refine the peak position
     if np.sign(sd(xval[ilo])) != np.sign(sd(xval[ihi])):
@@ -467,28 +466,28 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
 
     lnlmax = float(spline(x0))
 
-    fn = lambda t: spline(t)-lnlmax
-    ul = find_function_root(fn,x0,xval[-1],deltalnl)
-    ll = find_function_root(fn,x0,xval[0],deltalnl)
-    err_lo = np.abs(x0 - find_function_root(fn,x0,xval[0],0.5))
-    err_hi = np.abs(x0 - find_function_root(fn,x0,xval[-1],0.5))
+    fn = lambda t: spline(t) - lnlmax
+    ul = find_function_root(fn, x0, xval[-1], deltalnl)
+    ll = find_function_root(fn, x0, xval[0], deltalnl)
+    err_lo = np.abs(x0 - find_function_root(fn, x0, xval[0], 0.5))
+    err_hi = np.abs(x0 - find_function_root(fn, x0, xval[-1], 0.5))
 
     if np.isfinite(err_lo):
-        err = 0.5*(err_lo+err_hi)
+        err = 0.5 * (err_lo + err_hi)
     else:
         err = err_hi
 
-    o = {'x0' : x0, 'ul' : ul, 'll' : ll,
-         'err_lo' : err_lo, 'err_hi' : err_hi, 'err' : err,
-         'lnlmax' : lnlmax }
+    o = {'x0': x0, 'ul': ul, 'll': ll,
+         'err_lo': err_lo, 'err_hi': err_hi, 'err': err,
+         'lnlmax': lnlmax}
     return o
 
 
 def poly_to_parabola(coeff):
 
-    sigma = np.sqrt(1./np.abs(2.0*coeff[0]))
-    x0 = -coeff[1]/(2*coeff[0])
-    y0 = (1.-(coeff[1]**2-4*coeff[0]*coeff[2]))/(4*coeff[0])
+    sigma = np.sqrt(1. / np.abs(2.0 * coeff[0]))
+    x0 = -coeff[1] / (2 * coeff[0])
+    y0 = (1. - (coeff[1]**2 - 4 * coeff[0] * coeff[2])) / (4 * coeff[0])
 
     return x0, sigma, y0
 
@@ -507,48 +506,50 @@ def parabola(x, y, amplitude, x0, y0, sx, sy, theta):
     return np.ravel(v)
 
 
-def fit_parabola(z,ix,iy,dpix=2,zmin=None):
+def fit_parabola(z, ix, iy, dpix=2, zmin=None):
 
     import scipy.optimize
-    xmin = max(0,ix-dpix)
-    xmax = min(z.shape[0],ix+dpix+1)
+    xmin = max(0, ix - dpix)
+    xmax = min(z.shape[0], ix + dpix + 1)
 
-    ymin = max(0,iy-dpix)
-    ymax = min(z.shape[1],iy+dpix+1)
+    ymin = max(0, iy - dpix)
+    ymax = min(z.shape[1], iy + dpix + 1)
 
-    sx = slice(xmin,xmax)
-    sy = slice(ymin,ymax)
+    sx = slice(xmin, xmax)
+    sy = slice(ymin, ymax)
 
-    nx = sx.stop-sx.start
-    ny = sy.stop-sy.start
+    nx = sx.stop - sx.start
+    ny = sy.stop - sy.start
 
-    x = np.arange(sx.start,sx.stop)
-    y = np.arange(sy.start,sy.stop)
+    x = np.arange(sx.start, sx.stop)
+    y = np.arange(sy.start, sy.stop)
 
-    x = x[:,np.newaxis]*np.ones((nx,ny))
-    y = y[np.newaxis,:]*np.ones((nx,ny))
+    x = x[:, np.newaxis] * np.ones((nx, ny))
+    y = y[np.newaxis, :] * np.ones((nx, ny))
 
-    coeffx = poly_to_parabola(np.polyfit(np.arange(sx.start,sx.stop),z[sx,iy],2))
-    coeffy = poly_to_parabola(np.polyfit(np.arange(sy.start,sy.stop),z[ix,sy],2))
+    coeffx = poly_to_parabola(np.polyfit(
+        np.arange(sx.start, sx.stop), z[sx, iy], 2))
+    coeffy = poly_to_parabola(np.polyfit(
+        np.arange(sy.start, sy.stop), z[ix, sy], 2))
     p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
-    m = np.isfinite(z[sx,sy])
+    m = np.isfinite(z[sx, sy])
     if zmin is not None:
-        m = z[sx,sy] > zmin
+        m = z[sx, sy] > zmin
 
-    o = { 'fit_success': True, 'p0' : p0 }
+    o = {'fit_success': True, 'p0': p0}
 
     try:
         popt, pcov = scipy.optimize.curve_fit(parabola,
-                                              np.ravel(x[m]),np.ravel(y[m]),
-                                              np.ravel(z[sx,sy][m]), p0)
+                                              np.ravel(x[m]), np.ravel(y[m]),
+                                              np.ravel(z[sx, sy][m]), p0)
     except Exception:
         popt = copy.deepcopy(p0)
         o['fit_success'] = False
 #        self.logger.error('Localization failed.', exc_info=True)
 
-    fm = parabola(x[m],y[m],*popt)
-    df = fm - z[sx,sy][m].flat
-    rchi2 = np.sum(df**2)/len(fm)
+    fm = parabola(x[m], y[m], *popt)
+    df = fm - z[sx, sy][m].flat
+    rchi2 = np.sum(df**2) / len(fm)
 
     o['rchi2'] = rchi2
     o['x0'] = popt[1]
@@ -560,11 +561,11 @@ def fit_parabola(z,ix,iy,dpix=2,zmin=None):
     o['theta'] = popt[5]
     o['popt'] = popt
 
-    a = max(o['sigmax'],o['sigmay'])
-    b = min(o['sigmax'],o['sigmay'])
+    a = max(o['sigmax'], o['sigmay'])
+    b = min(o['sigmax'], o['sigmay'])
 
-    o['eccentricity'] = np.sqrt(1-b**2/a**2)
-    o['eccentricity2'] = np.sqrt(a**2/b**2-1)
+    o['eccentricity'] = np.sqrt(1 - b**2 / a**2)
+    o['eccentricity2'] = np.sqrt(a**2 / b**2 - 1)
 
     return o
 
@@ -602,20 +603,20 @@ def val_to_bin_bounded(edges, x):
     return ibin
 
 
-def extend_array(edges,binsz,lo,hi):
+def extend_array(edges, binsz, lo, hi):
     """Extend an array to encompass lo and hi values."""
 
-    numlo = int(np.ceil((edges[0]-lo)/binsz))
-    numhi = int(np.ceil((hi-edges[-1])/binsz))
+    numlo = int(np.ceil((edges[0] - lo) / binsz))
+    numhi = int(np.ceil((hi - edges[-1]) / binsz))
 
     edges = copy.deepcopy(edges)
     if numlo > 0:
-        edges_lo = np.linspace(edges[0]-numlo*binsz, edges[0], numlo+1)
-        edges = np.concatenate((edges_lo[:-1],edges))
+        edges_lo = np.linspace(edges[0] - numlo * binsz, edges[0], numlo + 1)
+        edges = np.concatenate((edges_lo[:-1], edges))
 
     if numhi > 0:
-        edges_hi = np.linspace(edges[-1],edges[-1]+numhi*binsz,numhi+1)
-        edges = np.concatenate((edges,edges_hi[1:]))
+        edges_hi = np.linspace(edges[-1], edges[-1] + numhi * binsz, numhi + 1)
+        edges = np.concatenate((edges, edges_hi[1:]))
 
     return edges
 
@@ -655,7 +656,7 @@ def fits_recarray_to_dict(table):
 def unicode_to_str(args):
     o = {}
     for k, v in args.items():
-        if isinstance(v,unicode):
+        if isinstance(v, unicode):
             o[k] = str(v)
         else:
             o[k] = v
@@ -678,7 +679,7 @@ def xmlpath_to_path(path):
     if path is None:
         return path
 
-    return re.sub(r'\$\(([a-zA-Z\_]+)\)',r'$\1',path)
+    return re.sub(r'\$\(([a-zA-Z\_]+)\)', r'$\1', path)
 
 
 def path_to_xmlpath(path):
@@ -693,11 +694,11 @@ def create_xml_element(root, name, attrib):
     el = et.SubElement(root, name)
     for k, v in attrib.iteritems():
 
-        if isinstance(v,bool):
-            el.set(k,str(int(v)))
+        if isinstance(v, bool):
+            el.set(k, str(int(v)))
         elif isstr(v):
             el.set(k, v)
-        elif np.isfinite(v):        
+        elif np.isfinite(v):
             el.set(k, str(v))
 
     return el
@@ -725,20 +726,21 @@ def prettify_xml(elem):
     return reparsed.toprettyxml(indent="  ")
 
 
-def update_keys(input_dict,key_map):
+def update_keys(input_dict, key_map):
 
     o = {}
-    for k,v in input_dict.items():
+    for k, v in input_dict.items():
 
         if k in key_map.keys():
             k = key_map[k]
 
-        if isinstance(v,dict):
-            o[k] = update_keys(v,key_map)
+        if isinstance(v, dict):
+            o[k] = update_keys(v, key_map)
         else:
             o[k] = v
 
     return o
+
 
 def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
     """Recursively merge the contents of python dictionary d0 with
@@ -876,52 +878,6 @@ def tolist(x):
         return x
 
 
-def extract_mapcube_region(infile, skydir, outfile, maphdu=0):
-    """Extract a region out of an all-sky mapcube file.
-
-    Parameters
-    ----------
-
-    infile : str
-        Path to mapcube file.
-
-    skydir : `~astropy.coordinates.SkyCoord`
-
-    """
-
-    h = pyfits.open(os.path.expandvars(infile))
-
-    npix = 200
-    shape = list(h[maphdu].data.shape)
-    shape[1] = 200
-    shape[2] = 200
-
-    wcs = pywcs.WCS(h[maphdu].header)
-    skywcs = pywcs.WCS(h[maphdu].header, naxis=[1, 2])
-    coordsys = get_coordsys(skywcs)
-
-    region_wcs = wcs.deepcopy()
-
-    if coordsys == 'CEL':
-        region_wcs.wcs.crval[0] = skydir.ra.deg
-        region_wcs.wcs.crval[1] = skydir.dec.deg
-    elif coordsys == 'GAL':
-        region_wcs.wcs.crval[0] = skydir.galactic.l.deg
-        region_wcs.wcs.crval[1] = skydir.galactic.b.deg
-    else:
-        raise Exception('Unrecognized coordinate system.')
-
-    region_wcs.wcs.crpix[0] = npix // 2 + 0.5
-    region_wcs.wcs.crpix[1] = npix // 2 + 0.5
-
-    from reproject import reproject_interp
-    data, footprint = reproject_interp(h, region_wcs.to_header(), hdu_in=maphdu,
-                                       shape_out=shape)
-
-    hdu_image = pyfits.PrimaryHDU(data, header=region_wcs.to_header())
-    hdulist = pyfits.HDUList([hdu_image, h['ENERGIES']])
-    hdulist.writeto(outfile, clobber=True)
-
 def create_hpx_disk_region_string(skyDir, coordsys, radius, inclusive=0):
     """
     """
@@ -972,9 +928,8 @@ def convolve2d_disk(fn, r, sig, nstep=200):
     rmin[rmin < 0] = 0
     delta = (rmax - rmin) / nstep
 
-    redge = rmin[:, np.newaxis] + delta[:, np.newaxis] * np.linspace(0, nstep,
-                                                                     nstep + 1)[
-                                                         np.newaxis, :]
+    redge = rmin[:, np.newaxis] + \
+        delta[:, np.newaxis] * np.linspace(0, nstep, nstep + 1)[np.newaxis, :]
     rp = 0.5 * (redge[:, 1:] + redge[:, :-1])
     dr = redge[:, 1:] - redge[:, :-1]
     fnv = fn(rp)
@@ -1048,8 +1003,8 @@ def convolve2d_gauss(fn, r, sig, nstep=200):
 
     je = convolve2d_gauss.je_fn(x.flat).reshape(x.shape)
     #    je2 = special.ive(0,x)
-    v = (
-    rp * fnv / (sig2) * je * np.exp(x - (r * r + rp * rp) / (2 * sig2)) * dr)
+    v = (rp * fnv / (sig2) * je * np.exp(x - (r * r + rp * rp) /
+                                         (2 * sig2)) * dr)
     s = np.sum(v, axis=saxis)
 
     return s
@@ -1136,7 +1091,7 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
 
     if normalize:
-        k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
+        k /= (np.sum(k, axis=0)[np.newaxis, ...] * np.radians(cdelt) ** 2)
 
     return k
 
@@ -1171,7 +1126,7 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
 
     if normalize:
-        k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
+        k /= (np.sum(k, axis=0)[np.newaxis, ...] * np.radians(cdelt) ** 2)
 
     return k
 
@@ -1205,7 +1160,7 @@ def make_psf_kernel(psf, npix, cdelt, xpix, ypix, normalize=False):
                                np.log10(psf.val[:, i])).reshape(x.shape)
 
     if normalize:
-        k /= (np.sum(k,axis=0)[np.newaxis,...] * np.radians(cdelt) ** 2)
+        k /= (np.sum(k, axis=0)[np.newaxis, ...] * np.radians(cdelt) ** 2)
 
     return k
 
@@ -1220,15 +1175,3 @@ def rebin_map(k, nebin, npix, rebin):
     k /= rebin ** 2
 
     return k
-
-
-def write_fits_image(data, wcs, outfile):
-    hdu_image = pyfits.PrimaryHDU(data, header=wcs.to_header())
-    hdulist = pyfits.HDUList([hdu_image])
-    hdulist.writeto(outfile, clobber=True)
-
-
-def write_hpx_image(data, hpx, outfile, extname="SKYMAP"):
-    hpx.write_fits(data, outfile, extname, clobber=True)
-
-

@@ -255,7 +255,7 @@ class LnLFn(object):
         """
         lo_lim = self.getLimit(alpha,upper=False)
         hi_lim = self.getLimit(alpha,upper=True)
-        return (lo_err,hi_err)
+        return (lo_lim,hi_lim)
 
 
 class SpecData(object):

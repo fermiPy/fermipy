@@ -284,23 +284,6 @@ class ResidMapGenerator(object):
         ts = 2.0 * (poisson_lnl(cmst, cmst) - poisson_lnl(cmst, mmst))
         sigma = np.sqrt(ts)
         sigma[excess < 0] *= -1
-
-        sigma_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                               'residmap_sigma.fits',
-                                               prefix=[prefix, modelname])
-
-        data_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                              'residmap_data.fits',
-                                              prefix=[prefix, modelname])
-
-        model_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                               'residmap_model.fits',
-                                               prefix=[prefix, modelname])
-
-        excess_map_file = utils.format_filename(self.config['fileio']['workdir'],
-                                                'residmap_excess.fits',
-                                                prefix=[prefix, modelname])
-
         emst /= np.max(emst)
 
         sigma_map = Map(sigma, skywcs)

@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, \
 
 import os
 import copy
+import logging
 import itertools
 import functools
 from multiprocessing import Pool
@@ -25,6 +26,8 @@ from fermipy.skymap import Map
 from fermipy.roi_model import Source
 
 from fermipy.spectrum import PowerLaw
+
+from LikelihoodState import LikelihoodState
 
 MAX_NITER = 100
 
@@ -77,7 +80,7 @@ def convert_tscube(infile,outfile):
     # If already in the new-style format just write and exit
     if 'DLOGLIKE_SCAN' in inhdulist['SCANDATA'].columns.names:
         if infile != outfile:
-            hdulist.writeto(outfile,clobber=True)
+            inhdulist.writeto(outfile,clobber=True)
         return
 
     # Get stuff out of the input file
@@ -893,7 +896,8 @@ class TSMapGenerator(object):
         saved_state.restore()
 
         outfile = os.path.join(self.config['fileio']['workdir'], 'tsmap.fits')
-        utils.write_fits_image(data, w, outfile)
+        fits_utils.write_fits_image(data, w, outfile)
+
 
 class TSCubeGenerator(object):
 

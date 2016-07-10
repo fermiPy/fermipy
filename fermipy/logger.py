@@ -78,8 +78,6 @@ class Logger(object):
 
         if not logger.handlers:
 
-            formatter = logging.Formatter(format,datefmt)
-
             # Add a file handler
             if logfile is not None:
                 fh = logging.FileHandler(logfile)
