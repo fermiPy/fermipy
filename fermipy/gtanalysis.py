@@ -2803,13 +2803,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
             status = optObject.getRetCode()
 
+            if isinstance(optObject, pyLike.Minuit):
+                quality = optObject.getQuality()
+            
             if isinstance(optObject, pyLike.Minuit) or \
                     isinstance(optObject, pyLike.NewMinuit):
-                quality = optObject.getQuality()
                 edm = optObject.getDistance()
-            else:
-                quality = 3
-                status = 0
 
             loglike = optObject.stat().value()
 

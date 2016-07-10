@@ -78,7 +78,7 @@ def test_gtanalysis_fit(setup):
     pprint.pprint(fit_output0)
     pprint.pprint(fit_output1)
 
-    assert(np.abs(fit_output0['loglike']-fit_output1['loglike']) < 0.1)
+    assert(np.abs(fit_output0['loglike']-fit_output1['loglike']) < 0.01)
 
 
 def test_gtanalysis_tsmap(setup):
