@@ -726,6 +726,16 @@ def prettify_xml(elem):
     return reparsed.toprettyxml(indent="  ")
 
 
+def arg_to_list(arg):
+
+    if arg is None:
+        return []    
+    elif isinstance(arg,list):
+        return arg
+    else:
+        return [arg]
+
+
 def update_keys(input_dict, key_map):
 
     o = {}

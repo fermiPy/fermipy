@@ -116,7 +116,7 @@ class FitCache(object):
         self._fitcache = pyLike.FitScanCache(self._fs_wrapper,
                                              str('fitscan_testsource'),
                                              tol, max_iter, init_lambda,
-                                             use_reduced)
+                                             use_reduced,False,True)
 
         for p in free_norm_params:
             self._like[p['idx']] = p['value']
@@ -4148,20 +4148,20 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def reload_sources(self, names):
 
         try:
-
             models = ['PSFSource', 'GaussianSource', 'DiskSource']
 
             srcs = [self.roi.get_source_by_name(name) for name in names]
-            names0 = [src.name for src in srcs if src[
-                'SpatialModel'] not in models]
+            names0 = [str(src.name) for src in srcs if
+                      src['SpatialModel'] not in models]
 
             srcs1 = [src for src in srcs if src['SpatialModel'] in models]
-            names1 = [src.name for src in srcs1]
+            names1 = [str(src.name) for src in srcs1]
 
-            self.like.logLike.loadSourceMaps(names0, True, True)
+            self.like.logLike.loadSourceMaps(names0, True, True)            
             self._update_srcmap_file(srcs1, True)
-            self.like.logLike.loadSourceMaps(names1, False, False)
-
+            for name in names1:
+                self.like.logLike.eraseSourceMap(name)
+            self.like.logLike.loadSourceMaps(names1, False, False)            
         except:
             for name in names:
                 self.reload_source(name)
@@ -4371,16 +4371,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         return None
 
     def model_counts_map(self, name=None, exclude=None):
-        """Return the model counts map for a single source, a list of
-        sources, or for the sum of all sources in the ROI.
+        """Return the model expectation map for a single source, a set
+        of sources, or all sources in the ROI.  The map will be
+        computed using the current model parameters.
 
         Parameters
         ----------
         name : str
 
-           Parameter controlling the set of sources for which the
-           model counts map will be calculated.  If name=None a
-           model map will be generated for all sources in the ROI.
+           Parameter that defines the sources for which the model map
+           will be calculated.  If name=None a model map will be
+           generated for all sources in the model.  If name='diffuse'
+           a map for all diffuse sources will be generated.
 
         exclude : list
 
@@ -4401,15 +4403,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             raise Exception("Unknown projection type %s", self.projtype)
 
-        if exclude is None:
-            exclude = []
-        elif not isinstance(exclude, list):
-            exclude = [exclude]
-
-        excluded_srcnames = []
+        exclude = utils.arg_to_list(exclude)
+        names = utils.arg_to_list(name)
+        
+        excluded_names = []
         for i, t in enumerate(exclude):
             srcs = self.roi.get_sources_by_name(t)
-            excluded_srcnames += [s.name for s in srcs]
+            excluded_names += [s.name for s in srcs]
 
         if not hasattr(self.like.logLike, 'loadSourceMaps'):
             # Update fixed model
@@ -4420,41 +4420,34 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.like.logLike.loadSourceMaps()
 
         src_names = []
-        if ((name is None) or (name == 'all')) and exclude:
-            for name in self.like.sourceNames():
-                if name in excluded_srcnames:
-                    continue
-                src_names += [name]
+        if (name is None) or (name == 'all'):
+            src_names = [src.name for src in self.roi.sources]
         elif name == 'diffuse':
-            for src in self.roi.sources:
-                if not src.diffuse:
-                    continue
-                if src.name in excluded_srcnames:
-                    continue
-                src_names += [src.name]
-        elif isinstance(name, list):
-            for n in name:
-                src = self.roi.get_source_by_name(n)
-                if src.name in excluded_srcnames:
-                    continue
-                src_names += [src.name]
-        elif name is not None:
-            src = self.roi.get_source_by_name(name)
-            src_names += [src.name]
+            src_names = [src.name for src in self.roi.sources if
+                         src.diffuse]
+        else:            
+            srcs = [self.roi.get_source_by_name(t) for t in names]
+            src_names = [src.name for src in srcs]
 
-        if len(src_names) == 0:
+        # Remove sources in exclude list
+        src_names = [str(t) for t in src_names if t not in excluded_names]
+        
+        if len(src_names) == len(self.roi.sources):
             self.like.logLike.computeModelMap(v)
         elif not hasattr(self.like.logLike, 'setSourceMapImage'):
             for s in src_names:
                 model = self.like.logLike.sourceMap(str(s))
                 self.like.logLike.updateModelMap(v, model)
         else:
-            vsum = np.zeros(v.size())
-            for s in src_names:
-                vtmp = pyLike.FloatVector(v.size())
-                self.like.logLike.computeModelMap(str(s), vtmp)
-                vsum += vtmp
-            v = pyLike.FloatVector(vsum)
+            try:
+                self.like.logLike.computeModelMap(src_names, v)
+            except:                
+                vsum = np.zeros(v.size())
+                for s in src_names:
+                    vtmp = pyLike.FloatVector(v.size())
+                    self.like.logLike.computeModelMap(str(s), vtmp)
+                    vsum += vtmp
+                v = pyLike.FloatVector(vsum)
 
         if self.projtype == "WCS":
             z = np.array(v).reshape(self.enumbins, self.npix, self.npix)
