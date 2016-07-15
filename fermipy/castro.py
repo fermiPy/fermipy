@@ -212,7 +212,6 @@ class LnLFn(object):
         """
         if self._mle is None:
             self._compute_mle()
-        
         return self._mle
         
 
@@ -249,10 +248,13 @@ class LnLFn(object):
         # find the root probably b/c of python overhead       
         #rf = lambda x: self._interp(x)+dlnl-lnl_max
         if upper:
-            x = np.linspace(self._mle,self._interp.xmax,100)  
+            x = np.zeros((100))
+            x[0] = self._mle
+            log_xmax = np.log10(self._interp.xmax)
+            x[1:] = np.logspace(log_xmax-10,log_xmax,100)[1:]
             #return opt.brentq(rf,self._mle,self._interp.xmax,xtol=1e-10*np.abs(self._mle))
         else:
-            x = np.linspace(self._mle,self._interp.xmin,100) 
+            x = np.linspace(self._interp.xmin,self._mle,100) 
             #return opt.brentq(rf,self._interp.xmin,self._mle,xtol=1e-10*np.abs(self._mle))
             
         retVal =  np.interp(dlnl,self.interp(x)-lnl_max,x)
@@ -373,6 +375,18 @@ class SpecData(object):
         """
         return self._ne
 
+    def build_ebound_table(self):
+        """
+        """
+        col_emin = Column(name="E_MIN",dtype=float,shape=self._emin.shape,data=self._emin)
+        col_emax = Column(name="E_MAX",dtype=float,shape=self._emax.shape,data=self._emax)      
+        col_dfde = Column(name="REF_DFDE",dtype=float,shape=self._dfde.shape,data=self._dfde)      
+        col_flux = Column(name="REF_FLUX",dtype=float,shape=self._flux.shape,data=self._flux)      
+        col_eflux = Column(name="REF_EFLUX",dtype=float,shape=self._eflux.shape,data=self._eflux)      
+        col_npred = Column(name="REF_NPRED",dtype=float,shape=self._npred.shape,data=self._npred)      
+
+        tab = Table(data=[col_emin,col_emax,col_dfde,col_flux,col_eflux,col_npred])
+        return tab
 
 class CastroData_Base(object):
     """ This class wraps the data needed to make a "Castro" plot,
@@ -489,7 +503,6 @@ class CastroData_Base(object):
         """ return the maximum likelihood estimates for each of the energy bins
         """
         mle_vals = np.ndarray((self._nx))
-        
         for i in range(self._nx):
             mle_vals[i] = self._loglikes[i].mle()
         return mle_vals
@@ -601,8 +614,24 @@ class CastroData_Base(object):
         return 2. * (self._nll_null - self.__call__(spec_vals))
 
 
+    def build_scandata_table(self):
+        """
+        """
+        shape = self._norm_vals.shape
+        dtype = 'f%i'%self._norm_vals.size
+        col_norm = Column(name="NORM",dtype=float)
+        col_normv = Column(name="NORM_SCAN",dtype=dtype,
+                          shape=shape)
+        col_dll = Column(name="DLOGLIKE_SCAN",dtype=dtype,
+                         shape=shape)
+        tab = Table(data=[col_norm,col_normv,col_dll])
+        tab.add_row({"NORM":1.,
+                     "NORM_SCAN":self._norm_vals,
+                     "DLOGLIKE_SCAN":-1*self._nll_vals})
+        return tab
+
     @staticmethod
-    def stack_nll(shape,components,weights=None):
+    def stack_nll(shape,components,ylims,weights=None):
         """ Combine the log-likelihoods from a number of components.
         
         Parameters
@@ -632,21 +661,21 @@ class CastroData_Base(object):
         norm_vals = np.zeros(shape)
         nll_vals = np.zeros(shape)
         for i in range(n_bins):
-            norm_mins = np.array( [c._norm_vals[i][1] for c in components] )
-            norm_maxs = np.array( [c._norm_vals[i][-1] for c in components] )
-            log_norm_min = np.log10(norm_mins.min())
-            log_norm_max = np.log10(norm_maxs.min())
-            norm_vals[i,1:] = np.logspace(log_norm_min,log_norm_max,n_vals-1)
+            mles = np.array( [c[i].mle() for c in components] )
+            log_min = np.log10(ylims[0])
+            log_max = np.log10(ylims[1])
+            norm_vals[i,1:] = np.logspace(log_min,log_max,n_vals-1)
+            check = 0
             for c,w in zip(components,weights):
+                check += w*c[i].interp(norm_vals[i,-1])
                 nll_vals[i] += w*c[i].interp(norm_vals[i])
                 pass
             # reset the zeros
             nll_obj = LnLFn(norm_vals[i],nll_vals[i])
             nll_min = nll_obj.fn_mle()
-            nll_vals[i] = nll_min - nll_vals[i]
+            nll_vals[i] -= nll_min
             pass
  
-        nll_vals *= -1.
         return norm_vals,nll_vals
 
 
@@ -729,8 +758,21 @@ class CastroData(CastroData_Base):
             raise Exception('Unrecognized normalization type: %s'%norm_type)
             
         nll_vals = -np.array(tab_s['DLOGLIKE_SCAN'])
+
         emin = np.array(tab_e['E_MIN'])
         emax = np.array(tab_e['E_MAX'])
+        try:
+            if str(tab_e['E_MIN'].unit) == 'keV':
+                emin /= 1000.
+        except:
+            pass
+        try:
+            if str(tab_e['E_MAX'].unit) == 'keV':
+                emax /= 1000.
+        except:
+            pass
+
+
         npred = np.array(tab_s['NORM']*tab_e['REF_NPRED'])
         dfde = np.array(tab_s['NORM']*tab_e['REF_DFDE'])
         flux = np.array(tab_s['NORM']*tab_e['REF_FLUX'])
@@ -830,7 +872,7 @@ class CastroData(CastroData_Base):
 
 
     @staticmethod
-    def create_from_stack(shape,components,weights=None):
+    def create_from_stack(shape,components,ylims,weights=None):
         """  Combine the log-likelihoods from a number of components.
         
         Parameters
@@ -849,7 +891,7 @@ class CastroData(CastroData_Base):
         """
         if len(components) == 0:
             return None
-        norm_vals,nll_vals = CastroData_Base.stack_nll(shape,components,weights)
+        norm_vals,nll_vals = CastroData_Base.stack_nll(shape,components,ylims,weights)
         return CastroData(norm_vals,nll_vals,components[0].specData,components[0].norm_type)
 
     
