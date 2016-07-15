@@ -130,10 +130,38 @@ def plotCastro(castroData,ylims,nstep=25,zlims=None):
     return plotCastro_base(castroData,xlims,ylims,xlabel,ylabel,nstep,zlims)
 
 
+def plotSED_OnAxis(ax,castroData,TS_thresh=4.0,errSigma=1.0,colorLim='red',colorPoint='blue'):
+    """
+    """
+    ts_vals = castroData.ts_vals()
+    mles = castroData.mles()
+
+    has_point = ts_vals > TS_thresh
+    has_limit = ~has_point
+    ul_vals = castroData.getLimits(0.05)
+    
+    err_pos = castroData.getLimits(0.32) - mles
+    err_neg = mles - castroData.getLimits(0.32,upper=False) 
+
+    yerr_points = (err_neg[has_point],err_pos[has_point])
+    xerrs = ( castroData.specData.evals - castroData.specData.ebins[0:-1],
+              castroData.specData.ebins[1:] - castroData.specData.evals )
+
+    yerr_limits = (0.5*ul_vals[has_limit],np.zeros((has_limit.sum())))
+
+    ax.errorbar(castroData.specData.evals[has_point],mles[has_point],
+                yerr=yerr_points,fmt='o',color=colorPoint)
+
+    ax.errorbar(castroData.specData.evals[has_limit],ul_vals[has_limit], 
+                yerr=yerr_limits, lw=1, color=colorLim, ls='none', zorder=1, uplims=True)
+
+    ax.errorbar(castroData.specData.evals[has_limit], ul_vals[has_limit], xerr=(xerrs[0][has_limit],xerrs[1][has_limit]),
+                lw=1.35, ls='none', color=colorLim, zorder=2, capsize=0)
+   
+ 
 
 def plotSED(castroData,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
-    """ Make a color plot (castro plot) of the (negative) log-likelihood as a function of 
-    energy and flux normalization
+    """ Plot the SED 
 
     castroData : A CastroData object, with the log-likelihood v. normalization for each energy bin
     ylims      : y-axis limits
@@ -158,36 +186,55 @@ def plotSED(castroData,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
     ax.set_xlabel("Energy [GeV]")
     ax.set_ylabel(NORM_LABEL[castroData.norm_type])
 
-    ts_vals = castroData.ts_vals()
-    mles = castroData.mles()
-
-    has_point = ts_vals > TS_thresh
-    has_limit = ~has_point
-    ul_vals = castroData.getLimits(0.05)
-    
-    err_pos = castroData.getLimits(0.32) - mles
-    err_neg = mles - castroData.getLimits(0.32,upper=False) 
-
-    yerr_points = (err_neg[has_point],err_pos[has_point])
-    xerrs = ( castroData.specData.evals - castroData.specData.ebins[0:-1],
-              castroData.specData.ebins[1:] - castroData.specData.evals )
-
-    yerr_limits = (0.5*ul_vals[has_limit],np.zeros((has_limit.sum())))
-
-    ax.errorbar(castroData.specData.evals[has_point],mles[has_point],
-                yerr=yerr_points,fmt='o')
-
-    ax.errorbar(castroData.specData.evals[has_limit],ul_vals[has_limit], 
-                yerr=yerr_limits, lw=1, color='red', ls='none', zorder=1, uplims=True)
-
-    ax.errorbar(castroData.specData.evals[has_limit], ul_vals[has_limit], xerr=(xerrs[0][has_limit],xerrs[1][has_limit]),
-                lw=1.35, ls='none', color='red', zorder=2, capsize=0)
+    plotSED_OnAxis(ax,castroData,TS_thresh,errSigma)
 
     for spec in specVals:
         ax.loglog(castroData.specData.evals,spec)
         pass
 
     return fig,ax
+
+
+
+def compare_SED(castroData1,castroData2,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
+    """ Plot the SED 
+
+    castroData1: A CastroData object, with the log-likelihood v. normalization for each energy bin
+    castroData2: A CastroData object, with the log-likelihood v. normalization for each energy bin
+    ylims      : y-axis limits
+    TS_thresh  : TS value above with to plot a point, rather than an upper limit
+    errSigma   : Number of sigma to use for error bars
+    specVals   : List of spectra to add to plot
+    returns fig,ax which are matplotlib figure and axes objects
+    """
+    xmin = min(castroData1.specData.ebins[0],castroData2.specData.ebins[0])
+    xmax = max(castroData1.specData.ebins[-1],castroData2.specData.ebins[-1])
+    ymin = ylims[0]
+    ymax = ylims[1]
+  
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlim((xmin,xmax))
+    ax.set_ylim((ymin,ymax))
+    
+    ax.set_xlabel("Energy [GeV]")
+    ax.set_ylabel(NORM_LABEL[castroData1.norm_type])
+
+    plotSED_OnAxis(ax,castroData1,TS_thresh,errSigma,colorLim='blue',colorPoint='blue')
+    plotSED_OnAxis(ax,castroData2,TS_thresh,errSigma,colorLim='red',colorPoint='red')
+  
+    for spec in specVals:
+        ax.loglog(castroData.specData.evals,spec)
+        pass
+
+    return fig,ax
+
+
+
+
 
 
 if __name__ == "__main__":
