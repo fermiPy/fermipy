@@ -63,13 +63,11 @@ def extract_images_from_tscube(infile, outfile):
         data = t_fit[c].data.reshape(map_shape)
         hdu = pyfits.ImageHDU(data, wcs.to_header(), name=c)
         outhdulist.append(hdu)
-        pass
 
     for c in SCAN_COLNAMES:
         data = t_scan[c].data.swapaxes(0, 1).reshape(cube_shape)
         hdu = pyfits.ImageHDU(data, wcs_cube.to_header(), name=c)
         outhdulist.append(hdu)
-        pass
 
     hdulist = pyfits.HDUList(outhdulist)
     hdulist.writeto(outfile, clobber=True)

@@ -14,7 +14,7 @@ import numpy as np
 # pyLikelihood needs to be imported before astropy to avoid CFITSIO
 # header error
 import pyLikelihood as pyLike
-import astropy.io.fits as pyfits
+from astropy.io import fits
 
 import fermipy
 import fermipy.defaults as defaults
@@ -2046,9 +2046,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             if s.name in skip_sources:
                 continue
 
-            if s['ts'] < shape_ts_threshold \
-                    or not np.isfinite(s['ts']):
-                        continue
+            if s['ts'] < shape_ts_threshold or not np.isfinite(s['ts']):
+                continue
 
             self.logger.debug('Fitting shape %s TS: %10.3f', s.name, s['ts'])
             self.free_source(s.name, loglevel=logging.DEBUG)
@@ -4759,9 +4758,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self.logger.info('Computing scaled source map.')
 
-        bexp0 = pyfits.open(self.files['bexpmap_roi'])
-        bexp1 = pyfits.open(self.config['gtlike']['bexpmap'])
-        srcmap = pyfits.open(self.config['gtlike']['srcmap'])
+        bexp0 = fits.open(self.files['bexpmap_roi'])
+        bexp1 = fits.open(self.config['gtlike']['bexpmap'])
+        srcmap = fits.open(self.config['gtlike']['srcmap'])
 
         if bexp0[0].data.shape != bexp1[0].data.shape:
             raise Exception('Wrong shape for input exposure map file.')
@@ -4887,7 +4886,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if not os.path.isfile(self.files['srcmap']):
             return
 
-        hdulist = pyfits.open(self.files['srcmap'])
+        hdulist = fits.open(self.files['srcmap'])
         hdunames = [hdu.name.upper() for hdu in hdulist]
 
         srcmaps = {}

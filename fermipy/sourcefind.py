@@ -338,7 +338,6 @@ class SourceFinder(object):
 
             names.append(name)
             src_dicts.append(src_dict)
-            pass
 
         return names, src_dicts
 

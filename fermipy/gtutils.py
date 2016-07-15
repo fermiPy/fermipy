@@ -31,7 +31,8 @@ def bitmask_to_bits(mask):
 
     bits = []    
     for i in range(32):
-        if mask&(2**i): bits += [2**i]
+        if mask & (2**i):
+            bits += [2**i]
 
     return bits
 
@@ -440,7 +441,7 @@ def cast_pars_dict(pars_dict):
 class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 
     def nFreeParams(self):        
-        '''Count the number of free parameters in the active model.'''
+        """Count the number of free parameters in the active model."""
         nF = 0
         pars = self.params()
         for par in pars:
@@ -594,13 +595,14 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
 
     def Ts2(self, srcName, reoptimize=False, approx=True,
             tol=None, MaxIterations=10, verbosity=0):
+        """Computes the TS value for a source indicated by "srcName."
 
-        '''Computes the TS value for a source indicated by "srcName."
         If "reoptimize=True" is selected this function will reoptimize
         the model up to "MaxIterations" given the tolerance "tol"
         (default is the tolerance selected for the overall fit).  If
         "appox=True" is selected (the default) it will renormalize the
-        model (see _renorm).'''
+        model (see _renorm).
+        """
 
         saved_state = LikelihoodState(self)
         if verbosity > 0:

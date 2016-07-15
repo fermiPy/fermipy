@@ -8,8 +8,9 @@ import fermipy
 
 
 def log_level(level):
-    '''This is a function that returns a python like
-    level from a HEASOFT like level.'''
+    """This is a function that returns a python like
+    level from a HEASOFT like level.
+    """
 
     levels_dict = {0: 50,
                    1: 40,

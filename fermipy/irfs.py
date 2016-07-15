@@ -3,7 +3,7 @@ import glob
 import re
 import numpy as np
 import healpy as hp
-import astropy.io.fits as pyfits
+from astropy.io import fits
 
 import pyIrfLoader
 
@@ -25,7 +25,8 @@ def bitmask_to_bits(mask):
 
     bits = []    
     for i in range(32):
-        if mask&(2**i): bits += [2**i]
+        if mask&(2**i):
+            bits += [2**i]
 
     return bits
 
@@ -149,12 +150,15 @@ class LTCube(object):
 
         self._ltmap = None
 
-        if ltfile is None: return
+        if ltfile is None:
+            return
         elif isinstance(ltfile,list):
-            for f in ltfile: self.load_ltfile(f)
+            for f in ltfile:
+                self.load_ltfile(f)
         elif not re.search('\.txt?',ltfile) is None:
-            files=np.loadtxt(ltfile,unpack=True,dtype='str')
-            for f in files: self.load_ltfile(f)
+            files = np.loadtxt(ltfile,unpack=True,dtype='str')
+            for f in files:
+                self.load_ltfile(f)
         else:
             self.load_ltfile(ltfile)
 
@@ -173,7 +177,7 @@ class LTCube(object):
 
     def load_ltfile(self,ltfile):
 
-        hdulist = pyfits.open(ltfile)
+        hdulist = fits.open(ltfile)
 
         if self._ltmap is None:
             self._ltmap = hdulist[1].data.field(0)

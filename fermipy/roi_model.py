@@ -12,7 +12,7 @@ import pyLikelihood as pyLike
 
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-import astropy.io.fits as pyfits
+from astropy.io import fits
 from astropy.table import Table, Column
 
 import fermipy
@@ -157,7 +157,8 @@ def get_skydir_distance_mask(src_skydir, skydir, dist, min_dist=None,
 
     """
 
-    if dist is None: dist = 180.
+    if dist is None:
+        dist = 180.
 
     if not square:
         dtheta = src_skydir.separation(skydir).rad
@@ -175,7 +176,8 @@ def get_skydir_distance_mask(src_skydir, skydir, dist, min_dist=None,
         raise Exception('Unrecognized coordinate system: %s' % coordsys)
 
     msk = (dtheta < np.radians(dist))
-    if min_dist is not None: msk &= (dtheta > np.radians(min_dist))
+    if min_dist is not None:
+        msk &= (dtheta > np.radians(min_dist))
     return msk
 
 
@@ -919,7 +921,6 @@ class Source(Model):
             else:
                 spectral_pars[k].update(src_dict.pop(k))
 
-
         for k, v in spatial_pars.items():
 
             if k not in src_dict: 
@@ -929,7 +930,6 @@ class Source(Model):
                 spatial_pars[k].update({'name': k, 'value': src_dict[k]})
             else:
                 spatial_pars[k].update(src_dict.pop(k))
-
 
         for k, v in spectral_pars.items():
             spectral_pars[k] = gtutils.make_parameter_dict(spectral_pars[k])
@@ -1012,7 +1012,7 @@ class Source(Model):
                 src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
                 src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
             else:                
-                hdu = pyfits.open(
+                hdu = fits.open(
                     os.path.expandvars(src_dict['Spatial_Filename']))
                 src_dict['RAJ2000'] = float(hdu[0].header['CRVAL1'])
                 src_dict['DEJ2000'] = float(hdu[0].header['CRVAL2'])
@@ -1067,7 +1067,6 @@ class Source(Model):
                                                            type='DiffuseSource'))
             spat_el = utils.create_xml_element(source_element, 'spatialModel',
                                                dict(type=self['SpatialType']))
-
 
         for k, v in self.spatial_pars.items():
             utils.create_xml_element(spat_el, 'parameter', v)
@@ -1177,7 +1176,9 @@ class ROIModel(fermipy.config.Configurable):
 
         for s in sorted(self.sources, key=lambda t: t['offset']):
 
-            if s.diffuse: continue
+            if s.diffuse:
+                continue
+
             o += '%-20.19s%-15.14s%-15.14s%8.3f%10.2f%12.1f\n' % (
             s['name'], s['SpatialModel'],
             s['SpectrumType'],
@@ -1185,7 +1186,9 @@ class ROIModel(fermipy.config.Configurable):
 
         for s in sorted(self.sources, key=lambda t: t['offset']):
 
-            if not s.diffuse: continue
+            if not s.diffuse:
+                continue
+
             o += '%-20.19s%-15.14s%-15.14s%8s%10.2f%12.1f\n' % (
             s['name'], s['SpatialModel'],
             s['SpectrumType'],
@@ -1969,7 +1972,7 @@ class ROIModel(fermipy.config.Configurable):
         tab = self.create_table()            
         tab.write(fitsfile,format='fits',overwrite=True)
 
-        hdulist = pyfits.open(fitsfile)
+        hdulist = fits.open(fitsfile)
         for h in hdulist:
             h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
         hdulist.writeto(fitsfile, clobber=True)

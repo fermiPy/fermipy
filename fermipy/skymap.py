@@ -4,8 +4,8 @@ from __future__ import absolute_import, division, print_function, \
 import copy
 import numpy as np
 
-import astropy.io.fits as pyfits
-import astropy.wcs as pywcs
+from astropy.io import fits
+from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 
 import fermipy.utils as utils
@@ -17,7 +17,7 @@ from fermipy.hpx_utils import HPX, HpxToWcsMapping
 
 def make_coadd_map(maps, proj, shape):
 
-    if isinstance(proj, pywcs.WCS):
+    if isinstance(proj, WCS):
         return make_coadd_wcs(maps, proj, shape)
     elif isinstance(proj, HPX):
         return make_coadd_hpx(maps, proj, shape)
@@ -51,7 +51,7 @@ def read_map_from_fits(fitsfile, extname=None):
     """
     """
     proj, f, hdu = fits_utils.read_projection_from_fits(fitsfile, extname)
-    if isinstance(proj, pywcs.WCS):
+    if isinstance(proj, WCS):
         m = Map(hdu.data, proj)
     elif isinstance(proj, HPX):
         m = HpxMap.create_from_hdu(hdu, proj.ebins)
@@ -142,11 +142,11 @@ class Map(Map_Base):
     def create_from_fits(fitsfile, **kwargs):
         hdu = kwargs.get('hdu', 0)
 
-        hdulist = pyfits.open(fitsfile)
+        hdulist = fits.open(fitsfile)
         header = hdulist[hdu].header
         data = hdulist[hdu].data
-        header = pyfits.Header.fromstring(header.tostring())
-        wcs = pywcs.WCS(header)
+        header = fits.Header.fromstring(header.tostring())
+        wcs = WCS(header)
         return Map(data, wcs)
 
     @staticmethod
@@ -157,11 +157,11 @@ class Map(Map_Base):
         return Map(np.zeros(npix), wcs)
 
     def create_image_hdu(self, name=None):
-        return pyfits.ImageHDU(self.counts, header=self.wcs.to_header(),
+        return fits.ImageHDU(self.counts, header=self.wcs.to_header(),
                                name=name)
 
     def create_primary_hdu(self):
-        return pyfits.PrimaryHDU(self.counts, header=self.wcs.to_header())
+        return fits.PrimaryHDU(self.counts, header=self.wcs.to_header())
 
     def sum_over_energy(self):
         """ Reduce a 3D counts cube to a 2D counts map

@@ -6,8 +6,8 @@ import os
 
 import numpy as np
 
-import astropy.wcs as pywcs
-import astropy.io.fits as pyfits
+from astropy.wcs import WCS
+from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 
@@ -124,7 +124,7 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
 
     """
 
-    w = pywcs.WCS(naxis=naxis)
+    w = WCS(naxis=naxis)
 
     if coordsys == 'CEL':
         w.wcs.ctype[0] = 'RA---%s' % (projection)
@@ -148,7 +148,7 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
     w.wcs.cdelt[0] = -cdelt
     w.wcs.cdelt[1] = cdelt
 
-    w = pywcs.WCS(w.to_header())
+    w = WCS(w.to_header())
     if naxis == 3 and energies is not None:
         w.wcs.crpix[2] = 1
         w.wcs.crval[2] = energies[0]
@@ -174,7 +174,7 @@ def wcs_add_energy_axis(wcs, energies):
     if wcs.naxis != 2:
         raise Exception(
             'wcs_add_energy_axis, input WCS naxis != 2 %i' % wcs.naxis)
-    w = pywcs.WCS(naxis=3)
+    w = WCS(naxis=3)
     w.wcs.crpix[0] = wcs.wcs.crpix[0]
     w.wcs.crpix[1] = wcs.wcs.crpix[1]
     w.wcs.ctype[0] = wcs.wcs.ctype[0]
@@ -183,7 +183,7 @@ def wcs_add_energy_axis(wcs, energies):
     w.wcs.crval[1] = wcs.wcs.crval[1]
     w.wcs.cdelt[0] = wcs.wcs.cdelt[0]
     w.wcs.cdelt[1] = wcs.wcs.cdelt[1]
-    w = pywcs.WCS(w.to_header())
+    w = WCS(w.to_header())
     w.wcs.crpix[2] = 1
     w.wcs.crval[2] = energies[0]
     w.wcs.cdelt[2] = energies[1] - energies[0]
@@ -411,15 +411,15 @@ def extract_mapcube_region(infile, skydir, outfile, maphdu=0):
 
     """
 
-    h = pyfits.open(os.path.expandvars(infile))
+    h = fits.open(os.path.expandvars(infile))
 
     npix = 200
     shape = list(h[maphdu].data.shape)
     shape[1] = 200
     shape[2] = 200
 
-    wcs = pywcs.WCS(h[maphdu].header)
-    skywcs = pywcs.WCS(h[maphdu].header, naxis=[1, 2])
+    wcs = WCS(h[maphdu].header)
+    skywcs = WCS(h[maphdu].header, naxis=[1, 2])
     coordsys = get_coordsys(skywcs)
 
     region_wcs = wcs.deepcopy()
@@ -441,6 +441,6 @@ def extract_mapcube_region(infile, skydir, outfile, maphdu=0):
                                        hdu_in=maphdu,
                                        shape_out=shape)
 
-    hdu_image = pyfits.PrimaryHDU(data, header=region_wcs.to_header())
-    hdulist = pyfits.HDUList([hdu_image, h['ENERGIES']])
+    hdu_image = fits.PrimaryHDU(data, header=region_wcs.to_header())
+    hdulist = fits.HDUList([hdu_image, h['ENERGIES']])
     hdulist.writeto(outfile, clobber=True)

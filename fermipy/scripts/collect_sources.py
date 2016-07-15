@@ -12,6 +12,7 @@ from astropy.table import Table, Column, vstack
 
 from fermipy.roi_model import ROIModel
 
+
 def read_sources_from_numpy_file(npfile):
     """ Open a numpy pickle file and read all the new sources into a dictionary
 

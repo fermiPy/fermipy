@@ -103,7 +103,7 @@ def read_projection_from_fits(fitsfile, extname=None):
                     return proj, f, f[i]
             except:
                 pass
-        pass
+
     return None, f, None
 
 
@@ -130,7 +130,6 @@ def write_tables_to_fits(filepath, tablelist, clobber=False,
                 ft_in[1].header[k] = v
         ft_in[1].update()
         outhdulist += [ft_in[1]]
-        pass
 
     pyfits.HDUList(outhdulist).writeto(filepath, clobber=clobber)
     for rm in rmlist:
