@@ -18,6 +18,84 @@ from fermipy import spectrum
 from fermipy import castro
 
 
+def norm(x,mu,sigma=1.0):
+    """ Scipy norm function """
+    return stats.norm(loc=mu,scale=sigma).pdf(x)
+
+def ln_norm(x,mu,sigma=1.0):
+    """ Natural log of scipy norm function truncated at zero """
+    return np.log(stats.norm(loc=mu,scale=sigma).pdf(x))
+
+def lognorm(x,mu,sigma=1.0):
+    """ Log-normal function from scipy """
+    return stats.lognorm(sigma,scale=mu).pdf(x)
+
+def log10norm(x,mu,sigma=1.0):
+    """ Scale scipy lognorm from natural log to base 10 
+    x     : input parameter
+    mu    : mean of the underlying log10 gaussian
+    sigma : variance of underlying log10 gaussian
+    """
+    return stats.lognorm(sigma*np.log(10),scale=mu).pdf(x)
+
+def ln_log10norm(x,mu,sigma=1.0):
+    """ Natural log of base 10 lognormal """
+    return np.log(stats.lognorm(sigma*np.log(10),scale=mu).pdf(x))
+
+def gauss(x,mu,sigma=1.0):
+    s2 = sigma*sigma
+    return 1./np.sqrt(2*s2*np.pi)*np.exp(-(x-mu)*(x-mu)/(2*s2))
+
+def lngauss(x,mu,sigma=1.0):
+    s2 = sigma*sigma
+    return -0.5*np.log(2*s2*np.pi) - np.power(x-mu,2)/(2*s2)
+
+def lgauss(x,mu,sigma=1.0,logpdf=False):
+    """ Log10 normal distribution...
+
+    x     : Parameter of interest for scanning the pdf
+    mu    : Peak of the lognormal distribution (mean of the underlying normal distribution is log10(mu)
+    sigma : Standard deviation of the underlying normal distribution
+    """
+    x = np.array(x,ndmin=1)
+
+    lmu = np.log10(mu)
+    s2 = sigma*sigma
+ 
+    lx = np.zeros(x.shape)
+    v = np.zeros(x.shape)
+
+    lx[x>0] = np.log10(x[x>0])
+
+    v = 1./np.sqrt(2*s2*np.pi)*np.exp(-(lx-lmu)**2/(2*s2))
+
+    if not logpdf: v /= (x*np.log(10.))
+
+    v[x<=0] = -np.inf
+
+    return v
+
+
+def lnlgauss(x,mu,sigma=1.0,logpdf=False):
+
+    x = np.array(x,ndmin=1)
+
+    lmu = np.log10(mu)
+    s2 = sigma*sigma
+
+    lx = np.zeros(x.shape)
+    v = np.zeros(x.shape)
+
+    lx[x>0] = np.log10(x[x>0])
+
+    v = -0.5*np.log(2*s2*np.pi) - np.power(lx-lmu,2)/(2*s2) 
+    if not logpdf: v -= 2.302585*lx + np.log(np.log(10.))
+
+    v[x<=0] = -np.inf
+
+    return v
+
+
 class prior_functor:
     """ A functor class that wraps simple functions we use to make priors 
     on paramters.    
@@ -49,6 +127,46 @@ class prior_functor:
         # centered on mean, using 1000 bins
         return np.logspace(-1.+log_mean,1.+log_mean,1001)
     
+    def log_value(self,x):
+        """
+        """
+        return np.log(self.__call__(x))
+
+
+class function_prior(prior_functor):
+    """
+    """
+    def __init__(self,mu,sigma,fn,lnfn=None):
+        """
+        """
+        self._mu = mu
+        self._sigma = sigma
+        self._fn = fn
+        self._lnfn = lnfn
+
+    def normalization(self):
+        """ The normalization 
+        i.e., the intergral of the function over the normalization_range 
+        """
+        norm_r = self.normalization_range()
+        return quad(self, norm_r[0], norm_r[1]) [0]
+        
+
+    def mean(self):
+        """ The mean value of the function.
+        """
+        return self._mu
+
+    def log_value(self,x):
+        """
+        """
+        if self._lnfn is None:
+            return np.log(self._fn(x,self._mu,self._sigma))
+        return self._lnfn(x,self._mu,self._sigma)
+        
+    def __call__(self,x):
+        """ Normal function from scipy """
+        return self._fn(x,self._mu,self._sigma)
 
 
 class lognorm_prior(prior_functor):
@@ -98,8 +216,10 @@ class lognorm_prior(prior_functor):
         return stats.lognorm(self._sigma,scale=self._mu).pdf(x)
 
 
+
+
 class norm_prior(prior_functor):
-    """ A wrapper around the lormal function.
+    """ A wrapper around the normal function.
         
     Parameters
     ----------
@@ -120,7 +240,9 @@ class norm_prior(prior_functor):
     def __call__(self,x):
         """ Normal function from scipy """
         return stats.norm(loc=self._mu,scale=self._sigma).pdf(x)
-        
+            
+
+
 
 def create_prior_functor(d):
     """ Build a prior from a dictionary
@@ -137,11 +259,23 @@ def create_prior_functor(d):
         return norm_prior(**d)
     elif functype == 'lognorm':
         return lognorm_prior(**d)
+    elif functype == 'gauss':
+        return function_prior(d['mu'],d['sigma'],gauss,lngauss)
+    elif functype == 'lgauss':
+        return function_prior(d['mu'],d['sigma'],lgauss,lnlgauss)
+    elif functype == 'lgauss_like':
+        fn = lambda x, y, s: lgauss(y,x,s)
+        lnfn = lambda x, y, s: lnlgauss(y,x,s)
+        return function_prior(d['mu'],d['sigma'],fn,lnfn)
+    elif functype == 'lgauss_logpdf':
+        fn = lambda x, y, s: lgauss(x,y,s,logpdf=True)
+        lnfn = lambda x, y, s: lnlgauss(x,y,s,logpdf=True)
+        return function_prior(d['mu'],d['sigma'],fn,lnfn)
     else:
         raise KeyError("Unrecognized prior_functor type %s"%functype)
     
 
-class LnLFn_norm_prior:
+class LnLFn_norm_prior(castro.LnLFn):
     """ A class to add a prior on normalization of a LnLFn object
 
     L(x,y|z') = L_z(x*y|z')*L_y(y)
@@ -192,6 +326,8 @@ class LnLFn_norm_prior:
         self._nuis_log_norm = np.log(self._nuis_norm)
         self.clear_cached_values()
         self.init_return(ret_type) 
+        self._mle = None
+        self._norm_type = lnlfn.norm_type
         
     @property
     def ret_type(self):
@@ -395,14 +531,13 @@ class LnLFn_norm_prior:
         return np.squeeze(self._interp(x))
 
 
-    def mle(self):
+    def _compute_mle(self):
         """ Maximum likelihood estimator """
 
         xmax = self._lnlfn.interp.xmax
         x0 = max(self._lnlfn.mle(),xmax*1e-5)
         ret = opt.fmin(lambda x: np.where(xmax>x>0, -self(x), np.inf), x0, disp=False)                       
-        mle = float(ret[0])
-        return ret
+        self._mle = float(ret[0])
 
 
 
