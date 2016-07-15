@@ -7,10 +7,11 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
-import astropy.io.fits as pyfits
+from astropy.io import fits
 
 import fermipy
-import fermipy.spectrum as spectrum
+from fermipy import spectrum
+
 
 def add_columns(t0, t1):
     """Add columns of table t1 to table t0."""
@@ -146,7 +147,7 @@ class Catalog2FHL(Catalog):
             fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
                                     'gll_psch_v08.fit')
 
-        hdulist = pyfits.open(fitsfile)
+        hdulist = fits.open(fitsfile)
         table = Table(hdulist['2FHL Source Catalog'].data)
         table_extsrc = Table(hdulist['Extended Sources'].data)
 
@@ -176,7 +177,7 @@ class Catalog3FGL(Catalog):
             fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
                                     'gll_psc_v16.fit')
 
-        hdulist = pyfits.open(fitsfile)
+        hdulist = fits.open(fitsfile)
         table = Table(hdulist['LAT_Point_Source_Catalog'].data)
         #table = Table.read(fitsfile)
         table_extsrc = Table(hdulist['ExtendedSources'].data)
@@ -218,7 +219,7 @@ class Catalog4FGLP(Catalog):
             extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
                                   'Extended_archive_v15')
 
-        #hdulist = pyfits.open(fitsfile)
+        #hdulist = fits.open(fitsfile)
         table = Table.read(fitsfile)
 
         strip_columns(table)

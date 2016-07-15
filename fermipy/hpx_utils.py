@@ -1,22 +1,16 @@
-#!/usr/bin/env python
-#
-
-# Description
 """
 Utilities for dealing with HEALPix projections and mappings
 """
-
 from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
 import re
-import copy
 
 import healpy as hp
 import numpy as np
 
-import astropy.io.fits as pf
-import astropy.wcs as pywcs
+from astropy.io import fits
+from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Galactic, ICRS
 
@@ -56,8 +50,8 @@ def get_pixel_size_from_nside(nside):
     """
     order = int(np.log2(nside))
     if order < 0 or order > 13:
-        raise Exception('HEALPix order must be between 0 to 13 %i' % order)
-        return
+        raise ValueError('HEALPix order must be between 0 to 13 %i' % order)
+
     return HPX_ORDER_TO_PIXSIZE[order]
 
 
@@ -119,20 +113,18 @@ def make_hpx_to_wcs_mapping(hpx, wcs):
     # this could probably be vectorized by filling a histogram.
     d_count = {}
     for ipix in ipixs:
-        if d_count.has_key(ipix):
+        if ipix in d_count:
             d_count[ipix] += 1
         else:
             d_count[ipix] = 1
-        pass
 
     # Here we are getting a multiplicative factor that tells use how to split up
-    # the counts in each HEALPix pixel (by dividing the corrsponding WCS pixels
+    # the counts in each HEALPix pixel (by dividing the corresponding WCS pixels
     # by the number of associated HEALPix pixels).
     # This could also likely be vectorized.
     mult_val = np.ones(ipixs.shape)
     for i, ipix in enumerate(ipixs):
         mult_val[i] /= d_count[ipix]
-        pass
 
     ipixs = ipixs.reshape(npix).T.flatten()
     mult_val = mult_val.reshape(npix).T.flatten()
@@ -193,7 +185,6 @@ class HPX(object):
         if self._ipix is not None:
             for i, ipixel in enumerate(self._ipix.flat):
                 self._rmap[ipixel] = i
-                pass
 
     def __getitem__(self, sliced):
         """ This implements the global-to-local lookup
@@ -209,7 +200,7 @@ class HPX(object):
         if self._rmap is not None:
             retval = np.zeros((sliced.size), 'i')
             for i, v in enumerate(sliced.flat):
-                if self._rmap.has_key(v):
+                if v in self._rmap:
                     retval[i] = self._rmap[v]
                 else:
                     retval[i] = -1
@@ -298,32 +289,32 @@ class HPX(object):
         coordsys = header["COORDSYS"]
         try:
             region = header["HPX_REG"]
-        except:
+        except KeyError:
             try:
                 region = header["HPXREGION"]
-            except:
+            except KeyError:
                 region = None
         return HPX(nside, nest, coordsys, order, region, ebins=ebins)
 
     def make_header(self):
         """ Builds and returns FITS header for this HEALPix map """
-        cards = [pf.Card("TELESCOP", "GLAST"),
-                 pf.Card("INSTRUME", "LAT"),
-                 pf.Card("COORDSYS", self._coordsys),
-                 pf.Card("PIXTYPE", "HEALPIX"),
-                 pf.Card("ORDERING", self.ordering),
-                 pf.Card("ORDER", self._order),
-                 pf.Card("NSIDE", self._nside),
-                 pf.Card("FIRSTPIX", 0),
-                 pf.Card("LASTPIX", self._maxpix - 1)]
+        cards = [fits.Card("TELESCOP", "GLAST"),
+                 fits.Card("INSTRUME", "LAT"),
+                 fits.Card("COORDSYS", self._coordsys),
+                 fits.Card("PIXTYPE", "HEALPIX"),
+                 fits.Card("ORDERING", self.ordering),
+                 fits.Card("ORDER", self._order),
+                 fits.Card("NSIDE", self._nside),
+                 fits.Card("FIRSTPIX", 0),
+                 fits.Card("LASTPIX", self._maxpix - 1)]
         if self._coordsys == "CEL":
-            cards.append(pf.Card("EQUINOX", 2000.0,
+            cards.append(fits.Card("EQUINOX", 2000.0,
                                  "Equinox of RA & DEC specifications"))
 
         if self._region:
-            cards.append(pf.Card("HPX_REG", self._region))
+            cards.append(fits.Card("HPX_REG", self._region))
 
-        header = pf.Header(cards)
+        header = fits.Header(cards)
         return header
 
     def make_hdu(self, data, extname="SKYMAP"):
@@ -338,18 +329,17 @@ class HPX(object):
                 "Size of data array does not match number of pixels")
         cols = []
         if self._region:
-            cols.append(pf.Column("PIX", "J", array=self._ipix))
+            cols.append(fits.Column("PIX", "J", array=self._ipix))
         if len(shape) == 1:
-            cols.append(pf.Column("CHANNEL1", "D", array=data))
+            cols.append(fits.Column("CHANNEL1", "D", array=data))
         elif len(shape) == 2:
             for i in range(shape[0]):
-                cols.append(pf.Column("CHANNEL%i" %
+                cols.append(fits.Column("CHANNEL%i" %
                                       (i + 1), "D", array=data[i]))
-                pass
         else:
             raise Exception("HPX.write_fits only handles 1D and 2D maps")
         header = self.make_header()
-        hdu = pf.BinTableHDU.from_columns(cols, header=header, name=extname)
+        hdu = fits.BinTableHDU.from_columns(cols, header=header, name=extname)
         return hdu
 
     def make_energy_bounds_hdu(self, extname="EBOUNDS"):
@@ -359,11 +349,11 @@ class HPX(object):
         """
         if self._ebins is None:
             return None
-        cols = [pf.Column("CHANNEL", "I", array=np.arange(1, len(self._ebins + 1))),
-                pf.Column("E_MIN", "1E", unit='keV',
+        cols = [fits.Column("CHANNEL", "I", array=np.arange(1, len(self._ebins + 1))),
+                fits.Column("E_MIN", "1E", unit='keV',
                           array=1000 * (10**self._ebins[0:-1])),
-                pf.Column("E_MAX", "1E", unit='keV', array=1000 * (10**self._ebins[1:]))]
-        hdu = pf.BinTableHDU.from_columns(
+                fits.Column("E_MAX", "1E", unit='keV', array=1000 * (10**self._ebins[1:]))]
+        hdu = fits.BinTableHDU.from_columns(
             cols, self.make_header(), name=extname)
         return hdu
 
@@ -375,13 +365,13 @@ class HPX(object):
         extname   : The HDU extension name        
         clobber   : True -> overwrite existing files
         """
-        hdu_prim = pf.PrimaryHDU()
+        hdu_prim = fits.PrimaryHDU()
         hdu_hpx = self.make_hdu(data, extname)
         hl = [hdu_prim, hdu_hpx]
         hdu_ebounds = self.make_energy_bounds_hdu()
         if hdu_ebounds is not None:
             hl.append(hdu_ebounds)
-        hdulist = pf.HDUList(hl)
+        hdulist = fits.HDUList(hl)
         hdulist.writeto(outfile, clobber=clobber)
 
     @staticmethod
@@ -485,7 +475,7 @@ class HPX(object):
         """
         """
 
-        w = pywcs.WCS(naxis=naxis)
+        w = WCS(naxis=naxis)
         skydir = self.get_ref_dir(self._region, self.coordsys)
 
         if self.coordsys == 'CEL':
@@ -519,7 +509,7 @@ class HPX(object):
                 w.wcs.crval[2] = 10 ** energies[0]
                 w.wcs.cdelt[2] = 10 ** energies[1] - 10 ** energies[0]
 
-        w = pywcs.WCS(w.to_header())
+        w = WCS(w.to_header())
         return w
 
 
@@ -614,7 +604,6 @@ if __name__ == "__main__":
     n2 = np.ndarray((8, npixels), 'd')
     for i in range(8):
         n2[i].flat = np.arange(npixels)
-        pass
 
     hpx_map = HpxMap(n2, hpx_2)
     wcs, wcs_data = hpx_map.make_wcs_from_hpx(normalize=True)

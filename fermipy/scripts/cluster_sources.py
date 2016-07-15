@@ -158,8 +158,8 @@ def make_clusters(span_tree,cut_value):
             continue                         
 
         # figure out the key
-        if rDict.has_key(i0):            
-            if rDict.has_key(i1):
+        if i0 in rDict:
+            if i1 in rDict:
                 # both key and value already seen
                 k1 = rDict[int(i0)]                
                 k2 = rDict[int(i1)]
@@ -181,7 +181,7 @@ def make_clusters(span_tree,cut_value):
                 k = rDict[int(i0)]
                 v = [int(i1)]
         else:
-            if rDict.has_key(i1):
+            if i1 in rDict:
                 # old value, new key
                 # switch to the existing key
                 # and add the key to the values
@@ -193,7 +193,7 @@ def make_clusters(span_tree,cut_value):
                 v = [int(i1)]
 
         # Fill the dict
-        if cDict.has_key(k):
+        if k in cDict:
             cDict[k] += v
         else:
             cDict[k] = v
@@ -268,7 +268,7 @@ def make_reverse_dict(in_dict):
     out_dict = {}
     for k,v in in_dict.items():
         for vv in v:
-            if out_dict.has_key(vv):
+            if vv in out_dict:
                 print("Dictionary collision %i"%vv)
             out_dict[vv] = k
     return out_dict

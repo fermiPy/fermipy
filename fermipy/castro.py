@@ -20,7 +20,7 @@ import scipy
 
 from astropy.table import Table
 
-import fermipy.sourcefind as sourcefind
+from fermipy import sourcefind
 
 from fermipy.wcs_utils import wcs_add_energy_axis
 from fermipy.skymap import read_map_from_fits, Map
@@ -498,7 +498,7 @@ class CastroData_Base(object):
         ts_vals = np.ndarray((self._nx))
         for i in range(self._nx):
             ts_vals[i] = self._loglikes[i].TS()
-            pass
+
         return ts_vals
 
     def getLimits(self, alpha, upper=True):
@@ -515,7 +515,7 @@ class CastroData_Base(object):
 
         for i in range(self._nx):
             limit_vals[i] = self._loglikes[i].getLimit(alpha, upper)
-            pass
+
         return limit_vals
 
     def fitNormalization(self, specVals, xlims):
@@ -628,12 +628,11 @@ class CastroData_Base(object):
                 log_norm_min, log_norm_max, n_vals - 1)
             for c, w in zip(components, weights):
                 nll_vals[i] += w * c[i].interp(norm_vals[i])
-                pass
+
             # reset the zeros
             nll_obj = LnLFn(norm_vals[i], nll_vals[i])
             nll_min = nll_obj.fn_mle()
             nll_vals[i] = nll_min - nll_vals[i]
-            pass
 
         nll_vals *= -1.
         return norm_vals, nll_vals
@@ -895,7 +894,7 @@ class CastroData(CastroData_Base):
                         "TS": fit_ts}
 
             retDict[specType] = specDict
-            pass
+
         return retDict
 
     def create_functor(self, specType, scale=1E3):
@@ -1056,7 +1055,7 @@ class TSCube(object):
            String specifying the quantity used for the normalization
 
         """
-        tsmap, f = read_map_from_fits(fitsfile)
+        tsmap, _ = read_map_from_fits(fitsfile)
 
         tab_e = Table.read(fitsfile, 'EBOUNDS')
         tab_s = Table.read(fitsfile, 'SCANDATA')
@@ -1152,7 +1151,7 @@ class TSCube(object):
                 skydir = peak['fit_skydir']
             else:
                 skydir = peak['skydir']
-            pass
+
         return peaks
 
     def test_spectra_of_peak(self, peak, spec_types=["PowerLaw", "LogParabola", "PLExpCutoff"]):
@@ -1194,7 +1193,7 @@ class TSCube(object):
         names = []
         peaks = self.find_and_refine_peaks(
             threshold, min_separation, use_cumul=use_cumul)
-        for i, peak in enumerate(peaks):
+        for peak in peaks:
             (castro, test_dict) = self.test_spectra_of_peak(peak, ["PowerLaw"])
             src_name = utils.create_source_name(peak['fit_skydir'])
             src_dict = build_source_dict(src_name, peak, test_dict, "PowerLaw")
@@ -1208,7 +1207,7 @@ class TSCube(object):
             if output_srcs:
                 src = roi_model.Source.create_from_dict(src_dict)
                 srcs.append(src)
-            pass
+
         retDict = {"Names": names}
         if output_peaks:
             retDict["Peaks"] = peaks

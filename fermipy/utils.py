@@ -147,8 +147,6 @@ L_CP = np.radians(122.9319185680026)
 
 def gal2eq(l, b):
 
-    global RA_NGP, DEC_NGP, L_CP
-
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.
 
@@ -182,8 +180,6 @@ def gal2eq(l, b):
 
 
 def eq2gal(ra, dec):
-
-    global RA_NGP, DEC_NGP, L_CP
 
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.

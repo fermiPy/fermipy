@@ -16,8 +16,8 @@ import matplotlib.patheffects as PathEffects
 from matplotlib.patches import Circle, Ellipse
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
 
-import astropy.io.fits as pyfits
-import astropy.wcs as pywcs
+from astropy.io import fits
+from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 import numpy as np
 
@@ -165,7 +165,8 @@ def annotate(**kwargs):
         text += ['E = %.3f - %.3f GeV' % (10 ** loge_bounds[0] / 1E3,
                                           10 ** loge_bounds[1] / 1E3)]
 
-    if not text: return
+    if not text:
+        return
 
     ax.annotate('\n'.join(text),
                 xy=(0.05, 0.93),
@@ -178,11 +179,11 @@ class ImagePlotter(object):
 
     def __init__(self, data, proj):
 
-        if isinstance(proj,pywcs.WCS):
+        if isinstance(proj,WCS):
             self._projtype = 'WCS'
             if data.ndim == 3:
                 data = np.sum(copy.deepcopy(data), axis=2)
-                proj = pywcs.WCS(proj.to_header(), naxis=[1, 2])
+                proj = WCS(proj.to_header(), naxis=[1, 2])
             else:
                 data = copy.deepcopy(data)        
             self._proj = proj
@@ -337,7 +338,7 @@ class ROIPlotter(fermipy.config.Configurable):
     @staticmethod
     def create_from_fits(fitsfile, roi, **kwargs):
 
-        hdulist = pyfits.open(fitsfile)
+        hdulist = fits.open(fitsfile)
         try:
             if hdulist[1].name == "SKYMAP":
                 projtype = "HPX"
@@ -348,8 +349,8 @@ class ROIPlotter(fermipy.config.Configurable):
 
         if projtype == "WCS":
             header = hdulist[0].header
-            header = pyfits.Header.fromstring(header.tostring())
-            wcs = pywcs.WCS(header)
+            header = fits.Header.fromstring(header.tostring())
+            wcs = WCS(header)
             data = copy.deepcopy(hdulist[0].data)
             themap = Map(data, wcs)
         elif projtype == "HPX":

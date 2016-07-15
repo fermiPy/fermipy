@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function, \
 import os
 import yaml
 import fermipy
-import fermipy.utils as utils
+from fermipy import utils
 
 
 def create_default_config(defaults):
@@ -175,5 +175,7 @@ class ConfigManager(object):
         if not os.path.isfile(path):
             path = os.path.join(fermipy.PACKAGE_ROOT, 'config', path)
 
-        with open(path, 'r') as f: config = yaml.load(f)
+        with open(path, 'r') as f:
+            config = yaml.load(f)
+
         return config

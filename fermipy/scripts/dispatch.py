@@ -1,12 +1,13 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
-
 import sys
-import time, os, stat
+import time
+import os
+import stat
 import datetime
 import argparse
 import pprint
 
-import fermipy.utils as utils
+from fermipy import utils
 from fermipy.batch import check_log, get_lsf_status
 
 def file_age_in_seconds(pathname):
@@ -91,8 +92,6 @@ def main():
                         'be run.')
 
     args = parser.parse_args()
-
-    from itertools import chain
 
     dirs = [d for argdir in args.dirs for d in utils.collect_dirs(argdir)]
     jobs = collect_jobs(dirs, args.runscript,

@@ -1,7 +1,7 @@
 import os
 import copy
 import yaml
-import fermipy.utils as utils
+from fermipy import utils
 import argparse
 import subprocess
 
@@ -17,7 +17,6 @@ def clone_configs(basedir,base_configs,opt_configs,scripts):
     for c in base_configs:
         config = utils.merge_dict(config,yaml.load(open(c)),
                                   add_new_keys=True)   
-        pass
 
     scriptdir = os.path.abspath(os.path.join(basedir,'scripts'))
     utils.mkdir(scriptdir)    
@@ -62,7 +61,6 @@ cat $0
         c = copy.deepcopy(config)
         c = utils.merge_dict(c,vdict,add_new_keys=True)
         yaml.dump(utils.tolist(c),open(cfgfile,'w'),default_flow_style=False)
-        pass
 
 
 def main():

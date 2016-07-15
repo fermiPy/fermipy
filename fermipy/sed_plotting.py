@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-#
-
-# Description
 """
 Utilities for plotting SEDs and Castro plots
 
@@ -102,8 +98,8 @@ def plotCastro_base(castroData,xlims,ylims,xlabel,ylabel,nstep=25,zlims=None):
     ztmp = []
     for i in range(castroData.nx):
         ztmp.append(castroData[i].interp(normVals))
-        pass
-    ztmp = np.asarray(ztmp).T    
+
+    ztmp = np.asarray(ztmp).T
     ztmp *= -1.
     ztmp = np.where(ztmp<zmin,np.nan,ztmp)
     im = ax.imshow(ztmp, extent=[xmin,xmax,ymin,ymax],
@@ -185,7 +181,6 @@ def plotSED(castroData,ylims,TS_thresh=4.0,errSigma=1.0,specVals=[]):
 
     for spec in specVals:
         ax.loglog(castroData.specData.evals,spec)
-        pass
 
     return fig,ax
 
@@ -194,7 +189,6 @@ if __name__ == "__main__":
 
 
     from fermipy import castro
-    from fermipy import roi_model
     import sys
 
     if len(sys.argv) == 1:
