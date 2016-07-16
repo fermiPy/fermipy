@@ -11,6 +11,7 @@ import numpy as np
 import scipy
 import xml.etree.cElementTree as et
 from astropy.extern import six
+import scipy.optimize
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
 import scipy.special as special
@@ -488,23 +489,92 @@ def poly_to_parabola(coeff):
     return x0, sigma, y0
 
 
-def parabola(x, y, amplitude, x0, y0, sx, sy, theta):
+def parabola(xy, amplitude, x0, y0, sx, sy, theta):
+    """Evaluate a 2D parabola given by:
+    
+    f(x,y) = f_0 - (1/2) * \delta^T * R * \Sigma * R^T * \delta
+
+    where
+
+    \delta = [(x - x_0), (y - y_0)]
+
+    and R is the matrix for a 2D rotation by angle \theta and \Sigma
+    is the covariance matrix:
+
+    \Sigma = [[1/\sigma_x^2, 0           ],
+              [0           , 1/\sigma_y^2]] 
+
+    Parameters
+    ----------
+    xy : tuple    
+       Tuple containing x and y arrays for the values at which the
+       parabola will be evaluated.
+
+    amplitude : float
+       Constant offset value.
+    
+    x0 : float
+       Centroid in x coordinate.
+
+    y0 : float
+       Centroid in y coordinate.
+       
+    sx : float
+       Standard deviation along first axis (x-axis when theta=0).
+
+    sy : float
+       Standard deviation along second axis (y-axis when theta=0).
+
+    theta : float
+       Rotation angle in radians.
+
+    Returns
+    -------
+    vals : `~numpy.ndarray`    
+       Values of the parabola evaluated at the points defined in the
+       `xy` input tuple.
+    
+    """
+    
+    x = xy[0]
+    y = xy[1]
+    
     cth = np.cos(theta)
     sth = np.sin(theta)
     a = (cth ** 2) / (2 * sx ** 2) + (sth ** 2) / (2 * sy ** 2)
     b = -(np.sin(2 * theta)) / (4 * sx ** 2) + (np.sin(2 * theta)) / (
         4 * sy ** 2)
     c = (sth ** 2) / (2 * sx ** 2) + (cth ** 2) / (2 * sy ** 2)
-    v = amplitude - (a * ((x - x0) ** 2) +
-                     2 * b * (x - x0) * (y - y0) +
-                     c * ((y - y0) ** 2))
+    vals = amplitude - (a * ((x - x0) ** 2) +
+                        2 * b * (x - x0) * (y - y0) +
+                        c * ((y - y0) ** 2))
 
-    return np.ravel(v)
+    return vals
 
 
 def fit_parabola(z, ix, iy, dpix=2, zmin=None):
+    """Fit a parabola to a 2D numpy array.  This function will fit a
+    parabola with the functional form described in
+    `~fermipy.utils.parabola` to a 2D slice of the input array `z`.
+    The boundaries of the fit region within z are set with the pixel
+    centroid (`ix` and `iy`) and region size (`dpix`).
 
-    import scipy.optimize
+    Parameters
+    ----------
+    z : `~numpy.ndarray`
+    
+    ix : int
+       X index of center pixel of fit region in array `z`.
+    
+    iy : int
+       Y index of center pixel of fit region in array `z`.
+
+    dpix : int
+       Size of fit region expressed as a pixel offset with respect the
+       centroid.  The size of the sub-array will be (dpix*2 + 1) x
+       (dpix*2 + 1).
+    """
+    
     xmin = max(0, ix - dpix)
     xmax = min(z.shape[0], ix + dpix + 1)
 
@@ -534,17 +604,19 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
 
     o = {'fit_success': True, 'p0': p0}
 
+    def curve_fit_fn(*args):
+        return np.ravel(parabola(*args))
+        
     try:
-        popt, pcov = scipy.optimize.curve_fit(parabola,
-                                              np.ravel(x[m]), np.ravel(y[m]),
+        popt, pcov = scipy.optimize.curve_fit(curve_fit_fn,
+                                              (np.ravel(x[m]), np.ravel(y[m])),
                                               np.ravel(z[sx, sy][m]), p0)
     except Exception:
         popt = copy.deepcopy(p0)
         o['fit_success'] = False
-#        self.logger.error('Localization failed.', exc_info=True)
 
-    fm = parabola(x[m], y[m], *popt)
-    df = fm - z[sx, sy][m].flat
+    fm = parabola((x[m], y[m]), *popt)
+    df = fm - z[sx, sy][m]
     rchi2 = np.sum(df**2) / len(fm)
 
     o['rchi2'] = rchi2
