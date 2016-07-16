@@ -161,7 +161,7 @@ def test_gtanalysis_localization(setup):
     np.random.seed(1)
 
     src_dict = {'SpatialModel': 'PointSource',
-                'Prefactor': 2E-12,
+                'Prefactor': 4E-12,
                 'glat': 36.0, 'glon': 86.0}
 
     gta.simulate_source(src_dict)
@@ -178,8 +178,9 @@ def test_gtanalysis_localization(setup):
     import pprint
     pprint.pprint(o)
 
-    assert(np.abs(o['glon']-86.0) < 0.025)
-    assert(np.abs(o['glat']-36.0) < 0.025)
+    assert(o['fit_success'] is True)
+    assert(np.abs(o['glon']-86.0) < 0.02)
+    assert(np.abs(o['glat']-36.0) < 0.02)
     gta.delete_source('testloc')
 
     gta.simulate_roi(restore=True)
