@@ -505,6 +505,12 @@ class SourceFinder(object):
         tsmap_fit, tsmap = self._localize_tsmap(name, prefix=prefix,
                                                 dtheta_max=dtheta_max)
 
+        self.logger.debug('Completed localization with TS Map.\n'
+                          '(ra,dec) = (%10.4f,%10.4f)\n'
+                          '(glon,glat) = (%10.4f,%10.4f)',
+                          tsmap_fit['ra'],tsmap_fit['dec'],
+                          tsmap_fit['glon'],tsmap_fit['glat'])
+        
         # Fit baseline (point-source) model
         self.free_norm(name)
         fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
@@ -522,6 +528,10 @@ class SourceFinder(object):
         cdelt1 = np.abs(skywcs.wcs.cdelt[1])
         scan_step = 2.0 * tsmap_fit['r95'] / (nstep - 1.0)
 
+        self.logger.debug('Refining localization search to '
+                          'region of width: %.4f deg',
+                          tsmap_fit['r95'])
+        
         scan_map = Map.create(SkyCoord(tsmap_fit['ra'],
                                        tsmap_fit['dec'], unit='deg'),
                               scan_step, (nstep, nstep),
@@ -580,14 +590,28 @@ class SourceFinder(object):
 
         o['offset'] = skydir.separation(new_skydir).deg
 
-        if o['fit_success'] and o['offset'] > dtheta_max:
+        if o['offset'] > dtheta_max:
             o['fit_success'] = False
-            self.logger.error('Best-fit position outside search region:\n '
-                              'offset = %.3f deltax = %.3f '
-                              'deltay = %.3f dtheta_max = %.3f',
-                              o['offset'], o['deltax'],
-                              o['deltay'], dtheta_max)
 
+        if not o['fit_success']:
+            self.logger.error('Localization failed.\n'
+                              '(ra,dec) = (%10.4f,%10.4f)\n'
+                              '(glon,glat) = (%10.4f,%10.4f)\n'
+                              'offset = %8.4f deltax = %8.4f '
+                              'deltay = %8.4f',
+                              o['ra'],o['dec'],o['glon'],o['glat'],
+                              o['offset'], o['deltax'],
+                              o['deltay'])
+        else:
+            self.logger.info('Localization succeeded with '
+                             'coordinates:\n'
+                             '(ra,dec) = (%10.4f,%10.4f)\n'
+                             '(glon,glat) = (%10.4f,%10.4f)\n'
+                             'offset = %8.4f r68 = %8.4f',
+                             o['ra'], o['dec'],
+                             o['glon'], o['glat'],
+                             o['offset'],o['r68'])
+            
         self.roi[name]['localize'] = copy.deepcopy(o)
 
         try:
@@ -599,10 +623,8 @@ class SourceFinder(object):
 
         if update and o['fit_success']:
 
-            self.logger.info(
-                'Updating position to: '
-                'RA %8.3f DEC %8.3f (offset = %8.3f)' % (o['ra'], o['dec'],
-                                                         o['offset']))
+            self.logger.info('Updating source %s '
+                             'to localized position.',name)
             src = self.delete_source(name)
             src.set_position(new_skydir)
             src.set_name(newname, names=src.names)
