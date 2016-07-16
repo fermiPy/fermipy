@@ -1219,13 +1219,13 @@ class AnalysisPlotter(fermipy.config.Configurable):
             e0 = Ellipse(xy=(float(peak_pix[0]),float(peak_pix[1])),
                          width=2.0*sigmax/cdelt0*peak_r68/sigma,
                          height=2.0*sigmay/cdelt1*peak_r68/sigma,
-                         angle=np.degrees(theta),
+                         angle=-np.degrees(theta),
                          facecolor='None',edgecolor='k')
 
             e1 = Ellipse(xy=(float(peak_pix[0]),float(peak_pix[1])),
                          width=2.0*sigmax/cdelt0*peak_r99/sigma,
                          height=2.0*sigmay/cdelt1*peak_r99/sigma,
-                         angle=np.degrees(theta),
+                         angle=-np.degrees(theta),
                          facecolor='None',edgecolor='k')
 
             plt.gca().add_artist(e0)
@@ -1241,13 +1241,13 @@ class AnalysisPlotter(fermipy.config.Configurable):
             e0 = Ellipse(xy=(float(scan_pix[0]),float(scan_pix[1])),
                          width=2.0*sigmax/cdelt0*o['r68']/o['sigma'],
                          height=2.0*sigmay/cdelt1*o['r68']/o['sigma'],
-                         angle=np.degrees(o['theta']),
+                         angle=-np.degrees(o['theta']),
                          facecolor='None',edgecolor='r')
 
             e1 = Ellipse(xy=(float(scan_pix[0]),float(scan_pix[1])),
                          width=2.0*sigmax/cdelt0*o['r99']/o['sigma'],
                          height=2.0*sigmay/cdelt1*o['r99']/o['sigma'],
-                         angle=np.degrees(o['theta']),
+                         angle=-np.degrees(o['theta']),
                          facecolor='None',edgecolor='r')
 
             plt.gca().add_artist(e0)
