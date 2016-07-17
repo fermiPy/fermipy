@@ -19,6 +19,7 @@ import scipy.optimize as opt
 import scipy
 
 from astropy.table import Table
+import astropy.units as u
 
 from fermipy import sourcefind
 
@@ -345,6 +346,12 @@ class SpecData(object):
         return self._dfde
 
     @property
+    def flux(self):
+        """ return the flux values
+        """
+        return self._flux
+    
+    @property
     def eflux(self):
         """ return the energy flux values
         """
@@ -562,9 +569,10 @@ class CastroData_Base(object):
 
         Parameters
         ----------
-        specFunc :  The Spectral Function
-        initPars :  The initial values of the parameters     
-
+        specFunc : `~fermipy.spectrum.SpectralFunction`
+           The Spectral Function
+        initPars : `~numpy.ndarray`
+           The initial values of the parameters     
 
         Returns
         -------
@@ -683,6 +691,49 @@ class CastroData(CastroData_Base):
         """ Return a '~fermipy.castro.SpecData' with the spectral data """
         return self._specData
 
+
+    @staticmethod
+    def create_from_flux_points(txtfile):
+        """Create a Castro data object from a text file containing a
+        sequence of differential flux points."""
+
+        tab = Table.read(txtfile,format='ascii.ecsv')
+        dfde_unit = u.ph / (u.MeV * u.cm**2 * u.s)
+        loge = np.log10(np.array(tab['E_REF'].to(u.MeV)))
+        norm = np.array(tab['NORM'].to(dfde_unit))
+        norm_errp = np.array(tab['NORM_ERRP'].to(dfde_unit))
+        norm_errn = np.array(tab['NORM_ERRN'].to(dfde_unit))
+        norm_err = 0.5*(norm_errp + norm_errn)
+        dloge = loge[1:]-loge[:-1]
+        dloge = np.insert(dloge,0,dloge[0])        
+        emin = 10**(loge-dloge*0.5)
+        emax = 10**(loge+dloge*0.5)
+        ectr = 10**loge
+        deltae = emax-emin
+        flux = norm*deltae
+        eflux = norm*deltae*ectr
+        
+        spec_data = SpecData(emin,emax,norm,flux,eflux,np.zeros(len(norm)))
+
+        xmin = norm - 3.0*norm_errn
+
+        stephi = np.linspace(0,1,11)
+        steplo = -np.linspace(0,1,11)[1:][::-1]
+
+        loscale = 3*norm_err
+        hiscale = 3*norm_err
+        loscale[loscale > norm] = norm[loscale > norm]
+        
+        norm_vals_hi = norm[:,np.newaxis] + stephi[np.newaxis,:]*hiscale[:,np.newaxis]
+        norm_vals_lo = norm[:,np.newaxis] + steplo[np.newaxis,:]*loscale[:,np.newaxis]
+
+        delta = norm/norm_err
+        
+        norm_vals = np.hstack((norm_vals_lo,norm_vals_hi))
+        nll_vals = 0.5*(norm_vals - norm[:,np.newaxis])**2/norm_err[:,np.newaxis]**2
+        return CastroData(norm_vals,nll_vals,spec_data,'FLUX')
+
+    
     @staticmethod
     def create_from_tables(norm_type='EFLUX',
                            tab_s="SCANDATA",
@@ -912,10 +963,10 @@ class CastroData(CastroData_Base):
 
         Returns:
         ----------
-        fn         : 'fermiy.spectrum.SpectralFunction'
+        fn         : `~fermipy.spectrum.SpectralFunction`
             The functor
 
-        initPars   :  '~np.array'
+        initPars   :  `~numpy.ndarray`
             Default set of initial parameter for this spectral type
 
         scale      : float

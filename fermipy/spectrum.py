@@ -157,7 +157,17 @@ class SpectralFunction(object):
 
 
 class PowerLaw(SpectralFunction):
+    """Class representation of a power-law with the functional form:
 
+    F(x) = F_0 * (x/x_s)^g
+
+    where x_s is the scale parameter.  The `params ` array should be
+    defined with:
+
+    * params[0] : Prefactor (F_0)
+    * params[1] : Index (g)
+    """
+    
     def __init__(self, params, scale=1.0):
         super(PowerLaw, self).__init__(params, scale)
 
