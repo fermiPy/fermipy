@@ -618,11 +618,11 @@ class CastroData_Base(object):
         """
         """
         shape = self._norm_vals.shape
-        dtype = 'f%i'%self._norm_vals.size
+        #dtype = 'f%i'%self._norm_vals.size
         col_norm = Column(name="NORM",dtype=float)
-        col_normv = Column(name="NORM_SCAN",dtype=dtype,
+        col_normv = Column(name="NORM_SCAN",dtype=float,
                           shape=shape)
-        col_dll = Column(name="DLOGLIKE_SCAN",dtype=dtype,
+        col_dll = Column(name="DLOGLIKE_SCAN",dtype=float,
                          shape=shape)
         tab = Table(data=[col_norm,col_normv,col_dll])
         tab.add_row({"NORM":1.,
