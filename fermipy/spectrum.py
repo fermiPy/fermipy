@@ -147,13 +147,15 @@ class SpectralFunction(object):
         """Evaluate E^2 times differential flux."""
         return self.eval_dfde(x, self.params, self.scale) * x**2
 
-    def flux(self, emin, emax):
+    def flux(self, emin, emax, params=None):
         """Evaluate the integral flux."""
-        return self.eval_flux(emin, emax, self.params, self.scale)
+        params = self.params if params is None else params
+        return self.eval_flux(emin, emax, params, self.scale)
 
-    def eflux(self, emin, emax):
+    def eflux(self, emin, emax, params=None):
         """Evaluate the energy flux flux."""
-        return self.eval_eflux(emin, emax, self.params, self.scale)
+        params = self.params if params is None else params
+        return self.eval_eflux(emin, emax, params, self.scale)
 
 
 class PowerLaw(SpectralFunction):
