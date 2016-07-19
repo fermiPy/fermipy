@@ -5,16 +5,11 @@
 Utilities to fit dark matter spectra to castro data
 """
 
-import os
 import numpy as np
-import collections
 
-from scipy.integrate import quad
-from scipy.interpolate import UnivariateSpline
 import scipy.stats as stats
 import scipy.optimize as opt
 
-from fermipy import spectrum
 from fermipy import castro
 
 
@@ -178,20 +173,20 @@ class lognorm_prior(prior_functor):
     scale = 1.0 : This is the mean of the linear-space lognormal distribution.
                   The mean of the underlying normal distribution occurs at ln(scale)
     loc = 0     : This linearly shifts the distribution in x (DO NOT USE)
-    
+
     The convention is different for numpy.random.lognormal
     mean        : This is the mean of the underlying normal distribution (so mean = log(scale))
     sigma       : This is the standard deviation of the underlying normal distribution (so sigma = s)
-    
+
     For random sampling:
     numpy.random.lognormal(mean, sigma, size)
     mean        : This is the mean of the underlying normal distribution (so mean = exp(scale))
     sigma       : This is the standard deviation of the underlying normal distribution (so sigma = s)
-    
+
     scipy.stats.lognorm.rvs(s, scale, loc, size)
     s           : This is the standard deviation of the underlying normal distribution
     scale       : This is the mean of the generated random sample scale = exp(mean)
-    
+
     Remember, pdf in log space is
     plot( log(x), stats.lognorm(sigma,scale=exp(mean)).pdf(x)*x )
     """
@@ -240,8 +235,6 @@ class norm_prior(prior_functor):
     def __call__(self,x):
         """ Normal function from scipy """
         return stats.norm(loc=self._mu,scale=self._sigma).pdf(x)
-            
-
 
 
 def create_prior_functor(d):
@@ -252,7 +245,7 @@ def create_prior_functor(d):
     d     :  A dictionary, it must contain:
        d['functype'] : 'lognorm' or 'norm' 
        and all of the required parameters for the prior_functor of the desired type
-    
+
     """
     functype = d.pop('functype','lognorm')
     if functype == 'norm':
@@ -273,7 +266,7 @@ def create_prior_functor(d):
         return function_prior(d['mu'],d['sigma'],fn,lnfn)
     else:
         raise KeyError("Unrecognized prior_functor type %s"%functype)
-    
+
 
 class LnLFn_norm_prior(castro.LnLFn):
     """ A class to add a prior on normalization of a LnLFn object
@@ -282,7 +275,7 @@ class LnLFn_norm_prior(castro.LnLFn):
 
     where x is the parameter of interest, y is a nuisance parameter,
     and L_z is a likelihood constraining z = x*y.
-  
+
     This class can compute:
 
     The likelikhood:
@@ -307,15 +300,15 @@ class LnLFn_norm_prior(castro.LnLFn):
     """
     def __init__(self,lnlfn,nuis_pdf,ret_type='profile'):
         """ C'tor
-  
+
         Parameters
         ----------
         lnlx : '~fermipy.castro.LnLFn' 
            The object wrapping L(x)  
-        
+
         nuis_pdf : '~fermipy.stats_utils.prior_functor'
            The object wrapping L(y)
-           
+
         ret_type : str
            determine what is returned by __call__
            allowed values are 'straight','profile','marginal','posterior'        
@@ -342,7 +335,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         That will give interoplated values of the type determined by ret_type
         """ 
         return self._interp
-    
+
     def init_return(self,ret_type):
         """ Specify the return type
 
@@ -366,7 +359,7 @@ class LnLFn_norm_prior(castro.LnLFn):
             raise ValueError("Did not recognize return type %s"%ret_type)
         self._ret_type = ret_type
 
-        
+
     def clear_cached_values(self):
         """ Removes all of the cached values and interpolators
         """
@@ -389,14 +382,14 @@ class LnLFn_norm_prior(castro.LnLFn):
         ----------
         x : array_like
         Array of coordinates in the `x` parameter.
-        
+
         y : array_like       
         Array of coordinates in the `y` nuisance parameter.
         """        
         # This is the negative log-likelihood
         z = self._lnlfn.interp(x*y)        
         return np.exp(-z)*self._nuis_pdf(y)/self._nuis_norm
-    
+
 
     def loglike(self,x,y):
         """ Evaluate the 2-D log-likelihood in the x/y parameter space.
@@ -406,7 +399,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         ----------
         x : array_like
         Array of coordinates in the `x` parameter.
-        
+
         y : array_like       
         Array of coordinates in the `y` nuisance parameter.
         """        
@@ -429,7 +422,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         if self._prof_interp is None:
             # This calculates values and caches the spline 
             return self._profile_loglike(x)[1]            
-    
+
         x = np.array(x,ndmin=1)
         return self._prof_interp(x)
 
@@ -443,7 +436,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         if self._marg_interp is None:
             # This calculates values and caches the spline 
             return self._marginal_loglike(x)
-        
+
         x = np.array(x,ndmin=1)
         return self._marg_interp(x)
 
@@ -465,12 +458,12 @@ class LnLFn_norm_prior(castro.LnLFn):
         """ Internal function to calculate and cache the profile likelihood
         """
         x = np.array(x,ndmin=1)
-        
+
         z = []
         y = []
 
         for xtmp in x:
-            
+
             fn = lambda t: -self.loglike(xtmp,t)
             ytmp = opt.fmin(fn,1.0,disp=False)[0]
             ztmp = self.loglike(xtmp,ytmp)
@@ -513,8 +506,8 @@ class LnLFn_norm_prior(castro.LnLFn):
         yedge = self._nuis_pdf.marginalization_bins()
         yc = 0.5*(yedge[1:]+yedge[:-1])
         yw = yedge[1:]-yedge[:-1]
-        
-        
+
+
         like_array = self.like(x[:,np.newaxis],yc[np.newaxis,:])*yw 
         like_array /= like_array.sum()
 
@@ -522,7 +515,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         self._post_interp = castro.Interpolator(x,self._post)
         return self._post
 
-   
+
     def __call__(self,x):
         """ Evaluate the quantity specified by ret_type parameter
 
@@ -544,5 +537,5 @@ class LnLFn_norm_prior(castro.LnLFn):
 
 
 if __name__ == "__main__":
-    
+
     pass

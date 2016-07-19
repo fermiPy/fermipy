@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function, \
 import os
 import yaml
 import fermipy
-import fermipy.utils as utils
+from fermipy import utils
 
 
 def create_default_config(defaults):
@@ -43,7 +43,7 @@ def cast_config(config, defaults):
 
         if key not in defaults:
             continue
-        
+
         if isinstance(item, dict):
             cast_config(config[key], defaults[key])
         elif item is None:
@@ -59,12 +59,25 @@ def cast_config(config, defaults):
                 config[key] = item_type(config[key])
 
 
-def validate_config(config, defaults, block='root'):
+def validate_config(config, defaults, section=None):
     for key, item in config.items():
 
+        if (key in defaults and isinstance(defaults[key],dict)
+            and not isinstance(item,dict)):
+
+            type0 = type(defaults[key])
+            type1 = type(item)
+
+            raise Exception('Wrong type for configuration key: '
+                            '%s\ntype: %s required type: %s'%(key,type1,type0))
+
         if key not in defaults:
-            raise Exception('Invalid key in \'%s\' block of configuration: %s' %
-                            (block, key))
+
+            if section is None:
+                raise Exception('Invalid key in configuration: %s'%key)
+            else:
+                raise Exception('Invalid key in \'%s\' section of configuration: %s' %
+                                (section, key))
 
         if isinstance(item, dict):
             validate_config(config[key], defaults[key], key)
@@ -88,7 +101,7 @@ class Configurable(object):
             raise Exception('Invalid path to configuration file: %s'%config)
         else:
             raise Exception('Invalid config argument.')
-            
+
         self.configure(config_dict, **kwargs)
 
         if self.configdir and 'fileio' in self.config and \
@@ -117,7 +130,7 @@ class Configurable(object):
     @property
     def configdir(self):
         return self._configdir
-    
+
     def write_config(self, outfile):
         """Write the configuration dictionary to an output file."""
         utils.write_yaml(self.config, outfile, default_flow_style=False)
@@ -162,5 +175,7 @@ class ConfigManager(object):
         if not os.path.isfile(path):
             path = os.path.join(fermipy.PACKAGE_ROOT, 'config', path)
 
-        with open(path, 'r') as f: config = yaml.load(f)
+        with open(path, 'r') as f:
+            config = yaml.load(f)
+
         return config

@@ -7,23 +7,21 @@ import shutil
 import collections
 import logging
 import tempfile
+import filecmp
 
 import numpy as np
-import scipy
-import scipy.optimize
 
 # pyLikelihood needs to be imported before astropy to avoid CFITSIO
 # header error
 import pyLikelihood as pyLike
-import astropy.io.fits as pyfits
-from astropy.coordinates import SkyCoord
+from astropy.io import fits
 
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
-import fermipy.gtutils as gtutils
 import fermipy.fits_utils as fits_utils
+import fermipy.gtutils as gtutils
 import fermipy.srcmap_utils as srcmap_utils
 import fermipy.skymap as skymap
 import fermipy.plotting as plotting
@@ -32,13 +30,13 @@ import fermipy.sed as sed
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
-from fermipy.utils import merge_dict, tolist
+from fermipy.utils import merge_dict
 from fermipy.utils import create_hpx_disk_region_string
 from fermipy.skymap import Map, HpxMap
 from fermipy.hpx_utils import HPX
-from fermipy.roi_model import ROIModel, Model
-from fermipy.logger import Logger
-from fermipy.logger import logLevel as ll
+from fermipy.roi_model import ROIModel
+from fermipy.plotting import AnalysisPlotter
+from fermipy.logger import Logger, log_level
 
 # pylikelihood
 import GtApp
@@ -56,6 +54,8 @@ norm_parameters = {
     'PLSuperExpCutoff': ['Prefactor'],
     'ExpCutoff': ['Prefactor'],
     'FileFunction': ['Normalization'],
+    'DMFitFunction': ['sigmav'],
+    'Gaussian': ['Prefactor'],
 }
 
 shape_parameters = {
@@ -67,6 +67,8 @@ shape_parameters = {
     'PLSuperExpCutoff': ['Index1', 'Cutoff'],
     'ExpCutoff': ['Index1', 'Cutoff'],
     'FileFunction': [],
+    'DMFitFunction': ['mass'],
+    'Gaussian': ['Mean', 'Sigma'],
 }
 
 index_parameters = {
@@ -78,17 +80,273 @@ index_parameters = {
     'PLSuperExpCutoff': ['Index1', 'Index2'],
     'ExpCutoff': ['Index1'],
     'FileFunction': [],
+    'DMFitFunction': [],
+    'Gaussian': [],
 }
 
 
-def get_spectral_index(src,egy):
+class FitCache(object):
+
+    def __init__(self, like, params, tol, max_iter, init_lambda, use_reduced):
+
+        self._like = like
+        self._init_fitcache(params, tol, max_iter, init_lambda, use_reduced)
+
+    @property
+    def fitcache(self):
+        return self._fitcache
+
+    @property
+    def params(self):
+        return self._cache_params
+
+    def _init_fitcache(self, params, tol, max_iter, init_lambda, use_reduced):
+
+        free_params = [p for p in params if p['free'] is True]
+        free_norm_params = [p for p in free_params if p['is_norm'] is True]
+
+        for p in free_norm_params:
+            bounds = self._like[p['idx']].getBounds()
+            self._like[p['idx']].setBounds(*utils.update_bounds(1.0, bounds))
+            self._like[p['idx']] = 1.0
+        self._like.syncSrcParams()
+
+        self._fs_wrapper = pyLike.FitScanModelWrapper_Summed(
+            self._like.logLike)
+        self._fitcache = pyLike.FitScanCache(self._fs_wrapper,
+                                             str('fitscan_testsource'),
+                                             tol, max_iter, init_lambda,
+                                             use_reduced,False,True)
+
+        for p in free_norm_params:
+            self._like[p['idx']] = p['value']
+            self._like[p['idx']].setBounds(*p['bounds'])
+        self._like.syncSrcParams()
+
+        self._all_params = gtutils.get_params_dict(self._like)
+        self._params = params
+        self._cache_params = free_norm_params
+        self._cache_param_idxs = [p['idx'] for p in self._cache_params]
+        npar = len(self.params)
+        self._prior_vals = np.ones(npar)
+        self._prior_errs = np.ones(npar)
+        self._prior_cov = np.ones((npar, npar))
+        self._has_prior = np.array([False] * npar)
+
+    def get_pars(self):
+        return get_fitcache_pars(self.fitcache)
+
+    def check_params(self, params):
+
+        if len(params) != len(self._params):
+            return False
+
+        free_params = [p for p in params if p['free'] is True]
+        free_norm_params = [p for p in free_params if p['is_norm'] is True]
+        cache_src_names = np.array(self.fitcache.templateSourceNames())
+
+        for i, p in enumerate(free_norm_params):
+            if p['idx'] not in self._cache_param_idxs:
+                return False
+
+        # Check if any fixed parameters changed
+        for i, p in enumerate(self._params):
+
+            if p['free']:
+                continue
+
+            if p['src_name'] in cache_src_names:
+                continue
+
+            if not np.isclose(p['value'], params[i]['value']):
+                return False
+
+            if not np.isclose(p['scale'], params[i]['scale']):
+                return False
+
+        return True
+
+    def update_source(self, name):
+
+        src_names = self.fitcache.templateSourceNames()
+        if not name in src_names:
+            return
+
+        self.fitcache.updateTemplateForSource(str(name))
+
+    def refactor(self):
+
+        npar = len(self.params)
+        self._free_pars = [True] * npar
+        par_scales = np.ones(npar)
+        ref_vals = np.array(self.fitcache.refValues())
+        cache_src_names = np.array(self.fitcache.templateSourceNames())
+
+        update_sources = []
+        all_params = gtutils.get_params_dict(self._like)
+
+        for src_name in cache_src_names:
+
+            pars0 = all_params[src_name]
+            pars1 = self._all_params[src_name]
+            for i, (p0, p1) in enumerate(zip(pars0, pars1)):
+
+                if p0['is_norm']:
+                    continue
+
+                if (np.isclose(p0['value'], p1['value']) and
+                        np.isclose(p0['scale'], p1['scale'])):
+                    continue
+
+                update_sources += [src_name]
+
+        for i, p in enumerate(self.params):
+            self._free_pars[i] = self._like[p['idx']].isFree()
+            par_scales[i] = self._like[p['idx']].getValue() / ref_vals[i]
+
+        for src_name in update_sources:
+            norm_val = self._like.normPar(src_name).getValue()
+            par_name = self._like.normPar(src_name).getName()
+            bounds = self._like.normPar(src_name).getBounds()
+            idx = self._like.par_index(src_name, par_name)
+            self._like[idx].setBounds(*utils.update_bounds(1.0, bounds))
+            self._like[idx] = 1.0
+            self.fitcache.updateTemplateForSource(str(src_name))
+            self._like[idx] = norm_val
+            self._like[idx].setBounds(*bounds)
+
+        self._all_params = all_params
+        self.fitcache.refactorModel(self._free_pars, par_scales, False)
+
+        # Set priors
+        self._set_priors_from_like()
+        if np.any(self._has_prior):
+            self._build_priors()
+
+    def update(self, params, tol, max_iter, init_lambda, use_reduced):
+
+        try:
+            self.fitcache.update()
+            self.fitcache.setInitLambda(init_lambda)
+            self.fitcache.setTolerance(tol)
+            self.fitcache.setMaxIter(max_iter)
+        except Exception:
+            if not self.check_params(params):
+                self._init_fitcache(params, tol, max_iter,
+                                    init_lambda, use_reduced)
+            self.refactor()
+
+    def _set_priors_from_like(self):
+
+        prior_vals, prior_errs, has_prior = get_priors(self._like)
+        if not np.any(has_prior):
+            self._has_prior.fill(False)
+            return
+
+        for i, p in enumerate(self.params):
+            self._prior_vals[i] = prior_vals[p['idx']]
+            self._prior_errs[i] = prior_errs[p['idx']]
+            self._has_prior[i] = True  # has_prior[p['idx']]
+
+            if not has_prior[p['idx']]:
+                self._prior_errs[i] = 1E3
+
+        self._prior_cov = np.diag(np.array(self._prior_errs)**2)
+
+    def set_priors(self, vals, err):
+
+        self._prior_vals = np.array(vals, ndmin=1)
+        self._prior_errs = err
+        self._prior_cov = np.diag(np.array(err)**2)
+        self._has_prior = np.array([True] * len(vals))
+
+    def _build_priors(self):
+
+        free_pars = np.array(self._free_pars)
+        ref_vals = np.array(self.fitcache.refValues())
+        pars = self._prior_vals / ref_vals
+        cov = np.ravel(self._prior_cov / np.outer(ref_vals, ref_vals))
+
+        pars = pars[free_pars]
+        cov = cov[np.ravel(np.outer(free_pars, free_pars))]
+        has_prior = self._has_prior[free_pars]
+
+        self.fitcache.buildPriorsFromExternal(pars, cov, has_prior.tolist())
+
+    def fit(self, verbose=0):
+
+        try:
+            return self.fitcache.fitCurrent(3, verbose)
+        except Exception:
+            return self.fitcache.fitCurrent(bool(np.any(self._has_prior)),
+                                            False, verbose)
+
+
+def get_priors(like):
+    """Extract priors from a likelihood object."""
+
+    npar = len(like.params())
+
+    vals = np.ones(npar)
+    errs = np.ones(npar)
+    has_prior = np.array([False] * npar)
+
+    for i, p in enumerate(like.params()):
+
+        prior = like[i].log_prior()
+
+        if prior is None:
+            continue
+
+        par_names = pyLike.StringVector()
+        prior.getParamNames(par_names)
+
+        if not 'Mean' in par_names:
+            raise Exception('Failed to find Mean in prior parameters.')
+
+        if not 'Sigma' in par_names:
+            raise Exception('Failed to find Sigma in prior parameters.')
+
+        for t in par_names:
+
+            if t == 'Mean':
+                vals[i] = prior.parameter(t).getValue()
+
+            if t == 'Sigma':
+                errs[i] = prior.parameter(t).getValue()
+
+        has_prior[i] = True
+
+    return vals, errs, has_prior
+
+
+def get_fitcache_pars(fitcache):
+
+    pars = pyLike.FloatVector()
+    cov = pyLike.FloatVector()
+
+    pyLike.Vector_Hep_to_Stl(fitcache.currentPars(), pars)
+    pyLike.Matrix_Hep_to_Stl(fitcache.currentCov(), cov)
+
+    pars = np.array(pars)
+    cov = np.array(cov)
+
+    npar = len(pars)
+
+    cov = cov.reshape((npar, npar))
+    err = np.sqrt(np.diag(cov))
+
+    return pars, err, cov
+
+
+def get_spectral_index(src, egy):
     """Compute the local spectral index of a source."""
     delta = 1E-5
-    f0 = src.spectrum()(pyLike.dArg(egy*(1-delta)))
-    f1 = src.spectrum()(pyLike.dArg(egy*(1+delta)))
+    f0 = src.spectrum()(pyLike.dArg(egy * (1 - delta)))
+    f1 = src.spectrum()(pyLike.dArg(egy * (1 + delta)))
 
-    if f0 > 0 and f1 > 0:    
-        gamma = np.log10(f0 / f1) / np.log10((1-delta)/(1+delta))
+    if f0 > 0 and f1 > 0:
+        gamma = np.log10(f0 / f1) / np.log10((1 - delta) / (1 + delta))
     else:
         gamma = np.nan
 
@@ -98,7 +356,7 @@ def get_spectral_index(src,egy):
 def run_gtapp(appname, logger, kw):
     logger.info('Running %s', appname)
     filter_dict(kw, None)
-    kw = utils.unicode_to_str(kw)    
+    kw = utils.unicode_to_str(kw)
     gtapp = GtApp.GtApp(str(appname))
 
     for k, v in kw.items():
@@ -118,8 +376,8 @@ def filter_dict(d, val):
         if v == val:
             del d[k]
 
-            
-class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
+
+class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
                  SourceFinder):
     """High-level analysis interface that manages a set of analysis
@@ -154,9 +412,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Setup directories
         self._rootdir = os.getcwd()
-        self._savedir = None
-        validate = kwargs.pop('validate',True)
-        
+        self._outdir = None
+        validate = kwargs.pop('validate', True)
+
         super(GTAnalysis, self).__init__(config, validate=validate,
                                          **kwargs)
 
@@ -167,48 +425,48 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Destination directory for output data products
         if self.config['fileio']['outdir'] is not None:
-            self._savedir = os.path.join(self._rootdir,
-                                         self.config['fileio']['outdir'])
-            utils.mkdir(self._savedir)
+            self._outdir = os.path.join(self._rootdir,
+                                        self.config['fileio']['outdir'])
+            utils.mkdir(self._outdir)
         else:
             raise Exception('Save directory not defined.')
 
-        # put pfiles into savedir
-        os.environ['PFILES'] = \
-            self._savedir + ';' + os.environ['PFILES'].split(';')[-1]
-
         if self.config['fileio']['logfile'] is None:
-            self._config['fileio']['logfile'] = os.path.join(self._savedir,
-                                                             'fermipy')
+            self.config['fileio']['logfile'] = os.path.join(self.outdir,
+                                                            'fermipy')
 
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
-                                 ll(self.config['logging']['verbosity']))
+                                 log_level(self.config['logging']
+                                           ['verbosity']))
 
-        self.logger.info('\n' + '-' * 80 + '\n' + "This is fermipy version {}.".
+        self.logger.info('\n' + '-' * 80 + '\n' +
+                         "This is fermipy version {}.".
                          format(fermipy.__version__))
         self.print_config(self.logger, loglevel=logging.DEBUG)
 
         # Working directory (can be the same as savedir)
         if self.config['fileio']['usescratch']:
-            self._config['fileio']['workdir'] = tempfile.mkdtemp(
+            self.config['fileio']['workdir'] = tempfile.mkdtemp(
                 prefix=os.environ['USER'] + '.',
                 dir=self.config['fileio']['scratchdir'])
-            self.logger.info(
-                'Created working directory: %s', self.config['fileio'][
-                    'workdir'])
-            self.stage_input()
+            self.logger.info('Created working directory: %s',
+                             self.config['fileio']['workdir'])
         else:
-            self._config['fileio']['workdir'] = self._savedir
+            self._config['fileio']['workdir'] = self._outdir
 
         if 'FERMIPY_WORKDIR' not in os.environ:
             os.environ['FERMIPY_WORKDIR'] = self.config['fileio']['workdir']
 
+        # put pfiles into savedir
+        os.environ['PFILES'] = \
+            self.workdir + ';' + os.environ['PFILES'].split(';')[-1]
+
         # Create Plotter
-        self._plotter = plotting.AnalysisPlotter(self.config['plotting'],
-                                                 fileio=self.config['fileio'],
-                                                 logging=self.config['logging'])
-            
+        self._plotter = AnalysisPlotter(self.config['plotting'],
+                                        fileio=self.config['fileio'],
+                                        logging=self.config['logging'])
+
         # Setup the ROI definition
         self._roi = ROIModel.create(self.config['selection'],
                                     self.config['model'],
@@ -229,7 +487,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             for s in c.roi.sources:
                 if s.name not in self.roi:
                     self.roi.load_source(s)
-            
+
         ebin_edges = np.zeros(0)
         roiwidths = np.zeros(0)
         binsz = np.zeros(0)
@@ -242,7 +500,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._enumbins = len(self._ebin_edges) - 1
         self._loge_bounds = np.array([self._ebin_edges[0],
                                       self._ebin_edges[-1]])
-        
+
         self._roi_model = {
             'loglike': np.nan,
             'npred': 0.0,
@@ -271,38 +529,50 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if self.projtype == 'HPX':
             self._hpx_region = create_hpx_disk_region_string(self._roi.skydir,
-                                                             coordsys=
-                                                             self.config[
+                                                             coordsys=self.config[
                                                                  'binning'][
                                                                  'coordsys'],
                                                              radius=0.5 *
-                                                                    self.config[
-                                                                        'binning'][
-                                                                        'roiwidth'])
+                                                             self.config[
+                                                                 'binning'][
+                                                                 'roiwidth'])
             self._proj = HPX.create_hpx(-1,
-                                    self.config['binning'][
-                                        'hpx_ordering_scheme'] == "NESTED",
-                                    self.config['binning']['coordsys'],
-                                    self.config['binning']['hpx_order'],
-                                    self._hpx_region,
-                                    self.energies)
+                                        self.config['binning'][
+                                            'hpx_ordering_scheme'] == "NESTED",
+                                        self.config['binning']['coordsys'],
+                                        self.config['binning']['hpx_order'],
+                                        self._hpx_region,
+                                        self.energies)
 
         else:
             self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
-                                      coordsys=self.config['binning'][
-                                          'coordsys'],
-                                      projection=self.config['binning']['proj'],
-                                      cdelt=self._binsz,
-                                      crpix=1.0 + 0.5 * (self._npix - 1),
-                                      naxis=2)
+                                                coordsys=self.config['binning'][
+                                                    'coordsys'],
+                                                projection=self.config[
+                                                    'binning']['proj'],
+                                                cdelt=self._binsz,
+                                                crpix=1.0 + 0.5 *
+                                                (self._npix - 1),
+                                                naxis=2)
 
             self._proj = wcs_utils.create_wcs(self._roi.skydir,
-                                    coordsys=self.config['binning']['coordsys'],
-                                    projection=self.config['binning']['proj'],
-                                    cdelt=self._binsz,
-                                    crpix=1.0 + 0.5 * (self._npix - 1),
-                                    naxis=3,
-                                    energies=self.energies)
+                                              coordsys=self.config[
+                                                  'binning']['coordsys'],
+                                              projection=self.config[
+                                                  'binning']['proj'],
+                                              cdelt=self._binsz,
+                                              crpix=1.0 + 0.5 *
+                                              (self._npix - 1),
+                                              naxis=3,
+                                              energies=self.energies)
+
+            # Update projection of ROI object
+            proj = wcs_utils.WCSProj(self._proj,
+                                     np.array([self.npix, self.npix]))
+            self._roi.set_projection(proj)
+
+        if self.config['fileio']['usescratch']:
+            self.stage_input()
 
     def __del__(self):
         self.stage_output()
@@ -316,8 +586,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     @property
     def outdir(self):
         """Return the analysis output directory."""
-        return self._savedir
-    
+        return self._outdir
+
     @property
     def roi(self):
         """Return the ROI object."""
@@ -342,7 +612,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def log_energies(self):
         """Return the energy bin edges in log10(E/MeV)."""
         return self._ebin_edges
-    
+
     @property
     def enumbins(self):
         """Return the number of energy bins."""
@@ -357,7 +627,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def loge_bounds(self):
         """Current analysis energy bounds in log10(E/MeV)."""
         return self._loge_bounds
-    
+
     @property
     def projtype(self):
         """Return the type of projection to use"""
@@ -431,16 +701,31 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for c in self.components:
             c._update_srcmap(name, skydir, spatial_model, spatial_width)
 
-    def reload_source(self, name):
+        if self._fitcache is not None:
+            self._fitcache.update_source(name)
+
+    def reload_source(self, name, init_source=True):
         """Delete and reload a source in the model.  This will refresh
         the spatial model of this source to the one defined in the XML
         model."""
-        
+
         for c in self.components:
             c.reload_source(name)
 
-        self._init_source(name)
-            
+        if init_source:
+            self._init_source(name)
+
+        self.like.model = self.like.components[0].model
+
+    def reload_sources(self, names, init_source=True):
+
+        for c in self.components:
+            c.reload_sources(names)
+
+        if init_source:
+            for name in names:
+                self._init_source(name)
+
         self.like.model = self.like.components[0].model
 
     def set_source_spectrum(self, name, spectrum_type='PowerLaw',
@@ -464,30 +749,30 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         spectrum_pars : dict
            Dictionary of spectral parameters (optional).
 
-        update_source : bool        
+        update_source : bool
            Recompute all source characteristics (flux, TS, NPred)
            using the new spectral model of the source.
-           
+
         """
         name = self.roi.get_source_by_name(name).name
-        
+
         if spectrum_type == 'FileFunction':
-            self._create_filefunction(name,spectrum_pars)
+            self._create_filefunction(name, spectrum_pars)
         else:
             fn = gtutils.create_spectrum_from_dict(spectrum_type,
                                                    spectrum_pars)
-            self.like.setSpectrum(str(name),fn)
+            self.like.setSpectrum(str(name), fn)
 
         # Get parameters
         src = self.components[0].like.logLike.getSource(str(name))
-        pars_dict = gtutils.get_pars_dict_from_source(src)
-        
+        pars_dict = gtutils.get_function_pars_dict(src.spectrum())
+
         self.roi[name].set_spectral_pars(pars_dict)
         self.roi[name]['SpectrumType'] = spectrum_type
         for c in self.components:
             c.roi[name].set_spectral_pars(pars_dict)
             c.roi[name]['SpectrumType'] = spectrum_type
-        
+
         if update_source:
             self.update_source(name)
 
@@ -499,29 +784,29 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         ----------
         name : str
            Source name.
-        
+
         dfde : `~numpy.ndarray`
            Array of differential flux values (cm^{-2} s^{-1} MeV^{-1}).
         """
         name = self.roi.get_source_by_name(name).name
-        
+
         if self.roi[name]['SpectrumType'] != 'FileFunction':
-            msg = 'Wrong spectral type: %s'%self.roi[name]['SpectrumType']
+            msg = 'Wrong spectral type: %s' % self.roi[name]['SpectrumType']
             self.logger.error(msg)
             raise Exception(msg)
 
         xy = self.get_source_dfde(name)
 
         if len(dfde) != len(xy[0]):
-            msg = 'Wrong length for dfde array: %i'%len(dfde)
+            msg = 'Wrong length for dfde array: %i' % len(dfde)
             self.logger.error(msg)
             raise Exception(msg)
-        
+
         for c in self.components:
             src = c.like.logLike.getSource(str(name))
             spectrum = src.spectrum()
             file_function = pyLike.FileFunction_cast(spectrum)
-            file_function.setSpectrum(10**xy[0],dfde)
+            file_function.setSpectrum(10**xy[0], dfde)
 
         if update_source:
             self.update_source(name)
@@ -533,52 +818,53 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         Returns
         -------
-        loge : `~numpy.ndarray`        
+        loge : `~numpy.ndarray`
            Array of energies at which the differential flux is
            evaluated (log10(E/MeV)).
-        
-        dfde : `~numpy.ndarray`        
+
+        dfde : `~numpy.ndarray`
            Array of differential flux values (cm^{-2} s^{-1} MeV^{-1})
            evaluated at energies in ``loge``.
-        
+
         """
         name = self.roi.get_source_by_name(name).name
 
         if self.roi[name]['SpectrumType'] != 'FileFunction':
-        
+
             src = self.components[0].like.logLike.getSource(str(name))
             spectrum = src.spectrum()
             file_function = pyLike.FileFunction_cast(spectrum)
             loge = file_function.log_energy()
             logdfde = file_function.log_dnde()
-            
+
             loge = np.log10(np.exp(loge))
             dfde = np.exp(logdfde)
-        
+
             return loge, dfde
 
         else:
-            ebinsz = (self.log_energies[-1]-
-                      self.log_energies[0])/self.enumbins
-            loge = utils.extend_array(self.log_energies,ebinsz,0.5,6.5)
+            ebinsz = (self.log_energies[-1] -
+                      self.log_energies[0]) / self.enumbins
+            loge = utils.extend_array(self.log_energies, ebinsz, 0.5, 6.5)
 
             dfde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
                              for egy in loge])
 
             return loge, dfde
-        
-    def _create_filefunction(self,name,spectrum_pars):
+
+    def _create_filefunction(self, name, spectrum_pars):
         """Replace the spectrum of an existing source with a
         FileFunction."""
-        
+
         spectrum_pars = {} if spectrum_pars is None else spectrum_pars
 
         if 'loge' in spectrum_pars:
             loge = spectrum_pars.get('loge')
-        else:            
-            ebinsz = (self.log_energies[-1]-self.log_energies[0])/self.enumbins
-            loge = utils.extend_array(self.log_energies,ebinsz,0.5,6.5)
-            
+        else:
+            ebinsz = (self.log_energies[-1] -
+                      self.log_energies[0]) / self.enumbins
+            loge = utils.extend_array(self.log_energies, ebinsz, 0.5, 6.5)
+
         # Get the values
         dfde = np.zeros(len(loge))
         if 'dfde' in spectrum_pars:
@@ -586,28 +872,27 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         else:
             dfde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
                              for egy in loge])
-            
+
         filename = \
             os.path.join(self.workdir,
-                         '%s_filespectrum.txt'%(name.lower().replace(' ','_')))
-            
-        # Create file spectrum txt file
-        np.savetxt(filename,np.vstack((10**loge,dfde)).T)
-#                   np.stack((10**loge,dfde),axis=1))
-        self.like.setSpectrum(name, 'FileFunction')
+                         '%s_filespectrum.txt' % (name.lower().replace(' ', '_')))
 
-        self.roi[name]['filefunction'] = filename
+        # Create file spectrum txt file
+        np.savetxt(filename, np.vstack((10**loge, dfde)).T)
+        self.like.setSpectrum(name, str('FileFunction'))
+
+        self.roi[name]['Spectrum_Filename'] = filename
         # Update
         for c in self.components:
             src = c.like.logLike.getSource(str(name))
             spectrum = src.spectrum()
 
-            spectrum.getParam('Normalization').setBounds(1E-3,1E3)
-            
+            spectrum.getParam(str('Normalization')).setBounds(1E-3, 1E3)
+
             file_function = pyLike.FileFunction_cast(spectrum)
-            file_function.readFunction(filename)
-            c.roi[name]['filefunction'] = filename 
-            
+            file_function.readFunction(str(filename))
+            c.roi[name]['Spectrum_Filename'] = filename
+
     def _create_component_configs(self):
         configs = []
 
@@ -653,43 +938,78 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def stage_output(self):
         """Copy data products to final output directory."""
 
-        extensions = ['.xml', '.par', '.yaml', '.png', '.pdf', '.npy']
-        if self.config['fileio']['savefits']:
-            extensions += ['.fits', '.fit']
-
-        if self.workdir == self._savedir:
+        if self.workdir == self.outdir:
             return
-        elif os.path.isdir(self.workdir):
-            self.logger.info('Staging files to %s', self._savedir)
-            for f in os.listdir(self.workdir):
-
-                if not os.path.splitext(f)[1] in extensions: continue
-
-                self.logger.info('Copying ' + f)
-                shutil.copy(os.path.join(self.workdir, f),
-                            self._savedir)
-
-        else:
+        elif not os.path.isdir(self.workdir):
             self.logger.error('Working directory does not exist.')
+            return
+
+        regex = self.config['fileio']['outdir_regex']
+        savefits = self.config['fileio']['savefits']
+        files = os.listdir(self.workdir)
+        self.logger.info('Staging files to %s', self.outdir)
+
+        fitsfiles = []
+        for c in self.components:
+            for f in c.files.values():
+                fitsfiles += [os.path.basename(f)]
+
+        for f in files:
+
+            wpath = os.path.join(self.workdir, f)
+            opath = os.path.join(self.outdir, f)
+
+            if not utils.match_regex_list(regex, os.path.basename(f)):
+                continue
+            if os.path.isfile(opath) and filecmp.cmp(wpath, opath, False):
+                continue
+            if not savefits and f in fitsfiles:
+                continue
+
+            self.logger.debug('Copying ' + f)
+            shutil.copy(wpath, self.outdir)
+
+        self.logger.info('Finished.')
 
     def stage_input(self):
-        """Copy data products to intermediate working directory."""
+        """Copy input files to working directory."""
 
-        extensions = ['.fits', '.fit', '.xml', '.npy']
-
-        if self.workdir == self._savedir:
+        if self.workdir == self.outdir:
             return
-        elif os.path.isdir(self.workdir):
-            self.logger.info('Staging files to %s', self.workdir)
-            #            for f in glob.glob(os.path.join(self._savedir,'*')):
-            for f in os.listdir(self._savedir):
-                if not os.path.splitext(f)[1] in extensions:
-                    continue
-                self.logger.debug('Copying ' + f)
-                shutil.copy(os.path.join(self._savedir, f),
-                            self.workdir)
-        else:
+        elif not os.path.isdir(self.workdir):
             self.logger.error('Working directory does not exist.')
+            return
+
+        self.logger.info('Staging files to %s', self.workdir)
+
+        files = [os.path.join(self.outdir, f)
+                 for f in os.listdir(self.outdir)]
+
+        regex = copy.deepcopy(self.config['fileio']['workdir_regex'])
+
+        for f in files:
+
+            if not os.path.isfile(f):
+                continue
+            if not utils.match_regex_list(regex, os.path.basename(f)):
+                continue
+
+            self.logger.debug('Copying ' + os.path.basename(f))
+            shutil.copy(f, self.workdir)
+
+        for c in self.components:
+            for f in c.files.values():
+
+                wpath = os.path.join(self.workdir, os.path.basename(f))
+                opath = os.path.join(self.outdir, os.path.basename(f))
+
+                if os.path.isfile(wpath):
+                    continue
+                elif os.path.isfile(opath):
+                    self.logger.debug('Copying ' + os.path.basename(f))
+                    shutil.copy(opath, self.workdir)
+
+        self.logger.info('Finished.')
 
     def setup(self, init_sources=True, overwrite=False):
         """Run pre-processing for each analysis component and
@@ -701,7 +1021,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         ----------
 
         init_sources : bool
-        
+
            Choose whether to compute properties (flux, TS, etc.) for
            individual sources.
 
@@ -726,12 +1046,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._ccube_file = os.path.join(self.workdir,
                                         'ccube.fits')
 
+        self._fitcache = None
         self._init_roi_model()
 
         if init_sources:
 
             self.logger.info('Initializing source properties')
             for name in self.like.sourceNames():
+                self.logger.debug('Initializing source %s', name)
                 self._init_source(name)
             self._update_roi()
 
@@ -742,10 +1064,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for c in self.components:
             c._create_binned_analysis(srcmdl)
             self._like.addComponent(c.like)
-            
+
         self.like.model = self.like.components[0].model
+        self._fitcache = None
         self._init_roi_model()
-        
+
     def _init_roi_model(self):
 
         rm = self._roi_model
@@ -776,7 +1099,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self._coadd_maps(cmaps, shape, rm)
 
     def _init_source(self, name):
-        
+
         src = self.roi.get_source_by_name(name)
         src.update_data({'sed': None,
                          'extension': None,
@@ -786,12 +1109,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if 'CLASS1' in src['catalog']:
             src['class'] = src['catalog']['CLASS1'].strip()
 
-        src.update_data(self.get_src_model(name, False))
+        src.update_data(self.get_src_model(name, True))
         return src
 
     def cleanup(self):
 
-        if self.workdir == self._savedir:
+        if self.workdir == self.outdir:
             return
         elif os.path.isdir(self.workdir):
             self.logger.info('Deleting working directory: ' +
@@ -839,19 +1162,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         else:
             imin = int(utils.val_to_edge(self.log_energies, logemin)[0])
             logemin = self.log_energies[imin]
-            
+
         if logemax is None:
             logemax = self.log_energies[-1]
         else:
             imax = int(utils.val_to_edge(self.log_energies, logemax)[0])
             logemax = self.log_energies[imax]
 
-        loge_bounds = np.array([logemin,logemax])
-        
-        if np.allclose(loge_bounds,self._loge_bounds):
-            return self._loge_bounds
-        
-        self._loge_bounds = np.array([logemin,logemax])
+        self._loge_bounds = np.array([logemin, logemax])
         self._roi_model['loge_bounds'] = np.copy(self.loge_bounds)
         for c in self.components:
             c.set_energy_range(logemin, logemax)
@@ -874,14 +1192,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         sources, or for the sum of all sources in the ROI.  The
         exclude parameter can be used to exclude one or more
         components when generating the model map.
-        
+
         Parameters
         ----------
         name : str or list of str
 
            Parameter controlling the set of sources for which the
            model counts map will be calculated.  If name=None the
-           model map will be generated for all sources in the ROI. 
+           model map will be generated for all sources in the ROI.
 
         exclude : str or list of str
 
@@ -895,7 +1213,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
 
         maps = [c.model_counts_map(name, exclude) for c in self.components]
-       
+
         if self.projtype == "HPX":
             shape = (self.enumbins, self._proj.npix)
             cmap = skymap.make_coadd_map(maps, self._proj, shape)
@@ -942,7 +1260,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 cs += [c.model_counts_spectrum(name, logemin, logemax)]
             return cs
 
-    def get_sources(self, cuts=None, distance=None,
+    def get_sources(self, cuts=None, distance=None, skydir=None,
                     minmax_ts=None, minmax_npred=None,
                     square=False):
         """Retrieve list of sources in the ROI satisfying the given
@@ -950,15 +1268,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         Returns
         -------
-
-        srcs : list 
+        srcs : list
             A list of `~fermipy.roi_model.Model` objects.
 
         """
 
-        return self.roi.get_sources(cuts,distance,
-                                    minmax_ts,minmax_npred,square)
-
+        coordsys = self.config['binning']['coordsys']
+        return self.roi.get_sources(skydir, distance, cuts,
+                                    minmax_ts, minmax_npred, square,
+                                    coordsys=coordsys)
 
     def add_source(self, name, src_dict, free=False, init_source=True,
                    save_source_maps=True, **kwargs):
@@ -985,11 +1303,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.logger.error(msg)
             raise Exception(msg)
 
-        loglevel=kwargs.pop('loglevel',logging.INFO)
-        
-        self.logger.log(loglevel,'Adding source ' + name)
+        loglevel = kwargs.pop('loglevel', logging.INFO)
 
-        src = self.roi.create_source(name,src_dict)
+        self.logger.log(loglevel, 'Adding source ' + name)
+
+        src = self.roi.create_source(name, src_dict)
 
         for c in self.components:
             c.add_source(name, src_dict, free=True,
@@ -1004,19 +1322,21 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         self.like.syncSrcParams(str(name))
         self.like.model = self.like.components[0].model
-        self.free_norm(name,free)
+        self.free_norm(name, free, loglevel=logging.DEBUG)
 
         if init_source:
             self._init_source(name)
             self._update_roi()
 
+        if self._fitcache is not None:
+            self._fitcache.update_source(name)
 
     def add_sources_from_roi(self, names, roi, free=False, **kwargs):
         """Add multiple sources to the current ROI model copied from another ROI model.
 
         Parameters
         ----------
-        
+
         names : list
             List of str source names to add.
 
@@ -1031,27 +1351,25 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for name in names:
             self.add_source(name, roi[name].data, free=free, **kwargs)
 
-
     def delete_source(self, name, save_template=True, delete_source_map=False,
                       build_fixed_wts=True, **kwargs):
         """Delete a source from the ROI model.
 
         Parameters
         ----------
-
         name : str
             Source name.
 
-        save_template : bool        
+        save_template : bool
             Delete the SpatialMap FITS template associated with this
             source.
 
-        delete_source_map : bool        
+        delete_source_map : bool
             Delete the source map associated with this source from the
             source maps file.
-            
+
         Returns
-        -------    
+        -------
         src : `~fermipy.roi_model.Model`
             The deleted source object.
 
@@ -1061,14 +1379,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.logger.error('No source with name: %s', name)
             return
 
-        loglevel=kwargs.pop('loglevel',logging.INFO)
-        
-        self.logger.log(loglevel,'Deleting source %s', name)
+        loglevel = kwargs.pop('loglevel', logging.INFO)
+
+        self.logger.log(loglevel, 'Deleting source %s', name)
 
         # STs require a source to be freed before deletion
         normPar = self.like.normPar(name)
         if not normPar.isFree():
-            self.free_norm(name)
+            self.free_norm(name, loglevel=logging.DEBUG)
 
         for c in self.components:
             c.delete_source(name, save_template=save_template,
@@ -1080,40 +1398,69 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.like.model = self.like.components[0].model
         self._update_roi()
         return src
-    
+
     def delete_sources(self, cuts=None, distance=None,
-                       minmax_ts=None, minmax_npred=None,
+                       skydir=None, minmax_ts=None, minmax_npred=None,
                        square=False, exclude_diffuse=True):
         """Delete sources in the ROI model satisfying the given
         selection criteria.
 
+        cuts : dict
+            Dictionary of [min,max] selections on source properties.
+
+        distance : float
+            Cut on angular distance from ``skydir``.  If None then no
+            selection will be applied.
+
+        skydir : `~astropy.coordinates.SkyCoord`
+            Reference sky coordinate for ``distance`` selection.  If
+            None then the distance selection will be applied with
+            respect to the ROI center.
+
+        minmax_ts : list
+            Free sources that have TS in the range [min,max].  If
+            either min or max are None then only a lower (upper) bound
+            will be applied.  If this parameter is none no selection
+            will be applied.
+
+        minmax_npred : list
+            Free sources that have npred in the range [min,max].  If
+            either min or max are None then only a lower (upper) bound
+            will be applied.  If this parameter is none no selection
+            will be applied.
+
+        square : bool
+            Switch between applying a circular or square (ROI-like)
+            selection on the maximum projected distance from the ROI
+            center.
+
         Returns
         -------
 
-        srcs : list 
+        srcs : list
             A list of `~fermipy.roi_model.Model` objects.
 
         """
 
-        srcs = self.roi.get_sources(cuts, distance,
-                                    minmax_ts,minmax_npred,
-                                    square=square,exclude_diffuse=exclude_diffuse,
+        srcs = self.roi.get_sources(skydir=skydir, distance=distance, cuts=cuts,
+                                    minmax_ts=minmax_ts, minmax_npred=minmax_npred,
+                                    square=square, exclude_diffuse=exclude_diffuse,
                                     coordsys=self.config['binning']['coordsys'])
 
         for s in srcs:
-            self.delete_source(s.name,build_fixed_wts=False)
+            self.delete_source(s.name, build_fixed_wts=False)
 
         # Build fixed model weights in one pass
         for c in self.components:
             c.like.logLike.buildFixedModelWts()
-            
-        self._update_roi()            
-        
+
+        self._update_roi()
+
         return srcs
 
     def free_sources(self, free=True, pars=None, cuts=None,
-                     distance=None, minmax_ts=None, minmax_npred=None, 
-                     square=False, exclude_diffuse=False):
+                     distance=None, skydir=None, minmax_ts=None, minmax_npred=None,
+                     square=False, exclude_diffuse=False, **kwargs):
         """Free or fix sources in the ROI model satisfying the given
         selection.  When multiple selections are defined, the selected
         sources will be those satisfying the logical AND of all
@@ -1123,12 +1470,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         Parameters
         ----------
 
-        free : bool        
+        free : bool
             Choose whether to free (free=True) or fix (free=False)
             source parameters.
 
-        pars : list        
-            Set a list of parameters to be freed/fixed for this
+        pars : list
+            Set a list of parameters to be freed/fixed for each
             source.  If none then all source parameters will be
             freed/fixed.  If pars='norm' then only normalization
             parameters will be freed.
@@ -1136,9 +1483,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         cuts : dict
             Dictionary of [min,max] selections on source properties.
 
-        distance : float        
-            Distance out to which sources should be freed or fixed.
-            If this parameter is none no selection will be applied.
+        distance : float
+            Cut on angular distance from ``skydir``.  If None then no
+            selection will be applied.
+
+        skydir : `~astropy.coordinates.SkyCoord`
+            Reference sky coordinate for ``distance`` selection.  If
+            None then the distance selection will be applied with
+            respect to the ROI center.
 
         minmax_ts : list
             Free sources that have TS in the range [min,max].  If
@@ -1146,12 +1498,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             will be applied.  If this parameter is none no selection
             will be applied.
 
-        minmax_npred : list        
+        minmax_npred : list
             Free sources that have npred in the range [min,max].  If
             either min or max are None then only a lower (upper) bound
             will be applied.  If this parameter is none no selection
             will be applied.
-                    
+
         square : bool
             Switch between applying a circular or square (ROI-like)
             selection on the maximum projected distance from the ROI
@@ -1159,62 +1511,25 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         exclude_diffuse : bool
             Exclude diffuse sources.
-            
+
         Returns
         -------
 
-        srcs : list 
+        srcs : list
             A list of `~fermipy.roi_model.Model` objects.
 
-        
         """
 
-        srcs = self.roi.get_sources(cuts, distance,
-                                    minmax_ts,minmax_npred,
-                                    square=square,exclude_diffuse=exclude_diffuse,
+        srcs = self.roi.get_sources(skydir=skydir, distance=distance,
+                                    cuts=cuts, minmax_ts=minmax_ts,
+                                    minmax_npred=minmax_npred, square=square,
+                                    exclude_diffuse=exclude_diffuse,
                                     coordsys=self.config['binning']['coordsys'])
 
         for s in srcs:
-            self.free_source(s.name, free=free, pars=pars)
+            self.free_source(s.name, free=free, pars=pars, **kwargs)
 
         return srcs
-
-    def free_sources_by_position(self, free=True, pars=None,
-                                 distance=None, square=False):
-        """Free/Fix all sources within a certain distance of the given sky
-        coordinate.  By default it will use the ROI center.
-
-        Parameters
-        ----------
-
-        free : bool        
-            Choose whether to free (free=True) or fix (free=False)
-            source parameters.
-
-        pars : list        
-            Set a list of parameters to be freed/fixed for this
-            source.  If none then all source parameters will be
-            freed/fixed.  If pars='norm' then only normalization
-            parameters will be freed.
-
-        distance : float        
-            Distance in degrees out to which sources should be freed
-            or fixed.  If none then all sources will be selected.
-
-        square : bool        
-            Apply a square (ROI-like) selection on the maximum distance in
-            either X or Y in projected cartesian coordinates.   
-
-        Returns
-        -------
-
-        srcs : list 
-            A list of `~fermipy.roi_model.Source` objects.
-     
-        """
-
-        return self.free_sources(free, pars, cuts=None, distance=distance,
-                                 square=square)
 
     def set_edisp_flag(self, name, flag=True):
         """Enable or disable the energy dispersion correction for the
@@ -1231,13 +1546,19 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.like[idx].setScale(self.like[idx].getScale() * scale)
         self._sync_params(name)
 
+    def _set_value_bounded(self, idx, value):
+        bounds = list(self.like.model[idx].getBounds())
+        value = max(value, bounds[0])
+        value = min(value, bounds[1])
+        self.like[idx].setValue(value)
+
     def set_parameter(self, name, par, value, true_value=True, scale=None,
                       bounds=None, update_source=True):
         """
         Update the value of a parameter.  Parameter bounds will
         automatically be adjusted to encompass the new parameter
         value.
-        
+
         Parameters
         ----------
 
@@ -1247,16 +1568,16 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         par : str
             Parameter name.
 
-        value : float        
+        value : float
             Parameter value.  By default this argument should be the
             unscaled (True) parameter value.
 
-        scale : float        
+        scale : float
             Parameter scale (optional).  Value argument is interpreted
             with respect to the scale parameter if it is provided.
 
         update_source : bool
-            Update the source dictionary for the object.            
+            Update the source dictionary for the object.
 
         """
         name = self.roi.get_source_by_name(name).name
@@ -1267,17 +1588,17 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.like[idx].setScale(scale)
         else:
             scale = self.like.model[idx].getScale()
-        
+
         if true_value:
-            current_bounds[0] = min(current_bounds[0],value/scale)
-            current_bounds[1] = max(current_bounds[1],value/scale)
+            current_bounds[0] = min(current_bounds[0], value / scale)
+            current_bounds[1] = max(current_bounds[1], value / scale)
         else:
-            current_bounds[0] = min(current_bounds[0],value)
-            current_bounds[1] = max(current_bounds[1],value)
+            current_bounds[0] = min(current_bounds[0], value)
+            current_bounds[1] = max(current_bounds[1], value)
 
         # update current bounds to encompass new value
         self.like[idx].setBounds(*current_bounds)
-        
+
         if true_value:
             for p in self.like[idx].pars:
                 p.setTrueValue(value)
@@ -1288,11 +1609,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             self.like[idx].setBounds(*bounds)
 
         self._sync_params(name)
-            
+
         if update_source:
             self.update_source(name)
 
-    def set_parameter_scale(self,name,par,scale):
+    def set_parameter_scale(self, name, par, scale):
         """Update the scale of a parameter while keeping its value constant."""
         name = self.roi.get_source_by_name(name).name
         idx = self.like.par_index(name, par)
@@ -1301,12 +1622,12 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         current_value = self.like[idx].getValue()
 
         self.like[idx].setScale(scale)
-        self.like[idx].setValue(current_value*current_scale/scale)
-        self.like[idx].setBounds(current_bounds[0]*current_scale/scale,
-                                 current_bounds[1]*current_scale/scale)
+        self.like[idx].setValue(current_value * current_scale / scale)
+        self.like[idx].setBounds(current_bounds[0] * current_scale / scale,
+                                 current_bounds[1] * current_scale / scale)
         self._sync_params(name)
 
-    def set_parameter_bounds(self,name,par,bounds):
+    def set_parameter_bounds(self, name, par, bounds):
         """Set the bounds of a parameter.
 
         Parameters
@@ -1331,7 +1652,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.like[idx].setFree(free)
         self._sync_params(name)
 
-    def free_source(self, name, free=True, pars=None):
+    def free_source(self, name, free=True, pars=None, **kwargs):
         """Free/Fix parameters of a source.
 
         Parameters
@@ -1340,18 +1661,20 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         name : str
             Source name.
 
-        free : bool        
+        free : bool
             Choose whether to free (free=True) or fix (free=False)
             source parameters.
 
-        pars : list        
+        pars : list
             Set a list of parameters to be freed/fixed for this source.  If
             none then all source parameters will be freed/fixed with the
             exception of those defined in the skip_pars list.
-            
+
         """
 
         free_pars = self.get_free_param_vector()
+
+        loglevel = kwargs.pop('loglevel', logging.INFO)
 
         # Find the source
         src = self.roi.get_source_by_name(name)
@@ -1359,14 +1682,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if pars is None:
             pars = []
-            pars += norm_parameters[src['SpectrumType']]
-            pars += shape_parameters[src['SpectrumType']]
+            pars += norm_parameters.get(src['SpectrumType'], [])
+            pars += shape_parameters.get(src['SpectrumType'], [])
         elif pars == 'norm':
             pars = []
-            pars += norm_parameters[src['SpectrumType']]
+            pars += norm_parameters.get(src['SpectrumType'], [])
         elif pars == 'shape':
             pars = []
-            pars += shape_parameters[src['SpectrumType']]
+            pars += shape_parameters.get(src['SpectrumType'], [])
         elif isinstance(pars, list):
             pass
         else:
@@ -1379,25 +1702,25 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         par_indices = []
         par_names = []
         for p in src_par_names:
-            if pars is not None and p not in pars: 
+            if pars is not None and p not in pars:
                 continue
 
             idx = self.like.par_index(name, p)
-            if free == free_pars[idx]: 
+            if free == free_pars[idx]:
                 continue
 
             par_indices.append(idx)
             par_names.append(p)
 
-        if len(par_names) == 0: 
+        if len(par_names) == 0:
             return
 
         if free:
-            self.logger.debug('Freeing parameters for %-22s: %s',
-                              name, par_names)
+            self.logger.log(loglevel, 'Freeing parameters for %-22s: %s',
+                            name, par_names)
         else:
-            self.logger.debug('Fixing parameters for %-22s: %s',
-                              name, par_names)
+            self.logger.log(loglevel, 'Fixing parameters for %-22s: %s',
+                            name, par_names)
 
         for (idx, par_name) in zip(par_indices, par_names):
             self.like[idx].setFree(free)
@@ -1408,14 +1731,19 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         normPar = self.like.normPar(name)
         normPar.setScale(value)
         self._sync_params(name)
-    
+
     def set_norm(self, name, value, update_source=True):
         name = self.get_source_name(name)
         par = self.like.normPar(name).getName()
-        self.set_parameter(name,par,value,true_value=False,
+        self.set_parameter(name, par, value, true_value=False,
                            update_source=update_source)
 
-    def free_norm(self, name, free=True):
+    def set_norm_bounds(self, name, bounds):
+        name = self.get_source_name(name)
+        par = self.like.normPar(name).getName()
+        self.set_parameter_bounds(name, par, bounds)
+
+    def free_norm(self, name, free=True, **kwargs):
         """Free/Fix normalization of a source.
 
         Parameters
@@ -1424,16 +1752,16 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         name : str
             Source name.
 
-        free : bool        
+        free : bool
             Choose whether to free (free=True) or fix (free=False).
-        
+
         """
 
         name = self.get_source_name(name)
         normPar = self.like.normPar(name).getName()
-        self.free_source(name, pars=[normPar], free=free)
+        self.free_source(name, pars=[normPar], free=free, **kwargs)
 
-    def free_index(self, name, free=True):
+    def free_index(self, name, free=True, **kwargs):
         """Free/Fix index of a source.
 
         Parameters
@@ -1442,15 +1770,16 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         name : str
             Source name.
 
-        free : bool        
+        free : bool
             Choose whether to free (free=True) or fix (free=False).
 
         """
         src = self.roi.get_source_by_name(name)
         self.free_source(name, free=free,
-                         pars=index_parameters[src['SpectrumType']])
+                         pars=index_parameters.get(src['SpectrumType'], []),
+                         **kwargs)
 
-    def free_shape(self, name, free=True):
+    def free_shape(self, name, free=True, **kwargs):
         """Free/Fix shape parameters of a source.
 
         Parameters
@@ -1459,35 +1788,45 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         name : str
             Source name.
 
-        free : bool        
+        free : bool
             Choose whether to free (free=True) or fix (free=False).
         """
         src = self.roi.get_source_by_name(name)
         self.free_source(name, free=free,
-                         pars=shape_parameters[src['SpectrumType']])
+                         pars=shape_parameters[src['SpectrumType']],
+                         **kwargs)
 
-    def _sync_params(self,name):
+    def _sync_params(self, name):
         self.like.syncSrcParams(str(name))
         src = self.components[0].like.logLike.getSource(str(name))
-        spectral_pars = gtutils.get_pars_dict_from_source(src)
+        spectral_pars = gtutils.get_function_pars_dict(src.spectrum())
         self.roi[name].set_spectral_pars(spectral_pars)
         for c in self.components:
             c.roi[name].set_spectral_pars(spectral_pars)
 
-    def _sync_params_state(self,name):
-        self.like.syncSrcParams(str(name))
-        src = self.components[0].like.logLike.getSource(str(name))
-        spectral_pars = gtutils.get_pars_dict_from_source(src)
+    def _sync_params_state(self, name=None):
 
-        for parname, par in spectral_pars.items():
-            for k,v in par.items():
-                if k != 'free':
-                    del spectral_pars[parname][k]
-                    
-        self.roi[name].update_spectral_pars(spectral_pars)
-        for c in self.components:
-            c.roi[name].update_spectral_pars(spectral_pars)            
-            
+        if name is None:
+            self.like.syncSrcParams()
+            names = self.like.sourceNames()
+        else:
+            self.like.syncSrcParams(str(name))
+            names = [name]
+
+        for name in names:
+
+            src = self.like[name].src
+            pars = gtutils.get_function_pars(src.spectrum())
+
+            for p in pars:
+                self.roi[name].spectral_pars[p['name']]['free'] = p['free']
+                for c in self.components:
+                    c.roi[name].spectral_pars[p['name']]['free'] = p['free']
+
+    def get_norm(self, name):
+        name = self.get_source_name(name)
+        return self.like.normPar(name).getValue()
+
     def get_params(self, freeonly=False):
 
         params = {}
@@ -1496,31 +1835,30 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             par_names = pyLike.StringVector()
             src = self.components[0].like.logLike.getSource(str(srcName))
             src.spectrum().getParamNames(par_names)
-            
+
 #            for parName in self.get_free_source_params(srcName):
             for parName in par_names:
                 idx = self.like.par_index(srcName, parName)
                 par = self.like.model[idx]
                 bounds = par.getBounds()
-                
-                is_norm = parName == self.like.normPar(srcName).getName()
 
+                is_norm = parName == self.like.normPar(srcName).getName()
 
                 if freeonly and not par.isFree():
                     continue
-                
-                params[idx] = {'src_name' : srcName,
-                               'par_name' : parName,
-                               'value' : par.getValue(),
-                               'error' : par.error(),
-                               'scale' : par.getScale(),
-                               'idx' : idx,
-                               'free' : par.isFree(),
-                               'is_norm' : is_norm,
-                               'bounds' : bounds }
+
+                params[idx] = {'src_name': srcName,
+                               'par_name': parName,
+                               'value': par.getValue(),
+                               'error': par.error(),
+                               'scale': par.getScale(),
+                               'idx': idx,
+                               'free': par.isFree(),
+                               'is_norm': is_norm,
+                               'bounds': bounds}
 
         return [params[k] for k in sorted(params.keys())]
-        
+
     def get_free_param_vector(self):
         free = []
         for p in self.like.params():
@@ -1534,12 +1872,23 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             else:
                 self.like.freeze(i)
 
+        self._sync_params_state()
+
     def _latch_free_params(self):
         self._free_params = self.get_free_param_vector()
 
     def _restore_free_params(self):
         self.set_free_param_vector(self._free_params)
-                
+
+    def _latch_state(self):
+        self._saved_state = LikelihoodState(self.like)
+        return self._saved_state
+
+    def _restore_state(self):
+        if self._saved_state is None:
+            return
+        self._saved_state.restore()
+
     def get_free_source_params(self, name):
         name = self.get_source_name(name)
         spectrum = self.like[name].src.spectrum()
@@ -1566,7 +1915,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def optimize(self, **kwargs):
         """Iteratively optimize the ROI model.  The optimization is
         performed in three sequential steps:
-        
+
         * Free the normalization of the N largest components (as
           determined from NPred) that contain a fraction ``npred_frac``
           of the total predicted counts in the model and perform a
@@ -1603,9 +1952,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             Threshold on source TS used for determining the sources
             that will be fit in the third optimization step.
 
-        max_free_sources : int        
+        max_free_sources : int
             Maximum number of sources that will be fit simultaneously
             in the first optimization step.
+
+        skip : list
+            List of str source names to skip while optimizing.
+
+        optimizer : dict
+            Dictionary that overrides the default optimizer settings.
 
         """
 
@@ -1613,39 +1968,45 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         loglike0 = -self.like()
         self.logger.debug('LogLike: %f' % loglike0)
-        
+
         # Extract options from kwargs
         config = copy.deepcopy(self.config['roiopt'])
-        config.update(kwargs)
-        
+        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
+        fermipy.config.validate_config(kwargs, config)
+        config = merge_dict(config, kwargs)
+
         # Extract options from kwargs
         npred_frac_threshold = config['npred_frac']
         npred_threshold = config['npred_threshold']
         shape_ts_threshold = config['shape_ts_threshold']
         max_free_sources = config['max_free_sources']
-        
+        skip = copy.deepcopy(config['skip'])
+
         o = defaults.make_default_dict(defaults.roiopt_output)
         o['config'] = config
         o['loglike0'] = loglike0
-        
+
         # preserve free parameters
         free = self.get_free_param_vector()
 
         # Fix all parameters
-        self.free_sources(free=False)
+        self.free_sources(free=False, loglevel=logging.DEBUG)
 
         # Free norms of sources for which the sum of npred is a
         # fraction > npred_frac of the total model counts in the ROI
         npred_sum = 0
-        skip_sources = []
+        skip_sources = skip if skip != None else []
         for s in sorted(self.roi.sources, key=lambda t: t['npred'],
                         reverse=True):
-            
+
+            if s.name in skip_sources:
+                continue
+
             npred_sum += s['npred']
             npred_frac = npred_sum / self._roi_model['npred']
-            self.free_norm(s.name)
+            self.free_norm(s.name, loglevel=logging.DEBUG)
             skip_sources.append(s.name)
-            
+
             if npred_frac > npred_frac_threshold:
                 break
             if s['npred'] < npred_threshold:
@@ -1653,9 +2014,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             if len(skip_sources) >= max_free_sources:
                 break
 
-        self.fit(loglevel=logging.DEBUG)
-        self.free_sources(free=False)
-        
+        self.fit(loglevel=logging.DEBUG, **config['optimizer'])
+        self.free_sources(free=False, loglevel=logging.DEBUG)
+
         # Step through remaining sources and re-fit normalizations
         for s in sorted(self.roi.sources, key=lambda t: t['npred'],
                         reverse=True):
@@ -1670,25 +2031,28 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
             self.logger.debug('Fitting %s npred: %10.3f TS: %10.3f',
                               s.name, s['npred'], s['ts'])
-            self.free_norm(s.name)
-            self.fit(loglevel=logging.DEBUG)
+            self.free_norm(s.name, loglevel=logging.DEBUG)
+            self.fit(loglevel=logging.DEBUG, **config['optimizer'])
             self.logger.debug('Post-fit Results npred: %10.3f TS: %10.3f',
                               s['npred'], s['ts'])
-            self.free_norm(s.name, free=False)
+            self.free_norm(s.name, free=False, loglevel=logging.DEBUG)
 
-            # Refit spectral shape parameters for sources with TS >
-            # shape_ts_threshold
+        # Refit spectral shape parameters for sources with TS >
+        # shape_ts_threshold
         for s in sorted(self.roi.sources,
                         key=lambda t: t['ts'] if np.isfinite(t['ts']) else 0,
                         reverse=True):
 
-            if s['ts'] < shape_ts_threshold \
-                    or not np.isfinite(s['ts']): continue
+            if s.name in skip_sources:
+                continue
 
-            self.logger.debug('Fitting shape %s TS: %10.3f',s.name, s['ts'])
-            self.free_source(s.name)
-            self.fit(loglevel=logging.DEBUG)
-            self.free_source(s.name, free=False)
+            if s['ts'] < shape_ts_threshold or not np.isfinite(s['ts']):
+                continue
+
+            self.logger.debug('Fitting shape %s TS: %10.3f', s.name, s['ts'])
+            self.free_source(s.name, loglevel=logging.DEBUG)
+            self.fit(loglevel=logging.DEBUG, **config['optimizer'])
+            self.free_source(s.name, free=False, loglevel=logging.DEBUG)
 
         self.set_free_param_vector(free)
 
@@ -1696,7 +2060,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         o['loglike1'] = loglike1
         o['dloglike'] = loglike1 - loglike0
-        
+
         self.logger.info('Finished')
         self.logger.info(
             'LogLike: %f Delta-LogLike: %f' % (loglike1, loglike1 - loglike0))
@@ -1721,12 +2085,18 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             Source name.
 
         spatial_model : str
-            Spatial model that will be used when testing extension
-            (e.g. DiskSource, GaussianSource).
+            Spatial model that will be used to test the source
+            extension.  The spatial scale parameter of the respective
+            model will be set such that the 68% containment radius of
+            the model is equal to the width parameter.  The following
+            spatial models are supported:
+
+            * RadialDisk : Azimuthally symmetric 2D disk.
+            * RadialGaussian : Azimuthally symmetric 2D gaussian.
 
         width_min : float
             Minimum value in degrees for the spatial extension scan.
-        
+
         width_max : float
             Maximum value in degrees for the spatial extension scan.
 
@@ -1735,21 +2105,25 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             Scan points will be spaced evenly on a logarithmic scale
             between log(width_min) and log(width_max).
 
-        width : array-like        
+        width : array-like
             Sequence of values in degrees for the spatial extension
             scan.  If this argument is None then the scan points will
             be determined from width_min/width_max/width_nstep.
-            
+
         fix_background : bool
             Fix all background sources when performing the extension fit.
 
-        update : bool        
+        update : bool
             Update this source with the best-fit model for spatial
-            extension.
-            
-        save_model_map : bool
-            Save model maps for all steps in the likelihood scan.
-            
+            extension if TS_ext > ``tsext_threshold``.
+
+        sqrt_ts_threshold : float
+            Threshold on sqrt(TS_ext) that will be applied when ``update``
+            is true.  If None then no threshold will be applied.
+
+        optimizer : dict
+            Dictionary that overrides the default optimizer settings.
+
         Returns
         -------
 
@@ -1763,8 +2137,9 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         # Extract options from kwargs
         config = copy.deepcopy(self.config['extension'])
+        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
         fermipy.config.validate_config(kwargs, config)
-        config.update(kwargs)
+        config = merge_dict(config, kwargs)
 
         spatial_model = config['spatial_model']
         width_min = config['width_min']
@@ -1772,78 +2147,74 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         width_nstep = config['width_nstep']
         width = config['width']
         fix_background = config['fix_background']
-        save_model_map = config['save_model_map']
         update = config['update']
+        sqrt_ts_threshold = config['sqrt_ts_threshold']
 
         self.logger.info('Starting')
         self.logger.info('Running analysis for %s', name)
 
         ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
-        null_model_name = '%s_noext' % (name.lower().replace(' ', '_'))
 
         saved_state = LikelihoodState(self.like)
 
         if fix_background:
-            self.free_sources(free=False)
+            self.free_sources(free=False, loglevel=logging.DEBUG)
 
         # Fit baseline model
-        self.free_norm(name)
-        self.fit(loglevel=logging.DEBUG,update=False)
+        self.free_norm(name, loglevel=logging.DEBUG)
+        fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
         src = self.roi.copy_source(name)
-        
+
         # Save likelihood value for baseline fit
-        loglike0 = -self.like()
+        loglike0 = fit_output['loglike']
 
         self.zero_source(name)
-        
-        if save_model_map:
-            self.write_model_map(model_name=ext_model_name + '_bkg')
 
         if width is None:
             width = np.logspace(np.log10(width_min), np.log10(width_max),
                                 width_nstep)
 
         width = np.array(width)
-        width = np.delete(width,0.0)            
-        width = np.concatenate(([0.0],np.array(width)))
-            
+        width = width[width > 0]
+        width = np.concatenate(([0.0], np.array(width)))
+
         o = defaults.make_default_dict(defaults.extension_output)
         o['width'] = width
-        o['dloglike'] = np.zeros(len(width)+1)
-        o['loglike'] = np.zeros(len(width)+1)
+        o['dloglike'] = np.zeros(len(width) + 1)
+        o['loglike'] = np.zeros(len(width) + 1)
         o['loglike_base'] = loglike0
         o['config'] = config
 
         # Fit a point-source
-        
+
         model_name = '%s_ptsrc' % (name)
         src.set_name(model_name)
         src.set_spatial_model('PSFSource')
-        #src.set_spatial_model('PointSource')
+        # src.set_spatial_model('PointSource')
 
         self.logger.debug('Testing point-source model.')
         self.add_source(model_name, src, free=True, init_source=False,
                         loglevel=logging.DEBUG)
-        self.fit(loglevel=logging.DEBUG,update=False)
-        o['loglike_ptsrc'] = -self.like()
+        fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
+        o['loglike_ptsrc'] = fit_output['loglike']
 
         self.delete_source(model_name, save_template=False,
                            loglevel=logging.DEBUG)
-        
+
         # Perform scan over width parameter
         self.logger.debug('Width scan vector:\n %s', width)
 
         if not hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
-            o['loglike'] = self._scan_extension_pylike(name, src,
-                                                       spatial_model,
-                                                       width[1:])
+            o['loglike'] = self._scan_extension_pylike(name, src, spatial_model,
+                                                       width, config['optimizer'])
         else:
-            o['loglike'] = self._scan_extension(name, src, spatial_model, width[1:])
-        o['loglike'] = np.concatenate(([o['loglike_ptsrc']],o['loglike']))
+            o['loglike'] = self._scan_extension(name, src, spatial_model,
+                                                width, config['optimizer'])
+        o['loglike'] = np.concatenate(([o['loglike_ptsrc']], o['loglike']))
         o['dloglike'] = o['loglike'] - o['loglike_ptsrc']
-        
+
         try:
-            
+
             ul_data = utils.get_parameter_limits(o['width'], o['dloglike'])
 
             o['ext'] = ul_data['x0']
@@ -1859,41 +2230,39 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                          % (o['ext'], o['ext_err_lo'], o['ext_err_hi']))
         self.logger.info('TS_ext:        %.3f' % o['ts_ext'])
         self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
-        
-        if np.isfinite(o['ext']):
 
-            # Fit with the best-fit extension model
-            model_name = ext_model_name
-            src.set_name(model_name)
-            src.set_spatial_model(spatial_model, max(o['ext'],10**-2.5))
+        # Fit with the best-fit extension model
+        model_name = ext_model_name
+        src.set_name(model_name)
+        src.set_spatial_model(spatial_model, max(o['ext'], 10**-2.5))
 
-            self.logger.info('Refitting extended model')
-            self.add_source(model_name, src, free=True)
-            self.fit(loglevel=logging.DEBUG,update=False)
-            self.update_source(model_name,reoptimize=True)
-            
-            o['source_fit'] = self.get_src_model(model_name)
-            o['loglike_ext'] = -self.like()
-            
-#            self.write_model_map(model_name=model_name,
-#                                    name=model_name)
+        self.logger.info('Refitting extended model')
+        self.add_source(model_name, src, free=True)
+        fit_output = self._fit(loglevel=logging.DEBUG, update=False,
+                               **config['optimizer'])
+        self.update_source(model_name, reoptimize=True,
+                           optimizer=config['optimizer'])
 
-            src_ext = self.delete_source(model_name, save_template=False)
-            
+        o['source_fit'] = self.get_src_model(model_name)
+        o['loglike_ext'] = fit_output['loglike']
+
+        src_ext = self.delete_source(model_name, save_template=False)
+
         # Restore ROI to previous state
         self.unzero_source(name)
         saved_state.restore()
         self._sync_params(name)
         self._update_roi()
-        
-        if update and src_ext is not None:
+
+        if update and (sqrt_ts_threshold is None or
+                       np.sqrt(o['ts_ext']) > sqrt_ts_threshold):
             src = self.delete_source(name)
             src.set_spectral_pars(src_ext.spectral_pars)
             src.set_spatial_model(src_ext['SpatialModel'],
                                   src_ext['SpatialWidth'])
-            self.add_source(name,src,free=True)
-            self.fit(loglevel=logging.DEBUG)
-        
+            self.add_source(name, src, free=True)
+            self.fit(loglevel=logging.DEBUG, **config['optimizer'])
+
         src = self.roi.get_source_by_name(name)
         src['extension'] = copy.deepcopy(o)
 
@@ -1901,57 +2270,53 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         return o
 
-    def _scan_extension(self, name, src, spatial_model, width):
+    def _scan_extension(self, name, src, spatial_model, width, optimizer):
 
         ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
-        
+
         src.set_name(ext_model_name)
         src.set_spatial_model('PSFSource', width[-1])
         self.add_source(ext_model_name, src, free=True, init_source=False)
+        self._fitcache = None
 
-        par = self.like.normPar(ext_model_name)
-        
         logLike = []
-        for i, w in enumerate(width):
-
+        for i, w in enumerate(width[1:]):
             self._update_srcmap(ext_model_name, self.roi[name].skydir,
                                 spatial_model, w)
-            self.like.optimize(0)            
-            logLike += [-self.like()]
+
+            fit_output = self._fit(**optimizer)
+            logLike += [fit_output['loglike']]
 
         self.delete_source(ext_model_name, save_template=False)
-            
+
         return np.array(logLike)
 
-    def _scan_extension_pylike(self, name, src, spatial_model, width):
+    def _scan_extension_pylike(self, name, src, spatial_model, width, optimizer):
 
         ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
 
         logLike = []
-        for i, w in enumerate(width):
+        for i, w in enumerate(width[1:]):
 
             # make a copy
             src.set_name(ext_model_name)
             src.set_spatial_model(spatial_model, w)
-            
+
             self.logger.debug('Adding test source with width: %10.3f deg' % w)
             self.add_source(ext_model_name, src, free=True, init_source=False,
                             loglevel=logging.DEBUG)
-            
-            self.like.optimize(0)
-            logLike += [-self.like()]
-            
-#            if save_model_map:
-#                self.write_model_map(model_name=model_name + '%02i' % i,
-#                                        name=model_name)
-                
+
+            fit_output = self._fit(**optimizer)
+            logLike += [fit_output['loglike']]
+
             self.delete_source(ext_model_name, save_template=False,
                                loglevel=logging.DEBUG)
 
         return np.array(logLike)
-    
+
     def profile_norm(self, name, logemin=None, logemax=None, reoptimize=False,
-                     xvals=None, npts=20, fix_shape=True, savestate=True):
+                     xvals=None, npts=None, fix_shape=True, savestate=True,
+                     **kwargs):
         """Profile the normalization of a source.
 
         Parameters
@@ -1967,72 +2332,86 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
 
         self.logger.debug('Profiling %s', name)
-        
+
         if savestate:
             saved_state = LikelihoodState(self.like)
 
         if fix_shape:
-            self.free_sources(False,pars='shape')
-            
+            self.free_sources(False, pars='shape', loglevel=logging.DEBUG)
+
+        if npts is None:
+            npts = self.config['gtlike']['llscan_npts']
+
         # Find the source
         name = self.roi.get_source_by_name(name).name
         parName = self.like.normPar(name).getName()
 
         loge_bounds = self.loge_bounds
         if logemin is not None or logemax is not None:
-            self.set_energy_range(logemin,logemax)
+            self.set_energy_range(logemin, logemax)
 
-            
         # Find a sequence of values for the normalization scan
         if xvals is None:
             if reoptimize:
-                xvals = self._find_scan_pts_reopt(name,npts=npts)
+                xvals = self._find_scan_pts_reopt(name, npts=npts,
+                                                  **kwargs)
             else:
-                xvals = self._find_scan_pts(name,npts=npts)
-                lnlp = self.profile(name, parName, 
-                                    reoptimize=False,xvals=xvals)
+                xvals = self._find_scan_pts(name, npts=9)
+                lnlp = self.profile(name, parName,
+                                    reoptimize=False, xvals=xvals)
                 lims = utils.get_parameter_limits(lnlp['xvals'],
                                                   lnlp['dloglike'],
                                                   ul_confidence=0.99)
-                
+
+                if not np.isfinite(lims['ul']):
+                    self.logger.warning('Upper limit not found.  '
+                                        'Refitting normalization.')
+                    self.like.optimize(0)
+                    xvals = self._find_scan_pts(name, npts=npts)
+                    lnlp = self.profile(name, parName,
+                                        reoptimize=False,
+                                        xvals=xvals)
+                    lims = utils.get_parameter_limits(lnlp['xvals'],
+                                                      lnlp['dloglike'],
+                                                      ul_confidence=0.99)
+
                 if np.isfinite(lims['ll']):
-                    xhi = np.linspace(lims['x0'], lims['ul'], npts - npts//2)
-                    xlo = np.linspace(lims['ll'], lims['x0'], npts//2)
-                    xvals = np.concatenate((xlo[:-1],xhi))
+                    xhi = np.linspace(lims['x0'], lims['ul'], npts - npts // 2)
+                    xlo = np.linspace(lims['ll'], lims['x0'], npts // 2)
+                    xvals = np.concatenate((xlo[:-1], xhi))
                     xvals = np.insert(xvals, 0, 0.0)
-                elif np.abs(lnlp['dloglike'][0]) > 0.1:                    
+                elif np.abs(lnlp['dloglike'][0] - lims['lnlmax']) > 0.1:
                     lims['ll'] = 0.0
                     xhi = np.linspace(lims['x0'], lims['ul'],
-                                      (npts+1) - (npts+1)//2)
-                    xlo = np.linspace(lims['ll'], lims['x0'], (npts+1)//2)
-                    xvals = np.concatenate((xlo[:-1],xhi))
+                                      (npts + 1) - (npts + 1) // 2)
+                    xlo = np.linspace(lims['ll'], lims['x0'], (npts + 1) // 2)
+                    xvals = np.concatenate((xlo[:-1], xhi))
                 else:
-                    xvals = np.linspace(0,lims['ul'],npts)
+                    xvals = np.linspace(0, lims['ul'], npts)
 
-        o = self.profile(name, parName, 
+        o = self.profile(name, parName,
                          reoptimize=reoptimize, xvals=xvals,
-                         savestate=savestate)
-            
+                         savestate=savestate, **kwargs)
+
         if savestate:
-            saved_state.restore() 
-        
+            saved_state.restore()
+
         if logemin is not None or logemax is not None:
             self.set_energy_range(*loge_bounds)
 
         self.logger.debug('Finished')
-            
+
         return o
 
-    def _find_scan_pts(self,name,logemin=None,logemax=None,npts=20):
+    def _find_scan_pts(self, name, logemin=None, logemax=None, npts=20):
 
-        
         par = self.like.normPar(name)
-        
+
         loge_bounds = [self.loge_bounds[0] if logemin is None else logemin,
-                   self.loge_bounds[1] if logemax is None else logemax]
-        
+                       self.loge_bounds[1] if logemax is None else logemax]
+
         val = par.getValue()
-        
+
         if val == 0:
             par.setValue(1.0)
             self.like.syncSrcParams(str(name))
@@ -2041,7 +2420,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                             loge_bounds[1],
                                             summed=True)
             npred = np.sum(cs)
-            val = 1./npred
+            val = 1. / npred
             npred = 1.0
             par.setValue(0.0)
             self.like.syncSrcParams(str(name))
@@ -2052,104 +2431,112 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                             summed=True)
             npred = np.sum(cs)
 
-            
         if npred < 10:
             val *= 1. / min(1.0, npred)
             xvals = val * 10 ** np.linspace(-1.0, 3.0, npts - 1)
             xvals = np.insert(xvals, 0, 0.0)
         else:
 
-            npts_lo = npts//2
-            npts_hi = npts - npts_lo            
+            npts_lo = npts // 2
+            npts_hi = npts - npts_lo
             xhi = np.linspace(0, 1, npts_hi)
             xlo = np.linspace(-1, 0, npts_lo)
-            xvals = val * 10 ** np.concatenate((xlo[:-1],xhi))
+            xvals = val * 10 ** np.concatenate((xlo[:-1], xhi))
             xvals = np.insert(xvals, 0, 0.0)
-            
+
         return xvals
-    
-    def _find_scan_pts_reopt(self,name,logemin=None,logemax=None,npts=20,
-                             dloglike_thresh = 3.0):
-        
+
+    def _find_scan_pts_reopt(self, name, logemin=None, logemax=None, npts=20,
+                             dloglike_thresh=3.0, **kwargs):
+
         parName = self.like.normPar(name).getName()
-        
-        npts = max(npts,5)
-        xvals = self._find_scan_pts(name,logemin=logemin, logemax=logemax,
+
+        npts = max(npts, 5)
+        xvals = self._find_scan_pts(name, logemin=logemin, logemax=logemax,
                                     npts=20)
-        lnlp0 = self.profile(name, parName, logemin=logemin, logemax=logemax, 
-                             reoptimize=False,xvals=xvals)
+
+        lnlp0 = self.profile(name, parName, logemin=logemin, logemax=logemax,
+                             reoptimize=False, xvals=xvals, **kwargs)
         xval0 = self.like.normPar(name).getValue()
         lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dloglike'],
                                            ul_confidence=0.99)
 
         if not np.isfinite(lims0['ll']) and lims0['x0'] > 1E-6:
-            xvals = np.array([0.0,lims0['x0'],
-                              lims0['x0']+lims0['err_hi'],lims0['ul']])
+            xvals = np.array([0.0, lims0['x0'],
+                              lims0['x0'] + lims0['err_hi'], lims0['ul']])
         elif not np.isfinite(lims0['ll']) and lims0['x0'] < 1E-6:
-            xvals = np.array([0.0,lims0['x0']+lims0['err_hi'],lims0['ul']])
+            xvals = np.array([0.0, lims0['x0'] + lims0['err_hi'], lims0['ul']])
         else:
             xvals = np.array([lims0['ll'],
-                              lims0['x0']-lims0['err_lo'],lims0['x0'],
-                              lims0['x0']+lims0['err_hi'],lims0['ul']])
-            
-        lnlp1 = self.profile(name, parName, logemin=logemin, logemax=logemax, 
-                             reoptimize=True,xvals=xvals)
+                              lims0['x0'] - lims0['err_lo'], lims0['x0'],
+                              lims0['x0'] + lims0['err_hi'], lims0['ul']])
 
-        dlogLike = copy.deepcopy(lnlp1['dloglike'])
-        dloglike0 = dlogLike[-1]
+        lnlp1 = self.profile(name, parName, logemin=logemin, logemax=logemax,
+                             reoptimize=True, xvals=xvals, **kwargs)
+
+        loglike = copy.deepcopy(lnlp1['loglike'])
+        dloglike = copy.deepcopy(lnlp1['dloglike'])
+        dloglike0 = dloglike[-1]
         xup = xvals[-1]
-        
+
         for i in range(20):
-            
-            lims1 = utils.get_parameter_limits(xvals, dlogLike,
+
+            lims1 = utils.get_parameter_limits(xvals, dloglike,
                                                ul_confidence=0.99)
-                
+
+#            print('iter',i,np.abs(np.abs(dloglike0) - utils.cl_to_dlnl(0.99)),xup)
+#            print(loglike)
+
             if np.abs(np.abs(dloglike0) - utils.cl_to_dlnl(0.99)) < 0.1:
                 break
-                
-            if not np.isfinite(lims1['ul']) or np.abs(dlogLike[-1]) < 1.0:
-                xup = 2.0*xvals[-1]
+
+            if not np.isfinite(lims1['ul']) or np.abs(dloglike[-1]) < 1.0:
+                xup = 2.0 * xvals[-1]
             else:
                 xup = lims1['ul']
-                                                    
+
             lnlp = self.profile(name, parName, logemin=logemin,
                                 logemax=logemax,
-                                reoptimize=True,xvals=[xup])
+                                reoptimize=True, xvals=[xup], **kwargs)
             dloglike0 = lnlp['dloglike']
-                
-            dlogLike = np.concatenate((dlogLike,dloglike0))
-            xvals = np.concatenate((xvals,[xup]))
+            loglike0 = lnlp['loglike']
+
+            loglike = np.concatenate((loglike, loglike0))
+            dloglike = np.concatenate((dloglike, dloglike0))
+            xvals = np.concatenate((xvals, [xup]))
             isort = np.argsort(xvals)
-            dlogLike = dlogLike[isort]
+            dloglike = dloglike[isort]
+            loglike = loglike[isort]
             xvals = xvals[isort]
 
 #        from scipy.interpolate import UnivariateSpline
-#        s = UnivariateSpline(xvals,dlogLike,k=2,s=1E-4)        
+#        s = UnivariateSpline(xvals,dloglike,k=2,s=1E-4)
 #        import matplotlib.pyplot as plt
 #        plt.figure()
-#        plt.plot(xvals,dlogLike,marker='o')
+#        plt.plot(xvals,dloglike,marker='o')
 #        plt.plot(np.linspace(xvals[0],xvals[-1],100),s(np.linspace(xvals[0],xvals[-1],100)))
 #        plt.gca().set_ylim(-5,1)
 #        plt.gca().axhline(-utils.cl_to_dlnl(0.99))
-        
-        if np.isfinite(lims1['ll']):
-            xlo = np.concatenate(([0.0],np.linspace(lims1['ll'],xval0,(npts+1)//2-1)))            
-        elif np.abs(dlogLike[0]) > 0.1:
-            xlo = np.linspace(0.0,xval0,(npts+1)//2)
-        else:
-            xlo = np.array([0.0,xval0])
-            
-        if np.isfinite(lims1['ul']):
-            xhi = np.linspace(xval0,lims1['ul'],npts+1-len(xlo))[1:]
-        else:
-            xhi = np.linspace(xval0,lims0['ul'],npts+1-len(xlo))[1:]
 
-        xvals = np.concatenate((xlo,xhi))
+        if np.isfinite(lims1['ll']):
+            xlo = np.concatenate(
+                ([0.0], np.linspace(lims1['ll'], xval0, (npts + 1) // 2 - 1)))
+        elif np.abs(dloglike[0]) > 0.1:
+            xlo = np.linspace(0.0, xval0, (npts + 1) // 2)
+        else:
+            xlo = np.array([0.0, xval0])
+
+        if np.isfinite(lims1['ul']):
+            xhi = np.linspace(xval0, lims1['ul'], npts + 1 - len(xlo))[1:]
+        else:
+            xhi = np.linspace(xval0, lims0['ul'], npts + 1 - len(xlo))[1:]
+
+        xvals = np.concatenate((xlo, xhi))
         return xvals
-    
+
     def profile(self, name, parName, logemin=None, logemax=None,
                 reoptimize=False,
-                xvals=None, npts=None, savestate=True):
+                xvals=None, npts=None, savestate=True, **kwargs):
         """Profile the likelihood for the given source and parameter.
 
         Parameters
@@ -2160,11 +2547,11 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         parName : str
            Parameter name.
-        
+
         reoptimize : bool
            Re-fit nuisance parameters at each step in the scan.  Note
-           that this will only re-fit parameters that were free when
-           the method was executed.
+           that enabling this option will only re-fit parameters that
+           were free when the method was executed.
 
         Returns
         -------
@@ -2173,7 +2560,6 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
            Dictionary containing results of likelihood scan.
 
         """
-        
         # Find the source
         name = self.roi.get_source_by_name(name).name
 
@@ -2183,18 +2569,22 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         bounds = self.like.model[idx].getBounds()
         value = self.like.model[idx].getValue()
         loge_bounds = self.loge_bounds
-        
+
+        optimizer = kwargs.get('optimizer', self.config['optimizer'])
+
         if savestate:
-            saved_state = LikelihoodState(self.like)
-            
+            saved_state = self._latch_state()
+
         # If parameter is fixed temporarily free it
         par.setFree(True)
+        if optimizer['optimizer'] == 'NEWTON':
+            self._create_fitcache()
 
         if logemin is not None or logemax is not None:
             loge_bounds = self.set_energy_range(logemin, logemax)
         else:
             loge_bounds = self.loge_bounds
-            
+
         loglike0 = -self.like()
 
         if xvals is None:
@@ -2211,8 +2601,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                 xvals = val * 10 ** xvals
 
         # Update parameter bounds to encompass scan range
-        self.like[idx].setBounds(min(min(xvals),value),
-                                 max(max(xvals),value))
+        self.like[idx].setBounds(min(min(xvals), value, bounds[0]),
+                                 max(max(xvals), value, bounds[1]))
 
         o = {'xvals': xvals,
              'npred': np.zeros(len(xvals)),
@@ -2228,21 +2618,19 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
             for c in self.components:
                 c.like.logLike.setUpdateFixedWeights(False)
-        
+
         for i, x in enumerate(xvals):
 
             self.like[idx] = x
-            self.like.syncSrcParams(str(name))
-
-            if self.like.logLike.getNumFreeParams() > 1 and reoptimize:
+            if self.like.nFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
-                self.like.optimize(0)
-                loglike1 = -self.like()
+                fit_output = self._fit(errors=False, **optimizer)
+                loglike1 = fit_output['loglike']
                 self.like.thaw(idx)
             else:
                 loglike1 = -self.like()
-            
+
             flux = self.like[name].flux(10 ** loge_bounds[0],
                                         10 ** loge_bounds[1])
             eflux = self.like[name].energyFlux(10 ** loge_bounds[0],
@@ -2260,55 +2648,29 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                                             loge_bounds[1], summed=True)
             o['npred'][i] += np.sum(cs)
 
+        self.like[idx] = value
+
         if reoptimize and hasattr(self.like.components[0].logLike,
                                   'setUpdateFixedWeights'):
 
             for c in self.components:
                 c.like.logLike.setUpdateFixedWeights(True)
-                
+
         # Restore model parameters to original values
         if savestate:
-            saved_state.restore()        
-            
+            saved_state.restore()
+
         self.like[idx].setBounds(*bounds)
         if logemin is not None or logemax is not None:
             self.set_energy_range(*loge_bounds)
-        
+
         return o
-
-    def _create_optObject(self,**kwargs):
-        """ Make MINUIT or NewMinuit type optimizer object """
-        
-        optimizer = kwargs.get('optimizer',self.config['optimizer']['optimizer'])
-        if optimizer.upper() == 'MINUIT':
-            optObject = pyLike.Minuit(self.like.logLike)
-        elif optimizer.upper == 'NEWMINUIT':
-            optObject = pyLike.NewMinuit(self.like.logLike)
-        else:
-            optFactory = pyLike.OptimizerFactory_instance()
-            optObject = optFactory.create(optimizer, self.like.logLike)
-        return optObject
-
-    def _run_fit(self, **kwargs):
-
-        try:
-            self.like.fit(**kwargs)
-        except Exception:
-            self.logger.error('Likelihood optimization failed.', exc_info=True)
-
-        if isinstance(self.like.optObject, pyLike.Minuit) or \
-                isinstance(self.like.optObject, pyLike.NewMinuit):
-            quality = self.like.optObject.getQuality()
-        else:
-            quality = 3
-
-        return quality
 
     def constrain_norms(self, srcNames, cov_scale=1.0):
         """Constrain the normalizations of one or more sources by
         adding gaussian priors with sigma equal to the parameter
         error times a scaling factor."""
-        
+
         # Get the covariance matrix
 
         for name in srcNames:
@@ -2316,19 +2678,19 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
             err = par.error()
             val = par.getValue()
-            
+
             if par.error() == 0.0 or not par.isFree():
                 continue
-            
+
             self.add_gauss_prior(name, par.getName(),
-                                 val,err*cov_scale)
+                                 val, err * cov_scale)
 
     def add_gauss_prior(self, name, parName, mean, sigma):
-        
-        par = self.like[name].funcs["Spectrum"].params[parName]
-        par.addGaussianPrior(mean,sigma)
 
-    def remove_prior(self,name, parName):
+        par = self.like[name].funcs["Spectrum"].params[parName]
+        par.addGaussianPrior(mean, sigma)
+
+    def remove_prior(self, name, parName):
 
         par = self.like[name].funcs["Spectrum"].params[parName]
         par.removePrior()
@@ -2340,15 +2702,152 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
             for par in self.like[src.name].funcs["Spectrum"].params.values():
                 par.removePrior()
-        
+
+    def _create_optObject(self, **kwargs):
+        """ Make MINUIT or NewMinuit type optimizer object """
+
+        optimizer = kwargs.get('optimizer',
+                               self.config['optimizer']['optimizer'])
+
+        self.logger.debug("Creating optimizer: %s", optimizer)
+
+        if optimizer.upper() == 'MINUIT':
+            optObject = pyLike.Minuit(self.like.logLike)
+        elif optimizer.upper() == 'NEWMINUIT':
+            optObject = pyLike.NewMinuit(self.like.logLike)
+        else:
+            optFactory = pyLike.OptimizerFactory_instance()
+            optObject = optFactory.create(str(optimizer), self.like.logLike)
+        return optObject
+
+    def _fit_optimizer_iter(self, **kwargs):
+
+        min_fit_quality = kwargs.get('min_fit_quality', 3)
+        retries = kwargs.get('retries', 3)
+        covar = kwargs.get('covar', True)
+
+        #saved_state = LikelihoodState(self.like)
+
+        quality = 0
+        niter = 0
+        while niter < retries:
+            self.logger.debug("Fit iteration: %i" % niter)
+            niter += 1
+            quality, status, edm, loglike = self._fit_optimizer(**kwargs)
+
+            if quality >= min_fit_quality and status == 0:
+                break
+
+        num_free = self.like.nFreeParams()
+        o = {'values': np.ones(num_free) * np.nan,
+             'errors': np.ones(num_free) * np.nan,
+             'indices': np.zeros(num_free, dtype=int),
+             'is_norm': np.empty(num_free, dtype=bool),
+             'src_names': num_free * [None],
+             'par_names': num_free * [None]}
+
+        o['fit_quality'] = quality
+        o['fit_status'] = status
+        o['edm'] = edm
+        o['niter'] = niter
+        o['loglike'] = loglike
+        o['fit_success'] = True
+
+        if quality < min_fit_quality or o['fit_status']:
+            o['fit_success'] = False
+
+        if covar:
+            o['covariance'] = np.array(self.like.covariance)
+            o['errors'] = np.diag(o['covariance'])**0.5
+            errinv = 1. / o['errors']
+            o['correlation'] = \
+                o['covariance'] * errinv[:, np.newaxis] * errinv[np.newaxis, :]
+
+        free_params = self.get_params(True)
+        for i, p in enumerate(free_params):
+            o['values'][i] = p['value']
+            o['errors'][i] = p['error']
+            o['indices'][i] = p['idx']
+            o['src_names'][i] = p['src_name']
+            o['par_names'][i] = p['par_name']
+            o['is_norm'][i] = p['is_norm']
+
+        return o
+
+    def _fit_optimizer(self, **kwargs):
+
+        errors = kwargs.get('errors', True)
+        optObject = self._create_optObject(optimizer=kwargs.get('optimizer',
+                                                                'MINUIT'))
+
+        kw = {}
+
+        quality = 3
+        status = 0
+        edm = 0
+        loglike = 0
+
+        try:
+            if errors:
+                kw['verbosity'] = kwargs.get('verbosity', 0)
+                kw['tol'] = kwargs.get('tol', None)
+                kw['covar'] = kwargs.get('covar', True)
+                kw['optObject'] = optObject
+                self.like.fit(**kw)
+            else:
+                kw['verbosity'] = kwargs.get('verbosity', 0)
+                kw['tol'] = kwargs.get('tol', None)
+                kw['optObject'] = optObject
+                self.like.optimize(**kw)
+
+            status = optObject.getRetCode()
+
+            if isinstance(optObject, pyLike.Minuit):
+                quality = optObject.getQuality()
+            
+            if isinstance(optObject, pyLike.Minuit) or \
+                    isinstance(optObject, pyLike.NewMinuit):
+                edm = optObject.getDistance()
+
+            loglike = optObject.stat().value()
+
+        except Exception:
+            self.logger.error('Likelihood optimization failed.', exc_info=True)
+            quality = 0
+            status = 1
+
+        return quality, status, edm, loglike
+
+    def _fit(self, **kwargs):
+
+        optimizer = kwargs.get('optimizer',
+                               self.config['optimizer']['optimizer']).upper()
+
+        if optimizer == 'NEWTON':
+
+            params = self.get_params(True)
+            for p in params:
+
+                if p['free'] and not p['is_norm']:
+                    optimizer = 'MINUIT'
+                    kwargs['optimizer'] = 'MINUIT'
+                    self.logger.debug(
+                        'Found non-norm free parameter.  Reverting to MINUIT.')
+                    break
+
+        if optimizer == 'NEWTON':
+            return self._fit_newton(**kwargs)
+        else:
+            return self._fit_optimizer_iter(**kwargs)
+
     def fit(self, update=True, **kwargs):
-        """Run the likelihood optimization.  This will execute a fit
-        of all parameters that are currently free in the model and
-        update the charateristics of the corresponding model
-        components (TS, npred, etc.).  The fit will be repeated N
-        times (set with the `retries` parameter) until a fit quality
-        greater than or equal to `min_fit_quality` is obtained.  If
-        the requested fit quality is not obtained then all parameter
+        """Run the likelihood optimization.  This will execute a fit of all
+        parameters that are currently free in the model and update the
+        charateristics of the corresponding model components (TS,
+        npred, etc.).  The fit will be repeated N times (set with the
+        `retries` parameter) until a fit quality greater than or equal
+        to `min_fit_quality` and a fit status code of 0 is obtained.
+        If the fit does not succeed after N retries then all parameter
         values will be reverted to their state prior to the execution
         of the fit.
 
@@ -2356,7 +2855,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         ----------
 
         update : bool
-           Do not update the ROI model.
+           Update the model dictionary for all sources with free
+           parameters.
 
         tol : float
            Set the optimizer tolerance.
@@ -2366,7 +2866,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         optimizer : str
            Set the likelihood optimizer (e.g. MINUIT or NEWMINUIT).
-           
+
         retries : int
            Set the number of times to rerun the fit when the fit quality
            is < 3.
@@ -2389,119 +2889,215 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         """
 
-        if not self.like.logLike.getNumFreeParams():
-            self.logger.debug("Skipping fit.  No free parameters.")
-            return
+        loglevel = kwargs.pop('loglevel', logging.INFO)
+        self.logger.log(loglevel, "Starting fit.")
 
-        loglevel=kwargs.pop('loglevel',logging.INFO)
-
-        self.logger.log(loglevel,"Starting fit.")
-
+        # Extract options from kwargs
         config = copy.deepcopy(self.config['optimizer'])
-        config.setdefault('covar',True)
-        config.setdefault('reoptimize',False)
-        config.update(kwargs)
-        
-        optObject = self._create_optObject(optimizer=config['optimizer'])
-        saved_state = LikelihoodState(self.like)
-        kw = dict(optObject=optObject,
-                  covar=config['covar'],
-                  verbosity=config['verbosity'],
-                  tol=config['tol'])
+        config.setdefault('covar', True)
+        config.setdefault('reoptimize', False)
+        config = utils.merge_dict(config, kwargs)
 
-        num_free = self.like.logLike.getNumFreeParams()
-        o = {'fit_quality' : 0,
-             'covariance' : None,
-             'correlation' : None,
-             'loglike' : None, 'dloglike' : None,
-             'values' : np.ones(num_free)*np.nan,
-             'errors' : np.ones(num_free)*np.nan,
-             'indices': np.zeros(num_free,dtype=int),
-             'is_norm' : np.empty(num_free,dtype=bool),
-             'src_names' : num_free*[None],
-             'par_names' : num_free*[None],
-             'config' : config
+        num_free = self.like.nFreeParams()
+
+        loglike0 = -self.like()
+
+        # Initialize output dict
+        o = {'fit_quality': 3,
+             'fit_status': 0,
+             'fit_success': True,
+             'dloglike': 0.0,
+             'edm': 0.0,
+             'loglike': loglike0,
+             'covariance': None,
+             'correlation': None,
+             'values': np.ones(num_free) * np.nan,
+             'errors': np.ones(num_free) * np.nan,
+             'indices': np.zeros(num_free, dtype=int),
+             'is_norm': np.empty(num_free, dtype=bool),
+             'src_names': num_free * [None],
+             'par_names': num_free * [None],
+             'config': config
              }
 
-        loglike0 = -self.like()        
-        quality = 0
-        niter = 0
-        max_niter = config['retries']
-        while niter < max_niter:
-            self.logger.debug("Fit iteration: %i" % niter)
-            niter += 1
-            quality = self._run_fit(**kw)
-            if quality >= config['min_fit_quality']:
-                break
-            
-        self.logger.debug("Fit complete.")        
-            
-        o['fit_quality'] = quality
-        o['covariance'] = np.array(self.like.covariance)
-        o['errors'] = np.diag(o['covariance'])**0.5
-        
-        errinv = 1./o['errors']
+        if not num_free:
+            self.logger.log(loglevel, "Skipping fit.  No free parameters.")
+            return o
 
-        o['correlation'] = \
-            o['covariance']*errinv[:,np.newaxis]*errinv[np.newaxis,:]
+        saved_state = LikelihoodState(self.like)
 
-        free_params = self.get_params(True)
-        for i, p in enumerate(free_params):
-            o['values'][i] = p['value']
-            o['errors'][i] = p['error']
-            o['indices'][i] = p['idx']
-            o['src_names'][i] = p['src_name']
-            o['par_names'][i] = p['par_name']
-            o['is_norm'][i] = p['is_norm']
-        
-        o['niter'] = niter
-        
-        # except Exception, message:
-        #            print self.like.optObject.getQuality()
-        #            self.logger.error('Likelihood optimization failed.',
-        # exc_info=True)
-        #            saved_state.restore()
-        #            return quality
+        fit_output = self._fit(**config)
+        o.update(fit_output)
 
-        o['loglike'] = -self.like()
+        self.logger.debug("Fit complete.")
         o['dloglike'] = o['loglike'] - loglike0
 
-        if o['fit_quality'] < config['min_fit_quality']:
-            self.logger.error('Failed to converge with %s',
-                              self.like.optimizer)
+        if not o['fit_success']:
+            self.logger.error('%s failed with status code %i fit quality %i',
+                              config['optimizer'], o['fit_status'],
+                              o['fit_quality'])
             saved_state.restore()
             return o
 
         if update:
 
-            self._extract_correlation(o,free_params)
+            free_params = self.get_params(True)
+            self._extract_correlation(o, free_params)
             for name in self.like.sourceNames():
-                freePars = self.get_free_source_params(name)                
+                freePars = self.get_free_source_params(name)
                 if len(freePars) == 0:
                     continue
                 self.update_source(name, reoptimize=config['reoptimize'])
-                
+
             # Update roi model counts
             self._update_roi()
 
-        self.logger.log(loglevel,"Fit returned successfully.")
-        self.logger.log(loglevel,"Fit Quality: %i "%o['fit_quality'] + 
-                        "LogLike: %12.3f "%o['loglike'] + 
-                        "DeltaLogLike: %12.3f"%o['dloglike'])
+        self.logger.log(loglevel, "Fit returned successfully. " +
+                        "Quality: %3i Status: %3i",
+                        o['fit_quality'], o['fit_status'])
+        self.logger.log(loglevel, "LogLike: %12.3f DeltaLogLike: %12.3f ",
+                        o['loglike'], o['dloglike'])
+        return o
+
+    def _create_fitcache(self, **kwargs):
+
+        create_fitcache = kwargs.get('create_fitcache', False)
+        if self._fitcache is not None and not create_fitcache:
+            return self._fitcache
+
+        tol = kwargs.get('tol', self.config['optimizer']['tol'])
+        max_iter = kwargs.get('max_iter',
+                              self.config['optimizer']['max_iter'])
+        init_lambda = kwargs.get('init_lambda',
+                                 self.config['optimizer']['init_lambda'])
+        use_reduced = kwargs.get('use_reduced', True)
+
+        self.logger.debug('Creating FitCache')
+        self.logger.debug('\ntol: %.5g\nmax_iter: %i\ninit_lambda: %.5g',
+                          tol, max_iter, init_lambda)
+
+        params = self.get_params()
+        self._fitcache = FitCache(self.like, params,
+                                  tol, max_iter, init_lambda, use_reduced)
+
+        return self._fitcache
+
+    def _fit_newton(self, fitcache=None, ebin=None, **kwargs):
+        """Fast fitting method using newton fitter."""
+
+        tol = kwargs.get('tol', self.config['optimizer']['tol'])
+        max_iter = kwargs.get('max_iter',
+                              self.config['optimizer']['max_iter'])
+        init_lambda = kwargs.get('init_lambda',
+                                 self.config['optimizer']['init_lambda'])
+        use_reduced = kwargs.get('use_reduced', True)
+
+        free_params = self.get_params(True)
+        free_norm_params = [p for p in free_params if p['is_norm'] is True]
+
+        if len(free_params) != len(free_norm_params):
+            msg = 'Executing Newton fitter with one ' + \
+                'or more free shape parameters.'
+            self.logger.error(msg)
+            raise Exception(msg)
+
+        verbosity = kwargs.get('verbosity', 0)
+        if fitcache is None:
+            fitcache = self._create_fitcache(**kwargs)
+
+        fitcache.update(self.get_params(),
+                        tol, max_iter, init_lambda, use_reduced)
+
+        logemin = self.loge_bounds[0]
+        logemax = self.loge_bounds[1]
+        imin = int(utils.val_to_edge(self.log_energies, logemin)[0])
+        imax = int(utils.val_to_edge(self.log_energies, logemax)[0])
+
+        if ebin is not None:
+            fitcache.fitcache.setEnergyBin(ebin)
+        elif imin == 0 and imax == self.enumbins:
+            fitcache.fitcache.setEnergyBin(-1)
+        else:
+            fitcache.fitcache.setEnergyBins(imin, imax)
+
+        num_free = len(free_norm_params)
+
+        o = {'fit_status': 0,
+             'fit_quality': 3,
+             'fit_success': True,
+             'edm': 0,
+             'loglike': None,
+             'values': np.ones(num_free) * np.nan,
+             'errors': np.ones(num_free) * np.nan,
+             'indices': np.zeros(num_free, dtype=int),
+             'is_norm': np.empty(num_free, dtype=bool),
+             'src_names': num_free * [None],
+             'par_names': num_free * [None],
+             }
+
+        if num_free == 0:
+            return o
+
+        ref_vals = np.array(fitcache.fitcache.refValues())
+        free = np.array(fitcache.fitcache.currentFree())
+        norm_vals = ref_vals[free]
+
+        norm_idxs = []
+        for i, p in enumerate(free_norm_params):
+
+            norm_idxs += [p['idx']]
+            o['indices'][i] = p['idx']
+            o['src_names'][i] = p['src_name']
+            o['par_names'][i] = p['par_name']
+            o['is_norm'][i] = p['is_norm']
+
+        o['fit_status'] = fitcache.fit(verbose=verbosity)
+        o['edm'] = fitcache.fitcache.currentEDM()
+
+        pars, errs, cov = fitcache.get_pars()
+        pars *= norm_vals
+        errs *= norm_vals
+        cov = cov * np.outer(norm_vals, norm_vals)
+
+        o['values'] = pars
+        o['errors'] = errs
+        o['covariance'] = cov
+        errinv = 1. / o['errors']
+        o['correlation'] = o['covariance'] * np.outer(errinv, errinv)
+
+        if o['fit_status'] in [-2, 0]:
+            for idx, val, err in zip(norm_idxs, pars, errs):
+                self._set_value_bounded(idx, val)
+                self.like[idx].setError(err)
+            self.like.syncSrcParams()
+            o['fit_success'] = True
+        else:
+            o['fit_success'] = False
+
+        if o['fit_status']:
+            self.logger.error('Error in NEWTON fit. Fit Status: %i',
+                              o['fit_status'])
+
+        loglike = fitcache.fitcache.currentLogLike()
+
+        prior_vals, prior_errs, has_prior = get_priors(self.like)
+        loglike -= np.sum(has_prior) * np.log(np.sqrt(2 * np.pi))
+        o['loglike'] = loglike
+
         return o
 
     def fit_correlation(self):
 
         saved_state = LikelihoodState(self.like)
-        self.free_sources(False)
-        self.free_sources(pars='norm')
-        fit_results = self.fit(loglevel=logging.DEBUG,min_fit_quality=2)
+        self.free_sources(False, loglevel=logging.DEBUG)
+        self.free_sources(pars='norm', loglevel=logging.DEBUG)
+        fit_results = self.fit(loglevel=logging.DEBUG, min_fit_quality=2)
         free_params = self.get_params(True)
-        self._extract_correlation(fit_results,free_params)        
+        self._extract_correlation(fit_results, free_params)
         saved_state.restore()
-    
-    def _extract_correlation(self,fit_results,free_params):
-        
+
+    def _extract_correlation(self, fit_results, free_params):
+
         for i, p0 in enumerate(free_params):
             if not p0['is_norm']:
                 continue
@@ -2511,10 +3107,10 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
                 if not p1['is_norm']:
                     continue
-                
-                src['correlation'][p1['src_name']] = fit_results['correlation'][i,j]
-        
-    
+
+                src['correlation'][p1['src_name']] = fit_results[
+                    'correlation'][i, j]
+
     def load_xml(self, xmlfile):
         """Load model definition from XML.
 
@@ -2526,12 +3122,14 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
 
         self.logger.info('Loading XML')
-        
+
         for c in self.components:
             c.load_xml(xmlfile)
 
         for name in self.like.sourceNames():
             self.update_source(name)
+
+        self._fitcache = None
 
         self.logger.info('Finished Loading XML')
 
@@ -2553,7 +3151,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
     def _restore_counts_maps(self):
         """
         Revert counts maps to their state prior to injecting any simulated
-        components.  
+        components.
         """
 
         for c in self.components:
@@ -2561,7 +3159,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         if hasattr(self.like.components[0].logLike, 'setCountsMap'):
             self._init_roi_model()
-        else:            
+        else:
             self.write_xml('tmp')
             self._like = SummedLikelihood()
             for i, c in enumerate(self._components):
@@ -2576,11 +3174,13 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
         Parameters
         ----------
-        src_dict : dict        
+        src_dict : dict
            Dictionary defining the spatial and spectral properties of
            the source that will be injected.
-        
+
         """
+
+        self._fitcache = None
 
         if src_dict is None:
             src_dict = {}
@@ -2599,7 +3199,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.add_source('mcsource', src_dict, free=True,
                         init_source=False)
         for c in self.components:
-            c.simulate_roi('mcsource',clear=False)
+            c.simulate_roi('mcsource', clear=False)
 
         self.delete_source('mcsource')
 
@@ -2635,15 +3235,17 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
 
         self.logger.info('Simulating ROI')
-        
+
+        self._fitcache = None
+
         if restore:
             self.logger.info('Restoring')
             self._restore_counts_maps()
             self.logger.info('Finished')
             return
-        
+
         for c in self.components:
-            c.simulate_roi(name=name,clear=True,randomize=randomize)
+            c.simulate_roi(name=name, clear=True, randomize=randomize)
 
         if hasattr(self.like.components[0].logLike, 'setCountsMap'):
             self._init_roi_model()
@@ -2680,36 +3282,40 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if self.projtype == "HPX":
             shape = (self.enumbins, self._proj.npix)
             model_counts = skymap.make_coadd_map(maps, self._proj, shape)
-            utils.write_hpx_image(model_counts.counts, self._proj, outfile)
+            fits_utils.write_hpx_image(
+                model_counts.counts, self._proj, outfile)
         elif self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
             model_counts = skymap.make_coadd_map(maps, self._proj, shape)
-            utils.write_fits_image(model_counts.counts, self._proj, outfile)
+            fits_utils.write_fits_image(
+                model_counts.counts, self._proj, outfile)
         else:
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
         return [model_counts] + maps
 
-    def print_roi(self):
-        self.logger.info('\n' + str(self.roi))
+    def print_roi(self, loglevel=logging.INFO):
+        """Print information about the spectral and spatial properties
+        of the ROI (sources, diffuse components)."""
+        self.logger.log(loglevel, '\n' + str(self.roi))
 
-    def print_params(self, allpars=False):
+    def print_params(self, allpars=False, loglevel=logging.INFO):
         """Print information about the model parameters (values,
         errors, bounds, scale)."""
-        
+
         pars = self.get_params()
 
         o = '\n'
         o += '%4s %-20s%10s%10s%10s%10s%10s%5s\n' % (
-        'idx','parname', 'value','error',
-        'min', 'max', 'scale', 'free')
-        
+            'idx', 'parname', 'value', 'error',
+            'min', 'max', 'scale', 'free')
+
         o += '-' * 80 + '\n'
 
         src_pars = collections.OrderedDict()
         for p in pars:
-            
-            src_pars.setdefault(p['src_name'],[])
+
+            src_pars.setdefault(p['src_name'], [])
             src_pars[p['src_name']] += [p]
 
         free_sources = []
@@ -2720,37 +3326,37 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     continue
 
                 free_sources += [k]
-            
+
         for k, v in src_pars.items():
 
-            if not allpars and not k in free_sources:
+            if not allpars and k not in free_sources:
                 continue
-                
-            o += '%s\n'%k
+
+            o += '%s\n' % k
             for p in v:
 
-                o += '%4i %-20.19s' % (p['idx'], p['par_name'])  
-                o += '%10.3g%10.3g' % (p['value'],p['error'])
-                o += '%10.3g%10.3g%10.3g' % (p['bounds'][0],p['bounds'][1],
-                                          p['scale'])
-            
+                o += '%4i %-20.19s' % (p['idx'], p['par_name'])
+                o += '%10.3g%10.3g' % (p['value'], p['error'])
+                o += '%10.3g%10.3g%10.3g' % (p['bounds'][0], p['bounds'][1],
+                                             p['scale'])
+
                 if p['free']:
                     o += '    *'
                 else:
                     o += '     '
 
                 o += '\n'
-            
-        self.logger.info(o)
-            
-    def print_model(self):
+
+        self.logger.log(loglevel, o)
+
+    def print_model(self, loglevel=logging.INFO):
 
         o = '\n'
         o += '%-20s%8s%8s%7s%10s%10s%12s%5s\n' % (
-        'sourcename', 'offset','norm','eflux','index',
-        'ts', 'npred', 'free')
+            'sourcename', 'offset', 'norm', 'eflux', 'index',
+            'ts', 'npred', 'free')
         o += '-' * 80 + '\n'
-        
+
         for s in sorted(self.roi.sources, key=lambda t: t['offset']):
             if s.diffuse:
                 continue
@@ -2766,16 +3372,17 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             if s['SpectrumType'] == 'PowerLaw':
                 index = s['dfde1000_index'][0]
             else:
-                index = 0.5*(s['dfde1000_index'][0]+s['dfde10000_index'][0])
-                
+                index = 0.5 * (s['dfde1000_index'][0] +
+                               s['dfde10000_index'][0])
+
             o += '%-20.19s%8.3f%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
-            s['name'], s['offset'], normVal, s['eflux'][0],index,
-            s['ts'], s['npred'],free_str)
+                s['name'], s['offset'], normVal, s['eflux'][0], index,
+                s['ts'], s['npred'], free_str)
 
         for s in sorted(self.roi.sources, key=lambda t: t['offset']):
             if not s.diffuse:
                 continue
-            
+
             normVal = self.like.normPar(s.name).getValue()
             fixed = self.like[s.name].fixedSpectrum()
 
@@ -2787,14 +3394,15 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             if s['SpectrumType'] == 'PowerLaw':
                 index = s['dfde1000_index'][0]
             else:
-                index = 0.5*(s['dfde1000_index'][0]+s['dfde10000_index'][0])
-                
+                index = 0.5 * (s['dfde1000_index'][0] +
+                               s['dfde10000_index'][0])
+
             o += '%-20.19s%8s%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
-            s['name'], 
-            '---', normVal, s['eflux'][0], index, s['ts'], s['npred'],free_str)
-                        
-        self.logger.info(o)
-                    
+                s['name'],
+                '---', normVal, s['eflux'][0], index, s['ts'], s['npred'], free_str)
+
+        self.logger.log(loglevel, o)
+
     def load_roi(self, infile, reload_sources=False):
         """This function reloads the analysis state from a previously
         saved instance generated with
@@ -2804,33 +3412,33 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         ----------
 
         infile : str
-        
+
         reload_sources : bool
            Regenerate source maps for non-diffuse sources.
 
         """
-        
+
         infile = utils.resolve_path(infile, workdir=self.workdir)
         roi_file, roi_data = utils.load_data(infile, workdir=self.workdir)
 
-        self.logger.info('Loading ROI file: %s',roi_file)
-        
+        self.logger.info('Loading ROI file: %s', roi_file)
+
         self._roi_model = utils.update_keys(roi_data['roi'],
-                                            {'Npred':'npred',
-                                             'logLike' : 'loglike',
-                                             'dlogLike' : 'dloglike'})
+                                            {'Npred': 'npred',
+                                             'logLike': 'loglike',
+                                             'dlogLike': 'dloglike'})
 
         if 'erange' in self._roi_model:
             self._roi_model['loge_bounds'] = self._roi_model.pop('erange')
-        
+
         self._loge_bounds = self._roi_model.setdefault('loge_bounds',
                                                        self.loge_bounds)
-                
+
         sources = roi_data.pop('sources')
-        sources = utils.update_keys(sources,{'Npred':'npred',
-                                             'logLike' : 'loglike',
-                                             'dlogLike' : 'dloglike'})
-        
+        sources = utils.update_keys(sources, {'Npred': 'npred',
+                                              'logLike': 'loglike',
+                                              'dlogLike': 'dloglike'})
+
         self.roi.load_sources(sources.values())
         for c in self.components:
             c.roi.load_sources(sources.values())
@@ -2839,48 +3447,44 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         self.set_energy_range(self.loge_bounds[0], self.loge_bounds[1])
 
         if reload_sources:
+            names = [s.name for s in self.roi.sources if not s.diffuse]
+            self.reload_sources(names, False)
 
-            for s in self.roi.sources:
-                if s.diffuse:
-                    continue
-                self.reload_source(s.name)
-        
         self.logger.info('Finished Loading ROI')
 
-    def write_roi(self, outfile=None, make_residuals=False, 
-                  save_model_map=True, format=None, **kwargs):
-        """Write current model to a file.  This function will write an
-        XML model file and an ROI dictionary in both YAML and npy
-        formats.
+    def write_roi(self, outfile=None,
+                  save_model_map=False, fmt='npy', **kwargs):
+        """Write current state of the analysis to a file.  This method
+        writes an XML model definition, a ROI dictionary, and a FITS
+        source catalog file.  A previously saved analysis state can be
+        reloaded from the ROI dictionary file with the
+        `~fermipy.gtanalysis.GTAnalysis.load_roi` method.
 
         Parameters
         ----------
 
         outfile : str
-            Name of the output file.  The extension of this string
-            will be stripped when generating the XML, YAML and
-            Numpy filenames.
+            String prefix of the output files.  The extension of this
+            string will be stripped when generating the XML, YAML and
+            npy filenames.
 
         make_plots : bool
             Generate diagnostic plots.
-            
-        make_residuals : bool
-            Run residual analysis.
 
         save_model_map : bool
             Save the current counts model to a FITS file.
 
-        format : str
+        fmt : str
             Set the output file format (yaml or npy).
 
         """
         # extract the results in a convenient format
 
-        make_plots = kwargs.get('make_plots',True)
+        make_plots = kwargs.get('make_plots', False)
 
         if outfile is None:
             pathprefix = os.path.join(self.config['fileio']['workdir'],
-                                      'results')            
+                                      'results')
         elif not os.path.isabs(outfile):
             pathprefix = os.path.join(self.config['fileio']['workdir'],
                                       outfile)
@@ -2888,27 +3492,24 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             pathprefix = outfile
 
         pathprefix = utils.strip_suffix(pathprefix,
-                                        ['fits','yaml','npy'])            
+                                        ['fits', 'yaml', 'npy'])
 #        pathprefix, ext = os.path.splitext(pathprefix)
         prefix = os.path.basename(pathprefix)
-        
+
         xmlfile = pathprefix + '.xml'
         fitsfile = pathprefix + '.fits'
         npyfile = pathprefix + '.npy'
         ymlfile = pathprefix + '.yaml'
-        
-        self.write_xml(xmlfile)
-        self.roi.write_fits(fitsfile)
-        
-        for c in self.components:
-            c.like.logLike.saveSourceMaps(str(c._srcmap_file))
-        
-        mcube_maps = None
-        if save_model_map:
-            mcube_maps = self.write_model_map(prefix)
 
-        if make_residuals:
-            resid_maps = self.residmap(prefix, make_plots=make_plots)
+        self.write_xml(xmlfile)
+        self.logger.info('Writing %s...', fitsfile)
+        self.roi.write_fits(fitsfile)
+
+        for c in self.components:
+            c.like.logLike.saveSourceMaps(str(c.files['srcmap']))
+
+        if save_model_map:
+            self.write_model_map(prefix)
 
         o = {}
         o['roi'] = copy.deepcopy(self._roi_model)
@@ -2919,29 +3520,22 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         for s in self.roi.sources:
             o['sources'][s.name] = copy.deepcopy(s.data)
 
-        if format is None:
-            format = ['npy','yaml']
-        elif not isinstance(format,list):
-            format = [format]
-            
-        for fmt in format:
-
-            if fmt == 'yaml':
-                self.logger.info('Writing %s...', ymlfile)
-                utils.write_yaml(o,ymlfile)
-            elif fmt == 'npy':                
-                self.logger.info('Writing %s...', npyfile)
-                np.save(npyfile, o)
-            else:
-                raise Exception('Unrecognized format.')
+        if fmt == 'yaml':
+            self.logger.info('Writing %s...', ymlfile)
+            utils.write_yaml(o, ymlfile)
+        elif fmt == 'npy':
+            self.logger.info('Writing %s...', npyfile)
+            np.save(npyfile, o)
+        else:
+            raise Exception('Unrecognized output format: %s' % fmt)
 
         if make_plots:
-            self.make_plots(prefix, mcube_maps[0],
-                            **kwargs.get('plotting',{}))
+            self.make_plots(prefix, None,
+                            **kwargs.get('plotting', {}))
 
     def make_plots(self, prefix, mcube_map=None, **kwargs):
         """Make diagnostic plots using the current ROI model."""
-        
+
         #mcube_maps = kwargs.pop('mcube_maps', None)
         if mcube_map is None:
             mcube_map = self.model_counts_map()
@@ -2965,30 +3559,31 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         name : str
            Source name.
 
-        fd : FluxDensity        
+        fd : FluxDensity
            Flux density object.  If this parameter is None then one
            will be created.
-        
-        loge : array-like        
+
+        loge : array-like
            Sequence of energies in log10(E/MeV) at which the flux band
            will be evaluated.
-        
+
         """
 
         if loge is None:
             logemin = self.log_energies[0]
             logemax = self.log_energies[-1]
             loge = np.linspace(logemin, logemax, 50)
-        
+
         o = {'energies': 10**loge,
              'log_energies': loge,
              'dfde': np.zeros(len(loge)) * np.nan,
              'dfde_lo': np.zeros(len(loge)) * np.nan,
              'dfde_hi': np.zeros(len(loge)) * np.nan,
-             'dfde_ferr' : np.zeros(len(loge)) * np.nan,
-             'pivot_energy' : np.nan }
+             'dfde_err': np.zeros(len(loge)) * np.nan,
+             'dfde_ferr': np.zeros(len(loge)) * np.nan,
+             'pivot_energy': np.nan}
 
-        try:        
+        try:
             if fd is None:
                 fd = FluxDensity.FluxDensity(self.like, name)
         except RuntimeError:
@@ -3007,32 +3602,34 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         o['dfde'] = dfde
         o['dfde_lo'] = flo
         o['dfde_hi'] = fhi
-        o['dfde_ferr'] = (fhi - flo) / dfde
-        
+        o['dfde_err'] = dfde_err
+        o['dfde_ferr'] = 0.5 * (fhi - flo) / dfde
+
         try:
-            o['pivot_energy'] = 10 ** utils.interpolate_function_min(loge,o['dfde_ferr'])
+            o['pivot_energy'] = 10 ** utils.interpolate_function_min(loge, o[
+                                                                     'dfde_ferr'])
         except Exception:
             self.logger.error('Failed to compute pivot energy',
                               exc_info=True)
 
         return o
-    
+
     def _coadd_maps(self, cmaps, shape, rm):
         """
         """
-        
+
         if self.projtype == "WCS":
             shape = (self.enumbins, self.npix, self.npix)
             self._ccube = skymap.make_coadd_map(cmaps, self._proj, shape)
-            utils.write_fits_image(self._ccube.counts, self._ccube.wcs,
-                                   self._ccube_file)
+            fits_utils.write_fits_image(self._ccube.counts, self._ccube.wcs,
+                                        self._ccube_file)
             rm['counts'] += np.squeeze(
                 np.apply_over_axes(np.sum, self._ccube.counts,
                                    axes=[1, 2]))
         elif self.projtype == "HPX":
             self._ccube = skymap.make_coadd_map(cmaps, self._proj, shape)
-            utils.write_hpx_image(self._ccube.counts, self._ccube.hpx,
-                                  self._ccube_file)
+            fits_utils.write_hpx_image(self._ccube.counts, self._ccube.hpx,
+                                       self._ccube_file)
             rm['counts'] += np.squeeze(
                 np.apply_over_axes(np.sum, self._ccube.counts,
                                    axes=[1]))
@@ -3040,7 +3637,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
 
-    def update_source(self, name, paramsonly=False, reoptimize=False):
+    def update_source(self, name, paramsonly=False, reoptimize=False, **kwargs):
         """Update the dictionary for this source.
 
         Parameters
@@ -3056,17 +3653,19 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         """
 
         npts = self.config['gtlike']['llscan_npts']
-        
-        sd = self.get_src_model(name, paramsonly, reoptimize, npts)
+        optimizer = kwargs.get('optimizer', self.config['optimizer'])
+
+        sd = self.get_src_model(name, paramsonly, reoptimize, npts,
+                                optimizer=optimizer)
         src = self.roi.get_source_by_name(name)
         src.update_data(sd)
 
         for c in self.components:
             src = c.roi.get_source_by_name(name)
-            src.update_data(sd)            
+            src.update_data(sd)
 
     def get_src_model(self, name, paramsonly=False, reoptimize=False,
-                      npts=None):
+                      npts=None, **kwargs):
         """Compose a dictionary for a source with the current best-fit
         parameters.
 
@@ -3076,19 +3675,26 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         name : str
 
         paramsonly : bool
+           Skip computing TS and likelihood profile.
 
         reoptimize : bool
            Re-fit background parameters in likelihood scan.
 
         npts : int
            Number of points for likelihood scan.
+
+        Returns
+        -------
+        src_dict : dict
+
         """
 
         self.logger.debug('Generating source dict for ' + name)
 
+        optimizer = kwargs.get('optimizer', self.config['optimizer'])
         if npts is None:
             npts = self.config['gtlike']['llscan_npts']
-        
+
         name = self.get_source_name(name)
         source = self.like[name].src
         spectrum = source.spectrum()
@@ -3121,24 +3727,24 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
                     'eflux10000_ul95': np.nan,
                     'pivot_energy': 1000.,
                     'ts': np.nan,
-                    'loglike' : np.nan,
+                    'loglike': np.nan,
                     'npred': 0.0,
                     'lnlprofile': None,
-                    'dloglike_scan' : np.nan*np.ones(npts),
-                    'eflux_scan' : np.nan*np.ones(npts),
-                    'flux_scan' : np.nan*np.ones(npts),
+                    'dloglike_scan': np.nan * np.ones(npts),
+                    'eflux_scan': np.nan * np.ones(npts),
+                    'flux_scan': np.nan * np.ones(npts),
                     }
 
-        src = self.components[0].like.logLike.getSource(str(name))
         src_dict['params'] = gtutils.gtlike_spectrum_to_dict(spectrum)
-        src_dict['spectral_pars'] = gtutils.get_pars_dict_from_source(src)
-        
+        src_dict['spectral_pars'] = gtutils.get_function_pars_dict(spectrum)
+
         # Get Counts Spectrum
-        src_dict['model_counts'] = self.model_counts_spectrum(name, summed=True)
+        src_dict['model_counts'] = self.model_counts_spectrum(
+            name, summed=True)
 
         # Get NPred
         src_dict['npred'] = self.like.NpredValue(str(name))
-        
+
         # Get the Model Fluxes
         try:
             src_dict['flux'][0] = self.like.flux(name, self.energies[0],
@@ -3169,30 +3775,31 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
 
                 dfde_index = -get_spectral_index(self.like[name],
                                                  src_dict['pivot_energy'])
-                
+
                 dfde100_index = -get_spectral_index(self.like[name],
                                                     100.)
                 dfde1000_index = -get_spectral_index(self.like[name],
                                                      1000.)
                 dfde10000_index = -get_spectral_index(self.like[name],
                                                       10000.)
-                
+
                 normPar.setValue(0.0)
             else:
                 dfde_index = -get_spectral_index(self.like[name],
                                                  src_dict['pivot_energy'])
-                
+
                 dfde100_index = -get_spectral_index(self.like[name],
                                                     100.)
                 dfde1000_index = -get_spectral_index(self.like[name],
                                                      1000.)
                 dfde10000_index = -get_spectral_index(self.like[name],
                                                       10000.)
-            
-            src_dict['dfde100_index'][0] = dfde100_index 
+
+            src_dict['dfde_index'][0] = dfde_index
+            src_dict['dfde100_index'][0] = dfde100_index
             src_dict['dfde1000_index'][0] = dfde1000_index
             src_dict['dfde10000_index'][0] = dfde10000_index
-            
+
         except Exception:
             self.logger.error('Failed to update source parameters.',
                               exc_info=True)
@@ -3203,7 +3810,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             return src_dict
 
         emax = 10 ** 5.5
-        
+
         try:
             src_dict['flux'][1] = self.like.fluxError(name,
                                                       self.energies[0],
@@ -3226,17 +3833,20 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         # self.logger.error('Failed to update source parameters.',
         #  exc_info=True)
         lnlp = self.profile_norm(name, savestate=True,
-                                 reoptimize=reoptimize,npts=npts)
-        
+                                 reoptimize=reoptimize, npts=npts,
+                                 optimizer=optimizer)
+
         src_dict['lnlprofile'] = lnlp
 
         src_dict['dloglike_scan'] = lnlp['dloglike']
         src_dict['eflux_scan'] = lnlp['eflux']
         src_dict['flux_scan'] = lnlp['flux']
         src_dict['loglike'] = np.max(lnlp['loglike'])
-        
-        flux_ul_data = utils.get_parameter_limits(lnlp['flux'], lnlp['dloglike'])
-        eflux_ul_data = utils.get_parameter_limits(lnlp['eflux'], lnlp['dloglike'])
+
+        flux_ul_data = utils.get_parameter_limits(
+            lnlp['flux'], lnlp['dloglike'])
+        eflux_ul_data = utils.get_parameter_limits(
+            lnlp['eflux'], lnlp['dloglike'])
 
         if normPar.getValue() == 0:
             normPar.setValue(1.0)
@@ -3250,32 +3860,31 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             eflux1000 = self.like.energyFlux(name, 1000., emax)
             eflux10000 = self.like.energyFlux(name, 10000., emax)
 
-            flux100_ratio = flux100/flux
-            flux1000_ratio = flux1000/flux
-            flux10000_ratio = flux10000/flux
-            eflux100_ratio = eflux100/flux
-            eflux1000_ratio = eflux1000/flux
-            eflux10000_ratio = eflux10000/flux
+            flux100_ratio = flux100 / flux
+            flux1000_ratio = flux1000 / flux
+            flux10000_ratio = flux10000 / flux
+            eflux100_ratio = eflux100 / eflux
+            eflux1000_ratio = eflux1000 / eflux
+            eflux10000_ratio = eflux10000 / eflux
             normPar.setValue(0.0)
         else:
-            flux100_ratio = src_dict['flux100'][0]/src_dict['flux'][0]
-            flux1000_ratio = src_dict['flux1000'][0]/src_dict['flux'][0]
-            flux10000_ratio = src_dict['flux10000'][0]/src_dict['flux'][0]
-            
-            eflux100_ratio = src_dict['eflux100'][0]/src_dict['eflux'][0]
-            eflux1000_ratio = src_dict['eflux1000'][0]/src_dict['eflux'][0]
-            eflux10000_ratio = src_dict['eflux10000'][0]/src_dict['eflux'][0]
-        
-        
+            flux100_ratio = src_dict['flux100'][0] / src_dict['flux'][0]
+            flux1000_ratio = src_dict['flux1000'][0] / src_dict['flux'][0]
+            flux10000_ratio = src_dict['flux10000'][0] / src_dict['flux'][0]
+
+            eflux100_ratio = src_dict['eflux100'][0] / src_dict['eflux'][0]
+            eflux1000_ratio = src_dict['eflux1000'][0] / src_dict['eflux'][0]
+            eflux10000_ratio = src_dict['eflux10000'][0] / src_dict['eflux'][0]
+
         src_dict['flux_ul95'] = flux_ul_data['ul']
-        src_dict['flux100_ul95'] = flux_ul_data['ul']*flux100_ratio
-        src_dict['flux1000_ul95'] = flux_ul_data['ul']*flux1000_ratio
-        src_dict['flux10000_ul95'] = flux_ul_data['ul']*flux10000_ratio
+        src_dict['flux100_ul95'] = flux_ul_data['ul'] * flux100_ratio
+        src_dict['flux1000_ul95'] = flux_ul_data['ul'] * flux1000_ratio
+        src_dict['flux10000_ul95'] = flux_ul_data['ul'] * flux10000_ratio
 
         src_dict['eflux_ul95'] = eflux_ul_data['ul']
-        src_dict['eflux100_ul95'] = eflux_ul_data['ul']*eflux100_ratio
-        src_dict['eflux1000_ul95'] = eflux_ul_data['ul']*eflux1000_ratio
-        src_dict['eflux10000_ul95'] = eflux_ul_data['ul']*eflux10000_ratio
+        src_dict['eflux100_ul95'] = eflux_ul_data['ul'] * eflux100_ratio
+        src_dict['eflux1000_ul95'] = eflux_ul_data['ul'] * eflux1000_ratio
+        src_dict['eflux10000_ul95'] = eflux_ul_data['ul'] * eflux10000_ratio
 
         # Extract covariance matrix
         fd = None
@@ -3297,7 +3906,7 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
             src_dict['dfde10000'][1] = fd.error(10000.)
 
             src_dict['pivot_energy'] = src_dict['model_flux']['pivot_energy']
-            
+
             e0 = src_dict['pivot_energy']
             src_dict['dfde'][0] = self.like[name].spectrum()(pyLike.dArg(e0))
             src_dict['dfde'][1] = fd.error(e0)
@@ -3305,8 +3914,8 @@ class GTAnalysis(fermipy.config.Configurable,sed.SEDGenerator,
         if not reoptimize:
             src_dict['ts'] = self.like.Ts2(name, reoptimize=reoptimize)
         else:
-            src_dict['ts'] = -2.0*lnlp['dloglike'][0]
-            
+            src_dict['ts'] = -2.0 * lnlp['dloglike'][0]
+
         return src_dict
 
 
@@ -3328,7 +3937,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self.logger = Logger.get(self.__class__.__name__,
                                  self.config['fileio']['logfile'],
-                                 ll(self.config['logging']['verbosity']))
+                                 log_level(self.config['logging']['verbosity']))
 
         self._roi = ROIModel.create(self.config['selection'],
                                     self.config['model'],
@@ -3340,41 +3949,35 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
 
-        from os.path import join
+        self._files = {}
+        self._files['ft1'] = 'ft1%s.fits'
+        self._files['ft1_filtered'] = 'ft1_filtered%s.fits'
+        self._files['ccube'] = 'ccube%s.fits'
+        self._files['ccubemc'] = 'ccubemc%s.fits'
+        self._files['srcmap'] = 'srcmap%s.fits'
+        self._files['bexpmap'] = 'bexpmap%s.fits'
+        self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
+        self._files['srcmdl'] = 'srcmdl%s.xml'
 
-        self._ft1_file = join(workdir,
-                              'ft1%s.fits' % self.config['file_suffix'])
-        self._ft1_filtered_file = join(workdir,
-                                       'ft1_filtered%s.fits' % self.config[
-                                           'file_suffix'])
+        for k, v in self._files.items():
+            self._files[k] = os.path.join(
+                workdir, v % self.config['file_suffix'])
 
         if self.config['data']['ltcube'] is not None:
             self._ext_ltcube = True
-            self._ltcube_file = os.path.expandvars(self.config['data']['ltcube'])
-            if not os.path.isfile(self._ltcube_file):
-                self._ltcube_file = os.path.join(workdir,self._ltcube_file)
-            if not os.path.isfile(self._ltcube_file):
-                raise Exception('Invalid livetime cube: %s' % self._ltcube_file)
+            self._files['ltcube'] = os.path.expandvars(
+                self.config['data']['ltcube'])
+            if not os.path.isfile(self._files['ltcube']):
+                self.files['ltcube'] = os.path.join(
+                    workdir, self.files['ltcube'])
+            if not os.path.isfile(self.files['ltcube']):
+                raise Exception('Invalid livetime cube: %s' %
+                                self.files['ltcube'])
         else:
             self._ext_ltcube = False
-            self._ltcube_file = join(workdir,
-                                'ltcube%s.fits' % self.config['file_suffix'])
-            
-        self._ccube_file = join(workdir,
-                                'ccube%s.fits' % self.config['file_suffix'])
-        self._ccubemc_file = join(workdir,
-                                  'ccubemc%s.fits' % self.config['file_suffix'])
-        self._mcube_file = join(workdir,
-                                'mcube%s.fits' % self.config['file_suffix'])
-        self._srcmap_file = join(workdir,
-                                 'srcmap%s.fits' % self.config['file_suffix'])
-        self._bexpmap_file = join(workdir,
-                                  'bexpmap%s.fits' % self.config['file_suffix'])
-        self._bexpmap_roi_file = join(workdir,
-                                      'bexpmap_roi%s.fits' % self.config[
-                                          'file_suffix'])
-        self._srcmdl_file = join(workdir,
-                                 'srcmdl%s.xml' % self.config['file_suffix'])
+            self.files['ltcube'] = os.path.join(workdir,
+                                                'ltcube%s.fits' %
+                                                self.config['file_suffix'])
 
         if self.config['binning']['enumbins'] is not None:
             self._enumbins = int(self.config['binning']['enumbins'])
@@ -3389,7 +3992,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             np.log10(self.config['selection']['emin']),
             np.log10(self.config['selection']['emax']),
             self._enumbins + 1)
-        self._ebin_center = 0.5 * (self._ebin_edges[1:] + self._ebin_edges[:-1])
+        self._ebin_center = 0.5 * \
+            (self._ebin_edges[1:] + self._ebin_edges[:-1])
 
         if self.config['binning']['npix'] is None:
             self._npix = int(np.round(self.config['binning']['roiwidth'] /
@@ -3421,32 +4025,36 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if self.projtype == 'HPX':
             self._hpx_region = create_hpx_disk_region_string(self.roi.skydir,
                                                              self._coordsys,
-                                                             0.5*self.config['binning']['roiwidth'])
+                                                             0.5 * self.config['binning']['roiwidth'])
             self._proj = HPX.create_hpx(-1,
-                                     self.config['binning']['hpx_ordering_scheme'] == "NESTED",
-                                     self._coordsys,
-                                     self.config['binning']['hpx_order'],
-                                     self._hpx_region,
-                                     self.energies)
+                                        self.config['binning'][
+                                            'hpx_ordering_scheme'] == "NESTED",
+                                        self._coordsys,
+                                        self.config['binning']['hpx_order'],
+                                        self._hpx_region,
+                                        self.energies)
         elif self.projtype == "WCS":
             self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
-                                      coordsys=self._coordsys,
-                                      projection=self.config['binning']['proj'],
-                                      cdelt=self.binsz,
-                                      crpix=1.0 + 0.5 * (self._npix - 1),
-                                      naxis=2)
+                                                coordsys=self._coordsys,
+                                                projection=self.config[
+                                                    'binning']['proj'],
+                                                cdelt=self.binsz,
+                                                crpix=1.0 + 0.5 *
+                                                (self._npix - 1),
+                                                naxis=2)
             self._proj = wcs_utils.create_wcs(self.roi.skydir,
-                                    coordsys=self._coordsys,
-                                    projection=self.config['binning']['proj'],
-                                    cdelt=self.binsz,
-                                    crpix=1.0 + 0.5 * (self._npix - 1),
-                                    naxis=3,
-                                    energies=self.energies)
+                                              coordsys=self._coordsys,
+                                              projection=self.config[
+                                                  'binning']['proj'],
+                                              cdelt=self.binsz,
+                                              crpix=1.0 + 0.5 *
+                                              (self._npix - 1),
+                                              naxis=3,
+                                              energies=self.energies)
 
         else:
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
-
 
         self.print_config(self.logger, loglevel=logging.DEBUG)
 
@@ -3471,7 +4079,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def log_energies(self):
         """Return the energy bin edges in log10(E/MeV)."""
         return self._ebin_edges
-    
+
     @property
     def enumbins(self):
         return len(self._ebin_edges) - 1
@@ -3509,29 +4117,54 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def coordsys(self):
         return self._coordsys
 
+    @property
+    def files(self):
+        return self._files
+
     def reload_source(self, name):
         """Delete and reload a source in the model."""
 
         src = self.roi.get_source_by_name(name)
-        
+
         if hasattr(self.like.logLike, 'loadSourceMap'):
 
-            if src['SpatialModel'] in ['PSFSource','GaussianSource',
+            if src['SpatialModel'] in ['PSFSource', 'GaussianSource',
                                        'DiskSource']:
                 self._update_srcmap_file([src], True)
-                self.like.logLike.loadSourceMap(name, False, False)
+                self.like.logLike.loadSourceMap(str(name), False, False)
             else:
-                self.like.logLike.loadSourceMap(name, True, False)
+                self.like.logLike.loadSourceMap(str(name), True, False)
 
-            srcmap_utils.delete_source_map(self._srcmap_file,name)
-            self.like.logLike.saveSourceMaps(self._srcmap_file)
+            srcmap_utils.delete_source_map(self.files['srcmap'], name)
+            self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
             self.like.logLike.buildFixedModelWts()
         else:
             self.write_xml('tmp')
             src = self.delete_source(name)
             self.add_source(name, src, free=True)
             self.load_xml('tmp')
-    
+
+    def reload_sources(self, names):
+
+        try:
+            models = ['PSFSource', 'GaussianSource', 'DiskSource']
+
+            srcs = [self.roi.get_source_by_name(name) for name in names]
+            names0 = [str(src.name) for src in srcs if
+                      src['SpatialModel'] not in models]
+
+            srcs1 = [src for src in srcs if src['SpatialModel'] in models]
+            names1 = [str(src.name) for src in srcs1]
+
+            self.like.logLike.loadSourceMaps(names0, True, True)            
+            self._update_srcmap_file(srcs1, True)
+            for name in names1:
+                self.like.logLike.eraseSourceMap(name)
+            self.like.logLike.loadSourceMaps(names1, False, False)            
+        except:
+            for name in names:
+                self.reload_source(name)
+
     def add_source(self, name, src_dict, free=False, save_source_maps=True):
         """Add a new source to the model.  Source properties
         (spectrum, spatial model) are set with the src_dict argument.
@@ -3560,27 +4193,27 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.logger.error(msg)
             raise Exception(msg)
 
-        srcmap_utils.delete_source_map(self._srcmap_file,name)
+        srcmap_utils.delete_source_map(self.files['srcmap'], name)
 
-        src = self.roi.create_source(name,src_dict)
+        src = self.roi.create_source(name, src_dict)
         self.make_template(src, self.config['file_suffix'])
-        
+
         if self._like is None:
             return
 
         self._update_srcmap_file([src], True)
 
-        pylike_src = self._create_source(src,free=True)        
+        pylike_src = self._create_source(src, free=True)
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(str(name))
         self.like.logLike.buildFixedModelWts()
         if save_source_maps:
-            self.like.logLike.saveSourceMaps(str(self._srcmap_file))
+            self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
 
     def _create_source(self, src, free=False):
         """Create a pyLikelihood Source object from a
         `~fermipy.roi_model.Model` object."""
-        
+
         if src['SpatialType'] == 'SkyDirFunction':
             pylike_src = pyLike.PointSource(self.like.logLike.observation())
             pylike_src.setDir(src.skydir.ra.deg, src.skydir.dec.deg, False,
@@ -3592,28 +4225,45 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                               False)
         elif src['SpatialType'] == 'RadialGaussian':
             sm = pyLike.RadialGaussian(src.skydir.ra.deg, src.skydir.dec.deg,
-                                        src['SpatialWidth'])
+                                       src['SpatialWidth'])
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
 
         elif src['SpatialType'] == 'RadialDisk':
             sm = pyLike.RadialDisk(src.skydir.ra.deg, src.skydir.dec.deg,
-                                        src['SpatialWidth'])
+                                   src['SpatialWidth'])
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
-            
+
         elif src['SpatialType'] == 'MapCubeFunction':
             mcf = pyLike.MapCubeFunction2(str(src['Spatial_Filename']))
             pylike_src = pyLike.DiffuseSource(mcf,
                                               self.like.logLike.observation(),
                                               False)
         else:
-            raise Exception('Unrecognized spatial type: %s', src['SpatialType'])
+            raise Exception('Unrecognized spatial type: %s',
+                            src['SpatialType'])
 
-        fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
-                                               src.spectral_pars)
+        if src['SpectrumType'] == 'FileFunction':
+            fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
+                                                   src.spectral_pars)
+
+            file_function = pyLike.FileFunction_cast(fn)
+            filename = str(os.path.expandvars(src['Spectrum_Filename']))
+            file_function.readFunction(filename)
+        elif src['SpectrumType'] == 'DMFitFunction':
+
+            fn = pyLike.DMFitFunction()
+            fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
+                                                   src.spectral_pars, fn)
+            filename = str(os.path.expandvars(src['Spectrum_Filename']))
+            fn.readFunction(filename)
+        else:
+            fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
+                                                   src.spectral_pars)
+
         pylike_src.setSpectrum(fn)
         pylike_src.setName(str(src.name))
 
@@ -3621,7 +4271,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         pylike_src.spectrum().normPar().setFree(free)
 
         return pylike_src
-            
+
     def delete_source(self, name, save_template=True, delete_source_map=False,
                       build_fixed_wts=True):
 
@@ -3633,14 +4283,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
             normPar = self.like.normPar(name)
             isFree = normPar.isFree()
-            
+
             if str(src.name) in self.like.sourceNames():
                 self.like.deleteSource(str(src.name))
                 self.like.logLike.eraseSourceMap(str(src.name))
-                
-            if not isFree and build_fixed_wts:            
+
+            if not isFree and build_fixed_wts:
                 self.like.logLike.buildFixedModelWts()
-                    
+
         if not save_template and 'Spatial_Filename' in src and \
                 src['Spatial_Filename'] is not None and \
                 os.path.isfile(src['Spatial_Filename']):
@@ -3649,8 +4299,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.roi.delete_sources([src])
 
         if delete_source_map:
-            srcmap_utils.delete_source_map(self._srcmap_file,name)
-            
+            srcmap_utils.delete_source_map(self.files['srcmap'], name)
+
         return src
 
     def set_edisp_flag(self, name, flag=True):
@@ -3670,23 +4320,26 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         logemax : float
            Upper end of energy range in log10(E/MeV).
-        
+
         """
-        
+
         if logemin is None:
             logemin = self.log_energies[0]
 
         if logemax is None:
             logemax = self.log_energies[-1]
-            
+
         imin = int(utils.val_to_edge(self.log_energies, logemin)[0])
         imax = int(utils.val_to_edge(self.log_energies, logemax)[0])
 
         if imin - imax == 0:
-            imin = len(self.log_energies) - 1
-            imax = len(self.log_energies) - 1
+            imin = int(len(self.log_energies) - 1)
+            imax = int(len(self.log_energies) - 1)
 
-        self.like.selectEbounds(int(imin), int(imax))
+        klims = self.like.logLike.klims()
+        if imin != klims[0] or imax != klims[1]:
+            self.like.selectEbounds(imin, imax)
+
         return np.array([self.log_energies[imin], self.log_energies[imax]])
 
     def counts_map(self):
@@ -3717,16 +4370,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         return None
 
     def model_counts_map(self, name=None, exclude=None):
-        """Return the model counts map for a single source, a list of
-        sources, or for the sum of all sources in the ROI.
-        
+        """Return the model expectation map for a single source, a set
+        of sources, or all sources in the ROI.  The map will be
+        computed using the current model parameters.
+
         Parameters
         ----------
         name : str
 
-           Parameter controlling the set of sources for which the
-           model counts map will be calculated.  If name=None a
-           model map will be generated for all sources in the ROI.
+           Parameter that defines the sources for which the model map
+           will be calculated.  If name=None a model map will be
+           generated for all sources in the model.  If name='diffuse'
+           a map for all diffuse sources will be generated.
 
         exclude : list
 
@@ -3747,61 +4402,52 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             raise Exception("Unknown projection type %s", self.projtype)
 
-        if exclude is None:
-            exclude = []
-        elif not isinstance(exclude, list):
-            exclude = [exclude]
-
-        excluded_srcnames = []
+        exclude = utils.arg_to_list(exclude)
+        names = utils.arg_to_list(name)
+        
+        excluded_names = []
         for i, t in enumerate(exclude):
             srcs = self.roi.get_sources_by_name(t)
-            excluded_srcnames += [s.name for s in srcs]
-            
+            excluded_names += [s.name for s in srcs]
+
         if not hasattr(self.like.logLike, 'loadSourceMaps'):
             # Update fixed model
             self.like.logLike.buildFixedModelWts()
             # Populate source map hash
             self.like.logLike.buildFixedModelWts(True)
-        elif (name is None or name =='all') and not exclude:
+        elif (name is None or name == 'all') and not exclude:
             self.like.logLike.loadSourceMaps()
 
         src_names = []
-        if ((name is None) or (name == 'all')) and exclude:
-            for name in self.like.sourceNames():
-                if name in excluded_srcnames:
-                    continue
-                src_names += [name]
-        elif name == 'diffuse':           
-            for src in self.roi.sources:
-                if not src.diffuse:
-                    continue
-                if src.name in excluded_srcnames:
-                    continue
-                src_names += [src.name]
-        elif isinstance(name, list):
-            for n in name:
-                src = self.roi.get_source_by_name(n)
-                if src.name in excluded_srcnames:
-                    continue
-                src_names += [src.name]
-        elif name is not None:
-            src = self.roi.get_source_by_name(name)
-            src_names += [src.name]
+        if (name is None) or (name == 'all'):
+            src_names = [src.name for src in self.roi.sources]
+        elif name == 'diffuse':
+            src_names = [src.name for src in self.roi.sources if
+                         src.diffuse]
+        else:            
+            srcs = [self.roi.get_source_by_name(t) for t in names]
+            src_names = [src.name for src in srcs]
 
-        if len(src_names) == 0:
+        # Remove sources in exclude list
+        src_names = [str(t) for t in src_names if t not in excluded_names]
+        
+        if len(src_names) == len(self.roi.sources):
             self.like.logLike.computeModelMap(v)
-        elif not hasattr(self.like.logLike, 'setSourceMapImage'):            
+        elif not hasattr(self.like.logLike, 'setSourceMapImage'):
             for s in src_names:
                 model = self.like.logLike.sourceMap(str(s))
                 self.like.logLike.updateModelMap(v, model)
         else:
-            vsum = np.zeros(v.size())
-            for s in src_names:
-                vtmp = pyLike.FloatVector(v.size())
-                self.like.logLike.computeModelMap(str(s),vtmp)
-                vsum += vtmp
-            v = pyLike.FloatVector(vsum)
-                
+            try:
+                self.like.logLike.computeModelMap(src_names, v)
+            except:                
+                vsum = np.zeros(v.size())
+                for s in src_names:
+                    vtmp = pyLike.FloatVector(v.size())
+                    self.like.logLike.computeModelMap(str(s), vtmp)
+                    vsum += vtmp
+                v = pyLike.FloatVector(vsum)
+
         if self.projtype == "WCS":
             z = np.array(v).reshape(self.enumbins, self.npix, self.npix)
             return Map(z, copy.deepcopy(self.wcs))
@@ -3821,11 +4467,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
            Source name.
 
         """
-        
+
         cs = np.array(self.like.logLike.modelCountsSpectrum(str(name)))
         imin = utils.val_to_edge(self.log_energies, logemin)[0]
         imax = utils.val_to_edge(self.log_energies, logemax)[0]
-        if imax <= imin: raise Exception('Invalid energy range.')
+        if imax <= imin:
+            raise Exception('Invalid energy range.')
         return cs[imin:imax]
 
     def setup(self, overwrite=False):
@@ -3844,29 +4491,28 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.info("Running setup for Analysis Component: " +
                          self.name)
 
-        srcmdl_file = self._srcmdl_file
-        roi_center = self.roi.skydir
+        srcmdl_file = self.files['srcmdl']
 
         # If ltcube or ccube do not exist then rerun data selection
-        if not os.path.isfile(self._ccube_file) or \
-                not os.path.isfile(self._ltcube_file):
-            self._select_data()
+        if not os.path.isfile(self.files['ccube']) or \
+                not os.path.isfile(self.files['ltcube']):
+            self._select_data(overwrite=overwrite)
 
         # Run gtltcube
-        kw = dict(evfile=self._ft1_file,
+        kw = dict(evfile=self.files['ft1'],
                   scfile=self.config['data']['scfile'],
-                  outfile=self._ltcube_file,
+                  outfile=self.files['ltcube'],
                   zmax=self.config['selection']['zmax'])
 
         if self._ext_ltcube:
             self.logger.debug('Using external LT cube.')
-        elif not os.path.isfile(self._ltcube_file) or overwrite:
+        elif not os.path.isfile(self.files['ltcube']) or overwrite:
             run_gtapp('gtltcube', self.logger, kw)
         else:
             self.logger.debug('Skipping gtltcube')
 
-        self.logger.debug('Loading LT Cube %s',self._ltcube_file)
-        self._ltc = irfs.LTCube.create(self._ltcube_file)
+        self.logger.debug('Loading LT Cube %s', self.files['ltcube'])
+        self._ltc = irfs.LTCube.create(self.files['ltcube'])
 
         self.logger.debug('Creating PSF model')
         self._psf = irfs.PSFModel(self.roi.skydir, self._ltc,
@@ -3879,8 +4525,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             kw = dict(algorithm='ccube',
                       nxpix=self.npix, nypix=self.npix,
                       binsz=self.config['binning']['binsz'],
-                      evfile=self._ft1_file,
-                      outfile=self._ccube_file,
+                      evfile=self.files['ft1'],
+                      outfile=self.files['ccube'],
                       scfile=self.config['data']['scfile'],
                       xref=self._xref,
                       yref=self._yref,
@@ -3894,10 +4540,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       chatter=self.config['logging']['chatter'])
         elif self.projtype == "HPX":
             hpx_region = "DISK(%.3f,%.3f,%.3f)" % (
-            self._xref, self._yref, 0.5 * self.config['binning']['roiwidth'])
+                self._xref, self._yref, 0.5 * self.config['binning']['roiwidth'])
             kw = dict(algorithm='healpix',
-                      evfile=self._ft1_file,
-                      outfile=self._ccube_file,
+                      evfile=self.files['ft1'],
+                      outfile=self.files['ccube'],
                       scfile=self.config['data']['scfile'],
                       xref=self._xref,
                       yref=self._yref,
@@ -3918,7 +4564,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 'Unknown projection type, %s. Choices are WCS or HPX',
                 self.projtype)
 
-        if not os.path.isfile(self._ccube_file) or overwrite:
+        if not os.path.isfile(self.files['ccube']) or overwrite:
             run_gtapp('gtbin', self.logger, kw)
         else:
             self.logger.debug('Skipping gtbin')
@@ -3929,36 +4575,36 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if self.projtype == "HPX":
                 cmap = None
             else:
-                cmap = self._ccube_file
+                cmap = self.files['ccube']
         else:
             cmap = 'none'
 
         # Run gtexpcube2
-        kw = dict(infile=self._ltcube_file, cmap=cmap,
+        kw = dict(infile=self.files['ltcube'], cmap=cmap,
                   ebinalg='LOG',
                   emin=self.config['selection']['emin'],
                   emax=self.config['selection']['emax'],
                   enumbins=self._enumbins,
-                  outfile=self._bexpmap_file, proj='CAR',
+                  outfile=self.files['bexpmap'], proj='CAR',
                   nxpix=360, nypix=180, binsz=1,
                   xref=0.0, yref=0.0,
                   evtype=evtype,
                   irfs=self.config['gtlike']['irfs'],
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
-        
-        if not os.path.isfile(self._bexpmap_file) or overwrite:
+
+        if not os.path.isfile(self.files['bexpmap']) or overwrite:
             run_gtapp('gtexpcube2', self.logger, kw)
         else:
             self.logger.debug('Skipping gtexpcube')
 
         if self.projtype == "WCS":
-            kw = dict(infile=self._ltcube_file, cmap='none',
+            kw = dict(infile=self.files['ltcube'], cmap='none',
                       ebinalg='LOG',
                       emin=self.config['selection']['emin'],
                       emax=self.config['selection']['emax'],
                       enumbins=self._enumbins,
-                      outfile=self._bexpmap_roi_file, proj='CAR',
+                      outfile=self.files['bexpmap_roi'], proj='CAR',
                       nxpix=self.npix, nypix=self.npix,
                       binsz=self.config['binning']['binsz'],
                       xref=self._xref, yref=self._yref,
@@ -3966,7 +4612,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       irfs=self.config['gtlike']['irfs'],
                       coordsys=self.config['binning']['coordsys'],
                       chatter=self.config['logging']['chatter'])
-            if not os.path.isfile(self._bexpmap_roi_file) or overwrite:
+            if not os.path.isfile(self.files['bexpmap_roi']) or overwrite:
                 run_gtapp('gtexpcube2', self.logger, kw)
             else:
                 self.logger.debug('Skipping local gtexpcube')
@@ -3985,16 +4631,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.make_template(s, self.config['file_suffix'])
 
         # Write ROI XML
-        #if not os.path.isfile(srcmdl_file):
+        # if not os.path.isfile(srcmdl_file):
         self.roi.write_xml(srcmdl_file)
 
         # Run gtsrcmaps
         kw = dict(scfile=self.config['data']['scfile'],
-                  expcube=self._ltcube_file,
-                  cmap=self._ccube_file,
+                  expcube=self.files['ltcube'],
+                  cmap=self.files['ccube'],
                   srcmdl=srcmdl_file,
-                  bexpmap=self._bexpmap_file,
-                  outfile=self._srcmap_file,
+                  bexpmap=self.files['bexpmap'],
+                  outfile=self.files['srcmap'],
                   irfs=self.config['gtlike']['irfs'],
                   evtype=evtype,
                   rfactor=self.config['gtlike']['rfactor'],
@@ -4003,7 +4649,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no')
 
-        if not os.path.isfile(self._srcmap_file) or overwrite:
+        if not os.path.isfile(self.files['srcmap']) or overwrite:
             if self.config['gtlike']['srcmap'] and self.config['gtlike']['bexpmap']:
                 self._make_scaled_srcmap()
             else:
@@ -4016,18 +4662,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._create_binned_analysis()
 
-        if not self.config['data']['cacheft1'] and os.path.isfile(self._ft1_file):
+        if not self.config['data']['cacheft1'] and os.path.isfile(self.files['ft1']):
             self.logger.debug('Deleting FT1 file.')
-            os.remove(self._ft1_file)
-        
+            os.remove(self.files['ft1'])
+
         self.logger.info('Finished setup for Analysis Component: %s',
                          self.name)
 
-    def _select_data(self):
+    def _select_data(self, overwrite=False):
 
         # Run gtselect and gtmktime
         kw_gtselect = dict(infile=self.config['data']['evfile'],
-                           outfile=self._ft1_file,
+                           outfile=self.files['ft1'],
                            ra=self.roi.skydir.ra.deg,
                            dec=self.roi.skydir.dec.deg,
                            rad=self.config['selection']['radius'],
@@ -4041,32 +4687,32 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                            zmax=self.config['selection']['zmax'],
                            chatter=self.config['logging']['chatter'])
 
-        kw_gtmktime = dict(evfile=self._ft1_file,
-                           outfile=self._ft1_filtered_file,
+        kw_gtmktime = dict(evfile=self.files['ft1'],
+                           outfile=self.files['ft1_filtered'],
                            scfile=self.config['data']['scfile'],
                            roicut=self.config['selection']['roicut'],
                            filter=self.config['selection']['filter'])
 
-        if not os.path.isfile(self._ft1_file) or overwrite:
+        if not os.path.isfile(self.files['ft1']) or overwrite:
             run_gtapp('gtselect', self.logger, kw_gtselect)
             if self.config['selection']['roicut'] == 'yes' or \
-                            self.config['selection']['filter'] is not None:
+                    self.config['selection']['filter'] is not None:
                 run_gtapp('gtmktime', self.logger, kw_gtmktime)
-                os.system(
-                    'mv %s %s' % (self._ft1_filtered_file, self._ft1_file))
+                os.system('mv %s %s' % (self.files['ft1_filtered'],
+                                        self.files['ft1']))
         else:
             self.logger.debug('Skipping gtselect')
-        
+
     def _create_binned_analysis(self, xmlfile=None):
 
-        srcmdl_file = self._srcmdl_file
+        srcmdl_file = self.files['srcmdl']
         if xmlfile is not None:
             srcmdl_file = self.get_model_path(xmlfile)
-            
+
         # Create BinnedObs
         self.logger.debug('Creating BinnedObs')
-        kw = dict(srcMaps=self._srcmap_file, expCube=self._ltcube_file,
-                  binnedExpMap=self._bexpmap_file,
+        kw = dict(srcMaps=self.files['srcmap'], expCube=self.files['ltcube'],
+                  binnedExpMap=self.files['bexpmap'],
                   irfs=self.config['gtlike']['irfs'])
         self.logger.debug(kw)
 
@@ -4097,7 +4743,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
             if not self.roi.has_source(s):
                 continue
-            
+
             self.logger.debug('Disabling energy dispersion for %s', s)
             self.set_edisp_flag(s, False)
 
@@ -4105,16 +4751,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Computing fixed weights')
         self.like.logLike.buildFixedModelWts()
         self.logger.debug('Updating source maps')
-        self.like.logLike.saveSourceMaps(str(self._srcmap_file))
+        self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
 
     def _make_scaled_srcmap(self):
         """Make an exposure cube with the same binning as the counts map."""
 
         self.logger.info('Computing scaled source map.')
 
-        bexp0 = pyfits.open(self._bexpmap_roi_file)
-        bexp1 = pyfits.open(self.config['gtlike']['bexpmap'])
-        srcmap = pyfits.open(self.config['gtlike']['srcmap'])
+        bexp0 = fits.open(self.files['bexpmap_roi'])
+        bexp1 = fits.open(self.config['gtlike']['bexpmap'])
+        srcmap = fits.open(self.config['gtlike']['srcmap'])
 
         if bexp0[0].data.shape != bexp1[0].data.shape:
             raise Exception('Wrong shape for input exposure map file.')
@@ -4129,21 +4775,24 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         for hdu in srcmap[1:]:
 
-            if hdu.name == 'GTI': continue
-            if hdu.name == 'EBOUNDS': continue
+            if hdu.name == 'GTI':
+                continue
+            if hdu.name == 'EBOUNDS':
+                continue
             hdu.data *= bexp_ratio
 
-        srcmap.writeto(self._srcmap_file, clobber=True)
+        srcmap.writeto(self.files['srcmap'], clobber=True)
 
     def restore_counts_maps(self):
 
-        cmap = Map.create_from_fits(self._ccube_file)
+        cmap = Map.create_from_fits(self.files['ccube'])
 
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(cmap.counts.astype(float)))
 
-        srcmap_utils.update_source_maps(self._srcmap_file, {'PRIMARY': cmap.counts},
-                                 logger=self.logger)
+        srcmap_utils.update_source_maps(self.files['srcmap'],
+                                        {'PRIMARY': cmap.counts},
+                                        logger=self.logger)
 
     def simulate_roi(self, name=None, clear=True, randomize=True):
         """Simulate the whole ROI or inject a simulation of one or
@@ -4151,13 +4800,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         Parameters
         ----------
-        name : str        
+        name : str
            Name of the model component to be simulated.  If None then
            the whole ROI will be simulated.
 
         clear : bool
-           Zero the current counts map before injecting the simulation. 
-           
+           Zero the current counts map before injecting the simulation.
+
         """
 
         data = self.counts_map().counts
@@ -4166,19 +4815,19 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if clear:
             data.fill(0.0)
 
-        if randomize:            
+        if randomize:
             data += np.random.poisson(m.counts).astype(float)
         else:
             data += m.counts
-            
-            
+
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(data))
 
-        srcmap_utils.update_source_maps(self._srcmap_file, {'PRIMARY': data},
-                                 logger=self.logger)
-        utils.write_fits_image(data, self.wcs, self._ccubemc_file)
-        
+        srcmap_utils.update_source_maps(self.files['srcmap'],
+                                        {'PRIMARY': data},
+                                        logger=self.logger)
+        fits_utils.write_fits_image(data, self.wcs, self.files['ccubemc'])
+
     def write_model_map(self, model_name=None, name=None):
         """Save counts model map to a FITS file.
 
@@ -4193,13 +4842,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'mcube%s.fits' % (suffix))
-        
+
         cmap = self.model_counts_map(name)
 
         if self.projtype == "HPX":
-            utils.write_hpx_image(cmap.counts, cmap.hpx, outfile)
+            fits_utils.write_hpx_image(cmap.counts, cmap.hpx, outfile)
         elif self.projtype == "WCS":
-            utils.write_fits_image(cmap.counts, cmap.wcs, outfile)
+            fits_utils.write_fits_image(cmap.counts, cmap.wcs, outfile)
         else:
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
@@ -4211,8 +4860,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             return
         if src['SpatialType'] != 'SpatialMap':
             return
-        
-        if src['SpatialModel'] in ['GaussianSource','RadialGaussian']:
+
+        if src['SpatialModel'] in ['GaussianSource', 'RadialGaussian']:
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_gauss_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
@@ -4221,23 +4870,23 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                                    src['SpatialWidth'],
                                                    template_file, npix=500)
             src['Spatial_Filename'] = template_file
-        elif src['SpatialModel'] in ['DiskSource','RadialDisk']:
+        elif src['SpatialModel'] in ['DiskSource', 'RadialDisk']:
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_disk_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
                                              suffix))
             srcmap_utils.make_disk_spatial_map(src.skydir, src['SpatialWidth'],
                                                template_file, npix=500)
-            src['Spatial_Filename'] = template_file        
+            src['Spatial_Filename'] = template_file
 
     def _update_srcmap_file(self, sources=None, overwrite=False):
         """Check the contents of the source map file and generate
         source maps for any components that are not present."""
 
-        if not os.path.isfile(self._srcmap_file):
+        if not os.path.isfile(self.files['srcmap']):
             return
 
-        hdulist = pyfits.open(self._srcmap_file)
+        hdulist = fits.open(self.files['srcmap'])
         hdunames = [hdu.name.upper() for hdu in hdulist]
 
         srcmaps = {}
@@ -4245,61 +4894,63 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if sources is None:
             sources = self.roi.sources
 
-        for s in sources:
+        for src in sources:
 
-            if s.diffuse:
+            if src.diffuse:
                 continue
-            if 'SpatialModel' not in s:
+            if 'SpatialModel' not in src:
                 continue
-            if s['SpatialModel'] in ['PointSource', 'Gaussian',
-                                     'SpatialMap','RadialGaussian',
-                                     'RadialDisk']:
+            if src['SpatialModel'] in ['PointSource', 'Gaussian',
+                                       'SpatialMap']:
                 continue
-            if s.name.upper() in hdunames and not overwrite:
+            if src.name.upper() in hdunames and not overwrite:
+                continue
+            if src['SpatialModel'] in ['RadialGaussian', 'RadialDisk'] and \
+                    hasattr(pyLike, 'RadialGaussian'):
                 continue
 
-            self.logger.debug('Creating source map for %s', s.name)
+            self.logger.debug('Creating source map for %s', src.name)
 
-            xpix, ypix = wcs_utils.skydir_to_pix(s.skydir, self._skywcs)
-            xpix -= (self.npix-1.0)/2.
-            ypix -= (self.npix-1.0)/2.
-            
-            k = srcmap_utils.make_srcmap(s.skydir, self._psf,
-                                         s['SpatialModel'],
-                                         s['SpatialWidth'],
+            xpix, ypix = wcs_utils.skydir_to_pix(src.skydir, self._skywcs)
+            xpix -= (self.npix - 1.0) / 2.
+            ypix -= (self.npix - 1.0) / 2.
+
+            k = srcmap_utils.make_srcmap(src.skydir, self._psf,
+                                         src['SpatialModel'],
+                                         src['SpatialWidth'],
                                          npix=self.npix,
                                          xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
                                          rebin=8)
-            
-            srcmaps[s.name] = k
+
+            srcmaps[src.name] = k
 
         if srcmaps:
             self.logger.debug(
                 'Updating source map file for component %s.', self.name)
-            srcmap_utils.update_source_maps(self._srcmap_file, srcmaps,
+            srcmap_utils.update_source_maps(self.files['srcmap'], srcmaps,
                                             logger=self.logger)
 
     def _update_srcmap(self, name, skydir, spatial_model, spatial_width):
 
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
-        xpix -= (self.npix-1.0)/2.
-        ypix -= (self.npix-1.0)/2.
+        xpix -= (self.npix - 1.0) / 2.
+        ypix -= (self.npix - 1.0) / 2.
 
         k = srcmap_utils.make_srcmap(self.roi.skydir, self._psf, spatial_model,
-                              spatial_width,
-                              npix=self.npix, xpix=xpix, ypix=ypix,
-                              cdelt=self.config['binning']['binsz'],
-                              rebin=8)
+                                     spatial_width,
+                                     npix=self.npix, xpix=xpix, ypix=ypix,
+                                     cdelt=self.config['binning']['binsz'],
+                                     rebin=8)
 
-        self.like.logLike.setSourceMapImage(str(name),np.ravel(k))        
+        self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
         #src_map = self.like.logLike.sourceMap(str(name))
-        #src_map.setImage(np.ravel(k))
+        # src_map.setImage(np.ravel(k))
 
         normPar = self.like.normPar(name)
         if not normPar.isFree():
             self.like.logLike.buildFixedModelWts()
-            
+
     def generate_model(self, model_name=None, outfile=None):
         """Generate a counts model map from an XML model file using
         gtmodel.
@@ -4319,7 +4970,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             model_name = os.path.splitext(model_name)[0]
 
         if model_name is None or model_name == '':
-            srcmdl = self._srcmdl_file
+            srcmdl = self.files['srcmdl']
         else:
             srcmdl = self.get_model_path(model_name)
 
@@ -4337,11 +4988,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # May consider generating a custom source model file
         if not os.path.isfile(outfile):
 
-            kw = dict(srcmaps=self._srcmap_file,
+            kw = dict(srcmaps=self.files['srcmap'],
                       srcmdl=srcmdl,
-                      bexpmap=self._bexpmap_file,
+                      bexpmap=self.files['bexpmap'],
                       outfile=outfile,
-                      expcube=self._ltcube_file,
+                      expcube=self.files['ltcube'],
                       irfs=self.config['gtlike']['irfs'],
                       evtype=self.config['selection']['evtype'],
                       edisp=bool(self.config['gtlike']['edisp']),
@@ -4386,9 +5037,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'tscube%s.fits' % (self.config['file_suffix']))
 
-        kw = dict(cmap=self._ccube_file,
-                  expcube=self._ltcube_file,
-                  bexpmap=self._bexpmap_file,
+        kw = dict(cmap=self.files['ccube'],
+                  expcube=self.files['ltcube'],
+                  bexpmap=self.files['bexpmap'],
                   irfs=self.config['gtlike']['irfs'],
                   evtype=self.config['selection']['evtype'],
                   srcmdl=xmlfile,

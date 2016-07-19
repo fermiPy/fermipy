@@ -1,14 +1,11 @@
 from __future__ import absolute_import, division, print_function, \
     unicode_literals
 
-from numpy.testing import assert_allclose
-import astropy.units as u
-import numpy as np
-from .. import gtanalysis
-from .. import utils
-from .. import spectrum
-import pytest
 import os
+import numpy as np
+from astropy.tests.helper import pytest
+from .. import gtanalysis
+from .. import spectrum
 
 
 @pytest.fixture(scope='module')
@@ -22,7 +19,8 @@ def setup(request, tmpdir_factory):
 #    dirname = os.path.abspath(os.path.dirname(__file__))
     outfile = path.join('fermipy_test0_small.tar.gz')
     dirname = path.join()
-    os.system('wget -nc %s -O %s' % (url, outfile))
+    #os.system('wget -nc %s -O %s' % (url, outfile))
+    os.system('curl -o %s -OL %s'%(outfile,url))
     os.system('cd %s;tar xzf %s' % (dirname, outfile))
 
     os.system('touch %s' % path.join('test.txt'))
@@ -65,6 +63,24 @@ def test_gtanalysis_optimize(setup):
     gta.optimize()
 
 
+def test_gtanalysis_fit(setup):
+
+    import pprint
+
+    gta = setup
+    gta.load_roi('fit0')
+    gta.free_sources(distance=3.0, pars='norm')
+    gta.write_xml('fit_test')
+    fit_output0 = gta.fit(optimizer='MINUIT')
+    gta.load_xml('fit_test')
+    fit_output1 = gta.fit(optimizer='NEWMINUIT')
+
+    pprint.pprint(fit_output0)
+    pprint.pprint(fit_output1)
+
+    assert(np.abs(fit_output0['loglike']-fit_output1['loglike']) < 0.01)
+
+
 def test_gtanalysis_tsmap(setup):
 
     gta = setup
@@ -78,7 +94,7 @@ def test_gtanalysis_residmap(setup):
     gta.load_roi('fit1')
     gta.residmap(model={})
 
-    
+
 def test_gtanalysis_sed(setup):
 
     gta = setup
@@ -92,10 +108,10 @@ def test_gtanalysis_sed(setup):
 
     emin = gta.energies[:-1]
     emax = gta.energies[1:]
-    
+
     flux_true = spectrum.PowerLaw.eval_flux(emin, emax,
                                             [prefactor,-index],scale)
-    
+
     gta.simulate_source({'SpatialModel': 'PointSource',
                          'Index' : index,
                          'Scale' : scale,
@@ -103,7 +119,7 @@ def test_gtanalysis_sed(setup):
 
     gta.free_source('draco')
     gta.fit()
-    
+
     o = gta.sed('draco')
 
     flux_resid = np.abs((flux_true - o['flux'])/o['flux_err'])
@@ -112,9 +128,9 @@ def test_gtanalysis_sed(setup):
     assert(np.abs(-params['Index'][0]-index)/params['Index'][1] < 3.0)
     assert(np.abs(params['Prefactor'][0]-prefactor)/
            params['Prefactor'][1] < 3.0)
-    
+
     gta.simulate_roi(restore=True)
-    
+
 
 def test_gtanalysis_extension_gaussian(setup):
 
@@ -145,7 +161,7 @@ def test_gtanalysis_localization(setup):
     np.random.seed(1)
 
     src_dict = {'SpatialModel': 'PointSource',
-                'Prefactor': 2E-12,
+                'Prefactor': 4E-12,
                 'glat': 36.0, 'glon': 86.0}
 
     gta.simulate_source(src_dict)
@@ -162,8 +178,9 @@ def test_gtanalysis_localization(setup):
     import pprint
     pprint.pprint(o)
 
-    assert(np.abs(o['glon']-86.0) < 0.025)
-    assert(np.abs(o['glat']-36.0) < 0.025)
+    assert(o['fit_success'] is True)
+    assert(np.abs(o['glon']-86.0) < 0.02)
+    assert(np.abs(o['glat']-36.0) < 0.02)
     gta.delete_source('testloc')
 
     gta.simulate_roi(restore=True)

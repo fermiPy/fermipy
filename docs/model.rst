@@ -67,14 +67,15 @@ takes precedence.
      src_radius: 5.0
      src_roiwidth: 10.0
      catalogs : 
-       - 'gll_psc_v14.fit'
+       - 'gll_psc_v16.fit'
        - 'extra_sources.xml'
 
-Sources in addition to those in the catalog file can be defined with
-the *sources* parameter.  This parameter contains a list of
-dictionaries that define the parameters of individual sources.  The
-keys of the source dictionary map to the spectral and spatial source
-properties as they would be defined in the XML model file.
+Individual sources can also be defined within the configuration file
+with the *sources* parameter.  This parameter contains a list of
+dictionaries that defines the spatial and spectral parameters of each
+source.  The keys of the source dictionary map to the spectral and
+spatial source properties as they would be defined in the XML model
+file.
 
 .. code-block:: yaml
    
@@ -89,8 +90,8 @@ properties as they would be defined in the XML model file.
 
 For parameters defined as scalars, the scale and value properties will
 be assigned automatically from the input value.  To set these manually
-a parameter can alternatively initialized with a dictionary that
-explicitly sets the value and scale properties:
+a parameter can also be initialized with a dictionary that explicitly
+sets the value and scale properties:
 
 .. code-block:: yaml
    
@@ -101,25 +102,28 @@ explicitly sets the value and scale properties:
            Prefactor : { value : 1.0, scale : !!float 1e-11, free : '0' }, 
            SpatialModel: 'PointSource' }
 
-fermiPy supports three types of pre-defined spatial templates which
-can be defined by setting the SpatialModel property: PointSource (the
-default), DiskSource, and GaussianSource.  The spatial extension of
-DiskSource and GaussianSource can be controlled with the
-*SpatialWidth* parameter which defines respectively the radius or 68%
-containment radius in degrees.  Note that sources with the DiskSource
-and GaussianSource spatial property can only be defined with the
-*sources* parameter.
+Spatial Models
+--------------
+
+Fermipy supports three types of pre-defined spatial models which
+can be defined by setting the ``SpatialModel`` property: PointSource
+(the default), RadialDisk, and RadialGaussian.  The spatial extension
+of RadialDisk and RadialGaussian can be controlled with the
+``SpatialWidth`` parameter which sets the 68% containment radius in
+degrees.  Note for ST releases prior to 11-01-01, RadialDisk and
+RadialGaussian sources will be represented with the ``SpatialMap``
+type.
 
 .. code-block:: yaml
    
    model:
      sources  : 
-       - { name: 'MyDiskSource', glon : 120.0, glat : 0.0, 
+       - { name: 'DiskSource', glon : 120.0, glat : 0.0, 
         SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
-        SpatialModel: 'DiskSource', SpatialWidth: 1.0 }
-       - { name: 'MyGaussSource', glon : 120.0, glat : 0.0, 
+        SpatialModel: 'RadialDisk', SpatialWidth: 1.0 }
+       - { name: 'GaussSource', glon : 120.0, glat : 0.0, 
         SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
-        SpatialModel: 'GaussianSource', SpatialWidth: 1.0 }
+        SpatialModel: 'RadialGaussian', SpatialWidth: 1.0 }
 
 
 Editing the Model at Runtime

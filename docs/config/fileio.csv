@@ -1,6 +1,8 @@
 ``logfile``	None	Path to log file.  If None then log will be written to fermipy.log.
 ``outdir``	None	Path of the output directory.  If none this will default to the directory containing the configuration file.
+``outdir_regex``	[u'\\.fits$|\\.fit$|\\.xml$|\\.npy$|\\.png$|\\.pdf$|\\.yaml$']	Stage files to the output directory that match at least one of the regular expressions in this list.  This option only takes effect when ``usescratch`` is True.
 ``savefits``	True	Save intermediate FITS files.
-``scratchdir``	/scratch	Path to the scratch directory.
-``usescratch``	False	Run analysis in a temporary directory under ``scratchdir``.
-``workdir``	None	Override the working directory.
+``scratchdir``	/scratch	Path to the scratch directory.  If ``usescratch`` is True then a temporary working directory will be created under this directory.
+``usescratch``	False	Run analysis in a temporary working directory under ``scratchdir``.
+``workdir``	None	Path to the working directory.
+``workdir_regex``	[u'\\.fits$|\\.fit$|\\.xml$|\\.npy$']	Stage files to the working directory that match at least one of the regular expressions in this list.  This option only takes effect when ``usescratch`` is True.

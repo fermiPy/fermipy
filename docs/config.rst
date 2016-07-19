@@ -192,7 +192,7 @@ extension
 
 The options in *extension* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.extension` method.  For more information
-about running this method see the :ref:`extension` page.
+about using this method see the :ref:`extension` page.
 
 .. csv-table:: *extension* Options
    :header:    Option, Default, Description
@@ -318,11 +318,26 @@ residmap
 
 The options in *residmap* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.residmap` method.  For more
-information about running this method see the :ref:`detection` page.
+information about using this method see the :ref:`detection` page.
 
 .. csv-table:: *residmap* Options
    :header:    Option, Default, Description
    :file: config/residmap.csv
+   :delim: tab
+   :widths: 10,10,80
+
+.. _config_roiopt:
+
+roiopt
+------
+
+The options in *roiopt* control the default behavior of the
+`~fermipy.gtanalysis.GTAnalysis.optimize` method.  For more
+information about using this method see the :ref:`fitting` page.
+
+.. csv-table:: *roiopt* Options
+   :header:    Option, Default, Description
+   :file: config/roiopt.csv
    :delim: tab
    :widths: 10,10,80
             
@@ -333,7 +348,7 @@ sed
 
 The options in *sed* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.sed` method.  For more information
-about running this method see the :ref:`sed` page.
+about using this method see the :ref:`sed` page.
 
 .. csv-table:: *sed* Options
    :header:    Option, Default, Description
@@ -381,6 +396,10 @@ explicit sky coordinates with *ra* and *dec* or *glon* and *glat*.
 sourcefind
 ----------
 
+The options in *sourcefind* control the default behavior of the
+`~fermipy.gtanalysis.GTAnalysis.find_sources` method.  For more information
+about using this method see the :ref:`detection` page.
+
 .. csv-table:: *sourcefind* Options
    :header:    Option, Default, Description
    :file: config/sourcefind.csv
@@ -388,11 +407,11 @@ sourcefind
    :widths: 10,10,80
             
 tsmap
----------
+-----
 
 The options in *tsmap* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.tsmap` method.  For more information
-about running this method see the :ref:`detection` page.
+about using this method see the :ref:`detection` page.
 
 .. csv-table:: *tsmap* Options
    :header:    Option, Default, Description
@@ -401,11 +420,11 @@ about running this method see the :ref:`detection` page.
    :widths: 10,10,80
             
 tscube
----------
+------
 
 The options in *tscube* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.tscube` method.  For more information
-about running this method see the :ref:`detection` page.
+about using this method see the :ref:`detection` page.
 
 .. csv-table:: *tscube* Options
    :header:    Option, Default, Description

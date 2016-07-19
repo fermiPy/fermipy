@@ -3,7 +3,7 @@ import glob
 import re
 import numpy as np
 import healpy as hp
-import astropy.io.fits as pyfits
+from astropy.io import fits
 
 import pyIrfLoader
 
@@ -25,7 +25,8 @@ def bitmask_to_bits(mask):
 
     bits = []    
     for i in range(32):
-        if mask&(2**i): bits += [2**i]
+        if mask&(2**i):
+            bits += [2**i]
 
     return bits
 
@@ -35,7 +36,7 @@ class PSFModel(object):
 
         if isinstance(event_types,int):
             event_types = bitmask_to_bits(event_types)
-        
+
         self._dtheta = np.logspace(-4,1.75,1000)
         self._dtheta = np.insert(self._dtheta,0,[0])
 #        self._dtheta = np.linspace(0.0,20.0,1001)
@@ -67,7 +68,7 @@ class PSFModel(object):
     @property
     def exp(self):
         return self._exp
-    
+
     @staticmethod
     def create_average_psf(skydir,ltc,event_class,event_types,dtheta,egy,
                            cth_min=0.2):
@@ -110,11 +111,11 @@ def create_psf(event_class,event_type,dtheta,egy,cth):
 
     theta = np.degrees(np.arccos(cth))
     m = np.zeros((len(dtheta),len(egy),len(cth)))
-    
+
     for i, x in enumerate(egy):
         for j, y in enumerate(theta):
             m[:,i,j] = irf.psf().value(dtheta,10**x,y,0.0)
-            
+
     return m
 
 def create_exposure(event_class,event_type,egy,cth):
@@ -124,14 +125,14 @@ def create_exposure(event_class,event_type,egy,cth):
 
     if isinstance(event_type,int):
         event_type = evtype_string[event_type]
-    
+
     irf_factory=pyIrfLoader.IrfsFactory.instance()
     irf = irf_factory.create('%s::%s'%(event_class,event_type))
 
     irf.aeff().setPhiDependence(False)
-    
+
     theta = np.degrees(np.arccos(cth))
-    
+
     # Exposure Matrix
     # Dimensions are Etrue and incidence angle
     m = np.zeros((len(egy),len(cth)))
@@ -149,12 +150,15 @@ class LTCube(object):
 
         self._ltmap = None
 
-        if ltfile is None: return
+        if ltfile is None:
+            return
         elif isinstance(ltfile,list):
-            for f in ltfile: self.load_ltfile(f)
+            for f in ltfile:
+                self.load_ltfile(f)
         elif not re.search('\.txt?',ltfile) is None:
-            files=np.loadtxt(ltfile,unpack=True,dtype='str')
-            for f in files: self.load_ltfile(f)
+            files = np.loadtxt(ltfile,unpack=True,dtype='str')
+            for f in files:
+                self.load_ltfile(f)
         else:
             self.load_ltfile(ltfile)
 
@@ -169,12 +173,12 @@ class LTCube(object):
             ltc.load_ltfile(f)
 
         return ltc
-        
+
 
     def load_ltfile(self,ltfile):
-        
-        hdulist = pyfits.open(ltfile)
-                
+
+        hdulist = fits.open(ltfile)
+
         if self._ltmap is None:
             self._ltmap = hdulist[1].data.field(0)
             self._tstart = hdulist[0].header['TSTART']
@@ -192,19 +196,19 @@ class LTCube(object):
 
 #        self._domega = (self._cth_axis.edges[1:]-
 #                        self._cth_axis.edges[:-1])*2*np.pi
-            
+
     def get_src_lthist(self,skydir,cth_edges):
 
         ra = skydir.ra.deg
         dec = skydir.dec.deg        
-        
+
         edges = np.linspace(cth_edges[0],cth_edges[-1],(len(cth_edges)-1)*4+1)
         center = edge_to_center(edges)
         width = edge_to_width(edges)
-        
+
         ipix = hp.ang2pix(64,np.pi/2. - np.radians(dec),
                           np.radians(ra),nest=True)
-        
+
         lt = np.interp(center,self._cth_center,
                        self._ltmap[ipix,::-1]/self._cth_width)*width
         lt = np.sum(lt.reshape(-1,4),axis=1)  

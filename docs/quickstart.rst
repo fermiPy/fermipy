@@ -239,7 +239,7 @@ fit quality and look for new sources.
 
 .. code-block:: python
 
-   # Dictionary defining the spatial/spectral template
+   # Dictionary defining the spatial/spectral parameters of the test source
    model = {'SpatialModel' : 'PointSource', 'Index' : 2.0,
             'SpectrumType' : 'PowerLaw'}
 
@@ -269,26 +269,22 @@ Extracting Analysis Results
 
 Results of the analysis can be extracted from the dictionary file
 written by :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_roi`.  This
-method writes the current ROI model to both an XML model file and a
-results dictionary.  More documentation on the contents of the output
+method writes information about the current state of the analysis to a
+python dictionary.  More documentation on the contents of the output
 file are available in the :ref:`output` page.
 
-The results dictionary is written in both npy and yaml formats and can
-be loaded from a python session after your analysis is complete.  The
-following example demonstrates how to load the dictionary from either
-format:
+By default the output dictionary is written to a file in the `numpy
+format <http://docs.scipy.org/doc/numpy/neps/npy-format.html>`_ and
+can be loaded from a python session after your analysis is complete.
+The following demonstrates how to load the analysis dictionary that
+was written to *fit_model.npy* in the Mkn421 analysis example:
 
 .. code-block:: python
    
-   >>> # Load from yaml
-   >>> import yaml
-   >>> c = yaml.load(open('fit_model.yaml'))
-   >>>
-   >>> # Load from npy
+   >>> # Load analysis dictionary from a npy file
    >>> import np
    >>> c = np.load('fit_model.npy').flat[0]
-   >>>
-   >>> print c.keys()
+   >>> print(c.keys())
    ['roi', 'config', 'sources', 'version']
 
 The output dictionary contains the following top-level elements:
@@ -306,20 +302,52 @@ the analysis.
 .. code-block:: python
    
    >>> print c['sources'].keys()
-   ['3FGL J0954.2+4913',
-    '3FGL J0957.4+4728',
-    '3FGL J1006.7+3453',
+   ['3FGL J1032.7+3735',
+   '3FGL J1033.2+4116',
+   ...
+   '3FGL J1145.8+4425',
+   'galdiff',
+   'isodiff']
+   >>> print c['sources']['3FGL J1104.4+3812']['ts']
+   87455.9709683
+   >>> print c['sources']['3FGL J1104.4+3812']['npred']
+   31583.7166495
+    
+Information about individual sources in the ROI is also saved to a
+catalog FITS file with the same string prefix as the dictionary file.
+This file can be loaded with the `astropy.io.fits` or
+`astropy.table.Table` interface:
+    
+.. code-block:: python
+   
+   >>> # Load the source catalog file
+   >>> from astropy.table import Table
+   >>> tab = Table.read('fit_model.fits')
+   >>> print(tab[['name','class','ts','npred','flux']])
+       name       class       ts           npred                    flux [2]               
+                                                                  1 / (cm2 s)              
+   ----------------- ----- -------------- ------------- --------------------------------------
+   3FGL J1104.4+3812   BLL  87455.9709683 31583.7166495 2.20746290445e-07 .. 1.67062058528e-09
+   3FGL J1109.6+3734   bll    42.34511826 93.7971922425  5.90635786943e-10 .. 3.6620894143e-10
+   ...
+   3FGL J1136.4+3405  fsrq  4.78089819776 261.427034151 1.86805869704e-08 .. 8.62638727067e-09
+   3FGL J1145.8+4425  fsrq  3.78006883967 237.525501441 7.25611442299e-08 .. 3.77056557247e-08
 
-    ...
+The FITS file contains columns for all scalar and vector elements of
+the source dictionary.  Spectral fit parameters are contained in the
+``param_names``, ``param_values``, and ``param_errors`` columns:
 
-    '3FGL J1153.4+4932',
-    '3FGL J1159.5+2914',
-    '3FGL J1203.2+3847',
-    '3FGL J1209.4+4119',
-    'galdiff',
-    'isodiff']
-
-
+.. code-block:: python
+                
+   >>> print(tab[['param_names','param_values','param_errors']][0])
+   <Row 0 of table
+    values=(['Prefactor', 'Index', 'Scale', '', '', ''],
+            [2.1301351784512767e-11, -1.7716399431228638, 1187.1300048828125, nan, nan, nan],
+            [1.6126233510314277e-13, nan, nan, nan, nan, nan])
+    dtype=[('param_names', 'S32', (6,)),
+           ('param_values', '>f8', (6,)),
+           ('param_errors', '>f8', (6,))]>
+   
 Reloading from a Previous State
 -------------------------------
 

@@ -3,9 +3,7 @@ from __future__ import absolute_import, division, print_function, \
 
 import numpy as np
 
-from astropy.coordinates import SkyCoord
 import astropy.io.fits as pyfits
-import astropy.wcs as pywcs
 
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
@@ -127,26 +125,28 @@ def make_disk_spatial_map(skydir, sigma, outfile, npix=501, cdelt=0.01):
     hdulist.writeto(outfile, clobber=True)
 
 
-def delete_source_map(srcmap_file, name, logger=None):
+def delete_source_map(srcmap_file, names, logger=None):
     """Delete a map from a binned analysis source map file if it exists.
-    
+
     Parameters
     ----------
-
     srcmap_file : str
        Path to the source map file.
 
-    name : str
-       HDU key of source map.
+    names : list
+       List of HDU keys of source maps to be deleted.
 
     """
     hdulist = pyfits.open(srcmap_file)
     hdunames = [hdu.name.upper() for hdu in hdulist]
 
-    if not name.upper() in hdunames:
-        return
+    if not isinstance(names,list):
+        names = [names]
 
-    del hdulist[name.upper()]
+    for name in names:        
+        if not name.upper() in hdunames:
+            continue
+        del hdulist[name.upper()]
 
     hdulist.writeto(srcmap_file, clobber=True)
 

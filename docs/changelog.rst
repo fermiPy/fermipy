@@ -5,6 +5,35 @@ Changelog
 
 This page is a changelog for releases of Fermipy.
 
+0.10.0 (07/03/2016)
+-------------------
+
+* Implement support for more spectral models
+  (DMFitFunction, EblAtten, FileFunction, Gaussian).
+* New options (``outdir_regex`` and ``workdir regex``) for
+  fine-grained control over input/output file staging.
+* Add ``offset_roi_edge`` to source dictionary.  Defined as the
+  distance from the source position to the edge of the ROI (< 0 =
+  inside the ROI, > 0 = outside the ROI).
+* Add new variables in `~fermipy.gtanalysis.GTAnalysis.fit` output
+  (``edm``, ``fit_status``).
+* Add new package scripts (``fermipy-collect-sources``,
+  ``fermipy-cluster-sources``).
+* Various refactoring and improvements in code for dealing with castro
+  data.
+* Add ``MODEL_FLUX`` and ``PARAMS`` HDUs to SED FITS file.  Many new
+  elements added SED output dictionary.
+* Support NEWTON fitter with the same interface as MINUIT and
+  NEWMINUIT.  Running `~fermipy.gtanalysis.GTAnalysis.fit` with
+  ``optimizer`` = NEWTON will use the NEWTON fitter where applicable
+  (only free norms) and MINUIT otherwise.  The ``optimizer`` argument
+  to `~fermipy.gtanalysis.GTAnalysis.sed`,
+  `~fermipy.gtanalysis.GTAnalysis.extension`, and
+  `~fermipy.gtanalysis.GTAnalysis.localize` can be used to override
+  the default optimizer at runtime.  Note that the NEWTON fitter is
+  only supported by ST releases *after* 11-01-01.
+
+  
 0.9.0 (05/25/2016)
 ------------------
 

@@ -1,6 +1,7 @@
 ``cov_scale``	-1.0	Scale factor to apply to broadband fitting cov. matrix in bin-by-bin fits ( < 0 -> fixed ) 
 ``cov_scale_bb``	-1.0	Scale factor to apply to global fitting cov. matrix in broadband fits. ( < 0 -> no prior ) 
 ``do_sed``	True	Compute the energy bin-by-bin fits
+``init_lambda``	0	Initial value of damping parameter for newton step size calculation.
 ``max_iter``	30	Maximum number of iterations for the Newtons method fitter.
 ``model``	None	Dictionary defining the properties of the test source.  By default the test source will be a PointSource with an Index 2 power-law specturm.
 ``nnorm``	10	Number of points in the likelihood v. normalization scan

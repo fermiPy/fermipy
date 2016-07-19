@@ -6,7 +6,7 @@
 ``SourceType``	str	Source type string (PointSource or DiffuseSource).
 ``SpectrumType``	str	Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).
 ``Spatial_Filename``	str	Path to spatial template associated to this source.
-``filefunction``	str	Path to file function associated to this source.
+``Spectrum_Filename``	str	Path to file associated to the spectral model of this source.
 ``ra``	float	Right ascension of the source in deg.
 ``dec``	float	Declination of the source in deg.
 ``glon``	float	Galactic Longitude of the source in deg.
@@ -15,6 +15,7 @@
 ``offset_dec``	float	Angular offset from ROI center along DEC
 ``offset_glon``	float	Angular offset from ROI center along GLON.
 ``offset_glat``	float	Angular offset from ROI center along GLAT.
+``offset_roi_edge``	float	Distance from the edge of the ROI in deg.  Negative (positive) values indicate locations inside (outside) the ROI.
 ``offset``	float	Angular offset from ROI center.
 ``pos_sigma``	float	1-sigma uncertainty (deg) on the source position.
 ``pos_sigma_semimajor``	float	1-sigma uncertainty (deg) on the source position along major axis.

@@ -43,7 +43,7 @@ _commit_info = '$Format:%cd by %aN$'
 _commit_hash = '$Format: %h$'
 
 def capture_output(cmd,dirname):
-    
+
     p = subprocess.Popen(cmd,
                          stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE,
@@ -51,7 +51,7 @@ def capture_output(cmd,dirname):
     p.stderr.close()
 
     output = p.stdout.readlines()
-    
+
     if not output: return None
     else: return  output[0].strip()
 
@@ -66,7 +66,7 @@ def render_pep440(vcs):
         return tags[0]
     else:
         return tags[0] + '+' + '.'.join(tags[1:])
-        
+
 def call_git_describe(abbrev=4):
 
     dirname = os.path.abspath(os.path.dirname(__file__))
@@ -95,7 +95,7 @@ def read_release_keywords(keyword):
     tags = set([r[len(TAG):] for r in refs if r.startswith(TAG)])
     if not tags: return None
     return sorted(tags)[-1]
-        
+
 def read_release_version():
 
     import re

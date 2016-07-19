@@ -31,13 +31,14 @@ def bitmask_to_bits(mask):
 
     bits = []    
     for i in range(32):
-        if mask&(2**i): bits += [2**i]
+        if mask & (2**i):
+            bits += [2**i]
 
     return bits
 
 DEFAULT_SCALE_DICT =  {'value': 1000.0, 'scale' : None, 'min': 0.001, 'max': 1000.0}
-DEFAULT_NORM_DICT = {'value': 1E-12, 'scale' : None, 'min': 1E-5, 'max': 100.0}
-DEFAULT_INTEGRAL_DICT = {'value': 1E-6, 'scale' : None, 'min': 1E-5, 'max': 100.0}
+DEFAULT_NORM_DICT = {'value': 1E-12, 'scale' : None, 'min': 1E-5, 'max': 1000.0}
+DEFAULT_INTEGRAL_DICT = {'value': 1E-6, 'scale' : None, 'min': 1E-5, 'max': 1000.0}
 DEFAULT_INDEX_DICT = {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0 }
 
 FUNCTION_NORM_PARS = {}
@@ -78,33 +79,37 @@ FUNCTION_DEFAULT_PARS = {
                      'alpha': {'value': 2.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
                      'beta' : {'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0},
                      'Eb' : DEFAULT_SCALE_DICT },
-    'ConstantValue' : {'norm' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 100.0} }
+    'ConstantValue' : {'Normalization' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 1000.0} },
+    'FileFunction' : {'Normalization' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 1000.0} },
+    'Gaussian' : { 'Mean': {'value': 1000.0, 'scale' : 1.0, 'min': 1E-5, 'max': 1E5},
+                   'Sigma':{'value': 100.0, 'scale' : 1.0, 'min': 10., 'max': 1E5},
+                   'Prefactor' : DEFAULT_NORM_DICT },
 
     }
 
 def init_function_pars():
-    
+
     global FUNCTION_PAR_NAMES
     global FUNCTION_NORM_PARS
     global FUNCTION_DEFAULT_PARS
-    
+
     FUNCTION_PAR_NAMES = {}
     FUNCTION_NORM_PARS = {}
-    
+
     funcFactory = pyLike.SourceFactory_funcFactory()
-    
+
     names = pyLike.StringVector()
     funcFactory.getFunctionNames(names)
-        
+
     for fname in names:
 
         FUNCTION_DEFAULT_PARS.setdefault(fname,{})
         FUNCTION_PAR_NAMES.setdefault(fname,[])
-        
+
         fn = funcFactory.create(fname)        
         try:
             FUNCTION_NORM_PARS[fname] = fn.normPar().getName()
-        except Exception as e:
+        except Exception:
             FUNCTION_NORM_PARS[fname] = 'Prefactor'
 
         params = pyLike.ParameterVector()
@@ -114,7 +119,7 @@ def init_function_pars():
 
             pname = p.getName()
             FUNCTION_PAR_NAMES[fname] += [pname]
-            
+
             if pname == 'Scale':
                 FUNCTION_DEFAULT_PARS[fname].setdefault(pname,DEFAULT_SCALE_DICT)
             elif pname == 'Prefactor':
@@ -127,12 +132,13 @@ def init_function_pars():
                             value = p.getValue(),
                             min = bounds[0],
                             max = bounds[1],
+                            scale = None,
                             free = False)
 
             par_dict.update(copy.deepcopy(FUNCTION_DEFAULT_PARS[fname][pname]))
             par_dict['name'] = pname            
             FUNCTION_DEFAULT_PARS[fname][pname] = par_dict
-        
+
 
 def get_function_par_names(function_type):
 
@@ -141,22 +147,25 @@ def get_function_par_names(function_type):
 
     if not function_type in FUNCTION_PAR_NAMES.keys():
         raise Exception('Invalid Function Type: %s'%function_type)
-    
+
     return copy.deepcopy(FUNCTION_PAR_NAMES[function_type])
-            
+
+
 def get_function_norm_par_name(function_type):
 
     if not FUNCTION_NORM_PARS:
         init_function_pars()
-            
+
     return FUNCTION_NORM_PARS[function_type]
 
-def get_function_pars_dict(function_type):
+
+def get_function_defaults(function_type):
 
     if not FUNCTION_NORM_PARS:
         init_function_pars()
-            
+
     return copy.deepcopy(FUNCTION_DEFAULT_PARS[function_type])
+
 
 def make_parameter_dict(pdict, fixed_par=False, rescale=True):
     """
@@ -173,7 +182,7 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True):
             value, scale = utils.scale_parameter(o['value'])
         else:
             value, scale = o['value'], 1.0
-            
+
         o['value'] = value
         o['scale'] = scale
         if 'error' in o:
@@ -184,7 +193,7 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True):
 
     if 'max' not in o:
         o['max'] = o['value']*1E3
-        
+
     if fixed_par:
         o['min'] = o['value']
         o['max'] = o['value']
@@ -203,7 +212,7 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True):
 
 def create_spectral_pars_dict(spectrum_type,spectral_pars=None):
 
-    pars_dict = get_function_pars_dict(spectrum_type)
+    pars_dict = get_function_defaults(spectrum_type)
 
     if spectral_pars is None:
         spectral_pars = {}
@@ -214,10 +223,10 @@ def create_spectral_pars_dict(spectrum_type,spectral_pars=None):
 
         if not k in pars_dict:
             continue
-        
+
         if not isinstance(v,dict):
             spectral_pars[k] = {'name' : k, 'value' : v}
-    
+
     pars_dict = utils.merge_dict(pars_dict,spectral_pars)
 
     for k, v in pars_dict.items():
@@ -225,7 +234,7 @@ def create_spectral_pars_dict(spectrum_type,spectral_pars=None):
 
     return pars_dict
 
-def create_spectrum_from_dict(spectrum_type,spectral_pars=None):
+def create_spectrum_from_dict(spectrum_type,spectral_pars=None, fn=None):
     """Create a Function object from a parameter dictionary.
 
     Parameters
@@ -239,17 +248,19 @@ def create_spectrum_from_dict(spectrum_type,spectral_pars=None):
     """
 
     pars = create_spectral_pars_dict(spectrum_type,spectral_pars)
-    fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
+
+    if fn is None:
+        fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
 
     for k, v in pars.items():
 
         v = make_parameter_dict(v)
-        
+
         par = fn.getParam(str(k))
 
         vmin = min(float(v['value']), float(v['min']))
         vmax = max(float(v['value']), float(v['max']))
-        
+
         par.setValue(float(v['value']))
         par.setBounds(vmin, vmax)
         par.setScale(float(v['scale']))
@@ -265,7 +276,7 @@ def create_spectrum_from_dict(spectrum_type,spectral_pars=None):
 
 def get_spatial_type(spatial_model):
     """Translate a spatial model string to a spatial type."""
-    
+
     if spatial_model in ['SkyDirFunction', 'PointSource',
                          'Gaussian', 'PSFSource']:
         return 'SkyDirFunction'
@@ -279,16 +290,16 @@ def get_spatial_type(spatial_model):
     else:
         return spatial_model
 
-    
+
 def get_source_type(spatial_type):
     """Translate a spatial type string to a source type."""
-    
+
     if spatial_type == 'SkyDirFunction':
         return 'PointSource'
     else:
         return 'DiffuseSource'
 
-    
+
 def gtlike_spectrum_to_dict(spectrum):
     """ Convert a pyLikelihood object to a python dictionary which can
         be easily saved to a file."""
@@ -307,27 +318,106 @@ def gtlike_spectrum_to_dict(spectrum):
             d['file'] = ff.filename()
     return d
 
-def get_pars_dict_from_source(src):
 
-    pars_dict = {}
+def get_function_pars_dict(fn):
 
+    pars = get_function_pars(fn)
+    pars_dict = { p['name'] : p for p in pars } 
+    return pars_dict
+
+def get_function_pars(fn):
+    """Extract the parameters of a pyLikelihood function object
+    (value, scale, bounds).
+
+    Parameters
+    ----------
+
+    fn : pyLikelihood.Function
+
+    Returns
+    -------
+
+    pars : list
+
+    """
+
+    pars = []
     par_names = pyLike.StringVector()
-    src.spectrum().getParamNames(par_names)
+    fn.getParamNames(par_names)
 
     for pname in par_names:
 
-        par = src.spectrum().getParam(pname)
+        par = fn.getParam(pname)
         bounds = par.getBounds()
         perr = par.error() if par.isFree() else np.nan
-        pars_dict[pname] = dict(name = pname,
-                                value = par.getValue(),
-                                error = perr,
-                                min = bounds[0],
-                                max = bounds[1],
-                                free = par.isFree(),
-                                scale = par.getScale())
+        pars += [dict(name = pname,
+                      value = par.getValue(),
+                      error = perr,
+                      min = bounds[0],
+                      max = bounds[1],
+                      free = par.isFree(),
+                      scale = par.getScale())]
 
-    return pars_dict
+    return pars
+
+
+def get_params_dict(like):
+
+    params = get_params(like)
+
+    params_dict = {}
+    for p in params:
+        params_dict.setdefault(p['src_name'],[])
+        params_dict[p['src_name']] += [p]
+
+    return params_dict
+
+def get_params(like):
+
+    params = []    
+    for src_name in like.sourceNames():
+
+        src = like[src_name].src
+        spars, ppars = get_source_pars(src)
+
+        for p in spars:
+            p['src_name'] = src_name            
+            params += [p]
+
+        for p in ppars:
+            p['src_name'] = src_name
+            params += [p]
+
+    return params
+
+def get_source_pars(src):
+
+    fnmap = src.getSrcFuncs()
+
+    keys = fnmap.keys()
+
+    if 'Position' in keys:    
+        ppars = get_function_pars(src.getSrcFuncs()[str('Position')])
+    elif 'SpatialDist' in keys:
+        ppars = get_function_pars(src.getSrcFuncs()[str('SpatialDist')])
+    else:
+        raise Exception('Failed to extract spatial parameters.')
+
+    fn = src.getSrcFuncs()[str('Spectrum')]
+    spars = get_function_pars(fn)
+
+    for i, p in enumerate(ppars):
+        ppars[i]['is_norm'] = False
+
+    for i, p in enumerate(spars):
+
+        if fn.normPar().getName() == p['name']:
+            spars[i]['is_norm'] = True
+        else:
+            spars[i]['is_norm'] = False
+
+    return spars, ppars
+
 
 def cast_pars_dict(pars_dict):
 
@@ -336,11 +426,11 @@ def cast_pars_dict(pars_dict):
     for pname, pdict in pars_dict.items():
 
         o[pname] = {}
-        
+
         for k,v in pdict.items():
 
             if k == 'free':
-                o[pname][k] = bool(v)
+                o[pname][k] = bool(int(v))
             elif k == 'name':
                 o[pname][k] = v
             else:
@@ -350,11 +440,34 @@ def cast_pars_dict(pars_dict):
 
 class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 
+    def nFreeParams(self):        
+        """Count the number of free parameters in the active model."""
+        nF = 0
+        pars = self.params()
+        for par in pars:
+            if par.isFree():
+                nF += 1
+        return nF
+
+    def optimize(self, verbosity=3, tol=None, optimizer=None, optObject=None):
+        self._syncParams()
+        if optimizer is None:
+            optimizer = self.optimizer
+        if tol is None:
+            tol = self.tol
+        if optObject is None:
+            optFactory = pyLike.OptimizerFactory_instance()
+            myOpt = optFactory.create(optimizer, self.logLike)
+        else:
+            myOpt = optObject
+        myOpt.find_min_only(verbosity, tol, self.tolType)
+        self.saveBestFit()
+
     def Ts2(self, srcName, reoptimize=False, approx=True,
            tol=None, MaxIterations=10, verbosity=0):
 
         srcName = str(srcName)
-        
+
         if verbosity > 0:
             print("*** Start Ts_dl ***")
         source_attributes = self.components[0].getExtraSourceAttributes()
@@ -412,7 +525,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
         return Ts_value
 
     def _renorm(self, factor=None):
-        
+
         if factor is None:
             freeNpred, totalNpred = self._npredValues()
             deficit = self.total_nobs() - totalNpred
@@ -426,7 +539,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 
             if src == self.components[0]._ts_src.getName():
                 continue
-            
+
             parameter = self.normPar(src)
             if (parameter.isFree() and 
                 self.components[0]._isDiffuseOrNearby(src)):
@@ -436,7 +549,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
                 xmin, xmax = parameter.getBounds()
                 if xmin <= newValue and newValue <= xmax:
                     parameter.setValue(newValue)
-    
+
 class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
 
     def __init__(self, binnedData, srcModel=None, optimizer='Drmngb',
@@ -473,23 +586,24 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         self.nobs = self.logLike.countsSpectrum()
         self.sourceFitPlots = []
         self.sourceFitResids  = []
-        
+
     def scaleSource(self,srcName,scale):
         src = self.logLike.getSource(srcName)
         old_scale = src.spectrum().normPar().getScale()
         src.spectrum().normPar().setScale(old_scale*scale)
         self.logLike.syncParams()
-        
+
     def Ts2(self, srcName, reoptimize=False, approx=True,
             tol=None, MaxIterations=10, verbosity=0):
+        """Computes the TS value for a source indicated by "srcName."
 
-        '''Computes the TS value for a source indicated by "srcName."
         If "reoptimize=True" is selected this function will reoptimize
         the model up to "MaxIterations" given the tolerance "tol"
         (default is the tolerance selected for the overall fit).  If
         "appox=True" is selected (the default) it will renormalize the
-        model (see _renorm).'''
-        
+        model (see _renorm).
+        """
+
         saved_state = LikelihoodState(self)
         if verbosity > 0:
             print("*** Start Ts_dl ***")
@@ -514,7 +628,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                 try:
                     myOpt.find_min(0, tol)
                     break
-                except RuntimeError,e:
+                except RuntimeError as e:
                     print(e)
                 if verbosity > 0:
                     print("** Iteration :",Niter)
@@ -529,7 +643,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         logLike0 = max(self.logLike.value(), logLike0)
         Ts_value = 2*(logLike1 - logLike0)
         self.scaleSource(srcName,1E10)
-        
+
         self.logLike.setFreeParamValues(freeParams)
         self.model = SourceModel(self.logLike)
         for src in source_attributes:

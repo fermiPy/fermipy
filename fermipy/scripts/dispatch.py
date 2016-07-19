@@ -1,14 +1,13 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
-
 import sys
-import time, os, stat
+import time
+import os
+import stat
 import datetime
 import argparse
-import glob
 import pprint
-import yaml
 
-import fermipy.utils as utils
+from fermipy import utils
 from fermipy.batch import check_log, get_lsf_status
 
 def file_age_in_seconds(pathname):
@@ -18,15 +17,15 @@ def file_age_in_seconds(pathname):
 
 def collect_jobs(dirs, runscript, overwrite=False, max_job_age=90): 
     """Construct a list of job dictionaries."""
-    
+
     jobs = []
-    
+
     for dirname in sorted(dirs):        
-        
+
         o = dict(cfgfile = os.path.join(dirname,'config.yaml'),
                  logfile = os.path.join(dirname,os.path.splitext(runscript)[0] + '.log'),
                  runscript = os.path.join(dirname,runscript))
-        
+
         if not os.path.isfile(o['cfgfile']):
             continue
 
@@ -36,10 +35,10 @@ def collect_jobs(dirs, runscript, overwrite=False, max_job_age=90):
         if not os.path.isfile(o['logfile']):
             jobs.append(o)
             continue
-            
+
         age = file_age_in_seconds(o['logfile'])/60.
         job_status = check_log(o['logfile'])
-        
+
         print(dirname, job_status, age)
 
         if job_status is False or overwrite:
@@ -64,10 +63,13 @@ def main():
     parser = argparse.ArgumentParser(usage=usage,description=description)
 
     parser.add_argument('--config', default = 'sample_config.yaml')
+    parser.add_argument('--time', default = 1500, type=int,
+                        help='Set the wallclock time allocation for the '
+                        'job in minutes.')
     parser.add_argument('--max_jobs', default = 500, type=int,
-                        help='Limit on the number of running or queued jobs.  New jobs will '
-                        'only be dispatched if the number of existing jobs is '
-                        'smaller than this parameter.')
+                        help='Limit on the number of running or queued jobs.  '
+                        'New jobs will only be dispatched if the number of '
+                        'existing jobs is smaller than this parameter.')
     parser.add_argument('--jobs_per_cycle', default = 20, type=int,
                         help='Maximum number of jobs to submit in each cycle.')
     parser.add_argument('--time_per_cycle', default = 15, type=float,
@@ -78,26 +80,24 @@ def main():
                         'time older than this parameter will be restarted.')
     parser.add_argument('--dry_run', default = False, action='store_true')
     parser.add_argument('--overwrite', default = False, action='store_true',
-                        help='Force all jobs to be re-run even if the job has completed successfully.')
+                        help='Force all jobs to be re-run even if the job has '
+                        'completed successfully.')
     parser.add_argument('--runscript', default = None, required=True,
-                        help='Set the name of the job execution script.  A script with '
-                        'this name must be located in each analysis subdirectory.')
+                        help='Set the name of the job execution script.  A '
+                        'script with this name must be located in each '
+                        'analysis subdirectory.')
 
     parser.add_argument('dirs', nargs='+', default = None,
-                        help='List of directories in which the analysis will be run.')
+                        help='List of directories in which the analysis will '
+                        'be run.')
 
     args = parser.parse_args()
 
-    from itertools import chain
-    
     dirs = [d for argdir in args.dirs for d in utils.collect_dirs(argdir)]
     jobs = collect_jobs(dirs, args.runscript,
                         args.overwrite, args.max_job_age)
 
-    print(dirs)
-    print(jobs)
-    
-    lsf_opts = {'W' : 1500,
+    lsf_opts = {'W' : args.time,
                 'R' : 'bullet,hequ,kiso'}
 
     lsf_opt_string = ''
@@ -105,9 +105,9 @@ def main():
 
         if utils.isstr(optval):
             optval = '\"%s\"'%optval
-            
+
         lsf_opt_string += '-%s %s '%(optname,optval)
-    
+
     while(1):
 
         print('-'*80)

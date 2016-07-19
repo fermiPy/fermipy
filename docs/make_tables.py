@@ -1,10 +1,10 @@
 import fermipy.defaults as defaults
 
 for k, v in defaults.__dict__.items():
-    
+
     if not isinstance(v,dict) or k.startswith('_'):
         continue
-    
+
     f = open("config/%s.csv"%k, "w")
 
     if 'output' in k:

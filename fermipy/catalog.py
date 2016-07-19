@@ -7,10 +7,11 @@ import numpy as np
 from astropy import units as u
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
-import astropy.io.fits as pyfits
+from astropy.io import fits
 
 import fermipy
-import fermipy.spectrum as spectrum
+from fermipy import spectrum
+
 
 def add_columns(t0, t1):
     """Add columns of table t1 to table t0."""
@@ -64,7 +65,7 @@ def row_to_dict(row):
 class Catalog(object):
     """Source catalog object.  This class provides a simple wrapper around
     FITS catalog tables."""
-    
+
     def __init__(self, table, extdir=''):
         self._table = table
         self._extdir = extdir
@@ -82,8 +83,8 @@ class Catalog(object):
 
         if 'Spatial_Filename' not in self.table.columns:
             self.table['Spatial_Filename'] = Column(dtype='S20',length=len(self.table))
-            
-        m = self.table['Spatial_Filename'] != ''
+
+        m = (self.table['Spatial_Filename'] != '') & (self.table['Spatial_Filename'] != 'None')
         self.table['extended'] = False
         self.table['extended'][m] = True
         self.table['extdir'] = extdir
@@ -115,18 +116,18 @@ class Catalog(object):
             if not os.path.isfile(fitsfile):
                 fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
                                         fitsfile)
-                
+
             # Try to guess the catalog type form its name
             if 'gll_psc' in fitsfile:                
                 return Catalog3FGL(fitsfile)
 
             tab = Table.read(fitsfile)
-            
+
             if 'NickName' in tab.columns:
                 return Catalog4FGLP(fitsfile)
             else:
                 return Catalog(Table.read(fitsfile))
-            
+
         elif name == '3FGL':
             return Catalog3FGL()
         elif name == '2FHL':
@@ -146,7 +147,7 @@ class Catalog2FHL(Catalog):
             fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
                                     'gll_psch_v08.fit')
 
-        hdulist = pyfits.open(fitsfile)
+        hdulist = fits.open(fitsfile)
         table = Table(hdulist['2FHL Source Catalog'].data)
         table_extsrc = Table(hdulist['Extended Sources'].data)
 
@@ -176,7 +177,7 @@ class Catalog3FGL(Catalog):
             fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
                                     'gll_psc_v16.fit')
 
-        hdulist = pyfits.open(fitsfile)
+        hdulist = fits.open(fitsfile)
         table = Table(hdulist['LAT_Point_Source_Catalog'].data)
         #table = Table.read(fitsfile)
         table_extsrc = Table(hdulist['ExtendedSources'].data)
@@ -211,14 +212,14 @@ class Catalog4FGLP(Catalog):
     Because there is currently no dedicated extended source library
     for 4FGL this class reuses the extended source library from the
     3FGL."""
-    
+
     def __init__(self, fitsfile=None, extdir=None):
 
         if extdir is None:
             extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
                                   'Extended_archive_v15')
 
-        hdulist = pyfits.open(fitsfile)
+        #hdulist = fits.open(fitsfile)
         table = Table.read(fitsfile)
 
         strip_columns(table)
@@ -229,14 +230,14 @@ class Catalog4FGLP(Catalog):
         m = table['Extended'] == True
 
         table['Spatial_Filename'] = Column(dtype='S20',length=len(table))
-        
+
         spatial_filenames = []
         for i, row in enumerate(table[m]):
             spatial_filenames += [table[m][i]['Source_Name'].replace(' ','') + '.fits']
         table['Spatial_Filename'][m] =  np.array(spatial_filenames)
-        
+
         super(Catalog4FGLP, self).__init__(table, extdir)
-        
+
         m = self.table['SpectrumType'] == 'PLExpCutoff'
         self.table['SpectrumType'][m] = 'PLSuperExpCutoff'
 
