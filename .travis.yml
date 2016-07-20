@@ -14,7 +14,7 @@ matrix:
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                ST_INSTALL='bash stinstall.sh force'
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
-               CONDA_DEPS2='healpy wcsaxes'
+               CONDA2='conda install -c openastronomy healpy wcsaxes'
 
         # Python 3, no Fermi ST, all other dependencies
         - os: linux
@@ -22,7 +22,7 @@ matrix:
                ST_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
-               CONDA_DEPS2=''
+               CONDA2='conda install -c openastronomy healpy wcsaxes'
 
         # Python 2, no Fermi ST, all other dependencies
         - os: linux
@@ -30,7 +30,7 @@ matrix:
                ST_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
-               CONDA_DEPS2=''
+               CONDA2='conda install -c openastronomy healpy wcsaxes'
 
         # Python 3, no Fermi ST, only the required dependencies
         - os: linux
@@ -38,7 +38,7 @@ matrix:
                ST_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS=''
-               CONDA_DEPS2=''
+               CONDA2=''
 
 
 # Setup anaconda and install packages
@@ -51,7 +51,7 @@ install:
   - conda info -a
   - conda create -q -n fermi-env python=$PYTHON_VERSION numpy astropy pytest $CONDA_DEPS
   - source activate fermi-env
-  - conda install -c openastronomy $CONDA_DEPS2
+  - $CONDA2
 #  - pip install healpy
   - python setup.py install
   - $ST_INSTALL # Download and install the ST binaries
