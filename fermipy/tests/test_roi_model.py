@@ -4,8 +4,12 @@ import xml.etree.cElementTree as ElementTree
 from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
 from fermipy.tests.utils import requires_dependency
-from fermipy import roi_model
-from fermipy.roi_model import Source
+
+try:
+    from fermipy import roi_model
+    from fermipy.roi_model import Source
+except ImportError:
+    pass
 
 # Skip tests in this file if Fermi ST aren't available
 pytestmark = requires_dependency('Fermi ST')

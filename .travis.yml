@@ -63,7 +63,15 @@ install:
 #  - python setup.py install
 #  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy 
 #  - pip install healpy
- 
+
+  # This is needed to make matplotlib plot testing work
+  - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
+        export DISPLAY=:99.0;
+        sh -e /etc/init.d/xvfb start;
+        export QT_API=pyqt;
+    fi
+
+
 # Run test
 script:
   - py.test -vv -s

@@ -5,8 +5,12 @@ import numpy as np
 from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
 from fermipy.tests.utils import requires_dependency
-from fermipy import gtanalysis
 from fermipy import spectrum
+
+try:
+    from fermipy import gtanalysis
+except ImportError:
+    pass
 
 # Skip tests in this file if Fermi ST aren't available
 pytestmark = requires_dependency('Fermi ST')
