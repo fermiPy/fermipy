@@ -1,7 +1,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function, unicode_literals
 import os
-import yaml
 import fermipy
 from fermipy import utils
 
@@ -27,7 +26,8 @@ def create_default_config(defaults):
             if value is None and (item_type == list or item_type == dict):
                 value = item_type()
 
-            if key in o: raise Exception('Duplicate key.')
+            if key in o:
+                raise Exception('Duplicate key.')
 
             o[key] = value
         else:
@@ -61,19 +61,18 @@ def cast_config(config, defaults):
 def validate_config(config, defaults, section=None):
     for key, item in config.items():
 
-        if (key in defaults and isinstance(defaults[key],dict)
-            and not isinstance(item,dict)):
-
+        if (key in defaults and isinstance(defaults[key], dict)
+            and not isinstance(item, dict)):
             type0 = type(defaults[key])
             type1 = type(item)
 
             raise Exception('Wrong type for configuration key: '
-                            '%s\ntype: %s required type: %s'%(key,type1,type0))
+                            '%s\ntype: %s required type: %s' % (key, type1, type0))
 
         if key not in defaults:
 
             if section is None:
-                raise Exception('Invalid key in configuration: %s'%key)
+                raise Exception('Invalid key in configuration: %s' % key)
             else:
                 raise Exception('Invalid key in \'%s\' section of configuration: %s' %
                                 (section, key))
@@ -87,29 +86,30 @@ class Configurable(object):
     configuration state. """
 
     def __init__(self, config, **kwargs):
+        import yaml
 
         self._config = self.get_config()
         self._configdir = None
 
         if utils.isstr(config) and os.path.isfile(config):
             self._configdir = os.path.abspath(os.path.dirname(config))
-            config_dict = yaml.load(open(config))            
+            config_dict = yaml.load(open(config))
         elif isinstance(config, dict) or config is None:
             config_dict = config
         elif utils.isstr(config) and not os.path.isfile(config):
-            raise Exception('Invalid path to configuration file: %s'%config)
+            raise Exception('Invalid path to configuration file: %s' % config)
         else:
             raise Exception('Invalid config argument.')
 
         self.configure(config_dict, **kwargs)
 
         if self.configdir and 'fileio' in self.config and \
-                self.config['fileio']['outdir'] is None:
+                        self.config['fileio']['outdir'] is None:
             self.config['fileio']['outdir'] = self.configdir
 
     def configure(self, config, **kwargs):
 
-        validate = kwargs.pop('validate',False)        
+        validate = kwargs.pop('validate', False)
         config = utils.merge_dict(config, kwargs, add_new_keys=True)
         if validate:
             validate_config(config, self.defaults)
@@ -135,13 +135,14 @@ class Configurable(object):
         utils.write_yaml(self.config, outfile, default_flow_style=False)
 
     def print_config(self, logger, loglevel=None):
-
-        cfgstr = yaml.dump(self.config,default_flow_style=False)
+        import yaml
+        cfgstr = yaml.dump(self.config, default_flow_style=False)
 
         if loglevel is None:
             logger.debug('Configuration:\n' + cfgstr)
         else:
             logger.log(loglevel, 'Configuration:\n' + cfgstr)
+
 
 class ConfigManager(object):
     @staticmethod
@@ -170,7 +171,7 @@ class ConfigManager(object):
 
     @staticmethod
     def load(path):
-
+        import yaml
         if not os.path.isfile(path):
             path = os.path.join(fermipy.PACKAGE_ROOT, 'config', path)
 
