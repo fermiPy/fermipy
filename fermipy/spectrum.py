@@ -5,6 +5,26 @@ import copy
 import numpy as np
 
 
+def cast_args(x):
+
+    if isinstance(x, np.ndarray) and x.ndim >= 2:
+        return x
+
+    return np.expand_dims(np.array(x, ndmin=1), -1)
+
+
+def cast_params(params):
+
+    if isinstance(params[0], np.ndarray) and params[0].ndim >= 2:
+        return list(params)
+
+    o = []
+    for i, p in enumerate(params):
+        o += [np.expand_dims(np.array(params[i], ndmin=1), 0)]
+
+    return o
+
+
 class SEDFunctor(object):
     """Functor that accepts a model parameter vector and computes the
     normalization of a spectral model in a sequence of SED energy
@@ -40,15 +60,11 @@ class SEDFluxFunctor(SEDFunctor):
 
     def __call__(self, params):
 
-        params = list(params)
-        for i, p in enumerate(params):
-            params[i] = np.expand_dims(np.array(params[i], ndmin=1), 0)
-
+        params = cast_params(params)
         emin = np.expand_dims(self.emin, 1)
         emax = np.expand_dims(self.emax, 1)
-
-        return self._spectrum.eval_flux(emin, emax,
-                                        params, self.scale)
+        return np.squeeze(self._spectrum.eval_flux(emin, emax,
+                                                   params, self.scale))
 
 
 class SEDEFluxFunctor(SEDFunctor):
@@ -60,14 +76,11 @@ class SEDEFluxFunctor(SEDFunctor):
 
     def __call__(self, params):
 
-        params = list(params)
-        for i, p in enumerate(params):
-            params[i] = np.expand_dims(np.array(params[i], ndmin=1), 0)
-
+        params = cast_params(params)
         emin = np.expand_dims(self.emin, 1)
         emax = np.expand_dims(self.emax, 1)
-
-        return self._spectrum.eval_eflux(emin, emax, params, self.scale)
+        return np.squeeze(self._spectrum.eval_eflux(emin, emax, params,
+                                                    self.scale))
 
 
 class SpectralFunction(object):
@@ -105,11 +118,21 @@ class SpectralFunction(object):
 
     @classmethod
     def eval_e2dfde(cls, x, params, scale=1.0):
-        return cls.eval_dfde(x, params, scale) * x**2
+        x = cast_args(x)
+        params = cast_params(params)
+        return cls._eval_dfde(x, params, scale) * x**2
 
     @classmethod
     def eval_edfde(cls, x, params, scale=1.0):
-        return cls.eval_dfde(x, params, scale) * x
+        x = cast_args(x)
+        params = cast_params(params)
+        return cls._eval_dfde(x, params, scale) * x
+
+    @classmethod
+    def eval_dfde(cls, x, params, scale=1.0):
+        x = cast_args(x)
+        params = cast_params(params)
+        return cls._eval_dfde(x, params, scale)
 
     @classmethod
     def integrate(cls, fn, emin, emax, params, scale=1.0, npt=20):
@@ -119,11 +142,9 @@ class SpectralFunction(object):
         emax = np.expand_dims(emax, -1)
 
         params = copy.deepcopy(params)
-
         for i, p in enumerate(params):
             params[i] = np.expand_dims(params[i], -1)
 
-#        params = np.expand_dims(params,-1)
         xedges = np.linspace(0.0, 1.0, npt + 1)
         logx_edge = np.log(emin) + xedges * (np.log(emax) - np.log(emin))
         logx = 0.5 * (logx_edge[..., 1:] + logx_edge[..., :-1])
@@ -133,48 +154,57 @@ class SpectralFunction(object):
 
     @classmethod
     def eval_flux(cls, emin, emax, params, scale=1.0):
+        emin = cast_args(emin)
+        emax = cast_args(emax)
+        params = cast_params(params)
         return cls.integrate(cls.eval_dfde, emin, emax, params, scale)
 
     @classmethod
     def eval_eflux(cls, emin, emax, params, scale=1.0):
+        emin = cast_args(emin)
+        emax = cast_args(emax)
+        params = cast_params(params)
         return cls.integrate(cls.eval_edfde, emin, emax, params, scale)
 
-    def dfde(self, x):
+    def dfde(self, x, params=None):
         """Evaluate differential flux."""
-        return self.eval_dfde(x, self.params, self.scale)
+        params = self.params if params is None else params
+        return np.squeeze(self.eval_dfde(x, params, self.scale))
 
-    def e2dfde(self, x):
+    def e2dfde(self, x, params=None):
         """Evaluate E^2 times differential flux."""
-        return self.eval_dfde(x, self.params, self.scale) * x**2
+        params = self.params if params is None else params
+        return np.squeeze(self.eval_dfde(x, params, self.scale) * x**2)
 
     def flux(self, emin, emax, params=None):
         """Evaluate the integral flux."""
         params = self.params if params is None else params
-        return self.eval_flux(emin, emax, params, self.scale)
+        return np.squeeze(self.eval_flux(emin, emax, params, self.scale))
 
     def eflux(self, emin, emax, params=None):
         """Evaluate the energy flux flux."""
         params = self.params if params is None else params
-        return self.eval_eflux(emin, emax, params, self.scale)
+        return np.squeeze(self.eval_eflux(emin, emax, params, self.scale))
 
 
 class PowerLaw(SpectralFunction):
-    """Class representation of a power-law with the functional form:
+    """Class that evaluates a power-law function with the
+    parameterization:
 
-    F(x) = F_0 * (x/x_s)^g
+    F(x) = p_0 * (x/x_s)^p_1
 
     where x_s is the scale parameter.  The `params ` array should be
     defined with:
 
-    * params[0] : Prefactor (F_0)
-    * params[1] : Index (g)
+    * params[0] : Prefactor (p_0)
+    * params[1] : Index (p_1)
+
     """
-    
     def __init__(self, params, scale=1.0):
         super(PowerLaw, self).__init__(params, scale)
 
     @staticmethod
-    def eval_dfde(x, params, scale=1.0):
+    def _eval_dfde(x, params, scale=1.0):
         return params[0] * (x / scale) ** params[1]
 
     @classmethod
@@ -221,7 +251,7 @@ class LogParabola(SpectralFunction):
         super(LogParabola, self).__init__(params, scale)
 
     @staticmethod
-    def eval_dfde(x, params, scale=1.0):
+    def _eval_dfde(x, params, scale=1.0):
         return (params[0] * (x / scale) **
                 (params[1] - params[2] * np.log(x / scale)))
 
@@ -232,5 +262,5 @@ class PLExpCutoff(SpectralFunction):
         super(PLExpCutoff, self).__init__(params, scale)
 
     @staticmethod
-    def eval_dfde(x, params, scale=1.0):
+    def _eval_dfde(x, params, scale=1.0):
         return params[0] * (x / scale) ** (params[1]) * np.exp(-x / params[2])
