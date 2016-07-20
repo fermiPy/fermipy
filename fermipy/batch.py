@@ -3,6 +3,12 @@ from __future__ import absolute_import, division, print_function
 import os
 import subprocess
 
+__all__ = [
+    'check_log',
+    'get_lsf_status',
+    'dispatch_jobs',
+]
+
 
 def check_log(logfile, exited='Exited with exit code',
               successful='Successfully completed', exists=True):
