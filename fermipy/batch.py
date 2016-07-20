@@ -1,5 +1,8 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 import subprocess
+
 
 def check_log(logfile, exited='Exited with exit code',
               successful='Successfully completed', exists=True):
@@ -17,16 +20,16 @@ def check_log(logfile, exited='Exited with exit code',
     elif successful in open(logfile).read():
         return 'Successful'
     else:
-        return 'None' 
+        return 'None'
+
 
 def get_lsf_status():
-
-    status_count = {'RUN' : 0,
-                    'PEND' : 0,
-                    'SUSP' : 0,
+    status_count = {'RUN': 0,
+                    'PEND': 0,
+                    'SUSP': 0,
                     'USUSP': 0,
-                    'NJOB' : 0,
-                    'UNKNWN' : 0}
+                    'NJOB': 0,
+                    'UNKNWN': 0}
 
     p = subprocess.Popen(['bjobs'],
                          stdout=subprocess.PIPE,
@@ -48,40 +51,38 @@ def get_lsf_status():
     return status_count
 
 
-def dispatch_jobs(exe,args,opts,batch_opts):
+def dispatch_jobs(exe, args, opts, batch_opts):
+    batch_opts.setdefault('W', 300)
+    batch_opts.setdefault('R', 'rhel60')
 
-    batch_opts.setdefault('W',300)
-    batch_opts.setdefault('R','rhel60')
-
-    #skip_keywords = ['queue','resources','batch','W']
+    # skip_keywords = ['queue','resources','batch','W']
 
     cmd_opts = ''
     for k, v in opts.__dict__.items():
-        if isinstance(v,list):
+        if isinstance(v, list):
             continue
 
-        if isinstance(v,bool) and v:
-            cmd_opts += ' --%s '%(k)
-        elif isinstance(v,bool):
+        if isinstance(v, bool) and v:
+            cmd_opts += ' --%s ' % (k)
+        elif isinstance(v, bool):
             continue
-        elif not v is None:
-            cmd_opts += ' --%s=\"%s\" '%(k,v)
+        elif v is not None:
+            cmd_opts += ' --%s=\"%s\" ' % (k, v)
 
-#    for x in args:
-#            cmd = '%s %s '%(exe,x)
-#            batch_cmd = 'bsub -W %s -R %s '%(W,resources)
-#            batch_cmd += ' %s %s '%(cmd,cmd_opts)        
-#            print(batch_cmd)
-#            os.system(batch_cmd)
+        #    for x in args:
+        #            cmd = '%s %s '%(exe,x)
+        #            batch_cmd = 'bsub -W %s -R %s '%(W,resources)
+        #            batch_cmd += ' %s %s '%(cmd,cmd_opts)
+        #            print(batch_cmd)
+        #            os.system(batch_cmd)
 
-
-    cmd = '%s %s '%(exe,' '.join(args))
+    cmd = '%s %s ' % (exe, ' '.join(args))
 
     batch_optstr = ''
-    for k,v in batch_opts.items():
-        batch_optstr += ' -%s %s '%(k,v)
+    for k, v in batch_opts.items():
+        batch_optstr += ' -%s %s ' % (k, v)
 
-    batch_cmd = 'bsub %s '%(batch_optstr)
-    batch_cmd += ' %s %s '%(cmd,cmd_opts)        
+    batch_cmd = 'bsub %s ' % (batch_optstr)
+    batch_cmd += ' %s %s ' % (cmd, cmd_opts)
     print(batch_cmd)
-    #os.system(batch_cmd)
+    # os.system(batch_cmd)

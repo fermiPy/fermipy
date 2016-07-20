@@ -1,3 +1,4 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Utilities for dealing with 'castro data', i.e., 2D table of
 likelihood values.
 
@@ -10,13 +11,10 @@ other variables, such as the Flux normalization and the spectral
 index, or the mass and cross-section of a putative dark matter
 particle.
 """
-
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import numpy as np
 from scipy.interpolate import UnivariateSpline, splrep, splev
-import scipy
 
 from astropy.table import Table
 import astropy.units as u

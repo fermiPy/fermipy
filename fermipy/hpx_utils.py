@@ -1,14 +1,11 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
 Utilities for dealing with HEALPix projections and mappings
 """
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 import re
-
 import healpy as hp
 import numpy as np
-
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord

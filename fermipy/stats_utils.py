@@ -1,15 +1,11 @@
-#!/usr/bin/env python
-#
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
 Utilities to fit dark matter spectra to castro data
 """
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
-
 import scipy.stats as stats
 import scipy.optimize as opt
-
 from fermipy import castro
 
 

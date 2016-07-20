@@ -1,12 +1,9 @@
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 import numpy as np
-
 import astropy.io.fits as pyfits
 import astropy.wcs as pywcs
-
 import fermipy
 from fermipy.hpx_utils import HPX
 

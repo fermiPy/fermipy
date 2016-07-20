@@ -1,20 +1,15 @@
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function, unicode_literals
 import copy
 import logging
-
 import numpy as np
-
 from astropy.coordinates import SkyCoord
-
 import fermipy.config
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
 from fermipy.skymap import Map
-
 from LikelihoodState import LikelihoodState
 
 
