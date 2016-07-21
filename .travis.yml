@@ -10,7 +10,8 @@ matrix:
         # The main build:
         # Python 2, Fermi ST, all dependencies
         - os: linux
-          env: PYTHON_VERSION=2.7
+          env: NAME=main
+               PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                ST_INSTALL='bash stinstall.sh force'
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
@@ -18,7 +19,8 @@ matrix:
 
         # Python 3, no Fermi ST, all other dependencies
         - os: linux
-          env: PYTHON_VERSION=3.5
+          env: NAME=py3_st-no_dep-yes
+               PYTHON_VERSION=3.5
                ST_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
@@ -26,7 +28,8 @@ matrix:
 
         # Python 2, no Fermi ST, all other dependencies
         - os: linux
-          env: PYTHON_VERSION=2.7
+          env: NAME=NAME=py2_st-no_dep-yes
+               PYTHON_VERSION=2.7
                ST_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
@@ -50,8 +53,9 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda create -q -n fermi-env python=$PYTHON_VERSION numpy astropy pytest $CONDA_DEPS
+  - conda create -q -n fermi-env python=$PYTHON_VERSION pip numpy astropy pytest $CONDA_DEPS
   - source activate fermi-env
+  - python -m pip install coverage pytest-cov coveralls
   - $CONDA2
 #  - pip install healpy
   - python setup.py install
@@ -75,8 +79,13 @@ install:
 
 # Run test
 script:
-  - py.test -vv -s
+  - python -m pytest -vv -s --cov=fermipy --cov-config=fermipy/tests/coveragerc
  
 #cache:
 #  directories:
 #  - $HOME/ScienceTools
+
+after_success:
+    - if [[ $NAME == 'main' ]]; then
+          coveralls --rcfile='fermipy/tests/coveragerc';
+      fi
