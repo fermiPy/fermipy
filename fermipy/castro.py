@@ -18,7 +18,7 @@ import numpy as np
 from scipy.interpolate import UnivariateSpline, splrep, splev
 import scipy
 
-from astropy.table import Table
+from astropy.table import Table, Column
 import astropy.units as u
 
 from fermipy.wcs_utils import wcs_add_energy_axis
@@ -26,6 +26,7 @@ from fermipy.skymap import read_map_from_fits, Map
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
 from fermipy.spectrum import SpectralFunction
+from fermipy.utils import cl_to_dlnl
 
 # Some useful functions
 
@@ -192,10 +193,9 @@ class LnLFn(object):
 
             while np.sign(self._interp.derivative(self._interp.x[ix0])) == np.sign(self._interp.derivative(self._interp.x[ix1])):
                 ix0 += 1
-
+ 
             self._mle = scipy.optimize.brentq(self._interp.derivative,
-                                              self._interp.x[
-                                                  ix0], self._interp.x[ix1],
+                                              self._interp.x[ix0], self._interp.x[ix1],
                                               xtol=1e-10 * np.median(self._interp.x))
 
     def mle(self):
@@ -223,7 +223,14 @@ class LnLFn(object):
         alpha :  limit confidence level.
         upper :  upper or lower limits.
         """
-        dlnl = utils.cl_to_dlnl(1.0 - alpha)
+        dlnl = cl_to_dlnl(1.0 - alpha)
+        mle_val = self.mle()
+        # A little bit of paranoia to avoid zeros
+        if mle_val <= 0.:
+            mle_val = self._interp.xmin
+        if mle_val <= 0.:
+            mle_val = self._interp.x[1]
+        log_mle = np.log10(mle_val)
         lnl_max = self.fn_mle()
 
         # This ultra-safe code to find an absolute maximum
@@ -235,15 +242,12 @@ class LnLFn(object):
         # else:
         #    xmax = self.interp.x[m][0]
 
-        # Matt has found that this is use an interpolator than an actual root-finder to
+        # Matt has found that it is faster to use an interpolator than an actual root-finder to
         # find the root probably b/c of python overhead
         #rf = lambda x: self._interp(x)+dlnl-lnl_max
         if upper:
-            x = np.zeros((100))
-            x[0] = self._mle
-            log_xmax = np.log10(self._interp.xmax)
-            x[1:] = np.logspace(log_xmax-10,log_xmax,100)[1:]
-            # Old version
+            x = np.logspace(log_mle,np.log10(self._interp.xmax),100)
+            # Old version.  This doesn't work if the interpolate is defined over a huge range
             # x = np.linspace(self._mle, self._interp.xmax, 100)
             #return opt.brentq(rf,self._mle,self._interp.xmax,xtol=1e-10*np.abs(self._mle))
         else:
