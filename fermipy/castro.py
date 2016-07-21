@@ -895,8 +895,9 @@ class CastroData(CastroData_Base):
         dfde = np.array(tab_s['NORM'] * tab_s['REF_DFDE'])
         flux = np.array(tab_s['NORM'] * tab_s['REF_FLUX'])
         eflux = np.array(tab_s['NORM'] * tab_s['REF_EFLUX'])
+        dfde_err = np.array(tab_s['NORM_ERR'] * tab_s['REF_DFDE'])
 
-        sd = SpecData(emin, emax, dfde, flux, eflux, npred)
+        sd = SpecData(emin, emax, dfde, flux, eflux, npred, dfde_err)
 
         return CastroData(norm_vals, nll_vals, sd, norm_type)
 
