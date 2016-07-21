@@ -9,8 +9,8 @@ Fermi-LAT Python Analysis Framework
 .. image:: https://travis-ci.org/fermiPy/fermipy.svg
     :target: https://travis-ci.org/fermiPy/fermipy
 
-* .. image:: https://img.shields.io/coveralls/fermipy/fermipy.svg
-    :target: https://coveralls.io/r/fermipy/fermipy
+.. image:: https://img.shields.io/coveralls/fermiPy/fermipy.svg
+    :target: https://coveralls.io/r/fermiPy/fermipy
     :alt: Code Coverage
 
 .. image:: http://img.shields.io/pypi/v/fermipy.svg?text=version
