@@ -9,6 +9,7 @@ import numpy as np
 
 import scipy.stats as stats
 import scipy.optimize as opt
+from scipy.integrate import quad
 
 from fermipy import castro
 
@@ -95,8 +96,8 @@ class prior_functor:
     """ A functor class that wraps simple functions we use to make priors 
     on paramters.    
     """
-    def __init__(self):
-        pass       
+    def __init__(self,funcname):
+        self._funcname = funcname
 
     def normalization(self):
         """ The normalization 
@@ -113,6 +114,18 @@ class prior_functor:
         """ The mean value of the function.
         """
         return 1.
+
+    def sigma(self):
+        """ The 'width' of the function.
+        What this means depend on the function being used.
+        """
+        raise NotImplementedError("prior_functor.sigma must be implemented by sub-class")
+
+    @property
+    def funcname(self):
+        """ A string identifying the function.
+        """
+        return self._funcname
 
     def marginalization_bins(self):
         """ The binning to use to do the marginalization integrals
@@ -131,13 +144,16 @@ class prior_functor:
 class function_prior(prior_functor):
     """
     """
-    def __init__(self,mu,sigma,fn,lnfn=None):
+    def __init__(self,funcname,mu,sigma,fn,lnfn=None):
         """
         """
+        # FIXME, why doesn't super(function_prior,self) work here?
+        prior_functor.__init__(self,funcname)
         self._mu = mu
         self._sigma = sigma
         self._fn = fn
         self._lnfn = lnfn
+
 
     def normalization(self):
         """ The normalization 
@@ -151,6 +167,12 @@ class function_prior(prior_functor):
         """ The mean value of the function.
         """
         return self._mu
+
+    def sigma(self):
+        """ The 'width' of the function.
+        What this means depend on the function being used.
+        """
+        return self._sigma
 
     def log_value(self,x):
         """
@@ -198,6 +220,7 @@ class lognorm_prior(prior_functor):
         mu    :  The mean value of the function
         sigma :  The variance of the underlying gaussian distribution
         """
+        super(lognorm_prior,self).__init__('lognorm')
         self._mu = mu
         self._sigma = sigma
 
@@ -205,6 +228,12 @@ class lognorm_prior(prior_functor):
         """ .The mean value of the function.
         """
         return self._mu
+
+    def sigma(self):
+        """ The 'width' of the function.
+        What this means depend on the function being used.
+        """
+        return self._sigma
 
     def __call__(self,x):
         """ Log-normal function from scipy """
@@ -224,6 +253,7 @@ class norm_prior(prior_functor):
     def __init__(self,mu,sigma):
         """
         """
+        super(norm_prior,self).__init__('norm')
         self._mu = mu
         self._sigma = sigma
 
@@ -231,6 +261,12 @@ class norm_prior(prior_functor):
         """ .The mean value of the function.
         """
         return self._mu    
+ 
+    def sigma(self):
+        """ The 'width' of the function.
+        What this means depend on the function being used.
+        """
+        return self._sigma
 
     def __call__(self,x):
         """ Normal function from scipy """
@@ -243,9 +279,21 @@ def create_prior_functor(d):
     Parameters
     ----------
     d     :  A dictionary, it must contain:
-       d['functype'] : 'lognorm' or 'norm' 
+       d['functype'] : a recognized function type
        and all of the required parameters for the prior_functor of the desired type
 
+    Returns
+    ----------
+    A sub-class of '~fermipy.stats_utils.prior_functor'
+
+    Recognized types are:
+
+    'lognorm'       : Scipy lognormal distribution
+    'norm'          : Scipy normal distribution
+    'gauss'         : Gaussian truncated at zero
+    'lgauss'        : Gaussian in log-space
+    'lgauss_like'   : Gaussian in log-space, with arguments reversed. 
+    'lgauss_logpdf' : ???
     """
     functype = d.pop('functype','lognorm')
     if functype == 'norm':
@@ -253,17 +301,17 @@ def create_prior_functor(d):
     elif functype == 'lognorm':
         return lognorm_prior(**d)
     elif functype == 'gauss':
-        return function_prior(d['mu'],d['sigma'],gauss,lngauss)
+        return function_prior(functype,d['mu'],d['sigma'],gauss,lngauss)
     elif functype == 'lgauss':
-        return function_prior(d['mu'],d['sigma'],lgauss,lnlgauss)
+        return function_prior(functype,d['mu'],d['sigma'],lgauss,lnlgauss)
     elif functype == 'lgauss_like':
         fn = lambda x, y, s: lgauss(y,x,s)
         lnfn = lambda x, y, s: lnlgauss(y,x,s)
-        return function_prior(d['mu'],d['sigma'],fn,lnfn)
+        return function_prior(functype,d['mu'],d['sigma'],fn,lnfn)
     elif functype == 'lgauss_logpdf':
         fn = lambda x, y, s: lgauss(x,y,s,logpdf=True)
         lnfn = lambda x, y, s: lnlgauss(x,y,s,logpdf=True)
-        return function_prior(d['mu'],d['sigma'],fn,lnfn)
+        return function_prior(functype,d['mu'],d['sigma'],fn,lnfn)
     else:
         raise KeyError("Unrecognized prior_functor type %s"%functype)
 
