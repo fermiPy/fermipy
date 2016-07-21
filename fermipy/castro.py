@@ -268,7 +268,7 @@ class SpecData(object):
     flux values and number of predicted photons
     """
 
-    def __init__(self, emin, emax, dfde, flux, eflux, npred):
+    def __init__(self, emin, emax, dfde, flux, eflux, npred, dfde_err):
         """
 
         Parameters
@@ -300,6 +300,7 @@ class SpecData(object):
         self._evals = np.sqrt(self.emin * self.emax)
         self._bin_widths = self._ebins[1:] - self._ebins[0:-1]
         self._dfde = dfde
+        self._dfde_err = dfde_err
         self._flux = flux
         self._eflux = eflux
         self._npred = npred
@@ -347,6 +348,24 @@ class SpecData(object):
         """
         return self._dfde
 
+    @property
+    def dfde_err(self):
+        """ return the differential flux values
+        """
+        return self._dfde_err
+    
+    @property
+    def e2dfde(self):
+        """ return the differential flux values scaled by E^2
+        """
+        return self._dfde*self.evals**2
+
+    @property
+    def e2dfde_err(self):
+        """ return the differential flux values scaled by E^2
+        """
+        return self._dfde_err*self.evals**2
+    
     @property
     def flux(self):
         """ return the flux values
@@ -721,7 +740,7 @@ class CastroData(CastroData_Base):
         eflux = norm*deltae*ectr
         
         spec_data = SpecData(emin, emax, norm, flux, eflux,
-                             np.zeros(len(norm)))
+                             np.zeros(len(norm)), norm_err)
 
         xmin = norm - 3.0*norm_errn
 
@@ -787,8 +806,9 @@ class CastroData(CastroData_Base):
         dfde = np.array(tab_s['NORM'] * tab_e['REF_DFDE'])
         flux = np.array(tab_s['NORM'] * tab_e['REF_FLUX'])
         eflux = np.array(tab_s['NORM'] * tab_e['REF_EFLUX'])
-
-        sd = SpecData(emin, emax, dfde, flux, eflux, npred)
+        dfde_err = np.array(tab_s['NORM_ERR'] * tab_e['REF_DFDE'])
+        
+        sd = SpecData(emin, emax, dfde, flux, eflux, npred, dfde_err)
 
         return CastroData(norm_vals, nll_vals, sd, norm_type)
 
