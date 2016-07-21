@@ -1,13 +1,10 @@
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function
 import copy
 import numpy as np
-
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
-
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.hpx_utils as hpx_utils

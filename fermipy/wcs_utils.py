@@ -1,16 +1,11 @@
-
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function
 import os
-
 import numpy as np
-
 from astropy.wcs import WCS
 from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-
 import fermipy.utils as utils
 
 
@@ -20,7 +15,6 @@ class WCSProj(object):
     helper methods for accessing the properties of the WCS object."""
 
     def __init__(self, wcs, npix):
-
         self._wcs = wcs
         self._npix = np.array(npix, ndmin=1)
         self._coordsys = get_coordsys(wcs)
@@ -64,7 +58,6 @@ class WCSProj(object):
 
     @staticmethod
     def create(skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
-
         npix = np.array(npix, ndmin=1)
         crpix = npix / 2. + 0.5
         wcs = create_wcs(skydir, coordsys, projection,
@@ -103,10 +96,8 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
 
     Parameters
     ----------
-
     skydir : `~astropy.coordinates.SkyCoord`
         Sky coordinate of the WCS reference point.
-
     coordsys : str
 
     projection : str
@@ -115,13 +106,10 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
 
     crpix : float or (float,float)
         In the first case the same value is used for x and y axes
-
-    naxis : 2
-       Number of dimensions of the projection.  Valid inputs are 2 or 3.
-
+    naxis : {2, 3}
+       Number of dimensions of the projection.
     energies : array-like
        Array of energies that defines the third dimension if naxis=3.
-
     """
 
     w = WCS(naxis=naxis)
@@ -160,16 +148,14 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
 
 
 def wcs_add_energy_axis(wcs, energies):
-    """ Copy a WCS object, and add on the energy axis
+    """Copy a WCS object, and add on the energy axis.
 
     Parameters
     ----------
-
     wcs : `~astropy.wcs.WCS`
-
+        WCS
     energies : array-like
        Array of energies.
-
     """
     if wcs.naxis != 2:
         raise Exception(
@@ -231,12 +217,13 @@ def offset_to_skydir(skydir, offset_lon, offset_lat,
 
 
 def skydir_to_pix(skydir, wcs):
-    """Convert skydir object to pixel coordinates.  Gracefully handles
-    0-d coordinate arrays.
+    """Convert skydir object to pixel coordinates.
+
+    Gracefully handles 0-d coordinate arrays.
 
     Parameters
     ----------
-    skydir : `~astropy.coordinates.SkyCOord`
+    skydir : `~astropy.coordinates.SkyCoord`
 
     wcs : `~astropy.wcs.WCS`
 
@@ -253,9 +240,10 @@ def skydir_to_pix(skydir, wcs):
 
 
 def pix_to_skydir(xpix, ypix, wcs):
-    """Convert pixel coordinates to a skydir object.  Gracefully
-    handles 0-d coordinate arrays.  Always returns a celestial
-    coordinate.
+    """Convert pixel coordinates to a skydir object.
+
+    Gracefully handles 0-d coordinate arrays.
+    Always returns a celestial coordinate.
 
     Parameters
     ----------
@@ -287,7 +275,6 @@ def get_coordsys(wcs):
 
 
 def get_target_skydir(config, ref_skydir=None):
-
     if ref_skydir is None:
         ref_skydir = SkyCoord(0.0, 0.0, unit=u.deg)
 
@@ -374,7 +361,6 @@ def wcs_to_coords(w, shape):
 
 
 def wcs_to_skydir(wcs):
-
     lon = wcs.wcs.crval[0]
     lat = wcs.wcs.crval[1]
 
@@ -388,7 +374,6 @@ def wcs_to_skydir(wcs):
 
 
 def is_galactic(wcs):
-
     coordsys = get_coordsys(wcs)
     if coordsys == 'GAL':
         return True

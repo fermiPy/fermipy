@@ -1,14 +1,11 @@
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
-
 from astropy import units as u
 from astropy.table import Table, Column
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
-
 import fermipy
 from fermipy import spectrum
 
