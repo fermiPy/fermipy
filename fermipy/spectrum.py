@@ -95,6 +95,10 @@ class SpectralFunction(object):
         return self._params
 
     @property
+    def log_params(self):
+        return self.params_to_log(self._params)
+
+    @property
     def scale(self):
         return self._scale
 
@@ -135,7 +139,29 @@ class SpectralFunction(object):
         return cls._eval_dfde(x, params, scale)
 
     @classmethod
-    def integrate(cls, fn, emin, emax, params, scale=1.0, npt=20):
+    def eval_dfde_deriv(cls, x, params, scale=1.0):
+        x = cast_args(x)
+        params = cast_params(params)
+        return cls._eval_dfde_deriv(x, params, scale)
+
+    @classmethod
+    def eval_edfde_deriv(cls, x, params, scale=1.0):
+        x = cast_args(x)
+        params = cast_params(params)
+        dfde_deriv = cls._eval_dfde_deriv(x, params, scale)
+        dfde = cls._eval_dfde(x, params, scale)
+        return x*dfde_deriv + dfde
+
+    @classmethod
+    def eval_e2dfde_deriv(cls, x, params, scale=1.0):
+        x = cast_args(x)
+        params = cast_params(params)
+        dfde_deriv = cls._eval_dfde_deriv(x, params, scale)
+        dfde = cls._eval_dfde(x, params, scale)
+        return x**2*dfde_deriv + 2*x*dfde
+
+    @classmethod
+    def _integrate(cls, fn, emin, emax, params, scale=1.0, npt=20):
         """Fast numerical integration method using mid-point rule."""
 
         emin = np.expand_dims(emin, -1)
@@ -153,28 +179,55 @@ class SpectralFunction(object):
         return np.sum(dfde * xw, axis=-1)
 
     @classmethod
+    def _eval_dfde_deriv(cls, x, params, scale=1.0, eps=1E-6):
+        return (cls._eval_dfde(x+eps, params, scale) -
+                cls._eval_dfde(x, params, scale))/eps
+
+    @classmethod
     def eval_flux(cls, emin, emax, params, scale=1.0):
         emin = cast_args(emin)
         emax = cast_args(emax)
         params = cast_params(params)
-        return cls.integrate(cls.eval_dfde, emin, emax, params, scale)
+        return cls._integrate(cls.eval_dfde, emin, emax, params, scale)
 
     @classmethod
     def eval_eflux(cls, emin, emax, params, scale=1.0):
         emin = cast_args(emin)
         emax = cast_args(emax)
         params = cast_params(params)
-        return cls.integrate(cls.eval_edfde, emin, emax, params, scale)
+        return cls._integrate(cls.eval_edfde, emin, emax, params, scale)
 
     def dfde(self, x, params=None):
         """Evaluate differential flux."""
         params = self.params if params is None else params
         return np.squeeze(self.eval_dfde(x, params, self.scale))
 
+    def edfde(self, x, params=None):
+        """Evaluate E times differential flux."""
+        params = self.params if params is None else params
+        return np.squeeze(self.eval_edfde(x, params, self.scale))
+
     def e2dfde(self, x, params=None):
         """Evaluate E^2 times differential flux."""
         params = self.params if params is None else params
-        return np.squeeze(self.eval_dfde(x, params, self.scale) * x**2)
+        return np.squeeze(self.eval_e2dfde(x, params, self.scale))
+
+    def dfde_deriv(self, x, params=None):
+        """Evaluate derivative of the differential flux with respect to E."""
+        params = self.params if params is None else params
+        return np.squeeze(self.eval_dfde_deriv(x, params, self.scale))
+
+    def edfde_deriv(self, x, params=None):
+        """Evaluate derivative of E times differential flux with respect to
+        E."""
+        params = self.params if params is None else params
+        return np.squeeze(self.eval_edfde_deriv(x, params, self.scale))
+
+    def e2dfde_deriv(self, x, params=None):
+        """Evaluate derivative of E^2 times differential flux with respect to
+        E."""
+        params = self.params if params is None else params
+        return np.squeeze(self.eval_e2dfde_deriv(x, params, self.scale))
 
     def flux(self, emin, emax, params=None):
         """Evaluate the integral flux."""
@@ -262,5 +315,22 @@ class PLExpCutoff(SpectralFunction):
         super(PLExpCutoff, self).__init__(params, scale)
 
     @staticmethod
+    def params_to_log(params):
+        return [np.log10(params[0]),
+                params[1],
+                np.log10(params[2])]
+
+    @staticmethod
+    def log_to_params(params):
+        return [10**params[0],
+                params[1],
+                10**params[2]]
+
+    @staticmethod
     def _eval_dfde(x, params, scale=1.0):
         return params[0] * (x / scale) ** (params[1]) * np.exp(-x / params[2])
+
+    @classmethod
+    def _eval_dfde_deriv(cls, x, params, scale=1.0):
+        return (cls._eval_dfde(x, params, scale) *
+                (params[1]*params[2] - x)/(params[2]*x))
