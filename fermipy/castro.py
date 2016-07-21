@@ -469,7 +469,10 @@ class CastroData_Base(object):
         nll_val : `~numpy.ndarray`
            Array of negative log-likelihood values.
         """
-        nll_val = 0.
+        if len(x.shape) == 1:
+            nll_val = np.zeros((1))
+        else:
+            nll_val = np.zeros((x.shape[1:]))
         # crude hack to force the fitter away from unphysical values
         if (x < 0).any():
             return 1000.
@@ -496,7 +499,11 @@ class CastroData_Base(object):
         der_val : `~numpy.ndarray`
            Array of negative log-likelihood values.
         """
-        der_val = 0.
+        if len(x.shape) == 1:
+            der_val = np.zeros((1))
+        else:
+            der_val = np.zeros((x.shape[1:]))
+
         for i, xv in enumerate(x):
             der_val += self._loglikes[i].interp.derivative(xv, der=der)
         return der_val
@@ -563,7 +570,7 @@ class CastroData_Base(object):
         try:
             result = scipy.optimize.brentq(fDeriv, xlims[0], xlims[1])
         except:
-            if self.__call__(specVals * xlims[0]) < self.__call__(specVals * xlims[1]):
+            if (self.__call__(specVals * xlims[0]) < self.__call__(specVals * xlims[1])).any():
                 return xlims[0]
             else:
                 return xlims[1]
