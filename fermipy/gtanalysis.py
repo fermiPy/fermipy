@@ -1,6 +1,5 @@
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function
 import os
 import copy
 import shutil
@@ -8,14 +7,10 @@ import collections
 import logging
 import tempfile
 import filecmp
-
 import numpy as np
-
-# pyLikelihood needs to be imported before astropy to avoid CFITSIO
-# header error
+# pyLikelihood needs to be imported before astropy to avoid CFITSIO header error
 import pyLikelihood as pyLike
 from astropy.io import fits
-
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
@@ -37,7 +32,6 @@ from fermipy.hpx_utils import HPX
 from fermipy.roi_model import ROIModel
 from fermipy.plotting import AnalysisPlotter
 from fermipy.logger import Logger, log_level
-
 # pylikelihood
 import GtApp
 import FluxDensity

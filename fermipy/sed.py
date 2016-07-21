@@ -1,3 +1,4 @@
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
 Utilities for dealing with SEDs
 
@@ -5,10 +6,7 @@ Many parts of this code are taken from dsphs/like/lnlfn.py by
   Matthew Wood <mdwood@slac.stanford.edu>
   Alex Drlica-Wagner <kadrlica@slac.stanford.edu>
 """
-
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+from __future__ import absolute_import, division, print_function
 import copy
 import logging
 import os

@@ -1,27 +1,65 @@
 language: python
-
-python:
-  - 2.7
-
 sudo: false
 
 notifications:
   email: false
- 
+
+matrix:
+    include:
+
+        # The main build:
+        # Python 2, Fermi ST, all dependencies
+        - os: linux
+          env: NAME=main
+               PYTHON_VERSION=2.7
+               CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
+               ST_INSTALL='bash stinstall.sh force'
+               CONDA_DEPS='scipy matplotlib pytest pyyaml'
+               CONDA2='conda install -c openastronomy healpy wcsaxes'
+
+        # Python 3, no Fermi ST, all other dependencies
+        - os: linux
+          env: NAME=py3_st-no_dep-yes
+               PYTHON_VERSION=3.5
+               ST_INSTALL=''
+               CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+               CONDA_DEPS='scipy matplotlib pytest pyyaml'
+               CONDA2='conda install -c openastronomy healpy wcsaxes'
+
+        # Python 2, no Fermi ST, all other dependencies
+        - os: linux
+          env: NAME=NAME=py2_st-no_dep-yes
+               PYTHON_VERSION=2.7
+               ST_INSTALL=''
+               CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+               CONDA_DEPS='scipy matplotlib pytest pyyaml'
+               CONDA2='conda install -c openastronomy healpy wcsaxes'
+
+#        # Python 3, no Fermi ST, only the required dependencies
+#        # TODO: This isn't working yet, need to handle imports for opt deps more carefully
+#        - os: linux
+#          env: PYTHON_VERSION=3.5
+#               ST_INSTALL=''
+#               CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+#               CONDA_DEPS=''
+#               CONDA2=''
+
+
 # Setup anaconda and install packages
 install:
-  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - conda create -q -n fermi-env python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy pytest pyyaml
+  - conda create -q -n fermi-env python=$PYTHON_VERSION pip numpy astropy pytest $CONDA_DEPS
   - source activate fermi-env
-  - conda install -c openastronomy healpy wcsaxes
+  - python -m pip install coverage pytest-cov coveralls
+  - $CONDA2
 #  - pip install healpy
   - python setup.py install
-  - bash stinstall.sh force # Download and install the ST binaries
+  - $ST_INSTALL # Download and install the ST binaries
   - source travissetup.sh
   - source condasetup.sh
 
@@ -30,11 +68,24 @@ install:
 #  - python setup.py install
 #  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy 
 #  - pip install healpy
- 
+
+  # This is needed to make matplotlib plot testing work
+  - if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
+        export DISPLAY=:99.0;
+        sh -e /etc/init.d/xvfb start;
+        export QT_API=pyqt;
+    fi
+
+
 # Run test
 script:
-  - py.test -vv -s
+  - python -m pytest -vv -s --cov=fermipy --cov-config=fermipy/tests/coveragerc
  
 #cache:
 #  directories:
 #  - $HOME/ScienceTools
+
+after_success:
+    - if [[ $NAME == 'main' ]]; then
+          coveralls --rcfile='fermipy/tests/coveragerc';
+      fi

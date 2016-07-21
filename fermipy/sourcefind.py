@@ -1,20 +1,15 @@
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function
 import copy
 import logging
-
 import numpy as np
-
 from astropy.coordinates import SkyCoord
-
 import fermipy.config
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
 from fermipy.skymap import Map
-
 from LikelihoodState import LikelihoodState
 
 
@@ -146,7 +141,7 @@ class SourceFinder(object):
 
             self.logger.info('Found source\n' +
                              'name: %s\n' % name +
-                             'ts: %f' % p['amp']**2)
+                             'ts: %f' % p['amp'] ** 2)
 
             names.append(name)
             src_dicts.append(src_dict)
@@ -184,7 +179,7 @@ class SourceFinder(object):
             (names, src_dicts) = \
                 self._build_src_dicts_from_peaks(peaks, m, src_dict_template)
         elif tsmap_fitter == 'tscube':
-            sd = m['tscube'].find_sources(threshold**2, min_separation,
+            sd = m['tscube'].find_sources(threshold ** 2, min_separation,
                                           use_cumul=False,
                                           output_src_dicts=True,
                                           output_peaks=True)
@@ -320,9 +315,9 @@ class SourceFinder(object):
         self.logger.debug('Completed localization with TS Map.\n'
                           '(ra,dec) = (%10.4f,%10.4f)\n'
                           '(glon,glat) = (%10.4f,%10.4f)',
-                          tsmap_fit['ra'],tsmap_fit['dec'],
-                          tsmap_fit['glon'],tsmap_fit['glat'])
-        
+                          tsmap_fit['ra'], tsmap_fit['dec'],
+                          tsmap_fit['glon'], tsmap_fit['glat'])
+
         # Fit baseline (point-source) model
         self.free_norm(name)
         fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
@@ -343,7 +338,7 @@ class SourceFinder(object):
         self.logger.debug('Refining localization search to '
                           'region of width: %.4f deg',
                           tsmap_fit['r95'])
-        
+
         scan_map = Map.create(SkyCoord(tsmap_fit['ra'],
                                        tsmap_fit['dec'], unit='deg'),
                               scan_step, (nstep, nstep),
@@ -357,7 +352,6 @@ class SourceFinder(object):
                        dloglike_fit=np.zeros((nstep, nstep)))
 
         for i, t in enumerate(scan_skydir):
-
             model_name = '%s_localize' % (name.replace(' ', '').lower())
             src.set_name(model_name)
             src.set_position(t)
@@ -382,10 +376,10 @@ class SourceFinder(object):
         scan_fit, new_skydir = fit_error_ellipse(scan_tsmap, dpix=3)
         o.update(scan_fit)
 
-#        lnlscan['dloglike_fit'] = \
-#            utils.parabola(np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
-#                           np.linspace(0,nstep-1.0,nstep)[np.newaxis,:],
-#                           *scan_fit['popt']).reshape((nstep,nstep))
+        #        lnlscan['dloglike_fit'] = \
+        #            utils.parabola(np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
+        #                           np.linspace(0,nstep-1.0,nstep)[np.newaxis,:],
+        #                           *scan_fit['popt']).reshape((nstep,nstep))
 
         o['lnlscan'] = lnlscan
 
@@ -411,7 +405,7 @@ class SourceFinder(object):
                               '(glon,glat) = (%10.4f,%10.4f)\n'
                               'offset = %8.4f deltax = %8.4f '
                               'deltay = %8.4f',
-                              o['ra'],o['dec'],o['glon'],o['glat'],
+                              o['ra'], o['dec'], o['glon'], o['glat'],
                               o['offset'], o['deltax'],
                               o['deltay'])
         else:
@@ -422,8 +416,8 @@ class SourceFinder(object):
                              'offset = %8.4f r68 = %8.4f',
                              o['ra'], o['dec'],
                              o['glon'], o['glat'],
-                             o['offset'],o['r68'])
-            
+                             o['offset'], o['r68'])
+
         self.roi[name]['localize'] = copy.deepcopy(o)
 
         try:
@@ -434,9 +428,8 @@ class SourceFinder(object):
             self.logger.error('Plot failed.', exc_info=True)
 
         if update and o['fit_success']:
-
             self.logger.info('Updating source %s '
-                             'to localized position.',name)
+                             'to localized position.', name)
             src = self.delete_source(name)
             src.set_position(new_skydir)
             src.set_name(newname, names=src.names)
@@ -447,7 +440,6 @@ class SourceFinder(object):
             self.roi[name]['localize'] = copy.deepcopy(o)
 
         if o['fit_success']:
-
             src = self.roi.get_source_by_name(newname)
             src['pos_sigma'] = o['sigma']
             src['pos_sigma_semimajor'] = o['sigma_semimajor']
@@ -463,6 +455,8 @@ class SourceFinder(object):
     def _localize_tscube(self, name, **kwargs):
         """Localize a source from a TS map generated with
         `~fermipy.gtanalysis.GTAnalysis.tscube`. """
+        import matplotlib.pyplot as plt
+        from fermipy.plotting import ROIPlotter
 
         prefix = kwargs.get('prefix', '')
 
@@ -474,7 +468,7 @@ class SourceFinder(object):
         self.zero_source(name)
         tscube = self.tscube(utils.join_strings([prefix,
                                                  name.lower().
-                                                 replace(' ', '_')]),
+                                                replace(' ', '_')]),
                              wcs=wp.wcs, npix=wp.npix,
                              remake_test_source=False)
         self.unzero_source(name)
@@ -482,8 +476,6 @@ class SourceFinder(object):
         tsmap_renorm = copy.deepcopy(tscube['ts'])
         tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
 
-        import matplotlib.pyplot as plt
-        from fermipy.plotting import ROIPlotter
         plt.figure()
 
         p = ROIPlotter(tsmap_renorm, roi=self.roi)
@@ -504,7 +496,7 @@ class SourceFinder(object):
         skydir = src.skydir
         skywcs = self._skywcs
         tsmap = self.tsmap(utils.join_strings([prefix, name.lower().
-                                               replace(' ', '_')]),
+                                              replace(' ', '_')]),
                            model=src.data,
                            map_skydir=skydir,
                            map_size=2.0 * dtheta_max,

@@ -1,9 +1,6 @@
-# pylikelihood
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function
 import copy
-
 import numpy as np
 import pyLikelihood as pyLike
 from SrcModel import SourceModel

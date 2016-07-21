@@ -1,22 +1,17 @@
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function
 import os
 import copy
 import logging
 import itertools
 import functools
 from multiprocessing import Pool
-
 import numpy as np
 import warnings
-
 import pyLikelihood as pyLike
-
 import astropy.io.fits as pyfits
 from astropy.table import Table
 import astropy.wcs as pywcs
-
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
@@ -24,9 +19,7 @@ import fermipy.plotting as plotting
 import fermipy.castro as castro
 from fermipy.skymap import Map
 from fermipy.roi_model import Source
-
 from fermipy.spectrum import PowerLaw
-
 from LikelihoodState import LikelihoodState
 
 MAX_NITER = 100

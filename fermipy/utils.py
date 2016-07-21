@@ -1,20 +1,17 @@
-from __future__ import absolute_import, division, print_function, \
-    unicode_literals
-
+# Licensed under a 3-clause BSD style license - see LICENSE.rst
+from __future__ import absolute_import, division, print_function
 import os
 import re
 import copy
 from collections import OrderedDict
-
+import xml.etree.cElementTree as et
 import yaml
 import numpy as np
-import scipy
-import xml.etree.cElementTree as et
-from astropy.extern import six
 import scipy.optimize
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
 import scipy.special as special
+from astropy.extern import six
 
 
 def unicode_representer(dumper, uni):
@@ -111,7 +108,6 @@ def match_regex_list(patterns, string):
 
 
 def join_strings(strings, sep='_'):
-
     if strings is None:
         return ''
     else:
@@ -135,11 +131,11 @@ def format_filename(outdir, basename, prefix=None, extension=None):
 
 
 def strip_suffix(filename, suffix):
-
     for s in suffix:
         filename = re.sub(r'\.%s$' % s, '', filename)
 
     return filename
+
 
 RA_NGP = np.radians(192.8594812065348)
 DEC_NGP = np.radians(27.12825118085622)
@@ -147,7 +143,6 @@ L_CP = np.radians(122.9319185680026)
 
 
 def gal2eq(l, b):
-
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.
 
@@ -181,7 +176,6 @@ def gal2eq(l, b):
 
 
 def eq2gal(ra, dec):
-
     L_0 = L_CP - np.pi / 2.
     RA_0 = RA_NGP + np.pi / 2.
     DEC_0 = np.pi / 2. - DEC_NGP
@@ -335,7 +329,6 @@ def create_model_name(src):
 
 
 def cov_to_correlation(cov):
-
     err = np.sqrt(np.diag(cov))
     corr = np.array(cov)
     corr *= np.outer(1 / err, 1 / err)
@@ -443,10 +436,10 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     deltalnl = cl_to_dlnl(ul_confidence)
 
     spline = UnivariateSpline(xval, loglike, k=2, s=tol)
-    #m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
-    #xval = np.concatenate((xval[:1],xval[1:][m]))
-    #loglike = np.concatenate((loglike[:1],loglike[1:][m]))
-    #spline = InterpolatedUnivariateSpline(xval, loglike, k=2)
+    # m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
+    # xval = np.concatenate((xval[:1],xval[1:][m]))
+    # loglike = np.concatenate((loglike[:1],loglike[1:][m]))
+    # spline = InterpolatedUnivariateSpline(xval, loglike, k=2)
 
     sd = spline.derivative()
 
@@ -481,10 +474,9 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
 
 
 def poly_to_parabola(coeff):
-
     sigma = np.sqrt(1. / np.abs(2.0 * coeff[0]))
     x0 = -coeff[1] / (2 * coeff[0])
-    y0 = (1. - (coeff[1]**2 - 4 * coeff[0] * coeff[2])) / (4 * coeff[0])
+    y0 = (1. - (coeff[1] ** 2 - 4 * coeff[0] * coeff[2])) / (4 * coeff[0])
 
     return x0, sigma, y0
 
@@ -535,10 +527,10 @@ def parabola(xy, amplitude, x0, y0, sx, sy, theta):
        `xy` input tuple.
     
     """
-    
+
     x = xy[0]
     y = xy[1]
-    
+
     cth = np.cos(theta)
     sth = np.sin(theta)
     a = (cth ** 2) / (2 * sx ** 2) + (sth ** 2) / (2 * sy ** 2)
@@ -574,7 +566,7 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
        centroid.  The size of the sub-array will be (dpix*2 + 1) x
        (dpix*2 + 1).
     """
-    
+
     xmin = max(0, ix - dpix)
     xmax = min(z.shape[0], ix + dpix + 1)
 
@@ -606,7 +598,7 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
 
     def curve_fit_fn(*args):
         return np.ravel(parabola(*args))
-        
+
     try:
         popt, pcov = scipy.optimize.curve_fit(curve_fit_fn,
                                               (np.ravel(x[m]), np.ravel(y[m])),
@@ -617,14 +609,14 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
 
     fm = parabola((x[m], y[m]), *popt)
     df = fm - z[sx, sy][m]
-    rchi2 = np.sum(df**2) / len(fm)
+    rchi2 = np.sum(df ** 2) / len(fm)
 
     o['rchi2'] = rchi2
     o['x0'] = popt[1]
     o['y0'] = popt[2]
     o['sigmax'] = popt[3]
     o['sigmay'] = popt[4]
-    o['sigma'] = np.sqrt(o['sigmax']**2 + o['sigmay']**2)
+    o['sigma'] = np.sqrt(o['sigmax'] ** 2 + o['sigmay'] ** 2)
     o['z0'] = popt[0]
     o['theta'] = popt[5]
     o['popt'] = popt
@@ -632,8 +624,8 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
     a = max(o['sigmax'], o['sigmay'])
     b = min(o['sigmax'], o['sigmay'])
 
-    o['eccentricity'] = np.sqrt(1 - b**2 / a**2)
-    o['eccentricity2'] = np.sqrt(a**2 / b**2 - 1)
+    o['eccentricity'] = np.sqrt(1 - b ** 2 / a ** 2)
+    o['eccentricity2'] = np.sqrt(a ** 2 / b ** 2 - 1)
 
     return o
 
@@ -743,7 +735,6 @@ def isstr(s):
 
 
 def xmlpath_to_path(path):
-
     if path is None:
         return path
 
@@ -751,7 +742,6 @@ def xmlpath_to_path(path):
 
 
 def path_to_xmlpath(path):
-
     if path is None:
         return path
 
@@ -795,17 +785,15 @@ def prettify_xml(elem):
 
 
 def arg_to_list(arg):
-
     if arg is None:
-        return []    
-    elif isinstance(arg,list):
+        return []
+    elif isinstance(arg, list):
         return arg
     else:
         return [arg]
 
 
 def update_keys(input_dict, key_map):
-
     o = {}
     for k, v in input_dict.items():
 
@@ -1007,7 +995,7 @@ def convolve2d_disk(fn, r, sig, nstep=200):
     delta = (rmax - rmin) / nstep
 
     redge = rmin[:, np.newaxis] + \
-        delta[:, np.newaxis] * np.linspace(0, nstep, nstep + 1)[np.newaxis, :]
+            delta[:, np.newaxis] * np.linspace(0, nstep, nstep + 1)[np.newaxis, :]
     rp = 0.5 * (redge[:, 1:] + redge[:, :-1])
     dr = redge[:, 1:] - redge[:, :-1]
     fnv = fn(rp)
