@@ -10,7 +10,7 @@ import numpy as np
 import scipy.stats as stats
 import scipy.optimize as opt
 from scipy.integrate import quad
-
+from scipy.interpolate import splrep, splev
 from fermipy import castro
 
 
@@ -135,6 +135,16 @@ class prior_functor:
         # centered on mean, using 1000 bins
         return np.logspace(-1.+log_mean,1.+log_mean,1001)
     
+    def profile_bins(self):
+        """ The binning to use to do the profile fitting
+        """ 
+        log_mean = np.log10(self.mean())
+        log_half_width = max(5.*self.sigma(),3.)
+        # Default is to profile over +-5 sigma,
+        # centered on mean, using 100 bins
+        return np.logspace(log_mean-log_half_width,log_mean+log_half_width,101)
+    
+
     def log_value(self,x):
         """
         """
@@ -295,7 +305,7 @@ def create_prior_functor(d):
     'lgauss_like'   : Gaussian in log-space, with arguments reversed. 
     'lgauss_logpdf' : ???
     """
-    functype = d.pop('functype','lognorm')
+    functype = d.pop('functype','lgauss_like')
     if functype == 'norm':
         return norm_prior(**d)
     elif functype == 'lognorm':
@@ -304,11 +314,11 @@ def create_prior_functor(d):
         return function_prior(functype,d['mu'],d['sigma'],gauss,lngauss)
     elif functype == 'lgauss':
         return function_prior(functype,d['mu'],d['sigma'],lgauss,lnlgauss)
-    elif functype == 'lgauss_like':
+    elif functype in ['lgauss_like','lgauss_lik']:
         fn = lambda x, y, s: lgauss(y,x,s)
         lnfn = lambda x, y, s: lnlgauss(y,x,s)
         return function_prior(functype,d['mu'],d['sigma'],fn,lnfn)
-    elif functype == 'lgauss_logpdf':
+    elif functype == 'lgauss_log':
         fn = lambda x, y, s: lgauss(x,y,s,logpdf=True)
         lnfn = lambda x, y, s: lnlgauss(x,y,s,logpdf=True)
         return function_prior(functype,d['mu'],d['sigma'],fn,lnfn)
@@ -395,7 +405,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         if ret_type == "straight":
             self._interp = self._lnlfn.interp
         if ret_type == "profile":
-            self._profile_loglike(self._lnlfn.interp.x)
+            self._profile_loglike_spline(self._lnlfn.interp.x)
             self._interp = self._prof_interp
         elif ret_type == "marginal":
             self._marginal_loglike(self._lnlfn.interp.x)
@@ -524,6 +534,32 @@ class LnLFn_norm_prior(castro.LnLFn):
         self._prof_interp = castro.Interpolator(x,self._prof_z)
         return self._prof_y,self._prof_z
 
+
+    def _profile_loglike_spline(self,x):
+        """ Internal function to calculate and cache the profile likelihood
+        """
+        z = []
+        y = []
+        
+        yv = self._nuis_pdf.profile_bins()
+        nuis_vals = self._nuis_pdf.log_value(yv) - self._nuis_log_norm
+        for xtmp in x:
+            zv = -1.*self._lnlfn.interp(xtmp*yv) + nuis_vals
+            sp = splrep(yv,zv,k=2,s=0)
+            rf = lambda t: splev(t,sp,der=1)
+            ix = np.argmax(splev(yv,sp))
+            imin, imax = max(0,ix-3), min(len(yv)-1,ix+3)            
+            y0 = opt.brentq(rf,yv[imin],yv[imax],xtol=1e-10)                        
+            z0 = self.loglike(xtmp,y0)
+            z.append(z0)
+            y.append(y0)
+
+        self._prof_y = np.array(y)
+        self._prof_z = np.array(z)
+        self._prof_z = self._prof_z.max() - self._prof_z
+        self._prof_interp = castro.Interpolator(x,self._prof_z)
+        return self._prof_y,self._prof_z
+    
 
     def _marginal_loglike(self,x):
         """ Internal function to calculate and cache the marginal likelihood
