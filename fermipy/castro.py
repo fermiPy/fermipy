@@ -516,6 +516,22 @@ class CastroData_Base(object):
 
         return nll_val
 
+
+    def norm_derivative(self, spec, norm):
+        """
+        """
+        if isinstance(norm,float):
+            der_val = 0.
+        elif len(norm.shape) == 1:
+            der_val = np.zeros((1))
+        else:
+            der_val = np.zeros((norm.shape[1:]))
+
+        for i, sv in enumerate(spec):
+            der_val += self._loglikes[i].interp.derivative(norm*sv, der=1) * sv 
+        return der_val
+   
+
     def derivative(self, x, der=1):
         """Return the derivate of the log-like summed over the energy
         bins
@@ -601,7 +617,7 @@ class CastroData_Base(object):
         returns the best-fit normalization value
         """
         from scipy.optimize import brentq
-        fDeriv = lambda x: self.derivative(specVals * x)
+        fDeriv = lambda x : self.norm_derivative(specVals,x)
         try:
             result = brentq(fDeriv, xlims[0], xlims[1])
         except:
