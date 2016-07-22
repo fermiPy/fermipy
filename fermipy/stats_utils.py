@@ -88,13 +88,17 @@ def lnlgauss(x, mu, sigma=1.0, logpdf=False):
     lx = np.zeros(x.shape)
     v = np.zeros(x.shape)
 
-    lx[x > 0] = np.log10(x[x > 0])
+    mask = x > 0
+    inv_mask = np.invert(mask)
+
+    lx[mask] = np.log10(x[mask])
 
     v = -0.5*np.log(2*s2*np.pi) - np.power(lx-lmu, 2)/(2*s2)
     if not logpdf:
         v -= 2.302585*lx + np.log(np.log(10.))
 
-    v[x <= 0] = -np.inf
+    if inv_mask.any():
+        v[inv_mask] = -np.inf
 
     return v
 
@@ -422,7 +426,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         if ret_type == "straight":
             self._interp = self._lnlfn.interp
         if ret_type == "profile":
-            self._profile_loglike_spline(self._lnlfn.interp.x)
+            self._profile_loglike(self._lnlfn.interp.x)
             self._interp = self._prof_interp
         elif ret_type == "marginal":
             self._marginal_loglike(self._lnlfn.interp.x)
