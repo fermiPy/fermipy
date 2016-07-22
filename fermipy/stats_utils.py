@@ -426,7 +426,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         if ret_type == "straight":
             self._interp = self._lnlfn.interp
         if ret_type == "profile":
-            self._profile_loglike(self._lnlfn.interp.x)
+            self._profile_loglike_spline(self._lnlfn.interp.x)
             self._interp = self._prof_interp
         elif ret_type == "marginal":
             self._marginal_loglike(self._lnlfn.interp.x)
@@ -572,7 +572,10 @@ class LnLFn_norm_prior(castro.LnLFn):
             rf = lambda t: splev(t, sp, der=1)
             ix = np.argmax(splev(yv, sp))
             imin, imax = max(0, ix-3), min(len(yv)-1, ix+3)
-            y0 = opt.brentq(rf, yv[imin], yv[imax], xtol=1e-10)
+            try:
+                y0 = opt.brentq(rf, yv[imin], yv[imax], xtol=1e-10)
+            except:
+                y0 = yv[ix]
             z0 = self.loglike(xtmp, y0)
             z.append(z0)
             y.append(y0)
