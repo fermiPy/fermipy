@@ -15,7 +15,7 @@ matrix:
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                ST_INSTALL='bash stinstall.sh force'
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
-               CONDA2='conda install -c openastronomy healpy wcsaxes'
+               CONDA2='conda install -c conda-forge healpy wcsaxes'
 
         # Python 3, no Fermi ST, all other dependencies
         - os: linux
@@ -24,7 +24,7 @@ matrix:
                ST_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
-               CONDA2='conda install -c openastronomy healpy wcsaxes'
+               CONDA2='conda install -c conda-forge healpy wcsaxes'
 
         # Python 2, no Fermi ST, all other dependencies
         - os: linux
@@ -33,7 +33,7 @@ matrix:
                ST_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
-               CONDA2='conda install -c openastronomy healpy wcsaxes'
+               CONDA2='conda install -c conda-forge healpy wcsaxes'
 
 #        # Python 3, no Fermi ST, only the required dependencies
 #        # TODO: This isn't working yet, need to handle imports for opt deps more carefully
