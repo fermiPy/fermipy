@@ -129,7 +129,7 @@ def write_tables_to_fits(filepath, tablelist, clobber=False,
         outhdulist += [ft_in[1]]
 
     if hdu_list is not None:
-        for h in hud_list:
+        for h in hdu_list:
             outhdulist.append(h)
 
     pyfits.HDUList(outhdulist).writeto(filepath, clobber=clobber)
