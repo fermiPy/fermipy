@@ -1486,3 +1486,4 @@ if __name__ == "__main__":
     castro_sed = CastroData.create_from_fits("castro.fits", irow=0)
     test_dict_sed = castro_sed.test_spectra()
     print(test_dict_sed)
+    print ("Hi Matt")
