@@ -1197,6 +1197,11 @@ class TSCube(object):
         self._norm_type = norm_type
 
     @property
+    def nvals(self):
+        """Return the number of values in the tscube"""
+        return self._norm_vals.shape[0]
+
+    @property
     def tsmap(self):
         """ return the Map of the TestStatistic value """
         return self._tsmap
@@ -1257,8 +1262,20 @@ class TSCube(object):
         tab_s = Table.read(fitsfile, 'SCANDATA')
         tab_f = Table.read(fitsfile, 'FITDATA')
 
-        emin = np.array(tab_e['E_MIN'] / 1E3)
-        emax = np.array(tab_e['E_MAX'] / 1E3)
+        emin = np.array(tab_e['E_MIN'])
+        emax = np.array(tab_e['E_MAX'])
+        try:
+            if str(tab_e['E_MIN'].unit) == 'keV':
+                emin /= 1000.
+        except:
+            pass
+        try:
+            if str(tab_e['E_MAX'].unit) == 'keV':
+                emax /= 1000.
+        except:
+            pass
+
+
         nebins = len(tab_e)
         npred = tab_e['REF_NPRED']
 
