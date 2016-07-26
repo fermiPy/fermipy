@@ -154,19 +154,19 @@ def plotSED_OnAxis(ax, castroData, TS_thresh=4.0, errSigma=1.0,
     err_neg = mles - castroData.getLimits(0.32, upper=False) 
 
     yerr_points = (err_neg[has_point], err_pos[has_point])
-    xerrs = (castroData.refSpec.erefs - castroData.refSpec.ebins[0:-1],
-             castroData.refSpec.ebins[1:] - castroData.refSpec.erefs)
+    xerrs = (castroData.refSpec.eref - castroData.refSpec.ebins[0:-1],
+             castroData.refSpec.ebins[1:] - castroData.refSpec.eref)
 
     yerr_limits = (0.5*ul_vals[has_limit], np.zeros((has_limit.sum())))
 
-    ax.errorbar(castroData.refSpec.erefs[has_point], mles[has_point],
+    ax.errorbar(castroData.refSpec.eref[has_point], mles[has_point],
                 yerr=yerr_points, fmt='o', color=colorPoint)
 
-    ax.errorbar(castroData.refSpec.erefs[has_limit], ul_vals[has_limit], 
+    ax.errorbar(castroData.refSpec.eref[has_limit], ul_vals[has_limit], 
                 yerr=yerr_limits, lw=1, color=colorLim, 
                 ls='none', zorder=1, uplims=True)
 
-    ax.errorbar(castroData.refSpec.erefs[has_limit], ul_vals[has_limit], 
+    ax.errorbar(castroData.refSpec.eref[has_limit], ul_vals[has_limit], 
                 xerr=(xerrs[0][has_limit], xerrs[1][has_limit]),
                 lw=1.35, ls='none', color=colorLim, zorder=2, capsize=0)
 
@@ -205,7 +205,7 @@ def plotSED(castroData, ylims, TS_thresh=4.0, errSigma=1.0, specVals=[]):
     plotSED_OnAxis(ax, castroData, TS_thresh, errSigma)
 
     for spec in specVals:
-        ax.loglog(castroData.refSpec.erefs, spec)
+        ax.loglog(castroData.refSpec.eref, spec)
         pass
 
     return fig, ax
@@ -250,7 +250,7 @@ def compare_SED(castroData1, castroData2, ylims, TS_thresh=4.0,
                    colorLim='red', colorPoint='red')
 
     for spec in specVals:
-        ax.loglog(castroData1.refSpec.erefs, spec)
+        ax.loglog(castroData1.refSpec.eref, spec)
 
     return fig, ax
 

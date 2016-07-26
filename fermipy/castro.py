@@ -304,8 +304,8 @@ class ReferenceSpec(object):
     def __init__(self, emin, emax, ref_dfde, ref_flux, ref_eflux, ref_npred, eref=None):
         """ C'tor from energy bin edges and refernce fluxes
         """
-        self._ne = len(self.ebins) - 1
         self._ebins = np.append(emin, emax[-1])
+        self._ne = len(self.ebins) - 1
         self._emin = emin
         self._emax = emax
         if eref is None:
@@ -315,10 +315,10 @@ class ReferenceSpec(object):
         self._log_ebins = np.log10(self._ebins)
 
         self._bin_widths = self._ebins[1:] - self._ebins[0:-1]
-        self._ref_dfde = dfde
-        self._ref_flux = flux
-        self._ref_eflux = eflux
-        self._ref_npred = npred
+        self._ref_dfde = ref_dfde
+        self._ref_flux = ref_flux
+        self._ref_eflux = ref_eflux
+        self._ref_npred = ref_npred
 
     @property
     def nE(self):
@@ -371,7 +371,7 @@ class ReferenceSpec(object):
         return self._ref_npred
 
     @staticmethod
-    def create_from_table(self,tab_e):
+    def create_from_table(tab_e):
         """
         """
         emin = np.array(tab_e['E_MIN'])
@@ -409,7 +409,7 @@ class ReferenceSpec(object):
             ref_npred = np.ones((ne))
             
         refSpec = ReferenceSpec(emin, emax,
-                                ref_dfde,ref_flux,ref_eflux,npred)
+                                ref_dfde,ref_flux,ref_eflux,ref_npred)
         return refSpec
 
 
@@ -531,11 +531,11 @@ class SpecData(ReferenceSpec):
         return self._eflux / self.ref_eflux
     
     @staticmethod
-    def create_from_table(self,tab_e):
+    def create_from_table(tab_e):
         """
         """
         rs = ReferenceSpec.create_from_table(tab_e)
-        
+        #FIXME
 
     def build_spec_table(self):
         """
@@ -1608,4 +1608,4 @@ if __name__ == "__main__":
     castro_sed = CastroData.create_from_fits("castro.fits", irow=0)
     test_dict_sed = castro_sed.test_spectra()
     print(test_dict_sed)
-    print ("Hi Matt")
+ 
