@@ -26,9 +26,9 @@ def test_castro_test_spectra_castro(tmpdir):
     castrofile = str(tmpdir.join('castro.fits'))
     url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/castro.fits'
     os.system('curl -o %s -OL %s' % (castrofile, url))
-    c = castro.CastroData.create_from_fits(castrofile, irow=0)
+    c = castro.CastroData.create_from_fits(castrofile, irow=19)
     test_dict = c.test_spectra()
 
-    assert_allclose(test_dict['PowerLaw']['TS'][0], 2.74, atol=0.01)
-    assert_allclose(test_dict['LogParabola']['TS'][0], 3.72, atol=0.01)
-    assert_allclose(test_dict['PLExpCutoff']['TS'][0], 3.70, atol=0.01)
+    assert_allclose(test_dict['PowerLaw']['TS'][0], 0.00, atol=0.01)
+    assert_allclose(test_dict['LogParabola']['TS'][0], 0.00, atol=0.01)
+    assert_allclose(test_dict['PLExpCutoff']['TS'][0], 2.71, atol=0.01)
