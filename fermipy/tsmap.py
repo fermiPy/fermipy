@@ -1097,7 +1097,7 @@ class TSCubeGenerator(object):
         ts_map = tscube.tsmap
         norm_map = tscube.normmap
         npred_map = copy.deepcopy(norm_map)
-        npred_map._counts *= tscube.specData.npred.sum()
+        npred_map._counts *= tscube.refSpec.npred.sum()
         amp_map = copy.deepcopy(norm_map)
         amp_map._counts *= src_dict['Prefactor']
 
