@@ -1021,19 +1021,6 @@ class CastroData(CastroData_Base):
 
         nll_vals = -np.array(tab_s['DLOGLIKE_SCAN'])
 
-        emin = np.array(tab_e['E_MIN'])
-        emax = np.array(tab_e['E_MAX'])
-        try:
-            if str(tab_e['E_MIN'].unit) == 'keV':
-                emin /= 1000.
-        except:
-            pass
-        try:
-            if str(tab_e['E_MAX'].unit) == 'keV':
-                emax /= 1000.
-        except:
-            pass
-
         rs = ReferenceSpec.create_from_table(tab_e)
         return CastroData(norm_vals, nll_vals, rs, norm_type)
 
