@@ -14,6 +14,27 @@ import scipy.special as special
 from astropy.extern import six
 
 
+def init_matplotlib_backend(backend=None):
+    """This function initializes the matplotlib backend.  When no
+    DISPLAY is available the backend is automatically set to 'Agg'.
+
+    Parameters
+    ----------
+    backend : str
+       matplotlib backend name.
+    """
+
+    import matplotlib
+    
+    try:
+        os.environ['DISPLAY']
+    except KeyError:
+        matplotlib.use('Agg')
+    else:
+        if backend is not None:
+            matplotlib.use(backend)
+
+
 def unicode_representer(dumper, uni):
     node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
     return node
