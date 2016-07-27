@@ -1990,6 +1990,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         # fraction > npred_frac of the total model counts in the ROI
         npred_sum = 0
         skip_sources = skip if skip != None else []
+        skip_sources_norm = []
         for s in sorted(self.roi.sources, key=lambda t: t['npred'],
                         reverse=True):
 
@@ -1999,7 +2000,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             npred_sum += s['npred']
             npred_frac = npred_sum / self._roi_model['npred']
             self.free_norm(s.name, loglevel=logging.DEBUG)
-            skip_sources.append(s.name)
+            skip_sources_norm.append(s.name)
 
             if npred_frac > npred_frac_threshold:
                 break
@@ -2015,7 +2016,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for s in sorted(self.roi.sources, key=lambda t: t['npred'],
                         reverse=True):
 
-            if s.name in skip_sources:
+            if s.name in skip_sources or s.name in skip_sources_norm:
                 continue
 
             if s['npred'] < npred_threshold:
