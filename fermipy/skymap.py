@@ -187,9 +187,9 @@ class Map(Map_Base):
         if colwise is True (False) this uses columnwise (rowwise) indexing
         """
         if colwise:
-            return (ipix / self._wcs._naxis2, ipix % self._wcs._naxis2)
+            return (int(ipix / self._wcs._naxis2), ipix % self._wcs._naxis2)
         else:
-            return (ipix % self._wcs._naxis1, ipix / self._wcs._naxis1)
+            return (ipix % self._wcs._naxis1, int(ipix / self._wcs._naxis1))
 
     def ipix_swap_axes(self, ipix, colwise=False):
         """ Return the transposed pixel index from the pixel xy coordinates

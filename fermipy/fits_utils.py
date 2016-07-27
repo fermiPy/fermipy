@@ -105,7 +105,7 @@ def read_projection_from_fits(fitsfile, extname=None):
 
 
 def write_tables_to_fits(filepath, tablelist, clobber=False,
-                         namelist=None, cardslist=None):
+                         namelist=None, cardslist=None, hdu_list=None):
     """
     Write some astropy.table.Table objects to a single fits file
     """
@@ -127,6 +127,10 @@ def write_tables_to_fits(filepath, tablelist, clobber=False,
                 ft_in[1].header[k] = v
         ft_in[1].update()
         outhdulist += [ft_in[1]]
+
+    if hdu_list is not None:
+        for h in hdu_list:
+            outhdulist.append(h)
 
     pyfits.HDUList(outhdulist).writeto(filepath, clobber=clobber)
     for rm in rmlist:
