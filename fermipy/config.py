@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 import os
+from astropy.extern import six
 import fermipy
 from fermipy import utils
 
@@ -52,7 +53,7 @@ def cast_config(config, defaults):
             if item_type is None or isinstance(item_type, tuple):
                 continue
 
-            if utils.isstr(item) and item_type == list:
+            if isinstance(item, six.text_type) and item_type == list:
                 config[key] = [item]
             else:
                 config[key] = item_type(config[key])
@@ -91,12 +92,12 @@ class Configurable(object):
         self._config = self.get_config()
         self._configdir = None
 
-        if utils.isstr(config) and os.path.isfile(config):
+        if isinstance(config, six.text_type) and os.path.isfile(config):
             self._configdir = os.path.abspath(os.path.dirname(config))
             config_dict = yaml.load(open(config))
         elif isinstance(config, dict) or config is None:
             config_dict = config
-        elif utils.isstr(config) and not os.path.isfile(config):
+        elif isinstance(config, six.text_type) and not os.path.isfile(config):
             raise Exception('Invalid path to configuration file: %s' % config)
         else:
             raise Exception('Invalid config argument.')

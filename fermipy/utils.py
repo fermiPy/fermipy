@@ -276,7 +276,7 @@ def project(lon0, lat0, lon1, lat1):
 
 
 def scale_parameter(p):
-    if isstr(p):
+    if isinstance(p, six.text_type):
         p = float(p)
 
     if p > 0:
@@ -737,22 +737,12 @@ def fits_recarray_to_dict(table):
 def unicode_to_str(args):
     o = {}
     for k, v in args.items():
-        if isinstance(v, unicode):
+        if isinstance(v, six.text_type):
             o[k] = str(v)
         else:
             o[k] = v
 
     return o
-
-
-def isstr(s):
-    """String instance testing method that works under both Python 2.X
-    and 3.X.  Returns true if the input is a string."""
-
-    try:
-        return isinstance(s, basestring)
-    except NameError:
-        return isinstance(s, str)
 
 
 def xmlpath_to_path(path):
@@ -775,7 +765,7 @@ def create_xml_element(root, name, attrib):
 
         if isinstance(v, bool):
             el.set(k, str(int(v)))
-        elif isstr(v):
+        elif isinstance(v, six.text_type):
             el.set(k, v)
         elif np.isfinite(v):
             el.set(k, str(v))
@@ -872,7 +862,7 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
             od[k] = copy.deepcopy(d0[k])
         elif isinstance(v, dict) and isinstance(d1[k], dict):
             od[k] = merge_dict(d0[k], d1[k], add_new_keys, append_arrays)
-        elif isinstance(v, list) and isstr(d1[k]):
+        elif isinstance(v, list) and isinstance(d1[k], six.text_type):
             od[k] = d1[k].split(',')
         elif isinstance(v, dict) and d1[k] is None:
             od[k] = copy.deepcopy(d0[k])
@@ -947,7 +937,7 @@ def tolist(x):
         return dict(x)
     elif isinstance(x, np.bool_):
         return bool(x)
-    elif isinstance(x, basestring) or isinstance(x, np.str):
+    elif isinstance(x, six.text_type) or isinstance(x, np.str):
         x = str(x)  # convert unicode & numpy strings
         try:
             return int(x)

@@ -7,6 +7,7 @@ import stat
 import datetime
 import argparse
 import pprint
+from astropy.extern import six
 from fermipy import utils
 from fermipy.batch import check_log, get_lsf_status
 
@@ -102,7 +103,7 @@ def main():
     lsf_opt_string = ''
     for optname, optval in lsf_opts.items():
 
-        if utils.isstr(optval):
+        if isinstance(optval, six.text_type):
             optval = '\"%s\"' % optval
 
         lsf_opt_string += '-%s %s ' % (optname, optval)

@@ -2,11 +2,12 @@
 from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
+from astropy.extern import six
 from astropy.wcs import WCS
 from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-import fermipy.utils as utils
+
 
 
 class WCSProj(object):
@@ -280,7 +281,7 @@ def get_target_skydir(config, ref_skydir=None):
 
     radec = config.get('radec', None)
 
-    if utils.isstr(radec):
+    if isinstance(radec, six.text_type):
         return SkyCoord(radec, unit=u.deg)
     elif isinstance(radec, list):
         return SkyCoord(radec[0], radec[1], unit=u.deg)
