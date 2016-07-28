@@ -1997,11 +1997,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for s in sorted(self.roi.sources, key=lambda t: t['npred'],
                         reverse=True):
 
+            npred_sum += s['npred']
+            npred_frac = npred_sum / self._roi_model['npred']
+
             if s.name in skip_sources:
                 continue
 
-            npred_sum += s['npred']
-            npred_frac = npred_sum / self._roi_model['npred']
             self.free_norm(s.name, loglevel=logging.DEBUG)
             joint_norm_fit.append(s.name)
 
