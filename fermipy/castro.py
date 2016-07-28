@@ -135,14 +135,17 @@ class LnLFn(object):
         Parameters
         ----------
         x : array-like
-          Set of values of the free parameter
+           Set of values of the free parameter
 
         y : array-like
-          Set of values for the _negative_ log-likelhood
+           Set of values for the _negative_ log-likelhood
 
         norm_type :  str
-           code specifying the quantity used for the flux
+           String specifying the type of quantity used for the `x`
+           parameter.
 
+        Notes
+        -----
         Note that class takes and returns the _negative log-likelihood
         as fitters typically minimize rather than maximize.
 
@@ -159,23 +162,10 @@ class LnLFn(object):
 
     @property
     def norm_type(self):
-        """return a code specifying the quantity used for the flux
-
+        """Return a string specifying the quantity used for the normalization.
         This isn't actually used in this class, but it is carried so
-        that the class is self-describing.
-
-        The possible values are open-ended.  The implementation here
-        can deal with the following options
-
-           NORM : Normalization w.r.t. to test source
-           FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-           EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-           NPRED: Number of predicted photons
-           DFDE : Differential flux of the test source 
-                  ( ph cm^-2 s^-1 MeV^-1 )
-           EDFDE: Differential energy flux of the test source 
-                  ( MeV cm^-2 s^-1 MeV^-1 )
-
+        that the class is self-describing.  The possible values are
+        open-ended.  
         """
         return self._norm_type
 
@@ -276,30 +266,41 @@ class LnLFn(object):
 
 
 class ReferenceSpec(object):
-    """ This class wraps data for a reference spectrum.
+    """This class wraps data for a reference spectrum.
     
-    This includes these parameters
+    Parameters
     ----------
-    ne    :  `int'             Number of energy bins
+    ne : `int`             
+        Number of energy bins
 
-    ebins :  `~numpy.ndarray'  Array of bin edges.
+    ebins : `~numpy.ndarray`  
+        Array of bin edges.
 
-    emin  :  `~numpy.ndarray'  Array of lower bin edges.
+    emin : `~numpy.ndarray`  
+        Array of lower bin edges.
     
-    emax  :  `~numpy.ndarray`  Array of upper bin edges.
+    emax : `~numpy.ndarray`  
+        Array of upper bin edges.
     
-    bin_widths: `~numpy.ndarray`  Array of energy bin widths.
+    bin_widths : `~numpy.ndarray`  
+        Array of energy bin widths.
 
-    eref :  '~numpy.ndarray`  Array of reference energies.
-    Typically these are the geometric mean of the energy bins
+    eref : `~numpy.ndarray`  
+        Array of reference energies. Typically these are the geometric
+        mean of the energy bins
     
-    ref_dfde :  `~numpy.ndarray`  Array of differential photon flux values.
+    ref_dfde : `~numpy.ndarray`  
+        Array of differential photon flux values.
 
-    ref_flux :  `~numpy.ndarray`  Array of integral photon flux values.
+    ref_flux : `~numpy.ndarray`  
+        Array of integral photon flux values.
 
-    ref_eflux :  `~numpy.ndarray` Array of integral energy flux values.
+    ref_eflux : `~numpy.ndarray` 
+        Array of integral energy flux values.
 
-    ref_npred :  `~numpy.ndarray` Array of predicted number of photons in each energy bin.
+    ref_npred : `~numpy.ndarray` 
+        Array of predicted number of photons in each energy bin.
+
     """
     def __init__(self, emin, emax, ref_dfde, ref_flux, ref_eflux, ref_npred, eref=None):
         """ C'tor from energy bin edges and refernce fluxes
@@ -911,15 +912,17 @@ class CastroData(CastroData_Base):
            The object with the reference spectrum details.
 
         norm_type : str
-           String specifying the quantity used for the normalization:
-            NORM: Normalization w.r.t. to test source
-            FLUX: Flux of the test source ( ph cm^-2 s^-1 )
-            EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-            NPRED: Number of predicted photons
-            DFDE: Differential flux of the test source 
-                  ( ph cm^-2 s^-1 MeV^-1 )
-            E2DFDE: Differential energy flux of the test source 
-                  ( MeV cm^-2 s^-1 MeV^-1 )           
+            Type of normalization to use, options are:
+
+            * NORM : Normalization w.r.t. to test source
+            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
+            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * NPRED: Number of predicted photons (Not implemented)
+            * DFDE : Differential flux of the test source ( ph cm^-2 s^-1
+              MeV^-1 )
+            * EDFDE: Differential energy flux of the test source ( MeV
+              cm^-2 s^-1 MeV^-1 ) (Not Implemented)
+     
         """
         super(CastroData, self).__init__(norm_vals, nll_vals, norm_type)
         self._refSpec = refSpec
@@ -932,7 +935,7 @@ class CastroData(CastroData_Base):
 
     @property
     def refSpec(self):
-        """ Return a '~fermipy.castro.ReferenceSpec' with the spectral data """
+        """ Return a `~fermipy.castro.ReferenceSpec` with the spectral data """
         return self._refSpec
 
     @staticmethod
@@ -986,30 +989,31 @@ class CastroData(CastroData_Base):
     def create_from_tables(norm_type='EFLUX',
                            tab_s="SCANDATA",
                            tab_e="EBOUNDS"):
-        """ Create a CastroData object from two tables
+        """Create a CastroData object from two tables
 
         Parameters
         ----------
         norm_type : str
-           Type of normalization to use, options are:
-           NORM : Normalization w.r.t. to test source
-           FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-           EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-           NPRED: Number of predicted photons (Not implemented)
-           DFDE : Differential flux of the test source 
-                  ( ph cm^-2 s^-1 MeV^-1 )
-           EDFDE: Differential energy flux of the test source 
-                  ( MeV cm^-2 s^-1 MeV^- ) (Not Implemented)
+            Type of normalization to use.  Valid options are:
 
-        tab_s   : str
+            * NORM : Normalization w.r.t. to test source
+            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
+            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * NPRED: Number of predicted photons (Not implemented)
+            * DFDE : Differential flux of the test source ( ph cm^-2 s^-1
+              MeV^-1 )
+            * EDFDE: Differential energy flux of the test source ( MeV
+              cm^-2 s^-1 MeV^-1 ) (Not Implemented)
+
+        tab_s : str
            table scan data
 
-        tab_e   : str
+        tab_e : str
            table energy binning and normalization data
 
         Returns
         -------
-          A '~fermipy.castro.CastroData' object
+        castro : `~fermipy.castro.CastroData`
         """
         if norm_type in ['FLUX', 'EFLUX', 'DFDE']:
             norm_vals = np.array(tab_s['NORM_SCAN'] *
@@ -1029,7 +1033,7 @@ class CastroData(CastroData_Base):
                          hdu_scan="SCANDATA",
                          hdu_energies="EBOUNDS",
                          irow=None):
-        """Create a CastroData object from a fits file
+        """Create a CastroData object from a fits file.
 
         Parameters
         ----------
@@ -1037,30 +1041,31 @@ class CastroData(CastroData_Base):
             Name of the fits file
 
         norm_type : str
-           Type of normalization to use, options are:
-           NORM : Normalization w.r.t. to test source
-           FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-           EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-           NPRED: Number of predicted photons (Not implemented)
-           DFDE : Differential flux of the test source 
-                  ( ph cm^-2 s^-1 MeV^-1 )
-           EDFDE: Differential energy flux of the test source 
-                  ( MeV cm^-2 s^-1 MeV^- ) (Not Implemented)
+            Type of normalization to use.  Valid options are:
 
-        hdu_scan  : str
-           name of the FITS HDU with the scan data
+            * NORM : Normalization w.r.t. to test source
+            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
+            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * NPRED: Number of predicted photons (Not implemented)
+            * DFDE : Differential flux of the test source ( ph cm^-2 s^-1
+              MeV^-1 )
+            * EDFDE: Differential energy flux of the test source ( MeV
+              cm^-2 s^-1 MeV^-1 ) (Not Implemented)
+
+        hdu_scan : str
+            Name of the FITS HDU with the scan data
 
         hdu_energies : str
-           name of the FITS HDU with the energy binning and normalization data
+            Name of the FITS HDU with the energy binning and normalization data
 
         irow : int or None
-           If none, then this assumes that there is a single row in
-           the scan data table Otherwise, this specifies which row of
-           the table to use
+            If none, then this assumes that there is a single row in
+            the scan data table Otherwise, this specifies which row of
+            the table to use
 
         Returns
         -------
-          A '~fermipy.castro.CastroData' object
+        castro : `~fermipy.castro.CastroData`
 
         """
         if irow is not None:
@@ -1072,7 +1077,7 @@ class CastroData(CastroData_Base):
 
     @staticmethod
     def create_from_sedfile(fitsfile, norm_type='EFLUX'):
-        """ Create a CastroData object from an SED fits file
+        """Create a CastroData object from an SED fits file
 
         Parameters
         ----------
@@ -1080,19 +1085,20 @@ class CastroData(CastroData_Base):
             Name of the fits file
 
         norm_type : str
-           Type of normalization to use, options are:
-           NORM : Normalization w.r.t. to test source
-           FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-           EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-           NPRED: Number of predicted photons (Not implemented)
-           DFDE : Differential flux of the test source 
-                  ( ph cm^-2 s^-1 MeV^-1 )
-           EDFDE: Differential energy flux of the test source 
-                  ( MeV cm^-2 s^-1 MeV^- ) (Not Implemented)
+            Type of normalization to use, options are:
 
-       Returns
+            * NORM : Normalization w.r.t. to test source
+            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
+            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * NPRED: Number of predicted photons (Not implemented)
+            * DFDE : Differential flux of the test source ( ph cm^-2 s^-1
+              MeV^-1 )
+            * EDFDE: Differential energy flux of the test source ( MeV
+              cm^-2 s^-1 MeV^-1 ) (Not Implemented)
+
+        Returns
         -------
-          A '~fermipy.castro.CastroData' object
+        castro : `~fermipy.castro.CastroData`
         """
         tab_s = Table.read(fitsfile, hdu=1)
 
@@ -1125,7 +1131,7 @@ class CastroData(CastroData_Base):
 
         Returns
         -------
-        A '~fermipy.castro.CastroData' object
+        castro : `~fermipy.castro.CastroData`
         """
         if len(components) == 0:
             return None
@@ -1143,13 +1149,15 @@ class CastroData(CastroData_Base):
     def spectrum_loglike(self, specType, params, scale=1E3):
         """ return the log-likelihood for a particular spectrum
 
+        Parameters
+        ----------
         specTypes  : str
             The type of spectrum to try
 
-        params     : array-like
+        params : array-like
             The spectral parameters
 
-        scale      : float
+        scale : float
             The energy scale or 'pivot' energy
         """
         sfn = self.create_functor(specType, scale)[0]
@@ -1158,26 +1166,26 @@ class CastroData(CastroData_Base):
     def test_spectra(self, spec_types=['PowerLaw', 
                                        'LogParabola', 
                                        'PLExpCutoff']):
-        """ Test different spectral types against the 
-            SED represented by this CastroData
+        """Test different spectral types against the SED represented by this
+        CastroData.
 
         Parameters
         ----------
-        spec_types  : [str,...]
+        spec_types : [str,...]
            List of spectral types to try
 
         Returns
         -------
         retDict : dict
-           A dictionary of dictionaries.
-           The top level dictionary is keyed by spec_type
+           A dictionary of dictionaries.  The top level dictionary is
+           keyed by spec_type.  The sub-dictionaries each contain:
 
-           The sub-dictionaries each contain:
-              "Function"    : '~fermipy.spectrum.SpectralFunction'
-              "Result"      : tuple with the output of scipy.optimize.fmin
-              "Spectrum"    : `~numpy.ndarray` with best-fit spectral values
-              "ScaleEnergy" : float, the 'pivot energy' value
-              "TS"          : float, the TS for the best-fit spectrum 
+           * "Function"    : `~fermipy.spectrum.SpectralFunction`
+           * "Result"      : tuple with the output of scipy.optimize.fmin
+           * "Spectrum"    : `~numpy.ndarray` with best-fit spectral values
+           * "ScaleEnergy" : float, the 'pivot energy' value
+           * "TS"          : float, the TS for the best-fit spectrum
+
         """
         retDict = {}
         for specType in spec_types:
@@ -1201,23 +1209,22 @@ class CastroData(CastroData_Base):
 
         Parameters
         ----------
-        specType   : str
+        specType : str
             The type of spectrum to use.
             'PowerLaw','LogParabola','PLExpCutoff' are implemented.
 
-        scale      : float
+        scale : float
             The 'pivot energy' or energy scale to use for the spectrum
 
-
-        Returns:
-        ----------
-        fn         : `~fermipy.spectrum.SpectralFunction`
+        Returns
+        -------
+        fn : `~fermipy.spectrum.SpectralFunction`
             The functor
 
-        initPars   :  `~numpy.ndarray`
+        initPars : `~numpy.ndarray`
             Default set of initial parameter for this spectral type
 
-        scale      : float
+        scale : float
             Energy scale (same as input)
 
         """
@@ -1245,12 +1252,11 @@ class CastroData(CastroData_Base):
 
 class TSCube(object):
     """A class wrapping a TSCube, which is a collection of CastroData
-    objects for a set of directions.
-
-    This class wraps a combination of:
-      Pixel data,
-      Pixel x Energy bin data, 
-      Pixel x Energy Bin x Normalization scan point data
+    objects for a set of directions.  This class wraps a combination
+    of:
+      * Pixel data,
+      * Pixel x Energy bin data, 
+      * Pixel x Energy Bin x Normalization scan point data
 
     """
 
@@ -1260,41 +1266,42 @@ class TSCube(object):
 
         Parameters
         ----------
-        tsmap       : `~fermipy.skymap.Map`
+        tsmap : `~fermipy.skymap.Map`
            A Map object with the TestStatistic values in each pixel
 
-        normmap     : `~fermipy.skymap.Map`
+        normmap : `~fermipy.skymap.Map`
            A Map object with the normalization values in each pixel
 
-        tscube      : `~fermipy.skymap.Map`
+        tscube : `~fermipy.skymap.Map`
            A Map object with the TestStatistic values in each pixel &
            energy bin
 
-        normcube    : `~fermipy.skymap.Map`
+        normcube : `~fermipy.skymap.Map`
            A Map object with the normalization values in each pixel &
            energy bin
 
-        norm_vals   : `~numpy.ndarray`
+        norm_vals : `~numpy.ndarray`
            The normalization values ( nEBins X N array, where N is the
            number of sampled values for each bin )
 
-        nll_vals    : `~numpy.ndarray`
+        nll_vals : `~numpy.ndarray`
            The negative log-likelihood values ( nEBins X N array, where N is
            the number of sampled values for each bin )
 
-        refSpec     : `~fermipy.castro.ReferenceSpec`
+        refSpec : `~fermipy.castro.ReferenceSpec`
            The ReferenceSpec object with the reference values.
 
         norm_type : str
-           String specifying the quantity used for the normalization
+            Type of normalization to use, options are:
+
             * NORM : Normalization w.r.t. to test source
             * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-            * EFLUX : Energy Flux of the test source ( MeV cm^-2 s^-1 )
-            * NPRED : Number of predicted photons
-            * DFDE : Differential flux of the test source 
-                     ( ph cm^-2 s^-1 MeV^-1 )
-            * E2DFDE : E^2 times Differential energy flux of the test source 
-                     ( MeV cm^-2 s^-1 )
+            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * NPRED: Number of predicted photons (Not implemented)
+            * DFDE : Differential flux of the test source ( ph cm^-2 s^-1
+              MeV^-1 )
+            * EDFDE: Differential energy flux of the test source ( MeV
+              cm^-2 s^-1 MeV^-1 ) (Not Implemented)
 
         """
         self._tsmap = tsmap
@@ -1458,7 +1465,7 @@ class TSCube(object):
         -------
         peaks    : list
             List of dictionaries containing the location and amplitude of
-            each peak.  Output of '~fermipy.sourcefind.find_peaks'
+            each peak.  Output of `~fermipy.sourcefind.find_peaks`
 
         """
         if use_cumul:
@@ -1490,11 +1497,11 @@ class TSCube(object):
 
         Returns
         -------
-        castro     : '~fermipy.castro.CastroData'
+        castro : `~fermipy.castro.CastroData`
            The castro data object for the pixel corresponding to the peak
 
-        test_dict  : dict
-           The dictionary returned by ~fermipy.castro.CastroData.test_spectra
+        test_dict : dict
+           The dictionary returned by `~fermipy.castro.CastroData.test_spectra`
 
         """
 
