@@ -5,10 +5,9 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
-import fermipy.utils as utils
-import fermipy.wcs_utils as wcs_utils
-import fermipy.hpx_utils as hpx_utils
-import fermipy.fits_utils as fits_utils
+from fermipy import wcs_utils
+from fermipy import hpx_utils
+from fermipy import fits_utils
 from fermipy.hpx_utils import HPX, HpxToWcsMapping
 
 
@@ -299,7 +298,7 @@ class HpxMap(Map_Base):
         """
         if ebounds is not None:
             try:
-                ebins = utils.read_energy_bounds(hdulist[ebounds])
+                ebins = fits_utils.read_energy_bounds(hdulist[ebounds])
             except:
                 ebins = None
         else:
