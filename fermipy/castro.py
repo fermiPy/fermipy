@@ -11,7 +11,7 @@ other variables, such as the Flux normalization and the spectral
 index, or the mass and cross-section of a putative dark matter
 particle.
 """
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, division, print_function, unicode_literals
 import numpy as np
 import scipy
 
