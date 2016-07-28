@@ -71,6 +71,14 @@ fermipy.sourcefind module
     :undoc-members:
     :show-inheritance:
 
+fermipy.spectrum module
+-----------------------
+
+.. automodule:: fermipy.spectrum
+    :members:
+    :undoc-members:
+    :show-inheritance:
+       
 fermipy.skymap module
 ---------------------
 

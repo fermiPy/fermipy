@@ -32,7 +32,7 @@ MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'GtApp','astropy',
                 'astropy.coordinates','astropy.extern',
                 'astropy.io','astropy.wcs','astropy.io.fits',
-                'astropy.table','healpy','wcsaxes']
+                'astropy.table','astropy.units','healpy','wcsaxes']
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
