@@ -5,18 +5,18 @@ import copy
 import logging
 import itertools
 import functools
+import warnings
 from multiprocessing import Pool
 import numpy as np
-import warnings
 import pyLikelihood as pyLike
-import astropy.io.fits as pyfits
+from astropy.io import fits
 from astropy.table import Table
-import astropy.wcs as pywcs
-import fermipy.utils as utils
-import fermipy.wcs_utils as wcs_utils
-import fermipy.fits_utils as fits_utils
-import fermipy.plotting as plotting
-import fermipy.castro as castro
+from astropy.wcs import WCS
+from fermipy import utils
+from fermipy import  wcs_utils
+from fermipy import  fits_utils
+from fermipy import plotting
+from fermipy import castro
 from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.spectrum import PowerLaw
@@ -28,8 +28,8 @@ MAX_NITER = 100
 def extract_images_from_tscube(infile, outfile):
     """ Extract data from table HDUs in TSCube file and convert them to FITS images
     """
-    inhdulist = pyfits.open(infile)
-    wcs = pywcs.WCS(inhdulist[0].header)
+    inhdulist = fits.open(infile)
+    wcs = WCS(inhdulist[0].header)
     map_shape = inhdulist[0].data.shape
 
     t_eng = Table.read(infile, "EBOUNDS")
@@ -54,22 +54,22 @@ def extract_images_from_tscube(infile, outfile):
 
     for c in FIT_COLNAMES:
         data = t_fit[c].data.reshape(map_shape)
-        hdu = pyfits.ImageHDU(data, wcs.to_header(), name=c)
+        hdu = fits.ImageHDU(data, wcs.to_header(), name=c)
         outhdulist.append(hdu)
 
     for c in SCAN_COLNAMES:
         data = t_scan[c].data.swapaxes(0, 1).reshape(cube_shape)
-        hdu = pyfits.ImageHDU(data, wcs_cube.to_header(), name=c)
+        hdu = fits.ImageHDU(data, wcs_cube.to_header(), name=c)
         outhdulist.append(hdu)
 
-    hdulist = pyfits.HDUList(outhdulist)
+    hdulist = fits.HDUList(outhdulist)
     hdulist.writeto(outfile, clobber=True)
     return hdulist
 
 
 def convert_tscube(infile, outfile):
     """Convert between old and new TSCube formats."""
-    inhdulist = pyfits.open(infile)
+    inhdulist = fits.open(infile)
 
     # If already in the new-style format just write and exit
     if 'DLOGLIKE_SCAN' in inhdulist['SCANDATA'].columns.names:
@@ -130,18 +130,18 @@ def convert_tscube(infile, outfile):
 
     # Adjust the "EBOUNDS" hdu
     columns = inhdulist['EBOUNDS'].columns
-    columns.add_col(pyfits.Column(name=str('E_REF'),
-                                  format='E', array=eref * 1E3,
-                                  unit='keV'))
-    columns.add_col(pyfits.Column(name=str('REF_FLUX'),
-                                  format='D', array=flux,
-                                  unit='ph / (cm2 s)'))
-    columns.add_col(pyfits.Column(name=str('REF_EFLUX'),
-                                  format='D', array=eflux,
-                                  unit='MeV / (cm2 s)'))
-    columns.add_col(pyfits.Column(name=str('REF_DFDE'),
-                                  format='D', array=dfde,
-                                  unit='ph / (MeV cm2 s)'))
+    columns.add_col(fits.Column(name=str('E_REF'),
+                                format='E', array=eref * 1E3,
+                                unit='keV'))
+    columns.add_col(fits.Column(name=str('REF_FLUX'),
+                                format='D', array=flux,
+                                unit='ph / (cm2 s)'))
+    columns.add_col(fits.Column(name=str('REF_EFLUX'),
+                                format='D', array=eflux,
+                                unit='MeV / (cm2 s)'))
+    columns.add_col(fits.Column(name=str('REF_DFDE'),
+                                format='D', array=dfde,
+                                unit='ph / (MeV cm2 s)'))
 
     columns.change_name('E_MIN_FL', str('REF_DFDE_E_MIN'))
     columns.change_unit('REF_DFDE_E_MIN', 'ph / (MeV cm2 s)')
@@ -149,77 +149,77 @@ def convert_tscube(infile, outfile):
     columns.change_unit('REF_DFDE_E_MAX', 'ph / (MeV cm2 s)')
     columns.change_name('NPRED', str('REF_NPRED'))
 
-    hdu_e = pyfits.BinTableHDU.from_columns(columns, name='EBOUNDS')
+    hdu_e = fits.BinTableHDU.from_columns(columns, name='EBOUNDS')
 
     # Make the "FITDATA" hdu
-    columns = pyfits.ColDefs([])
+    columns = fits.ColDefs([])
 
-    columns.add_col(pyfits.Column(
+    columns.add_col(fits.Column(
         name=str('FIT_TS'), format='E', array=ts_map))
-    columns.add_col(pyfits.Column(
+    columns.add_col(fits.Column(
         name=str('FIT_STATUS'), format='E', array=ok_map))
-    columns.add_col(pyfits.Column(
+    columns.add_col(fits.Column(
         name=str('FIT_NORM'), format='E', array=n_map))
-    columns.add_col(pyfits.Column(
+    columns.add_col(fits.Column(
         name=str('FIT_NORM_ERR'), format='E', array=err_map))
-    columns.add_col(pyfits.Column(
+    columns.add_col(fits.Column(
         name=str('FIT_NORM_ERRP'), format='E', array=errp_map))
-    columns.add_col(pyfits.Column(
+    columns.add_col(fits.Column(
         name=str('FIT_NORM_ERRN'), format='E', array=errn_map))
-    hdu_f = pyfits.BinTableHDU.from_columns(columns, name='FITDATA')
+    hdu_f = fits.BinTableHDU.from_columns(columns, name='FITDATA')
 
     # Make the "SCANDATA" hdu
-    columns = pyfits.ColDefs([])
+    columns = fits.ColDefs([])
 
-    columns.add_col(pyfits.Column(name=str('TS'),
-                                  format='%iE' % nebins, array=tscube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('TS'),
+                                format='%iE' % nebins, array=tscube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('BIN_STATUS'),
-                                  format='%iE' % nebins, array=ok_cube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('BIN_STATUS'),
+                                format='%iE' % nebins, array=ok_cube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM'),
-                                  format='%iE' % nebins, array=ncube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('NORM'),
+                                format='%iE' % nebins, array=ncube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_UL'),
-                                  format='%iE' % nebins, array=ul_cube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('NORM_UL'),
+                                format='%iE' % nebins, array=ul_cube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_ERR'),
-                                  format='%iE' % nebins, array=errcube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('NORM_ERR'),
+                                format='%iE' % nebins, array=errcube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_ERRP'),
-                                  format='%iE' % nebins, array=errpcube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('NORM_ERRP'),
+                                format='%iE' % nebins, array=errpcube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_ERRN'),
-                                  format='%iE' % nebins, array=errncube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('NORM_ERRN'),
+                                format='%iE' % nebins, array=errncube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('LOGLIKE'),
-                                  format='%iE' % nebins, array=nll_cube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('LOGLIKE'),
+                                format='%iE' % nebins, array=nll_cube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_SCAN'),
-                                  format='%iE' % (nebins * npts),
-                                  array=norm_scan,
-                                  dim=str('(%i,%i)' % (npts, nebins))))
+    columns.add_col(fits.Column(name=str('NORM_SCAN'),
+                                format='%iE' % (nebins * npts),
+                                array=norm_scan,
+                                dim=str('(%i,%i)' % (npts, nebins))))
 
-    columns.add_col(pyfits.Column(name=str('DLOGLIKE_SCAN'),
-                                  format='%iE' % (nebins * npts),
-                                  array=nll_scan,
-                                  dim=str('(%i,%i)' % (npts, nebins))))
+    columns.add_col(fits.Column(name=str('DLOGLIKE_SCAN'),
+                                format='%iE' % (nebins * npts),
+                                array=nll_scan,
+                                dim=str('(%i,%i)' % (npts, nebins))))
 
-    hdu_s = pyfits.BinTableHDU.from_columns(columns, name='SCANDATA')
+    hdu_s = fits.BinTableHDU.from_columns(columns, name='SCANDATA')
 
-    hdulist = pyfits.HDUList([inhdulist[0],
-                              hdu_s,
-                              hdu_f,
-                              inhdulist["BASELINE"],
-                              hdu_e])
+    hdulist = fits.HDUList([inhdulist[0],
+                            hdu_s,
+                            hdu_f,
+                            inhdulist["BASELINE"],
+                            hdu_e])
 
     hdulist['SCANDATA'].header['UL_CONF'] = 0.95
 
@@ -551,8 +551,8 @@ def _ts_value(position, counts, background, model, C_0_map,
     C_0_ = extract_fn(C_0_map, model, position)
     model_ = truncate_fn(model, counts, position)
 
-#    C_0 = sum(C_0_).sum()
-#    C_0 = _sum_wrapper(sum)(C_0_).sum()
+    #    C_0 = sum(C_0_).sum()
+    #    C_0 = _sum_wrapper(sum)(C_0_).sum()
     C_0 = sum_arrays(C_0_)
     if method == 'root brentq':
         amplitude, niter = _root_amplitude_brentq(counts_, background_, model_,
@@ -562,7 +562,7 @@ def _ts_value(position, counts, background, model, C_0_map,
         raise ValueError('Invalid fitting method.')
 
     if niter > MAX_NITER:
-        #log.warning('Exceeded maximum number of function evaluations!')
+        # log.warning('Exceeded maximum number of function evaluations!')
         if logger is not None:
             logger.warning('Exceeded maximum number of function evaluations!')
         return np.nan, amplitude, niter
@@ -728,7 +728,6 @@ class TSMapGenerator(object):
         enumbins = []
         model_npred = 0
         for c in self.components:
-
             imin = utils.val_to_edge(c.log_energies, loge_bounds[0])[0]
             imax = utils.val_to_edge(c.log_energies, loge_bounds[1])[0]
 
@@ -760,7 +759,6 @@ class TSMapGenerator(object):
 
             dpix = 3
             for j in range(mm.shape[0]):
-
                 ix, iy = np.unravel_index(
                     np.argmax(mm[j, ...]), mm[j, ...].shape)
 
@@ -770,7 +768,7 @@ class TSMapGenerator(object):
                 dpix = max(dpix, np.round(np.sum(my) / 2.))
 
             if max_kernel_radius is not None and \
-                    dpix > int(max_kernel_radius / self.components[i].binsz):
+                            dpix > int(max_kernel_radius / self.components[i].binsz):
                 dpix = int(max_kernel_radius / self.components[i].binsz)
 
             xslice = slice(max(xpix - dpix, 0),
@@ -829,7 +827,7 @@ class TSMapGenerator(object):
         amp_values = amp_values[xslice, yslice]
 
         ts_map = Map(ts_values, map_wcs)
-        sqrt_ts_map = Map(ts_values**0.5, map_wcs)
+        sqrt_ts_map = Map(ts_values ** 0.5, map_wcs)
         npred_map = Map(amp_values * model_npred, map_wcs)
         amp_map = Map(amp_values * src.get_norm(), map_wcs)
 
@@ -848,7 +846,6 @@ class TSMapGenerator(object):
                                           prefix=[prefix, modelname])
 
         if write_fits:
-
             fits_utils.write_maps(ts_map,
                                   {'SQRT_TS_MAP': sqrt_ts_map,
                                    'NPRED_MAP': npred_map,
@@ -933,8 +930,7 @@ class TSMapGenerator(object):
 
 
 class TSCubeGenerator(object):
-
-    def tscube(self,  prefix='', **kwargs):
+    def tscube(self, prefix='', **kwargs):
         """Generate a spatial TS map for a source component with
         properties defined by the `model` argument.  This method uses
         the `gttscube` ST application for source fitting and will
@@ -1102,7 +1098,7 @@ class TSCubeGenerator(object):
         amp_map._counts *= src_dict['Prefactor']
 
         sqrt_ts_map = copy.deepcopy(ts_map)
-        sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
+        sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts) ** 0.5
 
         o = {'name': '%s_%s' % (prefix, modelname),
              'src_dict': copy.deepcopy(src_dict),

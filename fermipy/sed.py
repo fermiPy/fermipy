@@ -15,7 +15,7 @@ import numpy as np
 
 import pyLikelihood as pyLike
 
-import astropy.io.fits as pyfits
+from astropy.io import fits
 from astropy.table import Table, Column
 
 import fermipy.config
@@ -176,52 +176,52 @@ class SEDGenerator(object):
 
         tab.write(filename, format='fits', overwrite=True)
 
-        columns = pyfits.ColDefs([])
+        columns = fits.ColDefs([])
 
-        columns.add_col(pyfits.Column(name=str('ENERGY'), format='E',
-                                      array=sed['model_flux']['energies'],
-                                      unit='MeV'))
-        columns.add_col(pyfits.Column(name=str('DFDE'), format='E',
-                                      array=sed['model_flux']['dfde'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('DFDE_LO'), format='E',
-                                      array=sed['model_flux']['dfde_lo'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('DFDE_HI'), format='E',
-                                      array=sed['model_flux']['dfde_hi'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('DFDE_ERR'), format='E',
-                                      array=sed['model_flux']['dfde_err'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('DFDE_FERR'), format='E',
-                                      array=sed['model_flux']['dfde_ferr']))
+        columns.add_col(fits.Column(name=str('ENERGY'), format='E',
+                                    array=sed['model_flux']['energies'],
+                                    unit='MeV'))
+        columns.add_col(fits.Column(name=str('DFDE'), format='E',
+                                    array=sed['model_flux']['dfde'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('DFDE_LO'), format='E',
+                                    array=sed['model_flux']['dfde_lo'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('DFDE_HI'), format='E',
+                                    array=sed['model_flux']['dfde_hi'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('DFDE_ERR'), format='E',
+                                    array=sed['model_flux']['dfde_err'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('DFDE_FERR'), format='E',
+                                    array=sed['model_flux']['dfde_ferr']))
 
-        hdu_f = pyfits.BinTableHDU.from_columns(columns, name='MODEL_FLUX')
+        hdu_f = fits.BinTableHDU.from_columns(columns, name='MODEL_FLUX')
 
-        columns = pyfits.ColDefs([])
+        columns = fits.ColDefs([])
 
         npar = len(sed['param_names'])
-        columns.add_col(pyfits.Column(name=str('NAME'),
-                                      format='A32',
-                                      array=sed['param_names']))
-        columns.add_col(pyfits.Column(name=str('VALUE'), format='E',
-                                      array=sed['param_values']))
-        columns.add_col(pyfits.Column(name=str('ERROR'), format='E',
-                                      array=sed['param_errors']))
-        columns.add_col(pyfits.Column(name=str('COVARIANCE'),
-                                      format='%iE' % npar,
-                                      dim=str('(%i)' % npar),
-                                      array=sed['param_covariance']))
-        columns.add_col(pyfits.Column(name=str('CORRELATION'),
-                                      format='%iE' % npar,
-                                      dim=str('(%i)' % npar),
-                                      array=sed['param_correlation']))
+        columns.add_col(fits.Column(name=str('NAME'),
+                                    format='A32',
+                                    array=sed['param_names']))
+        columns.add_col(fits.Column(name=str('VALUE'), format='E',
+                                    array=sed['param_values']))
+        columns.add_col(fits.Column(name=str('ERROR'), format='E',
+                                    array=sed['param_errors']))
+        columns.add_col(fits.Column(name=str('COVARIANCE'),
+                                    format='%iE' % npar,
+                                    dim=str('(%i)' % npar),
+                                    array=sed['param_covariance']))
+        columns.add_col(fits.Column(name=str('CORRELATION'),
+                                    format='%iE' % npar,
+                                    dim=str('(%i)' % npar),
+                                    array=sed['param_correlation']))
 
-        hdu_p = pyfits.BinTableHDU.from_columns(columns, name='PARAMS')
+        hdu_p = fits.BinTableHDU.from_columns(columns, name='PARAMS')
 
-        hdulist = pyfits.open(filename)
+        hdulist = fits.open(filename)
         hdulist[1].name = 'SED'
-        hdulist = pyfits.HDUList([hdulist[0], hdulist[1], hdu_f, hdu_p])
+        hdulist = fits.HDUList([hdulist[0], hdulist[1], hdu_f, hdu_p])
 
         for h in hdulist:
             h.header['SRCNAME'] = sed['name']

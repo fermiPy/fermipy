@@ -77,23 +77,23 @@ def hpx_to_coords(h, shape):
 
 
 def make_hpx_to_wcs_mapping(hpx, wcs):
-    """Make the mapping data needed to from from HPX pixelization to a
-    WCS-based array
+    """Make the mapping data needed to from from HPX pixelization to a WCS-based array.
 
     Parameters
     ----------
-    hpx     : `~fermipy.hpx_utils.HPX`
-       The healpix mapping (an HPX object)
-
-    wcs     : `~astropy.wcs.WCS`
-       The wcs mapping (a pywcs.wcs object)
+    hpx : `~fermipy.hpx_utils.HPX`
+       The healpix mapping
+    wcs : `~astropy.wcs.WCS`
+       The WCS mapping
 
     Returns
     -------
-      ipixs    :  array(nx,ny) of HEALPix pixel indices for each wcs pixel
-      mult_val :  array(nx,ny) of 1./number of wcs pixels pointing at each HEALPix pixel
-      npix     :  tuple(nx,ny) with the shape of the wcs grid
-
+    ipixs : `~numpy.array`
+        array(nx,ny) of HEALPix pixel indices for each wcs pixel
+    mult_val : `~numpy.array`
+        array(nx,ny) of 1./number of wcs pixels pointing at each HEALPix pixel
+    npix : tuple
+        tuple(nx,ny) with the shape of the wcs grid
     """
     npix = (int(wcs.wcs.crpix[0] * 2), int(wcs.wcs.crpix[1] * 2))
     pix_crds = np.dstack(np.meshgrid(np.arange(npix[0]),
