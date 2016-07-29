@@ -31,22 +31,22 @@ def make_lat_lons(cvects):
     return np.hstack([lats, lons])
 
 
-def make_cos_vects(ra_vect, dec_vect):
-    """ Convert from RA and DEC values to directional cosines
+def make_cos_vects(lon_vect, lat_vect):
+    """ Convert from longitude (RA or GLON) and latitude (DEC or GLAT) values to directional cosines
 
     Parameters
     ----------
-    ra_vect,dec_vect : np.ndarray(nsrc)  
-       RA and DEC values
+    lon_vect,lat_vect : np.ndarray(nsrc)  
+       Input values
 
     returns (np.ndarray(3,nsrc)) with the directional cosine (i.e., x,y,z component) values
     """
-    ra_rad = np.radians(ra_vect)
-    dec_rad = np.radians(dec_vect)
-    svals = np.sin(dec_rad)
-    xvals = svals * np.sin(ra_rad)
-    yvals = svals * np.cos(ra_rad)
-    zvals = np.cos(dec_rad)
+    lon_rad = np.radians(lon_vect)
+    lat_rad = np.radians(lat_vect)
+    cvals = np.cos(lat_rad)
+    xvals = cvals * np.sin(lon_rad)
+    yvals = cvals * np.cos(lon_rad)
+    zvals = np.sin(lat_rad)
     cvects = np.vstack([xvals, yvals, zvals])
     return cvects
 
@@ -357,21 +357,28 @@ def select_from_clusters(cluster_dict, measure_vect):
     return out_dict
 
 
-def make_reverse_dict(in_dict):
+def make_reverse_dict(in_dict, warn=True):
     """ Build a reverse dictionary from a cluster dictionary
 
-    in_dict : dict(int:[int,])        
-       A dictionary of clusters.   Each cluster is a source index and the list of other source in the cluster.    
+    Parameters
+    ----------
+    in_dict : dict(int:[int,])    
+        A dictionary of clusters.  Each cluster is a source index and
+        the list of other source in the cluster.
 
-    returns dict(int:int)
-       A single valued dictionary pointing from source index to cluster key for each source in a cluster.
-       Note that the key does not point to itself.
+    Returns
+    -------
+    out_dict : dict(int:int)    
+       A single valued dictionary pointing from source index to
+       cluster key for each source in a cluster.  Note that the key
+       does not point to itself.
     """
     out_dict = {}
     for k, v in in_dict.items():
         for vv in v:
-            if vv in out_dict:
-                print("Dictionary collision %i" % vv)
+            if out_dict.has_key(vv):
+                if warn:
+                    print "Dictionary collision %i" % vv
             out_dict[vv] = k
     return out_dict
 
@@ -379,6 +386,8 @@ def make_reverse_dict(in_dict):
 def filter_and_copy_table(tab, to_remove):
     """ Filter and copy a FITS table.
 
+    Parameters
+    ----------
     tab :  FITS Table object 
 
     to_remove : [int ...}
@@ -453,8 +462,8 @@ def main():
 
     # read table and get relevant columns
     tab = Table.read(args.input)
-    ra_vect = tab['GLON'].data
-    dec_vect = tab['GLAT'].data
+    glon_vect = tab['GLON'].data
+    glat_vect = tab['GLAT'].data
     offset_vect = tab['offset'].data
     src_names = tab['Source_Name'].data
     #TS_vect = tab['ts'].data
