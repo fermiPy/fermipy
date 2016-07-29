@@ -1,5 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, division, print_function, unicode_literals
 import copy
 import os
 import matplotlib.pyplot as plt
@@ -7,7 +7,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
 from matplotlib.patches import Circle, Ellipse
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
-
+from astropy.extern import six
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
@@ -275,7 +275,7 @@ class ROIPlotter(fermipy.config.Configurable):
         self._data_map = data_map
         self._catalogs = []
         for c in self.config['catalogs']:
-            if utils.isstr(c):
+            if isinstance(c, six.text_type):
                 self._catalogs += [catalog.Catalog.create(c)]
             else:
                 self._catalogs += [c]

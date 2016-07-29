@@ -1,5 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 import copy
 import re
@@ -9,6 +9,7 @@ import xml.etree.cElementTree as ElementTree
 
 import pyLikelihood as pyLike
 
+from astropy.extern import six
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
@@ -1254,7 +1255,7 @@ class ROIModel(fermipy.config.Configurable):
 
         for i, t in enumerate(srcs):
 
-            if utils.isstr(t):
+            if isinstance(t, six.text_type):
                 src_dict = {'file': t}
             elif isinstance(t, dict):
                 src_dict = copy.deepcopy(t)
