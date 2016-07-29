@@ -87,6 +87,48 @@ def test_gtanalysis_residmap(setup):
     gta.residmap(model={})
 
 
+def test_gtanalysis_find_sources(setup):
+    gta = setup
+    gta.load_roi('fit1')
+    np.random.seed(1)
+    
+    
+    src0 = {'SpatialModel': 'PointSource',
+            'Index': 2.0, 'offset_glon' : 0.0, 'offset_glat' : 2.0,
+            'Prefactor': 1E-12 }
+
+    src1 = {'SpatialModel': 'PointSource',
+            'Index': 2.0, 'offset_glon' : 0.0, 'offset_glat' : -2.0,
+            'Prefactor': 1E-12 }
+
+    gta.add_source('src0',src0)
+    gta.add_source('src1',src1)    
+    gta.simulate_roi()
+    src0 = gta.delete_source('src0')
+    src1 = gta.delete_source('src1')
+
+    newsrcs0 = gta.get_sources(skydir=src0.skydir,distance=0.3)
+    newsrcs1 = gta.get_sources(skydir=src1.skydir,distance=0.3)
+
+    assert(len(newsrcs0) == 1)
+    assert(len(newsrcs1) == 1)
+
+    newsrc0 = newsrcs0[0]
+    newsrc1 = newsrcs1[0]
+    
+    sep0 = src0.skydir.separation(newsrc0.skydir)
+    sep1 = src1.skydir.separation(newsrc1.skydir)
+
+    assert(sep0 < newsrc0['pos_r99'])
+    assert(sep1 < newsrc1['pos_r99'])
+
+    flux_diff0 = np.abs(src0['flux']-newsrc0['flux'])/newsrc0['flux_err']
+    flux_diff1 = np.abs(src1['flux']-newsrc1['flux'])/newsrc1['flux_err']
+
+    assert(flux_diff0 < 3.0)
+    assert(flux_diff1 < 3.0)
+    
+    
 def test_gtanalysis_sed(setup):
     gta = setup
     gta.load_roi('fit1')

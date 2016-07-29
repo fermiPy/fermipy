@@ -8,7 +8,8 @@ import logging
 import tempfile
 import filecmp
 import numpy as np
-# pyLikelihood needs to be imported before astropy to avoid CFITSIO header error
+# pyLikelihood needs to be imported before astropy to avoid CFITSIO header
+# error
 import pyLikelihood as pyLike
 from astropy.io import fits
 import fermipy
@@ -113,7 +114,7 @@ class FitCache(object):
         self._fitcache = pyLike.FitScanCache(self._fs_wrapper,
                                              str('fitscan_testsource'),
                                              tol, max_iter, init_lambda,
-                                             use_reduced,False,True)
+                                             use_reduced, False, True)
 
         for p in free_norm_params:
             self._like[p['idx']] = p['value']
@@ -1259,7 +1260,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def get_sources(self, cuts=None, distance=None, skydir=None,
                     minmax_ts=None, minmax_npred=None,
-                    square=False):
+                    square=False, exclude_diffuse=False):
         """Retrieve list of sources in the ROI satisfying the given
         selections.
 
@@ -1273,6 +1274,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         coordsys = self.config['binning']['coordsys']
         return self.roi.get_sources(skydir, distance, cuts,
                                     minmax_ts, minmax_npred, square,
+                                    exclude_diffuse=exclude_diffuse,
                                     coordsys=coordsys)
 
     def add_source(self, name, src_dict, free=False, init_source=True,
@@ -2803,7 +2805,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
             if isinstance(optObject, pyLike.Minuit):
                 quality = optObject.getQuality()
-            
+
             if isinstance(optObject, pyLike.Minuit) or \
                     isinstance(optObject, pyLike.NewMinuit):
                 edm = optObject.getDistance()
@@ -4155,11 +4157,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             srcs1 = [src for src in srcs if src['SpatialModel'] in models]
             names1 = [str(src.name) for src in srcs1]
 
-            self.like.logLike.loadSourceMaps(names0, True, True)            
+            self.like.logLike.loadSourceMaps(names0, True, True)
             self._update_srcmap_file(srcs1, True)
             for name in names1:
                 self.like.logLike.eraseSourceMap(name)
-            self.like.logLike.loadSourceMaps(names1, False, False)            
+            self.like.logLike.loadSourceMaps(names1, False, False)
         except:
             for name in names:
                 self.reload_source(name)
@@ -4403,7 +4405,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         exclude = utils.arg_to_list(exclude)
         names = utils.arg_to_list(name)
-        
+
         excluded_names = []
         for i, t in enumerate(exclude):
             srcs = self.roi.get_sources_by_name(t)
@@ -4423,13 +4425,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         elif name == 'diffuse':
             src_names = [src.name for src in self.roi.sources if
                          src.diffuse]
-        else:            
+        else:
             srcs = [self.roi.get_source_by_name(t) for t in names]
             src_names = [src.name for src in srcs]
 
         # Remove sources in exclude list
         src_names = [str(t) for t in src_names if t not in excluded_names]
-        
+
         if len(src_names) == len(self.roi.sources):
             self.like.logLike.computeModelMap(v)
         elif not hasattr(self.like.logLike, 'setSourceMapImage'):
@@ -4439,7 +4441,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             try:
                 self.like.logLike.computeModelMap(src_names, v)
-            except:                
+            except:
                 vsum = np.zeros(v.size())
                 for s in src_names:
                     vtmp = pyLike.FloatVector(v.size())
