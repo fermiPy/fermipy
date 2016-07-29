@@ -562,7 +562,6 @@ def _ts_value(position, counts, background, model, C_0_map,
         raise ValueError('Invalid fitting method.')
 
     if niter > MAX_NITER:
-        #log.warning('Exceeded maximum number of function evaluations!')
         if logger is not None:
             logger.warning('Exceeded maximum number of function evaluations!')
         return np.nan, amplitude, niter
@@ -656,7 +655,7 @@ class TSMapGenerator(object):
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_tsmap_plots(self, maps)
+            plotter.make_tsmap_plots(maps, self.roi)
 
         self.logger.info('Finished TS map')
         return maps
@@ -773,8 +772,8 @@ class TSMapGenerator(object):
                     dpix > int(max_kernel_radius / self.components[i].binsz):
                 dpix = int(max_kernel_radius / self.components[i].binsz)
 
-            xslice = slice(max(xpix - dpix, 0),
-                           min(xpix + dpix + 1, self.npix))
+            xslice = slice(max(int(xpix - dpix), 0),
+                           min(int(xpix + dpix + 1), self.npix))
             model[i] = model[i][:, xslice, xslice]
 
         ts_values = np.zeros((self.npix, self.npix))
@@ -833,7 +832,7 @@ class TSMapGenerator(object):
         npred_map = Map(amp_values * model_npred, map_wcs)
         amp_map = Map(amp_values * src.get_norm(), map_wcs)
 
-        o = {'name': '%s_%s' % (prefix, modelname),
+        o = {'name': utils.join_strings([prefix, modelname]),
              'src_dict': copy.deepcopy(src_dict),
              'file': None,
              'ts': ts_map,
@@ -1008,7 +1007,7 @@ class TSCubeGenerator(object):
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_tsmap_plots(self, maps, suffix='tscube')
+            plotter.make_tsmap_plots(maps, self.roi, suffix='tscube')
 
         self.logger.info("Finished TS cube")
         return maps
@@ -1104,7 +1103,7 @@ class TSCubeGenerator(object):
         sqrt_ts_map = copy.deepcopy(ts_map)
         sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
 
-        o = {'name': '%s_%s' % (prefix, modelname),
+        o = {'name': utils.join_strings([prefix, modelname]),
              'src_dict': copy.deepcopy(src_dict),
              'file': os.path.basename(outfile),
              'ts': ts_map,

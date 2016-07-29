@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 import copy
 import os
+import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
@@ -167,6 +168,7 @@ def annotate(**kwargs):
 
 
 class ImagePlotter(object):
+
     def __init__(self, data, proj):
 
         if isinstance(proj, WCS):
@@ -293,7 +295,8 @@ class ROIPlotter(fermipy.config.Configurable):
                                                           oversample=2)
             self._data = dataT.T
         else:
-            raise Exception("Can't make ROIPlotter of unknown projection type %s" % type(data_map))
+            raise Exception(
+                "Can't make ROIPlotter of unknown projection type %s" % type(data_map))
 
         self._loge_bounds = self.config['loge_bounds']
 
@@ -414,17 +417,20 @@ class ROIPlotter(fermipy.config.Configurable):
             label_mask.fill(False)
 
         pixcrd = wcs_utils.skydir_to_pix(skydir, self._implot._wcs)
+        path_effect = PathEffects.withStroke(linewidth=2.0,
+                                             foreground="black")
 
-        for i, (x, y, label, show_label) in enumerate(zip(pixcrd[0], pixcrd[1], labels, label_mask)):
+        for i, (x, y, label, show_label) in enumerate(zip(pixcrd[0], pixcrd[1],
+                                                          labels, label_mask)):
 
             if show_label:
                 t = ax.annotate(label, xy=(x, y),
                                 xytext=(5.0, 5.0), textcoords='offset points',
                                 **text_kwargs)
-                plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
+                plt.setp(t, path_effects=[path_effect])
 
             t = ax.plot(x, y, **plot_kwargs)
-            plt.setp(t, path_effects=[PathEffects.withStroke(linewidth=2.0, foreground="black")])
+            plt.setp(t, path_effects=[path_effect])
 
     def plot_roi(self, roi, **kwargs):
 
@@ -534,7 +540,8 @@ class ROIPlotter(fermipy.config.Configurable):
         #               transform=self._ax.get_transform('fk5'))
 
         c = Circle(self.cmap.pix_center, radius / max(self.cmap.pix_size),
-                   facecolor='none', edgecolor='w', linestyle='--', linewidth=0.5)
+                   facecolor='none', edgecolor='w', linestyle='--',
+                   linewidth=0.5)
 
         self._ax.add_patch(c)
 
@@ -558,6 +565,7 @@ class ROIPlotter(fermipy.config.Configurable):
 
 
 class SEDPlotter(object):
+
     def __init__(self, src):
 
         self._src = copy.deepcopy(src)
@@ -644,8 +652,10 @@ class SEDPlotter(object):
         xerr0 = np.vstack((delo[m], dehi[m]))
         xerr1 = np.vstack((delo[~m], dehi[~m]))
 
-        plt.errorbar(x[~m], y[~m], xerr=xerr1, yerr=(yerr_lo[~m], yerr_hi[~m]), **kwargs)
-        plt.errorbar(x[m], yul[m], xerr=xerr0, yerr=yul[m] * 0.2, uplims=True, **kwargs)
+        plt.errorbar(x[~m], y[~m], xerr=xerr1,
+                     yerr=(yerr_lo[~m], yerr_hi[~m]), **kwargs)
+        plt.errorbar(x[m], yul[m], xerr=xerr0,
+                     yerr=yul[m] * 0.2, uplims=True, **kwargs)
 
         plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
@@ -671,9 +681,9 @@ class SEDPlotter(object):
         dehi = sed['emax'] - sed['ectr']
         xerr = np.vstack((delo, dehi))
 
-        ym = np.interp(sed['ectr'],
-                       model_flux['log_energies'],
-                       10 ** (2 * model_flux['log_energies']) * model_flux['dfde'])
+        ym = np.interp(sed['ectr'], model_flux['log_energies'],
+                       10 ** (2 * model_flux['log_energies']) *
+                       model_flux['dfde'])
 
         plt.errorbar(x, (y - ym) / ym, xerr=xerr, yerr=yerr / ym, **kwargs)
 
@@ -746,6 +756,7 @@ class SEDPlotter(object):
 
 
 class ExtensionPlotter(object):
+
     def __init__(self, src, roi, suffix, workdir, loge_bounds=None):
 
         self._src = copy.deepcopy(src)
@@ -889,9 +900,35 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=format))
         plt.close(fig)
 
-    def make_tsmap_plots(self, gta, maps, **kwargs):
+    def make_tsmap_plots(self, maps, roi=None, **kwargs):
+        """Make plots from the output of
+        `~fermipy.gtanalysis.GTAnalysis.tsmap` or
+        `~fermipy.gtanalysis.GTAnalysis.tscube`.  This method
+        generates a 2D sky map for the best-fit test source in
+        sqrt(TS) and Npred.
 
-        format = kwargs.get('format', gta.config['plotting']['format'])
+        Parameters
+        ----------
+        maps : dict
+            Output dictionary of
+            `~fermipy.gtanalysis.GTAnalysis.tsmap` or
+            `~fermipy.gtanalysis.GTAnalysis.tscube`.
+
+        roi : `~fermipy.roi_model.ROIModel`
+            ROI Model object.  Generate markers at the positions of
+            the sources in this ROI.
+
+        zoom : float
+            Crop the image by this factor.  If None then no crop is
+            applied.
+        """
+        kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
+        kwargs.setdefault('label_ts_threshold',
+                          self.config['label_ts_threshold'])
+        kwargs.setdefault('cmap', self.config['cmap'])
+        kwargs.setdefault('catalogs', self.config['catalogs'])
+        format = kwargs.get('format', self.config['format'])
+        workdir = kwargs.get('format', self.config['fileio']['workdir'])
         suffix = kwargs.get('suffix', 'tsmap')
         zoom = kwargs.get('zoom', None)
 
@@ -899,36 +936,30 @@ class AnalysisPlotter(fermipy.config.Configurable):
             return
 
         sigma_levels = [3, 5, 7] + list(np.logspace(1, 3, 17))
-
-        kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
-        kwargs.setdefault('label_ts_threshold',
-                          self.config['label_ts_threshold'])
-        kwargs.setdefault('cmap', self.config['cmap'])
-        kwargs.setdefault('catalogs', self.config['catalogs'])
-
         prefix = maps['name']
         fig = plt.figure()
-        p = ROIPlotter(maps['sqrt_ts'], roi=gta.roi, **kwargs)
+        p = ROIPlotter(maps['sqrt_ts'], roi=roi, **kwargs)
         p.plot(vmin=0, vmax=5, levels=sigma_levels,
                cb_label='Sqrt(TS) [$\sigma$]', interpolation='bicubic',
                zoom=zoom)
-        plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
+        plt.savefig(utils.format_filename(workdir,
                                           '%s_sqrt_ts' % suffix,
                                           prefix=[prefix],
                                           extension=format))
         plt.close(fig)
 
         fig = plt.figure()
-        p = ROIPlotter(maps['npred'], roi=gta.roi, **kwargs)
+        p = ROIPlotter(maps['npred'], roi=roi, **kwargs)
         p.plot(vmin=0, cb_label='NPred [Counts]', interpolation='bicubic',
                zoom=zoom)
-        plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
+        plt.savefig(utils.format_filename(workdir,
                                           '%s_npred' % suffix,
                                           prefix=[prefix],
                                           extension=format))
         plt.close(fig)
 
-    def make_roi_plots(self, gta, mcube_map, prefix, loge_bounds=None, **kwargs):
+    def make_roi_plots(self, gta, mcube_map, prefix,
+                       loge_bounds=None, **kwargs):
         """Make various diagnostic plots for the 1D and 2D
         counts/model distributions.
 
@@ -944,7 +975,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         roi_kwargs = {}
         roi_kwargs.setdefault('loge_bounds', loge_bounds)
-        roi_kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
+        roi_kwargs.setdefault(
+            'graticule_radii', self.config['graticule_radii'])
         roi_kwargs.setdefault('label_ts_threshold',
                               self.config['label_ts_threshold'])
         roi_kwargs.setdefault('cmap', self.config['cmap'])
@@ -974,8 +1006,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
             model_data = mcube_map.counts.T
             diffuse_data = mcube_diffuse.counts.T
         elif p.projtype == "HPX":
-            dummy, model_dataT = p.cmap.convert_to_cached_wcs(mcube_map.counts, sum_ebins=False)
-            dummy, diffuse_dataT = p.cmap.convert_to_cached_wcs(mcube_diffuse.counts, sum_ebins=False)
+            dummy, model_dataT = p.cmap.convert_to_cached_wcs(
+                mcube_map.counts, sum_ebins=False)
+            dummy, diffuse_dataT = p.cmap.convert_to_cached_wcs(
+                mcube_diffuse.counts, sum_ebins=False)
             model_data = model_dataT.T
             diffuse_data = diffuse_dataT.T
 
@@ -1092,7 +1126,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
             if not s['extension']['config']['save_model_map']:
                 continue
 
-            self._plot_extension(prefix, s, loge_bounds=loge_bounds, format=format)
+            self._plot_extension(
+                prefix, s, loge_bounds=loge_bounds, format=format)
 
     def make_sed_plots(self, gta, prefix='', **kwargs):
 
@@ -1183,7 +1218,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         peak_r68 = tsmap_fit['r68']
         peak_r99 = tsmap_fit['r99']
 
-        scan_skydir = SkyCoord(o['glon'], o['glat'], frame='galactic', unit='deg')
+        scan_skydir = SkyCoord(o['glon'], o['glat'],
+                               frame='galactic', unit='deg')
         scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
 
         if skydir is not None:
