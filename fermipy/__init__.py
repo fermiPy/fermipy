@@ -1,9 +1,10 @@
+from __future__ import absolute_import, division, print_function
 import os
 
 __version__ = "unknown"
 
 try:
-    from version import get_git_version
+    from .version import get_git_version
     __version__ = get_git_version()
 except Exception as message:
     print(message)

@@ -170,12 +170,12 @@ def make_rev_dict_unique(cdict):
     """
     rev_dict = {}
     for k, v in cdict.items():
-        if rev_dict.has_key(k):
+        if k in rev_dict:
             rev_dict[k][k] = True
         else:
             rev_dict[k] = {k: True}
         for vv in v.keys():
-            if rev_dict.has_key(vv):
+            if vv in rev_dict:
                 rev_dict[vv][k] = True
             else:
                 rev_dict[vv] = {k: True}
@@ -210,7 +210,7 @@ def make_clusters(span_tree, cut_value):
 
         imin = int(min(i0, i1))
         imax = int(max(i0, i1))
-        if match_dict.has_key(imin):
+        if imin in match_dict:
             match_dict[imin][imax] = True
         else:
             match_dict[imin] = {imax: True}
@@ -394,7 +394,7 @@ def make_reverse_dict(in_dict, warn=True):
     out_dict = {}
     for k, v in in_dict.items():
         for vv in v:
-            if out_dict.has_key(vv):
+            if vv in out_dict:
                 if warn:
                     print("Dictionary collision %i" % vv)
             out_dict[vv] = k
