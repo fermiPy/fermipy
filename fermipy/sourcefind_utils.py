@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 import numpy as np
+import scipy
 from scipy.ndimage.filters import maximum_filter
 from astropy.coordinates import SkyCoord
 from fermipy import utils
@@ -14,6 +15,8 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3):
     tsmap : `~fermipy.skymap.Map`
 
     xy : tuple
+
+    dpix : int
     """
 
     if xy is None:
