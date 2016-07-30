@@ -52,70 +52,78 @@ def make_cos_vects(lon_vect, lat_vect):
 
 
 def find_matches_by_distance(cos_vects, cut_dist):
-    """ Find all the pairs of sources within a given distance of each other
+    """Find all the pairs of sources within a given distance of each
+    other.
 
     Parameters
     ----------
-    cos_vects : np.ndarray(e,nsrc)  
-       Directional cosines (i.e., x,y,z component) values of all the sources
+    cos_vects : np.ndarray(e,nsrc)    
+        Directional cosines (i.e., x,y,z component) values of all the
+        sources
 
-    cut_dist : float
-
-    returns dict((int,int):float).  
-       Each entry gives a pair of source indices, and the corresponding distance
+    cut_dist : float    
+        Angular cut in degrees that will be used to select pairs by
+        their separation.
+       
+    Returns
+    -------
+    match_dict : dict((int,int):float).    
+       Each entry gives a pair of source indices, and the
+       corresponding distance
     """
     dist_rad = np.radians(cut_dist)
     cos_t_cut = np.cos(dist_rad)
     nsrc = cos_vects.shape[1]
-    matchDict = {}
+    match_dict = {}
     for i, v1 in enumerate(cos_vects.T):
         cos_t_vect = (v1 * cos_vects.T).sum(1)
+        cos_t_vect[cos_t_vect < -1.0] = -1.0
+        cos_t_vect[cos_t_vect > 1.0] = 1.0        
         mask = cos_t_vect > cos_t_cut
         acos_t_vect = np.ndarray(nsrc)
         acos_t_vect[mask] = np.degrees(np.arccos(cos_t_vect[mask]))
-        for j in xrange(0, i):
-            if mask[j]:
-                matchDict[(j, i)] = acos_t_vect[j]
-            pass
-        pass
-    return matchDict
+        for j in np.where(mask[:i])[0]:
+            match_dict[(j, i)] = acos_t_vect[j]
+        
+    return match_dict
 
 
 def find_matches_by_sigma(cos_vects, unc_vect, cut_sigma):
-    """ Find all the pairs of sources within a given distance of each other
+    """Find all the pairs of sources within a given distance of each
+    other.
 
     Parameters
     ----------
     cos_vects : np.ndarray(3,nsrc)  
-       Directional cosines (i.e., x,y,z component) values of all the sources
+        Directional cosines (i.e., x,y,z component) values of all the sources
 
     unc_vect : np.ndarray(nsrc)  
-       Uncertainties on the source positions
+        Uncertainties on the source positions
 
-    cut_sigma : float
-
-    returns dict((int,int):float).  
-       Each entry gives a pair of source indices, and the corresponding sigma
+    cut_sigma : float    
+        Angular cut in positional errors standard deviations that will
+        be used to select pairs by their separation.
+    
+    Returns
+    -------
+    match_dict : dict((int,int):float)    
+        Each entry gives a pair of source indices, and the
+        corresponding sigma
     """
-    dist_rad = np.radians(dist)
-    cos_t_cut = np.cos(dist_rad)
-    nsrc = cos_vects.shape[1]
     match_dict = {}
-    acos_t_vect = np.ndarray(nsrc)
     sig_2_vect = unc_vect * unc_vect
-
     for i, v1 in enumerate(cos_vects.T):
         cos_t_vect = (v1 * cos_vects.T).sum(1)
+        cos_t_vect[cos_t_vect < -1.0] = -1.0
+        cos_t_vect[cos_t_vect > 1.0] = 1.0 
         sig_2_i = sig_2_vect[i]
-        acos_t_vect = np.degrees(np.arccos(cos_t_vect[mask]))
+        acos_t_vect = np.degrees(np.arccos(cos_t_vect))
         total_unc = np.sqrt(sig_2_i + sig_2_vect)
         sigma_vect = acos_t_vect / total_unc
         mask = sigma_vect < cut_sigma
-        for j in xrange(0, i):
-            if mask[j]:
-                match_dict[(j, i)] = sigma_vect[j]
-            pass
-        pass
+        for j in np.where(mask[:i])[0]:
+            match_dict[(j, i)] = sigma_vect[j]
+
     return match_dict
 
 
@@ -125,29 +133,39 @@ def fill_edge_matrix(nsrcs, match_dict):
     Parameters
     ----------
     nsrcs  : int 
-       number of sources (used to allocate the size of the matrix)
+        number of sources (used to allocate the size of the matrix)
 
-    match_dict :  dict((int,int):float)
-       Each entry gives a pair of source indices, and the corresponding measure (either distance or sigma) 
+    match_dict :  dict((int,int):float)    
+        Each entry gives a pair of source indices, and the
+        corresponding measure (either distance or sigma)
 
-    returns numpy.ndarray((nsrcs,nsrcs)) filled with zeros except for the matches, which are filled with the
-       edge measures (either distances or sigmas)
+    Returns
+    -------
+    e_matrix : `~numpy.ndarray`    
+        numpy.ndarray((nsrcs,nsrcs)) filled with zeros except for the
+        matches, which are filled with the edge measures (either
+        distances or sigmas)
     """
     e_matrix = np.zeros((nsrcs, nsrcs))
     for k, v in match_dict.items():
         e_matrix[k[0], k[1]] = v
-        pass
     return e_matrix
 
 
 def make_rev_dict_unique(cdict):
     """ Make a reverse dictionary
 
-    in_dict : dict(int:dict(int:True))
-       A dictionary of clusters.   Each cluster is a source index and the dictionary of other sources in the cluster.    
+    Parameters
+    ----------
+    in_dict : dict(int:dict(int:True))    
+       A dictionary of clusters.  Each cluster is a source index and
+       the dictionary of other sources in the cluster.
 
-    returns dict(int:dict(int:True))
-       A dictionary pointing from source index to the clusters it is included in.
+    Returns
+    -------
+    rev_dict : dict(int:dict(int:True))    
+       A dictionary pointing from source index to the clusters it is
+       included in.
 
     """
     rev_dict = {}
@@ -378,7 +396,7 @@ def make_reverse_dict(in_dict, warn=True):
         for vv in v:
             if out_dict.has_key(vv):
                 if warn:
-                    print "Dictionary collision %i" % vv
+                    print("Dictionary collision %i" % vv)
             out_dict[vv] = k
     return out_dict
 
@@ -440,7 +458,12 @@ def main():
                         help='Use full set off matches for clustering.')
     parser.add_argument('--clobber', action='store_true',
                         default=False, help='Overwrite output files.')
-
+    parser.add_argument('--remove_duplicates', action='store_true',
+                        default=False,
+                        help='Remove duplicates from output file.  By default '
+                        'duplicates will be indicated by the boolean "duplicate" '
+                        'column.')
+    
     # Argument parsing
     args = parser.parse_args()
 
@@ -462,6 +485,11 @@ def main():
 
     # read table and get relevant columns
     tab = Table.read(args.input)
+
+    src_id = np.arange(len(tab))
+    row_col = Column(name='src_id', dtype='i8', data=src_id)
+    tab.add_column(row_col)
+    
     glon_vect = tab['GLON'].data
     glat_vect = tab['GLAT'].data
     offset_vect = tab['offset'].data
@@ -512,8 +540,24 @@ def main():
 
     # Copy the table, filtering out the duplicates
     to_remove = rev_dict.keys()
-    out_tab = filter_and_copy_table(tab, to_remove)
+    if args.remove_duplicates:
+        out_tab = filter_and_copy_table(tab, to_remove)
+    else:
+        out_tab = tab.copy()
+        dup_col = Column(name='duplicate', dtype='bool',length=len(out_tab))
+        out_tab.add_column(dup_col)
+        out_tab['duplicate'][to_remove] = True
+        
+    cluster_col = Column(name='cluster_ids', shape=(30,), dtype='i8',
+                         data=-1*np.ones((len(out_tab),30)))
+    out_tab.add_column(cluster_col)
 
+    for k, v in sel_dict.items():
+        m = out_tab['src_id'] == k
+        vin = -1*np.ones(30)
+        vin[:len(v)] = v        
+        out_tab['cluster_ids'][m] = vin
+    
     # Write the output
     if args.output:
         out_tab.write(args.output, format='fits')
