@@ -17,6 +17,16 @@ matrix:
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                CONDA2='conda install -c conda-forge healpy wcsaxes'
 
+        # The Sphinx docs build
+        # Python 3, no Fermi ST, all other dependencies
+        - os: linux
+          env: NAME=docs
+               PYTHON_VERSION=3.5
+               ST_INSTALL=''
+               CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+               CONDA_DEPS='scipy matplotlib pytest pyyaml sphinx'
+               CONDA2='conda install -c conda-forge healpy wcsaxes'
+
         # Python 3, no Fermi ST, all other dependencies
         - os: linux
           env: NAME=py3_st-no_dep-yes
@@ -80,7 +90,13 @@ install:
 # Run test
 script:
   - python -m pytest -vv -s --cov=fermipy --cov-config=fermipy/tests/coveragerc
- 
+
+  - if [[ $NAME == 'docs' ]]; then
+        cd docs;
+        sphinx-build -b html -d _build/doctrees . _build/html -W;
+    fi
+
+
 #cache:
 #  directories:
 #  - $HOME/ScienceTools
