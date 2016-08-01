@@ -245,7 +245,7 @@ class PowerLaw(SpectralFunction):
 
     F(x) = p_0 * (x/x_s)^p_1
 
-    where x_s is the scale parameter.  The `params ` array should be
+    where x_s is the scale parameter.  The `params` array should be
     defined with:
 
     * params[0] : Prefactor (p_0)

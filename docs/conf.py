@@ -14,12 +14,14 @@
 
 import sys
 import os
-import shlex
 #import sphinx_bootstrap_theme
-from os import path
 
-import mock
-from mock import Mock as MagicMock
+if sys.version_info.major == 2:
+    import mock
+    from mock import Mock as MagicMock
+else:
+    from unittest import mock
+    from unittest.mock import Mock as MagicMock
 
 class Mock(MagicMock):
     @classmethod

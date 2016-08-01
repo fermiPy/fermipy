@@ -1252,12 +1252,13 @@ class CastroData(CastroData_Base):
 
 class TSCube(object):
     """A class wrapping a TSCube, which is a collection of CastroData
-    objects for a set of directions.  This class wraps a combination
-    of:
-      * Pixel data,
-      * Pixel x Energy bin data, 
-      * Pixel x Energy Bin x Normalization scan point data
+    objects for a set of directions.
 
+    This class wraps a combination of:
+
+    * Pixel data,
+    * Pixel x Energy bin data,
+    * Pixel x Energy Bin x Normalization scan point data
     """
 
     def __init__(self, tsmap, normmap, tscube, normcube,

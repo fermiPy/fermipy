@@ -36,6 +36,7 @@ The default configuration of
    :delim: tab
    :widths: 10,10,80
 
+
 The :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` method is executed
 by passing the name of a source in the ROI as a single argument.
 Additional keyword argument can also be provided to override the
