@@ -150,9 +150,11 @@ def plotSED_OnAxis(ax, castroData, TS_thresh=4.0, errSigma=1.0,
     has_limit = ~has_point
     ul_vals = castroData.getLimits(0.05)
 
-    err_pos = castroData.getLimits(0.32) - mles
-    err_neg = mles - castroData.getLimits(0.32, upper=False) 
-
+    err_lims_lo, err_lims_hi = castroData.getIntervals(0.32)
+    
+    err_pos = err_lims_hi - mles
+    err_neg = mles - err_lims_lo
+    
     yerr_points = (err_neg[has_point], err_pos[has_point])
     xerrs = (castroData.refSpec.eref - castroData.refSpec.ebins[0:-1],
              castroData.refSpec.ebins[1:] - castroData.refSpec.eref)

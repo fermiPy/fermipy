@@ -22,7 +22,8 @@ from fermipy.skymap import read_map_from_fits, Map
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
 from fermipy.spectrum import SpectralFunction
-from fermipy.utils import cl_to_dlnl
+from fermipy.utils import onesided_cl_to_dlnl
+from fermipy.utils import twosided_cl_to_dlnl
 
 FluxTypes = ['NORM', 'FLUX', 'EFLUX', 'NPRED', 'DFDE', 'EDFDE']
 
@@ -208,15 +209,9 @@ class LnLFn(object):
         """ return the Test Statistic """
         return 2. * (self._interp(0.) - self._interp(self.mle()))
 
-    def getLimit(self, alpha, upper=True):
-        """ Evaluate the limits corresponding to a C.L. of (1-alpha)%.
-
-        Parameters
-        ----------
-        alpha :  limit confidence level.
-        upper :  upper or lower limits.
-        """
-        dlnl = cl_to_dlnl(1.0 - alpha)
+    def getDeltaLogLike(self, dlnl, upper=True):
+        """Find the point at which the log-likelihood changes by a
+        given value with respect to its value at the MLE."""
         mle_val = self.mle()
         # A little bit of paranoia to avoid zeros
         if mle_val <= 0.:
@@ -244,14 +239,23 @@ class LnLFn(object):
         #                   xtol=1e-10*np.abs(self._mle))
         if upper:
             x = np.logspace(log_mle, np.log10(self._interp.xmax), 100)
-            # Old version.  This doesn't work if the interpolations
-            # is defined over a huge range
-            # x = np.linspace(self._mle, self._interp.xmax, 100)
+            retVal = np.interp(dlnl, self.interp(x)-lnl_max, x)
         else:
             x = np.linspace(self._interp.xmin, self._mle, 100) 
+            retVal = np.interp(dlnl, self.interp(x)[::-1]-lnl_max, x[::-1])
 
-        retVal = np.interp(dlnl, self.interp(x)-lnl_max, x)
         return retVal
+        
+    def getLimit(self, alpha, upper=True):
+        """ Evaluate the limits corresponding to a C.L. of (1-alpha)%.
+
+        Parameters
+        ----------
+        alpha :  limit confidence level.
+        upper :  upper or lower limits.
+        """
+        dlnl = onesided_cl_to_dlnl(1.0 - alpha)
+        return self.getDeltaLogLike(dlnl,upper=upper)
 
     def getInterval(self, alpha):
         """ Evaluate the interval corresponding to a C.L. of (1-alpha)%.
@@ -260,8 +264,9 @@ class LnLFn(object):
         ----------
         alpha : limit confidence level.
         """
-        lo_lim = self.getLimit(alpha, upper=False)
-        hi_lim = self.getLimit(alpha, upper=True)
+        dlnl = twosided_cl_to_dlnl(1.0 - alpha)
+        lo_lim = self.getDeltaLogLike(dlnl, upper=False)
+        hi_lim = self.getDeltaLogLike(dlnl, upper=True)
         return (lo_lim, hi_lim)
 
 
@@ -744,6 +749,33 @@ class CastroData_Base(object):
             limit_vals[i] = self._loglikes[i].getLimit(alpha, upper)
 
         return limit_vals
+
+    def getIntervals(self, alpha):
+        """ Evaluate the two-sided intervals corresponding to a C.L. of
+        (1-alpha)%.
+
+        Parameters
+        ----------
+        alpha :  float
+           limit confidence level.
+
+        Returns
+        -------
+        limit_vals_hi : `~numpy.ndarray`
+            An array of lower limit values.
+        
+        limit_vals_lo : `~numpy.ndarray`
+            An array of upper limit values.
+        """
+        limit_vals_lo = np.ndarray((self._nx))
+        limit_vals_hi = np.ndarray((self._nx))
+
+        for i in range(self._nx):
+            lo_lim, hi_lim = self._loglikes[i].getInterval(alpha)            
+            limit_vals_lo[i] = lo_lim
+            limit_vals_hi[i] = hi_lim
+
+        return limit_vals_lo, limit_vals_hi
 
     def fitNormalization(self, specVals, xlims):
         """Fit the normalization given a set of spectral values that

@@ -2485,10 +2485,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             lims1 = utils.get_parameter_limits(xvals, dloglike,
                                                ul_confidence=0.99)
 
-#            print('iter',i,np.abs(np.abs(dloglike0) - utils.cl_to_dlnl(0.99)),xup)
+#            print('iter',i,np.abs(np.abs(dloglike0) - utils.onesided_cl_to_dlnl(0.99)),xup)
 #            print(loglike)
 
-            if np.abs(np.abs(dloglike0) - utils.cl_to_dlnl(0.99)) < 0.1:
+            if np.abs(np.abs(dloglike0) - utils.onesided_cl_to_dlnl(0.99)) < 0.1:
                 break
 
             if not np.isfinite(lims1['ul']) or np.abs(dloglike[-1]) < 1.0:
@@ -2517,7 +2517,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 #        plt.plot(xvals,dloglike,marker='o')
 #        plt.plot(np.linspace(xvals[0],xvals[-1],100),s(np.linspace(xvals[0],xvals[-1],100)))
 #        plt.gca().set_ylim(-5,1)
-#        plt.gca().axhline(-utils.cl_to_dlnl(0.99))
+#        plt.gca().axhline(-utils.onesided_cl_to_dlnl(0.99))
 
         if np.isfinite(lims1['ll']):
             xlo = np.concatenate(

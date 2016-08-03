@@ -356,11 +356,78 @@ def cov_to_correlation(cov):
     return corr
 
 
-def cl_to_dlnl(cl):
-    """Compute the delta-log-likehood corresponding to an upper limit of
-    the given confidence level."""
+def twosided_cl_to_dlnl(cl):
+    """Compute the delta-loglikehood value that corresponds to a
+    two-sided interval of the given confidence level.
+
+    Parameters
+    ----------
+    cl : float
+        Confidence level.
+    
+    Returns
+    -------
+    dlnl : float    
+        Delta-loglikelihood value with respect to the maximum of the
+        likelihood function.
+    """
+    return 0.5 * np.power( np.sqrt(2.) * special.erfinv(cl), 2)
+
+
+def twosided_dlnl_to_cl(dlnl):
+    """Compute the confidence level that corresponds to a two-sided
+    interval with a given change in the loglikelihood value.
+
+    Parameters
+    ----------
+    dlnl : float
+        Delta-loglikelihood value with respect to the maximum of the
+        likelihood function.
+    
+    Returns
+    -------
+    cl : float
+        Confidence level.
+    """
+    return special.erf( dlnl**0.5 )
+
+
+def onesided_cl_to_dlnl(cl):
+    """Compute the delta-loglikehood values that corresponds to an
+    upper limit of the given confidence level.
+
+    Parameters
+    ----------
+    cl : float
+        Confidence level.
+    
+    Returns
+    -------
+    dlnl : float
+        Delta-loglikelihood value with respect to the maximum of the
+        likelihood function.
+    """
     alpha = 1.0 - cl
     return 0.5 * np.power(np.sqrt(2.) * special.erfinv(1 - 2 * alpha), 2.)
+
+
+def onesided_dlnl_to_cl(dlnl):
+    """Compute the confidence level that corresponds to an upper limit
+    with a given change in the loglikelihood value.
+
+    Parameters
+    ----------
+    dlnl : float
+        Delta-loglikelihood value with respect to the maximum of the
+        likelihood function.
+    
+    Returns
+    -------
+    cl : float
+        Confidence level.
+    """
+    alpha = (1.0 - special.erf(dlnl**0.5))/2.0
+    return 1.0-alpha
 
 
 def interpolate_function_min(x, y):
@@ -454,7 +521,7 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
 
     """
 
-    deltalnl = cl_to_dlnl(ul_confidence)
+    deltalnl = onesided_cl_to_dlnl(ul_confidence)
 
     spline = UnivariateSpline(xval, loglike, k=2, s=tol)
     # m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
