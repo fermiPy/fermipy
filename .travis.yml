@@ -1,5 +1,5 @@
 language: python
-sudo: required
+#dist: trusty
 services:
   - docker
 
@@ -52,6 +52,7 @@ matrix:
                CONDA2='conda install -c conda-forge healpy wcsaxes'
 
         - os: linux
+          sudo: required
           env: NAME=NAME=docker-test
                PYTHON_VERSION=2.7
                ST_INSTALL=''
