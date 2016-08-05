@@ -26,18 +26,20 @@ def cast_params(params):
 
 
 class SEDFunctor(object):
-    """Functor that accepts a model parameter vector and computes the
-    normalization of a spectral model in a sequence of SED energy
-    bins.
+    """Functor object that wraps a
+    `~fermipy.spectrum.SpectralFunction` and computes the
+    normalization of the model in a sequence of SED energy bins.  The
+    evaluation method of this class accepts a single vector for the
+    parameters of the model.  This class serves as an object that can
+    be passed to likelihood optimizers.
     """
 
-    def __init__(self, spectrum, scale, emin, emax):
+    def __init__(self, sfn, emin, emax):
 
         self._emin = emin
         self._emax = emax
-        self._scale = scale
-        self._spectrum = spectrum
-
+        self._sfn = sfn
+        
     @property
     def emin(self):
         return self._emin
@@ -47,47 +49,63 @@ class SEDFunctor(object):
         return self._emax
 
     @property
+    def spectral_fn(self):
+        return self._sfn
+    
+    @property
     def scale(self):
-        return self._scale
+        return self._sfn.scale
+
+    @property
+    def params(self):
+        return self._sfn.params
+
+    @scale.setter
+    def scale(self, scale):
+        self._sfn.scale = scale
+
+    @params.setter
+    def params(self,params):
+        self._sfn.params = params
 
 
 class SEDFluxFunctor(SEDFunctor):
-    """Functor that computes the flux of a source in a sequence of SED
-    energy bins."""
+    """Functor that computes the flux of a source in a pre-defined
+    sequence of energy bins."""
 
-    def __init__(self, spectrum, scale, emin, emax):
-        super(SEDFluxFunctor, self).__init__(spectrum, scale, emin, emax)
+    def __init__(self, sfn, emin, emax):
+        super(SEDFluxFunctor, self).__init__(sfn, emin, emax)
 
     def __call__(self, params):
 
         params = cast_params(params)
         emin = np.expand_dims(self.emin, 1)
         emax = np.expand_dims(self.emax, 1)
-        return np.squeeze(self._spectrum.eval_flux(emin, emax,
-                                                   params, self.scale))
+        return np.squeeze(self._sfn.flux(emin, emax, params))
 
 
 class SEDEFluxFunctor(SEDFunctor):
-    """Functor that computes the energy flux of a source in a sequence
-    of SED energy bins."""
+    """Functor that computes the energy flux of a source in a
+    pre-defined sequence of energy bins."""
 
-    def __init__(self, spectrum, scale, emin, emax):
-        super(SEDEFluxFunctor, self).__init__(spectrum, scale, emin, emax)
+    def __init__(self, sfn, emin, emax):
+        super(SEDEFluxFunctor, self).__init__(sfn, emin, emax)
 
     def __call__(self, params):
 
         params = cast_params(params)
         emin = np.expand_dims(self.emin, 1)
         emax = np.expand_dims(self.emax, 1)
-        return np.squeeze(self._spectrum.eval_eflux(emin, emax, params,
-                                                    self.scale))
+        return np.squeeze(self._sfn.eflux(emin, emax, params))
 
 
 class SpectralFunction(object):
-    """Base class for spectral model classes."""
+    """Base class for spectral models.  Spectral models inheriting
+    from this class should implement at a minimum an `_eval_dfde`
+    method which evaluates the differential flux at a given energy."""
 
     def __init__(self, params, scale=1.0, extra_params=None):
-        self._params = params
+        self._params = np.array(params)
         self._scale = scale
         self._extra_params = extra_params
 
@@ -106,29 +124,50 @@ class SpectralFunction(object):
     def scale(self):
         return self._scale
 
+    @scale.setter
+    def scale(self, scale):
+        self._scale = scale
+
+    @params.setter
+    def params(self,params):
+        if params is None:
+            self._params = np.zeros(self.nparam)
+        else:
+            self._params = np.array(params)
+    
     @property
     def extra_params(self):
-        """Dictionary containing additional parameters needed for evaluation
-        of the function."""
+        """Dictionary containing additional parameters needed for
+        evaluation of the function."""
         return self._extra_params
     
-    @staticmethod
-    def create_functor(spec_type, func_type, emin, emax, scale=1.0, extra_params=None):
+    @classmethod
+    def create_functor(cls, spec_type, func_type, emin, emax,
+                       params=None, scale=1.0, extra_params=None):
+
+        if isinstance(spec_type,SpectralFunction):
+            sfn = copy.deepcopy(spec_type)
+        else:
+            sfn = eval(spec_type)(params, scale, extra_params)
 
         if func_type.lower() == 'flux':
-            return eval(spec_type).create_flux_functor(emin, emax, scale)
+            return SEDFluxFunctor(sfn, emin, emax)
         elif func_type.lower() == 'eflux':
-            return eval(spec_type).create_eflux_functor(emin, emax, scale)
+            return SEDEFluxFunctor(sfn, emin, emax)
         else:
             raise Exception("Did not recognize func_type: %s" % func_type)
 
     @classmethod
-    def create_flux_functor(cls, emin, emax, escale=1.0, extra_params=None):
-        return SEDFluxFunctor(cls, escale, emin, emax)
+    def create_flux_functor(cls, emin, emax, params=None, scale=1.0,
+                            extra_params=None):
+        sfn = cls(params, scale, extra_params)
+        return SEDFluxFunctor(sfn, emin, emax)
 
     @classmethod
-    def create_eflux_functor(cls, emin, emax, escale=1.0, extra_params=None):
-        return SEDEFluxFunctor(cls, escale, emin, emax)
+    def create_eflux_functor(cls, emin, emax, params=None, scale=1.0,
+                             extra_params=None):
+        sfn = cls(params, scale, extra_params)
+        return SEDEFluxFunctor(sfn, emin, emax)
 
     @classmethod
     def eval_e2dfde(cls, x, params, scale=1.0, extra_params=None):
@@ -171,7 +210,8 @@ class SpectralFunction(object):
         return x**2*dfde_deriv + 2*x*dfde
 
     @classmethod
-    def _integrate(cls, fn, emin, emax, params, scale=1.0, extra_params=None, npt=20):
+    def _integrate(cls, fn, emin, emax, params, scale=1.0, extra_params=None,
+                   npt=20):
         """Fast numerical integration method using mid-point rule."""
 
         emin = np.expand_dims(emin, -1)
@@ -189,7 +229,8 @@ class SpectralFunction(object):
         return np.sum(dfde * xw, axis=-1)
 
     @classmethod
-    def _eval_dfde_deriv(cls, x, params, scale=1.0, extra_params=None, eps=1E-6):
+    def _eval_dfde_deriv(cls, x, params, scale=1.0, extra_params=None,
+                         eps=1E-6):
         return (cls._eval_dfde(x+eps, params, scale) -
                 cls._eval_dfde(x, params, scale))/eps
 
@@ -198,7 +239,8 @@ class SpectralFunction(object):
         emin = cast_args(emin)
         emax = cast_args(emax)
         params = cast_params(params)
-        return cls._integrate(cls.eval_dfde, emin, emax, params, scale, extra_params)
+        return cls._integrate(cls.eval_dfde, emin, emax, params, scale,
+                              extra_params)
 
     @classmethod
     def eval_eflux(cls, emin, emax, params, scale=1.0, extra_params=None):
@@ -207,7 +249,7 @@ class SpectralFunction(object):
         params = cast_params(params)
         return cls._integrate(cls.eval_edfde, emin, emax, params, scale,
                               extra_params)
-
+            
     def dfde(self, x, params=None):
         """Evaluate differential flux."""
         params = self.params if params is None else params
@@ -240,8 +282,8 @@ class SpectralFunction(object):
                                                 self.extra_params))
 
     def e2dfde_deriv(self, x, params=None):
-        """Evaluate derivative of E^2 times differential flux with respect to
-        E."""
+        """Evaluate derivative of E^2 times differential flux with
+        respect to E."""
         params = self.params if params is None else params
         return np.squeeze(self.eval_e2dfde_deriv(x, params, self.scale,
                                                  self.extra_params))
@@ -253,7 +295,7 @@ class SpectralFunction(object):
                                          self.extra_params))
 
     def eflux(self, emin, emax, params=None):
-        """Evaluate the energy flux flux."""
+        """Evaluate the integral energy flux."""
         params = self.params if params is None else params
         return np.squeeze(self.eval_eflux(emin, emax, params, self.scale,
                                           self.extra_params))
@@ -272,9 +314,15 @@ class PowerLaw(SpectralFunction):
     * params[1] : Index (p_1)
 
     """
-    def __init__(self, params, scale=1.0):
+    def __init__(self, params=None, scale=1.0, extra_params=None):
+        params = (params if params is not None else
+                  np.array([5e-13, -2.0]))
         super(PowerLaw, self).__init__(params, scale)
 
+    @staticmethod
+    def nparam():
+        return 2
+        
     @staticmethod
     def _eval_dfde(x, params, scale=1.0, extra_params=None):
         return params[0] * (x / scale) ** params[1]
@@ -330,9 +378,15 @@ class LogParabola(SpectralFunction):
     * params[2] : Curvature (p_2)
 
     """
-    def __init__(self, params, scale=1.0):
+    def __init__(self, params=None, scale=1.0, extra_params=None):
+        params = (params if params is not None else
+                  np.array([5e-13, -2.0, 0.0]))
         super(LogParabola, self).__init__(params, scale)
 
+    @staticmethod
+    def nparam():
+        return 3
+        
     @staticmethod
     def _eval_dfde(x, params, scale=1.0, extra_params=None):
         return (params[0] * (x / scale) **
@@ -352,7 +406,9 @@ class PLExpCutoff(SpectralFunction):
     * params[2] : Curvature (p_2)
 
     """
-    def __init__(self, params, scale=1.0):
+    def __init__(self, params=None, scale=1.0, extra_params=None):
+        params = (params if params is not None else
+                  np.array([5e-13, -1.0, 1E4]))        
         super(PLExpCutoff, self).__init__(params, scale)
 
     @staticmethod
@@ -368,6 +424,10 @@ class PLExpCutoff(SpectralFunction):
                 10**params[2]]
 
     @staticmethod
+    def nparam():
+        return 3
+    
+    @staticmethod
     def _eval_dfde(x, params, scale=1.0, extra_params=None):
         return params[0] * (x / scale) ** (params[1]) * np.exp(-x / params[2])
 
@@ -378,9 +438,9 @@ class PLExpCutoff(SpectralFunction):
 
 
 class DMFitFunction(SpectralFunction):
-    """Class that evaluates a spectrum for a DM particle of a given mass,
-    channel, cross section, and J-factor.  The parameterization is
-    given by:
+    """Class that evaluates the spectrum for a DM particle of a given
+    mass, channel, cross section, and J-factor.  The parameterization
+    is given by:
 
     F(x) = 1 / (8 * pi) * (1/mass^2) * sigmav * J * dN/dE(E,mass,i)
 
@@ -389,8 +449,46 @@ class DMFitFunction(SpectralFunction):
     * params[0] : sigmav
     * params[1] : mass
 
-    """    
-    def __init__(self, params, chan='bb', jfactor = 1E25, tablepath=None):
+    Note that this class assumes that mass and J-factor are provided
+    in units of GeV and GeV^2 cm^-5 while energies are defined in MeV.
+    """
+
+    # Mapping between the ST channel codes and the rows in the gammamc
+    # file
+    channel_index_mapping = {
+        1 : 8, # ee
+        2 : 6, # mumu
+        3 : 3, # tautau
+        4 : 1, # bb
+        5 : 2, # tt
+        6 : 7, # gg
+        7 : 4, # ww
+        8 : 5, # zz
+        9 : 0, # cc
+        10 : 10, # uu
+        11 : 11, # dd
+        12 : 9, # ss
+        }
+    
+    # Mapping between ST channel codes and string aliases
+    channel_name_mapping = {
+        1  :  ["e+e-","ee"],
+        2  :  ["mu+mu-","mumu","musrc"]      ,
+        3  :  ["tau+tau-","tautau","tausrc"] ,
+        4  :  ["bb-bar","bb","bbbar","bbsrc"],
+        5  :  ["tt-bar","tt"]                ,
+        6  :  ["gluons","gg"]                ,
+        7  :  ["W+W-","w+w-","ww","wwsrc"]   ,
+        8  :  ["ZZ","zz"]                    ,
+        9  :  ["cc-bar","cc"]                ,
+        10 :  ["uu-bar","uu"]                ,
+        11 :  ["dd-bar","dd"]                ,
+        12 :  ["ss-bar","ss"] }
+
+    channel_rev_map = { vv : k for k, v in channel_name_mapping.items()
+                        for vv in v  }
+    
+    def __init__(self, params, chan='bb', jfactor = 1E19, tablepath=None):
         """Constructor.
 
         Parameters
@@ -422,42 +520,45 @@ class DMFitFunction(SpectralFunction):
         xedge = np.linspace(0,1.0,251)
         self._x = 0.5*(xedge[1:]+xedge[:-1])*ndec - ndec
 
-        # Lookup table for chan string to table index
-        chan_index = { 'cc' : 0,
-                       'bb' : 1,
-                       'tt' : 2,
-                       'tautau' : 3,
-                       'ww' : 4,
-                       'zz' : 5,
-                       'mumu' : 6,
-                       'gg' : 7,
-                       'ee' : 8,
-                       'ss' : 9,
-                       'uu' : 10,
-                       'dd' : 11 }
-        
-        ichan = chan_index[chan]
+        chan_code = DMFitFunction.channel_rev_map[chan]        
+        ichan = DMFitFunction.channel_index_mapping[chan_code]
         self._chan = chan
+        self._chan_code = chan_code
         
         # These are the mass points
         self._mass = np.array([2.0,4.0,6.0,8.0,10.0,
                                25.0,50.0,80.3,91.2,100.0,
                                150.0,176.0,200.0,250.0,350.0,500.0,750.0,
                                1000.0,1500.0,2000.0,3000.0,5000.0,7000.0,1E4])
-        self._mass *= 1E3
         self._dndx = data.reshape((12,24,250))
         self._dndx_interp = RegularGridInterpolator([self._mass,self._x],
                                                     self._dndx[ichan,:,:],
                                                     bounds_error=False,
                                                     fill_value=None)
-        extra_params = {'dndx_interp' : self._dndx_interp, 'chan' : 'bb',
+        extra_params = {'dndx_interp' : self._dndx_interp,
+                        'chan' : chan,
                         'jfactor' : jfactor }        
         super(DMFitFunction, self).__init__(params, 1.0, extra_params)
             
     @property
     def chan(self):
+        """Return the channel string."""
         return self._chan
 
+    @property
+    def chan_code(self):
+        """Return the channel code."""
+        return self._chan_code
+    
+    @staticmethod
+    def nparam():
+        return 2
+
+    @staticmethod
+    def channels():
+        """ Return all available DMFit channel strings """
+        return DMFitFunction.channel_rev_map.keys()
+    
     @staticmethod
     def _eval_dfde(x, params, scale=1.0, extra_params=None):
 
@@ -465,7 +566,7 @@ class DMFitFunction(SpectralFunction):
         jfactor = extra_params.get('jfactor')
         sigmav = params[0]
         mass = params[1]
-        xm = np.log10(x/mass)
+        xm = np.log10(x/mass) - 3.0
         phip = 1./(8.*np.pi)*np.power(mass,-2)*(sigmav*jfactor)
         #dndx = self._dndx_interp[ichan]((np.log10(mass),xm))
         dndx = dndx_interp((mass,xm))
