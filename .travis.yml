@@ -1,5 +1,7 @@
 language: python
-sudo: false
+sudo: required
+services:
+  - docker
 
 notifications:
   email: false
@@ -14,6 +16,7 @@ matrix:
                PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                ST_INSTALL='bash stinstall.sh force'
+               DOCKER_SETUP=''
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                CONDA2='conda install -c conda-forge healpy wcsaxes'
 
@@ -23,6 +26,7 @@ matrix:
           env: NAME=docs
                PYTHON_VERSION=3.5
                ST_INSTALL=''
+               DOCKER_SETUP=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml sphinx'
                CONDA2='conda install -c conda-forge healpy wcsaxes'
@@ -32,6 +36,7 @@ matrix:
           env: NAME=py3_st-no_dep-yes
                PYTHON_VERSION=3.5
                ST_INSTALL=''
+               DOCKER_SETUP=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                CONDA2='conda install -c conda-forge healpy wcsaxes'
@@ -41,10 +46,20 @@ matrix:
           env: NAME=NAME=py2_st-no_dep-yes
                PYTHON_VERSION=2.7
                ST_INSTALL=''
+               DOCKER_SETUP=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                CONDA2='conda install -c conda-forge healpy wcsaxes'
 
+        - os: linux
+          env: NAME=NAME=docker-test
+               PYTHON_VERSION=2.7
+               ST_INSTALL=''
+               DOCKER_SETUP='docker build -t mdwood/fermist .;docker info;docker images'
+               CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+               CONDA_DEPS='scipy matplotlib pytest pyyaml'
+               CONDA2='conda install -c conda-forge healpy wcsaxes'
+              
 #        # Python 3, no Fermi ST, only the required dependencies
 #        # TODO: This isn't working yet, need to handle imports for opt deps more carefully
 #        - os: linux
@@ -57,6 +72,7 @@ matrix:
 
 # Setup anaconda and install packages
 install:
+  - $DOCKER_SETUP
   - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -67,7 +83,6 @@ install:
   - source activate fermi-env
   - python -m pip install coverage pytest-cov coveralls
   - $CONDA2
-#  - pip install healpy
   - python setup.py install
   - $ST_INSTALL # Download and install the ST binaries
   - source travissetup.sh
