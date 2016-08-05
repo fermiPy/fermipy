@@ -615,25 +615,12 @@ def main():
         n_src = len(out_tab)
         cluster_vect = make_cluster_vector(rev_dict,n_src)
         cluster_name_vect = make_cluster_name_vector(cluster_vect, src_names)
-        cluster_col = Column(name='cluster_ids', dtype='S30',length=n_src,data=cluster_name_vect)
+        cluster_col = Column(name='cluster_ids', dtype='S20',length=n_src,data=cluster_name_vect)
         out_tab.add_column(cluster_col)
     
     # Write the output
     if args.output:
         out_tab.write(args.output, format='fits')
-        out_idx = args.output.name.replace(".fits", "_idx_dict.yaml")
-        out_rename = args.output.name.replace(".fits", "_name_dict.yaml")
-        if args.clobber:
-            fout_idx = open(out_idx, 'w!')
-            fout_rename = open(out_rename, 'w!')
-        else:
-            fout_idx = open(out_idx, 'w')
-            fout_rename = open(out_rename, 'w')
-
-        fout_idx.write(yaml.dump(sel_dict))
-        fout_idx.close()
-        fout_rename.write(yaml.dump(rename_dict))
-        fout_rename.close()
 
 if __name__ == "__main__":
     main()
