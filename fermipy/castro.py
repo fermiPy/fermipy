@@ -740,8 +740,8 @@ class CastroData_Base(object):
         global best-fit model.  This array can be summed to get a
         goodness-of-fit chi2 for the model.
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         x : `~numpy.ndarray`        
             An array of normalizations derived from a global fit to
             all energy bins.
@@ -892,7 +892,8 @@ class CastroData_Base(object):
             p-value of chi-squared for the best-fit spectrum.
         """
         if not isinstance(specFunc,SEDFunctor):
-            specFunc = self.create_functor(specFunc,initPars)
+            specFunc = self.create_functor(specFunc,initPars,
+                                           scale=specFunc.scale)
         
         if freePars is None:
             freePars = np.empty(len(initPars),dtype=bool)
