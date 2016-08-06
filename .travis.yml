@@ -56,7 +56,7 @@ matrix:
           env: NAME=NAME=docker-test
                PYTHON_VERSION=2.7
                ST_INSTALL=''
-               DOCKER_SETUP='docker build -t mdwood/fermist .'
+               DOCKER_SETUP='bash dockersetup.sh'
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                CONDA2='conda install -c conda-forge healpy wcsaxes'
