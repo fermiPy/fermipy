@@ -56,11 +56,12 @@ matrix:
           env: NAME=NAME=docker-test
                PYTHON_VERSION=2.7
                ST_INSTALL=''
-               #DOCKER_SETUP='docker build -t mdwood/fermist .;docker info;docker images'
                DOCKER_SETUP='docker build -t mdwood/fermist .'
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                CONDA2='conda install -c conda-forge healpy wcsaxes'
+               #DOCKER_SETUP='docker build -t mdwood/fermist .;docker info;docker images'
+
               
 #        # Python 3, no Fermi ST, only the required dependencies
 #        # TODO: This isn't working yet, need to handle imports for opt deps more carefully
