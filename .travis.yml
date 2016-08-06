@@ -56,7 +56,8 @@ matrix:
           env: NAME=NAME=docker-test
                PYTHON_VERSION=2.7
                ST_INSTALL=''
-               DOCKER_SETUP='docker build -t mdwood/fermist .;docker info;docker images'
+               #DOCKER_SETUP='docker build -t mdwood/fermist .;docker info;docker images'
+               DOCKER_SETUP='docker build -t mdwood/fermist .'
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                CONDA2='conda install -c conda-forge healpy wcsaxes'
@@ -73,6 +74,7 @@ matrix:
 
 # Setup anaconda and install packages
 install:
+  - cat Dockerfile
   - $DOCKER_SETUP
   - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
