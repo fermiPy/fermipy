@@ -82,7 +82,6 @@ install:
   - cat Dockerfile
   - $DOCKER_SETUP
   - ls
-
   - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -99,8 +98,6 @@ install:
   - source condasetup.sh
 
 #  - source activate test-environment
-#  - pip install healpy
-#  - python setup.py install
 #  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib astropy 
 #  - pip install healpy
 
