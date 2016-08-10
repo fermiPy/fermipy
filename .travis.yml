@@ -72,11 +72,12 @@ matrix:
 #               CONDA_DEPS=''
 #               CONDA2=''
 
+before_install:
+  - cat Dockerfile
+  - $DOCKER_SETUP  
 
 # Setup anaconda and install packages
 install:
-  - cat Dockerfile
-  - $DOCKER_SETUP
   - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
