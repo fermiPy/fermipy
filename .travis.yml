@@ -87,17 +87,18 @@ matrix:
 
 # Setup anaconda and install packages
 install:
-  - cat Dockerfile
-  - export PATH="$HOME/miniconda/bin:$PATH"
+  # Download and install the ST binaries
   - if [[ $DOCKER_INSTALL == '' ]]; then
-        $ST_INSTALL;
-        bash condainstall.sh;
+        $ST_INSTALL; 
+        source condainstall.sh;
     else
+        cat Dockerfile;
         $DOCKER_INSTALL;
-        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/condainstall.sh";
+        docker exec test0 /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
         wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh;
         bash miniconda.sh -b -p $HOME/miniconda;
         python -m pip install coverage pytest-cov coveralls;
+        export PATH="$HOME/miniconda/bin:$PATH";
     fi
   
 #  - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
@@ -111,9 +112,7 @@ install:
 #  - python -m pip install coverage pytest-cov coveralls
 #  - $CONDA2
 #  - python setup.py install
-#  - $ST_INSTALL # Download and install the ST binaries
-#  - source travissetup.sh
-#  - source condasetup.sh
+#  - $ST_INSTALL 
 
 # Run test
 script:
@@ -124,12 +123,10 @@ script:
     fi
 
 after_success:
-  - if [[ $NAME == 'main' ]]; then
-        source condasetup.sh;
-        coveralls --rcfile='fermipy/tests/coveragerc';
-    elif [[ $NAME == 'py2_slac-st' ]]; then
+  - if [[ $NAME == 'main' ]] || [[ $NAME == 'py2_slac-st' ]]; then
         coveralls --rcfile='fermipy/tests/coveragerc';
     fi
+
 #after_script:
 #    - if [[ $DOCKER_INSTALL != '' ]]; then
 #          echo stopping docker;
