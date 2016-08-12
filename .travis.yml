@@ -124,3 +124,6 @@ after_success:
     - if [[ $NAME == 'main' ]]; then
           coveralls --rcfile='fermipy/tests/coveragerc';
       fi
+    - if [[ $DOCKER_INSTALL != '' ]]; then
+          docker stop test0
+      fi
