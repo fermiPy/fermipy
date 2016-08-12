@@ -1404,6 +1404,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """Delete sources in the ROI model satisfying the given
         selection criteria.
 
+        Parameters
+        ----------
         cuts : dict
             Dictionary of [min,max] selections on source properties.
 
@@ -1435,7 +1437,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         Returns
         -------
-
         srcs : list
             A list of `~fermipy.roi_model.Model` objects.
 

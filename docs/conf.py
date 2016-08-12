@@ -31,15 +31,9 @@ class Mock(MagicMock):
 MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
                 'SummedLikelihood','FluxDensity','LikelihoodState',
-                'GtApp','astropy',
-                'astropy.coordinates','astropy.extern',
-                'astropy.io','astropy.wcs','astropy.io.fits',
-                'astropy.table','astropy.units','healpy','wcsaxes']
+                'GtApp']
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
-
-import matplotlib.colors
-matplotlib.colors.PowerNorm = mock.Mock()
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
