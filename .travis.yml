@@ -86,11 +86,11 @@ matrix:
 install:
   - cat Dockerfile
   - if [[ $DOCKER_INSTALL == '' ]]; then
-        $DOCKER_INSTALL;
-        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travisinstall.sh";
-    else
         $ST_INSTALL;
         bash travisinstall.sh;
+    else
+        $DOCKER_INSTALL;
+        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travisinstall.sh";
     fi
   
 #  - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
@@ -111,9 +111,9 @@ install:
 # Run test
 script:
   - if [[ $DOCKER_INSTALL == '' ]]; then
-        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh"
+        bash travistests.sh        
     else
-        bash travistests.sh
+        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh"
     fi
 
 #cache:
