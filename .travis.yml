@@ -10,6 +10,7 @@ env:
     global:
       - FERMI_DIR=$HOME/ScienceTools/x86_64-unknown-linux-gnu-libc2.19-10
       - SLAC_ST_BUILD=false
+      - PIP_DEPS='coverage pytest-cov coveralls'
 
 matrix:
     include:
@@ -87,10 +88,11 @@ install:
   - cat Dockerfile
   - if [[ $DOCKER_INSTALL == '' ]]; then
         $ST_INSTALL;
-        bash travisinstall.sh;
+        bash condainstall.sh;
+        python setup.py install;
     else
         $DOCKER_INSTALL;
-        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travisinstall.sh";
+        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/condainstall.sh;python setup.py install";
     fi
   
 #  - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
