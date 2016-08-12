@@ -111,9 +111,9 @@ install:
 # Run test
 script:
   - if [[ $DOCKER_INSTALL == '' ]]; then
-        bash travistests.sh        
+        bash travistests.sh;
     else
-        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh"
+        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh";
     fi
 
 #cache:
