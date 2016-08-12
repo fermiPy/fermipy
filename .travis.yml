@@ -121,7 +121,6 @@ script:
 after_success:
     - if [[ $NAME == 'main' ]]; then
           coveralls --rcfile='fermipy/tests/coveragerc';
-          echo finished coverage;
       fi
 
 after_script:

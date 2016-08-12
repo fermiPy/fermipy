@@ -9,7 +9,7 @@ if [[ -z $CONDA_DOWNLOAD ]]; then
 fi
 
 if [[ -z $CONDA_DEPS ]]; then
-    CONDA_DEPS='numpy scipy matplotlib astropy pytest pyyaml ipython'
+    CONDA_DEPS='scipy matplotlib pyyaml ipython'
 fi
 
 if [[ -z $CONDA2 ]]; then
@@ -36,7 +36,7 @@ fi
 
 conda update -q conda -y
 conda info -a
-conda create -q -n fermi-env -y python=$PYTHON_VERSION $CONDA_DEPS
+conda create -q -n fermi-env -y python=$PYTHON_VERSION pip numpy astropy pytest $CONDA_DEPS
 source activate fermi-env
 
 if [[ -n $CONDA2 ]]; then
