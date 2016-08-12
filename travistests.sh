@@ -8,7 +8,6 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
     sh -e /etc/init.d/xvfb start;
     export QT_API=pyqt;
 else
-    echo 'here';
     export DISPLAY=:99.0;
     /usr/bin/Xvfb :99 -screen 0 1280x1024x24 &
 fi

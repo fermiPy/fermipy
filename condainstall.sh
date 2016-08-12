@@ -21,7 +21,7 @@ if ! type "conda" &> /dev/null; then
 
     if [ -n "$1" ]; then
 	CONDA_PATH=$1
-    else
+    elif [[ -z $CONDA_PATH ]]; then
 	CONDA_PATH=$HOME/miniconda
     fi
     
@@ -46,5 +46,9 @@ fi
 if [[ -n $PIP_DEPS ]]; then
     python -m pip install $PIP_DEPS
 fi
-    
+
+if [[ -n $INSTALL_CMD ]]; then
+    $INSTALL_CMD
+fi
+
 #pip install fermipy

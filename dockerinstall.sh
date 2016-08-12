@@ -10,5 +10,6 @@ docker run -it -d -v $PWD:/home/fermipy --name=test0 \
        -e PYTHON_VERSION="$PYTHON_VERSION" \
        -e CONDA2="$CONDA2" \
        -e SLAC_ST_BUILD="$SLAC_ST_BUILD" \
+       -e INSTALL_CMD="$INSTALL_CMD" \
        mdwood/fermist /bin/bash
 
