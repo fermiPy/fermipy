@@ -85,7 +85,7 @@ matrix:
 # Setup anaconda and install packages
 install:
   - cat Dockerfile
-  - if [[ $DOCKER_INSTALL == '']]; then
+  - if [[ $DOCKER_INSTALL == '' ]]; then
         $DOCKER_INSTALL;
         docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travisinstall.sh";
     else
@@ -110,7 +110,7 @@ install:
 
 # Run test
 script:
-  - if [[ $DOCKER_INSTALL == '']]; then
+  - if [[ $DOCKER_INSTALL == '' ]]; then
         docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh"
     else
         bash travistests.sh
