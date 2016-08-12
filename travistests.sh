@@ -8,13 +8,18 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
     sh -e /etc/init.d/xvfb start;
     export QT_API=pyqt;
 else
+    echo 'here';
     export DISPLAY=:99.0;
     /usr/bin/Xvfb :99 -screen 0 1280x1024x24 &
 fi
 
-python -m pytest -vv -s --cov=fermipy --cov-config=fermipy/tests/coveragerc
+#python -m pytest -vv -s --cov=fermipy --cov-config=fermipy/tests/coveragerc
 
 if [[ $NAME == 'docs' ]]; then
     cd docs;
     sphinx-build -b html -d _build/doctrees . _build/html -W;
+fi
+
+if [[ $TRAVIS_OS_NAME != 'linux' ]]; then
+    killall Xvfb;
 fi

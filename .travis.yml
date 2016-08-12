@@ -125,6 +125,8 @@ after_success:
           coveralls --rcfile='fermipy/tests/coveragerc';
           echo finished coverage;
       fi
+
+after_script:
     - if [[ $DOCKER_INSTALL != '' ]]; then
           echo stopping docker;
           docker stop test0;
