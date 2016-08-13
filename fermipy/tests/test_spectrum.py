@@ -23,7 +23,7 @@ def test_plexpcutoff_spectrum():
 def test_dmfitfunction_spectrum():
 
     sigmav = 3E-26
-    mass = 100.*1E3
+    mass = 100. # Mass in GeV
     params = [sigmav,mass]
     
     fn0 = spectrum.DMFitFunction(params,chan='bb')

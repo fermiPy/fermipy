@@ -14,14 +14,17 @@ particle.
 from __future__ import absolute_import, division, print_function
 import numpy as np
 import scipy
+from scipy import stats
+from scipy.optimize import fmin
 
 from astropy.table import Table, Column
 import astropy.units as u
+from fermipy import spectrum
 from fermipy.wcs_utils import wcs_add_energy_axis
 from fermipy.skymap import read_map_from_fits, Map
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
-from fermipy.spectrum import SpectralFunction
+from fermipy.spectrum import SpectralFunction, SEDFunctor
 from fermipy.utils import onesided_cl_to_dlnl
 from fermipy.utils import twosided_cl_to_dlnl
 
@@ -663,7 +666,7 @@ class CastroData_Base(object):
 
         return nll_val
 
-
+    
     def norm_derivative(self, spec, norm):
         """
         """
@@ -731,6 +734,35 @@ class CastroData_Base(object):
 
         return ts_vals
 
+    def chi2_vals(self,x):
+        """Compute the difference in the log-likelihood between the
+        MLE in each energy bin and the normalization predicted by a
+        global best-fit model.  This array can be summed to get a
+        goodness-of-fit chi2 for the model.
+
+        Parameters
+        ----------
+        x : `~numpy.ndarray`        
+            An array of normalizations derived from a global fit to
+            all energy bins.
+
+        Returns
+        -------
+        chi2_vals : `~numpy.ndarray`
+            An array of chi2 values for each energy bin.        
+        """
+        
+        chi2_vals = np.ndarray((self._nx))
+        for i in range(self._nx):
+
+            mle = self._loglikes[i].mle()
+            nll0 = self._loglikes[i].interp(mle)
+            nll1 = self._loglikes[i].interp(x[i])
+            chi2_vals[i] = 2.0*np.abs(nll0-nll1)
+
+        return chi2_vals
+            
+    
     def getLimits(self, alpha, upper=True):
         """ Evaluate the limits corresponding to a C.L. of (1-alpha)%.
 
@@ -824,40 +856,85 @@ class CastroData_Base(object):
         result = fmin(fToMin, 0., disp=False, xtol=1e-6)
         return result
 
-    def fit_spectrum(self, specFunc, initPars):
+    def fit_spectrum(self, specFunc, initPars, freePars=None):
         """ Fit for the free parameters of a spectral function
 
         Parameters
         ----------
         specFunc : `~fermipy.spectrum.SpectralFunction`
-           The Spectral Function
-        initPars : `~numpy.ndarray`
-           The initial values of the parameters
+            The Spectral Function
 
+        initPars : `~numpy.ndarray`
+            The initial values of the parameters
+
+        freePars : `~numpy.ndarray`        
+            Boolean array indicating which parameters should be free in
+            the fit.
+           
         Returns
         -------
-        result   : tuple
-           The output of scipy.optimize.fmin
-        spec_out : `~numpy.ndarray`
-           The best-fit spectral values
-        TS_spec  : float
-           The TS of the best-fit spectrum
+        params : `~numpy.ndarray`
+            Best-fit parameters.
+           
+        spec_vals : `~numpy.ndarray`
+            The values of the best-fit spectral model in each energy bin.
+           
+        ts_spec : float
+            The TS of the best-fit spectrum
+
+        chi2_vals : `~numpy.ndarray`
+            Array of chi-squared values for each energy bin.
+
+        chi2_spec : float
+            Global chi-squared value for the sum of all energy bins.
+
+        pval_spec : float
+            p-value of chi-squared for the best-fit spectrum.
         """
-        from scipy.optimize import fmin
+        if not isinstance(specFunc,SEDFunctor):
+            specFunc = self.create_functor(specFunc,initPars,
+                                           scale=specFunc.scale)
+        
+        if freePars is None:
+            freePars = np.empty(len(initPars),dtype=bool)
+            freePars.fill(True)
 
+        initPars = np.array(initPars)
+        freePars = np.array(freePars)
+            
         def fToMin(x):
-            return self.__call__(specFunc(x))
 
-        result = fmin(fToMin, initPars, disp=False, xtol=1e-6)
-        spec_out = specFunc(result)
-        TS_spec = self.TS_spectrum(spec_out)
-        return result, spec_out, TS_spec
+            xp = np.array(specFunc.params)
+            xp[freePars] = x
+            return self.__call__(specFunc(xp))
+
+        result = fmin(fToMin, initPars[freePars], disp=False, xtol=1e-6)
+
+        out_pars = specFunc.params
+        out_pars[freePars] = np.array(result)
+
+        spec_vals = specFunc(out_pars)
+        spec_npred = np.zeros(len(spec_vals))
+        
+        if isinstance(specFunc,spectrum.SEDFluxFunctor): 
+            spec_npred = spec_vals*self.refSpec.ref_npred/self.refSpec.ref_flux
+        elif isinstance(specFunc,spectrum.SEDEFluxFunctor):
+            spec_npred = spec_vals*self.refSpec.ref_npred/self.refSpec.ref_eflux
+            
+        ts_spec = self.TS_spectrum(spec_vals)
+        chi2_vals = self.chi2_vals(spec_vals)
+        chi2_spec = np.sum(chi2_vals)
+        pval_spec = stats.chisqprob(chi2_spec,len(spec_vals))
+        return dict(params=out_pars, spec_vals=spec_vals,
+                    spec_npred=spec_npred,
+                    ts_spec=ts_spec, chi2_spec=chi2_spec,
+                    chi2_vals=chi2_vals, pval_spec=pval_spec )
 
     def TS_spectrum(self, spec_vals):
         """Calculate and the TS for a given set of spectral values.
         """
         return 2. * (self._nll_null - self.__call__(spec_vals))
-
+    
     def build_scandata_table(self):
         """
         """
@@ -1195,9 +1272,7 @@ class CastroData(CastroData_Base):
         sfn = self.create_functor(specType, scale)[0]
         return self.__call__(sfn(params))
 
-    def test_spectra(self, spec_types=['PowerLaw', 
-                                       'LogParabola', 
-                                       'PLExpCutoff']):
+    def test_spectra(self, spec_types=None):
         """Test different spectral types against the SED represented by this
         CastroData.
 
@@ -1219,59 +1294,50 @@ class CastroData(CastroData_Base):
            * "TS"          : float, the TS for the best-fit spectrum
 
         """
+        if spec_types is None:
+            spec_types = ["PowerLaw", "LogParabola", "PLExpCutoff"]
+        
         retDict = {}
         for specType in spec_types:
-            spec_func, init_pars, scaleEnergy = self.create_functor(specType)
-            fit_result, fit_spec, fit_ts = self.fit_spectrum(
-                spec_func, init_pars)
-
+            spec_func = self.create_functor(specType)
+            fit_out = self.fit_spectrum(spec_func, spec_func.params)
+            
             specDict = {"Function": spec_func,
-                        "Result": fit_result,
-                        "Spectrum": fit_spec,
-                        "ScaleEnergy": scaleEnergy,
-                        "TS": fit_ts}
+                        "Result": fit_out['params'],
+                        "Spectrum": fit_out['spec_vals'],
+                        "ScaleEnergy": spec_func.scale,
+                        "TS": fit_out['ts_spec']}
 
             retDict[specType] = specDict
 
         return retDict
 
-    def create_functor(self, specType, scale=1E3):
+    def create_functor(self, specType, initPars=None, scale=1E3):
         """Create a functor object that computes normalizations in a
         sequence of energy bins for a given spectral model.
 
         Parameters
         ----------
-        specType : str
-            The type of spectrum to use.
-            'PowerLaw','LogParabola','PLExpCutoff' are implemented.
+        specType : str        
+            The type of spectrum to use.  This can be a string
+            corresponding to the spectral model class name or a
+            `~fermipy.spectrum.SpectralFunction` object.
 
+        initPars : `~numpy.ndarray`        
+            Arrays of parameter values with which the spectral
+            function will be initialized.
+        
         scale : float
             The 'pivot energy' or energy scale to use for the spectrum
 
         Returns
         -------
-        fn : `~fermipy.spectrum.SpectralFunction`
-            The functor
-
-        initPars : `~numpy.ndarray`
-            Default set of initial parameter for this spectral type
-
-        scale : float
-            Energy scale (same as input)
-
+        fn : `~fermipy.spectrum.SEDFunctor`
+            A functor object.
         """
 
         emin = self._refSpec.emin
         emax = self._refSpec.emax
-
-        if specType == 'PowerLaw':
-            initPars = np.array([5e-13, -2.0])
-        elif specType == 'LogParabola':
-            initPars = np.array([5e-13, -2.0, 0.0])
-        elif specType == 'PLExpCutoff':
-            initPars = np.array([5e-13, -1.0, 1E4])
-        else:
-            raise Exception('Unknown spectral type: %s' % specType)
 
         fn = SpectralFunction.create_functor(specType,
                                              self.norm_type,
@@ -1279,7 +1345,16 @@ class CastroData(CastroData_Base):
                                              emax,
                                              scale=scale)
 
-        return (fn, initPars, scale)
+        if initPars is None:
+            if specType == 'PowerLaw':
+                initPars = np.array([5e-13, -2.0])
+            elif specType == 'LogParabola':
+                initPars = np.array([5e-13, -2.0, 0.0])
+            elif specType == 'PLExpCutoff':
+                initPars = np.array([5e-13, -1.0, 1E4])
+        
+        fn.params = initPars
+        return fn
 
 
 class TSCube(object):
