@@ -3981,6 +3981,19 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                                 'ltcube%s.fits' %
                                                 self.config['file_suffix'])
 
+        if self.config['gtlike']['wmap'] is not None:
+            self._files['wmap'] = os.path.expandvars(
+                self.config['gtlike']['wmap'])
+            if not os.path.isfile(self._files['wmap']):
+                self.files['wmap'] = os.path.join(
+                    workdir, self.files['wmap'])
+            if not os.path.isfile(self.files['wmap']):
+                raise Exception('Invalid likelihood weights map: %s' %
+                                self.files['wmap'])
+        else:
+            self._files['wmap'] = None
+         
+        
         if self.config['binning']['enumbins'] is not None:
             self._enumbins = int(self.config['binning']['enumbins'])
         else:
@@ -4644,6 +4657,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   bexpmap=self.files['bexpmap'],
                   outfile=self.files['srcmap'],
                   irfs=self.config['gtlike']['irfs'],
+                  wmap=self.files['wmap'],
                   evtype=evtype,
                   rfactor=self.config['gtlike']['rfactor'],
                   #                   resample=self.config['resample'],
@@ -4724,6 +4738,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Creating BinnedAnalysis')
         kw = dict(srcModel=srcmdl_file,
                   optimizer='MINUIT',
+                  wmap=self._files['wmap'],
                   convolve=self.config['gtlike']['convolve'],
                   resample=self.config['gtlike']['resample'],
                   minbinsz=self.config['gtlike']['minbinsz'],

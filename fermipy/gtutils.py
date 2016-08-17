@@ -551,7 +551,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
 
     def __init__(self, binnedData, srcModel=None, optimizer='Drmngb',
                  use_bl2=False, verbosity=0, psfcorr=True,convolve=True,
-                 resample=True,resamp_fact=2,minbinsz=0.1):
+                 resample=True,resamp_fact=2,minbinsz=0.1,wmap=None):
         AnalysisBase.__init__(self)
         if srcModel is None:
             srcModel, optimizer = self._srcDialog()
@@ -567,13 +567,23 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                                                     resamp_fact,
                                                     minbinsz)
         else:
-            self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
-                                                   binnedData.observation,
-                                                   binnedData.srcMaps,
-                                                   True, psfcorr, convolve,
-                                                   resample,
-                                                   resamp_fact,
-                                                   minbinsz)
+            if wmap is None:
+                self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
+                                                       binnedData.observation,
+                                                       binnedData.srcMaps,
+                                                       True, psfcorr, convolve,
+                                                       resample,
+                                                       resamp_fact,
+                                                       minbinsz)
+            else:
+                self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
+                                                       wmap,
+                                                       binnedData.observation,
+                                                       binnedData.srcMaps,
+                                                       True, psfcorr, convolve,
+                                                       resample,
+                                                       resamp_fact,
+                                                       minbinsz)
         self.verbosity = verbosity
         self.logLike.initOutputStreams()
         self.logLike.readXml(srcModel, _funcFactory, False, True, False)
