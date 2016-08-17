@@ -567,7 +567,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                                                     resamp_fact,
                                                     minbinsz)
         else:
-            if wmap is None:
+            if wmap is None or wmap == "none":
                 self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
                                                        binnedData.observation,
                                                        binnedData.srcMaps,
@@ -575,9 +575,13 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                                                        resample,
                                                        resamp_fact,
                                                        minbinsz)
+                self._wmap = None
             else:
+                self._wmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap,"SKYMAP")
+                self._wmap.setInterpolation(False)
+                self._wmap.setExtrapolation(True)
                 self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
-                                                       wmap,
+                                                       self._wmap,
                                                        binnedData.observation,
                                                        binnedData.srcMaps,
                                                        True, psfcorr, convolve,
