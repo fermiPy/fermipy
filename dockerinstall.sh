@@ -3,7 +3,7 @@
 docker build -t mdwood/fermist .
 docker info
 docker images
-docker run -it -d -v $PWD:/home/fermipy --tmpfs /tmp --name=fermipy-tests \
+docker run -it -d -v $PWD:/home/fermipy --tmpfs /tmp --name=fermipy-testing \
        -e GLAST_EXT=/home/externals \
        -e INST_DIR=/home \
        -e CONDA_DOWNLOAD="$CONDA_DOWNLOAD" \

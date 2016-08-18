@@ -94,7 +94,7 @@ install:
     else
         cat Dockerfile;
         $DOCKER_INSTALL;
-        docker exec test0 /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
+        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
         wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh;
         bash miniconda.sh -b -p $HOME/miniconda;
         python -m pip install coverage pytest-cov coveralls;
@@ -119,7 +119,7 @@ script:
   - if [[ $DOCKER_INSTALL == '' ]]; then
         bash travistests.sh;
     else
-        docker exec test0 /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh";
+        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh";
     fi
 
 after_success:
