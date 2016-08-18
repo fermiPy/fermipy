@@ -173,13 +173,30 @@ class Map(Map_Base):
         if colwise is True (False) this uses columnwise (rowwise) indexing
         """
         if colwise:
-            return np.where((xypix[0] < self._wcs._naxis1) *
-                            (xypix[1] < self._wcs._naxis2),
-                            xypix[0] * self._wcs._naxis2 + xypix[1], -1)
+            if len(xypix)==2:
+                return np.where((xypix[0] < self._npix[0]) *
+                                (xypix[1] < self._npix[1]),
+                                xypix[0] * self._npix[1] + xypix[1], -1).astype(int)
+            elif len(xypix)==3:
+                return np.where((xypix[0] < self._npix[0]) *
+                                (xypix[1] < self._npix[1]) * 
+                                (xypix[2] < self._npix[2]),
+                                xypix[0] * self._npix[2] * self._npix[1] + 
+                                xypix[1] * self._npix[2] + 
+                                xypix[2], -1).astype(int)
+                
         else:
-            return np.where((xypix[0] < self._wcs._naxis2) *
-                            (xypix[1] < self._wcs._naxis1),
-                            xypix[1] * self._wcs._naxis1 + xypix[0], -1)
+            if len(xypix)==2:
+                return np.where((xypix[0] < self._npix[1]) *
+                                (xypix[1] < self._npix[0]),
+                                xypix[1] * self._npix[0] + xypix[0], -1).astype(int)
+            elif len(xypix)==3:
+                return np.where((xypix[0] < self._npix[2]) *
+                                (xypix[1] < self._npix[1]) * 
+                                (xypix[2] < self._npix[0]), 
+                                xypix[2] * self._npix[0] * self._npix[1] + 
+                                xypix[1] * self._npix[0] + 
+                                xypix[0], -1).astype(int)
 
     def ipix_to_xypix(self, ipix, colwise=False):
         """ Return the pixel xy coordinates from the pixel index
@@ -202,13 +219,13 @@ class Map(Map_Base):
 
     def get_pixel_skydirs(self):
 
-        xpix = np.linspace(0, self.counts.shape[0] - 1., self.counts.shape[0])
-        ypix = np.linspace(0, self.counts.shape[1] - 1., self.counts.shape[1])
+        xpix = np.linspace(0, self.counts.shape[-2] - 1., self.counts.shape[-2])
+        ypix = np.linspace(0, self.counts.shape[-1] - 1., self.counts.shape[-1])
         xypix = np.meshgrid(xpix, ypix, indexing='ij')
         return SkyCoord.from_pixel(np.ravel(xypix[0]),
                                    np.ravel(xypix[1]), self.wcs)
 
-    def get_pixel_indices(self, lons, lats):
+    def get_pixel_indices(self, lons, lats, ibin=None):
         """Return the indices in the flat array corresponding to a set of coordinates
 
         Parameters
@@ -218,6 +235,9 @@ class Map(Map_Base):
 
         lats  : array-like
            'Latitidues' (DEC or GLAT)
+
+        ibin : int or array-like
+           Extract data only for a given bin.  None -> extract data for all bins
 
         Returns
         ----------
@@ -228,12 +248,25 @@ class Map(Map_Base):
         if len(lats) != len(lons):
             raise RuntimeError('Map.get_pixel_indices, input lengths '
                                'do not match %i %i' % (len(lons), len(lats)))
-        pix_x, pix_y = self._wcs.wcs_world2pix(lons, lats, 1)
-        pixcrd = [np.floor(pix_x).astype(int), np.floor(pix_y).astype(int)]
-        idxs = self.xy_pix_to_ipix(pixcrd, colwise=False)
+        if len(self._npix) == 2:
+            pix_x, pix_y = self._wcs.wcs_world2pix(lons, lats, 1)
+            pixcrd = [np.floor(pix_x).astype(int), np.floor(pix_y).astype(int)]
+            idxs = self.xy_pix_to_ipix(pixcrd, colwise=True)
+        elif len(self._npix) == 3:
+            all_lons = np.expand_dims(lons,-1)
+            all_lats = np.expand_dims(lats,-1)
+            if ibin is None:
+                all_bins = (np.expand_dims(np.arange(self._npix[0]),-1) * np.ones(lons.shape)).T
+            else:
+                all_bins = ibin
+            l = self._wcs.wcs_world2pix(all_lons,all_lats,all_bins,1)
+            pix_x = l[0] 
+            pix_y = l[1]
+            pixcrd = [all_bins,np.floor(l[0]).astype(int),np.floor(l[1]).astype(int)]
+            idxs = self.xy_pix_to_ipix(pixcrd, colwise=True)            
         return idxs
 
-    def get_map_values(self, lons, lats):
+    def get_map_values(self, lons, lats, ibin=None):
         """Return the indices in the flat array corresponding to a set of coordinates
 
         Parameters
@@ -244,14 +277,20 @@ class Map(Map_Base):
         lats  : array-like
            'Latitidues' (DEC or GLAT)
 
+        ibin : int or array-like
+           Extract data only for a given bin.  None -> extract data for all bins
+
         Returns
         ----------
         vals : numpy.ndarray((n))
            Values of pixels in the flattened map, np.nan used to flag
            coords outside of map
         """
-        pix_idxs = self.get_pixel_indices(lons, lats)
-        vals = np.where(pix_idxs > 0, self.counts.flat[pix_idxs], np.nan)
+        pix_idxs = self.get_pixel_indices(lons, lats, ibin)
+        out_shape = pix_idxs.shape
+        if len(out_shape) != 1:
+            pix_idxs = pix_idxs.reshape((pix_idxs.size))
+        vals = np.squeeze(np.where(pix_idxs > 0, self.counts.flat[pix_idxs], np.nan)).reshape(out_shape)
         return vals
 
 

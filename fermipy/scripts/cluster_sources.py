@@ -81,7 +81,9 @@ def find_matches_by_distance(cos_vects, cut_dist):
         cos_t_vect[cos_t_vect > 1.0] = 1.0        
         mask = cos_t_vect > cos_t_cut
         acos_t_vect = np.ndarray(nsrc)
-        acos_t_vect[mask] = np.degrees(np.arccos(cos_t_vect[mask]))
+        # The 1e-6 is here b/c we use 0.0 for sources that failed the cut elsewhere.
+        # We should maybe do this better, but it works for now.
+        acos_t_vect[mask] = np.degrees(np.arccos(cos_t_vect[mask])) + 1e-6
         for j in np.where(mask[:i])[0]:
             match_dict[(j, i)] = acos_t_vect[j]
         
@@ -220,13 +222,17 @@ def make_clusters(span_tree, cut_value):
 
         working = False
         rev_dict = make_rev_dict_unique(match_dict)
-
-        for k, v in rev_dict.items():
+        k_sort = rev_dict.keys()
+        k_sort.sort()
+        for k in k_sort:
+            v = rev_dict[k]
             # Multiple mappings
             if len(v) > 1:
                 working = True
-                cluster_idx = v.keys()[0]
-                for vv in v.keys()[1:]:
+                v_sort = v.keys()
+                v_sort.sort()
+                cluster_idx = v_sort[0]
+                for vv in v_sort[1:]:
                     try:
                         to_merge = match_dict.pop(vv)
                     except:
@@ -306,6 +312,42 @@ def find_centroid(cvects, idx_list, weights=None):
     norm = np.sqrt((weighted * weighted).sum())
     weighted /= norm
     return weighted
+
+
+def count_sources_in_cluster(n_src,cdict,rev_dict):
+    """ Make a vector  of sources in each cluster
+ 
+    Parameters
+    ----------
+    n_src : number of sources 
+
+    cdict : dict(int:[int,])    
+        A dictionary of clusters.  Each cluster is a source index and
+        the list of other source in the cluster.
+
+    rev_dict : dict(int:int)    
+       A single valued dictionary pointing from source index to
+       cluster key for each source in a cluster.  Note that the key
+       does not point to itself.
+  
+     
+    Returns
+    ----------
+    `np.ndarray((n_src),int)' with the number of in the cluster a given source 
+    belongs to.
+    """
+    ret_val = np.zeros((n_src),int)
+    for i in xrange(n_src):
+        try:
+            key = rev_dict[i]
+        except KeyError:
+            key = i
+        try:
+            n = len(cdict[key])
+        except:
+            n = 0
+        ret_val[i] = n
+    return ret_val
 
 
 def find_dist_to_centroid(cvects, idx_list, weights=None):
@@ -401,6 +443,78 @@ def make_reverse_dict(in_dict, warn=True):
     return out_dict
 
 
+def make_cluster_vector(rev_dict,n_src):
+    """ Converts the cluster membership dictionary to an array
+
+    Parameters
+    ----------
+    rev_dict : dict(int:int)    
+       A single valued dictionary pointing from source index to
+       cluster key for each source in a cluster. 
+
+    n_src    : int
+       Number of source in the array
+
+    Returns
+    -------
+    out_array : `numpy.ndarray' 
+       An array filled with the index of the seed of a cluster if a source belongs to a cluster, 
+       and with -1 if it does not.
+    """
+    out_array = -1*np.ones((n_src),int)
+    for k,v in rev_dict.items():
+        out_array[k] = v
+        out_array[v] = v  # We need this to make sure the see source points at itself
+    return out_array
+
+
+def make_cluster_name_vector(cluster_vect,src_names):
+    """ Converts the cluster membership dictionary to an array
+
+    Parameters
+    ----------
+    cluster_vect : `numpy.ndarray' 
+       An array filled with the index of the seed of a cluster if a source belongs to a cluster, 
+       and with -1 if it does not.
+
+    src_names : 
+       An array with the source names 
+
+    Returns
+    -------
+    out_array : `numpy.ndarray' 
+       An array filled with the name of the seed of a cluster if a source belongs to a cluster, 
+       and with an empty string if it does not.
+    """
+    out_array = np.where(cluster_vect >= 0, src_names[cluster_vect], "")
+    return out_array
+
+
+def make_dict_from_vector(in_array):
+    """ Converts the cluster membership array stored in a fits file back to a dictionary
+
+    Parameters
+    ----------
+    in_array : `np.ndarray' 
+       An array filled with the index of the seed of a cluster if a source belongs to a cluster, 
+       and with -1 if it does not.
+
+    Returns
+    -------
+    returns dict(int:[int,...])  
+       Dictionary of clusters keyed by the best source in each cluster
+    """
+    out_dict = {}
+    for i,k in enumerate(in_array):
+        if k < 0: 
+            continue
+        try:
+            out_dict[k].append(i)
+        except KeyError:
+            out_dict[k] = [i]
+    return out_dict
+
+
 def filter_and_copy_table(tab, to_remove):
     """ Filter and copy a FITS table.
 
@@ -486,10 +600,6 @@ def main():
     # read table and get relevant columns
     tab = Table.read(args.input)
 
-    src_id = np.arange(len(tab))
-    row_col = Column(name='src_id', dtype='i8', data=src_id)
-    tab.add_column(row_col)
-    
     glon_vect = tab['GLON'].data
     glat_vect = tab['GLAT'].data
     offset_vect = tab['offset'].data
@@ -542,41 +652,20 @@ def main():
     to_remove = rev_dict.keys()
     if args.remove_duplicates:
         out_tab = filter_and_copy_table(tab, to_remove)
-    else:
+    else:        
         out_tab = tab.copy()
-        dup_col = Column(name='duplicate', dtype='bool',length=len(out_tab))
-        out_tab.add_column(dup_col)
-        out_tab['duplicate'][to_remove] = True
-        
-    cluster_col = Column(name='cluster_ids', shape=(30,), dtype='i8',
-                         data=-1*np.ones((len(out_tab),30)))
-    out_tab.add_column(cluster_col)
-
-    for k, v in sel_dict.items():
-        m = out_tab['src_id'] == k
-        vin = -1*np.ones(30)
-        vin[:len(v)] = v        
-        out_tab['cluster_ids'][m] = vin
+        n_src = len(out_tab)
+        cluster_vect = make_cluster_vector(rev_dict,n_src)
+        cluster_name_vect = make_cluster_name_vector(cluster_vect, src_names)
+        cluster_count_vect = count_sources_in_cluster(n_src,sel_dict,rev_dict)        
+        cluster_id_col = Column(name='cluster_ids', dtype='S20',length=n_src,data=cluster_name_vect)
+        cluster_cnt_col = Column(name='cluster_size', dtype=int,length=n_src,data=cluster_count_vect)
+        out_tab.add_column(cluster_id_col)
+        out_tab.add_column(cluster_cnt_col)
     
     # Write the output
     if args.output:
         out_tab.write(args.output, format='fits')
-        out_idx = args.output.name.replace(".fits", "_idx_dict.yaml")
-        out_rename = args.output.name.replace(".fits", "_name_dict.yaml")
-        out_hist = args.output.name.replace(".fits", "_hist.yaml")
-        if args.clobber:
-            fout_idx = open(out_idx, 'w!')
-            fout_rename = open(out_rename, 'w!')
-            fout_hist = open(out_hist, 'w!')
-        else:
-            fout_idx = open(out_idx, 'w')
-            fout_rename = open(out_rename, 'w')
-            fout_hist = open(out_hist, 'w')
-
-        fout_idx.write(yaml.dump(sel_dict))
-        fout_idx.close()
-        fout_rename.write(yaml.dump(rename_dict))
-        fout_rename.close()
 
 if __name__ == "__main__":
     main()
