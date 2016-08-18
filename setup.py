@@ -32,14 +32,13 @@ setup(
     install_requires=[
         'numpy >= 1.6.1',
         'astropy >= 1.0',
+        'matplotlib >= 1.4.0',
+        'scipy >= 0.14',
+        'pyyaml',
+        'healpy',
+        'wcsaxes',
     ],
     extras_require=dict(
-        all=[
-            'matplotlib >= 1.4.0',
-            'scipy >= 0.14',
-            'pyyaml',
-            'healpy',
-            'wcsaxes',
-        ],
+        all=[],
     ),
 )

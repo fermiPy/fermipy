@@ -10,7 +10,7 @@ else
 fi
 
 # default ST version
-export FERMI_RELEASE_TAG=11-01-01
+export FERMI_RELEASE_TAG=11-03-00
 
 function slacsetup
 {
