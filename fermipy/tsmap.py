@@ -425,6 +425,30 @@ def _f_cash_root(x, counts, background, model):
     return np.sum(model * (counts / (x * model + background) - 1.0))
 
 
+def _fit_amplitude_newton(counts, background, model, tol=1E-4):
+
+    norm = 0.0
+    counts_ = np.concatenate([t.flat for t in counts])
+    background_ = np.concatenate([t.flat for t in background])
+    model_ = np.concatenate([t.flat for t in model])
+    
+    for iiter in range(1,MAX_NITER):
+    
+        fdiff = (1.0 - (counts_/(background_+norm*model_)))
+        w2 = counts_/(background_+norm*model_)**2
+        grad = np.sum(fdiff*model_)
+        hess = np.sum(w2*model_**2)
+        delta = grad/hess
+        edm = delta*grad
+
+        norm = max(0,norm-delta)
+        
+        if edm < tol or (iiter==1 and grad > 0):
+            break
+
+    return norm, iiter
+
+
 def _root_amplitude_brentq(counts, background, model, root_fn=_f_cash_root):
     """Fit amplitude by finding roots using Brent algorithm.
 
@@ -530,18 +554,6 @@ def _ts_value(position, counts, background, model, C_0_map,
     TS : float
         TS value at the given pixel position.
     """
-
-    if not isinstance(position, list):
-        position = [position]
-    if not isinstance(counts, list):
-        counts = [counts]
-    if not isinstance(background, list):
-        background = [background]
-    if not isinstance(model, list):
-        model = [model]
-    if not isinstance(C_0_map, list):
-        C_0_map = [C_0_map]
-
     extract_fn = _collect_wrapper(extract_large_array)
     truncate_fn = _collect_wrapper(extract_small_array)
 
@@ -550,14 +562,13 @@ def _ts_value(position, counts, background, model, C_0_map,
     background_ = extract_fn(background, model, position)
     C_0_ = extract_fn(C_0_map, model, position)
     model_ = truncate_fn(model, counts, position)
-
-#    C_0 = sum(C_0_).sum()
-#    C_0 = _sum_wrapper(sum)(C_0_).sum()
     C_0 = sum_arrays(C_0_)
     if method == 'root brentq':
+        root_fn=_sum_wrapper(_f_cash_root)
         amplitude, niter = _root_amplitude_brentq(counts_, background_, model_,
-                                                  root_fn=_sum_wrapper(
-                                                      _f_cash_root))
+                                                  root_fn=root_fn)
+    elif method == 'newton':
+        amplitude, niter = _fit_amplitude_newton(counts_, background_, model_)
     else:
         raise ValueError('Invalid fitting method.')
 
@@ -781,7 +792,7 @@ class TSMapGenerator(object):
 
         wrap = functools.partial(_ts_value, counts=counts,
                                  background=background, model=model,
-                                 C_0_map=c0_map, method='root brentq')
+                                 C_0_map=c0_map, method='newton')
 
         if map_skydir is not None:
             map_offset = wcs_utils.skydir_to_pix(map_skydir, self._skywcs)
