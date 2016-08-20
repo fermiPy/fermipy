@@ -998,6 +998,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for c in self.components:
             for f in c.files.values():
 
+                if f is None:
+                    continue
+                
                 wpath = os.path.join(self.workdir, os.path.basename(f))
                 opath = os.path.join(self.outdir, os.path.basename(f))
 
