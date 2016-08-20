@@ -950,6 +950,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         fitsfiles = []
         for c in self.components:
             for f in c.files.values():
+
+                if f is None:
+                    continue
+                
                 fitsfiles += [os.path.basename(f)]
 
         for f in files:
