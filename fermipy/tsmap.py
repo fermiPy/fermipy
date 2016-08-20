@@ -9,6 +9,7 @@ from multiprocessing import Pool
 import numpy as np
 import warnings
 import pyLikelihood as pyLike
+from scipy.optimize import brentq
 import astropy.io.fits as pyfits
 from astropy.table import Table
 import astropy.wcs as pywcs
@@ -374,7 +375,7 @@ def _collect_wrapper(fn):
     return wrapper
 
 
-def _amplitude_bounds(counts, background, model):
+def _amplitude_bounds(counts, bkg, model):
     """
     Compute bounds for the root of `_f_cash_root_cython`.
 
@@ -382,7 +383,7 @@ def _amplitude_bounds(counts, background, model):
     ----------
     counts : `~numpy.ndarray`
         Count map.
-    background : `~numpy.ndarray`
+    bkg : `~numpy.ndarray`
         Background map.
     model : `~numpy.ndarray`
         Source template (multiplied with exposure).
@@ -390,23 +391,23 @@ def _amplitude_bounds(counts, background, model):
 
     if isinstance(counts, list):
         counts = np.concatenate([t.flat for t in counts])
-        background = np.concatenate([t.flat for t in background])
+        bkg = np.concatenate([t.flat for t in bkg])
         model = np.concatenate([t.flat for t in model])
 
     s_model = np.sum(model)
     s_counts = np.sum(counts)
 
-    sn = background / model
+    sn = bkg / model
     imin = np.argmin(sn)
-    sn_min = sn.flat[imin]
-    c_min = counts.flat[imin]
+    sn_min = sn[imin]
+    c_min = counts[imin]
 
     b_min = c_min / s_model - sn_min
     b_max = s_counts / s_model - sn_min
     return max(b_min, 0), b_max
 
 
-def _f_cash_root(x, counts, background, model):
+def _f_cash_root(x, counts, bkg, model):
     """
     Function to find root of. Described in Appendix A, Stewart (2009).
 
@@ -416,16 +417,52 @@ def _f_cash_root(x, counts, background, model):
         Model amplitude.
     counts : `~numpy.ndarray`
         Count map slice, where model is defined.
-    background : `~numpy.ndarray`
+    bkg : `~numpy.ndarray`
         Background map slice, where model is defined.
     model : `~numpy.ndarray`
         Source template (multiplied with exposure).
     """
+    return np.sum(model * (counts / (x * model + bkg) - 1.0))
 
-    return np.sum(model * (counts / (x * model + background) - 1.0))
+
+def _fit_amplitude_newton(counts, bkg, model, msum=0, tol=1E-4):
+
+    norm = 0.0
+
+    if isinstance(counts, list):
+        counts = np.concatenate([t.flat for t in counts])
+        bkg = np.concatenate([t.flat for t in bkg])
+        model = np.concatenate([t.flat for t in model])
+
+    m = counts > 0
+    if np.any(~m):
+        msum += np.sum(model[~m])
+        counts = counts[m]
+        bkg = bkg[m]
+        model = model[m]
+
+    for iiter in range(1, MAX_NITER):
+
+        fdiff = (1.0 - (counts / (bkg + norm * model)))
+        grad = np.sum(fdiff * model) + msum
+
+        if (iiter == 1 and grad > 0):
+            break
+
+        w2 = counts / (bkg + norm * model)**2
+        hess = np.sum(w2 * model**2)
+        delta = grad / hess
+        edm = delta * grad
+
+        norm = max(0, norm - delta)
+
+        if edm < tol:
+            break
+
+    return norm, iiter
 
 
-def _root_amplitude_brentq(counts, background, model, root_fn=_f_cash_root):
+def _root_amplitude_brentq(counts, bkg, model, root_fn=_f_cash_root):
     """Fit amplitude by finding roots using Brent algorithm.
 
     See Appendix A Stewart (2009).
@@ -434,7 +471,7 @@ def _root_amplitude_brentq(counts, background, model, root_fn=_f_cash_root):
     ----------
     counts : `~numpy.ndarray`
         Slice of count map.
-    background : `~numpy.ndarray`
+    bkg : `~numpy.ndarray`
         Slice of background map.
     model : `~numpy.ndarray`
         Model template to fit.
@@ -446,15 +483,14 @@ def _root_amplitude_brentq(counts, background, model, root_fn=_f_cash_root):
     niter : int
         Number of function evaluations needed for the fit.
     """
-    from scipy.optimize import brentq
 
     # Compute amplitude bounds and assert counts > 0
-    amplitude_min, amplitude_max = _amplitude_bounds(counts, background, model)
+    amplitude_min, amplitude_max = _amplitude_bounds(counts, bkg, model)
 
-    if not sum_arrays(counts) > 0:
+    if not np.sum(counts) > 0:
         return amplitude_min, 0
 
-    args = (counts, background, model)
+    args = (counts, bkg, model)
 
     if root_fn(0.0, *args) < 0:
         return 0.0, 1
@@ -473,7 +509,10 @@ def _root_amplitude_brentq(counts, background, model, root_fn=_f_cash_root):
 def poisson_log_like(counts, model):
     """Compute the Poisson log-likelihood function for the given
     counts and model arrays."""
-    return model - counts * np.log(model)
+    loglike = np.array(model)
+    m = counts > 0
+    loglike[m] -= counts[m] * np.log(model[m])
+    return loglike
 
 
 def cash(counts, model):
@@ -481,11 +520,11 @@ def cash(counts, model):
     return 2 * poisson_log_like(counts, model)
 
 
-def f_cash_sum(x, counts, background, model):
-    return np.sum(f_cash(x, counts, background, model))
+def f_cash_sum(x, counts, bkg, model, bkg_sum=0, model_sum=0):
+    return np.sum(f_cash(x, counts, bkg, model)) + 2.0 * (bkg_sum + x * model_sum)
 
 
-def f_cash(x, counts, background, model):
+def f_cash(x, counts, bkg, model):
     """
     Wrapper for cash statistics, that defines the model function.
 
@@ -495,21 +534,16 @@ def f_cash(x, counts, background, model):
         Model amplitude.
     counts : `~numpy.ndarray`
         Count map slice, where model is defined.
-    background : `~numpy.ndarray`
+    bkg : `~numpy.ndarray`
         Background map slice, where model is defined.
     model : `~numpy.ndarray`
         Source template (multiplied with exposure).
     """
 
-    return 2.0 * poisson_log_like(counts, background + x * model)
+    return 2.0 * poisson_log_like(counts, bkg + x * model)
 
 
-def sum_arrays(x):
-    return sum([t.sum() for t in x])
-
-
-def _ts_value(position, counts, background, model, C_0_map,
-              method, logger=None):
+def _ts_value(position, counts, bkg, model, C_0_map):
     """
     Compute TS value at a given pixel position using the approach described
     in Stewart (2009).
@@ -520,7 +554,7 @@ def _ts_value(position, counts, background, model, C_0_map,
         Pixel position.
     counts : `~numpy.ndarray`
         Count map.
-    background : `~numpy.ndarray`
+    bkg : `~numpy.ndarray`
         Background map.
     model : `~numpy.ndarray`
         Source model map.
@@ -530,36 +564,25 @@ def _ts_value(position, counts, background, model, C_0_map,
     TS : float
         TS value at the given pixel position.
     """
-
-    if not isinstance(position, list):
-        position = [position]
-    if not isinstance(counts, list):
-        counts = [counts]
-    if not isinstance(background, list):
-        background = [background]
-    if not isinstance(model, list):
-        model = [model]
-    if not isinstance(C_0_map, list):
-        C_0_map = [C_0_map]
-
     extract_fn = _collect_wrapper(extract_large_array)
     truncate_fn = _collect_wrapper(extract_small_array)
 
     # Get data slices
-    counts_ = extract_fn(counts, model, position)
-    background_ = extract_fn(background, model, position)
-    C_0_ = extract_fn(C_0_map, model, position)
-    model_ = truncate_fn(model, counts, position)
+    counts_slice = extract_fn(counts, model, position)
+    bkg_slice = extract_fn(bkg, model, position)
+    C_0_slice = extract_fn(C_0_map, model, position)
+    model_slice = truncate_fn(model, counts, position)
 
-#    C_0 = sum(C_0_).sum()
-#    C_0 = _sum_wrapper(sum)(C_0_).sum()
-    C_0 = sum_arrays(C_0_)
-    if method == 'root brentq':
-        amplitude, niter = _root_amplitude_brentq(counts_, background_, model_,
-                                                  root_fn=_sum_wrapper(
-                                                      _f_cash_root))
-    else:
-        raise ValueError('Invalid fitting method.')
+    # Flattened Arrays
+    counts_ = np.concatenate([t.flat for t in counts_slice])
+    bkg_ = np.concatenate([t.flat for t in bkg_slice])
+    model_ = np.concatenate([t.flat for t in model_slice])
+    C_0_ = np.concatenate([t.flat for t in C_0_slice])
+    C_0 = np.sum(C_0_)
+
+    root_fn = _sum_wrapper(_f_cash_root)
+    amplitude, niter = _root_amplitude_brentq(counts_, bkg_, model_,
+                                              root_fn=_f_cash_root)
 
     if niter > MAX_NITER:
         if logger is not None:
@@ -567,7 +590,76 @@ def _ts_value(position, counts, background, model, C_0_map,
         return np.nan, amplitude, niter
 
     with np.errstate(invalid='ignore', divide='ignore'):
-        C_1 = _sum_wrapper(f_cash_sum)(amplitude, counts_, background_, model_)
+        C_1 = f_cash_sum(amplitude, counts_, bkg_, model_)
+
+    # Compute and return TS value
+    return (C_0 - C_1) * np.sign(amplitude), amplitude, niter
+
+
+def _ts_value_newton(position, counts, bkg, model, C_0_map):
+    """
+    Compute TS value at a given pixel position using the newton
+    method.
+
+    Parameters
+    ----------
+    position : tuple
+        Pixel position.
+
+    counts : `~numpy.ndarray`
+        Count map.
+
+    bkg : `~numpy.ndarray`
+        Background map.
+
+    model : `~numpy.ndarray`
+        Source model map.
+
+    Returns
+    -------
+    TS : float
+        TS value at the given pixel position.
+
+    amp : float
+        Best-fit amplitude of the test source.
+
+    niter : int
+        Number of fit iterations.
+    """
+    extract_fn = _collect_wrapper(extract_large_array)
+    truncate_fn = _collect_wrapper(extract_small_array)
+
+    # Get data slices
+    counts_slice = extract_fn(counts, model, position)
+    bkg_slice = extract_fn(bkg, model, position)
+    C_0_map_slice = extract_fn(C_0_map, model, position)
+    model_slice = truncate_fn(model, counts, position)
+
+    # Mask of pixels with > 0 counts
+    mask = [c > 0 for c in counts_slice]
+
+    # Sum of background and model in empty pixels
+    bkg_sum = np.sum(np.array([np.sum(t[~m])
+                               for t, m in zip(bkg_slice, mask)]))
+    model_sum = np.sum(np.array([np.sum(t[~m])
+                                 for t, m in zip(model_slice, mask)]))
+
+    # Flattened Arrays
+    counts_ = np.concatenate([t[m].flat for t, m in zip(counts_slice, mask)])
+    bkg_ = np.concatenate([t[m].flat for t, m in zip(bkg_slice, mask)])
+    model_ = np.concatenate([t[m].flat for t, m in zip(model_slice, mask)])
+    C_0 = np.sum(np.array([np.sum(t) for t in C_0_map_slice]))
+
+    amplitude, niter = _fit_amplitude_newton(counts_, bkg_, model_,
+                                             model_sum)
+
+    if niter > MAX_NITER:
+        if logger is not None:
+            logger.warning('Exceeded maximum number of function evaluations!')
+        return np.nan, amplitude, niter
+
+    with np.errstate(invalid='ignore', divide='ignore'):
+        C_1 = f_cash_sum(amplitude, counts_, bkg_, model_, bkg_sum, model_sum)
 
     # Compute and return TS value
     return (C_0 - C_1) * np.sign(amplitude), amplitude, niter
@@ -720,7 +812,7 @@ class TSMapGenerator(object):
         src_dict.setdefault('Prefactor', 1E-13)
 
         counts = []
-        background = []
+        bkg = []
         model = []
         c0_map = []
         eslices = []
@@ -736,7 +828,7 @@ class TSMapGenerator(object):
                 eslice, ...]
             cm = c.counts_map().counts.astype('float')[eslice, ...]
 
-            background += [bm]
+            bkg += [bm]
             counts += [cm]
             c0_map += [cash(cm, bm)]
             eslices += [eslice]
@@ -779,9 +871,9 @@ class TSMapGenerator(object):
         ts_values = np.zeros((self.npix, self.npix))
         amp_values = np.zeros((self.npix, self.npix))
 
-        wrap = functools.partial(_ts_value, counts=counts,
-                                 background=background, model=model,
-                                 C_0_map=c0_map, method='root brentq')
+        wrap = functools.partial(_ts_value_newton, counts=counts,
+                                 bkg=bkg, model=model,
+                                 C_0_map=c0_map)
 
         if map_skydir is not None:
             map_offset = wcs_utils.skydir_to_pix(map_skydir, self._skywcs)
