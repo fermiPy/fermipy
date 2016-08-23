@@ -1323,6 +1323,7 @@ class ROIModel(fermipy.config.Configurable):
             src = Model.create_from_dict(src_dict,self.skydir)
         else:
             src = src_dict
+            src.set_name(name)
 
         if isinstance(src,Source):
             src.set_roi_direction(self.skydir)
