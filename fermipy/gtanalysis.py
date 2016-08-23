@@ -114,7 +114,7 @@ class FitCache(object):
         self._fitcache = pyLike.FitScanCache(self._fs_wrapper,
                                              str('fitscan_testsource'),
                                              tol, max_iter, init_lambda,
-                                             use_reduced, False, True)
+                                             use_reduced, False, False)
 
         for p in free_norm_params:
             self._like[p['idx']] = p['value']
@@ -2162,8 +2162,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.logger.info('Starting')
         self.logger.info('Running analysis for %s', name)
 
-        ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
-
         saved_state = LikelihoodState(self.like)
 
         if fix_background:
@@ -2176,7 +2174,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # Save likelihood value for baseline fit
         loglike0 = fit_output['loglike']
-
+        self.logger.debug('Baseline Likelihood: %f',loglike0)        
         self.zero_source(name)
 
         if width is None:
@@ -2194,31 +2192,35 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         o['loglike_base'] = loglike0
         o['config'] = config
 
+        src_ptsrc = copy.deepcopy(src)
+        src_ptsrc.set_name('%s_ptsrc' % (name.lower().replace(' ', '_')))
+        src_ptsrc.set_spatial_model('PSFSource')
+
+        src_ext = copy.deepcopy(src)
+        src_ext.set_name('%s_ext' % (name.lower().replace(' ', '_')))
+
         # Fit a point-source
-
-        model_name = '%s_ptsrc' % (name)
-        src.set_name(model_name)
-        src.set_spatial_model('PSFSource')
-        # src.set_spatial_model('PointSource')
-
         self.logger.debug('Testing point-source model.')
-        self.add_source(model_name, src, free=True, init_source=False,
+        self.add_source(src_ptsrc.name, src_ptsrc, free=True, init_source=False,
                         loglevel=logging.DEBUG)
         fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
         o['loglike_ptsrc'] = fit_output['loglike']
-
-        self.delete_source(model_name, save_template=False,
+        self.logger.debug('Point Source Likelihood: %f',o['loglike_ptsrc'])
+        
+        self.delete_source(src_ptsrc.name, save_template=False,
                            loglevel=logging.DEBUG)
 
         # Perform scan over width parameter
         self.logger.debug('Width scan vector:\n %s', width)
 
         if not hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
-            o['loglike'] = self._scan_extension_pylike(name, src, spatial_model,
+            o['loglike'] = self._scan_extension_pylike(src_ext, spatial_model,
                                                        width, config['optimizer'])
         else:
-            o['loglike'] = self._scan_extension(name, src, spatial_model,
+            o['loglike'] = self._scan_extension(src_ext, spatial_model,
                                                 width, config['optimizer'])
+
+        self.logger.debug('Likelihood: %s',o['loglike'])
         o['loglike'] = np.concatenate(([o['loglike_ptsrc']], o['loglike']))
         o['dloglike'] = o['loglike'] - o['loglike_ptsrc']
 
@@ -2241,21 +2243,19 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
 
         # Fit with the best-fit extension model
-        model_name = ext_model_name
-        src.set_name(model_name)
-        src.set_spatial_model(spatial_model, max(o['ext'], 10**-2.5))
+        src_ext.set_spatial_model(spatial_model, max(o['ext'], 10**-2.5))
 
         self.logger.info('Refitting extended model')
-        self.add_source(model_name, src, free=True)
+        self.add_source(src_ext.name, src_ext, free=True)
         fit_output = self._fit(loglevel=logging.DEBUG, update=False,
                                **config['optimizer'])
-        self.update_source(model_name, reoptimize=True,
+        self.update_source(src_ext.name, reoptimize=True,
                            optimizer=config['optimizer'])
 
-        o['source_fit'] = self.get_src_model(model_name)
+        o['source_fit'] = self.get_src_model(src_ext.name)
         o['loglike_ext'] = fit_output['loglike']
 
-        src_ext = self.delete_source(model_name, save_template=False)
+        src_ext = self.delete_source(src_ext.name, save_template=False)
 
         # Restore ROI to previous state
         self.unzero_source(name)
@@ -2279,49 +2279,41 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         return o
 
-    def _scan_extension(self, name, src, spatial_model, width, optimizer):
+    def _scan_extension(self, src, spatial_model, width, optimizer):
 
-        ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
-
-        src.set_name(ext_model_name)
         src.set_spatial_model('PSFSource', width[-1])
-        self.add_source(ext_model_name, src, free=True, init_source=False)
+        self.add_source(src.name, src, free=True, init_source=False)
         self._fitcache = None
 
-        logLike = []
+        loglike = []
         for i, w in enumerate(width[1:]):
-            self._update_srcmap(ext_model_name, self.roi[name].skydir,
+            self._update_srcmap(src.name, self.roi[src.name].skydir,
                                 spatial_model, w)
-
+            self.logger.debug('Fitting width: %10.3f deg' % w)
             fit_output = self._fit(**optimizer)
-            logLike += [fit_output['loglike']]
+            loglike += [fit_output['loglike']]
 
-        self.delete_source(ext_model_name, save_template=False)
+        self.delete_source(src.name, save_template=False)
 
-        return np.array(logLike)
+        return np.array(loglike)
 
-    def _scan_extension_pylike(self, name, src, spatial_model, width, optimizer):
+    def _scan_extension_pylike(self, src, spatial_model, width, optimizer):
 
-        ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
-
-        logLike = []
+        loglike = []
         for i, w in enumerate(width[1:]):
 
-            # make a copy
-            src.set_name(ext_model_name)
             src.set_spatial_model(spatial_model, w)
-
-            self.logger.debug('Adding test source with width: %10.3f deg' % w)
-            self.add_source(ext_model_name, src, free=True, init_source=False,
+            self.add_source(src.name, src, free=True, init_source=False,
                             loglevel=logging.DEBUG)
 
+            self.logger.debug('Fitting width: %10.3f deg' % w)
             fit_output = self._fit(**optimizer)
-            logLike += [fit_output['loglike']]
+            loglike += [fit_output['loglike']]
 
-            self.delete_source(ext_model_name, save_template=False,
+            self.delete_source(src.name, save_template=False,
                                loglevel=logging.DEBUG)
 
-        return np.array(logLike)
+        return np.array(loglike)
 
     def profile_norm(self, name, logemin=None, logemax=None, reoptimize=False,
                      xvals=None, npts=None, fix_shape=True, savestate=True,
