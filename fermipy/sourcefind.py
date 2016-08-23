@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 import copy
+import pprint
 import logging
 import numpy as np
 from astropy.coordinates import SkyCoord
@@ -216,8 +217,11 @@ class SourceFinder(object):
 
         # Re-fit spectral parameters of each source individually
         for name in new_src_names:
+            self.logger.info('Performing spectral fit for %s.',name)
+            self.logger.debug(pprint.pformat(self.roi[name].params))
             self.free_source(name, True)
             self.fit()
+            self.logger.info(pprint.pformat(self.roi[name].params))
             self.free_source(name, False)
 
         srcs = []
@@ -324,12 +328,15 @@ class SourceFinder(object):
 
         # Save likelihood value for baseline fit
         loglike0 = fit_output['loglike']
+        self.logger.debug('Baseline Model Likelihood: %f',loglike0)
 
         self.zero_source(name)
 
         o = {'config': config,
              'fit_success': True,
-             'loglike_base': loglike0}
+             'loglike_base': loglike0,
+             'loglike_loc' : np.nan,
+             'dloglike_loc' : np.nan }
 
         cdelt0 = np.abs(skywcs.wcs.cdelt[0])
         cdelt1 = np.abs(skywcs.wcs.cdelt[1])
@@ -367,7 +374,7 @@ class SourceFinder(object):
 
         lnlscan['dloglike'] = lnlscan['loglike'] - np.max(lnlscan['loglike'])
         scan_tsmap = Map(2.0 * lnlscan['dloglike'].T, scan_map.wcs)
-
+        
         self.unzero_source(name)
         saved_state.restore()
         self._sync_params(name)
@@ -376,10 +383,13 @@ class SourceFinder(object):
         scan_fit, new_skydir = fit_error_ellipse(scan_tsmap, dpix=3)
         o.update(scan_fit)
 
-        #        lnlscan['dloglike_fit'] = \
-        #            utils.parabola(np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
-        #                           np.linspace(0,nstep-1.0,nstep)[np.newaxis,:],
-        #                           *scan_fit['popt']).reshape((nstep,nstep))
+        o['loglike_loc'] = np.max(lnlscan['loglike'])+0.5*scan_fit['offset']
+        o['dloglike_loc'] = o['loglike_loc'] - o['loglike_base']
+        
+        # lnlscan['dloglike_fit'] = \
+        #   utils.parabola(np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
+        #                  np.linspace(0,nstep-1.0,nstep)[np.newaxis,:],
+        #                  *scan_fit['popt']).reshape((nstep,nstep))
 
         o['lnlscan'] = lnlscan
 
@@ -435,9 +445,13 @@ class SourceFinder(object):
             src.set_name(newname, names=src.names)
 
             self.add_source(newname, src, free=True)
-            self.fit(loglevel=logging.DEBUG)
+            fit_output = self.fit(loglevel=logging.DEBUG)
+            o['loglike_loc'] = fit_output['loglike']
+            o['dloglike_loc'] = o['loglike_loc'] - o['loglike_base']
             src = self.roi.get_source_by_name(newname)
-            self.roi[name]['localize'] = copy.deepcopy(o)
+            self.roi[newname]['localize'] = copy.deepcopy(o)
+            self.logger.info('LogLike: %12.3f DeltaLogLike: %12.3f',
+                             o['loglike_loc'],o['dloglike_loc'])
 
         if o['fit_success']:
             src = self.roi.get_source_by_name(newname)
