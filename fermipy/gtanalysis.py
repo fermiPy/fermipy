@@ -2206,7 +2206,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
         o['loglike_ptsrc'] = fit_output['loglike']
         self.logger.debug('Point Source Likelihood: %f',o['loglike_ptsrc'])
-        
         self.delete_source(src_ptsrc.name, save_template=False,
                            loglevel=logging.DEBUG)
 
@@ -2289,8 +2288,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for i, w in enumerate(width[1:]):
             self._update_srcmap(src.name, self.roi[src.name].skydir,
                                 spatial_model, w)
-            self.logger.debug('Fitting width: %10.3f deg' % w)
             fit_output = self._fit(**optimizer)
+            self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
+                              w,fit_output['loglike'])
             loglike += [fit_output['loglike']]
 
         self.delete_source(src.name, save_template=False)
@@ -2306,8 +2306,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self.add_source(src.name, src, free=True, init_source=False,
                             loglevel=logging.DEBUG)
 
-            self.logger.debug('Fitting width: %10.3f deg' % w)
             fit_output = self._fit(**optimizer)
+            self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
+                              w,fit_output['loglike'])
             loglike += [fit_output['loglike']]
 
             self.delete_source(src.name, save_template=False,
@@ -4930,14 +4931,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             xpix, ypix = wcs_utils.skydir_to_pix(src.skydir, self._skywcs)
             xpix -= (self.npix - 1.0) / 2.
             ypix -= (self.npix - 1.0) / 2.
-
+            rebin = min(int(np.ceil(self.binsz/0.01)),8)
             k = srcmap_utils.make_srcmap(src.skydir, self._psf,
                                          src['SpatialModel'],
                                          src['SpatialWidth'],
                                          npix=self.npix,
                                          xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
-                                         rebin=8)
+                                         rebin=rebin)
 
             srcmaps[src.name] = k
 
@@ -4952,16 +4953,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
         xpix -= (self.npix - 1.0) / 2.
         ypix -= (self.npix - 1.0) / 2.
-
+        rebin = min(int(np.ceil(self.binsz/0.01)),8)        
         k = srcmap_utils.make_srcmap(self.roi.skydir, self._psf, spatial_model,
                                      spatial_width,
                                      npix=self.npix, xpix=xpix, ypix=ypix,
                                      cdelt=self.config['binning']['binsz'],
-                                     rebin=8)
+                                     rebin=rebin)
 
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
-        #src_map = self.like.logLike.sourceMap(str(name))
-        # src_map.setImage(np.ravel(k))
 
         normPar = self.like.normPar(name)
         if not normPar.isFree():
