@@ -1,1 +1,11 @@
-recursive-include fermipy *.yaml *.fits *.xml *.fit *txt
+include README.rst
+
+include setup.cfg
+
+recursive-include fermipy *.yaml *.fits *.xml *.fit *.txt *.pyx *.pxd *.c *.h
+recursive-include licenses *
+recursive-include docs *
+
+prune build
+prune docs/_build
+
