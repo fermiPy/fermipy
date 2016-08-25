@@ -600,6 +600,14 @@ class CastroData_Base(object):
            value depend on the sub-class details
 
         """
+
+        # Ensure that input arrays are sorted by the normalization
+        # value in each bin
+        idx = norm_vals.argsort(1)+(np.arange(norm_vals.shape[0])[:,None]*
+                                    norm_vals.shape[1])
+        norm_vals = norm_vals.ravel()[idx]
+        nll_vals = nll_vals.ravel()[idx]
+        
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
         self._loglikes = []
