@@ -229,7 +229,8 @@ class Model(object):
         self._data.setdefault('catalog', {})
         self._data['assoc'] = {}
         self._data['name'] = name
-
+        self._data['psf_scale_fn'] = None
+        
         if data is not None:
             self._data.update(data)
 
@@ -320,6 +321,10 @@ class Model(object):
     def assoc(self):
         return self._data['assoc']
 
+    @property
+    def psf_scale_fn(self):
+        return self._data['psf_scale']
+    
     @staticmethod
     def create_from_dict(src_dict, roi_skydir=None):
 
@@ -363,7 +368,7 @@ class Model(object):
 
     def _sync_params(self):        
         self._data['params'] = get_params_dict(self['spectral_pars'])
-
+        
     def get_norm(self):
 
         par_name = gtutils.get_function_norm_par_name(self['SpectrumType'])
@@ -424,6 +429,9 @@ class Model(object):
 
         return True
 
+    def set_psf_scale_fn(self, fn):
+        self._data['psf_scale_fn'] = fn
+    
     def set_spectral_pars(self,spectral_pars):
 
         self._data['spectral_pars'] = copy.deepcopy(spectral_pars)
