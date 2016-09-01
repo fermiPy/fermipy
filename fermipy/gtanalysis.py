@@ -23,6 +23,7 @@ import fermipy.skymap as skymap
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 import fermipy.sed as sed
+import fermipy.lightcurve as lightcurve
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
@@ -377,7 +378,7 @@ def filter_dict(d, val):
 
 class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
-                 SourceFinder):
+                 SourceFinder, lightcurve.LightCurve):
     """High-level analysis interface that manages a set of analysis
     component objects.  Most of the functionality of the Fermipy
     package is provided through the methods of this class.  The class
@@ -400,6 +401,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'tscube': defaults.tscube,
                 'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
+                'lightcurve': defaults.lightcurve,
                 'extension': defaults.extension,
                 'localize': defaults.localize,
                 'roiopt': defaults.roiopt,
