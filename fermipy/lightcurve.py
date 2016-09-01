@@ -155,7 +155,7 @@ class LightCurve(object):
             if(unbinned_analysis == False):
 
                 # Produce necessary files for each bin
-                print "**Working on range (%f,%f)" % (time[0], time[1])
+                self.logger.info("**Working on range (%f,%f)", time[0], time[1])
 # run gtselect
                 kw_gtselect = dict(infile=self.config['data']['evfile'],
                                    outfile='lc_filtered_bin' +
@@ -179,7 +179,7 @@ class LightCurve(object):
                     fermipy.gtanalysis.run_gtapp(
                         'gtselect', self.logger, kw_gtselect)
                 else:
-                    print "File exists.  Won't execute."
+                    print("File exists.  Won't execute.")
 # run gtmktime
                 kw_gtmktime = dict(evfile='lc_filtered_bin' + str(i) + '.fits',
                                    outfile='lc_filtered_gti_bin' +
@@ -191,7 +191,7 @@ class LightCurve(object):
                     fermipy.gtanalysis.run_gtapp(
                         'gtmktime', self.logger, kw_gtmktime)
                 else:
-                    print "File exists.  Won't execute."
+                    print("File exists.  Won't execute.")
 
 
 # run gtltcube
@@ -203,13 +203,13 @@ class LightCurve(object):
                                    binsz=1.0)
 
                 if (not path.exists('lc_ltcube_bin' + str(i) + '.fits')):
-                    print "Calculating ltcube for bin " + str(i)
+                    print("Calculating ltcube for bin " + str(i))
 
                     fermipy.gtanalysis.run_gtapp(
                         'gtltcube', self.logger, kw_gtltcube)
 
                 else:
-                    print "LTcube for this bins already exists......"
+                    print("LTcube for this bins already exists......")
 
 
 # run gtbin
@@ -235,11 +235,11 @@ class LightCurve(object):
                                   enumbins=37
                                   )
                 if (not path.exists('lc_ccube_binned' + str(i) + '.fits')):
-                    print "Calculating counts cube for bin" + str(i)
+                    print("Calculating counts cube for bin" + str(i))
                     fermipy.gtanalysis.run_gtapp(
                         'gtbin', self.logger, kw_gtccube)
                 else:
-                    print "CCUBE exists already- lucky you."
+                    print("CCUBE exists already- lucky you.")
 
 
 # run gtexpcube2
@@ -264,12 +264,12 @@ class LightCurve(object):
                                    enumbins=37)
 
                 if (not path.exists('lc_expcube_bin' + str(i) + '.fits')):
-                    print "Calculating the Expcube for bin" + str(i)
+                    print("Calculating the Expcube for bin" + str(i))
 
                     fermipy.gtanalysis.run_gtapp(
                         'gtexpcube2', self.logger, kw_expcube2)
                 else:
-                    print "ExpCube exists already- lucky you."
+                    print("ExpCube exists already- lucky you.")
 
 # run gtsrcmaps
                 kw_srcmap = dict(scfile=self.config['data']['scfile'],
@@ -282,12 +282,12 @@ class LightCurve(object):
                                  emapbnds='no')
 
                 if (not path.exists('lc_srcmap_bin' + str(i) + '.fits')):
-                    print "Calculating the Source Map for bin" + str(i)
+                    print("Calculating the Source Map for bin" + str(i))
 
                     fermipy.gtanalysis.run_gtapp(
                         'gtsrcmaps', self.logger, kw_srcmap)
                 else:
-                    print "Source Map exists already- lucky you."
+                    print("Source Map exists already- lucky you.")
 
 
 # create BinnedAnalysis object, fit it like a boss, then push out the vals
@@ -409,9 +409,10 @@ class LightCurve(object):
                     binnedA.fit(verbosity=0,covar=True,optObject=likeObj)
                 except:
                     pass
-                print binnedA.flux(str(self.config['selection']['target']),  emin=self.config['selection']['emin'], emax=self.config['selection']['emax'])
-  
-
+                print(binnedA.flux(str(self.config['selection']['target']),
+                                   emin=self.config['selection']['emin'],
+                                   emax=self.config['selection']['emax']))
+                
                 binnedA.flux(str(self.config['selection']['target']),  emin=self.config['selection']['emin'], emax=self.config['selection']['emax'])
                 pars = dict()
                 for pn in binnedA[str(self.config['selection']['target'])].funcs['Spectrum'].paramNames:
@@ -447,7 +448,7 @@ class LightCurve(object):
             if(unbinned_analysis == True):
 #####Branch to deal with UnBinned Analysis
 
-                print "**Working on range (%f,%f)" % (time[0],time[1])
+                self.logger.info("**Working on range (%f,%f)",time[0],time[1])
 #run gtselect                                                                                                                                                                                             
                 kw_gtselect = dict(infile=self.config['data']['evfile'],
                            outfile='lc_filtered_bin'+str(i)+'.fits',
@@ -467,7 +468,7 @@ class LightCurve(object):
                 if(not path.exists('lc_filtered_bin'+str(i)+'.fits')):
                     fermipy.gtanalysis.run_gtapp('gtselect', self.logger, kw_gtselect)
                 else:
-                    print "File exists.  Won't execute."
+                    print("File exists.  Won't execute.")
 #run gtmktime                                                                                                                                                                                             
                 kw_gtmktime = dict(evfile='lc_filtered_bin'+str(i)+'.fits',
                            outfile='lc_filtered_gti_bin'+str(i)+'.fits',
@@ -477,7 +478,7 @@ class LightCurve(object):
                 if(not path.exists('lc_filtered_gti_rsp_bin'+str(i)+'.fits')):
                     fermipy.gtanalysis.run_gtapp('gtmktime', self.logger, kw_gtmktime)
                 else:
-                    print "File exists.  Won't execute."
+                    print("File exists.  Won't execute.")
 
 
 #run gtltcube                                                                                                                                                                                             
@@ -489,12 +490,12 @@ class LightCurve(object):
                                    binsz=1.0)
 
                 if (not path.exists('lc_ltcube_bin'+str(i)+'.fits')):
-                    print "Calculating ltcube for bin "+str(i)
+                    print("Calculating ltcube for bin "+str(i))
 
                     fermipy.gtanalysis.run_gtapp('gtltcube', self.logger, kw_gtltcube)
 
                 else:
-                    print "LTcube for this bins already exists......"
+                    print("LTcube for this bins already exists......")
                                         
                 
 #run gtexpmap
@@ -512,12 +513,12 @@ class LightCurve(object):
 
                 
                 if (not path.exists('lc_expmap_bin'+str(i)+'.fits')):
-                    print "Calculating expmap for bin "+str(i)
+                    print("Calculating expmap for bin "+str(i))
 
                     fermipy.gtanalysis.run_gtapp('gtexpmap', self.logger, kw_expmap)
 
                 else:
-                    print "ExpMap for this bin already exists......"
+                    print("ExpMap for this bin already exists......")
 
 #run gtdiffrsp
 
@@ -530,7 +531,7 @@ class LightCurve(object):
 
 
                 if (not path.exists('lc_filtered_gti_rsp_bin'+str(i)+'.fits')):
-                    print "Calculating diffuse responses for bin "+str(i)
+                    print("Calculating diffuse responses for bin "+str(i))
 
                     fermipy.gtanalysis.run_gtapp('gtdiffrsp', self.logger, kw_diffrsp)
                     oldfile = 'lc_filtered_gti_bin'+str(i)+'.fits'     
@@ -538,7 +539,7 @@ class LightCurve(object):
                     subprocess.call(["mv",oldfile, newfile])      
                         
                 else:
-                    print "Diffuse Responses for this bin already exists......"
+                    print("Diffuse Responses for this bin already exists......")
 
 
                 kwUBO = dict(irfs='CALDB',
@@ -569,7 +570,7 @@ class LightCurve(object):
                 self.retCode[i] = likeObj.getRetCode()
                 self.npred[i] = UnbinnedA.NpredValue(str(self.config['selection']['target']))
                 self.plottimes[i] = 54682.65 + (self.times[i]-239557414.0)/(86400.) + (binning/2.)/86400.
-                print self.plottimes[i], self.IntFlux[i], self.IntFluxErr[i],  self.TS[i],  self.retCode[i], self.npred[i]
+                print(self.plottimes[i], self.IntFlux[i], self.IntFluxErr[i],  self.TS[i],  self.retCode[i], self.npred[i])
 #calculate UL for points under TS = 5 if option is chosen                                                                                    
                 if(calc_ul == True):                                                           
                     if(self.TS[i] < thresh_TS):
