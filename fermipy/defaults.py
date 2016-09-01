@@ -101,6 +101,7 @@ gtlike = {
     'resample': (True, '', bool),
     'srcmap': (None, '', str),
     'bexpmap': (None, '', str),
+    'wmap': (None, 'Likelihood weights map.', str),
     'llscan_npts' : (20,'Number of evaluation points to use when performing a likelihood scan.',int)
 }
 
@@ -248,37 +249,6 @@ sourcefind = {
     'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.', str)
 }
 
-
-#Options for LC analysis
-LC = {
-    'calc_ul': (True, 'Calculate an upper limit in the case where a bin TS value is below a threshold set by thresh_TS', bool),
-    'thresh_TS': (5.0, 'Threshold TS value, below which upper limits are calculated for a bin if calc_ul is True', float),
-    'binning': (86400.0, 'time binning for lightcurve in seconds, default is 1 day', float),
-    'unbinned_analysis': (False, 'if true, perform unbinned analysis', bool)}
-#Output for LC Analysis
-
-
-LC_output = OrderedDict((
-        ('name', (None, 'Name of Source'', ',str,'str')),
-        ('plottimes', (None, 'Center of Time Bin in MJD', np.ndarray, '`~numpy.ndarray`')),
-        ('model', (None, 'Best fit model to the source', str, 'str')),
-        ('IntFlux', (None, 'Integral Flux in user defined energy range', np.ndarray, '`~numpy.ndarray`')),
-        ('IntFluxErr', (None, 'Error on Integral Flux, if 0 this means IntFlux is an Upperlimit', np.ndarray, '`~np.ndarray`')),
-        ('Index1', (None, 'Spectral Index',np.ndarray, '`~np.ndarray`')),
-        ('Index1Err', (None, 'Error on Spectral Index',np.ndarray, '`~np.ndarray`')),
-        ('Index2', (None, 'Spectral Index',np.ndarray, '`~np.ndarray`')),
-        ('Index2Err', (None, 'Error on Spectral Index',np.ndarray, '`~np.ndarray`')),        
-        ('TS', (None, 'Test Statistic',np.ndarray, '`~np.ndarray`')),
-        ('retCode', (None, 'Did the likelihood fit converge? 0 if yes, anything else means no',np.ndarray, '`~np.ndarray`')),
-        ('npred', (None, 'Number of Predicted photons in time bin from source',np.ndarray, '`~np.ndarray`')),
-        ('config', ({},'Copy of the input configuration to this method.',dict,'dict')),
-
-))
-
-
-
-
-
 # Options for SED analysis
 sed = {
     'bin_index': (2.0, 'Spectral index that will be use when fitting the energy distribution within an energy bin.', float),
@@ -293,8 +263,6 @@ sed = {
     'cov_scale' : (3.0,'Scale factor that sets the strength of the prior on nuisance '
                    'parameters when ``fix_background``=True.  Setting this to None disables the prior.',float)
 }
-
-
 
 # Output for SED analysis
 sed_output = OrderedDict((

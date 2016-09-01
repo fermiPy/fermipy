@@ -19,7 +19,6 @@ import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.gtutils as gtutils
 import fermipy.srcmap_utils as srcmap_utils
-import fermipy.LC as LC
 import fermipy.skymap as skymap
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
@@ -115,7 +114,7 @@ class FitCache(object):
         self._fitcache = pyLike.FitScanCache(self._fs_wrapper,
                                              str('fitscan_testsource'),
                                              tol, max_iter, init_lambda,
-                                             use_reduced, False, True)
+                                             use_reduced, False, False)
 
         for p in free_norm_params:
             self._like[p['idx']] = p['value']
@@ -376,7 +375,7 @@ def filter_dict(d, val):
             del d[k]
 
 
-class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
+class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
                  SourceFinder):
     """High-level analysis interface that manages a set of analysis
@@ -401,7 +400,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
                 'tscube': defaults.tscube,
                 'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
-                'LC': defaults.LC,
                 'extension': defaults.extension,
                 'localize': defaults.localize,
                 'roiopt': defaults.roiopt,
@@ -952,6 +950,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
         fitsfiles = []
         for c in self.components:
             for f in c.files.values():
+
+                if f is None:
+                    continue
+                
                 fitsfiles += [os.path.basename(f)]
 
         for f in files:
@@ -1000,6 +1002,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
         for c in self.components:
             for f in c.files.values():
 
+                if f is None:
+                    continue
+                
                 wpath = os.path.join(self.workdir, os.path.basename(f))
                 opath = os.path.join(self.outdir, os.path.basename(f))
 
@@ -1175,7 +1180,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
             c.set_energy_range(logemin, logemax)
 
         return self._loge_bounds
-
 
     def counts_map(self):
         """Return a `~fermipy.skymap.Map` representation of the counts map.
@@ -1407,6 +1411,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
         """Delete sources in the ROI model satisfying the given
         selection criteria.
 
+        Parameters
+        ----------
         cuts : dict
             Dictionary of [min,max] selections on source properties.
 
@@ -1438,7 +1444,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
 
         Returns
         -------
-
         srcs : list
             A list of `~fermipy.roi_model.Model` objects.
 
@@ -2157,8 +2162,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
         self.logger.info('Starting')
         self.logger.info('Running analysis for %s', name)
 
-        ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
-
         saved_state = LikelihoodState(self.like)
 
         if fix_background:
@@ -2171,7 +2174,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
 
         # Save likelihood value for baseline fit
         loglike0 = fit_output['loglike']
-
+        self.logger.debug('Baseline Likelihood: %f',loglike0)        
         self.zero_source(name)
 
         if width is None:
@@ -2189,31 +2192,34 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
         o['loglike_base'] = loglike0
         o['config'] = config
 
+        src_ptsrc = copy.deepcopy(src)
+        src_ptsrc.set_name('%s_ptsrc' % (name.lower().replace(' ', '_')))
+        src_ptsrc.set_spatial_model('PSFSource')
+
+        src_ext = copy.deepcopy(src)
+        src_ext.set_name('%s_ext' % (name.lower().replace(' ', '_')))
+
         # Fit a point-source
-
-        model_name = '%s_ptsrc' % (name)
-        src.set_name(model_name)
-        src.set_spatial_model('PSFSource')
-        # src.set_spatial_model('PointSource')
-
         self.logger.debug('Testing point-source model.')
-        self.add_source(model_name, src, free=True, init_source=False,
+        self.add_source(src_ptsrc.name, src_ptsrc, free=True, init_source=False,
                         loglevel=logging.DEBUG)
         fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
         o['loglike_ptsrc'] = fit_output['loglike']
-
-        self.delete_source(model_name, save_template=False,
+        self.logger.debug('Point Source Likelihood: %f',o['loglike_ptsrc'])
+        self.delete_source(src_ptsrc.name, save_template=False,
                            loglevel=logging.DEBUG)
 
         # Perform scan over width parameter
         self.logger.debug('Width scan vector:\n %s', width)
 
         if not hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
-            o['loglike'] = self._scan_extension_pylike(name, src, spatial_model,
+            o['loglike'] = self._scan_extension_pylike(src_ext, spatial_model,
                                                        width, config['optimizer'])
         else:
-            o['loglike'] = self._scan_extension(name, src, spatial_model,
+            o['loglike'] = self._scan_extension(src_ext, spatial_model,
                                                 width, config['optimizer'])
+
+        self.logger.debug('Likelihood: %s',o['loglike'])
         o['loglike'] = np.concatenate(([o['loglike_ptsrc']], o['loglike']))
         o['dloglike'] = o['loglike'] - o['loglike_ptsrc']
 
@@ -2236,21 +2242,19 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
         self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
 
         # Fit with the best-fit extension model
-        model_name = ext_model_name
-        src.set_name(model_name)
-        src.set_spatial_model(spatial_model, max(o['ext'], 10**-2.5))
+        src_ext.set_spatial_model(spatial_model, max(o['ext'], 10**-2.5))
 
         self.logger.info('Refitting extended model')
-        self.add_source(model_name, src, free=True)
+        self.add_source(src_ext.name, src_ext, free=True)
         fit_output = self._fit(loglevel=logging.DEBUG, update=False,
                                **config['optimizer'])
-        self.update_source(model_name, reoptimize=True,
+        self.update_source(src_ext.name, reoptimize=True,
                            optimizer=config['optimizer'])
 
-        o['source_fit'] = self.get_src_model(model_name)
+        o['source_fit'] = self.get_src_model(src_ext.name)
         o['loglike_ext'] = fit_output['loglike']
 
-        src_ext = self.delete_source(model_name, save_template=False)
+        src_ext = self.delete_source(src_ext.name, save_template=False)
 
         # Restore ROI to previous state
         self.unzero_source(name)
@@ -2274,49 +2278,43 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator, LC.LightCurve,
 
         return o
 
-    def _scan_extension(self, name, src, spatial_model, width, optimizer):
+    def _scan_extension(self, src, spatial_model, width, optimizer):
 
-        ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
-
-        src.set_name(ext_model_name)
         src.set_spatial_model('PSFSource', width[-1])
-        self.add_source(ext_model_name, src, free=True, init_source=False)
+        self.add_source(src.name, src, free=True, init_source=False)
         self._fitcache = None
 
-        logLike = []
+        loglike = []
         for i, w in enumerate(width[1:]):
-            self._update_srcmap(ext_model_name, self.roi[name].skydir,
+            self._update_srcmap(src.name, self.roi[src.name].skydir,
                                 spatial_model, w)
-
             fit_output = self._fit(**optimizer)
-            logLike += [fit_output['loglike']]
+            self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
+                              w,fit_output['loglike'])
+            loglike += [fit_output['loglike']]
 
-        self.delete_source(ext_model_name, save_template=False)
+        self.delete_source(src.name, save_template=False)
 
-        return np.array(logLike)
+        return np.array(loglike)
 
-    def _scan_extension_pylike(self, name, src, spatial_model, width, optimizer):
+    def _scan_extension_pylike(self, src, spatial_model, width, optimizer):
 
-        ext_model_name = '%s_ext' % (name.lower().replace(' ', '_'))
-
-        logLike = []
+        loglike = []
         for i, w in enumerate(width[1:]):
 
-            # make a copy
-            src.set_name(ext_model_name)
             src.set_spatial_model(spatial_model, w)
-
-            self.logger.debug('Adding test source with width: %10.3f deg' % w)
-            self.add_source(ext_model_name, src, free=True, init_source=False,
+            self.add_source(src.name, src, free=True, init_source=False,
                             loglevel=logging.DEBUG)
 
             fit_output = self._fit(**optimizer)
-            logLike += [fit_output['loglike']]
+            self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
+                              w,fit_output['loglike'])
+            loglike += [fit_output['loglike']]
 
-            self.delete_source(ext_model_name, save_template=False,
+            self.delete_source(src.name, save_template=False,
                                loglevel=logging.DEBUG)
 
-        return np.array(logLike)
+        return np.array(loglike)
 
     def profile_norm(self, name, logemin=None, logemax=None, reoptimize=False,
                      xvals=None, npts=None, fix_shape=True, savestate=True,
@@ -3983,6 +3981,19 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                                 'ltcube%s.fits' %
                                                 self.config['file_suffix'])
 
+        if self.config['gtlike']['wmap'] is not None:
+            self._files['wmap'] = os.path.expandvars(
+                self.config['gtlike']['wmap'])
+            if not os.path.isfile(self._files['wmap']):
+                self.files['wmap'] = os.path.join(
+                    workdir, self.files['wmap'])
+            if not os.path.isfile(self.files['wmap']):
+                raise Exception('Invalid likelihood weights map: %s' %
+                                self.files['wmap'])
+        else:
+            self._files['wmap'] = None
+         
+        
         if self.config['binning']['enumbins'] is not None:
             self._enumbins = int(self.config['binning']['enumbins'])
         else:
@@ -4646,6 +4657,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   bexpmap=self.files['bexpmap'],
                   outfile=self.files['srcmap'],
                   irfs=self.config['gtlike']['irfs'],
+                  wmap=self.files['wmap'],
                   evtype=evtype,
                   rfactor=self.config['gtlike']['rfactor'],
                   #                   resample=self.config['resample'],
@@ -4726,6 +4738,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Creating BinnedAnalysis')
         kw = dict(srcModel=srcmdl_file,
                   optimizer='MINUIT',
+                  wmap=self._files['wmap'],
                   convolve=self.config['gtlike']['convolve'],
                   resample=self.config['gtlike']['resample'],
                   minbinsz=self.config['gtlike']['minbinsz'],
@@ -4918,14 +4931,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             xpix, ypix = wcs_utils.skydir_to_pix(src.skydir, self._skywcs)
             xpix -= (self.npix - 1.0) / 2.
             ypix -= (self.npix - 1.0) / 2.
-
+            rebin = min(int(np.ceil(self.binsz/0.01)),8)
             k = srcmap_utils.make_srcmap(src.skydir, self._psf,
                                          src['SpatialModel'],
                                          src['SpatialWidth'],
                                          npix=self.npix,
                                          xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
-                                         rebin=8)
+                                         rebin=rebin)
 
             srcmaps[src.name] = k
 
@@ -4940,16 +4953,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
         xpix -= (self.npix - 1.0) / 2.
         ypix -= (self.npix - 1.0) / 2.
-
+        rebin = min(int(np.ceil(self.binsz/0.01)),8)        
         k = srcmap_utils.make_srcmap(self.roi.skydir, self._psf, spatial_model,
                                      spatial_width,
                                      npix=self.npix, xpix=xpix, ypix=ypix,
                                      cdelt=self.config['binning']['binsz'],
-                                     rebin=8)
+                                     rebin=rebin)
 
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
-        #src_map = self.like.logLike.sourceMap(str(name))
-        # src_map.setImage(np.ravel(k))
 
         normPar = self.like.normPar(name)
         if not normPar.isFree():
