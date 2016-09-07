@@ -129,34 +129,42 @@ already downloaded and installed the Fermi STs from the FSSC and you
 have set the ``FERMI_DIR`` environment variable to point to the location
 of this installation.
 
-The ``condainstall.sh`` script can be used to install fermipy into an
-existing conda python installation or to create a minimal conda
-installation from scratch.  In either case download and run the
-``condainstall.sh`` installation script from the fermipy repository:
+The ``condainstall.sh`` script can be used to install the fermipy
+dependencies in an existing anaconda python installation or to create
+a minimal anaconda installation from scratch.  In either case download
+and source the ``condainstall.sh`` script from the fermipy repository:
 
 .. code-block:: bash
 
    $ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condainstall.sh
-   $ bash condainstall.sh
+   $ source condainstall.sh
 
 If you do not already have anaconda python installed on your system
 this script will create a new installation under ``$HOME/miniconda``.
-If you already have conda installed and the ``conda`` command is
-in your path the script will use your existing installation.
-The script will create a separate environment for your fermipy
-installation called *fermi-env*.
+If you already have anaconda installed and the ``conda`` command is in
+your path the script will use your existing installation.  The script
+will create a separate conda environment for your fermipy installation
+called *fermi-env*.  After running ``condainstall.sh`` fermipy can be
+installed with pip:
 
-Once fermipy is installed you can initialize the fermi environment by
-running ``condasetup.sh``:
+.. code-block:: bash
+
+   $ pip install fermipy
+
+Alternatively fermipy can be installed from source following the
+instructions in :ref:`gitinstall`.
+
+Once fermipy is installed you can initialize the ST/fermipy environment at
+any time by running ``condasetup.sh``:
 
 .. code-block:: bash
 
    $ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condasetup.sh 
    $ source condasetup.sh
 
-This will both activate the *fermi-env* environment and set up your
-shell environment to run the Fermi Science Tools.  The *fermi-env*
-python environment can be exited by running:
+This will both activate the *fermi-env* conda environment and set up
+your shell environment to run the Fermi Science Tools.  The
+*fermi-env* python environment can be exited by running:
 
 .. code-block:: bash
 
@@ -183,7 +191,7 @@ To initialize the ST environment run the ``slacsetup`` function:
 
 This will setup your ``GLAST_EXT`` path and source the setup script
 for one of the pre-built ST installations (the current default is
-10-01-01).  To manually override the ST version you can optionally
+11-03-00).  To manually override the ST version you can optionally
 provide the release tag as an argument to ``slacsetup``:
 
 .. code-block:: bash
@@ -258,29 +266,36 @@ Building from Source
 --------------------
 
 These instructions describe how to install fermipy from its git source
-code repository using ``setup.py``.  Installing from source is
-necessary if you want to do local development or test features in an
-untagged release.  Note that for non-expert users it is recommended to
-install fermipy with ``pip`` following the instructions above.  First
-clone the fermipy repository:
+code repository using the ``setup.py`` script.  Installing from source
+can be useful if you want to make your own modifications to the
+fermipy source code or test features in an untagged commit.  Note that
+non-expert users are recommended to install fermipy with ``pip``
+following the :ref:`pipinstall` instructions above.
+
+First clone the fermipy git repository and cd to the root directory of
+the repository:
 
 .. code-block:: bash
 
    $ git clone https://github.com/fermiPy/fermipy.git
    $ cd fermipy
-
-To install the head of the master branch run ``setup.py install`` from
-the root of the source tree:
+   
+To install the latest commit in the master branch run ``setup.py
+install`` from the root directory:
 
 .. code-block:: bash
 
-   # Install the latest version
+   # Install the latest commit
    $ git checkout master
    $ python setup.py install --user 
 
 A useful option if you are doing active code development is to install
-your working copy as the local installation.  This can be done by
-running ``setup.py develop``:
+your working copy of the package.  This will create an installation in
+your python distribution that is linked to the copy of the code in
+your local repository.  This allows you to run with any local
+modifications without having to reinstall the package each time you
+make a change.  To install your working copy of fermipy run with the
+``develop`` argument:
 
 .. code-block:: bash
 

@@ -5,6 +5,30 @@ Changelog
 
 This page is a changelog for releases of Fermipy.
 
+0.11.0 (08/24/2016)
+-------------------
+* Add support for weighted likelihood fits (supported in ST
+  11-03-00 or later).  Weights maps can be specified with the ``wmap``
+  parameter in :ref:`config_gtlike`.
+* Implemented performance improvements in
+  `~fermipy.gtanalysis.GTAnalysis.tsmap` including switching to
+  newton's method for step-size calculation and masking of empty
+  pixels (see `#79 <https://github.com/fermiPy/fermipy/pull/79>`_).
+* Ongoing development and refactoring of classes for dealing with
+  CastroData (binned likelihood profiles).
+* Added `~fermipy.gtanalysis.GTAnalysis.reload_sources` method for
+  faster recomputation of source maps.
+* Fixed sign error in localization plotting method that gave wrong
+  orientation for error ellipse..
+* Refactored classes in `~fermipy.spectrum` and simplified interface
+  for doing spectral fits (see `#69
+  <https://github.com/fermiPy/fermipy/pull/69>`_).
+* Added DMFitFunction spectral model class in
+  `~fermipy.spectrum` (see `#66
+  <https://github.com/fermiPy/fermipy/pull/66>`_).  This uses the same
+  lookup tables as the ST DMFitFunction class but provides a pure
+  python implementation which can be used independently of the STs.
+  
 0.10.0 (07/03/2016)
 -------------------
 

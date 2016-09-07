@@ -8,3 +8,4 @@
 ``resample``	True	
 ``rfactor``	2	
 ``srcmap``	None	
+``wmap``	None	Likelihood weights map.

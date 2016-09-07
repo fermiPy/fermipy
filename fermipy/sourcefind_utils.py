@@ -63,6 +63,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3):
     o['dec'] = skydir.icrs.dec.deg
     o['glon'] = skydir.galactic.l.deg
     o['glat'] = skydir.galactic.b.deg
+    o['offset'] = pbfit['z0']
 
     pix = skydir.to_pixel(wcs)
     o['xpix'] = float(pix[0])

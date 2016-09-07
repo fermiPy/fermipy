@@ -8,11 +8,13 @@ import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
 from matplotlib.patches import Circle, Ellipse
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
+import matplotlib.mlab as mlab
 
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 import numpy as np
+from scipy.stats import norm
 
 import fermipy
 import fermipy.config
@@ -527,6 +529,7 @@ class ROIPlotter(fermipy.config.Configurable):
         for r in graticule_radii:
             self.draw_circle(self.cmap.skydir, r)
 
+
     def draw_circle(self, skydir, radius):
 
         # coordsys = wcs_utils.get_coordsys(self.proj)
@@ -871,6 +874,33 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           'residmap_sigma',
                                           prefix=[prefix],
                                           extension=format))
+        plt.close(fig)
+
+        # make and draw histogram
+        fig, ax = plt.subplots()
+        nBins=50
+        #import pdb; pdb.set_trace()
+        data = np.nan_to_num(maps['sigma'].counts.T)
+        # find best fit parameters
+        mu, sigma = norm.fit(data.flatten())
+        # make and draw the histogram
+        n, bins, patches = ax.hist(data.flatten(), nBins, normed=True, facecolor='green', alpha=0.75)
+        # make and draw best fit line
+        y = mlab.normpdf(bins, mu, sigma)
+        l = ax.plot(bins, y, 'r--', linewidth=2)
+
+        # labels and such
+        ax.set_xlabel(r'Significance ($\sigma$)')
+        ax.set_ylabel('Probability')
+        paramtext = 'Gaussian fit:\n'
+        paramtext += '$\\mu=%.2f$\n'%mu
+        paramtext += '$\\sigma=%.2f$'%sigma
+        ax.text(0.05, 0.95, paramtext, verticalalignment='top', horizontalalignment='left', transform=ax.transAxes)
+
+        plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
+                                        'residmap_sigma_hist',
+                                        prefix=[prefix],
+                                        extension=format))
         plt.close(fig)
 
         fig = plt.figure()
