@@ -361,8 +361,16 @@ extension = {
     'fix_background': (False, 'Fix any background parameters that are currently free in the model when '
                        'performing the likelihood scan over extension.', bool),
     'update': (False, 'Update the source model with the best-fit spatial extension.', bool),
+    'save_model_map': (False, 'Save model counts cubes for the best-fit model of extension.', bool),
     'sqrt_ts_threshold': (None, 'Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then no'
                           'threshold is applied.', float),
+    'psf_scale_fn': (None, 'Tuple of vectors (logE,f) defining an energy-dependent PSF scaling function '
+                     'that will be applied when building spatial models for the source of interest.  '
+                     'The tuple (logE,f) defines the fractional corrections f at the sequence of energies '
+                     'logE = log10(E/MeV) where f=0 means no correction.  The correction function f(E) is evaluated '
+                     'by linearly interpolating the fractional correction factors f in log(E).  The '
+                     'corrected PSF is given by P\'(x;E) = P(x/(1+f(E));E) where x is the angular separation.',
+                     tuple),
 }
 
 extension_output = OrderedDict((
