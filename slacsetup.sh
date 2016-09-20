@@ -72,4 +72,6 @@ function slacsetup
 	export PYTHON_USER_BIN=$(python -c 'import site; print(site.USER_BASE + "/bin")')
 	export PATH=$PYTHON_USER_BIN:$PYTHONROOT/bin:$PATH
     fi
+
+    export FERMI_DIFFUSE_DIR=$GLAST_EXT/diffuseModels/v5r0
 }
