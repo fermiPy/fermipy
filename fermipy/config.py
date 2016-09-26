@@ -77,7 +77,7 @@ def validate_config(config, defaults, section=None):
                 raise Exception('Invalid key in \'%s\' section of configuration: %s' %
                                 (section, key))
 
-        if isinstance(item, dict):
+        if isinstance(item, dict) and isinstance(defaults[key], dict):
             validate_config(config[key], defaults[key], key)
 
 
@@ -114,7 +114,8 @@ class Configurable(object):
         if validate:
             validate_config(config, self.defaults)
         cast_config(config, self.defaults)
-        self._config = utils.merge_dict(self._config, config)
+        self._config = utils.merge_dict(self._config, config,
+                                        add_new_keys=True)
 
     @classmethod
     def get_config(cls):

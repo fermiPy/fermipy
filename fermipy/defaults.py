@@ -102,7 +102,11 @@ gtlike = {
     'srcmap': (None, '', str),
     'bexpmap': (None, '', str),
     'wmap': (None, 'Likelihood weights map.', str),
-    'llscan_npts' : (20,'Number of evaluation points to use when performing a likelihood scan.',int)
+    'llscan_npts': (20,'Number of evaluation points to use when performing a likelihood scan.',int),
+    'src_expscale': (None, 'Dictionary of exposure corrections for individual sources keyed to source name.  The exposure '
+                     'for a given source will be scaled by this value.  A value of 1.0 corresponds to the nominal exposure.', dict),
+    'expscale': (None, 'Exposure correction that is applied to all sources in the analysis component.  '
+                 'This correction is superseded by `src_expscale` if it is defined for a source.', float),
 }
 
 # Options for binning.
