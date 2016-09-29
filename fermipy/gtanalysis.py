@@ -4822,6 +4822,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                            dec=self.roi.skydir.dec.deg,
                            rad=self.config['selection']['radius'],
                            convtype=self.config['selection']['convtype'],
+                           phasemin=self.config['selection']['phasemin'],
+                           phasemax=self.config['selection']['phasemax'],
                            evtype=self.config['selection']['evtype'],
                            evclass=self.config['selection']['evclass'],
                            tmin=self.config['selection']['tmin'],
@@ -4909,11 +4911,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 continue
 
             scale = scale_map[hdu.name]
+            if scale<1e-20:
+                self.logger.warning("The expscale parameter was zero, setting it to 1e-8")
+                scale = 1e-8
             if 'SRCMAP_SCALE' in hdu.header:
                 old_scale = hdu.header['SRCMAP_SCALE']
             else:
                 old_scale = 1.0
-
             hdu.data *= scale/old_scale
             hdu.header['SRCMAP_SCALE'] = scale
 

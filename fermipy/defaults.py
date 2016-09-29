@@ -37,6 +37,8 @@ selection = {
     'evclass': (None, 'Event class selection.', int),
     'evtype': (None, 'Event type selection.', int),
     'convtype': (None, 'Conversion type selection.', int),
+    'phasemin': (None, 'Minimum pulsar phase', float),
+    'phasemax': (None, 'Maximum pulsar phase', float),
     'target': (None, 'Choose an object on which to center the ROI.  '
                      'This option takes precendence over ra/dec or glon/glat.', str),
     'ra': (None, '', float),
