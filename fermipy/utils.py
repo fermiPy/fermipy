@@ -1035,6 +1035,10 @@ def tolist(x):
 def create_hpx_disk_region_string(skyDir, coordsys, radius, inclusive=0):
     """
     """
+    # Make an all-sky region
+    if radius >= 90.:
+        return None
+
     if coordsys == "GAL":
         xref = skyDir.galactic.l.deg
         yref = skyDir.galactic.b.deg
