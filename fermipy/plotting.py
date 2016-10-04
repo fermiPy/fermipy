@@ -171,7 +171,7 @@ def annotate(**kwargs):
 
 class ImagePlotter(object):
 
-    def __init__(self, data, proj):
+    def __init__(self, data, proj, mapping = None):
 
         if isinstance(proj, WCS):
             self._projtype = 'WCS'
@@ -185,9 +185,19 @@ class ImagePlotter(object):
         elif isinstance(proj, hpx_utils.HPX):
             self._projtype = 'HPX'
             self._proj = proj
-            self._wcs, data = proj.make_wcs_from_hpx()
+            self._wcsproj = proj.make_wcs(naxis=2,proj='AIT',energies=None,oversample=2)
+            self._wcs = self._wcsproj.wcs
+            if mapping is None:
+                self._mapping = hpx_utils.HpxToWcsMapping(self._proj,self._wcsproj)
+            else:
+                self._mapping = mapping
+            if data.ndim == 2:
+                hpx_data = np.sum(copy.deepcopy(data), axis=0)
+            else:
+                hpx_data = copy.deepcopy(data)
+            data = self._mapping.make_wcs_data_from_hpx_data(hpx_data,self._wcsproj,normalize=False)
         else:
-            raise Exception("Can't co-add map of unknown type %s" % type(proj))
+            raise Exception("Can't plot map of unknown type %s" % type(proj))
 
         self._data = data
 
@@ -227,6 +237,7 @@ class ImagePlotter(object):
         colormap.set_under(colormap(0))
 
         data = copy.copy(self._data)
+
         kwargs_imshow = merge_dict(kwargs_imshow, kwargs)
         kwargs_contour = merge_dict(kwargs_contour, kwargs)
 
@@ -238,7 +249,11 @@ class ImagePlotter(object):
             cs.levels = ['%.0f' % val for val in cs.levels]
             plt.clabel(cs, inline=1, fontsize=8)
 
-        coordsys = wcs_utils.get_coordsys(self._proj)
+        if self._projtype == "WCS":
+            coordsys = wcs_utils.get_coordsys(self._proj)
+        else: 
+            coordsys = "GAL"
+
 
         if coordsys == 'CEL':
             ax.set_xlabel('RA')
@@ -292,9 +307,9 @@ class ROIPlotter(fermipy.config.Configurable):
         elif isinstance(data_map, HpxMap):
             self._projtype = 'HPX'
             self._proj = data_map.hpx
-            self._wcs, dataT = data_map.make_wcs_from_hpx(sum_ebins=False,
-                                                          proj='CAR',
-                                                          oversample=2)
+            self._wcsproj = self._proj.make_wcs(naxis=2,proj='AIR',energies=None,oversample=2)
+            self._wcs = self._wcsproj.wcs
+            self._mapping = hpx_utils.HpxToWcsMapping(self._proj,self._wcsproj)
             self._data = dataT.T
         else:
             raise Exception(
