@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 import copy
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
@@ -67,6 +68,10 @@ class Map_Base(object):
     def counts(self):
         return self._counts
 
+    @property
+    def data(self):
+        return self._counts
+
     def get_pixel_indices(self, lats, lons):
         raise NotImplementedError("MapBase.get_pixel_indices)")
 
@@ -79,19 +84,18 @@ class Map(Map_Base):
         Parameters
         ----------
         counts : `~numpy.ndarray`
-          Counts array.
+            Counts array in row-wise ordering (LON is first dimension).
         """
-        Map_Base.__init__(self, counts.T)
+        Map_Base.__init__(self, counts)
         self._wcs = wcs
 
-        self._npix = counts.T.shape
+        self._npix = counts.shape
 
         if len(self._npix) != 3 and len(self._npix) != 2:
             raise Exception('Wrong number of dimensions for Map object.')
 
-        self._width = \
-            np.array([np.abs(self.wcs.wcs.cdelt[0]) * self._npix[0],
-                      np.abs(self.wcs.wcs.cdelt[1]) * self._npix[1]])
+        self._width = np.array([np.abs(self.wcs.wcs.cdelt[0]) * self._npix[0],
+                                np.abs(self.wcs.wcs.cdelt[1]) * self._npix[1]])
         self._pix_center = np.array([(self._npix[0] - 1.0) / 2.,
                                      (self._npix[1] - 1.0) / 2.])
         self._pix_size = np.array([np.abs(self.wcs.wcs.cdelt[0]),
@@ -105,6 +109,10 @@ class Map(Map_Base):
     def wcs(self):
         return self._wcs
 
+    @property
+    def npix(self):
+        return self._npix
+    
     @property
     def skydir(self):
         """Return the sky coordinate of the image center."""
@@ -138,7 +146,7 @@ class Map(Map_Base):
         data = hdulist[hdu].data
         header = fits.Header.fromstring(header.tostring())
         wcs = WCS(header)
-        return Map(data, wcs)
+        return Map(data.T, wcs)
 
     @staticmethod
     def create(skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
@@ -159,33 +167,31 @@ class Map(Map_Base):
         """
         # Note that the array is using the opposite convention from WCS
         # so we sum over axis 0 in the array, but drop axis 2 in the WCS object
-        return Map(np.sum(self.counts, axis=2).T, self.wcs.dropaxis(2))
+        return Map(np.sum(self.counts, axis=2), self.wcs.dropaxis(2))
 
-    def xy_pix_to_ipix(self, xypix, colwise=False):
+    def xypix_to_ipix(self, xypix, colwise=False):
         """Return the flattened pixel indices from an array multi-dimensional
         pixel indices.
 
         Parameters
         ----------
+        xypix : list
+            List of pixel indices in the order (LON,LAT,ENERGY).
+
         colwise : bool
-            if colwise is True (False) this uses columnwise (rowwise) indexing
-
+            Use column-wise pixel indexing.
         """
-        if colwise:
-            v = np.ravel_multi_index(xypix, self._npix, order='F',
-                                     mode='raise')
-        else:
-            v = np.ravel_multi_index(xypix, self._npix, order='C',
-                                     mode='raise')
-
-        print(np.ravel(self.counts)[v])
-            
-        return v
+        return np.ravel_multi_index(xypix, self._npix,
+                                    order='F' if colwise else 'C',
+                                    mode='raise')
 
     def ipix_to_xypix(self, ipix, colwise=False):
-        """ Return the pixel xy coordinates from the pixel index
+        """Return array multi-dimensional pixel indices from flattened index.
 
-        if colwise is True (False) this uses columnwise (rowwise) indexing
+        Parameters
+        ----------
+        colwise : bool
+            Use column-wise pixel indexing.
         """
         return np.unravel_index(ipix, self._npix,
                                 order='F' if colwise else 'C')
@@ -197,17 +203,20 @@ class Map(Map_Base):
         in column wise scheme
         """
         xy = self.ipix_to_xypix(ipix, colwise)
-        return self.xy_pix_to_ipix(xy, not colwise)
+        return self.xypix_to_ipix(xy, not colwise)
 
     def get_pixel_skydirs(self):
-
-        xpix = np.linspace(0, self.counts.shape[-2] - 1., self.counts.shape[-2])
-        ypix = np.linspace(0, self.counts.shape[-1] - 1., self.counts.shape[-1])
+        """Get a list of sky coordinates for the centers of every pixel.
+        
+        """
+        
+        xpix = np.linspace(0, self.counts.shape[0] - 1., self.counts.shape[0])
+        ypix = np.linspace(0, self.counts.shape[1] - 1., self.counts.shape[1])
         xypix = np.meshgrid(xpix, ypix, indexing='ij')
         return SkyCoord.from_pixel(np.ravel(xypix[0]),
                                    np.ravel(xypix[1]), self.wcs)
 
-    def get_pixel_indices(self, lons, lats, ibin=None, flatten=True):
+    def get_pixel_indices(self, lons, lats, ibin=None):
         """Return the indices in the flat array corresponding to a set of coordinates
 
         Parameters
@@ -223,9 +232,8 @@ class Map(Map_Base):
 
         Returns
         ----------
-        idxs : numpy.ndarray((n),'i')
-           Indices of pixels in the flattened map, -1 used to flag
-           coords outside of map
+        pixcrd : list
+           Pixel indices along each dimension of the map.
         """
         if len(lats) != len(lons):
             raise RuntimeError('Map.get_pixel_indices, input lengths '
@@ -247,10 +255,7 @@ class Map(Map_Base):
             pixcrd = [np.floor(l[0]).astype(int), np.floor(l[1]).astype(int),
                       all_bins.astype(int)]
 
-        if flatten:
-            return self.xy_pix_to_ipix(pixcrd)            
-        else:
-            return pixcrd
+        return pixcrd
 
     def get_map_values(self, lons, lats, ibin=None):
         """Return the indices in the flat array corresponding to a set of coordinates
@@ -264,7 +269,7 @@ class Map(Map_Base):
            'Latitidues' (DEC or GLAT)
 
         ibin : int or array-like
-           Extract data only for a given bin.  None -> extract data for all bins
+           Extract data only for a given energy bin.  None -> extract data for all bins
 
         Returns
         ----------
@@ -272,46 +277,34 @@ class Map(Map_Base):
            Values of pixels in the flattened map, np.nan used to flag
            coords outside of map
         """
-        pix_idxs = self.get_pixel_indices(lons, lats, ibin, False)
+        pix_idxs = self.get_pixel_indices(lons, lats, ibin)
         idxs = copy.copy(pix_idxs)
 
-        m = np.ones_like(idxs[0])*True
-        print(m)
+        m = np.empty_like(idxs[0],dtype=bool);m.fill(True)
         for i, p in enumerate(pix_idxs):
-            m |= (pix_idxs[i] < 0)
-            idxs[i][m] = 0
+            m &= (pix_idxs[i] >= 0) & (pix_idxs[i] < self._npix[i])
+            idxs[i][~m] = 0
         
-        print(m)
-        #for i, p in enumerate(pix_idxs):
-        #    idxs[i] = min(max(p,0),)
-
         vals = self.counts[idxs]
-        vals[m] = np.nan
-        return vals
-        
-        print(pix_idxs)
-            
-        return self.counts[pix_idxs]
-        
-        out_shape = pix_idxs.shape
-        if len(out_shape) != 1:
-            pix_idxs = pix_idxs.reshape((pix_idxs.size))
-        vals = np.squeeze(np.where(pix_idxs > 0, self.counts.flat[pix_idxs], np.nan)).reshape(out_shape)
+        vals[~m] = np.nan
         return vals
 
-    def interpolate(self, lon, lat):
-        
-        pixcrd = self.wcs.wcs_world2pix(lon, lat, 0)
+    def interpolate(self, lon, lat, ibin=None):
 
-        points = [np.linspace()]
-        data = self.counts()
-        
+        if len(self._npix) == 2:
+            pixcrd = self.wcs.wcs_world2pix(lon, lat, 0)
+        else:
+            ebins = np.linspace(0, self.npix[2] - 1., self.npix[2])
+            pixcrd = self.wcs.wcs_world2pix(lon, lat, ebins, 0)
+
+        points = []
+        for npix in self.npix:
+            points += [np.linspace(0, npix - 1., npix)]
+        data = self.counts
         fn = RegularGridInterpolator(points, data,
                                      bounds_error=False,
                                      fill_value=None)
-        
-        return fn(self._xedge, self._yedge, self._counts,
-                             *pixcrd)
+        return fn(np.column_stack(pixcrd))
 
 
 class HpxMap(Map_Base):
