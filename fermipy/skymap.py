@@ -405,7 +405,7 @@ class HpxMap(Map_Base):
         elif len(hpx_in.shape) == 2:
             if sum_ebins:
                 wcs_data = np.ndarray(self._hpx2wcs.npix)
-                hpx_data = hpx_in.sum(1)
+                hpx_data = hpx_in.sum(0)
                 loop_ebins = False
             else:
                 wcs_data = np.ndarray((self.counts.shape[0],

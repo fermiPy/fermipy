@@ -28,6 +28,6 @@ def test_hpxmap(tmpdir):
     wcs_out = hpx_2.make_wcs(3)
 
     filename = str(tmpdir / 'test_hpx_2_wcs.fits')
-    write_fits_image(wcs_data, wcs_out, filename)
+    write_fits_image(wcs_data, wcs_out.wcs, filename)
 
     # TODO: add assert statements
