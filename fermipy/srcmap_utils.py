@@ -7,15 +7,35 @@ import fermipy.wcs_utils as wcs_utils
 
 
 def make_srcmap(skydir, psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
-                cdelt=0.01, rebin=1):
+                cdelt=0.01, rebin=1, psf_scale_fn=None):
     """Compute the source map for a given spatial model.
 
     Parameters
     ----------
 
+    skydir : `~astropy.coordinates.SkyCoord`
+
+    psf : `~fermipy.irfs.PSFModel`
+
+    spatial_model : str
+        Spatial model.
+
+    sigma : float
+        Spatial size parameter for extended models.
+        
     xpix : float
+        Source position in pixel coordinates in X dimension.
 
     ypix : float
+        Source position in pixel coordinates in Y dimension.
+
+    rebin : int    
+        Factor by which the original map will be oversampled in the
+        spatial dimension when computing the model.
+
+    psf_scale_fn : callable        
+        Function that evaluates the PSF scaling function.
+        Argument is energy in MeV.
 
     """
 
@@ -24,13 +44,16 @@ def make_srcmap(skydir, psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
 
     if spatial_model == 'GaussianSource' or spatial_model == 'RadialGaussian':
         k = utils.make_cgauss_kernel(psf, sigma, npix * rebin, cdelt / rebin,
-                               xpix * rebin, ypix * rebin)
+                                     xpix * rebin, ypix * rebin,
+                                     psf_scale_fn)
     elif spatial_model == 'DiskSource' or spatial_model == 'RadialDisk':
         k = utils.make_cdisk_kernel(psf, sigma, npix * rebin, cdelt / rebin,
-                              xpix * rebin, ypix * rebin)
+                                    xpix * rebin, ypix * rebin,
+                                    psf_scale_fn)
     elif spatial_model == 'PSFSource' or spatial_model == 'PointSource':
         k = utils.make_psf_kernel(psf, npix * rebin, cdelt / rebin,
-                            xpix * rebin, ypix * rebin)
+                                  xpix * rebin, ypix * rebin,
+                                  psf_scale_fn)
     else:
         raise Exception('Unrecognized spatial model: %s' % spatial_model)
 

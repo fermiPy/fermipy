@@ -2130,6 +2130,18 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             Threshold on sqrt(TS_ext) that will be applied when ``update``
             is true.  If None then no threshold will be applied.
 
+        psf_scale_fn : tuple        
+            Tuple of vectors (logE,f) defining an energy-dependent PSF
+            scaling function that will be applied when building
+            spatial models for the source of interest.  The tuple
+            (logE,f) defines the fractional corrections f at the
+            sequence of energies logE = log10(E/MeV) where f=0 means
+            no correction.  The correction function f(E) is evaluated
+            by linearly interpolating the fractional correction
+            factors f in log(E).  The corrected PSF is given by
+            P\'(x;E) = P(x/(1+f(E));E) where x is the angular
+            separation.
+        
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
 
@@ -2147,6 +2159,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         # Extract options from kwargs
         config = copy.deepcopy(self.config['extension'])
         config['optimizer'] = copy.deepcopy(self.config['optimizer'])
+        config.setdefault('prefix', '')
+        config.setdefault('write_fits', True)
+        config.setdefault('write_npy', True)
         fermipy.config.validate_config(kwargs, config)
         config = merge_dict(config, kwargs)
 
@@ -2159,6 +2174,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         update = config['update']
         sqrt_ts_threshold = config['sqrt_ts_threshold']
 
+        if config['psf_scale_fn']:        
+            psf_scale_fn = lambda t: 1.0 + np.interp(np.log10(t),
+                                                     config['psf_scale_fn'][0],
+                                                     config['psf_scale_fn'][1])
+        else:
+            psf_scale_fn = None
+            
         self.logger.info('Starting')
         self.logger.info('Running analysis for %s', name)
 
@@ -2186,19 +2208,28 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         width = np.concatenate(([0.0], np.array(width)))
 
         o = defaults.make_default_dict(defaults.extension_output)
+        o['name'] = name
         o['width'] = width
         o['dloglike'] = np.zeros(len(width) + 1)
         o['loglike'] = np.zeros(len(width) + 1)
         o['loglike_base'] = loglike0
         o['config'] = config
-
+        o['ptsrc_tot_map'] = None
+        o['ptsrc_src_map'] = None
+        o['ptsrc_bkg_map'] = None
+        o['ext_tot_map'] = None
+        o['ext_src_map'] = None
+        o['ext_bkg_map'] = None
+        
         src_ptsrc = copy.deepcopy(src)
         src_ptsrc.set_name('%s_ptsrc' % (name.lower().replace(' ', '_')))
         src_ptsrc.set_spatial_model('PSFSource')
-
+        src_ptsrc.set_psf_scale_fn(psf_scale_fn)
+        
         src_ext = copy.deepcopy(src)
         src_ext.set_name('%s_ext' % (name.lower().replace(' ', '_')))
-
+        src_ext.set_psf_scale_fn(psf_scale_fn)        
+        
         # Fit a point-source
         self.logger.debug('Testing point-source model.')
         self.add_source(src_ptsrc.name, src_ptsrc, free=True, init_source=False,
@@ -2206,6 +2237,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
         o['loglike_ptsrc'] = fit_output['loglike']
         self.logger.debug('Point Source Likelihood: %f',o['loglike_ptsrc'])
+
+        if config['save_model_map']:
+            o['ptsrc_tot_map'] = self.model_counts_map()
+            o['ptsrc_src_map'] = self.model_counts_map(src_ptsrc.name)
+            o['ptsrc_bkg_map'] = self.model_counts_map(exclude=[src_ptsrc.name])
+
         self.delete_source(src_ptsrc.name, save_template=False,
                            loglevel=logging.DEBUG)
 
@@ -2254,6 +2291,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         o['source_fit'] = self.get_src_model(src_ext.name)
         o['loglike_ext'] = fit_output['loglike']
 
+        if config['save_model_map']:
+            o['ext_tot_map'] = self.model_counts_map()
+            o['ext_src_map'] = self.model_counts_map(src_ext.name)
+            o['ext_bkg_map'] = self.model_counts_map(exclude=[src_ext.name])
+        
         src_ext = self.delete_source(src_ext.name, save_template=False)
 
         # Restore ROI to previous state
@@ -2268,16 +2310,64 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             src.set_spectral_pars(src_ext.spectral_pars)
             src.set_spatial_model(src_ext['SpatialModel'],
                                   src_ext['SpatialWidth'])
+            src.set_psf_scale_fn(psf_scale_fn)
             self.add_source(name, src, free=True)
             self.fit(loglevel=logging.DEBUG, **config['optimizer'])
 
         src = self.roi.get_source_by_name(name)
         src['extension'] = copy.deepcopy(o)
 
+        filename = utils.format_filename(self.workdir, 'ext',
+                                         prefix=[config['prefix'],
+                                                 name.lower().replace(' ', '_')])
+        if config['write_fits']:
+            self._make_extension_fits(o, filename + '.fits')
+                
+        if config['write_npy']:
+            np.save(filename + '.npy', o)
+        
         self.logger.info('Finished')
 
         return o
 
+    def _make_extension_fits(self, ext, filename, **kwargs):
+        
+        maps = {'EXT_TOT_MAP': ext['ext_tot_map'],
+                'EXT_SRC_MAP': ext['ext_src_map'],
+                'EXT_BKG_MAP': ext['ext_bkg_map'],
+                'PTSRC_TOT_MAP' : ext['ptsrc_tot_map'],
+                'PTSRC_SRC_MAP' : ext['ptsrc_src_map'],
+                'PTSRC_BKG_MAP' : ext['ptsrc_bkg_map']}
+
+        hdu_images = []
+        for k, v in sorted(maps.items()):
+            if v is None:
+                continue
+            hdu_images += [v.create_image_hdu(k)]
+
+        columns = fits.ColDefs([])
+        for k,v in sorted(ext.items()):
+            
+            if np.isscalar(v) and isinstance(v,float):            
+                columns.add_col(fits.Column(name=str(k),
+                                            format='E',
+                                            array=np.array(v,ndmin=1)))
+            elif np.isscalar(v) and isinstance(v,str):            
+                columns.add_col(fits.Column(name=str(k),
+                                            format='A32',
+                                            array=np.array(v,ndmin=1)))
+            elif isinstance(v,np.ndarray):
+                columns.add_col(fits.Column(name=str(k),
+                                            format='%iE'%len(v),
+                                            array=v[None,:]))
+                
+        hdu_table = fits.BinTableHDU.from_columns(columns, name='EXTENSION')
+
+        hdulist = fits.HDUList([fits.PrimaryHDU(), hdu_table] + hdu_images)
+        for h in hdulist:
+            h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+        hdulist.writeto(filename, clobber=True)
+        
     def _scan_extension(self, src, spatial_model, width, optimizer):
 
         src.set_spatial_model('PSFSource', width[-1])
@@ -4938,7 +5028,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                          npix=self.npix,
                                          xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
-                                         rebin=rebin)
+                                         rebin=rebin,
+                                         psf_scale_fn=src['psf_scale_fn'])
 
             srcmaps[src.name] = k
 
@@ -4950,6 +5041,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
     def _update_srcmap(self, name, skydir, spatial_model, spatial_width):
 
+        src = self.roi[name]        
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
         xpix -= (self.npix - 1.0) / 2.
         ypix -= (self.npix - 1.0) / 2.
@@ -4958,7 +5050,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                      spatial_width,
                                      npix=self.npix, xpix=xpix, ypix=ypix,
                                      cdelt=self.config['binning']['binsz'],
-                                     rebin=rebin)
+                                     rebin=rebin,
+                                     psf_scale_fn=src['psf_scale_fn'])
 
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
 

@@ -8,6 +8,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
 from matplotlib.patches import Circle, Ellipse
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
+from matplotlib.colors import LinearSegmentedColormap
 import matplotlib.mlab as mlab
 
 from astropy.io import fits
@@ -15,6 +16,7 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 import numpy as np
 from scipy.stats import norm
+from scipy import interpolate
 
 import fermipy
 import fermipy.config
@@ -28,11 +30,17 @@ from fermipy.skymap import Map, HpxMap
 from fermipy.logger import Logger
 from fermipy.logger import log_level
 
-
-def draw_arrows(x, y, color='k'):
-    for t, z in zip(x, y):
-        plt.arrow(t, z, 0.0, -z * 0.2, fc=color, ec=color,
-                  head_width=t * 0.1, head_length=z * 0.05)
+def truncate_colormap( cmap, minval=0.0, maxval=1.0, n=256 ):
+    """Function that extracts a subset of a colormap.
+    """
+    if minval is None:
+        minval = 0.0
+    if maxval is None:
+        maxval = 0.0
+    
+    name = "%s-trunc-%.2g-%.2g" % (cmap.name, minval, maxval)
+    return LinearSegmentedColormap.from_list(
+        name, cmap( np.linspace( minval, maxval, n )))
 
 
 def get_xerr(sed):
@@ -584,11 +592,14 @@ class ROIPlotter(fermipy.config.Configurable):
 
 class SEDPlotter(object):
 
-    def __init__(self, src):
+    def __init__(self, sed):
 
-        self._src = copy.deepcopy(src)
-        self._sed = copy.deepcopy(self._src['sed'])
+        self._sed = copy.deepcopy(sed)
 
+    @property
+    def sed(self):
+        return self._sed
+        
     @staticmethod
     def get_ylims(sed):
 
@@ -605,34 +616,42 @@ class SEDPlotter(object):
     def plot_lnlscan(sed, **kwargs):
 
         ax = kwargs.pop('ax', plt.gca())
-        llhCut = kwargs.pop('llhCut', -2.70)
+        llhcut = kwargs.pop('llhcut', -2.70)
         cmap = kwargs.pop('cmap', 'BuGn')
-
-        lhProf = sed['lnlprofile']
-
+        cmap_trunc_lo = kwargs.pop('cmap_trunc_lo', None)
+        cmap_trunc_hi = kwargs.pop('cmap_trunc_hi', None)
+        
         fmin, fmax = SEDPlotter.get_ylims(sed)
-
         fluxM = np.arange(fmin, fmax, 0.01)
         fbins = len(fluxM)
         llhMatrix = np.zeros((len(sed['ectr']), fbins))
-
+        
         # loop over energy bins
-        for i in range(len(lhProf)):
-            m = lhProf[i]['dfde'] > 0
+        for i in range(len(sed['ectr'])):
+            m = sed['norm_scan'][i] > 0
             e2dfde_scan = sed['norm_scan'][i][m] * sed['ref_e2dfde'][i]
             flux = np.log10(e2dfde_scan)
-            logl = lhProf[i]['dloglike'][m]
-            logli = np.interp(fluxM, flux, logl)
-            logli[fluxM > flux[-1]] = logl[-1]
-            logli[fluxM < flux[0]] = logl[0]
+            logl = sed['dloglike_scan'][i][m]
+            logl -= np.max(logl)
+            fn = interpolate.interp1d(flux,logl, fill_value='extrapolate')
+            logli = fn(fluxM)
+            #logli[fluxM > flux[-1]] = logl[-1]
+            #logli[fluxM < flux[0]] = logl[0]
             llhMatrix[i, :] = logli
 
+        cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
+        #cmap.set_under('w')
+
+        if cmap_trunc_lo is not None or cmap_trunc_hi is not None:        
+            cmap = truncate_colormap(cmap,cmap_trunc_lo,cmap_trunc_hi,1024)
+        
         xedge = np.logspace(sed['logemin'][0], sed['logemax'][-1],
                             len(sed['logectr']) + 1)
         yedge = np.logspace(fmin, fmax, fbins)
         xedge, yedge = np.meshgrid(xedge, yedge)
         im = ax.pcolormesh(xedge, yedge, llhMatrix.T,
-                           vmin=llhCut, vmax=0, cmap=cmap)
+                           vmin=llhcut, vmax=0, cmap=cmap,
+                           linewidth=0)
         cb = plt.colorbar(im)
         cb.set_label('Delta LogLikelihood')
 
@@ -642,17 +661,20 @@ class SEDPlotter(object):
         plt.gca().set_xlim(sed['emin'][0], sed['emax'][-1])
 
     @staticmethod
-    def plot_sed(sed, **kwargs):
+    def plot_flux_points(sed, **kwargs):
 
-        ts_thresh = kwargs.pop('ts_thresh', 4)
-        kwargs.setdefault('marker', 'o')
-        kwargs.setdefault('linestyle', 'None')
-        kwargs.setdefault('color', 'k')
+        ax = kwargs.pop('ax',plt.gca())
+        
+        ul_ts_threshold = kwargs.pop('ul_ts_threshold', 4)
+
+        kw = {}
+        kw['marker'] = kwargs.get('marker','o')
+        kw['linestyle'] = kwargs.get('linestyle','None')
+        kw['color'] = kwargs.get('color','k')
 
         fmin, fmax = SEDPlotter.get_ylims(sed)
 
-        m = sed['ts'] < ts_thresh
-
+        m = sed['ts'] < ul_ts_threshold
         x = sed['ectr']
         y = sed['e2dfde']
         yerr = sed['e2dfde_err']
@@ -660,29 +682,26 @@ class SEDPlotter(object):
         yerr_hi = sed['e2dfde_err_hi']
         yul = sed['e2dfde_ul95']
 
-        y[m] = yul[m]
-        yerr[m] = 0
-        yerr_lo[m] = 0
-        yerr_hi[m] = 0
-
         delo = sed['ectr'] - sed['emin']
         dehi = sed['emax'] - sed['ectr']
         xerr0 = np.vstack((delo[m], dehi[m]))
         xerr1 = np.vstack((delo[~m], dehi[~m]))
 
         plt.errorbar(x[~m], y[~m], xerr=xerr1,
-                     yerr=(yerr_lo[~m], yerr_hi[~m]), **kwargs)
+                     yerr=(yerr_lo[~m], yerr_hi[~m]), **kw)
         plt.errorbar(x[m], yul[m], xerr=xerr0,
-                     yerr=yul[m] * 0.2, uplims=True, **kwargs)
+                     yerr=yul[m] * 0.2, uplims=True, **kw)
 
-        plt.gca().set_yscale('log')
-        plt.gca().set_xscale('log')
-        plt.gca().set_xlim(sed['emin'][0], sed['emax'][-1])
-        plt.gca().set_ylim(10 ** fmin, 10 ** fmax)
+        ax.set_yscale('log')
+        ax.set_xscale('log')
+        ax.set_xlim(sed['emin'][0], sed['emax'][-1])
+        ax.set_ylim(10 ** fmin, 10 ** fmax)
 
     @staticmethod
-    def plot_sed_resid(src, model_flux, **kwargs):
+    def plot_resid(src, model_flux, **kwargs):
 
+        ax = kwargs.pop('ax',plt.gca())
+        
         sed = src['sed']
 
         m = sed['ts'] < 4
@@ -691,10 +710,6 @@ class SEDPlotter(object):
         y = sed['e2dfde']
         yerr = sed['e2dfde_err']
         yul = sed['e2dfde_ul95']
-
-        y[m] = yul[m]
-        yerr[m] = 0
-
         delo = sed['ectr'] - sed['emin']
         dehi = sed['emax'] - sed['ectr']
         xerr = np.vstack((delo, dehi))
@@ -703,26 +718,27 @@ class SEDPlotter(object):
                        10 ** (2 * model_flux['log_energies']) *
                        model_flux['dfde'])
 
-        plt.errorbar(x, (y - ym) / ym, xerr=xerr, yerr=yerr / ym, **kwargs)
+        ax.errorbar(x, (y - ym) / ym, xerr=xerr, yerr=yerr / ym, **kwargs)
 
     @staticmethod
     def plot_model(model_flux, **kwargs):
 
-        ax = plt.gca()
+        ax = kwargs.pop('ax',plt.gca())
+
         color = kwargs.pop('color', 'k')
         noband = kwargs.pop('noband', False)
 
         e2 = 10 ** (2 * model_flux['log_energies'])
 
         ax.plot(10 ** model_flux['log_energies'],
-                model_flux['dfde'] * e2, color=color, **kwargs)
+                model_flux['dfde'] * e2, color=color)
 
         ax.plot(10 ** model_flux['log_energies'],
                 model_flux['dfde_lo'] * e2, color=color,
-                linestyle='--', **kwargs)
+                linestyle='--')
         ax.plot(10 ** model_flux['log_energies'],
                 model_flux['dfde_hi'] * e2, color=color,
-                linestyle='--', **kwargs)
+                linestyle='--')
 
         if not noband:
             ax.fill_between(10 ** model_flux['log_energies'],
@@ -731,47 +747,64 @@ class SEDPlotter(object):
                             alpha=0.5, color=color, zorder=-1)
 
     @staticmethod
-    def annotate(src, xy=(0.05, 0.93)):
+    def annotate(sed, xy=(0.05, 0.93), **kwargs):
 
-        ax = plt.gca()
-
-        name = src['name']
-
-        if src['assoc']:
-            name += ' (%s)' % src['assoc']
-
-        ax.annotate(name,
+        if not 'name' in sed:
+            return
+        
+        ax = kwargs.pop('ax',plt.gca())
+        ax.annotate(sed['name'],
                     xy=xy,
                     xycoords='axes fraction', fontsize=12,
                     xytext=(-5, 5), textcoords='offset points',
                     ha='left', va='center')
 
-    def plot(self, showlnl=False, **kwargs):
+    @staticmethod
+    def plot_sed(sed, showlnl=False, **kwargs):
+        """Render a plot of a spectral energy distribution.
 
-        sed = self._sed
-        src = self._src
-        ax = plt.gca()
+        Parameters
+        ----------
+        showlnl : bool        
+            Overlay a map of the delta-loglikelihood values vs. flux
+            in each energy bin.
+        
+        cmap : str        
+            Colormap that will be used for the delta-loglikelihood
+            map.
+
+        llhcut : float
+            Minimum delta-loglikelihood value.
+
+        ul_ts_threshold : float        
+            TS threshold that determines whether the MLE or UL
+            is plotted in each energy bin.
+            
+        """
+        
+        ax = kwargs.pop('ax',plt.gca())
         cmap = kwargs.get('cmap', 'BuGn')
 
-        annotate(src=src, ax=ax)
-
-        SEDPlotter.plot_sed(sed)
+        SEDPlotter.annotate(sed, ax=ax)
+        SEDPlotter.plot_flux_points(sed, **kwargs)
 
         if np.any(sed['ts'] > 9.):
 
             if 'model_flux' in sed:
-                SEDPlotter.plot_model(sed['model_flux'], noband=showlnl)
-            elif 'model_flux' in src:
-                SEDPlotter.plot_model(src, noband=showlnl)
+                SEDPlotter.plot_model(sed['model_flux'],
+                                      noband=showlnl, **kwargs)
 
         if showlnl:
-            SEDPlotter.plot_lnlscan(sed, cmap=cmap)
+            SEDPlotter.plot_lnlscan(sed, **kwargs)
 
         ax.set_yscale('log')
         ax.set_xscale('log')
         ax.set_xlabel('Energy [MeV]')
-        ax.set_ylabel('E$^{2}$dF/dE [MeV cm$^{-2}$ s$^{-1}$]')
+        ax.set_ylabel('E$^{2}$dN/dE [MeV cm$^{-2}$ s$^{-1}$]')
 
+    def plot(self, showlnl=False, **kwargs):
+        return SEDPlotter.plot_sed(self.sed,showlnl,**kwargs)
+        
 
 class ExtensionPlotter(object):
 
@@ -1189,14 +1222,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
             self.logger.debug('Making SED plot for %s' % s.name)
 
-            p = SEDPlotter(s)
+            p = SEDPlotter(s['sed'])
             fig = plt.figure()
             p.plot()
             plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                      '%s_%s_sed.%s' % (prefix, name, format)))
             plt.close(fig)
 
-            p = SEDPlotter(s)
+            p = SEDPlotter(s['sed'])
             fig = plt.figure()
             p.plot(showlnl=True)
             plt.savefig(os.path.join(gta.config['fileio']['workdir'],
@@ -1211,7 +1244,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         name = src.name.lower().replace(' ', '_')
         format = kwargs.get('format', gta.config['plotting']['format'])
-        p = SEDPlotter(src)
+        p = SEDPlotter(src['sed'])
         fig = plt.figure()
         p.plot()
 
@@ -1222,7 +1255,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.savefig(outfile)
         plt.close(fig)
 
-        p = SEDPlotter(src)
+        p = SEDPlotter(src['sed'])
         fig = plt.figure()
         p.plot(showlnl=True)
 

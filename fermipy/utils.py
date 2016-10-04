@@ -1224,7 +1224,8 @@ def make_disk_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     return k
 
 
-def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
+def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
+                      normalize=False):
     """Make a kernel for a PSF-convolved 2D disk.
 
     Parameters
@@ -1243,8 +1244,8 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
-    for i in range(len(egy)):
-        fn = lambda t: 10 ** np.interp(t, dtheta, np.log10(psf.val[:, i]))
+    for i in range(len(egy)):        
+        fn = lambda t: psf.eval(i, t, scale_fn=psf_scale_fn)
         psfc = convolve2d_disk(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
 
@@ -1254,7 +1255,8 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     return k
 
 
-def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
+def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
+                       normalize=False):
     """Make a kernel for a PSF-convolved 2D gaussian.
 
     Parameters
@@ -1275,11 +1277,8 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
-
-    logpsf = np.log10(psf.val)
-
     for i in range(len(egy)):
-        fn = lambda t: 10 ** np.interp(t, dtheta, logpsf[:, i])
+        fn = lambda t: psf.eval(i, t, scale_fn=psf_scale_fn)
         psfc = convolve2d_gauss(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
 
@@ -1289,7 +1288,7 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, normalize=False):
     return k
 
 
-def make_psf_kernel(psf, npix, cdelt, xpix, ypix, normalize=False):
+def make_psf_kernel(psf, npix, cdelt, xpix, ypix, psf_scale_fn=None, normalize=False):
     """
     Generate a kernel for a point-source.
 
@@ -1306,16 +1305,13 @@ def make_psf_kernel(psf, npix, cdelt, xpix, ypix, normalize=False):
 
     """
 
-    dtheta = psf.dtheta
     egy = psf.energies
-
     x = make_pixel_offset(npix, xpix, ypix)
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
     for i in range(len(egy)):
-        k[i] = 10 ** np.interp(np.ravel(x), dtheta,
-                               np.log10(psf.val[:, i])).reshape(x.shape)
+        k[i] = psf.eval(i, x, scale_fn=psf_scale_fn)
 
     if normalize:
         k /= (np.sum(k, axis=0)[np.newaxis, ...] * np.radians(cdelt) ** 2)
