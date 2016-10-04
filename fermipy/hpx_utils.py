@@ -11,6 +11,7 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Galactic, ICRS
 
+from fermipy.wcs_utils import WCSProj
 
 # This is an approximation of the size of HEALPix pixels (in degrees)
 # for a particular order.   It is used to convert from HEALPix to WCS-based
@@ -76,6 +77,44 @@ def hpx_to_coords(h, shape):
     return np.vstack((x, z))
 
 
+def make_hpx_to_wcs_mapping_centers(hpx, wcs):
+    """ Make the mapping data needed to from from HPX pixelization to a
+    WCS-based array
+
+    Parameters
+    ----------
+    hpx     : `~fermipy.hpx_utils.HPX`
+       The healpix mapping (an HPX object)
+
+    wcs     : `~astropy.wcs.WCS`
+       The wcs mapping (a pywcs.wcs object)
+
+    Returns
+    -------
+      ipixs    :  array(nx,ny) of HEALPix pixel indices for each wcs pixel 
+                  -1 indicates the wcs pixel does not contain the center of a HEALpix pixel
+      mult_val :  array(nx,ny) of 1.
+      npix     :  tuple(nx,ny) with the shape of the wcs grid
+
+    """
+    npix = (int(wcs.wcs.crpix[0] * 2), int(wcs.wcs.crpix[1] * 2))
+    mult_val = np.ones(npix).T.flatten()
+    sky_crds = hpx.get_sky_coords()
+    pix_crds = wcs.wcs_world2pix(sky_crds, 0).astype(int)
+    ipixs = -1*np.ones(npix,int).T.flatten()
+    pix_index = npix[1]*pix_crds[0:,0] + pix_crds[0:,1]
+    print (npix)
+    print (len(pix_index),len(ipixs),pix_index.max(),pix_crds[0:,0].max(),pix_crds[0:,1].max())
+    if hpx._ipix is None:
+        for ipix,pix_crd in enumerate(pix_index):
+            ipixs[pix_crd] = ipix
+    else:
+        for pix_crd,ipix in zip(pix_index,hpx._ipix):
+            ipixs[pix_crd] = ipix
+    ipixs = ipixs.reshape(npix).T.flatten()
+    return ipixs,mult_val,npix
+
+
 def make_hpx_to_wcs_mapping(hpx, wcs):
     """Make the mapping data needed to from from HPX pixelization to a
     WCS-based array
@@ -103,8 +142,11 @@ def make_hpx_to_wcs_mapping(hpx, wcs):
     sky_crds *= np.radians(1.)
     sky_crds[0:, 1] = (np.pi / 2) - sky_crds[0:, 1]
 
-    ipixs = hp.pixelfunc.ang2pix(hpx.nside, sky_crds[0:, 1],
-                                 sky_crds[0:, 0], hpx.nest)
+    fullmask = np.isnan(sky_crds)
+    mask = (fullmask[0:,0] + fullmask[0:,1]) == 0
+    ipixs = -1*np.ones(npix,int).T.flatten()
+    ipixs[mask] = hp.pixelfunc.ang2pix(hpx.nside, sky_crds[0:,1][mask],
+                                       sky_crds[0:,0][mask], hpx.nest)
 
     # Here we are counting the number of HEALPix pixels each WCS pixel points to;
     # this could probably be vectorized by filling a histogram.
@@ -123,8 +165,8 @@ def make_hpx_to_wcs_mapping(hpx, wcs):
     for i, ipix in enumerate(ipixs):
         mult_val[i] /= d_count[ipix]
 
-    ipixs = ipixs.reshape(npix).T.flatten()
-    mult_val = mult_val.reshape(npix).T.flatten()
+    ipixs = ipixs.reshape(npix).flatten()
+    mult_val = mult_val.reshape(npix).flatten()
     return ipixs, mult_val, npix
 
 
@@ -469,9 +511,8 @@ class HPX(object):
         return None
 
     def make_wcs(self, naxis=2, proj='CAR', energies=None, oversample=2):
+        """ Make a WCS projection appropirate for this HPX pixelization
         """
-        """
-
         w = WCS(naxis=naxis)
         skydir = self.get_ref_dir(self._region, self.coordsys)
 
@@ -489,12 +530,22 @@ class HPX(object):
             raise Exception('Unrecognized coordinate system.')
 
         pixsize = get_pixel_size_from_nside(self.nside)
-        roisize = min(self.get_region_size(self._region), 90)
+        roisize = self.get_region_size(self._region)
+        allsky = False
+        if roisize > 45:
+            roisize = 90
+            allsky = True
 
         npixels = int(2. * roisize / pixsize) * oversample
         crpix = npixels / 2.
 
-        w.wcs.crpix[0] = crpix
+        if allsky:
+            w.wcs.crpix[0] = 2*crpix
+            npix = (2*npixels,npixels)
+        else:
+            w.wcs.crpix[0] = crpix
+            npix = (npixels,npixels)
+
         w.wcs.crpix[1] = crpix
         w.wcs.cdelt[0] = -pixsize / oversample
         w.wcs.cdelt[1] = pixsize / oversample
@@ -507,7 +558,22 @@ class HPX(object):
                 w.wcs.cdelt[2] = 10 ** energies[1] - 10 ** energies[0]
 
         w = WCS(w.to_header())
-        return w
+        wcs_proj = WCSProj(w,npix)
+        return wcs_proj
+
+
+    def get_sky_coords(self):
+        """ Get the sky coordinates of all the pixels in this PIXELIZATION
+        """
+        if self._ipix is None:
+            theta, phi = hp.pix2ang(self._nside, xrange(self._npix), self._nest)
+        else:
+            theta, phi = hp.pix2ang(self._nside, self._ipix, self._nest)
+            
+        lat = np.degrees((np.pi / 2) - theta)
+        lon = np.degrees(phi)
+        return np.vstack([lon,lat]).T
+
 
 
 class HpxToWcsMapping(object):
@@ -519,7 +585,7 @@ class HpxToWcsMapping(object):
         self._hpx = hpx
         self._wcs = wcs
         self._ipixs, self._mult_val, self._npix = make_hpx_to_wcs_mapping(
-            self.hpx, self.wcs)
+            self.hpx, self.wcs.wcs)
         self._lmap = self._hpx[self._ipixs]
         self._valid = self._lmap > 0
 
@@ -562,6 +628,7 @@ class HpxToWcsMapping(object):
         HEALPix region"""
         return self._valid
 
+
     def fill_wcs_map_from_hpx_data(self, hpx_data, wcs_data, normalize=True):
         """Fills the wcs map from the hpx data using the pre-calculated
         mappings
@@ -571,7 +638,6 @@ class HpxToWcsMapping(object):
         normalize : True -> perserve integral by splitting HEALPix values between bins
 
         """
-
         # FIXME, there really ought to be a better way to do this
         hpx_data_flat = hpx_data.flatten()
         wcs_data_flat = np.zeros((wcs_data.size))
@@ -580,3 +646,17 @@ class HpxToWcsMapping(object):
         if normalize:
             wcs_data_flat *= self._mult_val
         wcs_data.flat = wcs_data_flat
+
+
+    def make_wcs_data_from_hpx_data(self, hpx_data, wcs, normalize=True):
+        """ Creates and fills a wcs map from the hpx data using the pre-calculated
+        mappings
+
+        hpx_data  : the input HEALPix data
+        wcs       : the WCS object
+        normalize : True -> perserve integral by splitting HEALPix values between bins
+        """
+        wcs_data = np.zeros(wcs.npix)
+        self.fill_wcs_map_from_hpx_data(hpx_data,wcs_data,normalize)
+        return wcs_data
+
