@@ -13,6 +13,7 @@ else
 fi
 
 python -m pytest -vv -s --cov=fermipy --cov-config=fermipy/tests/coveragerc
+status=$?
 
 if [[ $NAME == 'docs' ]]; then
     cd docs;
@@ -22,3 +23,5 @@ fi
 if [[ $TRAVIS_OS_NAME != 'linux' ]]; then
     killall Xvfb;
 fi
+
+exit $status
