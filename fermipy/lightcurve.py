@@ -137,72 +137,205 @@ class LightCurve(object):
         # Output Dictionary
 
         o = {'name': name,
-             # time array in MJD,
-             'plottimes':  np.zeros_like(times[:-1]),
-             'model': str,
-             'IntFlux': np.zeros_like(times[:-1]),
-             'IntFluxErr': np.zeros_like(times[:-1]),
-             'pars': dict(),
-             'TS':  np.zeros_like(times[:-1]),
-             'retCode':  np.zeros_like(times[:-1]),
-             'npred':  np.zeros_like(times[:-1])
+             'MJD':  np.zeros_like(times[:-1]),
+             'flux': np.zeros_like(times[:-1]),
+             'flux_err': np.zeros_like(times[:-1]),
+             'flux100': np.zeros_like(times[:-1]),
+             'flux100_err': np.zeros_like(times[:-1]),
+             'flux1000': np.zeros_like(times[:-1]),
+             'flux1000_err': np.zeros_like(times[:-1]),
+             'flux10000': np.zeros_like(times[:-1]),
+             'flux10000_err': np.zeros_like(times[:-1]),
+             'eflux':np.zeros_like(times[:-1]),
+             'eflux_err':np.zeros_like(times[:-1]),
+             'eflux100':np.zeros_like(times[:-1]),
+             'eflux100_err':np.zeros_like(times[:-1]),
+             'eflux1000':np.zeros_like(times[:-1]),
+             'eflux1000_err':np.zeros_like(times[:-1]),
+             'eflux10000':np.zeros_like(times[:-1]),
+             'eflux10000_err':np.zeros_like(times[:-1]),
+             'dfde':np.zeros_like(times[:-1]),
+             'dfde_err':np.zeros_like(times[:-1]),
+             'dfde100':np.zeros_like(times[:-1]),
+             'dfde100_err':np.zeros_like(times[:-1]),
+             'dfde1000':np.zeros_like(times[:-1]),
+             'dfde1000_err':np.zeros_like(times[:-1]),
+             'dfde10000':np.zeros_like(times[:-1]),
+             'dfde10000_eff':np.zeros_like(times[:-1]),
+             'dfde_index':np.zeros_like(times[:-1]),
+             'dfde_index_err':np.zeros_like(times[:-1]),
+             'dfde100_index':np.zeros_like(times[:-1]),
+             'dfde100_index_err':np.zeros_like(times[:-1]),
+             'dfde1000_index':np.zeros_like(times[:-1]),    
+             'dfde1000_index_err':np.zeros_like(times[:-1]),
+             'dfde10000_index':np.zeros_like(times[:-1]),
+             'dfde10000_index_err':np.zeros_like(times[:-1]),
+             'flux_ul95':  np.zeros_like(times[:-1]),
+             'flux100_ul95':np.zeros_like(times[:-1]),
+             'flux1000_ul95':np.zeros_like(times[:-1]),
+             'flux10000_ul95':np.zeros_like(times[:-1]),
+             'eflux_ul95':    np.zeros_like(times[:-1]),
+             'eflux100_ul95':np.zeros_like(times[:-1]),
+             'eflux1000_ul95':np.zeros_like(times[:-1]),
+             'eflux10000_ul95':np.zeros_like(times[:-1]),
+             'pivot_energy': np.zeros_like(times[:-1]),
+             'ts': np.zeros_like(times[:-1]),
+             'loglike': np.zeros_like(times[:-1]),
+             'npred': np.zeros_like(times[:-1])
+
              }
 
+
+
+
+
+        print(times[:-1])
         for i, time in enumerate(zip(times[:-1], times[1:])):
 
             config = copy.deepcopy(self.config)
             config['selection']['tmin'] = time[0]
             config['selection']['tmax'] = time[1]            
-            config['fileio']['outdir'] = os.path.join(self.workdir,'%i_%i'%(time[0],time[1]))
+            #create out directories labeled in MJD vals
+            config['fileio']['outdir'] = os.path.join(self.workdir,'%i_%i'%(54682.65 + (time[0]-239557414.0)/(86400.) + (binning/2.)/86400.,54682.65 + (time[1]-239557414.0)/(86400.) + (binning/2.)/86400))
             
             utils.mkdir(config['fileio']['outdir'])
             
             xmlfile = os.path.join(config['fileio']['outdir'],'base.xml')
-
+            
             # Make a copy of the source maps. TODO: Implement a
             # correction to account for the difference in exposure for
             # each time bin.
-            for c in self.components:            
-                shutil.copy(c._files['srcmap'],config['fileio']['outdir'])
+       #     for c in self.components:            
+        #        shutil.copy(c._files['srcmap'],config['fileio']['outdir'])
             
-            # Write the current model
-            self.write_xml(xmlfile)
+            
+            
 
             gta = fermipy.gtanalysis.GTAnalysis(config)
             gta.setup()
 
+            # Write the current model 
+            gta.write_xml(xmlfile)
+
             # Load the baseline model
-            gta.load_xml('base.xml')
+            gta.load_xml(xmlfile)
 
             # Optimize the model
             gta.optimize()
             
-            # Try Fitting with everything in the source model fixed:
-
-            # Delete low TS sources?
-
-            # Okay now free the normalization parameter and try the fit
-
-            #srcnormpar.setFree(1)
-            #binnedA.syncSrcParams(self.config['selection']['target'])
-
+            # Start by freeing normalization for everything w/in 3dg of center of ROI:
             self.logger.info('Fitting with normalization free')
 
-            # Okay now free everything and try the fit
-
-            self.logger.info('Fitting with everything free')
-
-
-            # Retrieve the flux and parameter errors and values
+            gta.free_sources(distance=3.0,pars='norm')
             
-            #print(binnedA.flux(str(self.config['selection']['target']),
-            #                   emin=self.config['selection']['emin'],
-            #                   emax=self.config['selection']['emax']))
-                
+            fit_results = gta.fit()
+            #gta.write_xml('fit_model_iter1.xml')
 
-            #o['plottimes'][i] = 54682.65 + (times[i]-239557414.0)/(86400.) + (binning/2.)/86400.
+            if(fit_results['fit_success'] != 1):
                 
+                print('Fit Failed with all Source Parameters Fixed......Lets try getting rid of some low TS sources')
+                
+                gta.delete_sources(minmax_ts=[0,1])
+                
+                fit_results = gta.fit()
+                
+                if(fit_results['fit_success'] != 1):
+                    gta.delete_sources(minmax_ts=[0,2])
 
+                    fit_results = gta.fit()
+                    
+                    if(fit_results['fit_success'] != 1):
+                        print('Fit still did not converge, lets try fixing the sources up to 1dg out from ROI')
+
+                        gta.free_sources(free=0)
+                        gta.free_sources(distance=1.0,pars='norm')
+
+                    if(fit_results['fit_success'] != 1):
+                        print('Fit still didnt converge.....please examine this data point')
+
+            gta.write_xml('fit_model_pass1.xml')
+#now fix the values, but free up params for source and diffuse comps
+            
+            self.logger.info('Fitting with all params free for source and diffuse, all else fixed')
+            gta.free_sources(free=0)
+            gta.free_sources(distance=0.1)
+            gta.fit()
+
+            if(fit_results['fit_success'] != 1):
+
+                print('Fit Failed with all Source Parameters Fixed......Lets try getting rid of some low TS sources')
+
+                gta.delete_sources(minmax_ts=[0,1])
+
+                fit_results = gta.fit()
+
+                if(fit_results['fit_success'] != 1):
+                        gta.delete_sources(minmax_ts=[0,2])
+
+                        fit_results = gta.fit()
+
+                        if(fit_results['fit_success'] != 1):
+                            print('Fit still did not converge, lets try fixing the sources up to 1dg out from ROI')
+
+                            gta.free_sources(free=0)
+                            gta.free_sources(distance=1.0,pars='norm')
+
+                            if(fit_results['fit_success'] != 1):
+                                print('Fit still didnt converge.....please examine this data point')
+
+            gta.write_xml('fit_model_final.xml')
+            output = gta.get_src_model(name)
+
+
+
+            o['MJD'][i]=54682.65 + (times[i]-239557414.0)/(86400.) + (binning/2.)/86400.       
+            o['flux'][i]                   = output['flux'][0]          
+            o['flux_err'][i]               = output['flux'][1]
+            o['flux100'][i]                = output['flux100'][0]
+            o['flux100_err'][i]            = output['flux100'][1]
+            o['flux1000'][i]               = output['flux1000'][0]
+            o['flux1000_err'][i]           = output['flux1000'][1]
+            o['flux10000'][i]              = output['flux10000'][0]
+            o['flux10000_err'][i]          = output['flux10000'][1]
+            o['eflux'][i]                  = output['eflux'][0]
+            o['eflux_err'][i]              = output['eflux'][1]
+            o['eflux100'][i]               = output['eflux100'][0]
+            o['eflux100_err'][i]           = output['eflux100'][1]
+            o['eflux1000'][i]              = output['eflux1000'][0]
+            o['eflux1000_err'][i]          = output['eflux1000'][1]
+            o['eflux10000'][i]             = output['eflux10000'][0]
+            o['eflux10000_err'][i]         = output['eflux10000'][1]
+            o['dfde'][i]                   = output['dfde'][0]
+            o['dfde_err'][i]               = output['dfde'][1]
+            o['dfde100'][i]                = output['dfde100'][0]
+            o['dfde100_err'][i]            = output['dfde100'][1]
+            o['dfde1000'][i]               = output['dfde1000'][0]
+            o['dfde1000_err'][i]           = output['dfde1000'][1]
+            o['dfde10000][i']              = output['dfde10000'][0]
+            o['dfde10000_eff'][i]          = output['dfde10000'][1]
+            o['dfde_index'][i]             = output['dfde_index'][0]
+            o['dfde_index_err'][i]         = output['dfde_index'][1]
+            o['dfde100_index'][i]          = output['dfde100_index'][0]
+            o['dfde100_index_err'][i]      = output['dfde100_index'][1]
+            o['dfde1000_index'][i]         = output['dfde1000_index'][0]
+            o['dfde1000_index_err'][i]     = output['dfde1000_index'][1]
+            o['dfde10000_index'][i]        = output['dfde10000_index'][0]
+            o['dfde10000_index_err'][i]    = output['dfde10000_index'][1]
+            o['flux_ul95'][i]              = output['flux_ul95']
+            o['flux100_ul95'][i]           = output['flux100_ul95']
+            o['flux1000_ul95'][i]          = output['flux1000_ul95']
+            o['flux10000_ul95'][i]         = output['flux10000_ul95']
+            o['eflux_ul95'][i]             = output['eflux_ul95']
+            o['eflux100_ul95'][i]          = output['eflux100_ul95']
+            o['eflux1000_ul95'][i]         = output['eflux1000_ul95']
+            o['eflux10000_ul95'][i]        = output['eflux10000_ul95']
+            o['pivot_energy'][i]           = output['pivot_energy']
+            o['ts'][i]                     = output['ts']
+            o['loglike'][i]                = output['loglike']
+            o['npred'][i]                  = output['npred']
+        
+
+          
 
         src = self.roi.get_source_by_name(name)
         src.update_data({'LightCurve': copy.deepcopy(o)})
