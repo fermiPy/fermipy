@@ -109,23 +109,6 @@ def create_source_table(scan_shape):
     return tab
 
 
-def resolve_file_path(path, **kwargs):
-    dirs = kwargs.get('search_dirs', [])
-
-    if os.path.isabs(os.path.expandvars(path)) and \
-            os.path.isfile(os.path.expandvars(path)):
-        return path
-
-    for d in dirs:
-        if not os.path.isdir(os.path.expandvars(d)):
-            continue
-        p = os.path.join(d, path)
-        if os.path.isfile(os.path.expandvars(p)):
-            return p
-
-    raise Exception('Failed to resolve file path: %s' % path)
-
-
 def get_skydir_distance_mask(src_skydir, skydir, dist, min_dist=None,
                              square=False, coordsys='CEL'):
     """Retrieve sources within a certain angular distance of an
@@ -1270,7 +1253,7 @@ class ROIModel(fermipy.config.Configurable):
                 raise Exception('Invalid type in diffuse mode list: %s'%str(type(t)))
 
             src_dict['file'] = \
-                resolve_file_path(src_dict['file'],
+                utils.resolve_file_path(src_dict['file'],
                                   search_dirs=['$FERMIPY_WORKDIR',
                                                os.path.join('$FERMIPY_ROOT',
                                                             'data'),
@@ -1803,7 +1786,7 @@ class ROIModel(fermipy.config.Configurable):
                 search_dirs += [row['extdir'],
                                 os.path.join(row['extdir'], 'Templates')]
 
-                src_dict['Spatial_Filename'] = resolve_file_path(
+                src_dict['Spatial_Filename'] = utils.resolve_file_path(
                     row['Spatial_Filename'],
                     search_dirs=search_dirs)
 
