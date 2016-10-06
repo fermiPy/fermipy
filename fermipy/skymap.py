@@ -89,15 +89,24 @@ class Map(Map_Base):
         Map_Base.__init__(self, counts)
         self._wcs = wcs
 
-        self._npix = counts.shape
+        self._npix = counts.shape[::-1]
 
-        if len(self._npix) != 3 and len(self._npix) != 2:
+        if len(self._npix) == 3:
+            self._xindex = 2
+            self._yindex = 1
+        elif len(self._npix) == 2:
+            self._xindex = 1
+            self._yindex = 0
+        else:
             raise Exception('Wrong number of dimensions for Map object.')
+        
+        #if len(self._npix) != 3 and len(self._npix) != 2:
+        #    raise Exception('Wrong number of dimensions for Map object.')
 
-        self._width = np.array([np.abs(self.wcs.wcs.cdelt[0]) * self._npix[0],
-                                np.abs(self.wcs.wcs.cdelt[1]) * self._npix[1]])
-        self._pix_center = np.array([(self._npix[0] - 1.0) / 2.,
-                                     (self._npix[1] - 1.0) / 2.])
+        self._width = np.array([np.abs(self.wcs.wcs.cdelt[0]) * self.npix[0],
+                                np.abs(self.wcs.wcs.cdelt[1]) * self.npix[1]])
+        self._pix_center = np.array([(self.npix[0] - 1.0) / 2.,
+                                     (self.npix[1] - 1.0) / 2.])
         self._pix_size = np.array([np.abs(self.wcs.wcs.cdelt[0]),
                                    np.abs(self.wcs.wcs.cdelt[1])])
 
@@ -146,28 +155,40 @@ class Map(Map_Base):
         data = hdulist[hdu].data
         header = fits.Header.fromstring(header.tostring())
         wcs = WCS(header)
-        return Map(data.T, wcs)
+
+        ebins = None
+        if 'ENERGIES' in hdulist:        
+            tab = Table.read(fitsfile,'ENERGIES')
+            ectr = np.array(tab.columns[0])
+            ebins = np.exp(utils.center_to_edge(np.log(ectr)))
+        elif 'EBOUNDS' in hdulist:
+            tab = Table.read(fitsfile,'EBOUNDS')
+            emin = np.array(tab['E_MIN'])/1E3
+            emax = np.array(tab['E_MAX'])/1E3
+            ebins = np.append(emin,emax[-1])
+            
+        return Map(data, wcs, ebins)
 
     @staticmethod
     def create(skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
         crpix = np.array([n / 2. + 0.5 for n in npix])
         wcs = wcs_utils.create_wcs(skydir, coordsys, projection,
                                    cdelt, crpix)
-        return Map(np.zeros(npix), wcs)
+        return Map(np.zeros(npix).T, wcs)
 
     def create_image_hdu(self, name=None):
-        return fits.ImageHDU(self.counts.T, header=self.wcs.to_header(),
+        return fits.ImageHDU(self.counts, header=self.wcs.to_header(),
                              name=name)
 
     def create_primary_hdu(self):
-        return fits.PrimaryHDU(self.counts.T, header=self.wcs.to_header())
+        return fits.PrimaryHDU(self.counts, header=self.wcs.to_header())
 
     def sum_over_energy(self):
         """ Reduce a 3D counts cube to a 2D counts map
         """
         # Note that the array is using the opposite convention from WCS
         # so we sum over axis 0 in the array, but drop axis 2 in the WCS object
-        return Map(np.sum(self.counts, axis=2), self.wcs.dropaxis(2))
+        return Map(np.sum(self.counts, axis=0), self.wcs.dropaxis(2))
 
     def xypix_to_ipix(self, xypix, colwise=False):
         """Return the flattened pixel indices from an array multi-dimensional
@@ -181,7 +202,7 @@ class Map(Map_Base):
         colwise : bool
             Use column-wise pixel indexing.
         """
-        return np.ravel_multi_index(xypix, self._npix,
+        return np.ravel_multi_index(xypix, self.npix,
                                     order='F' if colwise else 'C',
                                     mode='raise')
 
@@ -193,7 +214,7 @@ class Map(Map_Base):
         colwise : bool
             Use column-wise pixel indexing.
         """
-        return np.unravel_index(ipix, self._npix,
+        return np.unravel_index(ipix, self.npix,
                                 order='F' if colwise else 'C')
 
     def ipix_swap_axes(self, ipix, colwise=False):
@@ -210,8 +231,8 @@ class Map(Map_Base):
         
         """
         
-        xpix = np.linspace(0, self.counts.shape[0] - 1., self.counts.shape[0])
-        ypix = np.linspace(0, self.counts.shape[1] - 1., self.counts.shape[1])
+        xpix = np.linspace(0, self.npix[0] - 1., self.npix[0])
+        ypix = np.linspace(0, self.npix[1] - 1., self.npix[1])
         xypix = np.meshgrid(xpix, ypix, indexing='ij')
         return SkyCoord.from_pixel(np.ravel(xypix[0]),
                                    np.ravel(xypix[1]), self.wcs)
@@ -245,7 +266,7 @@ class Map(Map_Base):
             all_lons = np.expand_dims(lons,-1)
             all_lats = np.expand_dims(lats,-1)
             if ibin is None:
-                all_bins = (np.expand_dims(np.arange(self._npix[2]),-1) * np.ones(lons.shape)).T
+                all_bins = (np.expand_dims(np.arange(self.npix[2]),-1) * np.ones(lons.shape)).T
             else:
                 all_bins = ibin
                 
@@ -285,7 +306,7 @@ class Map(Map_Base):
             m &= (pix_idxs[i] >= 0) & (pix_idxs[i] < self._npix[i])
             idxs[i][~m] = 0
         
-        vals = self.counts[idxs]
+        vals = self.counts.T[idxs]
         vals[~m] = np.nan
         return vals
 
@@ -301,7 +322,7 @@ class Map(Map_Base):
         for npix in self.npix:
             points += [np.linspace(0, npix - 1., npix)]
         data = self.counts
-        fn = RegularGridInterpolator(points, data,
+        fn = RegularGridInterpolator(points, data.T,
                                      bounds_error=False,
                                      fill_value=None)
         return fn(np.column_stack(pixcrd))
