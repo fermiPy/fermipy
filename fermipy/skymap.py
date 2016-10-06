@@ -5,6 +5,7 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.table import Table
 from astropy.coordinates import SkyCoord
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
@@ -86,7 +87,7 @@ class Map(Map_Base):
         counts : `~numpy.ndarray`
             Counts array in row-wise ordering (LON is first dimension).
         """
-        Map_Base.__init__(self, counts)
+        Map_Base.__init__(self, counts, ebins=None)
         self._wcs = wcs
 
         self._npix = counts.shape[::-1]
