@@ -162,12 +162,12 @@ class Exposure(HpxMap):
 class PSFModel(object):
 
     def __init__(self, skydir, ltc, event_class, event_types,
-                 log_energies, cth_min=0.2):
+                 log_energies, cth_min=0.2, ndtheta=1000, ncth=40):
 
         if isinstance(event_types, int):
             event_types = bitmask_to_bits(event_types)
 
-        self._dtheta = np.logspace(-4, 1.75, 1000)
+        self._dtheta = np.logspace(-4, 1.75, ndtheta)
         self._dtheta = np.insert(self._dtheta, 0, [0])
         self._log_energies = log_energies
         self._energies = 10**log_energies
@@ -175,14 +175,14 @@ class PSFModel(object):
 
         self._exp = np.zeros(len(log_energies))
         self._psf = self.create_average_psf(skydir, ltc, event_class, event_types,
-                                            self._dtheta, log_energies, cth_min)
+                                            self._dtheta, log_energies, cth_min, ncth)
 
         self._psf_fn = RegularGridInterpolator((self._dtheta, log_energies),
                                                np.log(self._psf),
                                                bounds_error=False,
                                                fill_value=None)
 
-        cth_edge = np.linspace(cth_min, 1.0, 41)
+        cth_edge = np.linspace(cth_min, 1.0, ncth+1)
         cth = edge_to_center(cth_edge)
         ltw = ltc.get_skydir_lthist(skydir, cth_edge)
         for et in event_types:
@@ -307,12 +307,12 @@ class PSFModel(object):
 
     @staticmethod
     def create_average_psf(skydir, ltc, event_class, event_types, dtheta, egy,
-                           cth_min=0.2):
+                           cth_min=0.2, ncth=40):
 
         if isinstance(event_types, int):
             event_types = bitmask_to_bits(event_types)
 
-        cth_edge = np.linspace(cth_min, 1.0, 41)
+        cth_edge = np.linspace(cth_min, 1.0, ncth+1)
         cth = edge_to_center(cth_edge)
 
         wpsf = np.zeros((len(dtheta), len(egy)))
@@ -398,6 +398,8 @@ class LTCube(HpxMap):
         self._cth_edges = cth_edges
         self._cth_center = edge_to_center(self._cth_edges)
         self._cth_width = edge_to_width(self._cth_edges)
+        self._domega = (self._cth_edges[1:]-
+                        self._cth_edges[:-1])*2*np.pi
         self._tstart = tstart
         self._tstop = tstop
 
@@ -419,7 +421,9 @@ class LTCube(HpxMap):
     
     @staticmethod
     def create(ltfile):
-
+        """Create a livetime cube from a single file or list of
+        files."""
+        
         if not re.search('\.txt?', ltfile) is None:
             files = np.loadtxt(ltfile, unpack=True, dtype='str')        
         elif not isinstance(ltfile, list):
@@ -435,26 +439,41 @@ class LTCube(HpxMap):
     def create_from_file(ltfile):
 
         hdulist = fits.open(ltfile)
-        data = hdulist[1].data.field(0)
+        data = hdulist['EXPOSURE'].data.field(0)
         tstart = hdulist[0].header['TSTART']
         tstop = hdulist[0].header['TSTOP']
-        cth_edges = np.array(hdulist[3].data.field(0))
+        cth_edges = np.array(hdulist['CTHETABOUNDS'].data.field(0))
         cth_edges = np.concatenate(([1], cth_edges))
-        hpx = HPX(64,True,'CEL',ebins=cth_edges)        
+        cth_edges = cth_edges[::-1]        
+        hpx = HPX.create_from_header(hdulist['EXPOSURE'].header,cth_edges)
         return LTCube(data.T,hpx,cth_edges,tstart,tstop)
-        
+
+    @staticmethod
+    def create_empty(tstart, tstop, fill=0.0):
+        """Create an empty livetime cube."""
+        data = np.ones((40,49152))*fill
+        cth_edges = np.linspace(0,1.0,41)
+        hpx = HPX(64,True,'CEL',ebins=cth_edges)    
+        return LTCube(data,hpx,cth_edges,tstart,tstop)        
+    
     def load_ltfile(self, ltfile):
 
         ltc = LTCube.create_from_file(ltfile)
-        self.data += ltc.data
+        self._counts += ltc.data
         self._tstart = min(self.tstart, ltc.tstart)
         self._tstop = max(self.tstop, ltc.tstop)
 
-#        self._domega = (self._cth_axis.edges[1:]-
-#                        self._cth_axis.edges[:-1])*2*np.pi
-
     def get_skydir_lthist(self, skydir, cth_edges):
+        """Get the livetime distribution (observing profile) for a
+        given sky direction.
 
+        Parameters
+        ----------
+        skydir : `~astropy.coordinates.SkyCoord`
+
+        cth_edges : `~numpy.ndarray`
+            Bin edges in cosine of the incidence angle.
+        """
         ra = skydir.ra.deg
         dec = skydir.dec.deg
 
@@ -463,9 +482,8 @@ class LTCube(HpxMap):
         center = edge_to_center(edges)
         width = edge_to_width(edges)
 
-        ipix = hp.ang2pix(64, np.pi / 2. - np.radians(dec),
-                          np.radians(ra), nest=True)
-
+        ipix = hp.ang2pix(self.hpx.nside, np.pi / 2. - np.radians(dec),
+                          np.radians(ra), nest=self.hpx.nest)
         lt = np.interp(center, self._cth_center,
                        self.data[::-1,ipix] / self._cth_width) * width
         lt = np.sum(lt.reshape(-1, 4), axis=1)
