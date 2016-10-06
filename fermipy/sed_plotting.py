@@ -7,6 +7,7 @@ Many parts of this code are taken from dsphs/like/lnlfn.py by
   Alex Drlica-Wagner <kadrlica@slac.stanford.edu>
 """
 from __future__ import absolute_import, division, print_function
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes,mark_inset
 import numpy as np
 
 NORM_LABEL = {
@@ -61,6 +62,25 @@ def plotNLL_v_Flux(nll, fluxType, nstep=25, xlims=None):
     return fig, ax
 
 
+def make_colorbar(fig,ax,im,zlims):
+    """
+    """
+    pdf_adjust = 0.01 # Dealing with some pdf crap...
+    cax = inset_axes(ax,width="3%",height="100%",loc=3,
+                     bbox_to_anchor=(1.01,0.0,1.05,1.00),
+                     bbox_transform=ax.transAxes,
+                     borderpad=0.)
+    cbar = fig.colorbar(im, cax, ticks=np.arange(zlims[0],zlims[-1]))
+    xy = cbar.outline.xy
+    xy[0:,0] *= 1-5*pdf_adjust
+    xy[0:,1] *= 1-pdf_adjust
+    cbar.outline.set_xy(xy)
+    cax.invert_yaxis()
+    cax.axis['right'].toggle(ticks=True, ticklabels=True, label=True)
+    cax.set_ylabel(r"$\Delta \log \mathcal{L}$")
+    return cax,cbar
+
+
 def plotCastro_base(castroData, xlims, ylims, 
                     xlabel, ylabel, nstep=25, zlims=None):
     """ Make a color plot (castro plot) of the 
@@ -93,7 +113,7 @@ def plotCastro_base(castroData, xlims, ylims,
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
-
+    
     ax.set_xscale('log')
     ax.set_yscale('log')
     ax.set_xlim((xmin, xmax))
@@ -115,7 +135,12 @@ def plotCastro_base(castroData, xlims, ylims,
                    origin='lower', aspect='auto', interpolation='nearest',
                    vmin=zmin, vmax=zmax, cmap=cmap)
 
-    return fig, ax, im, ztmp
+    cax,cbar = make_colorbar(fig,ax,im,(zmin,zmax))
+    #cbar = fig.colorbar(im, ticks=np.arange(zmin,zmax),
+    #                    fraction=0.10,panchor=(1.05,0.5))
+    #cbar.set_label(r'$\Delta \log\mathcal{L}$')
+    #cax = None
+    return fig, ax, im, ztmp, cax, cbar
 
 
 def plotCastro(castroData, ylims, nstep=25, zlims=None):
