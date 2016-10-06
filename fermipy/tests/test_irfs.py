@@ -13,6 +13,8 @@ try:
 except ImportError:
     pass
 
+# Skip tests in this file if Fermi ST aren't available
+pytestmark = requires_dependency('Fermi ST')
 
 def test_psfmodel():
 
