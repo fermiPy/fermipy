@@ -80,14 +80,14 @@ class Map_Base(object):
 class Map(Map_Base):
     """ Representation of a 2D or 3D counts map using WCS. """
 
-    def __init__(self, counts, wcs):
+    def __init__(self, counts, wcs, ebins=None):
         """
         Parameters
         ----------
         counts : `~numpy.ndarray`
             Counts array in row-wise ordering (LON is first dimension).
         """
-        Map_Base.__init__(self, counts, ebins=None)
+        Map_Base.__init__(self, counts)
         self._wcs = wcs
 
         self._npix = counts.shape[::-1]
