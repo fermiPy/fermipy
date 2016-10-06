@@ -2,9 +2,11 @@
 from __future__ import absolute_import, division, print_function
 import copy
 import numpy as np
+import healpy as hp
 from scipy.interpolate import RegularGridInterpolator
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.table import Table
 from astropy.coordinates import SkyCoord
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
@@ -79,7 +81,7 @@ class Map_Base(object):
 class Map(Map_Base):
     """ Representation of a 2D or 3D counts map using WCS. """
 
-    def __init__(self, counts, wcs):
+    def __init__(self, counts, wcs, ebins=None):
         """
         Parameters
         ----------
@@ -104,7 +106,12 @@ class Map(Map_Base):
         self._skydir = SkyCoord.from_pixel(self._pix_center[0],
                                            self._pix_center[1],
                                            self.wcs)
-
+        self._ebins = ebins
+        if ebins is not None:        
+            self._ectr = np.exp(utils.edge_to_center(np.log(ebins)))
+        else:
+            self._ectr = None
+            
     @property
     def wcs(self):
         return self._wcs
@@ -146,7 +153,19 @@ class Map(Map_Base):
         data = hdulist[hdu].data
         header = fits.Header.fromstring(header.tostring())
         wcs = WCS(header)
-        return Map(data.T, wcs)
+
+        ebins = None
+        if 'ENERGIES' in hdulist:        
+            tab = Table.read(fitsfile,'ENERGIES')
+            ectr = np.array(tab.columns[0])
+            ebins = np.exp(utils.center_to_edge(np.log(ectr)))
+        elif 'EBOUNDS' in hdulist:
+            tab = Table.read(fitsfile,'EBOUNDS')
+            emin = np.array(tab['E_MIN'])/1E3
+            emax = np.array(tab['E_MAX'])/1E3
+            ebins = np.append(emin,emax[-1])
+            
+        return Map(data.T, wcs, ebins)
 
     @staticmethod
     def create(skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
@@ -235,6 +254,9 @@ class Map(Map_Base):
         pixcrd : list
            Pixel indices along each dimension of the map.
         """
+        lons = np.array(lons,ndmin=1)
+        lats = np.array(lats,ndmin=1)
+        
         if len(lats) != len(lons):
             raise RuntimeError('Map.get_pixel_indices, input lengths '
                                'do not match %i %i' % (len(lons), len(lats)))
@@ -258,7 +280,7 @@ class Map(Map_Base):
         return pixcrd
 
     def get_map_values(self, lons, lats, ibin=None):
-        """Return the indices in the flat array corresponding to a set of coordinates
+        """Return the map values corresponding to a set of coordinates.
 
         Parameters
         ----------
@@ -289,20 +311,22 @@ class Map(Map_Base):
         vals[~m] = np.nan
         return vals
 
-    def interpolate(self, lon, lat, ibin=None):
+    def interpolate(self, lon, lat, egy=None):
 
-        if len(self._npix) == 2:
+        if len(self.npix) == 2:
             pixcrd = self.wcs.wcs_world2pix(lon, lat, 0)
         else:
-            ebins = np.linspace(0, self.npix[2] - 1., self.npix[2])
-            pixcrd = self.wcs.wcs_world2pix(lon, lat, ebins, 0)
-
+            if egy is None:
+                egy = self._ectr
+            
+            pixcrd = self.wcs.wcs_world2pix(lon, lat, egy, 0)
+            pixcrd[2] = np.array(utils.val_to_pix(np.log(self._ectr), np.log(egy)),ndmin=1)
+            
         points = []
         for npix in self.npix:
             points += [np.linspace(0, npix - 1., npix)]
         data = self.counts
-        fn = RegularGridInterpolator(points, data,
-                                     bounds_error=False,
+        fn = RegularGridInterpolator(points, data, bounds_error=False,
                                      fill_value=None)
         return fn(np.column_stack(pixcrd))
 
@@ -448,3 +472,33 @@ class HpxMap(Map_Base):
             wcs = self._wcs_2d
 
         return wcs, wcs_data
+
+    def get_map_values(self, lons, lats, ibin=None):
+        """Return the indices in the flat array corresponding to a set of coordinates
+
+        Parameters
+        ----------
+        lons  : array-like
+           'Longitudes' (RA or GLON)
+
+        lats  : array-like
+           'Latitidues' (DEC or GLAT)
+
+        ibin : int or array-like
+           Extract data only for a given energy bin.  None -> extract data for all bins
+
+        Returns
+        ----------
+        vals : numpy.ndarray((n))
+           Values of pixels in the flattened map, np.nan used to flag
+           coords outside of map
+        """
+        theta = np.pi/2.-np.radians(lats)
+        phi = np.radians(lons)
+        
+        pix = hp.ang2pix(self.hpx.nside,theta,phi,nest=self.hpx.nest)
+
+        if self.data.ndim == 2:
+            return self.data[:,pix] if ibin is None else self.data[ibin,pix] 
+        else:
+            return self.data[pix]
