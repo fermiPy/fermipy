@@ -33,6 +33,7 @@ from fermipy.hpx_utils import HPX
 from fermipy.roi_model import ROIModel
 from fermipy.plotting import AnalysisPlotter
 from fermipy.logger import Logger, log_level
+from fermipy.config import ConfigSchema
 # pylikelihood
 import GtApp
 import FluxDensity
@@ -931,6 +932,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         cfg['fileio']['workdir'] = self.config['fileio']['workdir']
 
+        for k in cfg.keys():
+            if not k in GTBinnedAnalysis.defaults:
+                cfg.pop(k)
+        
         comp = GTBinnedAnalysis(cfg, logging=self.config['logging'])
 
         return comp
@@ -2158,15 +2163,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         name = self.roi.get_source_by_name(name).name
 
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['extension'])
-        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
-        config.setdefault('prefix', '')
-        config.setdefault('write_fits', True)
-        config.setdefault('write_npy', True)
-        fermipy.config.validate_config(kwargs, config)
-        config = merge_dict(config, kwargs)
-
+        schema = ConfigSchema(self.defaults['extension'],
+                              optimizer=self.defaults['optimizer'])
+        schema.add_option('prefix', '')
+        schema.add_option('write_fits', True)
+        schema.add_option('write_npy', True)
+        config = utils.create_dict(self.config['extension'],
+                                   optimizer=self.config['optimizer'])
+        config = schema.create_config(config, **kwargs)
+        
         spatial_model = config['spatial_model']
         width_min = config['width_min']
         width_max = config['width_max']

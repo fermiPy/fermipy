@@ -10,6 +10,7 @@ import numpy as np
 import warnings
 import pyLikelihood as pyLike
 from scipy.optimize import brentq
+import astropy
 import astropy.io.fits as pyfits
 from astropy.table import Table
 import astropy.wcs as pywcs
@@ -21,6 +22,7 @@ import fermipy.castro as castro
 from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.spectrum import PowerLaw
+from fermipy.config import ConfigSchema
 from LikelihoodState import LikelihoodState
 
 MAX_NITER = 100
@@ -730,19 +732,24 @@ class TSMapGenerator(object):
 
         self.logger.info('Generating TS map')
 
-        config = copy.deepcopy(self.config['tsmap'])
-        config = utils.merge_dict(config, kwargs, add_new_keys=True)
+        schema = ConfigSchema(self.defaults['tsmap'])        
+        schema.add_option('make_plots',True)
+        schema.add_option('write_fits', True)
+        schema.add_option('write_npy', True)
+        schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)
+        schema.add_option('map_size', 1.0)
+        schema.add_option('exclude', None,'',list)
+        config = schema.create_config(self.config['tsmap'],**kwargs)
 
         # Defining default properties of test source model
         config['model'].setdefault('Index', 2.0)
         config['model'].setdefault('SpectrumType', 'PowerLaw')
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
+        
+        maps = self._make_tsmap_fast(prefix, **config)
 
-        make_plots = kwargs.get('make_plots', True)
-        maps = self._make_tsmap_fast(prefix, config, **kwargs)
-
-        if make_plots:
+        if config['make_plots']:
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
@@ -752,7 +759,7 @@ class TSMapGenerator(object):
         self.logger.info('Finished TS map')
         return maps
 
-    def _make_tsmap_fast(self, prefix, config, **kwargs):
+    def _make_tsmap_fast(self, prefix, **kwargs):
         """
         Make a TS map from a GTAnalysis instance.  This is a
         simplified implementation optimized for speed that only fits
@@ -770,17 +777,13 @@ class TSMapGenerator(object):
 
         """
 
-        write_fits = kwargs.get('write_fits', True)
-        write_npy = kwargs.get('write_npy', True)
-        map_skydir = kwargs.get('map_skydir', None)
-        map_size = kwargs.get('map_size', 1.0)
-        exclude = kwargs.get('exclude', None)
-
-        src_dict = copy.deepcopy(config.setdefault('model', {}))
-        multithread = config.setdefault('multithread', False)
-        threshold = config.setdefault('threshold', 1E-2)
-        max_kernel_radius = config.get('max_kernel_radius')
-        loge_bounds = config.setdefault('loge_bounds', None)
+        src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
+        src_dict = {} if src_dict is None else src_dict
+        
+        multithread = kwargs.setdefault('multithread', False)
+        threshold = kwargs.setdefault('threshold', 1E-2)
+        max_kernel_radius = kwargs.get('max_kernel_radius')
+        loge_bounds = kwargs.setdefault('loge_bounds', None)
 
         if loge_bounds is not None:
             if len(loge_bounds) == 0:
@@ -802,8 +805,6 @@ class TSMapGenerator(object):
         skywcs = self._skywcs
         skydir = wcs_utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
-        if src_dict is None:
-            src_dict = {}
         src_dict['ra'] = skydir.ra.deg
         src_dict['dec'] = skydir.dec.deg
         src_dict.setdefault('SpatialModel', 'PointSource')
@@ -824,8 +825,7 @@ class TSMapGenerator(object):
             imax = utils.val_to_edge(c.log_energies, loge_bounds[1])[0]
 
             eslice = slice(imin, imax)
-            bm = c.model_counts_map(exclude=exclude).counts.astype('float')[
-                eslice, ...]
+            bm = c.model_counts_map(exclude=kwargs['exclude']).counts.astype('float')[eslice, ...]
             cm = c.counts_map().counts.astype('float')[eslice, ...]
 
             bkg += [bm]
@@ -875,9 +875,10 @@ class TSMapGenerator(object):
                                  bkg=bkg, model=model,
                                  C_0_map=c0_map)
 
-        if map_skydir is not None:
-            map_offset = wcs_utils.skydir_to_pix(map_skydir, self._skywcs)
-            map_delta = 0.5 * map_size / self.components[0].binsz
+        if kwargs['map_skydir'] is not None:
+            map_offset = wcs_utils.skydir_to_pix(kwargs['map_skydir'],
+                                                 self._skywcs)
+            map_delta = 0.5 * kwargs['map_size'] / self.components[0].binsz
             xmin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
             xmax = min(int(np.floor(map_offset[1] + map_delta)) + 1, self.npix)
             ymin = max(int(np.ceil(map_offset[0] - map_delta)), 0)
@@ -931,14 +932,14 @@ class TSMapGenerator(object):
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
              'amplitude': amp_map,
-             'config': config
+             'config': kwargs
              }
 
         fits_file = utils.format_filename(self.config['fileio']['workdir'],
                                           'tsmap.fits',
                                           prefix=[prefix, modelname])
 
-        if write_fits:
+        if kwargs['write_fits']:
 
             fits_utils.write_maps(ts_map,
                                   {'SQRT_TS_MAP': sqrt_ts_map,
@@ -947,7 +948,7 @@ class TSMapGenerator(object):
                                   fits_file)
             o['file'] = os.path.basename(fits_file)
 
-        if write_npy:
+        if kwargs['write_npy']:
             np.save(os.path.splitext(fits_file)[0] + '.npy', o)
 
         return o
@@ -1088,13 +1089,15 @@ class TSCubeGenerator(object):
 
         self.logger.info('Generating TS cube')
 
-        config = copy.deepcopy(self.config['tscube'])
-        config = utils.merge_dict(config, kwargs, add_new_keys=True)
+        schema = ConfigSchema(self.defaults['tscube'])        
+        schema.add_option('make_plots',True)
+        schema.add_option('write_fits', True)
+        schema.add_option('write_npy', True)
+        config = schema.create_config(self.config['tscube'],**kwargs)
+        
+        maps = self._make_ts_cube(prefix, **config)
 
-        make_plots = kwargs.get('make_plots', True)
-        maps = self._make_ts_cube(prefix, config, **kwargs)
-
-        if make_plots:
+        if config['make_plots']:
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
@@ -1104,9 +1107,8 @@ class TSCubeGenerator(object):
         self.logger.info("Finished TS cube")
         return maps
 
-    def _make_ts_cube(self, prefix, config, **kwargs):
+    def _make_ts_cube(self, prefix, **kwargs):
 
-        write_fits = kwargs.get('write_fits', True)
         skywcs = kwargs.get('wcs', self._skywcs)
         npix = kwargs.get('npix', self.npix)
 
@@ -1120,9 +1122,8 @@ class TSCubeGenerator(object):
                                                  refdir, pixsize, npix,
                                                  galactic)
 
-        src_dict = copy.deepcopy(config.setdefault('model', {}))
-        if src_dict is None:
-            src_dict = {}
+        src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
+        src_dict = {} if src_dict is None else src_dict
 
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
                       np.round((self.npix - 1.0) / 2.))
@@ -1159,24 +1160,24 @@ class TSCubeGenerator(object):
 
         try:
             fitScanner.run_tscube(True,
-                                  config['do_sed'], config['nnorm'],
-                                  config['norm_sigma'],
-                                  config['cov_scale_bb'], config['cov_scale'],
-                                  config['tol'], config['max_iter'],
-                                  config['tol_type'], config[
-                                      'remake_test_source'],
-                                  config['st_scan_level'],
+                                  kwargs['do_sed'], kwargs['nnorm'],
+                                  kwargs['norm_sigma'],
+                                  kwargs['cov_scale_bb'], kwargs['cov_scale'],
+                                  kwargs['tol'], kwargs['max_iter'],
+                                  kwargs['tol_type'],
+                                  kwargs['remake_test_source'],
+                                  kwargs['st_scan_level'],
                                   str(''),
-                                  config['init_lambda'])
+                                  kwargs['init_lambda'])
         except Exception:
             fitScanner.run_tscube(True,
-                                  config['do_sed'], config['nnorm'],
-                                  config['norm_sigma'],
-                                  config['cov_scale_bb'], config['cov_scale'],
-                                  config['tol'], config['max_iter'],
-                                  config['tol_type'], config[
-                                      'remake_test_source'],
-                                  config['st_scan_level'])
+                                  kwargs['do_sed'], kwargs['nnorm'],
+                                  kwargs['norm_sigma'],
+                                  kwargs['cov_scale_bb'], kwargs['cov_scale'],
+                                  kwargs['tol'], kwargs['max_iter'],
+                                  kwargs['tol_type'],
+                                  kwargs['remake_test_source'],
+                                  kwargs['st_scan_level'])
 
         self.logger.info("Writing FITS output")
 
@@ -1202,7 +1203,7 @@ class TSCubeGenerator(object):
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
              'amplitude': amp_map,
-             'config': config,
+             'config': kwargs,
              'tscube': tscube
              }
 

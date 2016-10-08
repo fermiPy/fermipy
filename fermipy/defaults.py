@@ -222,7 +222,7 @@ residmap = {
 # TS Map
 tsmap = {
     'model': (None, 'Dictionary defining the properties of the test source.', dict),
-    'multithread': (False, '', bool),
+    'multithread': (False, 'Split the TS map calculation across multiple cores.', bool),
     'max_kernel_radius': (3.0, '', float),
     'loge_bounds': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
 }
@@ -335,7 +335,7 @@ sed_output = OrderedDict((
 extension = {
     'spatial_model': ('RadialGaussian', 'Spatial model use for extension test.', str),
     'width': (None, 'Parameter vector for scan over spatial extent.  If none then the parameter '
-              'vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.', str),
+              'vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.', list),
     'width_min': (0.01, 'Minimum value in degrees for the likelihood scan over spatial extent.', float),
     'width_max': (1.0, 'Maximum value in degrees for the likelihood scan over spatial extent.', float),
     'width_nstep': (21, 'Number of steps for the spatial likelihood scan.', int),
