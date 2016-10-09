@@ -4330,6 +4330,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         src = self.roi.create_source(name, src_dict)
         self.make_template(src, self.config['file_suffix'])
 
+        if self.config['gtlike']['expscale'] is not None and \
+                name not in self._src_expscale:
+            self._src_expscale[name] = self.config['gtlike']['expscale']
+                    
         if self._like is None:
             return
 
@@ -4341,6 +4345,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.logLike.buildFixedModelWts()
         if save_source_maps:
             self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
+
+        self.set_exposure_scale(name)
 
     def _create_source(self, src, free=False):
         """Create a pyLikelihood Source object from a
@@ -4435,7 +4441,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         return src
 
-    def set_exposure_scale(self, name, scale):
+    def set_exposure_scale(self, name, scale=None):
         """Set the exposure correction of a source.
 
         Parameters
@@ -4448,7 +4454,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         """
         name = self.roi.get_source_by_name(name).name
-        self._src_expscale[name] = scale
+        if scale is None and name not in self._src_expscale:
+            return        
+        elif scale is None:
+            scale = self._src_expscale.get(name,1.0)
+        else:
+            self._src_expscale[name] = scale
         self._scale_srcmap({name: scale})
 
     def set_edisp_flag(self, name, flag=True):
