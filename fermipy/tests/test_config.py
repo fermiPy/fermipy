@@ -30,18 +30,15 @@ default_config = {
     'secB' : secB_default_config,
     }
 
-
-    
 class TestClass(config.Configurable):
     defaults = default_config    
     def __init__(self,config=None,**kwargs):
         super(TestClass, self).__init__(config, **kwargs)
 
-    def test_method(self,**kwargs):
+    def method(self,**kwargs):
 
         schema = config.ConfigSchema(self.defaults['secA'],
                                      secB=self.defaults['secB'])
-#        schema.add_section('secB',self.defaults['secB'])
         schema.add_option('extraOptA',3.0)
         schema.add_option('extraOptB',False)
         cfg = utils.create_dict(self.config['secA'],secB=self.config['secB'])
@@ -88,19 +85,19 @@ def test_method_config():
     cfg = {'secA' : {'optFloatA' : 1.0}}
     cls = TestClass(cfg)
     
-    outcfg = cls.test_method()
+    outcfg = cls.method()
     assert(outcfg['optFloatA'] == 1.0)
     assert(outcfg['secB']['optFloatA'] == 7.0)
     assert(outcfg['extraOptA'] == 3.0)
     assert(outcfg['extraOptB'] == False)
     
     cfg = {'optFloatA' : 5.0, 'extraOptB' : True}
-    outcfg = cls.test_method(**cfg)
+    outcfg = cls.method(**cfg)
     assert(outcfg['optFloatA'] == 5.0)
     assert(outcfg['extraOptA'] == 3.0)
     assert(outcfg['extraOptB'] == True)
     
-    outcfg = cls.test_method(extraOptA=4.0,
+    outcfg = cls.method(extraOptA=4.0,
                              secB={'optFloatA' : 2.0},**cfg)
     assert(outcfg['extraOptA'] == 4.0)
     assert(outcfg['secB']['optFloatA'] == 2.0)
@@ -135,13 +132,13 @@ def test_config_method_validation():
 
     cls = TestClass()    
     with pytest.raises(KeyError):    
-        cls.test_method(optInvalid=3.0)
+        cls.method(optInvalid=3.0)
 
     with pytest.raises(KeyError):    
-        cls.test_method(secB={'optInvalid' : 3.0})
+        cls.method(secB={'optInvalid' : 3.0})
         
     with pytest.raises(TypeError):    
-        cls.test_method(**{'optFloatA' : {}})
+        cls.method(**{'optFloatA' : {}})
     
     with pytest.raises(TypeError):    
-        cls.test_method(**{'secB' : {'optFloatA' : {}}})
+        cls.method(**{'secB' : {'optFloatA' : {}}})
