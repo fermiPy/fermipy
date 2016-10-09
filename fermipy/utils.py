@@ -961,7 +961,7 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
             od[k] = copy.copy(d1[k])
 
     if add_new_keys:
-        for k, v in d1.iteritems():
+        for k, v in d1.items():
             if k not in d0:
                 od[k] = copy.deepcopy(d1[k])
 
