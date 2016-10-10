@@ -4930,12 +4930,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if scale<1e-20:
                 self.logger.warning("The expscale parameter was zero, setting it to 1e-8")
                 scale = 1e-8
-            if 'SRCMAP_SCALE' in hdu.header:
-                old_scale = hdu.header['SRCMAP_SCALE']
+            if 'EXPSCALE' in hdu.header:
+                old_scale = hdu.header['EXPSCALE']
             else:
                 old_scale = 1.0
             hdu.data *= scale/old_scale
-            hdu.header['SRCMAP_SCALE'] = scale
+            hdu.header['EXPSCALE'] = scale
 
         srcmap.writeto(self.files['srcmap'], clobber=True)
 
