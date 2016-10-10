@@ -11,6 +11,7 @@ import fermipy.wcs_utils as wcs_utils
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
 from fermipy.skymap import Map
+from fermipy.config import ConfigSchema
 from LikelihoodState import LikelihoodState
 
 
@@ -78,9 +79,17 @@ class SourceFinder(object):
 
         self.logger.info('Starting.')
 
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['sourcefind'])
-        config.update(kwargs)
+        schema = ConfigSchema(self.defaults['sourcefind'],
+                              tsmap=self.defaults['tsmap'],
+                              tscube=self.defaults['tscube'])
+
+        schema.add_option('search_skydir', None, '', SkyCoord)
+        schema.add_option('search_minmax_radius', [None, 1.0], '', list)
+        
+        config = utils.create_dict(self.config['sourcefind'],
+                                   tsmap=self.config['tsmap'],
+                                   tscube=self.config['tscube'])        
+        config = schema.create_config(config, **kwargs)
 
         # Defining default properties of test source model
         config['model'].setdefault('Index', 2.0)
@@ -158,19 +167,19 @@ class SourceFinder(object):
         sources_per_iter = kwargs.get('sources_per_iter')
         search_skydir = kwargs.get('search_skydir', None)
         search_minmax_radius = kwargs.get('search_minmax_radius', [None, 1.0])
-
-        tsmap_fitter = kwargs.get('tsmap_fitter')
-        tsmap_kwargs = kwargs.get('tsmap', {})
-        tscube_kwargs = kwargs.get('tscube', {})
-
+        tsmap_fitter = kwargs.get('tsmap_fitter','tsmap')
+        
         if tsmap_fitter == 'tsmap':
+            kw = kwargs.get('tsmap', {})
+            kw['model'] = src_dict_template
             m = self.tsmap('%s_sourcefind_%02i' % (prefix, iiter),
-                           model=src_dict_template,
-                           **tsmap_kwargs)
+                           **kw)
+            
         elif tsmap_fitter == 'tscube':
+            kw = kwargs.get('tscube', {})
+            kw['model'] = src_dict_template
             m = self.tscube('%s_sourcefind_%02i' % (prefix, iiter),
-                            model=src_dict_template,
-                            **tscube_kwargs)
+                            **kw)
         else:
             raise Exception(
                 'Unrecognized option for fitter: %s.' % tsmap_fitter)
@@ -287,14 +296,14 @@ class SourceFinder(object):
 
         name = self.roi.get_source_by_name(name).name
 
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['localize'])
-        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
-        config.setdefault('newname', name)
-        config.setdefault('prefix', '')
-        fermipy.config.validate_config(kwargs, config)
-        config = utils.merge_dict(config, kwargs)
-
+        schema = ConfigSchema(self.defaults['localize'],
+                              optimizer=self.defaults['optimizer'])        
+        schema.add_option('newname', name)
+        schema.add_option('prefix', '')
+        config = utils.create_dict(self.config['localize'],
+                                   optimizer=self.config['optimizer'])
+        config = schema.create_config(config, **kwargs)
+        
         nstep = config['nstep']
         dtheta_max = config['dtheta_max']
         update = config['update']

@@ -2,10 +2,12 @@
 ``convolve``	True	
 ``edisp``	True	Enable the correction for energy dispersion.
 ``edisp_disable``	None	Provide a list of sources for which the edisp correction should be disabled.
+``expscale``	None	Exposure correction that is applied to all sources in the analysis component.  This correction is superseded by `src_expscale` if it is defined for a source.
 ``irfs``	None	Set the IRF string.
 ``llscan_npts``	20	Number of evaluation points to use when performing a likelihood scan.
 ``minbinsz``	0.05	Set the minimum bin size used for resampling diffuse maps.
 ``resample``	True	
 ``rfactor``	2	
+``src_expscale``	None	Dictionary of exposure corrections for individual sources keyed to source name.  The exposure for a given source will be scaled by this value.  A value of 1.0 corresponds to the nominal exposure.
 ``srcmap``	None	
 ``wmap``	None	Likelihood weights map.

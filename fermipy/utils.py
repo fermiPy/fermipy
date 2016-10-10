@@ -896,6 +896,12 @@ def update_keys(input_dict, key_map):
     return o
 
 
+def create_dict(d0, **kwargs):
+    o = copy.deepcopy(d0)
+    o = merge_dict(o,kwargs,add_new_keys=True)
+    return o
+
+
 def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
     """Recursively merge the contents of python dictionary d0 with
     the contents of another python dictionary, d1.
@@ -955,7 +961,7 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
             od[k] = copy.copy(d1[k])
 
     if add_new_keys:
-        for k, v in d1.iteritems():
+        for k, v in d1.items():
             if k not in d0:
                 od[k] = copy.deepcopy(d1[k])
 
