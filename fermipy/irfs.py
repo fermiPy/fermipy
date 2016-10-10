@@ -446,7 +446,7 @@ class LTCube(HpxMap):
         cth_edges = np.concatenate(([1], cth_edges))
         cth_edges = cth_edges[::-1]        
         hpx = HPX.create_from_header(hdulist['EXPOSURE'].header,cth_edges)
-        return LTCube(data.T,hpx,cth_edges,tstart,tstop)
+        return LTCube(data[:,::-1].T,hpx,cth_edges,tstart,tstop)
 
     @staticmethod
     def create_empty(tstart, tstop, fill=0.0):
@@ -485,7 +485,7 @@ class LTCube(HpxMap):
         ipix = hp.ang2pix(self.hpx.nside, np.pi / 2. - np.radians(dec),
                           np.radians(ra), nest=self.hpx.nest)
         lt = np.interp(center, self._cth_center,
-                       self.data[::-1,ipix] / self._cth_width) * width
+                       self.data[:,ipix] / self._cth_width) * width
         lt = np.sum(lt.reshape(-1, 4), axis=1)
         return lt
 
@@ -549,7 +549,7 @@ def plot_hpxmap(hpxmap, **kwargs):
     fig.add_axes(ax)
 
     if hpxmap.data.ndim == 2:
-        data = np.sum(hpxmap.data,axis=1)
+        data = np.sum(hpxmap.data,axis=0)
     else:
         data = hpxmap.data
 
