@@ -20,7 +20,7 @@ def main():
     description = "Calculate the LAT point-source flux sensitivity."
     parser = argparse.ArgumentParser(usage=usage, description=description)
 
-    parser.add_argument('--ltcube', default=None, required=True,
+    parser.add_argument('--ltcube', default=None,
                         help='Set the path to the livetime cube.')
     parser.add_argument('--galdiff', default=None, required=True,
                         help='Set the path to the galactic diffuse model.')
@@ -62,10 +62,19 @@ def main():
     ectr = np.exp(utils.edge_to_center(np.log(ebins)))
 
     c = SkyCoord(args.glon,args.glat,unit='deg',frame='galactic')
-    ltc = irfs.LTCube.create(args.ltcube)
 
-    if args.obs_time_yr is not None:
-        ltc._counts *= args.obs_time_yr*365*24*3600./(ltc.tstop-ltc.tstart)
+    if args.ltcube is None:
+
+        if args.obs_time_yr is None:
+            raise Exception('No observation time defined.')
+        
+        ltc = irfs.LTCube.create_empty(0,args.obs_time_yr*365*24*3600.,
+                                       args.obs_time_yr*365*24*3600.)
+        ltc._counts *= ltc.domega[:,np.newaxis]/(4.*np.pi)
+    else:
+        ltc = irfs.LTCube.create(args.ltcube)
+        if args.obs_time_yr is not None:
+            ltc._counts *= args.obs_time_yr*365*24*3600./(ltc.tstop-ltc.tstart)
     
     m0 = skymap.Map.create_from_fits(args.galdiff)
 
@@ -104,6 +113,7 @@ def main():
     e2dnde = ectr**2*dnde
     
     cols = [Column(name='E_MIN', dtype='f8', data=ebins[:-1], unit='MeV'),
+            Column(name='E_REF', dtype='f8', data=ectr, unit='MeV'),
             Column(name='E_MAX', dtype='f8', data=ebins[1:], unit='MeV'),
             Column(name='FLUX', dtype='f8', data=flux, unit='ph / (cm2 s)'),
             Column(name='EFLUX', dtype='f8', data=eflux, unit='MeV / (cm2 s)'),
