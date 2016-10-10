@@ -37,6 +37,8 @@ selection = {
     'evclass': (None, 'Event class selection.', int),
     'evtype': (None, 'Event type selection.', int),
     'convtype': (None, 'Conversion type selection.', int),
+    'phasemin': (None, 'Minimum pulsar phase', float),
+    'phasemax': (None, 'Maximum pulsar phase', float),
     'target': (None, 'Choose an object on which to center the ROI.  '
                      'This option takes precendence over ra/dec or glon/glat.', str),
     'ra': (None, '', float),
@@ -102,7 +104,11 @@ gtlike = {
     'srcmap': (None, '', str),
     'bexpmap': (None, '', str),
     'wmap': (None, 'Likelihood weights map.', str),
-    'llscan_npts' : (20,'Number of evaluation points to use when performing a likelihood scan.',int)
+    'llscan_npts': (20,'Number of evaluation points to use when performing a likelihood scan.',int),
+    'src_expscale': (None, 'Dictionary of exposure corrections for individual sources keyed to source name.  The exposure '
+                     'for a given source will be scaled by this value.  A value of 1.0 corresponds to the nominal exposure.', dict),
+    'expscale': (None, 'Exposure correction that is applied to all sources in the analysis component.  '
+                 'This correction is superseded by `src_expscale` if it is defined for a source.', float),
 }
 
 # Options for binning.
@@ -216,7 +222,7 @@ residmap = {
 # TS Map
 tsmap = {
     'model': (None, 'Dictionary defining the properties of the test source.', dict),
-    'multithread': (False, '', bool),
+    'multithread': (False, 'Split the TS map calculation across multiple cores.', bool),
     'max_kernel_radius': (3.0, '', float),
     'loge_bounds': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
 }
@@ -329,7 +335,7 @@ sed_output = OrderedDict((
 extension = {
     'spatial_model': ('RadialGaussian', 'Spatial model use for extension test.', str),
     'width': (None, 'Parameter vector for scan over spatial extent.  If none then the parameter '
-              'vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.', str),
+              'vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.', list),
     'width_min': (0.01, 'Minimum value in degrees for the likelihood scan over spatial extent.', float),
     'width_max': (1.0, 'Maximum value in degrees for the likelihood scan over spatial extent.', float),
     'width_nstep': (21, 'Number of steps for the spatial likelihood scan.', int),

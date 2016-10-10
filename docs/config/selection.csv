@@ -9,6 +9,8 @@
 ``glon``	None	
 ``logemax``	None	Maximum Energy (log10(MeV))
 ``logemin``	None	Minimum Energy (log10(MeV))
+``phasemax``	None	Maximum pulsar phase
+``phasemin``	None	Minimum pulsar phase
 ``ra``	None	
 ``radius``	None	Radius of data selection.  If none this will be automatically set from the ROI size.
 ``roicut``	no	

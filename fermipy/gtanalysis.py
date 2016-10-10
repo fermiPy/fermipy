@@ -33,6 +33,7 @@ from fermipy.hpx_utils import HPX
 from fermipy.roi_model import ROIModel
 from fermipy.plotting import AnalysisPlotter
 from fermipy.logger import Logger, log_level
+from fermipy.config import ConfigSchema
 # pylikelihood
 import GtApp
 import FluxDensity
@@ -517,6 +518,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                            'model_counts': np.zeros(c.enumbins),
                            'energies': np.copy(c.energies),
                            'log_energies': np.copy(c.log_energies),
+                           'src_expscale': copy.deepcopy(c.src_expscale),
                            }]
 
             self._roi_model['components'] += comp_model
@@ -897,7 +899,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         components = self.config['components']
 
         common_config = GTBinnedAnalysis.get_config()
-        common_config = merge_dict(common_config, self.config)
+        common_config = merge_dict(common_config, self.config,
+                                   add_new_keys=True)
 
         if components is None or len(components) == 0:
             cfg = copy.copy(common_config)
@@ -907,14 +910,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         elif isinstance(components, dict):
             for i, k in enumerate(sorted(components.keys())):
                 cfg = copy.copy(common_config)
-                cfg = merge_dict(cfg, components[k])
+                cfg = merge_dict(cfg, components[k], add_new_keys=True)
                 cfg['file_suffix'] = '_' + k
                 cfg['name'] = k
                 configs.append(cfg)
         elif isinstance(components, list):
             for i, c in enumerate(components):
                 cfg = copy.copy(common_config)
-                cfg = merge_dict(cfg, c)
+                cfg = merge_dict(cfg, c, add_new_keys=True)
                 cfg['file_suffix'] = '_%02i' % i
                 cfg['name'] = '%02i' % i
                 configs.append(cfg)
@@ -929,6 +932,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         cfg['fileio']['workdir'] = self.config['fileio']['workdir']
 
+        for k in cfg.keys():
+            if not k in GTBinnedAnalysis.defaults:
+                cfg.pop(k)
+        
         comp = GTBinnedAnalysis(cfg, logging=self.config['logging'])
 
         return comp
@@ -2156,15 +2163,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         name = self.roi.get_source_by_name(name).name
 
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['extension'])
-        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
-        config.setdefault('prefix', '')
-        config.setdefault('write_fits', True)
-        config.setdefault('write_npy', True)
-        fermipy.config.validate_config(kwargs, config)
-        config = merge_dict(config, kwargs)
-
+        schema = ConfigSchema(self.defaults['extension'],
+                              optimizer=self.defaults['optimizer'])
+        schema.add_option('prefix', '')
+        schema.add_option('write_fits', True)
+        schema.add_option('write_npy', True)
+        config = utils.create_dict(self.config['extension'],
+                                   optimizer=self.config['optimizer'])
+        config = schema.create_config(config, **kwargs)
+        
         spatial_model = config['spatial_model']
         width_min = config['width_min']
         width_max = config['width_max']
@@ -3532,9 +3539,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                               'dlogLike': 'dloglike'})
 
         self.roi.load_sources(sources.values())
-        for c in self.components:
+        for i, c in enumerate(self.components):
             c.roi.load_sources(sources.values())
-
+            if 'src_expscale' in self._roi_model['components'][i]:
+                c._src_expscale = copy.deepcopy(self._roi_model['components']
+                                                [i]['src_expscale'])
+            
         self._create_likelihood(infile)
         self.set_energy_range(self.loge_bounds[0], self.loge_bounds[1])
 
@@ -3611,6 +3621,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         for s in self.roi.sources:
             o['sources'][s.name] = copy.deepcopy(s.data)
+
+        for i, c in enumerate(self.components):
+            o['roi']['components'][i]['src_expscale'] = copy.deepcopy(c.src_expscale)
 
         if fmt == 'yaml':
             self.logger.info('Writing %s...', ymlfile)
@@ -4051,14 +4064,23 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
         self._files['srcmdl'] = 'srcmdl%s.xml'
 
+        # Fill dictionary of exposure corrections
+        self._src_expscale = {}
+        if self.config['gtlike']['expscale'] is not None:
+            for src in self.roi:
+                self._src_expscale[src.name] = self.config['gtlike']['expscale']
+
+        if self.config['gtlike']['src_expscale']:
+            for k, v in self.config['gtlike']['src_expscale'].items():
+                self._src_expscale[k] = v
+
         for k, v in self._files.items():
             self._files[k] = os.path.join(
                 workdir, v % self.config['file_suffix'])
 
         if self.config['data']['ltcube'] is not None:
             self._ext_ltcube = True
-            self._files['ltcube'] = os.path.expandvars(
-                self.config['data']['ltcube'])
+            self._files['ltcube'] = os.path.expandvars(self.config['data']['ltcube'])
             if not os.path.isfile(self._files['ltcube']):
                 self.files['ltcube'] = os.path.join(
                     workdir, self.files['ltcube'])
@@ -4082,8 +4104,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                 self.files['wmap'])
         else:
             self._files['wmap'] = None
-         
-        
+
         if self.config['binning']['enumbins'] is not None:
             self._enumbins = int(self.config['binning']['enumbins'])
         else:
@@ -4226,8 +4247,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def files(self):
         return self._files
 
+    @property
+    def src_expscale(self):
+        return self._src_expscale
+
     def reload_source(self, name):
-        """Delete and reload a source in the model."""
+        """Delete and reload a single source in the model.  This function will
+        force the recomputation of source maps.
+        """
 
         src = self.roi.get_source_by_name(name)
 
@@ -4303,6 +4330,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         src = self.roi.create_source(name, src_dict)
         self.make_template(src, self.config['file_suffix'])
 
+        if self.config['gtlike']['expscale'] is not None and \
+                name not in self._src_expscale:
+            self._src_expscale[name] = self.config['gtlike']['expscale']
+                    
         if self._like is None:
             return
 
@@ -4314,6 +4345,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.logLike.buildFixedModelWts()
         if save_source_maps:
             self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
+
+        self.set_exposure_scale(name)
 
     def _create_source(self, src, free=False):
         """Create a pyLikelihood Source object from a
@@ -4407,6 +4440,27 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             srcmap_utils.delete_source_map(self.files['srcmap'], name)
 
         return src
+
+    def set_exposure_scale(self, name, scale=None):
+        """Set the exposure correction of a source.
+
+        Parameters
+        ----------
+        name : str
+            Source name.
+
+        scale : factor
+            Exposure scale factor (1.0 = nominal exposure).
+
+        """
+        name = self.roi.get_source_by_name(name).name
+        if scale is None and name not in self._src_expscale:
+            return        
+        elif scale is None:
+            scale = self._src_expscale.get(name,1.0)
+        else:
+            self._src_expscale[name] = scale
+        self._scale_srcmap({name: scale})
 
     def set_edisp_flag(self, name, flag=True):
         """Enable/Disable the energy dispersion correction for a
@@ -4784,6 +4838,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                            dec=self.roi.skydir.dec.deg,
                            rad=self.config['selection']['radius'],
                            convtype=self.config['selection']['convtype'],
+                           phasemin=self.config['selection']['phasemin'],
+                           phasemax=self.config['selection']['phasemax'],
                            evtype=self.config['selection']['evtype'],
                            evclass=self.config['selection']['evclass'],
                            tmin=self.config['selection']['tmin'],
@@ -4860,6 +4916,33 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Updating source maps')
         self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
 
+        # Apply exposure corrections
+        self._scale_srcmap(self._src_expscale)
+
+    def _scale_srcmap(self, scale_map):
+        srcmap = fits.open(self.files['srcmap'])
+
+        for hdu in srcmap[1:]:
+            if hdu.name not in scale_map:
+                continue
+
+            scale = scale_map[hdu.name]
+            if scale<1e-20:
+                self.logger.warning("The expscale parameter was zero, setting it to 1e-8")
+                scale = 1e-8
+            if 'EXPSCALE' in hdu.header:
+                old_scale = hdu.header['EXPSCALE']
+            else:
+                old_scale = 1.0
+            hdu.data *= scale/old_scale
+            hdu.header['EXPSCALE'] = scale
+
+        srcmap.writeto(self.files['srcmap'], clobber=True)
+
+        for name in scale_map.keys():
+            self.like.logLike.eraseSourceMap(str(name))
+        self.like.logLike.buildFixedModelWts()
+
     def _make_scaled_srcmap(self):
         """Make an exposure cube with the same binning as the counts map."""
 
@@ -4913,6 +4996,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         clear : bool
            Zero the current counts map before injecting the simulation.
+
+        randomize : bool
+           Fill with each pixel with random values drawn from a
+           poisson distribution.  If false then fill each pixel with
+           the counts expectation value.
 
         """
 
