@@ -28,6 +28,7 @@ setup(
         'fermipy-clone-configs = fermipy.scripts.clone_configs:main',
         'fermipy-collect-sources = fermipy.scripts.collect_sources:main',
         'fermipy-cluster-sources = fermipy.scripts.cluster_sources:main',
+        'fermipy-flux-sensitivity = fermipy.scripts.flux_sensitivity:main',
     ]},
     install_requires=[
         'numpy >= 1.6.1',
