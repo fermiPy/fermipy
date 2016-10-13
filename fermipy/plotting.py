@@ -644,9 +644,8 @@ class SEDPlotter(object):
 
         if cmap_trunc_lo is not None or cmap_trunc_hi is not None:        
             cmap = truncate_colormap(cmap,cmap_trunc_lo,cmap_trunc_hi,1024)
-        
-        xedge = np.logspace(sed['logemin'][0], sed['logemax'][-1],
-                            len(sed['logectr']) + 1)
+
+        xedge = 10**np.insert(sed['logemax'], 0, sed['logemin'][0])
         yedge = np.logspace(fmin, fmax, fbins)
         xedge, yedge = np.meshgrid(xedge, yedge)
         im = ax.pcolormesh(xedge, yedge, llhMatrix.T,
