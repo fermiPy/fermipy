@@ -57,7 +57,19 @@ def get_lsf_status():
     return status_count
 
 
-def dispatch_jobs(exe, args, opts, batch_opts):
+def add_lsf_args(parser):
+
+    parser.add_argument("--batch", action="store_true",
+                        help="Split this job into several batch jobs.")
+
+    parser.add_argument('--time', default=1500, type=int,
+                        help='Set the wallclock time allocation for the '
+                             'job in minutes.')
+
+    parser.add_argument('--resources', default='rhel60', type=str,
+                        help='Set the resource string.')
+
+def dispatch_jobs(exe, args, opts, batch_opts, dry_run=False):
     batch_opts.setdefault('W', 300)
     batch_opts.setdefault('R', 'rhel60')
 
@@ -91,4 +103,5 @@ def dispatch_jobs(exe, args, opts, batch_opts):
     batch_cmd = 'bsub %s ' % (batch_optstr)
     batch_cmd += ' %s %s ' % (cmd, cmd_opts)
     print(batch_cmd)
-    # os.system(batch_cmd)
+    if not dry_run:
+        os.system(batch_cmd)
