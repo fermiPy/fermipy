@@ -68,7 +68,7 @@ function slacsetup
     elif [ -n "$CONDABASE" ]; then
 	export PATH=$CONDABASE/bin:$PATH
     else
-	export PYTHONROOT=$GLAST_EXT/python/2.7.12
+	export PYTHONROOT=$GLAST_EXT/python/2.7.12-anaconda2-4.2.0
 	export PYTHON_USER_BIN=$(python -c 'import site; print(site.USER_BASE + "/bin")')
 	export PATH=$PYTHON_USER_BIN:$PYTHONROOT/bin:$PATH
     fi
