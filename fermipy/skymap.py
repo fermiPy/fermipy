@@ -356,22 +356,23 @@ class HpxMap(Map_Base):
         return self._hpx
 
     @staticmethod
-    def create_from_hdu(hdu, ebins):
+    def create_from_hdu(hdu, ebins, colstring="CHANNEL"):
         """ Creates and returns an HpxMap object from a FITS HDU.
 
         hdu    : The FITS
         ebins  : Energy bin edges [optional]
+        colstring  : String to build colum names [optional]
         """
         hpx = HPX.create_from_header(hdu.header, ebins)
         colnames = hdu.columns.names
         nebin = 0
         for c in colnames:
-            if c.find("CHANNEL") == 0:
+            if c.find(colstring) == 0:
                 nebin += 1
             pass
         data = np.ndarray((nebin, hpx.npix))
         for i in range(nebin):
-            cname = "CHANNEL%i" % (i + 1)
+            cname = "%s%i" % (colstring, i + 1)
             data[i, 0:] = hdu.data.field(cname)
             pass
         return HpxMap(data, hpx)
@@ -390,8 +391,13 @@ class HpxMap(Map_Base):
                 ebins = None
         else:
             ebins = None
-
-        hpxMap = HpxMap.create_from_hdu(hdulist[extname], ebins)
+            
+        if extname == "HPXEXPOSURES":
+            colstring = "ENERGY"
+        else:
+            colstring = "CHANNEL"
+        
+        hpxMap = HpxMap.create_from_hdu(hdulist[extname], ebins, colstring)
         return hpxMap
 
     def make_wcs_from_hpx(self, sum_ebins=False, proj='CAR', oversample=2,
