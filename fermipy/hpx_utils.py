@@ -594,13 +594,13 @@ class HpxToWcsMapping(object):
         """
         self._hpx = hpx
         self._wcs = wcs
-        if map_data is None:
+        if mapping_data is None:
             self._ipixs, self._mult_val, self._npix = make_hpx_to_wcs_mapping(
                 self.hpx, self.wcs.wcs)
         else:
-            self._ipixs = map_data['ipixs']
-            self._mult_val = map_data['mult_val']
-            self._npix = map_data['npix']
+            self._ipixs = mapping_data['ipixs']
+            self._mult_val = mapping_data['mult_val']
+            self._npix = mapping_data['npix']
         self._lmap = self._hpx[self._ipixs]
         self._valid = self._lmap > 0
 
