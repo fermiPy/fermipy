@@ -193,7 +193,7 @@ class ImagePlotter(object):
         elif isinstance(proj, hpx_utils.HPX):
             self._projtype = 'HPX'
             self._proj = proj
-            self._wcsproj = proj.make_wcs(naxis=2,proj='AIT',energies=None,oversample=2)
+            self._wcsproj = proj.make_wcs(naxis=2,proj='MOL',energies=None,oversample=2)
             self._wcs = self._wcsproj.wcs
             if mapping is None:
                 self._mapping = hpx_utils.HpxToWcsMapping(self._proj,self._wcsproj)

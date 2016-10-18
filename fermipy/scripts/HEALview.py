@@ -59,7 +59,7 @@ def main():
     outdata = []
      
     if args.ebin == "ALL":
-        wcsproj = hpxmap.hpx.make_wcs(naxis=2,proj='AIT',energies=None,oversample=2)
+        wcsproj = hpxmap.hpx.make_wcs(naxis=2,proj='MOL',energies=None,oversample=2)
         mapping = HpxToWcsMapping(hpxmap.hpx,wcsproj)
         
         for i,data in enumerate(hpxmap.counts):
