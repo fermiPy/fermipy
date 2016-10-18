@@ -17,6 +17,10 @@ Fermi-LAT Python Analysis Framework
     :target: https://pypi.python.org/pypi/fermipy/
     :alt: Latest release
 
+.. image:: https://anaconda.org/conda-forge/fermipy/badges/version.svg
+    :target: https://anaconda.org/conda-forge/fermipy
+    :alt: Latest conda release
+
 .. image:: https://readthedocs.org/projects/fermipy/badge/?version=latest
     :target: https://readthedocs.org/projects/fermipy/?badge=latest
     :alt: Documentation Status

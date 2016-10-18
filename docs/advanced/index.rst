@@ -14,3 +14,5 @@ in the following pages:
    extension
    detection
    localization
+   phased
+   sensitivity

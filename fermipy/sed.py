@@ -22,6 +22,7 @@ import fermipy.config
 import fermipy.utils as utils
 import fermipy.gtutils as gtutils
 import fermipy.roi_model as roi_model
+from fermipy.config import ConfigSchema
 
 from LikelihoodState import LikelihoodState
 
@@ -107,15 +108,16 @@ class SEDGenerator(object):
 
         name = self.roi.get_source_by_name(name).name
 
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['sed'])
-        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
-        config.setdefault('prefix', '')
-        config.setdefault('write_fits', True)
-        config.setdefault('write_npy', True)
-        config.setdefault('loge_bins', None)
-        fermipy.config.validate_config(kwargs, config)
-        config = utils.merge_dict(config, kwargs)
+        # Create schema for method configuration
+        schema = ConfigSchema(self.defaults['sed'],
+                              optimizer=self.defaults['optimizer'])
+        schema.add_option('prefix', '')
+        schema.add_option('write_fits', True)
+        schema.add_option('write_npy', True)
+        schema.add_option('loge_bins', None, '', list)
+        config = utils.create_dict(self.config['sed'],
+                                   optimizer=self.config['optimizer'])
+        config = schema.create_config(config, **kwargs)
 
         self.logger.info('Computing SED for %s' % name)
 
@@ -238,7 +240,7 @@ class SEDGenerator(object):
         cov_scale = config['cov_scale']
         loge_bins = config['loge_bins']
 
-        if loge_bins is None:
+        if not loge_bins or loge_bins is None:
             loge_bins = self.log_energies
         else:
             loge_bins = np.array(loge_bins)

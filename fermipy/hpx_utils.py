@@ -320,7 +320,12 @@ class HPX(object):
             nest = True
         else:
             raise Exception("ORDERING != RING | NESTED")
-        order = header["ORDER"]
+
+        try:
+            order = header["ORDER"]
+        except KeyError:
+            order = -1
+            
         if order < 0:
             nside = header["NSIDE"]
         else:

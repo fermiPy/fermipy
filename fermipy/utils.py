@@ -86,6 +86,23 @@ def resolve_path(path, workdir=None):
         return os.path.join(workdir, path)
 
 
+def resolve_file_path(path, **kwargs):
+    dirs = kwargs.get('search_dirs', [])
+
+    if os.path.isabs(os.path.expandvars(path)) and \
+            os.path.isfile(os.path.expandvars(path)):
+        return path
+
+    for d in dirs:
+        if not os.path.isdir(os.path.expandvars(d)):
+            continue
+        p = os.path.join(d, path)
+        if os.path.isfile(os.path.expandvars(p)):
+            return p
+
+    raise Exception('Failed to resolve file path: %s' % path)
+
+
 def collect_dirs(path, max_depth=1, followlinks=True):
     """Recursively find directories under the given path."""
 
@@ -718,6 +735,19 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
     return o
 
 
+def center_to_edge(center):
+
+    if len(center) == 1: 
+        delta = np.array(1.0,ndmin=1)
+    else: 
+        delta = center[1:]-center[:-1]
+    
+    edges = 0.5*(center[1:]+center[:-1])
+    edges = np.insert(edges,0,center[0]-0.5*delta[0])
+    edges = np.append(edges,center[-1]+0.5*delta[-1])
+    return edges
+
+
 def edge_to_center(edges):
     return 0.5 * (edges[1:] + edges[:-1])
 
@@ -730,6 +760,10 @@ def val_to_bin(edges, x):
     """Convert axis coordinate to bin index."""
     ibin = np.digitize(np.array(x, ndmin=1), edges) - 1
     return ibin
+
+
+def val_to_pix(center, x):
+    return np.interp(x, center, np.arange(len(center)).astype(float))
 
 
 def val_to_edge(edges, x):
@@ -896,6 +930,12 @@ def update_keys(input_dict, key_map):
     return o
 
 
+def create_dict(d0, **kwargs):
+    o = copy.deepcopy(d0)
+    o = merge_dict(o,kwargs,add_new_keys=True)
+    return o
+
+
 def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
     """Recursively merge the contents of python dictionary d0 with
     the contents of another python dictionary, d1.
@@ -955,7 +995,7 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
             od[k] = copy.copy(d1[k])
 
     if add_new_keys:
-        for k, v in d1.iteritems():
+        for k, v in d1.items():
             if k not in d0:
                 od[k] = copy.deepcopy(d1[k])
 

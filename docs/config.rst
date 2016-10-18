@@ -119,6 +119,8 @@ Options in the *binning* section control the spatial and spectral binning of the
    :delim: tab
    :widths: 10,10,80
 
+.. _config_components:
+
 components
 ----------
 
@@ -355,6 +357,8 @@ about using this method see the :ref:`sed` page.
    :file: config/sed.csv
    :delim: tab
    :widths: 10,10,80
+
+.. _config_selection:
 
 selection
 ---------

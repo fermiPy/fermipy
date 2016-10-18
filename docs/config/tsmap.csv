@@ -1,4 +1,4 @@
 ``loge_bounds``	None	Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.
 ``max_kernel_radius``	3.0	
 ``model``	None	Dictionary defining the properties of the test source.
-``multithread``	False	
+``multithread``	False	Split the TS map calculation across multiple cores.
