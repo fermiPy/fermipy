@@ -30,6 +30,7 @@ setup(
         'fermipy-cluster-sources = fermipy.scripts.cluster_sources:main',
         'fermipy-flux-sensitivity = fermipy.scripts.flux_sensitivity:main',
         'fermipy-run-tempo = fermipy.scripts.run_tempo:main',
+        'fermipy-healview = fermipy.scripts.HEALView:main',
         'fermipy-select = fermipy.scripts.select_data:main',
         'fermipy-coadd = fermipy.merge_utils:main',
     ]},
