@@ -101,18 +101,19 @@ def make_hpx_to_wcs_mapping_centers(hpx, wcs):
     mult_val = np.ones(npix).T.flatten()
     sky_crds = hpx.get_sky_coords()
     pix_crds = wcs.wcs_world2pix(sky_crds, 0).astype(int)
-    ipixs = -1*np.ones(npix,int).T.flatten()
-    pix_index = npix[1]*pix_crds[0:,0] + pix_crds[0:,1]
+    ipixs = -1 * np.ones(npix, int).T.flatten()
+    pix_index = npix[1] * pix_crds[0:, 0] + pix_crds[0:, 1]
     print (npix)
-    print (len(pix_index),len(ipixs),pix_index.max(),pix_crds[0:,0].max(),pix_crds[0:,1].max())
+    print (len(pix_index), len(ipixs), pix_index.max(),
+           pix_crds[0:, 0].max(), pix_crds[0:, 1].max())
     if hpx._ipix is None:
-        for ipix,pix_crd in enumerate(pix_index):
+        for ipix, pix_crd in enumerate(pix_index):
             ipixs[pix_crd] = ipix
     else:
-        for pix_crd,ipix in zip(pix_index,hpx._ipix):
+        for pix_crd, ipix in zip(pix_index, hpx._ipix):
             ipixs[pix_crd] = ipix
     ipixs = ipixs.reshape(npix).T.flatten()
-    return ipixs,mult_val,npix
+    return ipixs, mult_val, npix
 
 
 def make_hpx_to_wcs_mapping(hpx, wcs):
@@ -143,10 +144,10 @@ def make_hpx_to_wcs_mapping(hpx, wcs):
     sky_crds[0:, 1] = (np.pi / 2) - sky_crds[0:, 1]
 
     fullmask = np.isnan(sky_crds)
-    mask = (fullmask[0:,0] + fullmask[0:,1]) == 0
-    ipixs = -1*np.ones(npix,int).T.flatten()
-    ipixs[mask] = hp.pixelfunc.ang2pix(hpx.nside, sky_crds[0:,1][mask],
-                                       sky_crds[0:,0][mask], hpx.nest)
+    mask = (fullmask[0:, 0] + fullmask[0:, 1]) == 0
+    ipixs = -1 * np.ones(npix, int).T.flatten()
+    ipixs[mask] = hp.pixelfunc.ang2pix(hpx.nside, sky_crds[0:, 1][mask],
+                                       sky_crds[0:, 0][mask], hpx.nest)
 
     # Here we are counting the number of HEALPix pixels each WCS pixel points to;
     # this could probably be vectorized by filling a histogram.
@@ -325,12 +326,17 @@ class HPX(object):
             order = header["ORDER"]
         except KeyError:
             order = -1
-            
+
         if order < 0:
             nside = header["NSIDE"]
         else:
             nside = -1
-        coordsys = header["COORDSYS"]
+
+        try:
+            coordsys = header["COORDSYS"]
+        except KeyError:
+            coordsys = header["COORDTYPE"]
+
         try:
             region = header["HPX_REG"]
         except KeyError:
@@ -353,7 +359,7 @@ class HPX(object):
                  fits.Card("LASTPIX", self._maxpix - 1)]
         if self._coordsys == "CEL":
             cards.append(fits.Card("EQUINOX", 2000.0,
-                                 "Equinox of RA & DEC specifications"))
+                                   "Equinox of RA & DEC specifications"))
 
         if self._region:
             cards.append(fits.Card("HPX_REG", self._region))
@@ -379,7 +385,7 @@ class HPX(object):
         elif len(shape) == 2:
             for i in range(shape[0]):
                 cols.append(fits.Column("CHANNEL%i" %
-                                      (i + 1), "D", array=data[i]))
+                                        (i + 1), "D", array=data[i]))
         else:
             raise Exception("HPX.write_fits only handles 1D and 2D maps")
         header = self.make_header()
@@ -395,7 +401,7 @@ class HPX(object):
             return None
         cols = [fits.Column("CHANNEL", "I", array=np.arange(1, len(self._ebins + 1))),
                 fits.Column("E_MIN", "1E", unit='keV',
-                          array=1000 * (10**self._ebins[0:-1])),
+                            array=1000 * (10**self._ebins[0:-1])),
                 fits.Column("E_MAX", "1E", unit='keV', array=1000 * (10**self._ebins[1:]))]
         hdu = fits.BinTableHDU.from_columns(
             cols, self.make_header(), name=extname)
@@ -545,11 +551,11 @@ class HPX(object):
         crpix = npixels / 2.
 
         if allsky:
-            w.wcs.crpix[0] = 2*crpix
-            npix = (2*npixels,npixels)
+            w.wcs.crpix[0] = 2 * crpix
+            npix = (2 * npixels, npixels)
         else:
             w.wcs.crpix[0] = crpix
-            npix = (npixels,npixels)
+            npix = (npixels, npixels)
 
         w.wcs.crpix[1] = crpix
         w.wcs.cdelt[0] = -pixsize / oversample
@@ -563,34 +569,38 @@ class HPX(object):
                 w.wcs.cdelt[2] = 10 ** energies[1] - 10 ** energies[0]
 
         w = WCS(w.to_header())
-        wcs_proj = WCSProj(w,npix)
+        wcs_proj = WCSProj(w, npix)
         return wcs_proj
-
 
     def get_sky_coords(self):
         """ Get the sky coordinates of all the pixels in this PIXELIZATION
         """
         if self._ipix is None:
-            theta, phi = hp.pix2ang(self._nside, xrange(self._npix), self._nest)
+            theta, phi = hp.pix2ang(
+                self._nside, xrange(self._npix), self._nest)
         else:
             theta, phi = hp.pix2ang(self._nside, self._ipix, self._nest)
-            
+
         lat = np.degrees((np.pi / 2) - theta)
         lon = np.degrees(phi)
-        return np.vstack([lon,lat]).T
-
+        return np.vstack([lon, lat]).T
 
 
 class HpxToWcsMapping(object):
     """ Stores the indices need to conver from HEALPix to WCS """
 
-    def __init__(self, hpx, wcs):
+    def __init__(self, hpx, wcs, mapping_data=None):
         """
         """
         self._hpx = hpx
         self._wcs = wcs
-        self._ipixs, self._mult_val, self._npix = make_hpx_to_wcs_mapping(
-            self.hpx, self.wcs.wcs)
+        if map_data is None:
+            self._ipixs, self._mult_val, self._npix = make_hpx_to_wcs_mapping(
+                self.hpx, self.wcs.wcs)
+        else:
+            self._ipixs = map_data['ipixs']
+            self._mult_val = map_data['mult_val']
+            self._npix = map_data['npix']
         self._lmap = self._hpx[self._ipixs]
         self._valid = self._lmap > 0
 
@@ -633,6 +643,37 @@ class HpxToWcsMapping(object):
         HEALPix region"""
         return self._valid
 
+    def write_to_fitsfile(self, fitsfile, clobber=True):
+        """Write this mapping to a FITS file, to avoid having to recompute it
+        """
+        from fermipy.skymap import Map
+        hpx_header = self._hpx.make_header()
+        index_map = Map(self.ipixs, self.wcs)
+        mult_map = Map(self.mult_val, self.wcs)
+        prim_hdu = index_map.create_primary_hdu()
+        mult_hdu = index_map.create_image_hdu()
+        for key in ['COORDSYS', 'ORDERING', 'PIXTYPE',
+                    'ORDERING', 'ORDER', 'NSIDE',
+                    'FIRSTPIX', 'LASTPIX']:
+            prim_hdu.header[key] = hpx_header[key]
+            mult_hdu.header[key] = hpx_header[key]
+
+        hdulist = fits.HDUList([prim_hdu, mult_dhu])
+        hdulist.writeto(fitsfile, clobber=clobber)
+
+    @staticmethod
+    def create_from_fitsfile(self, fitsfile):
+        """ Read a fits file and use it to make a mapping
+        """
+        from fermipy.skymap import Map
+        index_map = Map.create_from_fits(fitsfile)
+        mult_map = Map.create_from_fits(fitsfile, hdu=1)
+        ff = fits.open(fitsfile)
+        hpx = HPX.create_from_header(ff[0])
+        mapping_data = dict(ipixs=index_map.counts,
+                            mult_val=mult_map.counts,
+                            npix=mult_map.counts.shape)
+        return HpxToWcsMapping(hpx, index_map.wcs, mapping_data)
 
     def fill_wcs_map_from_hpx_data(self, hpx_data, wcs_data, normalize=True):
         """Fills the wcs map from the hpx data using the pre-calculated
@@ -652,7 +693,6 @@ class HpxToWcsMapping(object):
             wcs_data_flat *= self._mult_val
         wcs_data.flat = wcs_data_flat
 
-
     def make_wcs_data_from_hpx_data(self, hpx_data, wcs, normalize=True):
         """ Creates and fills a wcs map from the hpx data using the pre-calculated
         mappings
@@ -662,6 +702,5 @@ class HpxToWcsMapping(object):
         normalize : True -> perserve integral by splitting HEALPix values between bins
         """
         wcs_data = np.zeros(wcs.npix)
-        self.fill_wcs_map_from_hpx_data(hpx_data,wcs_data,normalize)
+        self.fill_wcs_map_from_hpx_data(hpx_data, wcs_data, normalize)
         return wcs_data
-
