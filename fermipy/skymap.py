@@ -374,7 +374,7 @@ class HpxMap(Map_Base):
         data = np.ndarray((nebin, hpx.npix))
         for i in range(first_bin,first_bin+nebin):
             cname = "%s%i" % (colstring, i)
-            data[i, 0:] = hdu.data.field(cname)
+            data[i-first_bin, 0:] = hdu.data.field(cname)
             pass
         return HpxMap(data, hpx)
 
@@ -524,3 +524,4 @@ class HpxMap(Map_Base):
             return self.data[:,pix] if ibin is None else self.data[ibin,pix] 
         else:
             return self.data[pix]
+        
