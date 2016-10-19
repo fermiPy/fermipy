@@ -175,6 +175,11 @@ def strip_suffix(filename, suffix):
     return filename
 
 
+def met_to_mjd(time):
+    """"Convert mission elapsed time to mean julian date."""
+    return 54682.65 + (time-239557414.0)/(86400.)
+
+
 RA_NGP = np.radians(192.8594812065348)
 DEC_NGP = np.radians(27.12825118085622)
 L_CP = np.radians(122.9319185680026)

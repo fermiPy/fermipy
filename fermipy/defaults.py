@@ -255,12 +255,11 @@ sourcefind = {
     'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.', str)
 }
 
-#Options for lightcurve analysis
+# Options for lightcurve analysis
 lightcurve = {
-    'calc_ul': (True, 'Calculate an upper limit in the case where a bin TS value is below a threshold set by thresh_TS', bool),
-    'thresh_TS': (5.0, 'Threshold TS value, below which upper limits are calculated for a bin if calc_ul is True', float),
-    'binning': (86400.0, 'time binning for lightcurve in seconds, default is 1 day', float),
-    'unbinned_analysis': (False, 'if true, perform unbinned analysis', bool)
+    'binsz': (86400.0, 'Set the lightcurve bin size in seconds, default is 1 day.', float),
+    'nbins': (None, 'Set the number of lightcurve bins.  The total time range will be evenly split into this number of time bins.', int),
+    'time_bins': (None, 'Set the lightcurve bin edge sequence in MET.  This option takes precedence over binsz and nbins.', list),
 }
 
 #Output for lightcurve Analysis
@@ -440,7 +439,9 @@ plotting = {
 }
 
 # Source dictionary
-source_output = OrderedDict((
+
+
+source_meta_output = OrderedDict((
     ('name', (None,'Name of the source.',str,'str')),
     ('Source_Name', (None,'Name of the source.',str,'str')),
     ('SpatialModel', (None,'Spatial model.',str,'str')),
@@ -450,6 +451,16 @@ source_output = OrderedDict((
     ('SpectrumType', (None,'Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).',str,'str')),
     ('Spatial_Filename', (None,'Path to spatial template associated to this source.',str,'str')),
     ('Spectrum_Filename' , (None,'Path to file associated to the spectral model of this source.',str,'str')),
+    ('params', (None,'Dictionary of spectral parameters.',dict,'dict')),
+    ('correlation', ({},'Dictionary of correlation coefficients.',dict,'dict')),    
+    ('model_counts', (None,'Vector of predicted counts for this source in each analysis energy bin.',np.ndarray, '`~numpy.ndarray`')),
+    ('sed', (None,'Output of SED analysis.  See :ref:`sed` for more information.',dict,'dict')),
+    ('extension', (None,'Output of extension analysis.  See :ref:`extension` for more information.',dict,'dict')),
+    ('localize', (None,'Output of localization analysis.  See :ref:`localization` for more information.',dict,'dict')),
+    ('lightcurve', (None,'Output of lightcurve analysis.  See :ref:`lightcurve` for more information.',dict,'dict')),
+))
+
+source_pos_output = OrderedDict((
     ('ra', (np.nan,'Right ascension of the source in deg.',float,'float')),
     ('dec', (np.nan,'Declination of the source in deg.',float,'float')),
     ('glon', (np.nan,'Galactic Longitude of the source in deg.',float,'float')),
@@ -468,19 +479,15 @@ source_output = OrderedDict((
     ('pos_r68', (np.nan,'68% uncertainty (deg) on the source position.',float,'float')),
     ('pos_r95', (np.nan,'95% uncertainty (deg) on the source position.',float,'float')),
     ('pos_r99', (np.nan,'99% uncertainty (deg) on the source position.',float,'float')),    
+))
+
+source_flux_output = OrderedDict((
     ('ts', (np.nan,'Source test statistic.',float,'float')),
     ('loglike', (np.nan,'Log-likelihood of the model evaluated at the best-fit normalization of the source.',float,'float')),
-    ('ts', (np.nan,'Source test statistic.',float,'float')),
     ('dloglike_scan', (np.array([np.nan]), 'Delta Log-likelihood values for likelihood scan of source normalization.',np.ndarray, '`~numpy.ndarray`')),
     ('eflux_scan', (np.array([np.nan]), 'Energy flux values for likelihood scan of source normalization.',np.ndarray, '`~numpy.ndarray`')),
     ('flux_scan', (np.array([np.nan]), 'Flux values for likelihood scan of source normalization.',np.ndarray, '`~numpy.ndarray`')),
     ('npred', (np.nan,'Number of predicted counts from this source integrated over the analysis energy range.',float,'float')),
-    ('params', (None,'Dictionary of spectral parameters.',dict,'dict')),
-    ('correlation', ({},'Dictionary of correlation coefficients.',dict,'dict')),    
-    ('model_counts', (None,'Vector of predicted counts for this source in each analysis energy bin.',np.ndarray, '`~numpy.ndarray`')),
-    ('sed', (None,'Output of SED analysis.  See :ref:`sed` for more information.',dict,'dict')),
-    ('extension', (None,'Output of extension analysis.  See :ref:`extension` for more information.',dict,'dict')),
-    ('localize', (None,'Output of localization analysis.  See :ref:`localization` for more information.',dict,'dict')),
     ('pivot_energy', (np.nan,'Decorrelation energy in MeV.',float,'float')),
     ('flux', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated over analysis energy range'%FLUX_UNIT,
              np.ndarray, '`~numpy.ndarray`')),
@@ -539,6 +546,8 @@ source_output = OrderedDict((
     ('e2dfde10000', (np.array([np.nan,np.nan]), 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 10 GeV.'%ENERGY_FLUX_UNIT,
                   np.ndarray, '`~numpy.ndarray`')),  
 ))
+
+source_output = OrderedDict(source_meta_output.items() + source_pos_output.items() + source_flux_output.items())
 
 # Top-level dictionary for output file
 file_output = OrderedDict((

@@ -8,6 +8,16 @@ import fermipy
 from fermipy.hpx_utils import HPX
 
 
+def write_fits(hdulist, outfile, keywords):
+
+    for h in hdulist:
+        for k, v in keywords.items():
+            h.header[k] = v
+        h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+            
+    hdulist.writeto(outfile, clobber=True)
+
+
 def read_energy_bounds(hdu):
     """ Reads and returns the energy bin edges from a FITs HDU
     """
