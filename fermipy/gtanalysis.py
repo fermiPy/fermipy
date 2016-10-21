@@ -5063,7 +5063,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                              suffix))
             srcmap_utils.make_gaussian_spatial_map(src.skydir,
                                                    src['SpatialWidth'],
-                                                   template_file, npix=500)
+                                                   template_file)
             src['Spatial_Filename'] = template_file
         elif src['SpatialModel'] in ['DiskSource', 'RadialDisk']:
             template_file = os.path.join(self.config['fileio']['workdir'],
@@ -5071,7 +5071,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                              src.name, src['SpatialWidth'],
                                              suffix))
             srcmap_utils.make_disk_spatial_map(src.skydir, src['SpatialWidth'],
-                                               template_file, npix=500)
+                                               template_file)
             src['Spatial_Filename'] = template_file
 
     def _update_srcmap_file(self, sources=None, overwrite=False):

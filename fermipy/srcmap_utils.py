@@ -124,7 +124,14 @@ def make_psf_mapcube(skydir, psf, outfile, npix=500, cdelt=0.01, rebin=1):
     hdulist.writeto(outfile, clobber=True)
 
 
-def make_gaussian_spatial_map(skydir, sigma, outfile, npix=501, cdelt=0.01):
+def make_gaussian_spatial_map(skydir, sigma, outfile, cdelt=None, npix=None):
+
+    if cdelt is None:
+        cdelt = sigma/10.
+    
+    if npix is None:
+        npix = int(np.ceil((6.0*(sigma+cdelt))/cdelt))
+    
     w = wcs_utils.create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5)
     hdu_image = pyfits.PrimaryHDU(np.zeros((npix, npix)),
                                   header=w.to_header())
@@ -134,13 +141,19 @@ def make_gaussian_spatial_map(skydir, sigma, outfile, npix=501, cdelt=0.01):
     hdulist.writeto(outfile, clobber=True)
 
 
-def make_disk_spatial_map(skydir, sigma, outfile, npix=501, cdelt=0.01):
-    w = wcs_utils.create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5)
+def make_disk_spatial_map(skydir, radius, outfile, cdelt=None, npix=None):
 
+    if cdelt is None:
+        cdelt = radius/10.
+    
+    if npix is None:
+        npix = int(np.ceil((2.0*(radius+cdelt))/cdelt))
+        
+    w = wcs_utils.create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5)
     hdu_image = pyfits.PrimaryHDU(np.zeros((npix, npix)),
                                   header=w.to_header())
 
-    hdu_image.data[:, :] = utils.make_disk_kernel(sigma, npix=npix, cdelt=cdelt)
+    hdu_image.data[:, :] = utils.make_disk_kernel(radius, npix=npix, cdelt=cdelt)
     hdulist = pyfits.HDUList([hdu_image])
     hdulist.writeto(outfile, clobber=True)
 
