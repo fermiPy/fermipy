@@ -101,7 +101,7 @@ def create_source_table(scan_shape):
     for t in ['flux_ul95','flux100_ul95','flux1000_ul95','flux10000_ul95']:
         cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (cm2 s)')
 
-    for t in ['dfde','dfde100','dfde1000','dfde10000']:
+    for t in ['dnde','dnde100','dnde1000','dnde10000']:
         cols_dict[t] = dict(dtype='f8', format='%.3f',unit='1 / (MeV cm2 s)',shape=(2,))
 
     cols = [Column(name=k, **v) for k,v in cols_dict.items()]

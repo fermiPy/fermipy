@@ -44,8 +44,8 @@ def truncate_colormap( cmap, minval=0.0, maxval=1.0, n=256 ):
 
 
 def get_xerr(sed):
-    delo = sed['ectr'] - sed['emin']
-    dehi = sed['emax'] - sed['ectr']
+    delo = sed['e_ctr'] - sed['e_min']
+    dehi = sed['e_max'] - sed['e_ctr']
     xerr = np.vstack((delo, dehi))
     return xerr
 
@@ -603,8 +603,8 @@ class SEDPlotter(object):
     @staticmethod
     def get_ylims(sed):
 
-        fmin = np.log10(np.min(sed['e2dfde_ul95'])) - 0.5
-        fmax = np.log10(np.max(sed['e2dfde_ul95'])) + 0.5
+        fmin = np.log10(np.min(sed['e2dnde_ul95'])) - 0.5
+        fmax = np.log10(np.max(sed['e2dnde_ul95'])) + 0.5
         fdelta = fmax - fmin
         if fdelta < 2.0:
             fmin -= 0.5 * (2.0 - fdelta)
@@ -624,13 +624,13 @@ class SEDPlotter(object):
         fmin, fmax = SEDPlotter.get_ylims(sed)
         fluxM = np.arange(fmin, fmax, 0.01)
         fbins = len(fluxM)
-        llhMatrix = np.zeros((len(sed['ectr']), fbins))
+        llhMatrix = np.zeros((len(sed['e_ctr']), fbins))
         
         # loop over energy bins
-        for i in range(len(sed['ectr'])):
+        for i in range(len(sed['e_ctr'])):
             m = sed['norm_scan'][i] > 0
-            e2dfde_scan = sed['norm_scan'][i][m] * sed['ref_e2dfde'][i]
-            flux = np.log10(e2dfde_scan)
+            e2dnde_scan = sed['norm_scan'][i][m] * sed['ref_e2dnde'][i]
+            flux = np.log10(e2dnde_scan)
             logl = sed['dloglike_scan'][i][m]
             logl -= np.max(logl)
             fn = interpolate.interp1d(flux,logl, fill_value='extrapolate')
@@ -645,7 +645,7 @@ class SEDPlotter(object):
         if cmap_trunc_lo is not None or cmap_trunc_hi is not None:        
             cmap = truncate_colormap(cmap,cmap_trunc_lo,cmap_trunc_hi,1024)
 
-        xedge = 10**np.insert(sed['logemax'], 0, sed['logemin'][0])
+        xedge = 10**np.insert(sed['loge_max'], 0, sed['loge_min'][0])
         yedge = np.logspace(fmin, fmax, fbins)
         xedge, yedge = np.meshgrid(xedge, yedge)
         im = ax.pcolormesh(xedge, yedge, llhMatrix.T,
@@ -657,7 +657,7 @@ class SEDPlotter(object):
         plt.gca().set_ylim(10 ** fmin, 10 ** fmax)
         plt.gca().set_yscale('log')
         plt.gca().set_xscale('log')
-        plt.gca().set_xlim(sed['emin'][0], sed['emax'][-1])
+        plt.gca().set_xlim(sed['e_min'][0], sed['e_max'][-1])
 
     @staticmethod
     def plot_flux_points(sed, **kwargs):
@@ -674,15 +674,15 @@ class SEDPlotter(object):
         fmin, fmax = SEDPlotter.get_ylims(sed)
 
         m = sed['ts'] < ul_ts_threshold
-        x = sed['ectr']
-        y = sed['e2dfde']
-        yerr = sed['e2dfde_err']
-        yerr_lo = sed['e2dfde_err_lo']
-        yerr_hi = sed['e2dfde_err_hi']
-        yul = sed['e2dfde_ul95']
+        x = sed['e_ctr']
+        y = sed['e2dnde']
+        yerr = sed['e2dnde_err']
+        yerr_lo = sed['e2dnde_err_lo']
+        yerr_hi = sed['e2dnde_err_hi']
+        yul = sed['e2dnde_ul95']
 
-        delo = sed['ectr'] - sed['emin']
-        dehi = sed['emax'] - sed['ectr']
+        delo = sed['e_ctr'] - sed['e_min']
+        dehi = sed['e_max'] - sed['e_ctr']
         xerr0 = np.vstack((delo[m], dehi[m]))
         xerr1 = np.vstack((delo[~m], dehi[~m]))
 
@@ -693,7 +693,7 @@ class SEDPlotter(object):
 
         ax.set_yscale('log')
         ax.set_xscale('log')
-        ax.set_xlim(sed['emin'][0], sed['emax'][-1])
+        ax.set_xlim(sed['e_min'][0], sed['e_max'][-1])
         ax.set_ylim(10 ** fmin, 10 ** fmax)
 
     @staticmethod
@@ -705,17 +705,17 @@ class SEDPlotter(object):
 
         m = sed['ts'] < 4
 
-        x = sed['ectr']
-        y = sed['e2dfde']
-        yerr = sed['e2dfde_err']
-        yul = sed['e2dfde_ul95']
-        delo = sed['ectr'] - sed['emin']
-        dehi = sed['emax'] - sed['ectr']
+        x = sed['e_ctr']
+        y = sed['e2dnde']
+        yerr = sed['e2dnde_err']
+        yul = sed['e2dnde_ul95']
+        delo = sed['e_ctr'] - sed['e_min']
+        dehi = sed['e_max'] - sed['e_ctr']
         xerr = np.vstack((delo, dehi))
 
-        ym = np.interp(sed['ectr'], model_flux['log_energies'],
+        ym = np.interp(sed['e_ctr'], model_flux['log_energies'],
                        10 ** (2 * model_flux['log_energies']) *
-                       model_flux['dfde'])
+                       model_flux['dnde'])
 
         ax.errorbar(x, (y - ym) / ym, xerr=xerr, yerr=yerr / ym, **kwargs)
 
@@ -730,19 +730,19 @@ class SEDPlotter(object):
         e2 = 10 ** (2 * model_flux['log_energies'])
 
         ax.plot(10 ** model_flux['log_energies'],
-                model_flux['dfde'] * e2, color=color)
+                model_flux['dnde'] * e2, color=color)
 
         ax.plot(10 ** model_flux['log_energies'],
-                model_flux['dfde_lo'] * e2, color=color,
+                model_flux['dnde_lo'] * e2, color=color,
                 linestyle='--')
         ax.plot(10 ** model_flux['log_energies'],
-                model_flux['dfde_hi'] * e2, color=color,
+                model_flux['dnde_hi'] * e2, color=color,
                 linestyle='--')
 
         if not noband:
             ax.fill_between(10 ** model_flux['log_energies'],
-                            model_flux['dfde_lo'] * e2,
-                            model_flux['dfde_hi'] * e2,
+                            model_flux['dnde_lo'] * e2,
+                            model_flux['dnde_hi'] * e2,
                             alpha=0.5, color=color, zorder=-1)
 
     @staticmethod
@@ -1006,7 +1006,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         kwargs.setdefault('catalogs', self.config['catalogs'])
         format = kwargs.get('format', self.config['format'])
         workdir = kwargs.get('format', self.config['fileio']['workdir'])
-        suffix = kwargs.get('suffix', 'tsmap')
+        suffix = kwargs.pop('suffix', 'tsmap')
         zoom = kwargs.get('zoom', None)
 
         if 'ts' not in maps:
