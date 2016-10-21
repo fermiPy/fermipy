@@ -140,8 +140,8 @@ class SEDGenerator(object):
 
         # Write a FITS file
         cols = [Column(name='e_min', dtype='f8', data=sed['e_min'], unit='MeV'),
-                Column(name='e_ref', dtype='f8', data=sed['ectr'], unit='MeV'),
-                Column(name='e_max', dtype='f8', data=sed['emax'], unit='MeV'),
+                Column(name='e_ref', dtype='f8', data=sed['e_ref'], unit='MeV'),
+                Column(name='e_max', dtype='f8', data=sed['e_max'], unit='MeV'),
                 Column(name='ref_dnde_e_min', dtype='f8',
                        data=sed['ref_dnde_e_min'], unit='ph / (MeV cm2 s)'),
                 Column(name='ref_dnde_e_max', dtype='f8',

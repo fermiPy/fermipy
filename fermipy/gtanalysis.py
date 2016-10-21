@@ -3522,9 +3522,32 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.info('Loading ROI file: %s', roi_file)
 
-        key_map = {'Npred': 'npred',
+        key_map = {'dfde' : 'dnde',
+                   'dfde100' : 'dnde100',
+                   'dfde1000' : 'dnde1000',
+                   'dfde10000' : 'dnde10000',
+                   'dfde_index' : 'dnde_index',
+                   'dfde100_index' : 'dnde100_index',
+                   'dfde1000_index' : 'dnde1000_index',
+                   'dfde10000_index' : 'dnde10000_index',
+                   'e2dfde' : 'e2dnde',
+                   'e2dfde100' : 'e2dnde100',
+                   'e2dfde1000' : 'e2dnde1000',
+                   'e2dfde10000' : 'e2dnde10000',
+                   'Npred': 'npred',
                    'logLike': 'loglike',
-                   'dlogLike': 'dloglike'}
+                   'dlogLike': 'dloglike',
+                   'emin' : 'e_min',
+                   'ectr' : 'e_ctr',
+                   'emax' : 'e_max',
+                   'logemin' : 'loge_min',
+                   'logectr' : 'loge_ctr',
+                   'logemax' : 'loge_max',
+                   'ref_dfde' : 'ref_dnde',
+                   'ref_e2dfde' : 'ref_e2dnde',
+                   'ref_dfde_emin' : 'ref_dnde_e_min',
+                   'ref_dfde_emax' : 'ref_dnde_e_max',
+                   }
         
         self._roi_model = utils.update_keys(roi_data['roi'],key_map)
 

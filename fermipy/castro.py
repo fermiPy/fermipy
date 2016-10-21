@@ -43,7 +43,7 @@ def convert_sed_cols(tab):
     for i, c in enumerate(tab.columns):
 
         newname = tab.columns[i].name.lower()
-        newname.replace('dfde','dnde')
+        newname = newname.replace('dfde','dnde')
             
         if tab.columns[i].name == newname:
             continue
@@ -58,8 +58,8 @@ def convert_ebounds_cols(tab):
     # Update Column names
     for i, c in enumerate(tab.columns):
 
-        newname.replace('DFDE','DNDE')
-            
+        newname = tab.columns[i].name
+        newname = newname.replace('DFDE','DNDE')            
         if tab.columns[i].name == newname:
             continue
 
