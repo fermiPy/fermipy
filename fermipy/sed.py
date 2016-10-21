@@ -145,7 +145,7 @@ class SEDGenerator(object):
                 Column(name='ref_dnde_e_min', dtype='f8',
                        data=sed['ref_dnde_e_min'], unit='ph / (MeV cm2 s)'),
                 Column(name='ref_dnde_e_max', dtype='f8',
-                       data=sed['ref_dnde_emax'], unit='ph / (MeV cm2 s)'),
+                       data=sed['ref_dnde_e_max'], unit='ph / (MeV cm2 s)'),
                 Column(name='ref_dnde', dtype='f8',
                        data=sed['ref_dnde'], unit='ph / (MeV cm2 s)'),
                 Column(name='ref_flux', dtype='f8',
@@ -195,18 +195,18 @@ class SEDGenerator(object):
         columns = pyfits.ColDefs([])
 
         npar = len(sed['param_names'])
-        columns.add_col(pyfits.Column(name=str('NAME'),
+        columns.add_col(pyfits.Column(name=str('name'),
                                       format='A32',
                                       array=sed['param_names']))
-        columns.add_col(pyfits.Column(name=str('VALUE'), format='E',
+        columns.add_col(pyfits.Column(name=str('value'), format='E',
                                       array=sed['param_values']))
-        columns.add_col(pyfits.Column(name=str('ERROR'), format='E',
+        columns.add_col(pyfits.Column(name=str('error'), format='E',
                                       array=sed['param_errors']))
-        columns.add_col(pyfits.Column(name=str('COVARIANCE'),
+        columns.add_col(pyfits.Column(name=str('covariance'),
                                       format='%iE' % npar,
                                       dim=str('(%i)' % npar),
                                       array=sed['param_covariance']))
-        columns.add_col(pyfits.Column(name=str('CORRELATION'),
+        columns.add_col(pyfits.Column(name=str('correlation'),
                                       format='%iE' % npar,
                                       dim=str('(%i)' % npar),
                                       array=sed['param_correlation']))
