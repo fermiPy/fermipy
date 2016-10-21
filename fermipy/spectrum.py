@@ -101,7 +101,7 @@ class SEDEFluxFunctor(SEDFunctor):
 
 class SpectralFunction(object):
     """Base class for spectral models.  Spectral models inheriting
-    from this class should implement at a minimum an `_eval_dfde`
+    from this class should implement at a minimum an `_eval_dnde`
     method which evaluates the differential flux at a given energy."""
 
     def __init__(self, params, scale=1.0, extra_params=None):
@@ -170,44 +170,44 @@ class SpectralFunction(object):
         return SEDEFluxFunctor(sfn, emin, emax)
 
     @classmethod
-    def eval_e2dfde(cls, x, params, scale=1.0, extra_params=None):
+    def eval_e2dnde(cls, x, params, scale=1.0, extra_params=None):
         x = cast_args(x)
         params = cast_params(params)
-        return cls._eval_dfde(x, params, scale, extra_params) * x**2
+        return cls._eval_dnde(x, params, scale, extra_params) * x**2
 
     @classmethod
-    def eval_edfde(cls, x, params, scale=1.0, extra_params=None):
+    def eval_ednde(cls, x, params, scale=1.0, extra_params=None):
         x = cast_args(x)
         params = cast_params(params)
-        return cls._eval_dfde(x, params, scale, extra_params) * x
+        return cls._eval_dnde(x, params, scale, extra_params) * x
 
     @classmethod
-    def eval_dfde(cls, x, params, scale=1.0, extra_params=None):
+    def eval_dnde(cls, x, params, scale=1.0, extra_params=None):
         x = cast_args(x)
         params = cast_params(params)
-        return cls._eval_dfde(x, params, scale, extra_params)
+        return cls._eval_dnde(x, params, scale, extra_params)
 
     @classmethod
-    def eval_dfde_deriv(cls, x, params, scale=1.0, extra_params=None):
+    def eval_dnde_deriv(cls, x, params, scale=1.0, extra_params=None):
         x = cast_args(x)
         params = cast_params(params)
-        return cls._eval_dfde_deriv(x, params, scale, extra_params)
+        return cls._eval_dnde_deriv(x, params, scale, extra_params)
 
     @classmethod
-    def eval_edfde_deriv(cls, x, params, scale=1.0, extra_params=None):
+    def eval_ednde_deriv(cls, x, params, scale=1.0, extra_params=None):
         x = cast_args(x)
         params = cast_params(params)
-        dfde_deriv = cls._eval_dfde_deriv(x, params, scale, extra_params)
-        dfde = cls._eval_dfde(x, params, scale)
-        return x*dfde_deriv + dfde
+        dnde_deriv = cls._eval_dnde_deriv(x, params, scale, extra_params)
+        dnde = cls._eval_dnde(x, params, scale)
+        return x*dnde_deriv + dnde
 
     @classmethod
-    def eval_e2dfde_deriv(cls, x, params, scale=1.0, extra_params=None):
+    def eval_e2dnde_deriv(cls, x, params, scale=1.0, extra_params=None):
         x = cast_args(x)
         params = cast_params(params)
-        dfde_deriv = cls._eval_dfde_deriv(x, params, scale, extra_params)
-        dfde = cls._eval_dfde(x, params, scale)
-        return x**2*dfde_deriv + 2*x*dfde
+        dnde_deriv = cls._eval_dnde_deriv(x, params, scale, extra_params)
+        dnde = cls._eval_dnde(x, params, scale)
+        return x**2*dnde_deriv + 2*x*dnde
 
     @classmethod
     def _integrate(cls, fn, emin, emax, params, scale=1.0, extra_params=None,
@@ -225,21 +225,21 @@ class SpectralFunction(object):
         logx_edge = np.log(emin) + xedges * (np.log(emax) - np.log(emin))
         logx = 0.5 * (logx_edge[..., 1:] + logx_edge[..., :-1])
         xw = np.exp(logx_edge[..., 1:]) - np.exp(logx_edge[..., :-1])
-        dfde = fn(np.exp(logx), params, scale, extra_params)
-        return np.sum(dfde * xw, axis=-1)
+        dnde = fn(np.exp(logx), params, scale, extra_params)
+        return np.sum(dnde * xw, axis=-1)
 
     @classmethod
-    def _eval_dfde_deriv(cls, x, params, scale=1.0, extra_params=None,
+    def _eval_dnde_deriv(cls, x, params, scale=1.0, extra_params=None,
                          eps=1E-6):
-        return (cls._eval_dfde(x+eps, params, scale) -
-                cls._eval_dfde(x, params, scale))/eps
+        return (cls._eval_dnde(x+eps, params, scale) -
+                cls._eval_dnde(x, params, scale))/eps
 
     @classmethod
     def eval_flux(cls, emin, emax, params, scale=1.0, extra_params=None):
         emin = cast_args(emin)
         emax = cast_args(emax)
         params = cast_params(params)
-        return cls._integrate(cls.eval_dfde, emin, emax, params, scale,
+        return cls._integrate(cls.eval_dnde, emin, emax, params, scale,
                               extra_params)
 
     @classmethod
@@ -247,45 +247,45 @@ class SpectralFunction(object):
         emin = cast_args(emin)
         emax = cast_args(emax)
         params = cast_params(params)
-        return cls._integrate(cls.eval_edfde, emin, emax, params, scale,
+        return cls._integrate(cls.eval_ednde, emin, emax, params, scale,
                               extra_params)
             
-    def dfde(self, x, params=None):
+    def dnde(self, x, params=None):
         """Evaluate differential flux."""
         params = self.params if params is None else params
-        return np.squeeze(self.eval_dfde(x, params, self.scale,
+        return np.squeeze(self.eval_dnde(x, params, self.scale,
                                          self.extra_params))
 
-    def edfde(self, x, params=None):
+    def ednde(self, x, params=None):
         """Evaluate E times differential flux."""
         params = self.params if params is None else params
-        return np.squeeze(self.eval_edfde(x, params, self.scale,
+        return np.squeeze(self.eval_ednde(x, params, self.scale,
                                           self.extra_params))
 
-    def e2dfde(self, x, params=None):
+    def e2dnde(self, x, params=None):
         """Evaluate E^2 times differential flux."""
         params = self.params if params is None else params
-        return np.squeeze(self.eval_e2dfde(x, params, self.scale,
+        return np.squeeze(self.eval_e2dnde(x, params, self.scale,
                                            self.extra_params))
 
-    def dfde_deriv(self, x, params=None):
+    def dnde_deriv(self, x, params=None):
         """Evaluate derivative of the differential flux with respect to E."""
         params = self.params if params is None else params
-        return np.squeeze(self.eval_dfde_deriv(x, params, self.scale,
+        return np.squeeze(self.eval_dnde_deriv(x, params, self.scale,
                                                self.extra_params))
 
-    def edfde_deriv(self, x, params=None):
+    def ednde_deriv(self, x, params=None):
         """Evaluate derivative of E times differential flux with respect to
         E."""
         params = self.params if params is None else params
-        return np.squeeze(self.eval_edfde_deriv(x, params, self.scale,
+        return np.squeeze(self.eval_ednde_deriv(x, params, self.scale,
                                                 self.extra_params))
 
-    def e2dfde_deriv(self, x, params=None):
+    def e2dnde_deriv(self, x, params=None):
         """Evaluate derivative of E^2 times differential flux with
         respect to E."""
         params = self.params if params is None else params
-        return np.squeeze(self.eval_e2dfde_deriv(x, params, self.scale,
+        return np.squeeze(self.eval_e2dnde_deriv(x, params, self.scale,
                                                  self.extra_params))
 
     def flux(self, emin, emax, params=None):
@@ -324,7 +324,7 @@ class PowerLaw(SpectralFunction):
         return 2
         
     @staticmethod
-    def _eval_dfde(x, params, scale=1.0, extra_params=None):
+    def _eval_dnde(x, params, scale=1.0, extra_params=None):
         return params[0] * (x / scale) ** params[1]
 
     @classmethod
@@ -388,7 +388,7 @@ class LogParabola(SpectralFunction):
         return 3
         
     @staticmethod
-    def _eval_dfde(x, params, scale=1.0, extra_params=None):
+    def _eval_dnde(x, params, scale=1.0, extra_params=None):
         return (params[0] * (x / scale) **
                 (params[1] - params[2] * np.log(x / scale)))
 
@@ -428,12 +428,12 @@ class PLExpCutoff(SpectralFunction):
         return 3
     
     @staticmethod
-    def _eval_dfde(x, params, scale=1.0, extra_params=None):
+    def _eval_dnde(x, params, scale=1.0, extra_params=None):
         return params[0] * (x / scale) ** (params[1]) * np.exp(-x / params[2])
 
     @classmethod
-    def _eval_dfde_deriv(cls, x, params, scale=1.0, extra_params=None):
-        return (cls._eval_dfde(x, params, scale) *
+    def _eval_dnde_deriv(cls, x, params, scale=1.0, extra_params=None):
+        return (cls._eval_dnde(x, params, scale) *
                 (params[1]*params[2] - x)/(params[2]*x))
 
 
@@ -560,7 +560,7 @@ class DMFitFunction(SpectralFunction):
         return DMFitFunction.channel_rev_map.keys()
     
     @staticmethod
-    def _eval_dfde(x, params, scale=1.0, extra_params=None):
+    def _eval_dnde(x, params, scale=1.0, extra_params=None):
 
         dndx_interp = extra_params.get('dndx_interp')
         jfactor = extra_params.get('jfactor')

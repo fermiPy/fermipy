@@ -113,13 +113,13 @@ def convert_tscube_old(infile, outfile):
     emin = inhdulist['EBOUNDS'].data.field('e_min') / 1E3
     emax = inhdulist['EBOUNDS'].data.field('e_max') / 1E3
     eref = np.sqrt(emin * emax)
-    dfde_emin = inhdulist['EBOUNDS'].data.field('E_MIN_FL')
-    dfde_emax = inhdulist['EBOUNDS'].data.field('E_MAX_FL')
-    index = np.log(dfde_emin / dfde_emax) / np.log(emin / emax)
+    dnde_emin = inhdulist['EBOUNDS'].data.field('E_MIN_FL')
+    dnde_emax = inhdulist['EBOUNDS'].data.field('E_MAX_FL')
+    index = np.log(dnde_emin / dnde_emax) / np.log(emin / emax)
 
-    flux = PowerLaw.eval_flux(emin, emax, [dfde_emin, index], emin)
-    eflux = PowerLaw.eval_eflux(emin, emax, [dfde_emin, index], emin)
-    dfde = PowerLaw.eval_dfde(np.sqrt(emin * emax), [dfde_emin, index], emin)
+    flux = PowerLaw.eval_flux(emin, emax, [dnde_emin, index], emin)
+    eflux = PowerLaw.eval_eflux(emin, emax, [dnde_emin, index], emin)
+    dnde = PowerLaw.eval_dnde(np.sqrt(emin * emax), [dnde_emin, index], emin)
 
     ts_map = inhdulist['PRIMARY'].data.reshape((nrows))
     ok_map = inhdulist['TSMAP_OK'].data.reshape((nrows))
@@ -168,7 +168,7 @@ def convert_tscube_old(infile, outfile):
                                 format='D', array=eflux,
                                 unit='MeV / (cm2 s)'))
     columns.add_col(fits.Column(name=str('ref_dnde'),
-                                format='D', array=dfde,
+                                format='D', array=dnde,
                                 unit='ph / (MeV cm2 s)'))
 
     columns.change_name('E_MIN_FL', str('ref_dnde_e_min'))

@@ -32,8 +32,8 @@ def test_dmfitfunction_spectrum():
     loge = np.linspace(2,4,5)
 
     # Test energy scalar evaluation
-    assert_allclose(fn0.dfde(1E3),1.15754e-14, rtol=1E-3)
-    assert_allclose(fn1.dfde(1E3),2.72232e-16, rtol=1E-3)
+    assert_allclose(fn0.dnde(1E3),1.15754e-14, rtol=1E-3)
+    assert_allclose(fn1.dnde(1E3),2.72232e-16, rtol=1E-3)
 
     fn0.flux(1E3,1E4)
     fn1.flux(1E3,1E4)
@@ -42,10 +42,10 @@ def test_dmfitfunction_spectrum():
     fn1.eflux(1E3,1E4)
     
     # Test energy vector evaluation
-    assert_allclose(fn0.dfde(10**loge),
+    assert_allclose(fn0.dnde(10**loge),
                     [ 5.39894e-14, 3.26639e-14, 1.15754e-14,
                       2.13262e-15, 1.79554e-16], rtol=1E-3)
-    assert_allclose(fn1.dfde(10**loge),
+    assert_allclose(fn1.dnde(10**loge),
                     [ 7.12808e-16, 3.79861e-16, 2.72232e-16,
                       1.96952e-16, 9.49478e-17], rtol=1E-3)
 
@@ -56,11 +56,11 @@ def test_dmfitfunction_spectrum():
     fn1.eflux(loge[:-1],loge[1:])
     
     # Test energy vector + parameter vector evaluation
-    dfde0 = fn0.dfde(10**loge,params=[sigmav,[100E3,200E3]])
-    dfde1 = fn1.dfde(10**loge,params=[sigmav,[100E3,200E3]])
+    dnde0 = fn0.dnde(10**loge,params=[sigmav,[100E3,200E3]])
+    dnde1 = fn1.dnde(10**loge,params=[sigmav,[100E3,200E3]])
 
-    assert_allclose(dfde0[:,0], fn0.dfde(10**loge,params=[sigmav,100E3]))
-    assert_allclose(dfde0[:,1], fn0.dfde(10**loge,params=[sigmav,200E3]))
-    assert_allclose(dfde1[:,0], fn1.dfde(10**loge,params=[sigmav,100E3]))
-    assert_allclose(dfde1[:,1], fn1.dfde(10**loge,params=[sigmav,200E3]))
+    assert_allclose(dnde0[:,0], fn0.dnde(10**loge,params=[sigmav,100E3]))
+    assert_allclose(dnde0[:,1], fn0.dnde(10**loge,params=[sigmav,200E3]))
+    assert_allclose(dnde1[:,0], fn1.dnde(10**loge,params=[sigmav,100E3]))
+    assert_allclose(dnde1[:,1], fn1.dnde(10**loge,params=[sigmav,200E3]))
     
