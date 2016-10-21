@@ -1006,7 +1006,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         kwargs.setdefault('catalogs', self.config['catalogs'])
         format = kwargs.get('format', self.config['format'])
         workdir = kwargs.get('format', self.config['fileio']['workdir'])
-        suffix = kwargs.get('suffix', 'tsmap')
+        suffix = kwargs.pop('suffix', 'tsmap')
         zoom = kwargs.get('zoom', None)
 
         if 'ts' not in maps:
