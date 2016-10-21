@@ -40,15 +40,15 @@ PAR_NAMES = {
 def convert_sed_cols(tab):
     """Convert SED column names to new-style format."""    
     # Update Column names
-    for i, c in enumerate(tab.columns):
+    for colname, col in tab.columns.items():
 
-        newname = tab.columns[i].name.lower()
+        newname = colname.lower()
         newname = newname.replace('dfde','dnde')
             
-        if tab.columns[i].name == newname:
+        if tab.columns[colname].name == newname:
             continue
 
-        tab.columns[i].name = newname
+        tab.columns[colname].name = newname
 
     return tab
 
@@ -56,14 +56,14 @@ def convert_sed_cols(tab):
 def convert_ebounds_cols(tab):
     """Convert EBOUNDS column names to new-style format."""    
     # Update Column names
-    for i, c in enumerate(tab.columns):
+    for colname, col in tab.columns.items():
 
-        newname = tab.columns[i].name
+        newname = colname
         newname = newname.replace('DFDE','DNDE')            
-        if tab.columns[i].name == newname:
+        if tab.columns[colname].name == newname:
             continue
 
-        tab.columns[i].name = newname
+        tab.columns[colname].name = newname
 
     return tab
 
@@ -1170,14 +1170,14 @@ class CastroData(CastroData_Base):
         castro : `~fermipy.castro.CastroData`
         """
         if norm_type in ['FLUX', 'EFLUX', 'DNDE']:
-            norm_vals = np.array(tab_s['NORM_SCAN'] *
+            norm_vals = np.array(tab_s['norm_scan'] *
                                  tab_e['REF_%s' % norm_type][:, np.newaxis])
         elif norm_type == "NORM":
-            norm_vals = np.array(tab_s['NORM_SCAN'])
+            norm_vals = np.array(tab_s['norm_scan'])
         else:
             raise Exception('Unrecognized normalization type: %s' % norm_type)
 
-        nll_vals = -np.array(tab_s['DLOGLIKE_SCAN'])
+        nll_vals = -np.array(tab_s['dloglike_scan'])
 
         rs = ReferenceSpec.create_from_table(tab_e)
         return CastroData(norm_vals, nll_vals, rs, norm_type)
