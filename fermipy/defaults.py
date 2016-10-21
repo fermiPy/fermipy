@@ -549,7 +549,9 @@ source_flux_output = OrderedDict((
                   np.ndarray, '`~numpy.ndarray`')),  
 ))
 
-source_output = OrderedDict(source_meta_output.items() + source_pos_output.items() + source_flux_output.items())
+source_output = OrderedDict(list(source_meta_output.items()) +
+                            list(source_pos_output.items()) +
+                            list(source_flux_output.items()))
 
 # Top-level dictionary for output file
 file_output = OrderedDict((
