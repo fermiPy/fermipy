@@ -81,6 +81,13 @@ def test_gtanalysis_tsmap(setup):
     gta.tsmap(model={})
 
 
+@requires_st_version('11-04-00')
+def test_gtanalysis_tscube(setup):
+    gta = setup
+    gta.load_roi('fit1')
+    gta.tscube(model={})
+
+
 def test_gtanalysis_residmap(setup):
     gta = setup
     gta.load_roi('fit1')
