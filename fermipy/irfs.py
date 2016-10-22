@@ -27,6 +27,14 @@ evtype_string = {
     32: 'PSF3'
 }
 
+def split_edges(edges,npt=2):
+
+    x = (edges[:-1,None] +
+         (edges[1:,None]-edges[:-1,None])*np.linspace(0.0,1.0,npt+1)[None,:])
+    return np.unique(np.ravel(x))
+    
+    #return x[:-1,None] + (x[1:,None]-x[:-1,None])*np.array([0.25,0.75])[None,:]
+    
 
 def bitmask_to_bits(mask):
 
@@ -43,7 +51,8 @@ def poisson_log_like(c, m):
 
 
 def poisson_ts(sig, bkg):
-    return 2 * (poisson_log_like(sig + bkg, sig + bkg) - poisson_log_like(sig + bkg, bkg))
+    return 2 * (poisson_log_like(sig + bkg, sig + bkg) -
+                poisson_log_like(sig + bkg, bkg))
 
 
 def compute_ext_flux(egy, flux):
@@ -349,8 +358,8 @@ def create_irf(event_class, event_type):
 
 
 def create_psf(event_class, event_type, dtheta, egy, cth):
-    """This function creates a map of the PSF versus offset angle.  
-
+    """This function creates an array of PSF response values versus energy
+    and inclination angle.
     """
     irf = create_irf(event_class, event_type)
     theta = np.degrees(np.arccos(cth))
@@ -361,6 +370,21 @@ def create_psf(event_class, event_type, dtheta, egy, cth):
             m[:, i, j] = irf.psf().value(dtheta, 10**x, y, 0.0)
 
     return m
+
+
+def create_edisp(event_class, event_type, erec, egy, cth):
+
+    irf = create_irf(event_class, event_type)
+    theta = np.degrees(np.arccos(cth))
+    v = np.zeros((len(erec), len(egy), len(cth)))
+
+    for i, x in enumerate(egy):
+        for j, y in enumerate(theta):
+
+            m = (erec/10**x < 3.0) & (erec/10**x > 0.333)
+            v[m, i, j] = irf.edisp().value(erec[m], 10**x, y, 0.0)
+
+    return v
 
 
 def create_aeff(event_class, event_type, egy, cth):
@@ -394,6 +418,76 @@ def create_aeff(event_class, event_type, egy, cth):
             m[i, j] = irf.aeff().value(10**x, y, 0.0)
 
     return m
+
+
+def create_exp(skydir, ltc, event_class, event_types,
+               egy, cth_edge, npt=2):
+
+    exp = np.zeros((len(egy), len(cth_edge)-1))
+    cth_edge = split_edges(cth_edge, npt)
+    cth = edge_to_center(cth_edge)
+    ltw = ltc.get_skydir_lthist(skydir, cth_edge).reshape(-1, npt)
+    for et in event_types:
+        aeff = create_aeff(event_class, et, egy, cth)
+        aeff = aeff.reshape(exp.shape + (npt,))
+        exp += np.sum(aeff * ltw[np.newaxis, :, :], axis=-1)
+
+    return exp
+
+
+def create_avg_rsp(rsp_fn, skydir, ltc, event_class, event_types, x,
+                   egy, cth_edge, npt=2):
+
+    wrsp = np.zeros((len(x), len(egy), len(cth_edge)-1))
+    exps = np.zeros((len(egy), len(cth_edge)-1))
+
+    cth_edge = split_edges(cth_edge, npt)
+    cth = edge_to_center(cth_edge)
+    ltw = ltc.get_skydir_lthist(skydir, cth_edge)
+    ltw = ltw.reshape(-1, npt)
+
+    for et in event_types:
+        rsp = rsp_fn(event_class, et, x, egy, cth)
+        aeff = create_aeff(event_class, et, egy, cth)
+        rsp = rsp.reshape(wrsp.shape + (npt,))
+        aeff = aeff.reshape(exps.shape + (npt,))
+        wrsp += np.sum(rsp * aeff[np.newaxis, :, :, :] *
+                       ltw[np.newaxis, np.newaxis, :, :], axis=-1)
+        exps += np.sum(aeff * ltw[np.newaxis, :, :], axis=-1)
+
+    wrsp /= exps[np.newaxis, :, :]
+    return wrsp
+
+
+def create_avg_psf(skydir, ltc, event_class, event_types, dtheta,
+                   egy, cth_edge, npt=2):
+    """Generate model for exposure-weighted PSF averaged over incidence
+    angle.
+
+    Parameters
+    ----------
+    """
+
+    return create_avg_rsp(create_psf, skydir, ltc,
+                          event_class, event_types,
+                          dtheta, egy,  cth_edge, npt)
+
+
+def create_avg_edisp(skydir, ltc, event_class, event_types, erec,
+                     egy, cth_edge, npt=2):
+    """Generate model for exposure-weighted DRM averaged over incidence
+    angle.
+
+    Parameters
+    ----------
+    """
+    return create_avg_rsp(create_edisp, skydir, ltc,
+                          event_class, event_types,
+                          erec, egy,  cth_edge, npt)
+
+def create_wpsf():
+    """Create a weighted-PSF model."""
+    pass
 
 
 class LTCube(HpxMap):
