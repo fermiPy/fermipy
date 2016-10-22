@@ -22,7 +22,7 @@ def get_st_version():
         import ST_Version
         return ST_Version.version()
     except ImportError:
-        return 0
+        return ''
 
     
 def requires_st_version(version_str):
