@@ -13,5 +13,8 @@ docker run -it -d -v $PWD:/home/fermipy --tmpfs /tmp --name=fermipy-testing \
        -e CONDA2="$CONDA2" \
        -e SLAC_ST_BUILD="$SLAC_ST_BUILD" \
        -e INSTALL_CMD="$INSTALL_CMD" \
+       -e TRAVIS="$TRAVIS" \
+       -e TRAVIS_JOB_ID="$TRAVIS_JOB_ID" \
+       -e TRAVIS_BRANCH="$TRAVIS_BRANCH" \
        mdwood/fermist /bin/bash
 
