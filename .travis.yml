@@ -95,11 +95,13 @@ install:
         cat Dockerfile;
         $DOCKER_INSTALL;
         docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
-        wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh;
-        bash miniconda.sh -b -p $HOME/miniconda;
-        python -m pip install coverage pytest-cov coveralls;
-        export PATH="$HOME/miniconda/bin:$PATH";
     fi
+      
+#        wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh;
+#        bash miniconda.sh -b -p $HOME/miniconda;
+#        python -m pip install coverage pytest-cov coveralls;
+#        export PATH="$HOME/miniconda/bin:$PATH";
+    
   
 #  - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
 #  - bash miniconda.sh -b -p $HOME/miniconda
@@ -123,8 +125,10 @@ script:
     fi
 
 after_success:
-  - if [[ $NAME == 'main' ]] || [[ $NAME == 'py2_slac-st' ]]; then
+  - if [[ $NAME == 'main' ]]; then
         coveralls --rcfile='fermipy/tests/coveragerc';
+    elif [[ $NAME == 'py2_slac-st' ]]; then
+        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source condasetup.sh;coveralls --rcfile='fermipy/tests/coveragerc'";
     fi
 
 #after_script:
