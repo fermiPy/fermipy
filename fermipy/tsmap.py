@@ -86,11 +86,13 @@ def convert_tscube(infile, outfile):
             continue
 
         for col in hdu.columns:
-            colname_old = col.name
-            colname_new = col.name.lower()
-            colname_new.replace('dfde', 'dnde')
-            col.name = str(colname_new)
 
+            if hdu.name == 'EBOUNDS':
+                col.name = col.name.replace('DFDE','DNDE')
+            else:
+                colname = col.name.lower()
+                col.name = colname.replace('dfde', 'dnde')
+                
     inhdulist.writeto(outfile, clobber=True)
     return inhdulist
 

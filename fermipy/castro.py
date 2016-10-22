@@ -1580,7 +1580,7 @@ class TSCube(object):
         nmap = Map(tab_f['fit_norm'].reshape(tsmap.counts.shape),
                    tsmap.wcs)
 
-        ref_colname = 'ref_%s' % norm_type.lower()
+        ref_colname = 'REF_%s' % norm_type
         norm_vals *= tab_e[ref_colname][np.newaxis, :, np.newaxis]
 
         return TSCube(tsmap, nmap, tscube, ncube,

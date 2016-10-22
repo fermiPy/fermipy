@@ -4,7 +4,7 @@ import os
 import numpy as np
 from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
-from fermipy.tests.utils import requires_dependency
+from fermipy.tests.utils import requires_dependency, requires_st_version
 from fermipy import spectrum
 
 try:
