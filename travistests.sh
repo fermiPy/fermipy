@@ -18,6 +18,7 @@ status=$?
 if [[ $NAME == 'docs' ]]; then
     cd docs;
     sphinx-build -b html -d _build/doctrees . _build/html -W;
+    status=$[$status | $?]
 fi
 
 if [[ $TRAVIS_OS_NAME != 'linux' ]]; then

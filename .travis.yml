@@ -39,7 +39,7 @@ matrix:
                ST_INSTALL=''
                DOCKER_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
-               CONDA_DEPS='scipy matplotlib pytest pyyaml sphinx'
+               CONDA_DEPS='scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
 
         # Python 3, no Fermi ST, all other dependencies
         - os: linux
