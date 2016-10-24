@@ -40,7 +40,7 @@ PAR_NAMES = {
 def convert_sed_cols(tab):
     """Convert SED column names to new-style format."""    
     # Update Column names
-    for colname, col in tab.columns.items():
+    for colname in list(tab.columns.keys()):
 
         newname = colname.lower()
         newname = newname.replace('dfde','dnde')
@@ -56,7 +56,7 @@ def convert_sed_cols(tab):
 def convert_ebounds_cols(tab):
     """Convert EBOUNDS column names to new-style format."""    
     # Update Column names
-    for colname, col in tab.columns.items():
+    for colname in list(tab.columns.keys()):
 
         newname = colname
         newname = newname.replace('DFDE','DNDE')            
@@ -1580,7 +1580,7 @@ class TSCube(object):
         nmap = Map(tab_f['fit_norm'].reshape(tsmap.counts.shape),
                    tsmap.wcs)
 
-        ref_colname = 'ref_%s' % norm_type.lower()
+        ref_colname = 'REF_%s' % norm_type
         norm_vals *= tab_e[ref_colname][np.newaxis, :, np.newaxis]
 
         return TSCube(tsmap, nmap, tscube, ncube,

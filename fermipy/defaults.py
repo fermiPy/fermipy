@@ -291,7 +291,7 @@ sed = {
     'ul_confidence': (0.95, 'Confidence level for upper limit calculation.',
                       float),
     'cov_scale' : (3.0,'Scale factor that sets the strength of the prior on nuisance '
-                   'parameters when ``fix_background``=True.  Setting this to None disables the prior.',float)
+                   'parameters when ``fix_background`` is True.  Setting this to None disables the prior.',float)
 }
 
 # Output for SED analysis

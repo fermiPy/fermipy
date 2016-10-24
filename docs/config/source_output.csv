@@ -53,15 +53,15 @@
 ``eflux100_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
 ``eflux1000_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
 ``eflux10000_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
-``dfde``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at the pivot energy.
-``dfde100``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 100 MeV.
-``dfde1000``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 1 GeV.
-``dfde10000``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 10 GeV.
-``dfde_index``	`~numpy.ndarray`	Logarithmic slope of the differential photon spectrum evaluated at the pivot energy.
-``dfde100_index``	`~numpy.ndarray`	Logarithmic slope of the differential photon spectrum evaluated at 100 MeV.
-``dfde1000_index``	`~numpy.ndarray`	Logarithmic slope of the differential photon spectrum evaluated evaluated at 1 GeV.
-``dfde10000_index``	`~numpy.ndarray`	Logarithmic slope of the differential photon spectrum evaluated at 10 GeV.
-``e2dfde``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at the pivot energy.
-``e2dfde100``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at 100 MeV.
-``e2dfde1000``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at 1 GeV.
-``e2dfde10000``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at 10 GeV.
+``dnde``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at the pivot energy.
+``dnde100``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 100 MeV.
+``dnde1000``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 1 GeV.
+``dnde10000``	`~numpy.ndarray`	Differential photon flux and uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 10 GeV.
+``dnde_index``	`~numpy.ndarray`	Logarithmic slope of the differential photon spectrum evaluated at the pivot energy.
+``dnde100_index``	`~numpy.ndarray`	Logarithmic slope of the differential photon spectrum evaluated at 100 MeV.
+``dnde1000_index``	`~numpy.ndarray`	Logarithmic slope of the differential photon spectrum evaluated evaluated at 1 GeV.
+``dnde10000_index``	`~numpy.ndarray`	Logarithmic slope of the differential photon spectrum evaluated at 10 GeV.
+``e2dnde``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at the pivot energy.
+``e2dnde100``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at 100 MeV.
+``e2dnde1000``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at 1 GeV.
+``e2dnde10000``	`~numpy.ndarray`	E^2 times the differential photon flux and uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) evaluated at 10 GeV.
