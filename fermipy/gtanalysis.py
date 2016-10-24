@@ -1475,7 +1475,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return srcs
 
     def free_sources(self, free=True, pars=None, cuts=None,
-                     distance=None, skydir=None, minmax_ts=None, minmax_npred=None,
+                     distance=None, skydir=None, minmax_ts=None, minmax_npred=None, minmax_var=None,
                      square=False, exclude_diffuse=False, **kwargs):
         """Free or fix sources in the ROI model satisfying the given
         selection.  When multiple selections are defined, the selected
@@ -1519,6 +1519,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             either min or max are None then only a lower (upper) bound
             will be applied.  If this parameter is none no selection
             will be applied.
+
+        minmax_var:  list
+        Free sources that have variability index in the range [min,max].
+        If either min or max are none then only a lower (upper) bound
+        will be applied. If this paramater is none no selection will be applied
+
+       
+        
 
         square : bool
             Switch between applying a circular or square (ROI-like)
