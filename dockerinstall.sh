@@ -1,6 +1,6 @@
 #echo 'DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock -s devicemapper"' | sudo tee /etc/default/docker > /dev/null
 #sudo service docker restart
-docker build -t mdwood/fermist .
+docker build -t mdwood/fermist $1
 docker info
 docker images
 docker run -it -d -v $PWD:/home/fermipy --tmpfs /tmp --name=fermipy-testing \
