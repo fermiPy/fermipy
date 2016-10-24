@@ -87,7 +87,7 @@ def create_source_table(scan_shape):
     cols_dict['Conf_95_PosAng'] = dict(dtype='f8', format='%.3f',unit='deg')
     cols_dict['Conf_95_SemiMajor'] = dict(dtype='f8', format='%.3f',unit='deg')
     cols_dict['Conf_95_SemiMinor'] = dict(dtype='f8', format='%.3f',unit='deg')
-
+  
 
     for t in ['eflux','eflux100','eflux1000','eflux10000']:
         cols_dict[t] = dict(dtype='f8', format='%.3f',unit='MeV / (cm2 s)',shape=(2,))
@@ -307,6 +307,10 @@ class Model(object):
     @property
     def psf_scale_fn(self):
         return self._data['psf_scale']
+
+
+
+
     
     @staticmethod
     def create_from_dict(src_dict, roi_skydir=None):
@@ -368,6 +372,7 @@ class Model(object):
              'Exp_Index' : np.nan,
              'Cutoff' : np.nan}
 
+        
         if self['SpectrumType'] == 'PowerLaw':
             o['Spectral_Index'] = -1.0*self.params['Index'][0]
             o['Flux_Density'] = self.params['Prefactor'][0]
@@ -594,7 +599,7 @@ class Source(Model):
         super(Source, self).__init__(name, data)
 
         catalog = self.data.get('catalog', {})
-
+        
         if radec is not None:
             self._set_radec(radec)
         elif 'ra' in self.data and 'dec' in self.data:
@@ -719,6 +724,8 @@ class Source(Model):
         sp = self['spectral_pars']
 
         catalog = self.data.get('catalog', {})
+    
+    
 
         if self['SpectrumType'] == 'PowerLaw':
 
@@ -734,7 +741,7 @@ class Source(Model):
             sp['Prefactor'] = gtutils.make_parameter_dict(sp['Prefactor'])
             sp['Scale'] = gtutils.make_parameter_dict(sp['Scale'], True)
             sp['Index'] = gtutils.make_parameter_dict(sp['Index'])
-
+            
         elif self['SpectrumType'] == 'LogParabola':
 
             sp['norm']['value'] = catalog['Flux_Density']
@@ -858,6 +865,11 @@ class Source(Model):
         skydir : `~astropy.coordinates.SkyCoord` 
         """
         return SkyCoord(self.radec[0] * u.deg, self.radec[1] * u.deg)
+
+    @property
+    def get_var_index(self):
+        return self.data.get('Variability_Index')
+
 
     @property
     def data(self):
@@ -1627,7 +1639,7 @@ class ROIModel(fermipy.config.Configurable):
                                             square)
 
     def get_sources(self, skydir=None, distance=None, cuts=None, 
-                    minmax_ts=None, minmax_npred=None, square=False,
+                    minmax_ts=None, minmax_npred=None, minmax_var = None, square=False,
                     exclude_diffuse=False,
                     coordsys='CEL'):
         """Retrieve list of sources satisfying the given selections.
@@ -1652,12 +1664,14 @@ class ROIModel(fermipy.config.Configurable):
                 continue
             ts = s['ts']
             npred = s['npred']
+            var = s.get_var_index
 
             if not utils.apply_minmax_selection(ts, minmax_ts):
                 continue
             if not utils.apply_minmax_selection(npred, minmax_npred):
                 continue
-
+            if not utils.apply_minmax_selection(var, minmax_var):
+                continue
             o.append(s)
 
         for s in self.diffuse_sources:
@@ -1771,6 +1785,7 @@ class ROIModel(fermipy.config.Configurable):
 
             catalog_dict = catalog.row_to_dict(row)
             src_dict = {'catalog': catalog_dict}
+            src_dict['Variability_Index'] = row['Variability_Index']
             src_dict['Source_Name'] = row['Source_Name']
             src_dict['SpectrumType'] = row['SpectrumType']
 
@@ -1914,7 +1929,6 @@ class ROIModel(fermipy.config.Configurable):
             row_dict['DEJ2000'] = s['dec']
             row_dict['GLON'] = s['glon']
             row_dict['GLAT'] = s['glat']
-
             row_dict['param_names'] = np.empty(6,dtype='S32')
             row_dict['param_names'].fill('')
             row_dict['param_values'] = np.empty(6,dtype=float)*np.nan
