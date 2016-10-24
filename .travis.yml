@@ -65,7 +65,7 @@ matrix:
           env: NAME=py2_slac-st-11-03-00
                PYTHON_VERSION=2.7
                ST_INSTALL=''
-               DOCKER_INSTALL='bash dockerinstall.sh docker/11-03-00'
+               DOCKER_INSTALL='bash dockerinstall.sh docker/centos6-11-03-00-python'
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                FERMI_DIR='/home'
@@ -77,7 +77,7 @@ matrix:
           env: NAME=py2_slac-st-11-04-00
                PYTHON_VERSION=2.7
                ST_INSTALL=''
-               DOCKER_INSTALL='bash dockerinstall.sh docker/11-04-00'
+               DOCKER_INSTALL='bash dockerinstall.sh docker/centos6-11-04-00-python'
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                FERMI_DIR='/home'

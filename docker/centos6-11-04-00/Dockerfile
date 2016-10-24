@@ -14,5 +14,7 @@ RUN mkdir -p /home/externals \
     && curl -o /home/externals/ape-2.8.tar.gz ${SLAC_EXTERNALS_URL}/ape-2.8.tar.gz \
     && curl -o /home/externals/f2c-3.4-gl4.tar.gz ${SLAC_EXTERNALS_URL}/f2c-3.4-gl4.tar.gz \
     && curl -o /home/externals/cppunit-1.10.2-gl1.tar.gz ${SLAC_EXTERNALS_URL}/cppunit-1.10.2-gl1.tar.gz \
-    && curl -o /home/externals/ROOT-v5.34.34.tar.gz ${SLAC_EXTERNALS_URL}/ROOT-v5.34.34.tar.gz 
-RUN curl -o /home/ScienceTools-11-04-00-user.tar.gz ${SLAC_ST_URL}/11-04-00/ScienceTools-11-04-00-user.tar.gz
+    && curl -o /home/externals/ROOT-v5.34.34.tar.gz ${SLAC_EXTERNALS_URL}/ROOT-v5.34.34.tar.gz \
+    && cd /home/externals && for f in *.tar.gz; do tar -xf "$f"; done && rm *.tar.gz
+RUN curl -o /home/ScienceTools-11-04-00-user.tar.gz ${SLAC_ST_URL}/11-04-00/ScienceTools-11-04-00-user.tar.gz \
+    && cd /home && tar xzf ScienceTools-11-04-00-user.tar.gz && rm ScienceTools-11-04-00-user.tar.gz
