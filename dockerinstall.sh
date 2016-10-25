@@ -2,10 +2,10 @@
 #sudo service docker restart
 cat $1/Dockerfile
 docker build -t mdwood/fermist \
-       --build-args PIP_DEPS="$PIP_DEPS" \
-       --build-args PYTHON_VERSION="$PYTHON_VERSION" \
-       --build-args CONDA_DEPS="$CONDA_DEPS" \
-       --build-args CONDA_DOWNLOAD="$CONDA_DOWNLOAD" \
+       --build-arg PIP_DEPS="$PIP_DEPS" \
+       --build-arg PYTHON_VERSION="$PYTHON_VERSION" \
+       --build-arg CONDA_DEPS="$CONDA_DEPS" \
+       --build-arg CONDA_DOWNLOAD="$CONDA_DOWNLOAD" \
        $1
 docker info
 docker images
