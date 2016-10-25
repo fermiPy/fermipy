@@ -13,7 +13,7 @@ if [[ -z $CONDA_DEPS ]]; then
 fi
 
 if [[ -z $CONDA2 ]]; then
-    CONDA2='conda install -c openastronomy -y wcsaxes healpy'
+    CONDA2='conda install -c conda-forge -y wcsaxes healpy'
 fi
 
 # Check if conda exists if not then install it
@@ -35,6 +35,7 @@ if ! type "conda" &> /dev/null; then
 fi
 
 conda update -q conda -y
+conda config --set channel_priority false 
 conda info -a
 conda create -q -n fermi-env -y python=$PYTHON_VERSION pip numpy astropy pytest $CONDA_DEPS
 source activate fermi-env

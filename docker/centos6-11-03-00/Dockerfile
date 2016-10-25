@@ -16,5 +16,6 @@ RUN mkdir -p /home/externals \
     && curl -o /home/externals/cppunit-1.10.2-gl1.tar.gz ${SLAC_EXTERNALS_URL}/cppunit-1.10.2-gl1.tar.gz \
     && curl -o /home/externals/ROOT-v5.34.34.tar.gz ${SLAC_EXTERNALS_URL}/ROOT-v5.34.34.tar.gz \
     && cd /home/externals && for f in *.tar.gz; do tar -xf "$f"; done && rm *.tar.gz
-RUN curl -o /home/ScienceTools-11-03-00-user.tar.gz ${SLAC_ST_URL}/11-03-00/ScienceTools-11-03-00-user.tar.gz \
-    && cd /home && tar xzf ScienceTools-11-03-00-user.tar.gz && rm ScienceTools-11-03-00-user.tar.gz
+RUN mkdir -p /home/ScienceTools \
+    && curl -o /home/ScienceTools/ScienceTools-11-03-00-user.tar.gz ${SLAC_ST_URL}/11-03-00/ScienceTools-11-03-00-user.tar.gz \
+    && cd /home/ScienceTools && tar xzf ScienceTools-11-03-00-user.tar.gz && rm ScienceTools-11-03-00-user.tar.gz
