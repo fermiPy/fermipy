@@ -107,10 +107,10 @@ install:
     else
         cat Dockerfile;
         $DOCKER_INSTALL;
-        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy && python setup.py install"
+        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy && python setup.py install";
     fi
 
-    #docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
+#docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
   
 #  - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
 #  - bash miniconda.sh -b -p $HOME/miniconda
