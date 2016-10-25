@@ -1,5 +1,6 @@
 #echo 'DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock -s devicemapper"' | sudo tee /etc/default/docker > /dev/null
 #sudo service docker restart
+cat $1/Dockerfile
 docker build -t mdwood/fermist \
        --build-args PIP_DEPS="$PIP_DEPS" \
        --build-args PYTHON_VERSION="$PYTHON_VERSION" \

@@ -105,7 +105,6 @@ install:
         $ST_INSTALL; 
         source condainstall.sh;
     else
-        cat Dockerfile;
         $DOCKER_INSTALL;
         docker exec fermipy-testing /bin/bash -c "cd /home/fermipy && python setup.py install";
     fi
