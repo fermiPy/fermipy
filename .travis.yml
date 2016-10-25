@@ -106,7 +106,7 @@ install:
         source condainstall.sh;
     else
         $DOCKER_INSTALL;
-        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy && python setup.py install";
+        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy && python setup.py install";
     fi
 
 #docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
@@ -129,14 +129,14 @@ script:
   - if [[ $DOCKER_INSTALL == '' ]]; then
         bash travistests.sh;
     else
-        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh";
+        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh";
     fi
 
 after_success:
   - if [[ $NAME == 'main' ]]; then
         coveralls --rcfile='fermipy/tests/coveragerc';
     elif [[ $NAME == 'py2_slac-st' ]]; then
-        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source condasetup.sh;coveralls --rcfile='fermipy/tests/coveragerc'";
+        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy;source condasetup.sh;coveralls --rcfile='fermipy/tests/coveragerc'";
     fi
 
 #after_script:
