@@ -11,7 +11,7 @@ import warnings
 import pyLikelihood as pyLike
 from scipy.optimize import brentq
 import astropy
-import astropy.io.fits as pyfits
+from astropy.io import fits
 from astropy.table import Table
 import astropy.wcs as pywcs
 import fermipy.utils as utils
@@ -31,7 +31,7 @@ MAX_NITER = 100
 def extract_images_from_tscube(infile, outfile):
     """ Extract data from table HDUs in TSCube file and convert them to FITS images
     """
-    inhdulist = pyfits.open(infile)
+    inhdulist = fits.open(infile)
     wcs = pywcs.WCS(inhdulist[0].header)
     map_shape = inhdulist[0].data.shape
 
@@ -57,22 +57,49 @@ def extract_images_from_tscube(infile, outfile):
 
     for c in FIT_COLNAMES:
         data = t_fit[c].data.reshape(map_shape)
-        hdu = pyfits.ImageHDU(data, wcs.to_header(), name=c)
+        hdu = fits.ImageHDU(data, wcs.to_header(), name=c)
         outhdulist.append(hdu)
 
     for c in SCAN_COLNAMES:
         data = t_scan[c].data.swapaxes(0, 1).reshape(cube_shape)
-        hdu = pyfits.ImageHDU(data, wcs_cube.to_header(), name=c)
+        hdu = fits.ImageHDU(data, wcs_cube.to_header(), name=c)
         outhdulist.append(hdu)
 
-    hdulist = pyfits.HDUList(outhdulist)
+    hdulist = fits.HDUList(outhdulist)
     hdulist.writeto(outfile, clobber=True)
     return hdulist
 
 
 def convert_tscube(infile, outfile):
+
+    inhdulist = fits.open(infile)
+    if 'dloglike_scan' in inhdulist['SCANDATA'].columns.names:
+        if infile != outfile:
+            inhdulist.writeto(outfile, clobber=True)
+        return
+    elif 'E_MIN_FL' in inhdulist['EBOUNDS'].columns.names:
+        return convert_tscube_old(infile, outfile)
+
+    for hdu in inhdulist:
+
+        if not isinstance(hdu, fits.BinTableHDU):
+            continue
+
+        for col in hdu.columns:
+
+            if hdu.name == 'EBOUNDS':
+                col.name = col.name.replace('DFDE','DNDE')
+            else:
+                colname = col.name.lower()
+                col.name = colname.replace('dfde', 'dnde')
+                
+    inhdulist.writeto(outfile, clobber=True)
+    return inhdulist
+
+
+def convert_tscube_old(infile, outfile):
     """Convert between old and new TSCube formats."""
-    inhdulist = pyfits.open(infile)
+    inhdulist = fits.open(infile)
 
     # If already in the new-style format just write and exit
     if 'DLOGLIKE_SCAN' in inhdulist['SCANDATA'].columns.names:
@@ -85,16 +112,16 @@ def convert_tscube(infile, outfile):
     nebins = inhdulist['EBOUNDS']._nrows
     npts = inhdulist['SCANDATA'].data.field('NORMSCAN').shape[1] / nebins
 
-    emin = inhdulist['EBOUNDS'].data.field('E_MIN') / 1E3
-    emax = inhdulist['EBOUNDS'].data.field('E_MAX') / 1E3
+    emin = inhdulist['EBOUNDS'].data.field('e_min') / 1E3
+    emax = inhdulist['EBOUNDS'].data.field('e_max') / 1E3
     eref = np.sqrt(emin * emax)
-    dfde_emin = inhdulist['EBOUNDS'].data.field('E_MIN_FL')
-    dfde_emax = inhdulist['EBOUNDS'].data.field('E_MAX_FL')
-    index = np.log(dfde_emin / dfde_emax) / np.log(emin / emax)
+    dnde_emin = inhdulist['EBOUNDS'].data.field('E_MIN_FL')
+    dnde_emax = inhdulist['EBOUNDS'].data.field('E_MAX_FL')
+    index = np.log(dnde_emin / dnde_emax) / np.log(emin / emax)
 
-    flux = PowerLaw.eval_flux(emin, emax, [dfde_emin, index], emin)
-    eflux = PowerLaw.eval_eflux(emin, emax, [dfde_emin, index], emin)
-    dfde = PowerLaw.eval_dfde(np.sqrt(emin * emax), [dfde_emin, index], emin)
+    flux = PowerLaw.eval_flux(emin, emax, [dnde_emin, index], emin)
+    eflux = PowerLaw.eval_eflux(emin, emax, [dnde_emin, index], emin)
+    dnde = PowerLaw.eval_dnde(np.sqrt(emin * emax), [dnde_emin, index], emin)
 
     ts_map = inhdulist['PRIMARY'].data.reshape((nrows))
     ok_map = inhdulist['TSMAP_OK'].data.reshape((nrows))
@@ -133,96 +160,96 @@ def convert_tscube(infile, outfile):
 
     # Adjust the "EBOUNDS" hdu
     columns = inhdulist['EBOUNDS'].columns
-    columns.add_col(pyfits.Column(name=str('E_REF'),
-                                  format='E', array=eref * 1E3,
-                                  unit='keV'))
-    columns.add_col(pyfits.Column(name=str('REF_FLUX'),
-                                  format='D', array=flux,
-                                  unit='ph / (cm2 s)'))
-    columns.add_col(pyfits.Column(name=str('REF_EFLUX'),
-                                  format='D', array=eflux,
-                                  unit='MeV / (cm2 s)'))
-    columns.add_col(pyfits.Column(name=str('REF_DFDE'),
-                                  format='D', array=dfde,
-                                  unit='ph / (MeV cm2 s)'))
+    columns.add_col(fits.Column(name=str('e_ref'),
+                                format='E', array=eref * 1E3,
+                                unit='keV'))
+    columns.add_col(fits.Column(name=str('ref_flux'),
+                                format='D', array=flux,
+                                unit='ph / (cm2 s)'))
+    columns.add_col(fits.Column(name=str('ref_eflux'),
+                                format='D', array=eflux,
+                                unit='MeV / (cm2 s)'))
+    columns.add_col(fits.Column(name=str('ref_dnde'),
+                                format='D', array=dnde,
+                                unit='ph / (MeV cm2 s)'))
 
-    columns.change_name('E_MIN_FL', str('REF_DFDE_E_MIN'))
-    columns.change_unit('REF_DFDE_E_MIN', 'ph / (MeV cm2 s)')
-    columns.change_name('E_MAX_FL', str('REF_DFDE_E_MAX'))
-    columns.change_unit('REF_DFDE_E_MAX', 'ph / (MeV cm2 s)')
-    columns.change_name('NPRED', str('REF_NPRED'))
+    columns.change_name('E_MIN_FL', str('ref_dnde_e_min'))
+    columns.change_unit('ref_dnde_e_min', 'ph / (MeV cm2 s)')
+    columns.change_name('E_MAX_FL', str('ref_dnde_e_max'))
+    columns.change_unit('ref_dnde_e_max', 'ph / (MeV cm2 s)')
+    columns.change_name('NPRED', str('ref_npred'))
 
-    hdu_e = pyfits.BinTableHDU.from_columns(columns, name='EBOUNDS')
+    hdu_e = fits.BinTableHDU.from_columns(columns, name='EBOUNDS')
 
     # Make the "FITDATA" hdu
-    columns = pyfits.ColDefs([])
+    columns = fits.ColDefs([])
 
-    columns.add_col(pyfits.Column(
-        name=str('FIT_TS'), format='E', array=ts_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_STATUS'), format='E', array=ok_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_NORM'), format='E', array=n_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_NORM_ERR'), format='E', array=err_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_NORM_ERRP'), format='E', array=errp_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_NORM_ERRN'), format='E', array=errn_map))
-    hdu_f = pyfits.BinTableHDU.from_columns(columns, name='FITDATA')
+    columns.add_col(fits.Column(
+        name=str('fit_ts'), format='E', array=ts_map))
+    columns.add_col(fits.Column(
+        name=str('fit_status'), format='E', array=ok_map))
+    columns.add_col(fits.Column(
+        name=str('fit_norm'), format='E', array=n_map))
+    columns.add_col(fits.Column(
+        name=str('fit_norm_err'), format='E', array=err_map))
+    columns.add_col(fits.Column(
+        name=str('fit_norm_errp'), format='E', array=errp_map))
+    columns.add_col(fits.Column(
+        name=str('fit_norm_errn'), format='E', array=errn_map))
+    hdu_f = fits.BinTableHDU.from_columns(columns, name='FITDATA')
 
     # Make the "SCANDATA" hdu
-    columns = pyfits.ColDefs([])
+    columns = fits.ColDefs([])
 
-    columns.add_col(pyfits.Column(name=str('TS'),
-                                  format='%iE' % nebins, array=tscube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('ts'),
+                                format='%iE' % nebins, array=tscube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('BIN_STATUS'),
-                                  format='%iE' % nebins, array=ok_cube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('bin_status'),
+                                format='%iE' % nebins, array=ok_cube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM'),
-                                  format='%iE' % nebins, array=ncube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm'),
+                                format='%iE' % nebins, array=ncube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_UL'),
-                                  format='%iE' % nebins, array=ul_cube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm_ul'),
+                                format='%iE' % nebins, array=ul_cube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_ERR'),
-                                  format='%iE' % nebins, array=errcube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm_err'),
+                                format='%iE' % nebins, array=errcube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_ERRP'),
-                                  format='%iE' % nebins, array=errpcube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm_errp'),
+                                format='%iE' % nebins, array=errpcube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_ERRN'),
-                                  format='%iE' % nebins, array=errncube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm_errn'),
+                                format='%iE' % nebins, array=errncube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('LOGLIKE'),
-                                  format='%iE' % nebins, array=nll_cube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('loglike'),
+                                format='%iE' % nebins, array=nll_cube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_SCAN'),
-                                  format='%iE' % (nebins * npts),
-                                  array=norm_scan,
-                                  dim=str('(%i,%i)' % (npts, nebins))))
+    columns.add_col(fits.Column(name=str('norm_scan'),
+                                format='%iE' % (nebins * npts),
+                                array=norm_scan,
+                                dim=str('(%i,%i)' % (npts, nebins))))
 
-    columns.add_col(pyfits.Column(name=str('DLOGLIKE_SCAN'),
-                                  format='%iE' % (nebins * npts),
-                                  array=nll_scan,
-                                  dim=str('(%i,%i)' % (npts, nebins))))
+    columns.add_col(fits.Column(name=str('dloglike_scan'),
+                                format='%iE' % (nebins * npts),
+                                array=nll_scan,
+                                dim=str('(%i,%i)' % (npts, nebins))))
 
-    hdu_s = pyfits.BinTableHDU.from_columns(columns, name='SCANDATA')
+    hdu_s = fits.BinTableHDU.from_columns(columns, name='SCANDATA')
 
-    hdulist = pyfits.HDUList([inhdulist[0],
-                              hdu_s,
-                              hdu_f,
-                              inhdulist["BASELINE"],
-                              hdu_e])
+    hdulist = fits.HDUList([inhdulist[0],
+                            hdu_s,
+                            hdu_f,
+                            inhdulist["BASELINE"],
+                            hdu_e])
 
     hdulist['SCANDATA'].header['UL_CONF'] = 0.95
 
@@ -732,21 +759,22 @@ class TSMapGenerator(object):
 
         self.logger.info('Generating TS map')
 
-        schema = ConfigSchema(self.defaults['tsmap'])        
-        schema.add_option('make_plots',True)
+        schema = ConfigSchema(self.defaults['tsmap'])
+        schema.add_option('make_plots', True)
         schema.add_option('write_fits', True)
         schema.add_option('write_npy', True)
         schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)
         schema.add_option('map_size', 1.0)
-        schema.add_option('exclude', None,'',list)
-        config = schema.create_config(self.config['tsmap'],**kwargs)
+        schema.add_option('exclude', None, '', list)
+        schema.add_option('threshold', 1E-2, '', float)
+        config = schema.create_config(self.config['tsmap'], **kwargs)
 
         # Defining default properties of test source model
         config['model'].setdefault('Index', 2.0)
         config['model'].setdefault('SpectrumType', 'PowerLaw')
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
-        
+
         maps = self._make_tsmap_fast(prefix, **config)
 
         if config['make_plots']:
@@ -779,7 +807,7 @@ class TSMapGenerator(object):
 
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         src_dict = {} if src_dict is None else src_dict
-        
+
         multithread = kwargs.setdefault('multithread', False)
         threshold = kwargs.setdefault('threshold', 1E-2)
         max_kernel_radius = kwargs.get('max_kernel_radius')
@@ -825,7 +853,8 @@ class TSMapGenerator(object):
             imax = utils.val_to_edge(c.log_energies, loge_bounds[1])[0]
 
             eslice = slice(imin, imax)
-            bm = c.model_counts_map(exclude=kwargs['exclude']).counts.astype('float')[eslice, ...]
+            bm = c.model_counts_map(exclude=kwargs['exclude']).counts.astype('float')[
+                eslice, ...]
             cm = c.counts_map().counts.astype('float')[eslice, ...]
 
             bkg += [bm]
@@ -1089,12 +1118,12 @@ class TSCubeGenerator(object):
 
         self.logger.info('Generating TS cube')
 
-        schema = ConfigSchema(self.defaults['tscube'])        
-        schema.add_option('make_plots',True)
+        schema = ConfigSchema(self.defaults['tscube'])
+        schema.add_option('make_plots', True)
         schema.add_option('write_fits', True)
         schema.add_option('write_npy', True)
-        config = schema.create_config(self.config['tscube'],**kwargs)
-        
+        config = schema.create_config(self.config['tscube'], **kwargs)
+
         maps = self._make_ts_cube(prefix, **config)
 
         if config['make_plots']:
@@ -1189,7 +1218,7 @@ class TSCubeGenerator(object):
         ts_map = tscube.tsmap
         norm_map = tscube.normmap
         npred_map = copy.deepcopy(norm_map)
-        npred_map._counts *= tscube.refSpec.npred.sum()
+        npred_map._counts *= tscube.refSpec.ref_npred.sum()
         amp_map = copy.deepcopy(norm_map)
         amp_map._counts *= src_dict['Prefactor']
 
@@ -1207,7 +1236,7 @@ class TSCubeGenerator(object):
              'tscube': tscube
              }
 
-        if not write_fits:
+        if not kwargs['write_fits']:
             os.remove(outfile)
             os['file'] = None
 

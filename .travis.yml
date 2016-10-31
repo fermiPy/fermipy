@@ -39,7 +39,7 @@ matrix:
                ST_INSTALL=''
                DOCKER_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
-               CONDA_DEPS='scipy matplotlib pytest pyyaml sphinx'
+               CONDA_DEPS='scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
 
         # Python 3, no Fermi ST, all other dependencies
         - os: linux
@@ -62,14 +62,27 @@ matrix:
         # Python 2, Fermi ST (SLAC build), all other dependencies
         - os: linux
           sudo: required
-          env: NAME=py2_slac-st
+          env: NAME=py2_slac-st-11-03-00
                PYTHON_VERSION=2.7
                ST_INSTALL=''
-               DOCKER_INSTALL='bash dockerinstall.sh'
+               DOCKER_INSTALL='bash dockerinstall.sh docker/centos6-11-03-00-python'
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                FERMI_DIR='/home'
                SLAC_ST_BUILD=true
+
+        # Python 2, Fermi ST (SLAC build), all other dependencies
+        - os: linux
+          sudo: required
+          env: NAME=py2_slac-st-11-04-00
+               PYTHON_VERSION=2.7
+               ST_INSTALL=''
+               DOCKER_INSTALL='bash dockerinstall.sh docker/centos6-11-04-00-python'
+               CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
+               CONDA_DEPS='scipy matplotlib pytest pyyaml'
+               FERMI_DIR='/home'
+               SLAC_ST_BUILD=true
+        
               
 #        # Python 3, no Fermi ST, only the required dependencies
 #        # TODO: This isn't working yet, need to handle imports for opt deps more carefully
@@ -92,14 +105,11 @@ install:
         $ST_INSTALL; 
         source condainstall.sh;
     else
-        cat Dockerfile;
         $DOCKER_INSTALL;
-        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
-        wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh;
-        bash miniconda.sh -b -p $HOME/miniconda;
-        python -m pip install coverage pytest-cov coveralls;
-        export PATH="$HOME/miniconda/bin:$PATH";
+        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy && python setup.py install";
     fi
+
+#docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
   
 #  - wget http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD -O miniconda.sh
 #  - bash miniconda.sh -b -p $HOME/miniconda
@@ -119,12 +129,14 @@ script:
   - if [[ $DOCKER_INSTALL == '' ]]; then
         bash travistests.sh;
     else
-        docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh";
+        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy;/bin/bash /home/fermipy/travistests.sh";
     fi
 
 after_success:
-  - if [[ $NAME == 'main' ]] || [[ $NAME == 'py2_slac-st' ]]; then
+  - if [[ $NAME == 'main' ]]; then
         coveralls --rcfile='fermipy/tests/coveragerc';
+    elif [[ $NAME == 'py2_slac-st' ]]; then
+        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy;source condasetup.sh;coveralls --rcfile='fermipy/tests/coveragerc'";
     fi
 
 #after_script:

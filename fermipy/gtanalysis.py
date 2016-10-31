@@ -776,7 +776,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if update_source:
             self.update_source(name)
 
-    def set_source_dfde(self, name, dfde, update_source=True):
+    def set_source_dnde(self, name, dnde, update_source=True):
         """Set the differential flux distribution of a source with the
         FileFunction spectral type.
 
@@ -785,7 +785,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         name : str
            Source name.
 
-        dfde : `~numpy.ndarray`
+        dnde : `~numpy.ndarray`
            Array of differential flux values (cm^{-2} s^{-1} MeV^{-1}).
         """
         name = self.roi.get_source_by_name(name).name
@@ -795,10 +795,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self.logger.error(msg)
             raise Exception(msg)
 
-        xy = self.get_source_dfde(name)
+        xy = self.get_source_dnde(name)
 
-        if len(dfde) != len(xy[0]):
-            msg = 'Wrong length for dfde array: %i' % len(dfde)
+        if len(dnde) != len(xy[0]):
+            msg = 'Wrong length for dnde array: %i' % len(dnde)
             self.logger.error(msg)
             raise Exception(msg)
 
@@ -806,12 +806,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             src = c.like.logLike.getSource(str(name))
             spectrum = src.spectrum()
             file_function = pyLike.FileFunction_cast(spectrum)
-            file_function.setSpectrum(10**xy[0], dfde)
+            file_function.setSpectrum(10**xy[0], dnde)
 
         if update_source:
             self.update_source(name)
 
-    def get_source_dfde(self, name):
+    def get_source_dnde(self, name):
         """Return differential flux distribution of a source.  For
         sources with FileFunction spectral type this returns the
         internal differential flux array.
@@ -822,7 +822,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
            Array of energies at which the differential flux is
            evaluated (log10(E/MeV)).
 
-        dfde : `~numpy.ndarray`
+        dnde : `~numpy.ndarray`
            Array of differential flux values (cm^{-2} s^{-1} MeV^{-1})
            evaluated at energies in ``loge``.
 
@@ -835,22 +835,22 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             spectrum = src.spectrum()
             file_function = pyLike.FileFunction_cast(spectrum)
             loge = file_function.log_energy()
-            logdfde = file_function.log_dnde()
+            logdnde = file_function.log_dnde()
 
             loge = np.log10(np.exp(loge))
-            dfde = np.exp(logdfde)
+            dnde = np.exp(logdnde)
 
-            return loge, dfde
+            return loge, dnde
 
         else:
             ebinsz = (self.log_energies[-1] -
                       self.log_energies[0]) / self.enumbins
             loge = utils.extend_array(self.log_energies, ebinsz, 0.5, 6.5)
 
-            dfde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
+            dnde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
                              for egy in loge])
 
-            return loge, dfde
+            return loge, dnde
 
     def _create_filefunction(self, name, spectrum_pars):
         """Replace the spectrum of an existing source with a
@@ -866,11 +866,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             loge = utils.extend_array(self.log_energies, ebinsz, 0.5, 6.5)
 
         # Get the values
-        dfde = np.zeros(len(loge))
-        if 'dfde' in spectrum_pars:
-            dfde = spectrum_pars.get('dfde')
+        dnde = np.zeros(len(loge))
+        if 'dnde' in spectrum_pars:
+            dnde = spectrum_pars.get('dnde')
         else:
-            dfde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
+            dnde = np.array([self.like[name].spectrum()(pyLike.dArg(10 ** egy))
                              for egy in loge])
 
         filename = \
@@ -878,7 +878,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                          '%s_filespectrum.txt' % (name.lower().replace(' ', '_')))
 
         # Create file spectrum txt file
-        np.savetxt(filename, np.vstack((10**loge, dfde)).T)
+        np.savetxt(filename, np.vstack((10**loge, dnde)).T)
         self.like.setSpectrum(name, str('FileFunction'))
 
         self.roi[name]['Spectrum_Filename'] = filename
@@ -2705,7 +2705,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         o = {'xvals': xvals,
              'npred': np.zeros(len(xvals)),
-             'dfde': np.zeros(len(xvals)),
+             'dnde': np.zeros(len(xvals)),
              'flux': np.zeros(len(xvals)),
              'eflux': np.zeros(len(xvals)),
              'dloglike': np.zeros(len(xvals)),
@@ -2738,7 +2738,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
             o['dloglike'][i] = loglike1 - loglike0
             o['loglike'][i] = loglike1
-            o['dfde'][i] = prefactor.getTrueValue()
+            o['dnde'][i] = prefactor.getTrueValue()
             o['flux'][i] = flux
             o['eflux'][i] = eflux
 
@@ -3469,10 +3469,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 free_str = '*'
 
             if s['SpectrumType'] == 'PowerLaw':
-                index = s['dfde1000_index'][0]
+                index = s['dnde1000_index'][0]
             else:
-                index = 0.5 * (s['dfde1000_index'][0] +
-                               s['dfde10000_index'][0])
+                index = 0.5 * (s['dnde1000_index'][0] +
+                               s['dnde10000_index'][0])
 
             o += '%-20.19s%8.3f%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
                 s['name'], s['offset'], normVal, s['eflux'][0], index,
@@ -3491,10 +3491,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 free_str = '*'
 
             if s['SpectrumType'] == 'PowerLaw':
-                index = s['dfde1000_index'][0]
+                index = s['dnde1000_index'][0]
             else:
-                index = 0.5 * (s['dfde1000_index'][0] +
-                               s['dfde10000_index'][0])
+                index = 0.5 * (s['dnde1000_index'][0] +
+                               s['dnde10000_index'][0])
 
             o += '%-20.19s%8s%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
                 s['name'],
@@ -3522,10 +3522,34 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.info('Loading ROI file: %s', roi_file)
 
-        self._roi_model = utils.update_keys(roi_data['roi'],
-                                            {'Npred': 'npred',
-                                             'logLike': 'loglike',
-                                             'dlogLike': 'dloglike'})
+        key_map = {'dfde' : 'dnde',
+                   'dfde100' : 'dnde100',
+                   'dfde1000' : 'dnde1000',
+                   'dfde10000' : 'dnde10000',
+                   'dfde_index' : 'dnde_index',
+                   'dfde100_index' : 'dnde100_index',
+                   'dfde1000_index' : 'dnde1000_index',
+                   'dfde10000_index' : 'dnde10000_index',
+                   'e2dfde' : 'e2dnde',
+                   'e2dfde100' : 'e2dnde100',
+                   'e2dfde1000' : 'e2dnde1000',
+                   'e2dfde10000' : 'e2dnde10000',
+                   'Npred': 'npred',
+                   'logLike': 'loglike',
+                   'dlogLike': 'dloglike',
+                   'emin' : 'e_min',
+                   'ectr' : 'e_ctr',
+                   'emax' : 'e_max',
+                   'logemin' : 'loge_min',
+                   'logectr' : 'loge_ctr',
+                   'logemax' : 'loge_max',
+                   'ref_dfde' : 'ref_dnde',
+                   'ref_e2dfde' : 'ref_e2dnde',
+                   'ref_dfde_emin' : 'ref_dnde_e_min',
+                   'ref_dfde_emax' : 'ref_dnde_e_max',
+                   }
+        
+        self._roi_model = utils.update_keys(roi_data['roi'],key_map)
 
         if 'erange' in self._roi_model:
             self._roi_model['loge_bounds'] = self._roi_model.pop('erange')
@@ -3534,9 +3558,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                                        self.loge_bounds)
 
         sources = roi_data.pop('sources')
-        sources = utils.update_keys(sources, {'Npred': 'npred',
-                                              'logLike': 'loglike',
-                                              'dlogLike': 'dloglike'})
+        sources = utils.update_keys(sources, key_map)
 
         self.roi.load_sources(sources.values())
         for i, c in enumerate(self.components):
@@ -3681,11 +3703,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         o = {'energies': 10**loge,
              'log_energies': loge,
-             'dfde': np.zeros(len(loge)) * np.nan,
-             'dfde_lo': np.zeros(len(loge)) * np.nan,
-             'dfde_hi': np.zeros(len(loge)) * np.nan,
-             'dfde_err': np.zeros(len(loge)) * np.nan,
-             'dfde_ferr': np.zeros(len(loge)) * np.nan,
+             'dnde': np.zeros(len(loge)) * np.nan,
+             'dnde_lo': np.zeros(len(loge)) * np.nan,
+             'dnde_hi': np.zeros(len(loge)) * np.nan,
+             'dnde_err': np.zeros(len(loge)) * np.nan,
+             'dnde_ferr': np.zeros(len(loge)) * np.nan,
              'pivot_energy': np.nan}
 
         try:
@@ -3696,23 +3718,23 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                               exc_info=True)
             return o
 
-        dfde = [fd.value(10 ** x) for x in loge]
-        dfde_err = [fd.error(10 ** x) for x in loge]
+        dnde = [fd.value(10 ** x) for x in loge]
+        dnde_err = [fd.error(10 ** x) for x in loge]
 
-        dfde = np.array(dfde)
-        dfde_err = np.array(dfde_err)
-        fhi = dfde * (1.0 + dfde_err / dfde)
-        flo = dfde / (1.0 + dfde_err / dfde)
+        dnde = np.array(dnde)
+        dnde_err = np.array(dnde_err)
+        fhi = dnde * (1.0 + dnde_err / dnde)
+        flo = dnde / (1.0 + dnde_err / dnde)
 
-        o['dfde'] = dfde
-        o['dfde_lo'] = flo
-        o['dfde_hi'] = fhi
-        o['dfde_err'] = dfde_err
-        o['dfde_ferr'] = 0.5 * (fhi - flo) / dfde
+        o['dnde'] = dnde
+        o['dnde_lo'] = flo
+        o['dnde_hi'] = fhi
+        o['dnde_err'] = dnde_err
+        o['dnde_ferr'] = 0.5 * (fhi - flo) / dnde
 
         try:
             o['pivot_energy'] = 10 ** utils.interpolate_function_min(loge, o[
-                                                                     'dfde_ferr'])
+                                                                     'dnde_ferr'])
         except Exception:
             self.logger.error('Failed to compute pivot energy',
                               exc_info=True)
@@ -3814,14 +3836,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                     'eflux100': np.ones(2) * np.nan,
                     'eflux1000': np.ones(2) * np.nan,
                     'eflux10000': np.ones(2) * np.nan,
-                    'dfde': np.ones(2) * np.nan,
-                    'dfde100': np.ones(2) * np.nan,
-                    'dfde1000': np.ones(2) * np.nan,
-                    'dfde10000': np.ones(2) * np.nan,
-                    'dfde_index': np.ones(2) * np.nan,
-                    'dfde100_index': np.ones(2) * np.nan,
-                    'dfde1000_index': np.ones(2) * np.nan,
-                    'dfde10000_index': np.ones(2) * np.nan,
+                    'dnde': np.ones(2) * np.nan,
+                    'dnde100': np.ones(2) * np.nan,
+                    'dnde1000': np.ones(2) * np.nan,
+                    'dnde10000': np.ones(2) * np.nan,
+                    'dnde_index': np.ones(2) * np.nan,
+                    'dnde100_index': np.ones(2) * np.nan,
+                    'dnde1000_index': np.ones(2) * np.nan,
+                    'dnde10000_index': np.ones(2) * np.nan,
                     'flux_ul95': np.nan,
                     'flux100_ul95': np.nan,
                     'flux1000_ul95': np.nan,
@@ -3866,44 +3888,44 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                                             10 ** 5.5)
             src_dict['eflux10000'][0] = self.like.energyFlux(name, 10000.,
                                                              10 ** 5.5)
-            src_dict['dfde'][0] = self.like[name].spectrum()(
+            src_dict['dnde'][0] = self.like[name].spectrum()(
                 pyLike.dArg(src_dict['pivot_energy']))
-            src_dict['dfde100'][0] = self.like[name].spectrum()(
+            src_dict['dnde100'][0] = self.like[name].spectrum()(
                 pyLike.dArg(100.))
-            src_dict['dfde1000'][0] = self.like[name].spectrum()(
+            src_dict['dnde1000'][0] = self.like[name].spectrum()(
                 pyLike.dArg(1000.))
-            src_dict['dfde10000'][0] = self.like[name].spectrum()(
+            src_dict['dnde10000'][0] = self.like[name].spectrum()(
                 pyLike.dArg(10000.))
 
             if normPar.getValue() == 0:
                 normPar.setValue(1.0)
 
-                dfde_index = -get_spectral_index(self.like[name],
+                dnde_index = -get_spectral_index(self.like[name],
                                                  src_dict['pivot_energy'])
 
-                dfde100_index = -get_spectral_index(self.like[name],
+                dnde100_index = -get_spectral_index(self.like[name],
                                                     100.)
-                dfde1000_index = -get_spectral_index(self.like[name],
+                dnde1000_index = -get_spectral_index(self.like[name],
                                                      1000.)
-                dfde10000_index = -get_spectral_index(self.like[name],
+                dnde10000_index = -get_spectral_index(self.like[name],
                                                       10000.)
 
                 normPar.setValue(0.0)
             else:
-                dfde_index = -get_spectral_index(self.like[name],
+                dnde_index = -get_spectral_index(self.like[name],
                                                  src_dict['pivot_energy'])
 
-                dfde100_index = -get_spectral_index(self.like[name],
+                dnde100_index = -get_spectral_index(self.like[name],
                                                     100.)
-                dfde1000_index = -get_spectral_index(self.like[name],
+                dnde1000_index = -get_spectral_index(self.like[name],
                                                      1000.)
-                dfde10000_index = -get_spectral_index(self.like[name],
+                dnde10000_index = -get_spectral_index(self.like[name],
                                                       10000.)
 
-            src_dict['dfde_index'][0] = dfde_index
-            src_dict['dfde100_index'][0] = dfde100_index
-            src_dict['dfde1000_index'][0] = dfde1000_index
-            src_dict['dfde10000_index'][0] = dfde10000_index
+            src_dict['dnde_index'][0] = dnde_index
+            src_dict['dnde100_index'][0] = dnde100_index
+            src_dict['dnde1000_index'][0] = dnde1000_index
+            src_dict['dnde10000_index'][0] = dnde10000_index
 
         except Exception:
             self.logger.error('Failed to update source parameters.',
@@ -4006,15 +4028,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             loge = np.linspace(self.log_energies[0],
                                self.log_energies[-1], 50)
             src_dict['model_flux'] = self.bowtie(name, fd=fd, loge=loge)
-            src_dict['dfde100'][1] = fd.error(100.)
-            src_dict['dfde1000'][1] = fd.error(1000.)
-            src_dict['dfde10000'][1] = fd.error(10000.)
+            src_dict['dnde100'][1] = fd.error(100.)
+            src_dict['dnde1000'][1] = fd.error(1000.)
+            src_dict['dnde10000'][1] = fd.error(10000.)
 
             src_dict['pivot_energy'] = src_dict['model_flux']['pivot_energy']
 
             e0 = src_dict['pivot_energy']
-            src_dict['dfde'][0] = self.like[name].spectrum()(pyLike.dArg(e0))
-            src_dict['dfde'][1] = fd.error(e0)
+            src_dict['dnde'][0] = self.like[name].spectrum()(pyLike.dArg(e0))
+            src_dict['dnde'][1] = fd.error(e0)
 
         if not reoptimize:
             src_dict['ts'] = self.like.Ts2(name, reoptimize=reoptimize)
@@ -5063,7 +5085,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                              suffix))
             srcmap_utils.make_gaussian_spatial_map(src.skydir,
                                                    src['SpatialWidth'],
-                                                   template_file, npix=500)
+                                                   template_file)
             src['Spatial_Filename'] = template_file
         elif src['SpatialModel'] in ['DiskSource', 'RadialDisk']:
             template_file = os.path.join(self.config['fileio']['workdir'],
@@ -5071,7 +5093,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                              src.name, src['SpatialWidth'],
                                              suffix))
             srcmap_utils.make_disk_spatial_map(src.skydir, src['SpatialWidth'],
-                                               template_file, npix=500)
+                                               template_file)
             src['Spatial_Filename'] = template_file
 
     def _update_srcmap_file(self, sources=None, overwrite=False):

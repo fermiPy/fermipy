@@ -18,7 +18,9 @@ installing and setting up the STs see :ref:`stinstall`.  If you are
 running at SLAC you can follow the `Running at SLAC`_ instructions.
 For Unix/Linux users we currently recommend following the
 :ref:`condainstall` instructions.  For OSX users we recommend
-following the :ref:`pipinstall` instructions.
+following the :ref:`pipinstall` instructions.  The
+:ref:`dockerinstall` instructions can be used to install the STs on
+both OSX and Linux machines that are new enough to support Docker.
 
 .. _stinstall:
 
@@ -170,6 +172,99 @@ your shell environment to run the Fermi Science Tools.  The
 
    $ source deactivate
 
+
+.. _dockerinstall:
+
+Installing with Docker
+----------------------
+
+.. note::
+
+   This method for installing the STs is currently experimental
+   and has not been fully tested on all operating systems.  If you
+   encounter issues please try either the pip- or anaconda-based
+   installation instructions.
+
+Docker is a virtualization tool that can be used to deploy software in
+portable containers that can be run on any operating system that
+supports Docker.  Before following these instruction you should first
+install docker on your machine following the `installation instructions
+<https://docs.docker.com/engine/installation/>`_ for your operating
+system.  Docker is currently supported on the following operating
+systems:
+
+* macOS 10.10.3 Yosemite or later
+* Ubuntu Precise 12.04 or later
+* Debian 8.0 or later
+* RHEL7 or later
+* Windows 10 or later
+
+Note that Docker is not supported by RHEL6 or its variants (CentOS6,
+Scientific Linux 6).
+
+These instructions describe how to create a docker-based ST
+installation that comes preinstalled with anaconda python and fermipy.
+The installation is fully contained in a docker image that is roughly
+2GB in size.  First download the docker image file:
+
+.. code-block:: bash
+
+   $ docker pull mdwood/fermist-python:11-04-00
+   $ docker tag mdwood/fermist-python:11-04-00 fermist
+   
+This will create an image called *fermist*.  Now change to the
+directory where you plan to do your analysis and run the following
+command to launch a docker container instance:
+
+.. code-block:: bash
+   
+   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermist
+
+This will start an ipython notebook server that will be attached to
+port 8888.  Once the server is running you can start a notebook
+session by navigating to the URL `http://localhost:8888/
+<http://localhost:8888/>`_.  The `-v $PWD:/workdir` argument mounts
+the current directory to the working area of the container.
+Additional directories may be mounted by adding more volume arguments
+``-v`` with host and container paths separated by a colon.
+
+The same docker image may be used to launch python, ipython, or bash
+shell by passing the corresponding command as an argument to ``docker
+run``:
+
+.. code-block:: bash
+   
+   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermist ipython
+   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermist python
+   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermist /bin/bash
+
+By default interactive graphics will not be enabled.  The following
+commands can be used to enable X11 forwarding for interactive graphics
+on an OSX machine.  This requires you to have installed XQuartz 2.7.10
+or later.  First enable remote connections by default and start the X
+server:
+
+.. code-block:: bash
+                
+   $ defaults write org.macosforge.xquartz.X11 nolisten_tcp -boolean false
+   $ open -a XQuartz
+
+Now check that the X server is running and listening on port 6000:
+
+.. code-block:: bash
+                
+   $ lsof -i :6000
+
+If you don't see X11 listening on port 6000 then try restarting XQuartz.
+
+Once you have XQuartz configured you can enable forwarding by setting
+DISPLAY environment variable to the IP address of the host machine:
+
+.. code-block:: bash
+
+   $ export HOST_IP=`ifconfig en0 | grep "inet " | cut -d " " -f2`
+   $ xhost +$HOST_IP
+   $ docker run -it --rm -e DISPLAY=$HOST_IP:0 -v $PWD:/workdir -w /workdir fermist ipython
 
 Running at SLAC
 ---------------

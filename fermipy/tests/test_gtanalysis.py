@@ -4,7 +4,7 @@ import os
 import numpy as np
 from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
-from fermipy.tests.utils import requires_dependency
+from fermipy.tests.utils import requires_dependency, requires_st_version
 from fermipy import spectrum
 
 try:
@@ -79,6 +79,13 @@ def test_gtanalysis_tsmap(setup):
     gta = setup
     gta.load_roi('fit1')
     gta.tsmap(model={})
+
+
+@requires_st_version('11-04-00')
+def test_gtanalysis_tscube(setup):
+    gta = setup
+    gta.load_roi('fit1')
+    gta.tscube(model={})
 
 
 def test_gtanalysis_residmap(setup):

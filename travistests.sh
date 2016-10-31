@@ -12,12 +12,13 @@ else
     /usr/bin/Xvfb :99 -screen 0 1280x1024x24 &
 fi
 
-python -m pytest -vv -s --cov=fermipy --cov-config=fermipy/tests/coveragerc
+python -m pytest -vv --cov=fermipy --cov-config=fermipy/tests/coveragerc
 status=$?
 
 if [[ $NAME == 'docs' ]]; then
     cd docs;
     sphinx-build -b html -d _build/doctrees . _build/html -W;
+    status=$[$status | $?]
 fi
 
 if [[ $TRAVIS_OS_NAME != 'linux' ]]; then

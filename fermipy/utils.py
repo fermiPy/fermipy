@@ -1281,21 +1281,21 @@ def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     return k
 
 
-def make_disk_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
+def make_disk_kernel(radius, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     """Make kernel for a 2D disk.
 
     Parameters
     ----------
 
-    sigma : float
+    radius : float
       Disk radius in deg.
     """
 
-    sigma /= cdelt
+    radius /= cdelt
     fn = lambda t, s: 0.5 * (np.sign(s - t) + 1.0)
 
     dxy = make_pixel_offset(npix, xpix, ypix)
-    k = fn(dxy, sigma)
+    k = fn(dxy, radius)
     k /= (np.sum(k) * np.radians(cdelt) ** 2)
 
     return k
