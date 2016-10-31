@@ -145,23 +145,44 @@ def compute_norm(sig, bkg, ts_thresh, min_counts, sum_axes=None):
     return vals
 
 
-class Exposure(HpxMap):
+class ExposureMap(HpxMap):
 
     def __init__(self, data, hpx):
         HpxMap.__init__(self, data, hpx)
 
     @staticmethod
-    def create(ltc, event_class, event_types, log_energies):
+    def create(ltc, event_class, event_types, ebins):
+        """Create an exposure map from a livetime cube.  This method will
+        generate an exposure map with the same geometry as the
+        livetime cube (nside, etc.).
 
-        exp = np.zeros((len(log_energies), ltc.hpx.npix))
+        Parameters
+        ----------
+        ltc : `~fermipy.irfs.LTCube`
+            Livetime cube object.
+
+        event_class : str
+            Event class string.
+
+        event_types : list
+            List of event type strings, e.g. ['FRONT','BACK'].
+
+        ebins :  `~numpy.ndarray`
+            Energy bin edges in MeV.
+
+        """
+
+        evals = np.sqrt(ebins[1:] * ebins[:-1])
+        exp = np.zeros((len(evals), ltc.hpx.npix))
         for et in event_types:
-            aeff = create_aeff(event_class, et, log_energies, ltc.costh_center)
+            aeff = create_aeff(
+                event_class, et, np.log10(evals), ltc.costh_center)
             exp += np.sum(aeff.T[:, :, np.newaxis] *
                           ltc.data[:, np.newaxis, :], axis=0)
 
         hpx = HPX(ltc.hpx.nside, ltc.hpx.nest,
-                  ltc.hpx.coordsys, ebins=log_energies)
-        return Exposure(exp, hpx)
+                  ltc.hpx.coordsys, ebins=ebins)
+        return ExposureMap(exp, hpx)
 
 
 class PSFModel(object):
