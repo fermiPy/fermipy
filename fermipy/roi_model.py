@@ -66,6 +66,8 @@ def create_source_table(scan_shape):
         if not k in cols_dict.keys():
             if v[2] == float:
                 cols_dict[k] = dict(dtype='f8', format='%f')
+            elif k == 'Spectrum_Filename' or k == 'Spatial_Filename':
+                cols_dict[k] = dict(dtype='S128', format='%s')
             elif v[2] == str:
                 cols_dict[k] = dict(dtype='S32', format='%s')
 
