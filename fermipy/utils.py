@@ -772,6 +772,33 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
     return o
 
 
+def split_bin_edges(edges, npts=2):
+    """Subdivide an array of bins by splitting each bin into ``npts``
+    subintervals.
+
+    Parameters
+    ----------
+    edges : `~numpy.ndarray`
+        Bin edge array.
+
+    npts : int
+        Number of intervals into which each bin will be subdivided.
+
+    Returns
+    -------
+    edges : `~numpy.ndarray`
+        Subdivided bin edge array.
+
+    """
+    if npts < 2:
+        return edges
+
+    x = (edges[:-1, None] +
+         (edges[1:, None] - edges[:-1, None]) *
+         np.linspace(0.0, 1.0, npts + 1)[None, :])
+    return np.unique(np.ravel(x))
+
+
 def center_to_edge(center):
 
     if len(center) == 1: 
