@@ -12,6 +12,7 @@ import pyIrfLoader
 pyIrfLoader.Loader_go()
 
 from fermipy import utils
+from fermipy import spectrum
 from fermipy.utils import edge_to_center
 from fermipy.utils import edge_to_width
 from fermipy.skymap import HpxMap
@@ -24,17 +25,17 @@ evtype_string = {
     4: 'PSF0',
     8: 'PSF1',
     16: 'PSF2',
-    32: 'PSF3'
+    32: 'PSF3',
+    64: 'EDISP0',
+    128: 'EDISP1',
+    256: 'EDISP2',
+    512: 'EDISP3',
 }
 
-def split_edges(edges,npt=2):
 
-    x = (edges[:-1,None] +
-         (edges[1:,None]-edges[:-1,None])*np.linspace(0.0,1.0,npt+1)[None,:])
-    return np.unique(np.ravel(x))
-    
-    #return x[:-1,None] + (x[1:,None]-x[:-1,None])*np.array([0.25,0.75])[None,:]
-    
+def bins_per_dec(edges):
+    return (len(edges) - 1) / np.log10(edges[-1] / edges[0])
+
 
 def bitmask_to_bits(mask):
 
@@ -184,8 +185,7 @@ class ExposureMap(HpxMap):
         evals = np.sqrt(ebins[1:] * ebins[:-1])
         exp = np.zeros((len(evals), ltc.hpx.npix))
         for et in event_types:
-            aeff = create_aeff(
-                event_class, et, np.log10(evals), ltc.costh_center)
+            aeff = create_aeff(event_class, et, evals, ltc.costh_center)
             exp += np.sum(aeff.T[:, :, np.newaxis] *
                           ltc.data[:, np.newaxis, :], axis=0)
 
@@ -195,37 +195,60 @@ class ExposureMap(HpxMap):
 
 
 class PSFModel(object):
+    """Class that stores a pre-computed model of the PSF versus energy.  
 
-    def __init__(self, skydir, ltc, event_class, event_types,
-                 log_energies, cth_min=0.2, ndtheta=1000, ncth=40):
+    """
 
-        if isinstance(event_types, int):
-            event_types = bitmask_to_bits(event_types)
+    def __init__(self, dtheta, energies, cth_bins, exp, psf, wts):
+        """Create a PSFModel.
 
-        self._dtheta = np.logspace(-4, 1.75, ndtheta)
-        self._dtheta = np.insert(self._dtheta, 0, [0])
-        self._log_energies = log_energies
-        self._energies = 10**log_energies
+        Parameters
+        ----------
+        dtheta : `~numpy.ndarray`
+            Array of angular offsets in degrees at which the PSF is
+            evaluated.
+
+        energies : `~numpy.ndarray`
+            Array of energies in MeV at which the PSF is evaluated.
+
+        cth_bins : `~numpy.ndarray`
+            Interval in cosine of the incidence angle for which this
+            model of the PSF was generated.
+
+        exp : `~numpy.ndarray`
+            Array of exposure vs. energy in cm^2 s.
+
+        psf : `~numpy.ndarray`
+            2D array of PSF values evaluated on an NxM grid of N
+            offset angles and M energies (defined by ``dtheta`` and
+            ``energies``).
+
+        wts : `~numpy.ndarray`
+            Array of weights vs. energy.  These are used to evaluate
+            the bin-averaged PSF model.
+
+        """
+
+        self._dtheta = dtheta
+        self._log_energies = np.log10(energies)
+        self._energies = energies
+        self._cth_bins = cth_bins
+        self._cth = utils.edge_to_center(cth_bins)
         self._scale_fn = None
-
-        self._exp = np.zeros(len(log_energies))
-        self._psf = self.create_average_psf(skydir, ltc, event_class, event_types,
-                                            self._dtheta, log_energies, cth_min, ncth)
-
-        self._psf_fn = RegularGridInterpolator((self._dtheta, log_energies),
+        self._exp = exp
+        self._psf = psf
+        self._wts = wts
+        self._psf_fn = RegularGridInterpolator((self._dtheta, self._log_energies),
                                                np.log(self._psf),
                                                bounds_error=False,
                                                fill_value=None)
-
-        cth_edge = np.linspace(cth_min, 1.0, ncth + 1)
-        cth = edge_to_center(cth_edge)
-        ltw = ltc.get_skydir_lthist(skydir, cth_edge)
-        for et in event_types:
-            aeff = create_aeff(event_class, et, log_energies, cth)
-            self._exp += np.sum(aeff * ltw[np.newaxis, :], axis=1)
+        self._wts_fn = RegularGridInterpolator((self._log_energies,),
+                                               np.log(self._wts),
+                                               bounds_error=False,
+                                               fill_value=None)
 
     def eval(self, ebin, dtheta, scale_fn=None):
-        """Evaluate the PSF at one of the source map energies.
+        """Evaluate the PSF at the given energy bin index.
 
         Parameters
         ----------
@@ -284,11 +307,39 @@ class PSFModel(object):
         vals = np.exp(self._psf_fn((dtheta, log_energies)))
         return vals * scale_factor
 
+    def interp_bin(self, egy_bins, dtheta, scale_fn=None):
+        """Evaluate the bin-averaged PSF model over the energy bins ``egy_bins``.
+
+        Parameters
+        ----------
+        egy_bins : array_like
+            Energy bin edges in MeV.
+
+        dtheta : array_like
+            Array of angular separations in degrees.
+
+        scale_fn : callable        
+            Function that evaluates the PSF scaling function.
+            Argument is energy in MeV.
+        """
+
+        npts = 4
+        egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
+        egy = np.exp(utils.edge_to_center(np.log(egy_bins)))
+        log_energies = np.log10(egy)
+
+        vals = self.interp(egy[None, :], dtheta[:, None],
+                           scale_fn=scale_fn)
+        wts = np.exp(self._wts_fn((log_energies,)))
+        wts = wts.reshape((1,) + wts.shape)
+        vals = np.sum(
+            (vals * wts).reshape((vals.shape[0], int(vals.shape[1] / npts), npts)), axis=2)
+        vals /= np.sum(wts.reshape(wts.shape[0],
+                                   int(wts.shape[1] / npts), npts), axis=2)
+        return vals
+
     def containment_angle(self, energies=None, fraction=0.68, scale_fn=None):
         """Evaluate the PSF containment angle at a sequence of energies."""
-
-        if scale_fn is None and self.scale_fn:
-            scale_fn = self.scale_fn
 
         if energies is None:
             energies = self.energies
@@ -296,6 +347,16 @@ class PSFModel(object):
         vals = self.interp(energies[np.newaxis, :], self.dtheta[:, np.newaxis],
                            scale_fn=scale_fn)
         dtheta = np.radians(self.dtheta[:, np.newaxis] * np.ones(vals.shape))
+        return self._calc_containment(dtheta, vals, fraction)
+
+    def containment_angle_bin(self, egy_bins, fraction=0.68, scale_fn=None):
+        """Evaluate the PSF containment angle averaged over energy bins."""
+
+        vals = self.interp_bin(egy_bins, self.dtheta, scale_fn=scale_fn)
+        dtheta = np.radians(self.dtheta[:, np.newaxis] * np.ones(vals.shape))
+        return self._calc_containment(dtheta, vals, fraction)
+
+    def _calc_containment(self, dtheta, vals, fraction=0.68):
 
         delta = dtheta[1:] - dtheta[:-1]
         ctr = 0.5 * (dtheta[1:] + dtheta[:-1])
@@ -305,9 +366,9 @@ class PSFModel(object):
 
         csum = delta * avg_val * 2 * np.pi
         csum = np.cumsum(csum, axis=0)
-        theta = np.zeros(len(energies))
+        theta = np.zeros(csum.shape[1])
 
-        for i in range(len(theta)):
+        for i in range(csum.shape[1]):
             theta[i] = np.degrees(np.interp(fraction, csum[:, i],
                                             dtheta[1:, i]))
 
@@ -341,31 +402,63 @@ class PSFModel(object):
         return self._exp
 
     @staticmethod
-    def create_average_psf(skydir, ltc, event_class, event_types, dtheta, egy,
-                           cth_min=0.2, ncth=40):
+    def create(skydir, ltc, event_class, event_types, energies, cth_bins=None,
+               ndtheta=500, use_edisp=False, fn=None, nbin=64):
+        """Create a PSFModel object.  This class can be used to evaluate the
+        exposure-weighted PSF for a source with a given observing
+        profile and energy distribution.
+
+        Parameters
+        ----------
+        skydir : `~astropy.coordinates.SkyCoord`
+
+        ltc : `~fermipy.irfs.LTCube`
+
+        energies : `~numpy.ndarray`
+            Grid of energies at which the PSF will be pre-computed.
+
+        cth_bins : `~numpy.ndarray`
+            Bin edges in cosine of the inclination angle.
+
+        use_edisp : bool
+            Generate the PSF model accounting for the influence of
+            energy dispersion.
+
+        fn : `~fermipy.spectrum.SpectralFunction`
+            Model for the spectral energy distribution of the source.
+
+        """
 
         if isinstance(event_types, int):
             event_types = bitmask_to_bits(event_types)
 
-        cth_edge = np.linspace(cth_min, 1.0, ncth + 1)
-        cth = edge_to_center(cth_edge)
+        if fn is None:
+            fn = spectrum.PowerLaw([1E-13, -2.0])
 
-        wpsf = np.zeros((len(dtheta), len(egy)))
-        exps = np.zeros(len(egy))
+        dtheta = np.logspace(-4, 1.75, ndtheta)
+        dtheta = np.insert(dtheta, 0, [0])
+        log_energies = np.log10(energies)
+        egy_bins = 10**utils.center_to_edge(log_energies)
 
-        ltw = ltc.get_skydir_lthist(skydir, cth_edge)
+        if cth_bins is None:
+            cth_bins = np.array([0.2, 1.0])
 
-        for et in event_types:
-            psf = create_psf(event_class, et, dtheta, egy, cth)
-            aeff = create_aeff(event_class, et, egy, cth)
+        if use_edisp:
+            psf = create_wtd_psf(skydir, ltc, event_class, event_types,
+                                 dtheta, egy_bins, cth_bins, fn, nbin=nbin)
+            wts = calc_counts_edisp(skydir, ltc, event_class, event_types,
+                                    egy_bins, cth_bins, fn, nbin=nbin)
+        else:
+            psf = create_avg_psf(skydir, ltc, event_class, event_types,
+                                 dtheta, energies, cth_bins)
+            wts = calc_counts(skydir, ltc, event_class, event_types,
+                              egy_bins, cth_bins, fn)
 
-            wpsf += np.sum(psf * aeff[np.newaxis, :, :] *
-                           ltw[np.newaxis, np.newaxis, :], axis=2)
-            exps += np.sum(aeff * ltw[np.newaxis, :], axis=1)
+        exp = calc_exp(skydir, ltc, event_class, event_types,
+                       energies, cth_bins)
 
-        wpsf /= exps[np.newaxis, :]
-
-        return wpsf
+        return PSFModel(dtheta, energies, cth_bins, np.squeeze(exp), np.squeeze(psf),
+                        np.squeeze(wts))
 
 
 def create_irf(event_class, event_type):
@@ -379,8 +472,17 @@ def create_irf(event_class, event_type):
 
 
 def create_psf(event_class, event_type, dtheta, egy, cth):
-    """This function creates an array of PSF response values versus energy
-    and inclination angle.
+    """Create an array of PSF response values versus energy and
+    inclination angle.
+
+    Parameters
+    ----------
+    egy : `~numpy.ndarray`
+        Energy in MeV.
+
+    cth : `~numpy.ndarray`
+        Cosine of the incidence angle.
+
     """
     irf = create_irf(event_class, event_type)
     theta = np.degrees(np.arccos(cth))
@@ -388,13 +490,24 @@ def create_psf(event_class, event_type, dtheta, egy, cth):
 
     for i, x in enumerate(egy):
         for j, y in enumerate(theta):
-            m[:, i, j] = irf.psf().value(dtheta, 10**x, y, 0.0)
+            m[:, i, j] = irf.psf().value(dtheta, x, y, 0.0)
 
     return m
 
 
 def create_edisp(event_class, event_type, erec, egy, cth):
+    """Create an array of energy response values versus energy and
+    inclination angle.
 
+    Parameters
+    ----------
+    egy : `~numpy.ndarray`
+        Energy in MeV.
+
+    cth : `~numpy.ndarray`
+        Cosine of the incidence angle.
+
+    """
     irf = create_irf(event_class, event_type)
     theta = np.degrees(np.arccos(cth))
     v = np.zeros((len(erec), len(egy), len(cth)))
@@ -402,16 +515,16 @@ def create_edisp(event_class, event_type, erec, egy, cth):
     for i, x in enumerate(egy):
         for j, y in enumerate(theta):
 
-            m = (erec/10**x < 3.0) & (erec/10**x > 0.333)
-            v[m, i, j] = irf.edisp().value(erec[m], 10**x, y, 0.0)
+            m = (erec / x < 3.0) & (erec / x > 0.333)
+            v[m, i, j] = irf.edisp().value(erec[m], x, y, 0.0)
 
     return v
 
 
 def create_aeff(event_class, event_type, egy, cth):
-    """This function creates a map of effective area versus energy and
-    incidence angle.  Binning in energy and incidence angle is
-    controlled with the egy and cth input parameters.
+    """Create an array of effective areas versus energy and incidence
+    angle.  Binning in energy and incidence angle is controlled with
+    the egy and cth input parameters.
 
     Parameters
     ----------
@@ -425,6 +538,7 @@ def create_aeff(event_class, event_type, egy, cth):
 
     cth : array_like
         Evaluation points in cosine of the incidence angle.
+
     """
     irf = create_irf(event_class, event_type)
     irf.aeff().setPhiDependence(False)
@@ -436,42 +550,65 @@ def create_aeff(event_class, event_type, egy, cth):
 
     for i, x in enumerate(egy):
         for j, y in enumerate(theta):
-            m[i, j] = irf.aeff().value(10**x, y, 0.0)
+            m[i, j] = irf.aeff().value(x, y, 0.0)
 
     return m
 
 
-def create_exp(skydir, ltc, event_class, event_types,
-               egy, cth_edge, npt=2):
+def calc_exp(skydir, ltc, event_class, event_types,
+             egy, cth_bins, npts=None):
+    """Calculate the exposure on a 2D grid of energy and incidence angle.
 
-    exp = np.zeros((len(egy), len(cth_edge)-1))
-    cth_edge = split_edges(cth_edge, npt)
-    cth = edge_to_center(cth_edge)
-    ltw = ltc.get_skydir_lthist(skydir, cth_edge).reshape(-1, npt)
+    Parameters
+    ----------
+    npts : int
+        Number of points by which to sample the response in cosine of
+        the incidence angle.  If None then npts will be automatically
+        set such that incidence angle is sampled on intervals of <
+        0.05 in Cos(Theta).
+
+    Returns
+    -------
+    exp : `~numpy.ndarray`
+        2D Array of exposures vs. energy and incidence angle.
+
+    """
+
+    
+    if npts is None:
+        npts = int(np.ceil(np.max(cth_bins[1:]-cth_bins[:-1])/0.05))
+    
+    exp = np.zeros((len(egy), len(cth_bins) - 1))
+    cth_bins = utils.split_bin_edges(cth_bins, npts)
+    cth = edge_to_center(cth_bins)
+    ltw = ltc.get_skydir_lthist(skydir, cth_bins).reshape(-1, npts)
     for et in event_types:
         aeff = create_aeff(event_class, et, egy, cth)
-        aeff = aeff.reshape(exp.shape + (npt,))
+        aeff = aeff.reshape(exp.shape + (npts,))
         exp += np.sum(aeff * ltw[np.newaxis, :, :], axis=-1)
 
     return exp
 
 
 def create_avg_rsp(rsp_fn, skydir, ltc, event_class, event_types, x,
-                   egy, cth_edge, npt=2):
+                   egy, cth_bins, npts=None):
 
-    wrsp = np.zeros((len(x), len(egy), len(cth_edge)-1))
-    exps = np.zeros((len(egy), len(cth_edge)-1))
+    if npts is None:
+        npts = int(np.ceil(np.max(cth_bins[1:]-cth_bins[:-1])/0.05))
+    
+    wrsp = np.zeros((len(x), len(egy), len(cth_bins) - 1))
+    exps = np.zeros((len(egy), len(cth_bins) - 1))
 
-    cth_edge = split_edges(cth_edge, npt)
-    cth = edge_to_center(cth_edge)
-    ltw = ltc.get_skydir_lthist(skydir, cth_edge)
-    ltw = ltw.reshape(-1, npt)
+    cth_bins = utils.split_bin_edges(cth_bins, npts)
+    cth = edge_to_center(cth_bins)
+    ltw = ltc.get_skydir_lthist(skydir, cth_bins)
+    ltw = ltw.reshape(-1, npts)
 
     for et in event_types:
         rsp = rsp_fn(event_class, et, x, egy, cth)
         aeff = create_aeff(event_class, et, egy, cth)
-        rsp = rsp.reshape(wrsp.shape + (npt,))
-        aeff = aeff.reshape(exps.shape + (npt,))
+        rsp = rsp.reshape(wrsp.shape + (npts,))
+        aeff = aeff.reshape(exps.shape + (npts,))
         wrsp += np.sum(rsp * aeff[np.newaxis, :, :, :] *
                        ltw[np.newaxis, np.newaxis, :, :], axis=-1)
         exps += np.sum(aeff * ltw[np.newaxis, :, :], axis=-1)
@@ -481,34 +618,199 @@ def create_avg_rsp(rsp_fn, skydir, ltc, event_class, event_types, x,
 
 
 def create_avg_psf(skydir, ltc, event_class, event_types, dtheta,
-                   egy, cth_edge, npt=2):
+                   egy, cth_bins, npts=None):
     """Generate model for exposure-weighted PSF averaged over incidence
     angle.
 
     Parameters
     ----------
+    egy : `~numpy.ndarray`
+        Energies in MeV.
+
+    cth_bins : `~numpy.ndarray`
+        Bin edges in cosine of the incidence angle.
     """
 
     return create_avg_rsp(create_psf, skydir, ltc,
                           event_class, event_types,
-                          dtheta, egy,  cth_edge, npt)
+                          dtheta, egy,  cth_bins, npts)
 
 
 def create_avg_edisp(skydir, ltc, event_class, event_types, erec,
-                     egy, cth_edge, npt=2):
+                     egy, cth_bins, npts=None):
     """Generate model for exposure-weighted DRM averaged over incidence
     angle.
 
     Parameters
     ----------
+    egy : `~numpy.ndarray`
+        True energies in MeV.
+
+    cth_bins : `~numpy.ndarray`
+        Bin edges in cosine of the incidence angle.
     """
     return create_avg_rsp(create_edisp, skydir, ltc,
                           event_class, event_types,
-                          erec, egy,  cth_edge, npt)
+                          erec, egy,  cth_bins, npts)
 
-def create_wpsf():
-    """Create a weighted-PSF model."""
-    pass
+
+def create_wtd_psf(skydir, ltc, event_class, event_types, dtheta,
+                   egy_bins, cth_bins, fn, nbin=64, npts=1):
+    """Create an exposure- and dispersion-weighted PSF model for a source
+    with spectral parameterization ``fn``.  The calculation performed
+    by this method accounts for the influence of energy dispersion on
+    the PSF.
+
+    Parameters
+    ----------
+    dtheta : `~numpy.ndarray`
+
+    egy_bins : `~numpy.ndarray`
+        Bin edges in observed energy.
+
+    cth_bins : `~numpy.ndarray`
+        Bin edges in cosine of the true incidence angle.
+
+    nbin : int
+        Number of bins per decade in true energy.
+
+    npts : int
+        Number of points by which to oversample each energy bin.
+
+    """
+    #npts = int(np.ceil(32. / bins_per_dec(egy_bins)))
+    egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
+    egy = 10**utils.edge_to_center(np.log10(egy_bins))
+    etrue_bins = 10**np.linspace(1.0, 6.5, nbin * 5.5 + 1)
+    etrue = 10**utils.edge_to_center(np.log10(etrue_bins))
+
+    psf = create_avg_psf(skydir, ltc, event_class, event_types, dtheta,
+                         etrue, cth_bins)
+    drm = calc_drm(skydir, ltc, event_class, event_types,
+                   egy_bins, cth_bins, nbin=nbin)
+    flux = fn.flux(etrue_bins[:-1], etrue_bins[1:])
+    exp = calc_exp(skydir, ltc, event_class, event_types,
+                   etrue, cth_bins)
+    drm = drm * flux[None, :, None] * exp[None, :, :]
+    cnts = np.sum(drm[None, :, :, :], axis=2)
+    cnts[cnts == 0] = 1.0
+    wpsf = np.sum(drm[None, :, :, :] * psf[:, None, :, :],
+                  axis=2) / cnts
+
+    if npts > 1:
+        shape = (wpsf.shape[0], int(wpsf.shape[1] / npts), npts, wpsf.shape[2])
+        wpsf = np.sum((wpsf * cnts).reshape(shape), axis=2)
+        shape = (cnts.shape[0], int(cnts.shape[1] / npts), npts, cnts.shape[2])
+        wpsf = wpsf / np.sum(cnts.reshape(shape), axis=2)
+
+    return wpsf
+
+
+def calc_drm(skydir, ltc, event_class, event_types,
+             egy_bins, cth_bins, nbin=64):
+    """Calculate the detector response matrix."""
+    etrue_bins = 10**np.linspace(1.0, 6.5, nbin * 5.5 + 1)
+    egy = 10**utils.edge_to_center(np.log10(egy_bins))
+    egy_width = utils.edge_to_width(egy_bins)
+    etrue = 10**utils.edge_to_center(np.log10(etrue_bins))
+    edisp = create_avg_edisp(skydir, ltc, event_class, event_types,
+                             egy, etrue, cth_bins)
+    edisp = edisp * egy_width[:, None, None]
+    return edisp
+
+
+def calc_counts(skydir, ltc, event_class, event_types,
+                egy_bins, cth_bins, fn, npts=1):
+    """Calculate the expected counts vs. true energy and incidence angle
+    for a source with spectral parameterization ``fn``.
+
+    Parameters
+    ----------
+    skydir : `~astropy.coordinate.SkyCoord`
+
+    ltc : `~fermipy.irfs.LTCube`
+
+    egy_bins : `~numpy.ndarray`
+        Bin edges in observed energy.
+
+    cth_bins : `~numpy.ndarray`
+        Bin edges in cosine of the true incidence angle.
+
+    npts : int
+        Number of points by which to oversample each energy bin.
+    """
+    #npts = int(np.ceil(32. / bins_per_dec(egy_bins)))
+    egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
+    egy = 10**utils.edge_to_center(np.log10(egy_bins))
+    egy_width = utils.edge_to_width(egy_bins)
+    exp = calc_exp(skydir, ltc, event_class, event_types,
+                   egy, cth_bins)
+
+    cnts = fn.dnde(egy)[:, None] * exp * egy_width[:, None]
+    if npts > 1:
+        cnts = np.sum(cnts.reshape((npts, int(cnts.shape[0] / npts),
+                                    cnts.shape[1])), axis=0)
+    return cnts
+
+
+def calc_counts_edisp(skydir, ltc, event_class, event_types,
+                      egy_bins, cth_bins, fn, nbin=64, npts=1):
+    """Calculate the expected counts vs. observed energy and true
+    incidence angle for a source with spectral parameterization ``fn``.
+
+    Parameters
+    ----------
+    skydir : `~astropy.coordinate.SkyCoord`
+
+    ltc : `~fermipy.irfs.LTCube`
+
+    egy_bins : `~numpy.ndarray`
+        Bin edges in observed energy.
+
+    cth_bins : `~numpy.ndarray`
+        Bin edges in cosine of the true incidence angle.
+
+    npts : int
+        Number of points by which to oversample each energy bin.
+
+    """
+    #npts = int(np.ceil(32. / bins_per_dec(egy_bins)))
+    
+    # Split energy bins
+    egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
+    etrue_bins = 10**np.linspace(1.0, 6.5, nbin * 5.5 + 1)
+    egy = 10**utils.edge_to_center(np.log10(egy_bins))
+    etrue = 10**utils.edge_to_center(np.log10(etrue_bins))
+    drm = calc_drm(skydir, ltc, event_class, event_types,
+                   egy_bins, cth_bins, nbin=nbin)
+    exp = calc_exp(skydir, ltc, event_class, event_types,
+                   etrue, cth_bins)
+    flux = fn.flux(etrue_bins[:-1], etrue_bins[1:])
+    cnts = np.sum(exp[None, :, :] *
+                  flux[None, :, None] *
+                  drm[:, :, :], axis=1)
+    if npts > 1:
+        cnts = np.sum(cnts.reshape((npts, int(cnts.shape[0] / npts), cnts.shape[1])),
+                      axis=0)
+
+    return cnts
+
+
+def calc_wtd_exp(skydir, ltc, event_class, event_types,
+                 egy_bins, cth_bins, fn):
+    """Calculate the effective exposure.
+
+    Parameters
+    ----------
+    skydir : `~astropy.coordinates.SkyCoord`
+
+    ltc : `~fermipy.irfs.LTCube`
+
+    """
+    cnts = calc_counts_edisp(skydir, ltc, event_class, event_types,
+                             egy_bins, cth_bins, fn)
+    flux = fn.flux(egy_bins[:-1], egy_bins[1:])
+    return cnts / flux[:, None]
 
 
 class LTCube(HpxMap):
@@ -598,24 +900,28 @@ class LTCube(HpxMap):
         self._tstart = min(self.tstart, ltc.tstart)
         self._tstop = max(self.tstop, ltc.tstop)
 
-    def get_skydir_lthist(self, skydir, cth_edges):
-        """Get the livetime distribution (observing profile) for a
-        given sky direction.
+    def get_skydir_lthist(self, skydir, cth_bins):
+        """Get the livetime distribution (observing profile) for a given sky
+        direction with binning in incidence angle defined by
+        ``cth_bins``.
 
         Parameters
         ----------
         skydir : `~astropy.coordinates.SkyCoord`
+            Sky coordinate for which the observing profile will be
+            computed.
 
-        cth_edges : `~numpy.ndarray`
+        cth_bins : `~numpy.ndarray`
             Bin edges in cosine of the incidence angle.
+
         """
         ra = skydir.ra.deg
         dec = skydir.dec.deg
 
-        edges = np.linspace(cth_edges[0], cth_edges[-1],
-                            (len(cth_edges) - 1) * 4 + 1)
-        center = edge_to_center(edges)
-        width = edge_to_width(edges)
+        bins = np.linspace(cth_bins[0], cth_bins[-1],
+                            (len(cth_bins) - 1) * 4 + 1)
+        center = edge_to_center(bins)
+        width = edge_to_width(bins)
         ipix = hp.ang2pix(self.hpx.nside, np.pi / 2. - np.radians(dec),
                           np.radians(ra), nest=self.hpx.nest)
         lt = np.interp(center, self._cth_center,

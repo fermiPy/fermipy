@@ -48,9 +48,9 @@ class SensitivityCalc(object):
         ebins = 10**np.linspace(1.0,6.0,5*8+1)
         skydir = SkyCoord(0.0,0.0,unit='deg')        
         for et in self._event_types:
-            self._psf += [irfs.PSFModel(skydir.icrs, self._ltc,
-                                        self._event_class, et,
-                                        np.log10(ebins))]
+            self._psf += [irfs.PSFModel.create(skydir.icrs, self._ltc,
+                                               self._event_class, et,
+                                               ebins)]
             self._exp += [irfs.ExposureMap.create(self._ltc,
                                                   self._event_class, et,
                                                   ebins)]
