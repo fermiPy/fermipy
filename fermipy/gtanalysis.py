@@ -4699,7 +4699,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._psf = irfs.PSFModel.create(self.roi.skydir, self._ltc,
                                          self.config['gtlike']['irfs'],
                                          self.config['selection']['evtype'],
-                                         self.log_energies)
+                                         self.energies)
 
         # Run gtbin
         if self.projtype == "WCS":
