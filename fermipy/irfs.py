@@ -32,6 +32,29 @@ evtype_string = {
     512: 'EDISP3',
 }
 
+def loglog_quad(x,y,dim):
+
+    ys0 = [slice(None)]*y.ndim
+    ys1 = [slice(None)]*y.ndim
+
+    xs0 = [None]*y.ndim
+    xs1 = [None]*y.ndim
+    
+    ys0[dim] = slice(None,-1)
+    ys1[dim] = slice(1,None)
+
+    xs0[dim] = slice(None,-1)
+    xs1[dim] = slice(1,None)
+    log_ratio = np.log(x[xs1]/x[xs0])    
+    return 0.5*(y[ys0]*x[xs0] + y[ys1]*x[xs1])*log_ratio
+
+
+def sum_bins(x,dim,npts):
+    if npts <= 1:
+        return x    
+    shape = x.shape[:dim] + (int(x.shape[dim]/npts),npts) + x.shape[dim+1:]
+    return np.sum(x.reshape(shape),axis=dim+1)
+
 
 def bins_per_dec(edges):
     return (len(edges) - 1) / np.log10(edges[-1] / edges[0])
@@ -561,9 +584,9 @@ def calc_exp(skydir, ltc, event_class, event_types,
 
     Parameters
     ----------
-    npts : int
-        Number of points by which to sample the response in cosine of
-        the incidence angle.  If None then npts will be automatically
+    npts : int    
+        Number of points by which to sample the response in each
+        incidence angle bin.  If None then npts will be automatically
         set such that incidence angle is sampled on intervals of <
         0.05 in Cos(Theta).
 
@@ -680,7 +703,6 @@ def create_wtd_psf(skydir, ltc, event_class, event_types, dtheta,
     """
     #npts = int(np.ceil(32. / bins_per_dec(egy_bins)))
     egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
-    egy = 10**utils.edge_to_center(np.log10(egy_bins))
     etrue_bins = 10**np.linspace(1.0, 6.5, nbin * 5.5 + 1)
     etrue = 10**utils.edge_to_center(np.log10(etrue_bins))
 
@@ -688,20 +710,21 @@ def create_wtd_psf(skydir, ltc, event_class, event_types, dtheta,
                          etrue, cth_bins)
     drm = calc_drm(skydir, ltc, event_class, event_types,
                    egy_bins, cth_bins, nbin=nbin)
-    flux = fn.flux(etrue_bins[:-1], etrue_bins[1:])
-    exp = calc_exp(skydir, ltc, event_class, event_types,
-                   etrue, cth_bins)
-    drm = drm * flux[None, :, None] * exp[None, :, :]
-    cnts = np.sum(drm[None, :, :, :], axis=2)
-    cnts[cnts == 0] = 1.0
-    wpsf = np.sum(drm[None, :, :, :] * psf[:, None, :, :],
-                  axis=2) / cnts
-
+    cnts = calc_counts(skydir, ltc, event_class, event_types,
+                       etrue_bins, cth_bins, fn)
+    
+    wts = drm * cnts[None, :, :]
+    wts_norm = np.sum(wts,axis=1)
+    wts_norm[wts_norm == 0] = 1.0    
+    wts = wts / wts_norm[:, None, :]
+    wpsf = np.sum(wts[None, :, :, :] * psf[:, None, :, :], axis=2)
+    wts = np.sum(wts[None, :, :, :],axis=2)
+    
     if npts > 1:
         shape = (wpsf.shape[0], int(wpsf.shape[1] / npts), npts, wpsf.shape[2])
-        wpsf = np.sum((wpsf * cnts).reshape(shape), axis=2)
-        shape = (cnts.shape[0], int(cnts.shape[1] / npts), npts, cnts.shape[2])
-        wpsf = wpsf / np.sum(cnts.reshape(shape), axis=2)
+        wpsf = np.sum((wpsf * wts).reshape(shape), axis=2)
+        shape = (wts.shape[0], int(wts.shape[1] / npts), npts, wts.shape[2])
+        wpsf = wpsf / np.sum(wts.reshape(shape), axis=2)
 
     return wpsf
 
@@ -709,6 +732,9 @@ def create_wtd_psf(skydir, ltc, event_class, event_types, dtheta,
 def calc_drm(skydir, ltc, event_class, event_types,
              egy_bins, cth_bins, nbin=64):
     """Calculate the detector response matrix."""
+    npts = int(np.ceil(128. / bins_per_dec(egy_bins)))
+    egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
+    
     etrue_bins = 10**np.linspace(1.0, 6.5, nbin * 5.5 + 1)
     egy = 10**utils.edge_to_center(np.log10(egy_bins))
     egy_width = utils.edge_to_width(egy_bins)
@@ -716,6 +742,7 @@ def calc_drm(skydir, ltc, event_class, event_types,
     edisp = create_avg_edisp(skydir, ltc, event_class, event_types,
                              egy, etrue, cth_bins)
     edisp = edisp * egy_width[:, None, None]
+    edisp = sum_bins(edisp,0,npts)
     return edisp
 
 
@@ -731,7 +758,7 @@ def calc_counts(skydir, ltc, event_class, event_types,
     ltc : `~fermipy.irfs.LTCube`
 
     egy_bins : `~numpy.ndarray`
-        Bin edges in observed energy.
+        Bin edges in observed energy in MeV.
 
     cth_bins : `~numpy.ndarray`
         Bin edges in cosine of the true incidence angle.
@@ -741,15 +768,11 @@ def calc_counts(skydir, ltc, event_class, event_types,
     """
     #npts = int(np.ceil(32. / bins_per_dec(egy_bins)))
     egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
-    egy = 10**utils.edge_to_center(np.log10(egy_bins))
-    egy_width = utils.edge_to_width(egy_bins)
     exp = calc_exp(skydir, ltc, event_class, event_types,
-                   egy, cth_bins)
-
-    cnts = fn.dnde(egy)[:, None] * exp * egy_width[:, None]
-    if npts > 1:
-        cnts = np.sum(cnts.reshape((npts, int(cnts.shape[0] / npts),
-                                    cnts.shape[1])), axis=0)
+                   egy_bins, cth_bins)
+    dnde = fn.dnde(egy_bins)
+    cnts = loglog_quad(egy_bins, exp * dnde[:, None],0)
+    cnts = sum_bins(cnts,0,npts)
     return cnts
 
 
@@ -765,7 +788,7 @@ def calc_counts_edisp(skydir, ltc, event_class, event_types,
     ltc : `~fermipy.irfs.LTCube`
 
     egy_bins : `~numpy.ndarray`
-        Bin edges in observed energy.
+        Bin edges in observed energy in MeV.
 
     cth_bins : `~numpy.ndarray`
         Bin edges in cosine of the true incidence angle.
@@ -779,20 +802,13 @@ def calc_counts_edisp(skydir, ltc, event_class, event_types,
     # Split energy bins
     egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
     etrue_bins = 10**np.linspace(1.0, 6.5, nbin * 5.5 + 1)
-    egy = 10**utils.edge_to_center(np.log10(egy_bins))
-    etrue = 10**utils.edge_to_center(np.log10(etrue_bins))
     drm = calc_drm(skydir, ltc, event_class, event_types,
                    egy_bins, cth_bins, nbin=nbin)
-    exp = calc_exp(skydir, ltc, event_class, event_types,
-                   etrue, cth_bins)
-    flux = fn.flux(etrue_bins[:-1], etrue_bins[1:])
-    cnts = np.sum(exp[None, :, :] *
-                  flux[None, :, None] *
-                  drm[:, :, :], axis=1)
-    if npts > 1:
-        cnts = np.sum(cnts.reshape((npts, int(cnts.shape[0] / npts), cnts.shape[1])),
-                      axis=0)
+    cnts_etrue = calc_counts(skydir, ltc, event_class, event_types,
+                             etrue_bins, cth_bins, fn)
 
+    cnts = np.sum(cnts_etrue[None,:,:] * drm[:, :, :], axis=1)
+    cnts = sum_bins(cnts,0,npts)
     return cnts
 
 
@@ -889,10 +905,20 @@ class LTCube(HpxMap):
     def create_empty(tstart, tstop, fill=0.0, nside=64):
         """Create an empty livetime cube."""
         cth_edges = np.linspace(0, 1.0, 41)
+        domega = utils.edge_to_width(cth_edges)*2.0*np.pi
         hpx = HPX(nside, True, 'CEL', ebins=cth_edges)
         data = np.ones((len(cth_edges) - 1, hpx.npix)) * fill
         return LTCube(data, hpx, cth_edges, tstart, tstop)
 
+    @staticmethod
+    def create_from_obs_time(obs_time,nside=64):
+
+        tstart = 239557417.0
+        tstop = tstart + obs_time        
+        ltc = LTCube.create_empty(tstart, tstop, obs_time, nside)
+        ltc._counts *= ltc.domega[:, np.newaxis] / (4. * np.pi)
+        return ltc        
+        
     def load_ltfile(self, ltfile):
 
         ltc = LTCube.create_from_file(ltfile)
