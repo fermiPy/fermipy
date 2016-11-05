@@ -29,11 +29,10 @@ def _get_test_runner():
 def test(package=None, test_path=None, args=None, plugins=None,
          verbose=False, pastebin=None, remote_data=False, pep8=False,
          pdb=False, coverage=False, open_files=False, **kwargs):
-    """
-    Run the tests using `py.test <http://pytest.org/latest>`__. A proper set
-    of arguments is constructed and passed to `pytest.main`_.
-    .. _py.test: http://pytest.org/latest/
-    .. _pytest.main: http://pytest.org/latest/builtin.html#pytest.main
+    """Run the tests using `py.test <http://pytest.org/latest>`_. A
+    proper set of arguments is constructed and passed to `pytest.main
+    <http://pytest.org/latest/builtin.html#pytest.main>`_.
+
     Parameters
     ----------
     package : str, optional
@@ -44,16 +43,17 @@ def test(package=None, test_path=None, args=None, plugins=None,
         directory. Must be specified absolutely or relative to the
         calling directory.
     args : str, optional
-        Additional arguments to be passed to pytest.main_ in the ``args``
+        Additional arguments to be passed to pytest.main in the ``args``
         keyword argument.
     plugins : list, optional
-        Plugins to be passed to pytest.main_ in the ``plugins`` keyword
+        Plugins to be passed to pytest.main in the ``plugins`` keyword
         argument.
     verbose : bool, optional
-        Convenience option to turn on verbose output from py.test_. Passing
-        True is the same as specifying ``'-v'`` in ``args``.
+        Convenience option to turn on verbose output from `py.test
+        <http://pytest.org/latest>`_. Passing True is the same as
+        specifying ``'-v'`` in ``args``.
     pastebin : {'failed','all',None}, optional
-        Convenience option for turning on py.test_ pastebin output. Set to
+        Convenience option for turning on py.test pastebin output. Set to
         ``'failed'`` to upload info for failed tests, or ``'all'`` to upload
         info for all tests.
     remote_data : bool, optional
@@ -85,6 +85,7 @@ def test(package=None, test_path=None, args=None, plugins=None,
         on to the astropy test runner.  This allows use of test-related
         functionality implemented in later versions of astropy without
         explicitly updating the package template.
+
     """
     test_runner = _get_test_runner()
     return test_runner.run_tests(
