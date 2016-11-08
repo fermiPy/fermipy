@@ -9,7 +9,7 @@ setup(
     author_email='fermipy.developers@gmail.com',
     description='A Python package for analysis of Fermi-LAT data',
     license='BSD',
-    packages=find_packages(exclude='tests'),
+    packages=find_packages(),
     include_package_data=True,
     url="https://github.com/fermiPy/fermipy",
     classifiers=[
@@ -36,7 +36,7 @@ setup(
     ]},
     install_requires=[
         'numpy >= 1.6.1',
-        'astropy >= 1.0',
+        'astropy >= 1.2.1',
         'matplotlib >= 1.4.0',
         'scipy >= 0.14',
         'pyyaml',

@@ -8,9 +8,6 @@ import logging
 import tempfile
 import filecmp
 import numpy as np
-# pyLikelihood needs to be imported before astropy to avoid CFITSIO header
-# error
-import pyLikelihood as pyLike
 from astropy.io import fits
 import fermipy
 import fermipy.defaults as defaults
@@ -40,6 +37,7 @@ import FluxDensity
 from LikelihoodState import LikelihoodState
 from fermipy.gtutils import BinnedAnalysis, SummedLikelihood
 import BinnedAnalysis as ba
+import pyLikelihood as pyLike
 
 norm_parameters = {
     'ConstantValue': ['Value'],
