@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 # Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_dependency('Fermi ST')
+#pytestmark = requires_dependency('Fermi ST')
 
 
 @pytest.fixture(scope='module')

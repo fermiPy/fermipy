@@ -12,77 +12,82 @@ pyIrfLoader.Loader_go()
 
 _funcFactory = pyLike.SourceFactory_funcFactory()
 
-import BinnedAnalysis 
+import BinnedAnalysis
 import SummedLikelihood
 
-import fermipy.utils as utils
+from fermipy import utils
+from fermipy import model_utils
 
 evtype_string = {
-    4 : 'PSF0',
-    8 : 'PSF1',
-    16 : 'PSF2',
-    32 : 'PSF3'
-    }
+    4: 'PSF0',
+    8: 'PSF1',
+    16: 'PSF2',
+    32: 'PSF3'
+}
+
 
 def bitmask_to_bits(mask):
 
-    bits = []    
+    bits = []
     for i in range(32):
         if mask & (2**i):
             bits += [2**i]
 
     return bits
 
-DEFAULT_SCALE_DICT =  {'value': 1000.0, 'scale' : None, 'min': 0.001, 'max': 1000.0}
-DEFAULT_NORM_DICT = {'value': 1E-12, 'scale' : None, 'min': 1E-5, 'max': 1000.0}
-DEFAULT_INTEGRAL_DICT = {'value': 1E-6, 'scale' : None, 'min': 1E-5, 'max': 1000.0}
-DEFAULT_INDEX_DICT = {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0 }
+DEFAULT_SCALE_DICT = {'value': 1000.0,
+                      'scale': None, 'min': 0.001, 'max': 1000.0}
+DEFAULT_NORM_DICT = {'value': 1E-12, 'scale': None, 'min': 1E-5, 'max': 1000.0}
+DEFAULT_INTEGRAL_DICT = {'value': 1E-6,
+                         'scale': None, 'min': 1E-5, 'max': 1000.0}
+DEFAULT_INDEX_DICT = {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0}
 
 FUNCTION_NORM_PARS = {}
 FUNCTION_PAR_NAMES = {}
 FUNCTION_DEFAULT_PARS = {
-    'PowerLaw': { 'Index': DEFAULT_INDEX_DICT,
-                  'Scale': DEFAULT_SCALE_DICT,
-                  'Prefactor' : DEFAULT_NORM_DICT },
-    'PowerLaw2': { 'Index': DEFAULT_INDEX_DICT,
-                   'LowerLimit': {'value': 100.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
-                   'UpperLimit': {'value': 100000.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
-                   'Integral' : DEFAULT_INTEGRAL_DICT },
-    'BrokenPowerLaw': { 'Index1': DEFAULT_INDEX_DICT,
+    'PowerLaw': {'Index': DEFAULT_INDEX_DICT,
+                 'Scale': DEFAULT_SCALE_DICT,
+                 'Prefactor': DEFAULT_NORM_DICT},
+    'PowerLaw2': {'Index': DEFAULT_INDEX_DICT,
+                  'LowerLimit': {'value': 100.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
+                  'UpperLimit': {'value': 100000.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
+                  'Integral': DEFAULT_INTEGRAL_DICT},
+    'BrokenPowerLaw': {'Index1': DEFAULT_INDEX_DICT,
+                       'Index2': DEFAULT_INDEX_DICT,
+                       'BreakValue': DEFAULT_SCALE_DICT,
+                       'Prefactor': DEFAULT_NORM_DICT},
+    'BrokenPowerLaw2': {'Index1': DEFAULT_INDEX_DICT,
                         'Index2': DEFAULT_INDEX_DICT,
-                        'BreakValue' : DEFAULT_SCALE_DICT,
-                        'Prefactor' : DEFAULT_NORM_DICT },
-    'BrokenPowerLaw2': { 'Index1': DEFAULT_INDEX_DICT,
-                         'Index2': DEFAULT_INDEX_DICT,
-                         'LowerLimit': {'value': 100.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
-                         'UpperLimit': {'value': 100000.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
-                         'BreakValue' : DEFAULT_SCALE_DICT,
-                         'Integral' : DEFAULT_INTEGRAL_DICT },
-    'BPLExpCutoff': { 'Index1': DEFAULT_INDEX_DICT,
-                      'Index2': DEFAULT_INDEX_DICT,
-                      'BreakValue' : DEFAULT_SCALE_DICT,
-                      'Prefactor' : DEFAULT_NORM_DICT },
-    'SmoothBrokenPowerLaw': { 'Index1': DEFAULT_INDEX_DICT,
-                              'Index2': DEFAULT_INDEX_DICT,
-                              'BreakValue' : DEFAULT_SCALE_DICT,
-                              'Prefactor' : DEFAULT_NORM_DICT,
-                              'Beta' : {'value': 0.2, 'scale': 1.0, 'min': 0.01, 'max': 10.0} },
-    'PLSuperExpCutoff' : { 'Cutoff': DEFAULT_SCALE_DICT,
-                           'Index1': {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0},
-                           'Index2': {'value': 1.0, 'scale': 1.0, 'min': 0.0, 'max': 2.0},
-                           'Prefactor' : DEFAULT_NORM_DICT,
-                           },
-    'LogParabola' : {'norm' : DEFAULT_NORM_DICT,
-                     'alpha': {'value': 2.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
-                     'beta' : {'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0},
-                     'Eb' : DEFAULT_SCALE_DICT },
-    'ConstantValue' : {'Normalization' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 1000.0} },
-    'FileFunction' : {'Normalization' : {'value': 1.0, 'scale' : 1.0, 'min': 1E-5, 'max': 1000.0} },
-    'Gaussian' : { 'Mean': {'value': 1000.0, 'scale' : 1.0, 'min': 1E-5, 'max': 1E5},
-                   'Sigma':{'value': 100.0, 'scale' : 1.0, 'min': 10., 'max': 1E5},
-                   'Prefactor' : DEFAULT_NORM_DICT },
+                        'LowerLimit': {'value': 100.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
+                        'UpperLimit': {'value': 100000.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
+                        'BreakValue': DEFAULT_SCALE_DICT,
+                        'Integral': DEFAULT_INTEGRAL_DICT},
+    'BPLExpCutoff': {'Index1': DEFAULT_INDEX_DICT,
+                     'Index2': DEFAULT_INDEX_DICT,
+                     'BreakValue': DEFAULT_SCALE_DICT,
+                     'Prefactor': DEFAULT_NORM_DICT},
+    'SmoothBrokenPowerLaw': {'Index1': DEFAULT_INDEX_DICT,
+                             'Index2': DEFAULT_INDEX_DICT,
+                             'BreakValue': DEFAULT_SCALE_DICT,
+                             'Prefactor': DEFAULT_NORM_DICT,
+                             'Beta': {'value': 0.2, 'scale': 1.0, 'min': 0.01, 'max': 10.0}},
+    'PLSuperExpCutoff': {'Cutoff': DEFAULT_SCALE_DICT,
+                         'Index1': {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0},
+                         'Index2': {'value': 1.0, 'scale': 1.0, 'min': 0.0, 'max': 2.0},
+                         'Prefactor': DEFAULT_NORM_DICT,
+                         },
+    'LogParabola': {'norm': DEFAULT_NORM_DICT,
+                    'alpha': {'value': 2.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
+                    'beta': {'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0},
+                    'Eb': DEFAULT_SCALE_DICT},
+    'ConstantValue': {'Normalization': {'value': 1.0, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}},
+    'FileFunction': {'Normalization': {'value': 1.0, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}},
+    'Gaussian': {'Mean': {'value': 1000.0, 'scale': 1.0, 'min': 1E-5, 'max': 1E5},
+                 'Sigma': {'value': 100.0, 'scale': 1.0, 'min': 10., 'max': 1E5},
+                 'Prefactor': DEFAULT_NORM_DICT},
 
-    }
+}
+
 
 def init_function_pars():
 
@@ -100,14 +105,14 @@ def init_function_pars():
 
     for fname in names:
 
-        FUNCTION_DEFAULT_PARS.setdefault(fname,{})
-        FUNCTION_PAR_NAMES.setdefault(fname,[])
+        FUNCTION_DEFAULT_PARS.setdefault(fname, {})
+        FUNCTION_PAR_NAMES.setdefault(fname, [])
 
-        fn = funcFactory.create(fname)        
+        fn = funcFactory.create(fname)
         try:
             FUNCTION_NORM_PARS[fname] = fn.normPar().getName()
         except Exception:
-            FUNCTION_NORM_PARS[fname] = 'Prefactor'
+            FUNCTION_NORM_PARS[fname] = None
 
         params = pyLike.ParameterVector()
         fn.getParams(params)
@@ -118,22 +123,24 @@ def init_function_pars():
             FUNCTION_PAR_NAMES[fname] += [pname]
 
             if pname == 'Scale':
-                FUNCTION_DEFAULT_PARS[fname].setdefault(pname,DEFAULT_SCALE_DICT)
+                FUNCTION_DEFAULT_PARS[fname].setdefault(
+                    pname, DEFAULT_SCALE_DICT)
             elif pname == 'Prefactor':
-                FUNCTION_DEFAULT_PARS[fname].setdefault(pname,DEFAULT_NORM_DICT)
+                FUNCTION_DEFAULT_PARS[fname].setdefault(
+                    pname, DEFAULT_NORM_DICT)
             else:
-                FUNCTION_DEFAULT_PARS[fname].setdefault(pname,{})
+                FUNCTION_DEFAULT_PARS[fname].setdefault(pname, {})
 
             bounds = p.getBounds()
-            par_dict = dict(name = pname,
-                            value = p.getValue(),
-                            min = bounds[0],
-                            max = bounds[1],
-                            scale = None,
-                            free = False)
+            par_dict = dict(name=pname,
+                            value=p.getValue(),
+                            min=bounds[0],
+                            max=bounds[1],
+                            scale=None,
+                            free=False)
 
             par_dict.update(copy.deepcopy(FUNCTION_DEFAULT_PARS[fname][pname]))
-            par_dict['name'] = pname            
+            par_dict['name'] = pname
             FUNCTION_DEFAULT_PARS[fname][pname] = par_dict
 
 
@@ -143,7 +150,7 @@ def get_function_par_names(function_type):
         init_function_pars()
 
     if not function_type in FUNCTION_PAR_NAMES.keys():
-        raise Exception('Invalid Function Type: %s'%function_type)
+        raise Exception('Invalid Function Type: %s' % function_type)
 
     return copy.deepcopy(FUNCTION_PAR_NAMES[function_type])
 
@@ -164,74 +171,7 @@ def get_function_defaults(function_type):
     return copy.deepcopy(FUNCTION_DEFAULT_PARS[function_type])
 
 
-def make_parameter_dict(pdict, fixed_par=False, rescale=True):
-    """
-    Prepare a parameter dictionary.  This function will automatically
-    set the parameter scale and bounds if they are not defined.
-    Bounds are also adjusted to ensure that they encompass the
-    parameter value.
-    """
-    o = copy.deepcopy(pdict)
-
-    if 'scale' not in o or o['scale'] is None:
-
-        if rescale:        
-            value, scale = utils.scale_parameter(o['value'])
-        else:
-            value, scale = o['value'], 1.0
-
-        o['value'] = value
-        o['scale'] = scale
-        if 'error' in o:
-            o['error'] /= np.abs(scale)
-
-    if 'min' not in o:
-        o['min'] = o['value']*1E-3
-
-    if 'max' not in o:
-        o['max'] = o['value']*1E3
-
-    if fixed_par:
-        o['min'] = o['value']
-        o['max'] = o['value']
-
-    if float(o['min']) > float(o['value']):
-        o['min'] = o['value']
-
-    if float(o['max']) < float(o['value']):
-        o['max'] = o['value']
-
-#    for k, v in o.items():
-#        o[k] = str(v)
-
-    return o
-
-
-def create_spectral_pars_dict(spectrum_type,spectral_pars=None):
-
-    pars_dict = get_function_defaults(spectrum_type)
-
-    if spectral_pars is None:
-        spectral_pars = {}
-    else:
-        spectral_pars = copy.deepcopy(spectral_pars)
-
-    for k, v in spectral_pars.items():
-
-        if not k in pars_dict:
-            continue
-
-        if not isinstance(v,dict):
-            spectral_pars[k] = {'name' : k, 'value' : v}
-
-    pars_dict = utils.merge_dict(pars_dict,spectral_pars)
-
-    for k, v in pars_dict.items():
-        pars_dict[k] = make_parameter_dict(v)
-
-    return pars_dict
-
-def create_spectrum_from_dict(spectrum_type,spectral_pars=None, fn=None):
+def create_spectrum_from_dict(spectrum_type, spectral_pars=None, fn=None):
     """Create a Function object from a parameter dictionary.
 
     Parameters
@@ -244,7 +184,7 @@ def create_spectrum_from_dict(spectrum_type,spectral_pars=None, fn=None):
 
     """
 
-    pars = create_spectral_pars_dict(spectrum_type,spectral_pars)
+    pars = model_utils.create_spectral_pars_dict(spectrum_type, spectral_pars)
 
     if fn is None:
         fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
@@ -271,32 +211,6 @@ def create_spectrum_from_dict(spectrum_type,spectral_pars=None, fn=None):
     return fn
 
 
-def get_spatial_type(spatial_model):
-    """Translate a spatial model string to a spatial type."""
-
-    if spatial_model in ['SkyDirFunction', 'PointSource',
-                         'Gaussian', 'PSFSource']:
-        return 'SkyDirFunction'
-    elif spatial_model in ['GaussianSource', 'DiskSource', 'SpatialMap']:
-        return 'SpatialMap'
-    elif spatial_model in ['RadialGaussian','RadialDisk']:
-        if hasattr(pyLike,'RadialGaussian'):
-            return spatial_model
-        else:
-            return 'SpatialMap'
-    else:
-        return spatial_model
-
-
-def get_source_type(spatial_type):
-    """Translate a spatial type string to a source type."""
-
-    if spatial_type == 'SkyDirFunction':
-        return 'PointSource'
-    else:
-        return 'DiffuseSource'
-
-
 def gtlike_spectrum_to_dict(spectrum):
     """ Convert a pyLikelihood object to a python dictionary which can
         be easily saved to a file."""
@@ -319,8 +233,9 @@ def gtlike_spectrum_to_dict(spectrum):
 def get_function_pars_dict(fn):
 
     pars = get_function_pars(fn)
-    pars_dict = { p['name'] : p for p in pars } 
+    pars_dict = {p['name']: p for p in pars}
     return pars_dict
+
 
 def get_function_pars(fn):
     """Extract the parameters of a pyLikelihood function object
@@ -347,13 +262,13 @@ def get_function_pars(fn):
         par = fn.getParam(pname)
         bounds = par.getBounds()
         perr = par.error() if par.isFree() else np.nan
-        pars += [dict(name = pname,
-                      value = par.getValue(),
-                      error = perr,
-                      min = bounds[0],
-                      max = bounds[1],
-                      free = par.isFree(),
-                      scale = par.getScale())]
+        pars += [dict(name=pname,
+                      value=par.getValue(),
+                      error=perr,
+                      min=bounds[0],
+                      max=bounds[1],
+                      free=par.isFree(),
+                      scale=par.getScale())]
 
     return pars
 
@@ -364,21 +279,22 @@ def get_params_dict(like):
 
     params_dict = {}
     for p in params:
-        params_dict.setdefault(p['src_name'],[])
+        params_dict.setdefault(p['src_name'], [])
         params_dict[p['src_name']] += [p]
 
     return params_dict
 
+
 def get_params(like):
 
-    params = []    
+    params = []
     for src_name in like.sourceNames():
 
         src = like[src_name].src
         spars, ppars = get_source_pars(src)
 
         for p in spars:
-            p['src_name'] = src_name            
+            p['src_name'] = src_name
             params += [p]
 
         for p in ppars:
@@ -387,13 +303,17 @@ def get_params(like):
 
     return params
 
+
 def get_source_pars(src):
+    """Extract the parameters associated with a pyLikelihood Source object.
+
+    """
 
     fnmap = src.getSrcFuncs()
 
     keys = fnmap.keys()
 
-    if 'Position' in keys:    
+    if 'Position' in keys:
         ppars = get_function_pars(src.getSrcFuncs()[str('Position')])
     elif 'SpatialDist' in keys:
         ppars = get_function_pars(src.getSrcFuncs()[str('SpatialDist')])
@@ -416,28 +336,9 @@ def get_source_pars(src):
     return spars, ppars
 
 
-def cast_pars_dict(pars_dict):
-
-    o = {}
-
-    for pname, pdict in pars_dict.items():
-
-        o[pname] = {}
-
-        for k,v in pdict.items():
-
-            if k == 'free':
-                o[pname][k] = bool(int(v))
-            elif k == 'name':
-                o[pname][k] = v
-            else:
-                o[pname][k] = float(v)
-
-    return o
-
 class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 
-    def nFreeParams(self):        
+    def nFreeParams(self):
         """Count the number of free parameters in the active model."""
         nF = 0
         pars = self.params()
@@ -461,7 +362,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
         self.saveBestFit()
 
     def Ts2(self, srcName, reoptimize=False, approx=True,
-           tol=None, MaxIterations=10, verbosity=0):
+            tol=None, MaxIterations=10, verbosity=0):
 
         srcName = str(srcName)
 
@@ -472,8 +373,8 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
         freeParams = pyLike.DoubleVector()
         self.components[0].logLike.getFreeParamValues(freeParams)
         logLike1 = -self()
-        for comp in self.components:            
-            comp.scaleSource(srcName,1E-10)
+        for comp in self.components:
+            comp.scaleSource(srcName, 1E-10)
             comp._ts_src = comp.logLike.getSource(srcName)
             free_flag = comp._ts_src.spectrum().normPar().isFree()
 
@@ -497,7 +398,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
                 except RuntimeError as e:
                     print(e)
                 if verbosity > 0:
-                    print("** Iteration :",Niter)
+                    print("** Iteration :", Niter)
                 Niter += 1
         else:
             if approx:
@@ -507,7 +408,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
                     pass
         self.syncSrcParams()
         logLike0 = max(-self(), logLike0)
-        Ts_value = 2*(logLike1 - logLike0)
+        Ts_value = 2 * (logLike1 - logLike0)
         for comp in self.components:
             comp.scaleSource(srcName, 1E10)
             if reoptimize:
@@ -526,7 +427,7 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
         if factor is None:
             freeNpred, totalNpred = self._npredValues()
             deficit = self.total_nobs() - totalNpred
-            self.renormFactor = 1. + deficit/freeNpred
+            self.renormFactor = 1. + deficit / freeNpred
         else:
             self.renormFactor = factor
         if self.renormFactor < 1:
@@ -538,20 +439,21 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
                 continue
 
             parameter = self.normPar(src)
-            if (parameter.isFree() and 
-                self.components[0]._isDiffuseOrNearby(src)):
+            if (parameter.isFree() and
+                    self.components[0]._isDiffuseOrNearby(src)):
                 oldValue = parameter.getValue()
-                newValue = oldValue*self.renormFactor
+                newValue = oldValue * self.renormFactor
                 # ensure new value is within parameter bounds
                 xmin, xmax = parameter.getBounds()
                 if xmin <= newValue and newValue <= xmax:
                     parameter.setValue(newValue)
 
+
 class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
 
     def __init__(self, binnedData, srcModel=None, optimizer='Drmngb',
-                 use_bl2=False, verbosity=0, psfcorr=True,convolve=True,
-                 resample=True,resamp_fact=2,minbinsz=0.1,wmap=None):
+                 use_bl2=False, verbosity=0, psfcorr=True, convolve=True,
+                 resample=True, resamp_fact=2, minbinsz=0.1, wmap=None):
         AnalysisBase.__init__(self)
         if srcModel is None:
             srcModel, optimizer = self._srcDialog()
@@ -577,7 +479,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                                                        minbinsz)
                 self._wmap = None
             else:
-                self._wmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap,"SKYMAP")
+                self._wmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap, "SKYMAP")
                 self._wmap.setInterpolation(False)
                 self._wmap.setExtrapolation(True)
                 self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
@@ -593,15 +495,15 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         self.logLike.readXml(srcModel, _funcFactory, False, True, False)
         self.model = SourceModel(self.logLike, srcModel)
         self.energies = np.array(self.logLike.energies())
-        self.e_vals = np.sqrt(self.energies[:-1]*self.energies[1:])
+        self.e_vals = np.sqrt(self.energies[:-1] * self.energies[1:])
         self.nobs = self.logLike.countsSpectrum()
         self.sourceFitPlots = []
-        self.sourceFitResids  = []
+        self.sourceFitResids = []
 
-    def scaleSource(self,srcName,scale):
+    def scaleSource(self, srcName, scale):
         src = self.logLike.getSource(srcName)
         old_scale = src.spectrum().normPar().getScale()
-        src.spectrum().normPar().setScale(old_scale*scale)
+        src.spectrum().normPar().setScale(old_scale * scale)
         self.logLike.syncParams()
 
     def Ts2(self, srcName, reoptimize=False, approx=True,
@@ -625,7 +527,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         freeParams = pyLike.DoubleVector()
         self.logLike.getFreeParamValues(freeParams)
         logLike1 = self.logLike.value()
-        self.scaleSource(srcName,1E-10)
+        self.scaleSource(srcName, 1E-10)
         logLike0 = self.logLike.value()
         if tol is None:
             tol = self.tol
@@ -642,7 +544,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                 except RuntimeError as e:
                     print(e)
                 if verbosity > 0:
-                    print("** Iteration :",Niter)
+                    print("** Iteration :", Niter)
                 Niter += 1
         else:
             if approx:
@@ -652,8 +554,8 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                     pass
         self.logLike.syncParams()
         logLike0 = max(self.logLike.value(), logLike0)
-        Ts_value = 2*(logLike1 - logLike0)
-        self.scaleSource(srcName,1E10)
+        Ts_value = 2 * (logLike1 - logLike0)
+        self.scaleSource(srcName, 1E10)
 
         self.logLike.setFreeParamValues(freeParams)
         self.model = SourceModel(self.logLike)
@@ -664,8 +566,8 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         return Ts_value
 
     def _isDiffuseOrNearby(self, srcName):
-        if (self[srcName].src.getType() == 'Diffuse' or 
-            self._ts_src.getType() == 'Diffuse'):
+        if (self[srcName].src.getType() == 'Diffuse' or
+                self._ts_src.getType() == 'Diffuse'):
             return True
         elif self._separation(self._ts_src, self[srcName].src) < self.maxdist:
             return True

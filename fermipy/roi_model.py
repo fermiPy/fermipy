@@ -7,8 +7,6 @@ import collections
 import numpy as np
 import xml.etree.cElementTree as ElementTree
 
-import pyLikelihood as pyLike
-
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
@@ -16,13 +14,17 @@ from astropy.table import Table, Column
 
 import fermipy
 import fermipy.config
-import fermipy.utils as utils
-import fermipy.wcs_utils as wcs_utils
-import fermipy.gtutils as gtutils
-import fermipy.catalog as catalog
-import fermipy.defaults as defaults
+from fermipy import utils
+from fermipy import wcs_utils
+from fermipy import catalog
+from fermipy import defaults
+from fermipy import model_utils
 from fermipy.logger import Logger, log_level
-
+from fermipy.model_utils import make_parameter_dict
+from fermipy.model_utils import cast_pars_dict
+from fermipy.model_utils import get_function_defaults
+from fermipy.model_utils import get_spatial_type
+from fermipy.model_utils import get_function_norm_par_name
 
 def create_source_table(scan_shape):
     """Create an empty source table.
@@ -201,9 +203,10 @@ def get_params_dict(pars_dict):
     return params
 
 class Model(object):
-    """Base class for source objects.  This class is a container for both
-    spectral and spatial parameters as well as other source properties
-    such as TS, Npred, and location within the ROI.
+    """Base class for point-like and diffuse source components.  This
+    class is a container for spectral and spatial parameters as well
+    as other source properties such as TS, Npred, and location within
+    the ROI.
     """
 
     def __init__(self, name, data=None):
@@ -220,10 +223,10 @@ class Model(object):
             self._data.update(data)
 
         if not self.spectral_pars:
-            pdict = gtutils.get_function_defaults(self['SpectrumType'])
+            pdict = get_function_defaults(self['SpectrumType'])
             self._data['spectral_pars'] = pdict
             for k, v in self.spectral_pars.items():
-                self._data['spectral_pars'][k] = gtutils.make_parameter_dict(v)
+                self._data['spectral_pars'][k] = make_parameter_dict(v)
 
         self._names = [name]
         catalog = self._data['catalog']
@@ -315,7 +318,7 @@ class Model(object):
 
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('SpatialType',
-                            gtutils.get_spatial_type(src_dict['SpatialModel']))
+                            get_spatial_type(src_dict['SpatialModel']))
 
         # Need this to handle old conventions for
         # MapCubeFunction/ConstantValue sources
@@ -329,10 +332,10 @@ class Model(object):
                 src_dict['Spatial_Filename'] = src_dict.pop('mapcube')
 
         if 'spectral_pars' in src_dict:
-            src_dict['spectral_pars'] = gtutils.cast_pars_dict(src_dict['spectral_pars'])
+            src_dict['spectral_pars'] = cast_pars_dict(src_dict['spectral_pars'])
 
         if 'spatial_pars' in src_dict:
-            src_dict['spatial_pars'] = gtutils.cast_pars_dict(src_dict['spatial_pars'])
+            src_dict['spatial_pars'] = cast_pars_dict(src_dict['spatial_pars'])
 
         if src_dict['SpatialModel'] == 'ConstantValue':
             return IsoSource(src_dict['name'],src_dict)
@@ -349,14 +352,14 @@ class Model(object):
             sp[k]['value'] = self['params'][k][0]/sp[k]['scale']
             if np.isfinite(self['params'][k][1]):
                 sp[k]['error'] = self['params'][k][1]/np.abs(sp[k]['scale'])
-            sp[k] = gtutils.make_parameter_dict(sp[k])
+            sp[k] = make_parameter_dict(sp[k])
 
     def _sync_params(self):        
         self._data['params'] = get_params_dict(self['spectral_pars'])
         
     def get_norm(self):
 
-        par_name = gtutils.get_function_norm_par_name(self['SpectrumType'])
+        par_name = get_function_norm_par_name(self['SpectrumType'])
         val = self.spectral_pars[par_name]['value']
         scale = self.spectral_pars[par_name]['scale']
         return float(val)*float(scale)
@@ -590,8 +593,8 @@ class Source(Model):
 
         data.setdefault('SpatialModel','PointSource')
         data.setdefault('SpectrumType','PowerLaw')
-        data.setdefault('SpatialType',gtutils.get_spatial_type(data['SpatialModel']))
-        data.setdefault('SourceType',gtutils.get_source_type(data['SpatialType']))
+        data.setdefault('SpatialType',model_utils.get_spatial_type(data['SpatialModel']))
+        data.setdefault('SourceType',model_utils.get_source_type(data['SpatialType']))
 
         super(Source, self).__init__(name, data)
 
@@ -716,8 +719,7 @@ class Source(Model):
     def load_from_catalog(self):
         """Load spectral parameters from catalog values."""
 
-        self._data['spectral_pars'] = \
-            gtutils.get_function_defaults(self['SpectrumType'])
+        self._data['spectral_pars'] = get_function_defaults(self['SpectrumType'])
         sp = self['spectral_pars']
 
         catalog = self.data.get('catalog', {})
@@ -733,9 +735,9 @@ class Source(Model):
             sp['Index']['min'] = min(0.0, sp['Index']['value'] - 1.0)
             sp['Index']['scale'] = -1.0
 
-            sp['Prefactor'] = gtutils.make_parameter_dict(sp['Prefactor'])
-            sp['Scale'] = gtutils.make_parameter_dict(sp['Scale'], True)
-            sp['Index'] = gtutils.make_parameter_dict(sp['Index'])
+            sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
+            sp['Scale'] = make_parameter_dict(sp['Scale'], True)
+            sp['Index'] = make_parameter_dict(sp['Index'])
 
         elif self['SpectrumType'] == 'LogParabola':
 
@@ -745,10 +747,10 @@ class Source(Model):
             sp['alpha']['value'] = catalog['Spectral_Index']
             sp['beta']['value'] = catalog['beta']
 
-            sp['norm'] = gtutils.make_parameter_dict(sp['norm'])
-            sp['Eb'] = gtutils.make_parameter_dict(sp['Eb'], True)
-            sp['alpha'] = gtutils.make_parameter_dict(sp['alpha'])
-            sp['beta'] = gtutils.make_parameter_dict(sp['beta'])
+            sp['norm'] = make_parameter_dict(sp['norm'])
+            sp['Eb'] = make_parameter_dict(sp['Eb'], True)
+            sp['alpha'] = make_parameter_dict(sp['alpha'])
+            sp['beta'] = make_parameter_dict(sp['beta'])
 
         elif self['SpectrumType'] == 'PLSuperExpCutoff':
 
@@ -766,11 +768,11 @@ class Source(Model):
             sp['Scale']['value'] = catalog['Pivot_Energy']
             sp['Cutoff']['value'] = catalog['Cutoff']
 
-            sp['Prefactor'] = gtutils.make_parameter_dict(sp['Prefactor'])
-            sp['Scale'] = gtutils.make_parameter_dict(sp['Scale'], True)
-            sp['Index1'] = gtutils.make_parameter_dict(sp['Index1'])
-            sp['Index2'] = gtutils.make_parameter_dict(sp['Index2'])
-            sp['Cutoff'] = gtutils.make_parameter_dict(sp['Cutoff'])
+            sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
+            sp['Scale'] = make_parameter_dict(sp['Scale'], True)
+            sp['Index1'] = make_parameter_dict(sp['Index1'])
+            sp['Index2'] = make_parameter_dict(sp['Index2'])
+            sp['Cutoff'] = make_parameter_dict(sp['Cutoff'])
 
         else:
             raise Exception('Unsupported spectral type:' + self['SpectrumType'])
@@ -824,7 +826,7 @@ class Source(Model):
 
         self._data['SpatialModel'] = spatial_model
         self._data['SpatialWidth'] = spatial_width
-        self._data['SpatialType'] = gtutils.get_spatial_type(self['SpatialModel'])
+        self._data['SpatialType'] = get_spatial_type(self['SpatialModel'])
         self._data['spatial_pars'] = {}
         self._init_spatial_pars()
 
@@ -880,16 +882,17 @@ class Source(Model):
         src_dict.setdefault('SpatialModel','PointSource')
         src_dict.setdefault('Spectrum_Filename',None)
         spectrum_type = src_dict.setdefault('SpectrumType','PowerLaw')
-        src_dict.setdefault('SpatialType',
-                            gtutils.get_spatial_type(src_dict['SpatialModel']))
+        spatial_type = \
+            src_dict.setdefault('SpatialType',
+                                get_spatial_type(src_dict['SpatialModel']))
         
         spectral_pars = \
             src_dict.setdefault('spectral_pars',
-                                gtutils.get_function_defaults(spectrum_type))
+                                get_function_defaults(spectrum_type))
 
         spatial_pars = \
             src_dict.setdefault('spatial_pars',
-                                gtutils.get_function_defaults(src_dict['SpatialType']))
+                                get_function_defaults(spatial_type))
 
         if 'file' in src_dict:
             src_dict['Spectrum_Filename'] = src_dict.pop('file')
@@ -924,15 +927,14 @@ class Source(Model):
                 spatial_pars[k].update(src_dict.pop(k))
 
         for k, v in spectral_pars.items():
-            spectral_pars[k] = gtutils.make_parameter_dict(spectral_pars[k])
+            spectral_pars[k] = make_parameter_dict(spectral_pars[k])
 
         for k, v in spatial_pars.items():
-            spatial_pars[k] = gtutils.make_parameter_dict(spatial_pars[k],
-                                                          rescale=False)
+            spatial_pars[k] = make_parameter_dict(spatial_pars[k],
+                                                  rescale=False)
 
-        src_dict['spectral_pars'] = gtutils.cast_pars_dict(spectral_pars)
-        src_dict['spatial_pars'] = gtutils.cast_pars_dict(spatial_pars)
-        #        validate_config(src_dict,default_src_dict)
+        src_dict['spectral_pars'] = cast_pars_dict(spectral_pars)
+        src_dict['spatial_pars'] = cast_pars_dict(spatial_pars)
 
         if 'name' in src_dict:
             name = src_dict['name']
@@ -960,8 +962,8 @@ class Source(Model):
         spectral_pars = utils.load_xml_elements(root, 'spectrum/parameter')
         spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
 
-        spectral_pars = gtutils.cast_pars_dict(spectral_pars)
-        spatial_pars = gtutils.cast_pars_dict(spatial_pars)
+        spectral_pars = cast_pars_dict(spectral_pars)
+        spatial_pars = cast_pars_dict(spatial_pars)
 
         src_type = root.attrib['type']
         spatial_type = spat['type']
@@ -1900,7 +1902,9 @@ class ROIModel(fermipy.config.Configurable):
 
 
     def create_table(self):
-
+        """Create an astropy Table object with the contents of the ROI model.
+        """
+        
         scan_shape = (1,)
         for src in self._srcs:
             scan_shape = max(scan_shape,src['dloglike_scan'].shape)
@@ -1926,7 +1930,7 @@ class ROIModel(fermipy.config.Configurable):
             if 'spectrum_type' in params:
                 del params['spectrum_type']
 
-            param_names = gtutils.get_function_par_names(s['SpectrumType'])
+            param_names = get_function_par_names(s['SpectrumType'])
             for i, k in enumerate(param_names[:6]):
 
                 row_dict['param_names'][i] = k
