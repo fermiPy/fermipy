@@ -38,6 +38,33 @@ def fill_evclass_hist(evts, axes):
     pass
 
 
+def calc_eff(ns0,nb0,ns1,nb1,alpha, sum_axes=None):
+
+    if sum_axes:
+        ns0 = np.apply_over_axes(np.sum,ns0,axes=sum_axes)
+        nb0 = np.apply_over_axes(np.sum,nb0,axes=sum_axes)
+        ns1 = np.apply_over_axes(np.sum,ns1,axes=sum_axes)
+        nb1 = np.apply_over_axes(np.sum,nb1,axes=sum_axes)
+        
+    shape = np.broadcast(ns0,nb0,ns1,nb1).shape
+    eff = np.zeros(shape)
+    eff_var = np.zeros(shape)
+
+    s0 = ns0-alpha*nb0
+    s1 = ns1-alpha*nb1
+    mask = (s0*np.ones(shape) > 0)
+    mask &= (s1*np.ones(shape) > 0)
+
+    s0[s0<=0] = 1.0
+    eff = s1/s0
+    eff_var = (((ns0-ns1+alpha**2*(nb0-nb1))*eff**2 +
+                (ns1+alpha**2*nb1)*(1-eff)**2)/s0**2)
+    
+    eff[~mask] = 0.0
+    eff_var[~mask] = 0.0
+    return eff, eff_var
+
+
 class Accumulator(object):
 
     defaults = {
@@ -58,8 +85,12 @@ class Accumulator(object):
         self._psf_scale = scale
         self._sep_bins = self._xsep_bins[None,:]*self._psf_scale[:,None]
         self._domega = np.pi*(self._sep_bins[:,1:]**2 - self._sep_bins[:,:-1]**2)
-        
+        self._hists = {}
         self.init()
+
+    @property
+    def hists(self):
+        return self._hists
         
     def init(self):
 
@@ -70,10 +101,10 @@ class Accumulator(object):
         
         self._hists = dict(evclass_on = np.zeros(evclass_shape),
                            evclass_off = np.zeros(evclass_shape),
-                           evclass_alpha = np.zeros([40,10]),
+                           evclass_alpha = np.zeros([1,40,1]),
                            evtype_on = np.zeros(evtype_shape),
                            evtype_off = np.zeros(evtype_shape),
-                           evtype_alpha = np.zeros([40,10]),
+                           evtype_alpha = np.zeros([1,1,40,1]),
                            evclass_psf_on = np.zeros(evclass_psf_shape),
                            evclass_psf_off = np.zeros(evclass_psf_shape),
                            evtype_psf_on = np.zeros(evtype_psf_shape),
@@ -83,12 +114,25 @@ class Accumulator(object):
                            
     def process(self,filename):
 
-        tab = Table.read(filename)
-
+        tab = Table.read(filename,'EVENTS')
+        self.load_events(tab)
+        
         # Loop over sources
         #for skydir in self._skydirs:
         
 
+    def load_hists(self,filename):
+
+        tab = Table.read(filename,'DATA')
+
+        for k in self.hists.keys():
+
+            if k in ['evclass_on','evclass_off']:
+                self.hists[k] += np.array(tab[k.upper()][0])
+            elif k in ['evclass_alpha']:
+                self.hists[k] = np.array(tab[k.upper()][0])
+            
+        
     def write(self, outfile, compress=True):
 
         cols = [Column(name='E_MIN', dtype='f8', data=self._energy_bins[None,:-1], unit='MeV'),
@@ -100,17 +144,9 @@ class Accumulator(object):
     
         tab0 = Table(cols)
 
-        cols = [Column(name='EVCLASS_ON', dtype='f8',data=self._hists['evclass_on'][None,...]),
-                Column(name='EVCLASS_OFF', dtype='f8',data=self._hists['evclass_off'][None,...]),
-                Column(name='EVCLASS_ALPHA', dtype='f8',data=self._hists['evclass_alpha'][None,...]),
-                Column(name='EVTYPE_ON', dtype='f8',data=self._hists['evtype_on'][None,...]),
-                Column(name='EVTYPE_OFF', dtype='f8',data=self._hists['evtype_off'][None,...]),
-                Column(name='EVTYPE_ALPHA', dtype='f8',data=self._hists['evtype_alpha'][None,...]),
-                Column(name='EVCLASS_PSF_ON', dtype='f8',data=self._hists['evclass_psf_on'][None,...]),
-                Column(name='EVCLASS_PSF_OFF', dtype='f8',data=self._hists['evclass_psf_off'][None,...]),
-                Column(name='EVTYPE_PSF_ON', dtype='f8',data=self._hists['evtype_psf_on'][None,...]),
-                Column(name='EVTYPE_PSF_OFF', dtype='f8',data=self._hists['evtype_psf_off'][None,...]),
-                ]
+        cols = []
+        for k, v in self.hists.items():
+            cols += [Column(name=k, dtype='f8',data=v[None,...])]
 
         tab1 = Table(cols)
         
@@ -128,6 +164,8 @@ class Accumulator(object):
 
     def calc_sep(self, tab, src_list):
 
+        print('calculating separations')
+        
         src_tab = catalog.Catalog3FGL().table
         rows = utils.find_rows_by_string(src_tab,src_list,['Source_Name','ASSOC1','ASSOC2'])
         src_skydir = SkyCoord(rows['RAJ2000'],rows['DEJ2000'],unit='deg')
@@ -147,7 +185,9 @@ class Accumulator(object):
 
         self.fill_alpha()
         
-        for sep, xsep, cth in zip(evt_sep,evt_xsep, evt_ctheta)[:10]:
+        for sep, xsep, cth in zip(evt_sep, evt_xsep, evt_ctheta):
+
+            print('loading source')
             
             tab['SEP'] = sep
             tab['XSEP'] = xsep
@@ -155,17 +195,19 @@ class Accumulator(object):
             
             tab_on, tab_off = self.create_onoff(tab)
 
+            print('create hists')
+            
             hists['evclass_psf_on'] += self.create_hist(tab_on,fill_sep=True)
             hists['evclass_psf_off'] += self.create_hist(tab_off,fill_sep=True)
             hists['evtype_psf_on'] += self.create_hist(tab_on,fill_sep=True, fill_evtype=True)            
-            hists['evtype_psf_off'] += self.create_hist(tab_off,fill_sep=True, fill_evtype=True)                        
+            hists['evtype_psf_off'] += self.create_hist(tab_off,fill_sep=True, fill_evtype=True)
             hists['evclass_on'] += self.create_hist(tab_on)
             hists['evclass_off'] += self.create_hist(tab_off)
             hists['evtype_on'] += self.create_hist(tab_on,fill_evtype=True)
             hists['evtype_off'] += self.create_hist(tab_off,fill_evtype=True)
     
     def create_hist(self, tab, fill_sep=False, fill_evtype=False):
-        """Load events from a table into a table."""
+        """Load events from a table into a histogram."""
         
         nevt = len(tab)        
         evclass = tab['EVENT_CLASS'][:,::-1]
@@ -208,6 +250,37 @@ class Accumulator(object):
             
         return h
 
+    def calc_eff(self):
+        """Calculate the efficiency."""
+        
+        hists = self.hists
+
+        cth_axis_idx = dict(evclass=2,evtype=3)
+        for k in ['evclass','evtype']:
+
+            if k == 'evclass':
+                ns0 = hists['evclass_on'][4][None,...]
+                nb0 = hists['evclass_off'][4][None,...]
+            else:
+                ns0 = hists['evclass_on'][4][None,None,...]
+                nb0 = hists['evclass_off'][4][None,None,...]
+
+            eff, eff_var = calc_eff(ns0, nb0,
+                                    hists['%s_on'%k], hists['%s_off'%k],
+                                    hists['%s_alpha'%k])
+            hists['%s_cth_eff'%k] = eff
+            hists['%s_cth_eff_var'%k] = eff_var
+
+            eff, eff_var = calc_eff(ns0, nb0,
+                                    hists['%s_on'%k], hists['%s_off'%k],
+                                    hists['%s_alpha'%k],
+                                    sum_axes=[cth_axis_idx[k]])
+            hists['%s_eff'%k] = eff
+            hists['%s_eff_var'%k] = eff_var
+
+        
+        
+        
 
 class GRAccumulator(Accumulator):
 
@@ -215,10 +288,13 @@ class GRAccumulator(Accumulator):
         super(GRAccumulator, self).__init__()
         self._type = 'ridge'
 
-    def load(self, tab):
-        pass
+    def create_onoff(self, tab):
 
-
+        mon = np.abs(tab['GLAT']) < 5.0
+        moff = np.abs(tab['GLAT']) > 60.0
+        return tab[mon], tab[moff]
+    
+        
 class AGNAccumulator(Accumulator):
 
     def __init__(self):
@@ -238,7 +314,10 @@ class AGNAccumulator(Accumulator):
 
         self._hists['evclass_alpha'][...] = 2.0**2/(4.0**2-2.0**2)
         self._hists['evtype_alpha'][...] = 2.0**2/(4.0**2-2.0**2)
-            
+
+
+        
+        
 class PSRAccumulator(Accumulator):
 
     def __init__(self):
