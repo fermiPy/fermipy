@@ -11,6 +11,7 @@ import scipy.optimize
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
 import scipy.special as special
+from numpy.core import defchararray
 from astropy.extern import six
 
 
@@ -143,6 +144,42 @@ def match_regex_list(patterns, string):
             return True
 
     return False
+
+
+def find_rows_by_string(tab, names, colnames=['assoc']):
+    """Find the rows in a table ``tab`` that match at least one of the
+    strings in ``names``.  This method ignores whitespace and case
+    when matching strings.
+
+    Parameters
+    ----------
+    tab : `astropy.table.Table`
+       Table that will be searched.
+
+    names : list
+       List of strings.
+
+    colname : str
+       Name of the table column that will be searched for matching string.
+
+    Returns
+    -------
+    outtab : `astropy.table.Table`
+       Table containing the subset of rows with matching strings.
+
+    """
+    mask = np.empty(len(tab),dtype=bool); mask.fill(False)
+    names = [name.lower().replace(' ', '') for name in names]
+
+
+    for colname in colnames:    
+        col = tab[[colname]].copy()    
+        col[colname] = defchararray.replace(defchararray.lower(col[colname]),
+                               ' ', '')
+        for name in names:
+            mask |= col[colname] == name
+    #mask = create_mask(col, {colname: names})
+    return tab[mask]
 
 
 def join_strings(strings, sep='_'):
@@ -733,6 +770,33 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
     o['eccentricity2'] = np.sqrt(a ** 2 / b ** 2 - 1)
 
     return o
+
+
+def split_bin_edges(edges, npts=2):
+    """Subdivide an array of bins by splitting each bin into ``npts``
+    subintervals.
+
+    Parameters
+    ----------
+    edges : `~numpy.ndarray`
+        Bin edge array.
+
+    npts : int
+        Number of intervals into which each bin will be subdivided.
+
+    Returns
+    -------
+    edges : `~numpy.ndarray`
+        Subdivided bin edge array.
+
+    """
+    if npts < 2:
+        return edges
+
+    x = (edges[:-1, None] +
+         (edges[1:, None] - edges[:-1, None]) *
+         np.linspace(0.0, 1.0, npts + 1)[None, :])
+    return np.unique(np.ravel(x))
 
 
 def center_to_edge(center):

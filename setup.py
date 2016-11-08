@@ -31,6 +31,7 @@ setup(
         'fermipy-flux-sensitivity = fermipy.scripts.flux_sensitivity:main',
         'fermipy-run-tempo = fermipy.scripts.run_tempo:main',
         'fermipy-select = fermipy.scripts.select_data:main',
+        'fermipy-validate = fermipy.scripts.validate:main',
         'fermipy-coadd = fermipy.merge_utils:main',
     ]},
     install_requires=[

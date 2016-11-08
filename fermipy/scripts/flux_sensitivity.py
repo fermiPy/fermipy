@@ -25,12 +25,16 @@ class SensitivityCalc(object):
         Parameters
         ----------
         gdiff : `~fermipy.skymap.SkyMap`
-            Galactic diffuse map cube function.
+            Galactic diffuse map cube object.
 
         iso : `~numpy.ndarray`
-            Array of isotropic intensity vs. energy.
+            Array of background isotropic intensity vs. energy.
 
         ltc : `~fermipy.irfs.LTCube`
+
+        event_class : str
+
+        event_types : list        
 
         """
         self._gdiff = gdiff
@@ -48,9 +52,9 @@ class SensitivityCalc(object):
         ebins = 10**np.linspace(1.0,6.0,5*8+1)
         skydir = SkyCoord(0.0,0.0,unit='deg')        
         for et in self._event_types:
-            self._psf += [irfs.PSFModel(skydir.icrs, self._ltc,
-                                        self._event_class, et,
-                                        np.log10(ebins))]
+            self._psf += [irfs.PSFModel.create(skydir.icrs, self._ltc,
+                                               self._event_class, et,
+                                               ebins)]
             self._exp += [irfs.ExposureMap.create(self._ltc,
                                                   self._event_class, et,
                                                   ebins)]
@@ -64,7 +68,8 @@ class SensitivityCalc(object):
         return self._ectr
     
     def compute_counts(self, skydir, fn, ebins=None):
-        """Compute signal and background counts.
+        """Compute signal and background counts for a point source at
+        position ``skydir`` with spectral parameterization ``fn``.
 
         Parameters
         ----------
@@ -77,6 +82,8 @@ class SensitivityCalc(object):
             separation, and event type.
 
         bkg : `~numpy.ndarray`
+            Background counts array.  Dimensions are energy, angular
+            separation, and event type.
 
         """
 
@@ -103,7 +110,11 @@ class SensitivityCalc(object):
         return sig, bkg
 
     def diff_flux_threshold(self, skydir, fn, ts_thresh, min_counts):
+        """Compute the differential flux threshold for a point source at
+        position ``skydir`` with spectral parameterization ``fn``.
 
+        """
+        
         sig, bkg = self.compute_counts(skydir, fn)
     
         norms = irfs.compute_norm(sig, bkg, ts_thresh,
@@ -121,7 +132,11 @@ class SensitivityCalc(object):
                     dnde=dnde, e2dnde=e2dnde)
 
     def int_flux_threshold(self, skydir, fn, ts_thresh, min_counts):
+        """Compute the integral flux threshold for a point source at
+        position ``skydir`` with spectral parameterization ``fn``.
 
+        """
+        
         ebins = 10**np.linspace(np.log10(self.ebins[0]),
                                 np.log10(self.ebins[-1]),32)
         ectr = np.sqrt(ebins[0]*ebins[-1])
@@ -212,9 +227,7 @@ def main():
         if args.obs_time_yr is None:
             raise Exception('No observation time defined.')
 
-        ltc = irfs.LTCube.create_empty(0, args.obs_time_yr * 365 * 24 * 3600.,
-                                       args.obs_time_yr * 365 * 24 * 3600.)
-        ltc._counts *= ltc.domega[:, np.newaxis] / (4. * np.pi)
+        ltc = irfs.LTCube.create_from_obs_time( args.obs_time_yr * 365 * 24 * 3600. )
     else:
         ltc = irfs.LTCube.create(args.ltcube)
         if args.obs_time_yr is not None:
