@@ -1090,7 +1090,7 @@ class ROIModel(fermipy.config.Configurable):
 
         >>> skydir = astropy.coordinates.SkyCoord(0.0,0.0,unit='deg')
         >>> roi = ROIModel({'catalogs' : ['3FGL'],'src_roiwidth' : 10.0},skydir=skydir)
-        >>> print roi
+        >>> print(roi)
         name                SpatialModel   SpectrumType     offset        ts       npred
         --------------------------------------------------------------------------------
         3FGL J2357.3-0150   PointSource    PowerLaw          1.956       nan         0.0
@@ -1100,7 +1100,21 @@ class ROIModel(fermipy.config.Configurable):
 
         * Print a summary of an individual source
 
-        >>> print roi['3FGL J0006.2+0135']
+        >>> print(roi['3FGL J0006.2+0135'])
+        Name           : 3FGL J0006.2+0135
+        Associations   : ['3FGL J0006.2+0135']
+        RA/DEC         :      1.572/     1.585
+        GLON/GLAT      :    100.400/   -59.297
+        TS             : nan
+        Npred          : nan
+        Flux           :       nan +/-      nan
+        EnergyFlux     :       nan +/-      nan
+        SpatialModel   : PointSource
+        SpectrumType   : PowerLaw
+        Spectral Parameters
+        Index          :         -2 +/-        nan
+        Scale          :       1000 +/-        nan
+        Prefactor      :      1e-12 +/-        nan
 
         * Get the SkyCoord for a source
 
@@ -1108,7 +1122,11 @@ class ROIModel(fermipy.config.Configurable):
 
         * Loop over all sources and print their names
 
-        >>> for s in roi.sources: print s.name
+        >>> for s in roi.sources: print(s.name)
+        3FGL J2357.3-0150
+        3FGL J0006.2+0135
+        3FGL J0016.3-0013
+        3FGL J0014.3-0455
 
     """
 
@@ -1146,7 +1164,7 @@ class ROIModel(fermipy.config.Configurable):
 
         self._srcs = []
         self._diffuse_srcs = []
-        self._src_dict = collections.defaultdict(set)
+        self._src_dict = collections.defaultdict(list)
         self._src_radius = []
 
         self.load(coordsys=coordsys)
@@ -1222,7 +1240,7 @@ class ROIModel(fermipy.config.Configurable):
         """Clear the contents of the ROI."""
         self._srcs = []
         self._diffuse_srcs = []
-        self._src_dict = collections.defaultdict(set)
+        self._src_dict = collections.defaultdict(list)
         self._src_radius = []
 
     def load_diffuse_srcs(self):
@@ -1351,6 +1369,11 @@ class ROIModel(fermipy.config.Configurable):
 
         self.logger.debug('Finished')
 
+    def _add_source_alias(self, name, src):
+
+        if src not in self._src_dict[name]:
+            self._src_dict[name] += [src]
+        
     def load_source(self, src, build_index=True, merge_sources=True,
                     **kwargs):
         """
@@ -1395,17 +1418,17 @@ class ROIModel(fermipy.config.Configurable):
                 match_srcs[0].add_name(src.name)
                 self.logger.debug('Skipping source model for %s' % src.name)
 
-            self._src_dict[src.name.replace(' ', '').lower()].add(match_srcs[0])
-
+            self._add_source_alias(src.name.replace(' ', '').lower(),
+                                   match_srcs[0])
             return
         elif len(match_srcs) > 2:
             self.logger.warning('Multiple sources matching %s' % name)
             return
-
-        self._src_dict[src.name].add(src)
-
+        
+        self._add_source_alias(src.name,src)
+        
         for name in src.names:
-            self._src_dict[name.replace(' ', '').lower()].add(src)
+            self._add_source_alias(name.replace(' ', '').lower(),src)
 
         if isinstance(src, Source):
             self._srcs.append(src)
@@ -1421,19 +1444,20 @@ class ROIModel(fermipy.config.Configurable):
         columns defined in the assoc_xmatch_columns parameter.
         """
 
-        srcs = set()
+        srcs = []
 
         names = [src.name]
-        for col in self.config['assoc_xmatch_columns']:
+        for col in ['ASSOC_GAM1']:
             if col in src.assoc and src.assoc[col]:
                 names += [src.assoc[col]]
 
         for name in names:
             name = name.replace(' ', '').lower()
-            if name in self._src_dict and self._src_dict[name]:
-                srcs.update(self._src_dict[name])
-
-        return list(srcs)
+            if name not in self._src_dict:
+                continue                
+            srcs += [s for s in self._src_dict[name] if s not in srcs]
+                
+        return srcs
 
     def load(self, **kwargs):
         """Load both point source and diffuse components."""

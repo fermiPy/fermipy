@@ -41,11 +41,7 @@ def join_tables(t0, t1, key0, key1):
 def strip_columns(tab):
     """Strip whitespace from string columns."""
     for colname in tab.colnames:
-
-        print(colname,not tab[colname].dtype, tab[colname].dtype.type, tab[colname].dtype.kind)
-        
         if tab[colname].dtype.kind in ['S','U']:
-            print('strip',colname)        
             tab[colname] = np.core.defchararray.strip(tab[colname])
 
 

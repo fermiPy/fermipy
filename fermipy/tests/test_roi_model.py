@@ -22,17 +22,20 @@ def tmppath(request, tmpdir_factory):
 
 
 def test_load_3fgl_catalog_fits():
-    rm = roi_model.ROIModel(catalogs=['3FGL'])
-    assert len(rm.sources) == 3034
+    skydir = astropy.coordinates.SkyCoord(0.0,0.0,unit='deg')
+    rm = roi_model.ROIModel(catalogs=['3FGL'],skydir=skydir,src_radius=20.0)
+    assert len(rm.sources) == 78
 
-    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.fit'])
-    assert len(rm.sources) == 3034
+    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.fit'],skydir=skydir,src_radius=20.0)
+    assert len(rm.sources) == 78
 
 
 def test_load_3fgl_catalog_xml():
+    skydir = astropy.coordinates.SkyCoord(0.0,0.0,unit='deg')
     rm = roi_model.ROIModel(catalogs=['gll_psc_v16.xml'],
-                            extdir='Extended_archive_v15')
-    assert len(rm.sources) == 3034
+                            extdir='Extended_archive_v15',
+                            skydir=skydir,src_radius=20.0)
+    assert len(rm.sources) == 78
 
 
 def test_load_2fhl_catalog_fits():
