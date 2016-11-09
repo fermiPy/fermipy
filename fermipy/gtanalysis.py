@@ -8,9 +8,6 @@ import logging
 import tempfile
 import filecmp
 import numpy as np
-# pyLikelihood needs to be imported before astropy to avoid CFITSIO header
-# error
-import pyLikelihood as pyLike
 from astropy.io import fits
 import fermipy
 import fermipy.defaults as defaults
@@ -40,6 +37,7 @@ import FluxDensity
 from LikelihoodState import LikelihoodState
 from fermipy.gtutils import BinnedAnalysis, SummedLikelihood
 import BinnedAnalysis as ba
+import pyLikelihood as pyLike
 
 norm_parameters = {
     'ConstantValue': ['Value'],
@@ -4696,10 +4694,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._ltc = irfs.LTCube.create(self.files['ltcube'])
 
         self.logger.debug('Creating PSF model')
-        self._psf = irfs.PSFModel(self.roi.skydir, self._ltc,
-                                  self.config['gtlike']['irfs'],
-                                  self.config['selection']['evtype'],
-                                  self.log_energies)
+        self._psf = irfs.PSFModel.create(self.roi.skydir, self._ltc,
+                                         self.config['gtlike']['irfs'],
+                                         self.config['selection']['evtype'],
+                                         self.energies)
 
         # Run gtbin
         if self.projtype == "WCS":
