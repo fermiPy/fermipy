@@ -25,6 +25,7 @@ from fermipy.model_utils import cast_pars_dict
 from fermipy.model_utils import get_function_defaults
 from fermipy.model_utils import get_spatial_type
 from fermipy.model_utils import get_function_norm_par_name
+from fermipy.model_utils import get_function_par_names
 
 def create_source_table(scan_shape):
     """Create an empty source table.

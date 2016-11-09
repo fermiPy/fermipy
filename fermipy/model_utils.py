@@ -96,25 +96,36 @@ def get_spatial_type(spatial_model):
         return spatial_model
 
     
-def create_spectral_pars_dict(spectrum_type,spectral_pars=None):
-    """Create a dictionary for the spectral parameters of a source."""
+def create_pars_dict(name,pars_dict=None):
+    """Create a dictionary for the parameters of a function.
+
+    Parameters
+    ----------
+    name : str
+        Name of the function.
+
+    pars_dict : dict    
+        Existing parameter dict that will be merged with the
+        default dictionary created by this method.
+        
+    """
     
-    pars_dict = get_function_defaults(spectrum_type)
+    default_pars_dict = get_function_defaults(name)
 
-    if spectral_pars is None:
-        spectral_pars = {}
+    if pars_dict is None:
+        pars_dict = {}
     else:
-        spectral_pars = copy.deepcopy(spectral_pars)
+        pars_dict = copy.deepcopy(pars_dict)
 
-    for k, v in spectral_pars.items():
+    for k, v in pars_dict.items():
 
-        if not k in pars_dict:
+        if not k in default_pars_dict:
             continue
 
         if not isinstance(v,dict):
-            spectral_pars[k] = {'name' : k, 'value' : v}
+            pars_dict[k] = {'name' : k, 'value' : v}
 
-    pars_dict = utils.merge_dict(pars_dict,spectral_pars)
+    pars_dict = utils.merge_dict(default_pars_dict,pars_dict)
 
     for k, v in pars_dict.items():
         pars_dict[k] = make_parameter_dict(v)

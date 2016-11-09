@@ -17,6 +17,7 @@ import SummedLikelihood
 
 from fermipy import utils
 from fermipy import model_utils
+from fermipy.model_utils import create_pars_dict
 
 evtype_string = {
     4: 'PSF0',
@@ -184,14 +185,14 @@ def create_spectrum_from_dict(spectrum_type, spectral_pars=None, fn=None):
 
     """
 
-    pars = model_utils.create_spectral_pars_dict(spectrum_type, spectral_pars)
+    pars = create_pars_dict(spectrum_type, spectral_pars)
 
     if fn is None:
         fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
 
     for k, v in pars.items():
 
-        v = make_parameter_dict(v)
+        v = model_utils.make_parameter_dict(v)
 
         par = fn.getParam(str(k))
 
