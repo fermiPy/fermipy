@@ -44,12 +44,9 @@ def strip_columns(tab):
 
         print(colname,not tab[colname].dtype, tab[colname].dtype.type, tab[colname].dtype.kind)
         
-        if not tab[colname].dtype.kind == 'S':
-            continue
-
-        print('strip',colname)
-        
-        tab[colname] = np.core.defchararray.strip(tab[colname])
+        if tab[colname].dtype.kind in ['S','U']:
+            print('strip',colname)        
+            tab[colname] = np.core.defchararray.strip(tab[colname])
 
 
 def row_to_dict(row):
@@ -57,7 +54,7 @@ def row_to_dict(row):
     o = {}
     for colname in row.colnames:
 
-        if row[colname].dtype.kind == 'S':
+        if row[colname].dtype.kind in ['S','U']:
             o[colname] = str(row[colname])
         else:
             o[colname] = row[colname]
