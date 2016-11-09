@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import xml.etree.cElementTree as ElementTree
 from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
+from astropy.coordinates import SkyCoord
 from fermipy.tests.utils import requires_dependency
 
 try:
@@ -22,7 +23,7 @@ def tmppath(request, tmpdir_factory):
 
 
 def test_load_3fgl_catalog_fits():
-    skydir = astropy.coordinates.SkyCoord(0.0,0.0,unit='deg')
+    skydir = SkyCoord(0.0,0.0,unit='deg')
     rm = roi_model.ROIModel(catalogs=['3FGL'],skydir=skydir,src_radius=20.0)
     assert len(rm.sources) == 78
 
@@ -31,7 +32,7 @@ def test_load_3fgl_catalog_fits():
 
 
 def test_load_3fgl_catalog_xml():
-    skydir = astropy.coordinates.SkyCoord(0.0,0.0,unit='deg')
+    skydir = SkyCoord(0.0,0.0,unit='deg')
     rm = roi_model.ROIModel(catalogs=['gll_psc_v16.xml'],
                             extdir='Extended_archive_v15',
                             skydir=skydir,src_radius=20.0)
