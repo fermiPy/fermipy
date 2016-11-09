@@ -23,7 +23,6 @@ import fermipy.skymap as skymap
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 import fermipy.sed as sed
-import fermipy.lightcurve as lightcurve
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
@@ -379,7 +378,7 @@ def filter_dict(d, val):
 
 class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
-                 SourceFinder, lightcurve.LightCurve):
+                 SourceFinder):
     """High-level analysis interface that manages a set of analysis
     component objects.  Most of the functionality of the Fermipy
     package is provided through the methods of this class.  The class
@@ -402,7 +401,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'tscube': defaults.tscube,
                 'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
-                'lightcurve': defaults.lightcurve,
                 'extension': defaults.extension,
                 'localize': defaults.localize,
                 'roiopt': defaults.roiopt,
@@ -1475,7 +1473,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return srcs
 
     def free_sources(self, free=True, pars=None, cuts=None,
-                     distance=None, skydir=None, minmax_ts=None, minmax_npred=None, minmax_var=None,
+                     distance=None, skydir=None, minmax_ts=None, minmax_npred=None,
                      square=False, exclude_diffuse=False, **kwargs):
         """Free or fix sources in the ROI model satisfying the given
         selection.  When multiple selections are defined, the selected
@@ -1519,14 +1517,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             either min or max are None then only a lower (upper) bound
             will be applied.  If this parameter is none no selection
             will be applied.
-
-        minmax_var:  list
-        Free sources that have variability index in the range [min,max].
-        If either min or max are none then only a lower (upper) bound
-        will be applied. If this paramater is none no selection will be applied
-
-       
-        
 
         square : bool
             Switch between applying a circular or square (ROI-like)
