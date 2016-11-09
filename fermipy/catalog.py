@@ -42,11 +42,24 @@ def strip_columns(tab):
     """Strip whitespace from string columns."""
     for colname in tab.colnames:
 
-        print(colname,not tab[colname].dtype, tab[colname].dtype.type, tab[colname].dtype.kind)
+        print(colname,not tab[colname].dtype, tab[colname].dtype.type)
         
         if not tab[colname].dtype.kind == 'S':
             continue
         tab[colname] = np.core.defchararray.strip(tab[colname])
+
+
+def row_to_dict(row):
+    """Convert a table row to a dictionary."""
+    o = {}
+    for colname in row.colnames:
+
+        if row[colname].dtype.kind == 'S':
+            o[colname] = str(row[colname])
+        else:
+            o[colname] = row[colname]
+
+    return o
 
 
 class Catalog(object):
