@@ -42,10 +42,13 @@ def strip_columns(tab):
     """Strip whitespace from string columns."""
     for colname in tab.colnames:
 
-        print(colname,not tab[colname].dtype, tab[colname].dtype.type)
+        print(colname,not tab[colname].dtype, tab[colname].dtype.type, tab[colname].dtype.kind)
         
         if not tab[colname].dtype.kind == 'S':
             continue
+
+        print('strip',colname)
+        
         tab[colname] = np.core.defchararray.strip(tab[colname])
 
 
