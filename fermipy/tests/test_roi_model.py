@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import xml.etree.cElementTree as ElementTree
 from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
+from astropy.coordinates import SkyCoord
 from fermipy.tests.utils import requires_dependency
 
 try:
@@ -12,7 +13,7 @@ except ImportError:
     pass
 
 # Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_dependency('Fermi ST')
+#pytestmark = requires_dependency('Fermi ST')
 
 
 @pytest.fixture(scope='module')
@@ -22,17 +23,21 @@ def tmppath(request, tmpdir_factory):
 
 
 def test_load_3fgl_catalog_fits():
-    rm = roi_model.ROIModel(catalogs=['3FGL'])
-    assert len(rm.sources) == 3034
+    skydir = SkyCoord(0.0,0.0,unit='deg',frame='galactic').icrs
+    rm = roi_model.ROIModel(catalogs=['3FGL'],skydir=skydir,src_radius=20.0)
+    assert len(rm.sources) == 175
 
-    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.fit'])
-    assert len(rm.sources) == 3034
+    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.fit'],skydir=skydir,
+                            src_radius=20.0)
+    assert len(rm.sources) == 175
 
 
 def test_load_3fgl_catalog_xml():
+    skydir = SkyCoord(0.0,0.0,unit='deg',frame='galactic').icrs
     rm = roi_model.ROIModel(catalogs=['gll_psc_v16.xml'],
-                            extdir='Extended_archive_v15')
-    assert len(rm.sources) == 3034
+                            extdir='Extended_archive_v15',
+                            skydir=skydir,src_radius=20.0)
+    assert len(rm.sources) == 175
 
 
 def test_load_2fhl_catalog_fits():
