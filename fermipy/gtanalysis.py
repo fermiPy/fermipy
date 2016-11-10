@@ -1113,12 +1113,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src = self.roi.get_source_by_name(name)
         src.update_data({'sed': None,
                          'extension': None,
-                         'localize': None,
-                         'class': None})
-
-        if 'CLASS1' in src['catalog']:
-            src['class'] = src['catalog']['CLASS1'].strip()
-
+                         'localize': None})
         src.update_data(self.get_src_model(name, True))
         return src
 

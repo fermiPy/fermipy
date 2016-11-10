@@ -79,7 +79,7 @@ def main():
             im,ax = ip.plot(zscale='log')
             outdata.append((im,ax))        
         except:
-            print "--ebin argument must be an integer or 'ALL'"
+            print("--ebin argument must be an integer or 'ALL'")
 
     if args.output is None:
         plt.show()

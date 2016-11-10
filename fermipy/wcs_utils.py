@@ -360,12 +360,16 @@ def wcs_to_coords(w, shape):
     return np.vstack((x, y, z))
 
 
+def get_map_skydir(filename,maphdu=0):
+    hdulist = fits.open(filename)
+    wcs = WCS(hdulist[maphdu].header)
+    return wcs_to_skydir(wcs)
+
+
 def wcs_to_skydir(wcs):
     lon = wcs.wcs.crval[0]
     lat = wcs.wcs.crval[1]
-
     coordsys = get_coordsys(wcs)
-
     if coordsys == 'GAL':
         return SkyCoord(lon, lat, unit='deg',
                         frame='galactic').transform_to('icrs')
