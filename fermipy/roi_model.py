@@ -218,6 +218,7 @@ class Model(object):
         self._data.setdefault('catalog', {})
         self._data['assoc'] = {}
         self._data['name'] = name
+        self._data['class'] = ''
         self._data['psf_scale_fn'] = None
         
         if data is not None:
@@ -232,6 +233,9 @@ class Model(object):
         self._names = [name]
         catalog = self._data['catalog']
 
+        if 'CLASS1' in catalog:
+            self['class'] = catalog['CLASS1'].strip()
+        
         for k in ROIModel.src_name_cols:
 
             if k not in catalog: 
@@ -1000,18 +1004,18 @@ class Source(Model):
         if src_type == 'PointSource' or \
                 spatial_type in ['SpatialMap','RadialGaussian','RadialDisk']:
 
-            if 'RA' in src_dict:
+            if 'RA' in xml_dict:
                 src_dict['RAJ2000'] = float(xml_dict['RA'])
                 src_dict['DEJ2000'] = float(xml_dict['DEC'])
             elif 'RA' in spatial_pars:
                 src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
                 src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
-            else:                
-                hdu = fits.open(
-                    os.path.expandvars(src_dict['Spatial_Filename']))
-                src_dict['RAJ2000'] = float(hdu[0].header['CRVAL1'])
-                src_dict['DEJ2000'] = float(hdu[0].header['CRVAL2'])
-
+            else:
+                skydir = wcs_utils.get_map_skydir(os.path.expandvars(
+                        src_dict['Spatial_Filename']))
+                src_dict['RAJ2000'] = skydir.ra.deg
+                src_dict['DEJ2000'] = skydir.dec.deg
+                
             radec = np.array([src_dict['RAJ2000'], src_dict['DEJ2000']])
 
             src_dict['spectral_pars'] = spectral_pars
@@ -1408,15 +1412,15 @@ class ROIModel(fermipy.config.Configurable):
 
         if len(match_srcs) == 1:
 
-            self.logger.debug('Found matching source for %s : %s'
-                              %( src.name, match_srcs[0].name ) )
-
+            self.logger.debug('Found matching source for %s : %s',
+                              src.name, match_srcs[0].name )
+            
             if merge_sources:
-                self.logger.debug('Updating source model for %s' % src.name)
+                self.logger.debug('Updating source model for %s', src.name)
                 match_srcs[0].update_from_source(src)
             else:
                 match_srcs[0].add_name(src.name)
-                self.logger.debug('Skipping source model for %s' % src.name)
+                self.logger.debug('Skipping source model for %s', src.name)
 
             self._add_source_alias(src.name.replace(' ', '').lower(),
                                    match_srcs[0])
@@ -1447,7 +1451,7 @@ class ROIModel(fermipy.config.Configurable):
         srcs = []
 
         names = [src.name]
-        for col in ['ASSOC_GAM1']:
+        for col in self.config['assoc_xmatch_columns']:
             if col in src.assoc and src.assoc[col]:
                 names += [src.assoc[col]]
 
@@ -1542,34 +1546,6 @@ class ROIModel(fermipy.config.Configurable):
         coordsys = kwargs.pop('coordsys', 'CEL')
         roi = ROIModel(config, skydir=skydir, coordsys=coordsys, **kwargs)
         return roi
-
-        srcs_dict = {}
-
-        if roi.config['src_radius'] is not None:
-            rsrc, srcs = roi.get_sources_by_position(skydir,
-                                                     roi.config['src_radius'])
-            for s, r in zip(srcs, rsrc):
-                srcs_dict[s.name] = (s, r)
-
-        if roi.config['src_roiwidth'] is not None:
-            rsrc, srcs = \
-                roi.get_sources_by_position(skydir,
-                                            roi.config['src_roiwidth'] / 2.,
-                                            square=True, coordsys=coordsys)
-
-            for s, r in zip(srcs, rsrc):
-                srcs_dict[s.name] = (s, r)
-
-        srcs = []
-        rsrc = []
-
-        for k, v in srcs_dict.items():
-            srcs.append(v[0])
-            rsrc.append(v[1])
-
-        return ROIModel(config, srcs=srcs,
-                        diffuse_srcs=roi._diffuse_srcs,
-                        skydir=skydir, **kwargs)
 
     @staticmethod
     def create_from_source(name, config, **kwargs):
@@ -1772,7 +1748,6 @@ class ROIModel(fermipy.config.Configurable):
         name : str
             Catalog name or path to a catalog FITS file.
         """
-
         self.logger.debug('Loading FITS catalog: %s'%name)
 
         coordsys = kwargs.get('coordsys', 'CEL')
@@ -1797,7 +1772,6 @@ class ROIModel(fermipy.config.Configurable):
 
         for i, (row, radec) in enumerate(zip(cat.table[m],
                                              cat.radec[m])):
-
             catalog_dict = catalog.row_to_dict(row)
             src_dict = {'catalog': catalog_dict}
             src_dict['Source_Name'] = row['Source_Name']
@@ -1998,6 +1972,13 @@ class ROIModel(fermipy.config.Configurable):
         for h in hdulist:
             h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
         hdulist.writeto(fitsfile, clobber=True)
+
+    def load_fits(self,fitsfile):
+        """Load the ROI model from a FITS file."""
+        #tab = Table.read(fitsfile)
+        self.load_fits_catalog(fitsfile)
+            
+        
 
 if __name__ == '__main__':
     roi = ROIModel()
