@@ -27,7 +27,7 @@ import pyLikelihood as pyLike
 
 class LightCurve(object):
 
-    def lightcurve(self, name, **kwargs):
+    def lightcurve(self, name, freesources, **kwargs):
         """Generate a lightcurve for the named source. The function will
         complete the basic analysis steps for each bin and perform a
         likelihood fit for each bin. Extracted values (along with
@@ -39,14 +39,8 @@ class LightCurve(object):
         name: str
             source name
 
-        prefix : str
-            Optional string that will be prepended to all output files
-
-        binning: float
-            user provided time binning in seconds
-
-        unbinned_analysis : bool
-           if true, perform an unbinned analysis
+        fitsources: dict
+            dict of sources to be left free in the fitting routine
 
 
         Returns
@@ -71,7 +65,7 @@ class LightCurve(object):
 
         self.logger.info('Computing Lightcurve for %s' % name)
 
-        o = self._make_lc(name, **config)
+        o = self._make_lc(name, freesources, **config)
         filename = utils.format_filename(self.workdir, 'lightcurve',
                                          prefix=[config['prefix'],
                                                  name.lower().replace(' ', '_')])
@@ -118,7 +112,7 @@ class LightCurve(object):
         hdulist = fits.HDUList([hdulist[0], hdulist[1]])
         fits_utils.write_fits(hdulist,filename,{'SRCNAME' : lc['name']})
     
-    def _make_lc(self, name, **config):
+    def _make_lc(self, name, freesources, **config):
 
         # make array of time values in MET
         if config['time_bins']:
@@ -130,7 +124,7 @@ class LightCurve(object):
         else:
             times = np.arange(self.config['selection']['tmin'],
                               self.config['selection']['tmax'],
-                              config['binsz'])
+                              config['binning'])
 
         # Output Dictionary
         o = {}
@@ -187,98 +181,99 @@ class LightCurve(object):
             gta.optimize(skip=['galdiff','isodiff'])
             
             # Start by fixing all paramters for sources with Variability Index <50
-            
-            gta.free_sources(free=False, minmax_var=[0,50], exclude_diffuse=True )
-                            
+
+            #fitting routine-
+            #  1.)   start by freeing target and provided list of sources, fix all else- if fit fails, fix all pars except norm and try again
+            #    2.)    if that fails to converge then try fixing low TS (<4) sources and then refit
+            #      3.)    if that fails to converge then try fixing low-moderate TS (<9) sources and then refit   
+            #        4.)    if that fails then fix sources out to 1dg away from center of ROI
+            #         5.)    if that fails set values to 0 in output and print warning message
+            #  
+            #-----------11111111----------#
+
+            gta.free_sources(free=False, exclude_diffuse=True )
+
+            for names in freesources:
+                gta.free_source(names)
             gta.free_source(name)
+
             fit_results = gta.fit()
-         
-
-
-
-#If fit fails, try altering model
+    
          
             if(fit_results['fit_success'] != 1):
-              
-                print('Fit Failed with all Source Parameters Fixed......Lets try '
-                    'getting rid of some low TS sources')                
-            
-                for s in gta.roi.get_sources(minmax_ts=[0,10]):                                    
-                    if s != name:                                                         
-                        gta.delete_source(s.name,build_fixed_wts=False)                                          
-                for c in gta.components:                                              
-                    c.like.logLike.buildFixedModelWts()                               
-                                                                                      
-                gta._update_roi()                                                                    
-         
-                fit_results = gta.fit()
-              
-                if(fit_results['fit_success'] != 1):
+
+                 for names in freesources:
+                     gta.free_source(names, free=False)
+                     gta.free_source(names, pars='norm')
+                 gta.free_source(name)
+                 fit_results = gta.fit()
+
+             #-----------22222222---------#
+
+                 if(fit_results['fit_success'] != 1):
+                     print('Fit Failed with User Supplied List of Free/Fixed Sources.....Lets try '
+                               'fixing TS<4 sources')               
+                     
+                     gta.free_sources(free=False, exclude_diffuse=True )
+
+                     for names in freesources:
+                         gta.free_source(names)
+
+                     gta.free_sources(minmax_ts=[0,4],free=False) 
+                     gta.free_source(name)
+
+                     fit_results = gta.fit()
                 
-                    for s in gta.roi.get_sources(minmax_ts=[0,10]):
-                        if s != name:
-                            gta.delete_source(s.name,build_fixed_wts=False)
-                    for c in gta.components:
-                        c.like.logLike.buildFixedModelWts()
+               #----------333333333---------#    
+                                                                                     
+                     if(fit_results['fit_success'] != 1):
+                         print('Fit Failed with User Supplied List of Free/Fixed Sources.....Lets try '
+                                  'fixing TS<9 sources')
+                   
+                         gta.free_sources(free=False, exclude_diffuse=True )
 
-                        gta._update_roi()
+                         for names in freesources:
+                             gta.free_source(names)
 
-                    fit_results = gta.fit()
+                         gta.free_sources(minmax_ts=[0,9],free=False)
+                         gta.free_source(name)
+                         fit_results = gta.fit()
+               
+                   #-----------4444444444---------#  
 
-                    if(fit_results['fit_success'] != 1):
-                      print('Fit still did not converge, lets try fixing the sources up to 1dg out from ROI')
-         
-                      gta.free_sources(free=0)
-                      gta.free_sources(distance=1.0,pars='norm')
-                      fit_results = gta.fit()
-                      if(fit_results['fit_success'] != 1):
-                          print('Fit still didnt converge.....please examine this data point')
-         
+                         if(fit_results['fit_success'] != 1):
+                             print('Fit still did not converge, lets try fixing the sources up to 1dg out from ROI')
+        
+                     
+                             gta.free_sources(free=False, exclude_diffuse=True)
+                                  
+                             for s in freesources:
+                                 src = self.roi.get_source_by_name(s)
+                                 if src['offset'] < 1.0:
+                                     gta.free_source(s)
+                             gta.free_sources(minmax_ts=[0,9], free=False)
+                                  
+                             gta.free_source(name)
+                     
+                             fit_results = gta.fit()
+                     
 
+                      #-----------55555555555---------#      
+                             if(fit_results['fit_success'] != 1):
+                                 print('Fit still didnt converge.....please examine this data point, setting output to 0')
+                         
 
-
-#            gta.write_xml('fit_model_pass1.xml')
             
-
-
-#now fix the values, but free up params for source and diffuse comps
-#            
-#            self.logger.info('Fitting with all params free for source and diffuse, all else fixed')
-#            gta.free_sources(free=False)
-#            gta.free_source(name)
-#            #gta.free_sources(distance=0.1)
-#            gta.fit()
-#
-#            if(fit_results['fit_success'] != 1):
-#
-#                print('Fit Failed with all Source Parameters Fixed......Lets try '
-#                      'getting rid of some low TS sources')
-#
-#                gta.delete_sources(minmax_ts=[0,1])
-#
-#                fit_results = gta.fit()
-#
-#                if(fit_results['fit_success'] != 1):
-#                    gta.delete_sources(minmax_ts=[0,2])
-#
-#                    fit_results = gta.fit()
-#
-#                    if(fit_results['fit_success'] != 1):
-#                        print('Fit still did not converge, lets try fixing the sources up to 1dg out from ROI')
-#
-#                        gta.free_sources(free=0)
-#                        gta.free_sources(distance=1.0,pars='norm')
-#
-#                        if(fit_results['fit_success'] != 1):
-#                            print('Fit still didnt converge.....please examine this data point')
-
             gta.write_xml('fit_model_final.xml')
             output = gta.get_src_model(name)
 
             for k in defaults.source_flux_output.keys():
                 if not k in output:
                     continue                
-                o[k] = output[k]
+                if (fit_results['fit_success'] == 1):
+                    o[k] = output[k]
+                else:
+                    o[k]=0.0
 
         src = self.roi.get_source_by_name(name)
         src.update_data({'lightcurve': copy.deepcopy(o)})
