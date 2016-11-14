@@ -4,6 +4,7 @@ import copy
 import numpy as np
 import healpy as hp
 from scipy.interpolate import RegularGridInterpolator
+from scipy.ndimage.interpolation import map_coordinates
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.table import Table
@@ -101,8 +102,8 @@ class Map(Map_Base):
             self._yindex = 0
         else:
             raise Exception('Wrong number of dimensions for Map object.')
-        
-        #if len(self._npix) != 3 and len(self._npix) != 2:
+
+        # if len(self._npix) != 3 and len(self._npix) != 2:
         #    raise Exception('Wrong number of dimensions for Map object.')
 
         self._width = np.array([np.abs(self.wcs.wcs.cdelt[0]) * self.npix[0],
@@ -116,11 +117,11 @@ class Map(Map_Base):
                                            self._pix_center[1],
                                            self.wcs)
         self._ebins = ebins
-        if ebins is not None:        
+        if ebins is not None:
             self._ectr = np.exp(utils.edge_to_center(np.log(ebins)))
         else:
             self._ectr = None
-            
+
     @property
     def wcs(self):
         return self._wcs
@@ -128,7 +129,7 @@ class Map(Map_Base):
     @property
     def npix(self):
         return self._npix
-    
+
     @property
     def skydir(self):
         """Return the sky coordinate of the image center."""
@@ -164,16 +165,16 @@ class Map(Map_Base):
         wcs = WCS(header)
 
         ebins = None
-        if 'ENERGIES' in hdulist:        
-            tab = Table.read(fitsfile,'ENERGIES')
+        if 'ENERGIES' in hdulist:
+            tab = Table.read(fitsfile, 'ENERGIES')
             ectr = np.array(tab.columns[0])
             ebins = np.exp(utils.center_to_edge(np.log(ectr)))
         elif 'EBOUNDS' in hdulist:
-            tab = Table.read(fitsfile,'EBOUNDS')
-            emin = np.array(tab['E_MIN'])/1E3
-            emax = np.array(tab['E_MAX'])/1E3
-            ebins = np.append(emin,emax[-1])
-            
+            tab = Table.read(fitsfile, 'EBOUNDS')
+            emin = np.array(tab['E_MIN']) / 1E3
+            emax = np.array(tab['E_MAX']) / 1E3
+            ebins = np.append(emin, emax[-1])
+
         return Map(data, wcs, ebins)
 
     @staticmethod
@@ -235,9 +236,9 @@ class Map(Map_Base):
 
     def get_pixel_skydirs(self):
         """Get a list of sky coordinates for the centers of every pixel.
-        
+
         """
-        
+
         xpix = np.linspace(0, self.npix[0] - 1., self.npix[0])
         ypix = np.linspace(0, self.npix[1] - 1., self.npix[1])
         xypix = np.meshgrid(xpix, ypix, indexing='ij')
@@ -263,9 +264,9 @@ class Map(Map_Base):
         pixcrd : list
            Pixel indices along each dimension of the map.
         """
-        lons = np.array(lons,ndmin=1)
-        lats = np.array(lats,ndmin=1)
-        
+        lons = np.array(lons, ndmin=1)
+        lats = np.array(lats, ndmin=1)
+
         if len(lats) != len(lons):
             raise RuntimeError('Map.get_pixel_indices, input lengths '
                                'do not match %i %i' % (len(lons), len(lats)))
@@ -273,13 +274,14 @@ class Map(Map_Base):
             pix_x, pix_y = self._wcs.wcs_world2pix(lons, lats, 0)
             pixcrd = [np.floor(pix_x).astype(int), np.floor(pix_y).astype(int)]
         elif len(self._npix) == 3:
-            all_lons = np.expand_dims(lons,-1)
-            all_lats = np.expand_dims(lats,-1)
+            all_lons = np.expand_dims(lons, -1)
+            all_lats = np.expand_dims(lats, -1)
             if ibin is None:
-                all_bins = (np.expand_dims(np.arange(self.npix[2]),-1) * np.ones(lons.shape)).T
+                all_bins = (np.expand_dims(
+                    np.arange(self.npix[2]), -1) * np.ones(lons.shape)).T
             else:
                 all_bins = ibin
-                
+
             l = self.wcs.wcs_world2pix(all_lons, all_lats, all_bins, 0)
             pix_x = l[0]
             pix_y = l[1]
@@ -311,11 +313,12 @@ class Map(Map_Base):
         pix_idxs = self.get_pixel_indices(lons, lats, ibin)
         idxs = copy.copy(pix_idxs)
 
-        m = np.empty_like(idxs[0],dtype=bool);m.fill(True)
+        m = np.empty_like(idxs[0], dtype=bool)
+        m.fill(True)
         for i, p in enumerate(pix_idxs):
             m &= (pix_idxs[i] >= 0) & (pix_idxs[i] < self._npix[i])
             idxs[i][~m] = 0
-        
+
         vals = self.counts.T[idxs]
         vals[~m] = np.nan
         return vals
@@ -327,10 +330,11 @@ class Map(Map_Base):
         else:
             if egy is None:
                 egy = self._ectr
-            
+
             pixcrd = self.wcs.wcs_world2pix(lon, lat, egy, 0)
-            pixcrd[2] = np.array(utils.val_to_pix(np.log(self._ectr), np.log(egy)),ndmin=1)
-            
+            pixcrd[2] = np.array(utils.val_to_pix(np.log(self._ectr),
+                                                  np.log(egy)), ndmin=1)
+
         points = []
         for npix in self.npix:
             points += [np.linspace(0, npix - 1., npix)]
@@ -503,12 +507,39 @@ class HpxMap(Map_Base):
            Values of pixels in the flattened map, np.nan used to flag
            coords outside of map
         """
-        theta = np.pi/2.-np.radians(lats)
+        theta = np.pi / 2. - np.radians(lats)
         phi = np.radians(lons)
-        
-        pix = hp.ang2pix(self.hpx.nside,theta,phi,nest=self.hpx.nest)
+
+        pix = hp.ang2pix(self.hpx.nside, theta, phi, nest=self.hpx.nest)
 
         if self.data.ndim == 2:
-            return self.data[:,pix] if ibin is None else self.data[ibin,pix] 
+            return self.data[:, pix] if ibin is None else self.data[ibin, pix]
         else:
             return self.data[pix]
+
+    def interpolate(self, lon, lat, egy=None):
+        """Interpolate map values.
+
+        """
+
+        if self.data.ndim == 1:
+            theta = np.pi / 2. - np.radians(lat)
+            phi = np.radians(lon)
+            return hp.pixelfunc.get_interp_val(self.counts, theta,
+                                               phi, nest=self.hpx.nest)
+        else:
+            shape = np.broadcast(lon, lat, egy).shape
+            lon *= np.ones(shape)
+            lat *= np.ones(shape)
+            egy *= np.ones(shape)
+            theta = np.pi / 2. - np.radians(lat)
+            phi = np.radians(lon)
+            vals = []
+            for i, _ in enumerate(self.hpx.evals):
+                v = hp.pixelfunc.get_interp_val(self.counts[i], theta,
+                                                phi, nest=self.hpx.nest)
+                vals += [np.expand_dims(np.array(v, ndmin=1), -1)]
+
+            vals = np.concatenate(vals, axis=-1)
+            xvals = utils.val_to_pix(np.log(self.hpx.evals), np.log(egy))
+            return map_coordinates(vals, [np.arange(shape[0]), xvals], order=1)

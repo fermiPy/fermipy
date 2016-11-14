@@ -8,9 +8,6 @@ import logging
 import tempfile
 import filecmp
 import numpy as np
-# pyLikelihood needs to be imported before astropy to avoid CFITSIO header
-# error
-import pyLikelihood as pyLike
 from astropy.io import fits
 import fermipy
 import fermipy.defaults as defaults
@@ -23,7 +20,6 @@ import fermipy.skymap as skymap
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 import fermipy.sed as sed
-import fermipy.lightcurve as lightcurve
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
@@ -41,6 +37,7 @@ import FluxDensity
 from LikelihoodState import LikelihoodState
 from fermipy.gtutils import BinnedAnalysis, SummedLikelihood
 import BinnedAnalysis as ba
+import pyLikelihood as pyLike
 
 norm_parameters = {
     'ConstantValue': ['Value'],
@@ -379,7 +376,7 @@ def filter_dict(d, val):
 
 class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
-                 SourceFinder, lightcurve.LightCurve):
+                 SourceFinder):
     """High-level analysis interface that manages a set of analysis
     component objects.  Most of the functionality of the Fermipy
     package is provided through the methods of this class.  The class
@@ -402,7 +399,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'tscube': defaults.tscube,
                 'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
-                'lightcurve': defaults.lightcurve,
                 'extension': defaults.extension,
                 'localize': defaults.localize,
                 'roiopt': defaults.roiopt,
@@ -1117,12 +1113,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src = self.roi.get_source_by_name(name)
         src.update_data({'sed': None,
                          'extension': None,
-                         'localize': None,
-                         'class': None})
-
-        if 'CLASS1' in src['catalog']:
-            src['class'] = src['catalog']['CLASS1'].strip()
-
+                         'localize': None})
         src.update_data(self.get_src_model(name, True))
         return src
 
@@ -1475,7 +1466,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return srcs
 
     def free_sources(self, free=True, pars=None, cuts=None,
-                     distance=None, skydir=None, minmax_ts=None, minmax_npred=None, minmax_var=None,
+                     distance=None, skydir=None, minmax_ts=None, minmax_npred=None,
                      square=False, exclude_diffuse=False, **kwargs):
         """Free or fix sources in the ROI model satisfying the given
         selection.  When multiple selections are defined, the selected
@@ -1519,14 +1510,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             either min or max are None then only a lower (upper) bound
             will be applied.  If this parameter is none no selection
             will be applied.
-
-        minmax_var:  list
-        Free sources that have variability index in the range [min,max].
-        If either min or max are none then only a lower (upper) bound
-        will be applied. If this paramater is none no selection will be applied
-
-       
-        
 
         square : bool
             Switch between applying a circular or square (ROI-like)
@@ -4706,10 +4689,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._ltc = irfs.LTCube.create(self.files['ltcube'])
 
         self.logger.debug('Creating PSF model')
-        self._psf = irfs.PSFModel(self.roi.skydir, self._ltc,
-                                  self.config['gtlike']['irfs'],
-                                  self.config['selection']['evtype'],
-                                  self.log_energies)
+        self._psf = irfs.PSFModel.create(self.roi.skydir, self._ltc,
+                                         self.config['gtlike']['irfs'],
+                                         self.config['selection']['evtype'],
+                                         self.energies)
 
         # Run gtbin
         if self.projtype == "WCS":

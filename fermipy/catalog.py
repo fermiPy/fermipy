@@ -41,9 +41,8 @@ def join_tables(t0, t1, key0, key1):
 def strip_columns(tab):
     """Strip whitespace from string columns."""
     for colname in tab.colnames:
-        if not tab[colname].dtype.type is np.string_:
-            continue
-        tab[colname] = np.core.defchararray.strip(tab[colname])
+        if tab[colname].dtype.kind in ['S','U']:
+            tab[colname] = np.core.defchararray.strip(tab[colname])
 
 
 def row_to_dict(row):
@@ -51,7 +50,7 @@ def row_to_dict(row):
     o = {}
     for colname in row.colnames:
 
-        if isinstance(row[colname], np.string_):
+        if row[colname].dtype.kind in ['S','U']:
             o[colname] = str(row[colname])
         else:
             o[colname] = row[colname]
