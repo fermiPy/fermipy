@@ -404,15 +404,12 @@ class ReferenceSpec(object):
         """
 
         convert_sed_cols(tab_e)            
-        
         try:
-            tab_e['e_min'].to(u.MeV)
-            tab_e['e_max'].to(u.MeV)
+            emin = np.array(tab_e['e_min'].to(u.MeV))
+            emax = np.array(tab_e['e_max'].to(u.MeV))
         except:
-            pass
-
-        emin = np.array(tab_e['e_min'])
-        emax = np.array(tab_e['e_max'])
+            emin = np.array(tab_e['e_min'])
+            emax = np.array(tab_e['e_max'])
         
         ne = len(emin)
         try:
