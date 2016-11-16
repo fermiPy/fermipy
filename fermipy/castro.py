@@ -28,7 +28,6 @@ from fermipy.spectrum import SpectralFunction, SEDFunctor
 from fermipy.utils import onesided_cl_to_dlnl
 from fermipy.utils import twosided_cl_to_dlnl
 
-FluxTypes = ['NORM', 'FLUX', 'EFLUX', 'NPRED', 'DNDE']
 
 PAR_NAMES = {
     "PowerLaw": ["Prefactor", "Index"],
@@ -38,28 +37,13 @@ PAR_NAMES = {
 
 
 def convert_sed_cols(tab):
-    """Convert SED column names to new-style format."""    
+    """Cast SED column names to lowercase."""    
     # Update Column names
     for colname in list(tab.columns.keys()):
 
         newname = colname.lower()
         newname = newname.replace('dfde','dnde')
             
-        if tab.columns[colname].name == newname:
-            continue
-
-        tab.columns[colname].name = newname
-
-    return tab
-
-
-def convert_ebounds_cols(tab):
-    """Convert EBOUNDS column names to new-style format."""    
-    # Update Column names
-    for colname in list(tab.columns.keys()):
-
-        newname = colname
-        newname = newname.replace('DFDE','DNDE')            
         if tab.columns[colname].name == newname:
             continue
 
@@ -305,7 +289,7 @@ class LnLFn(object):
 
 
 class ReferenceSpec(object):
-    """This class wraps data for a reference spectrum.
+    """This class encapsulates data for a reference spectrum.
     
     Parameters
     ----------
@@ -419,38 +403,35 @@ class ReferenceSpec(object):
             EBOUNDS table.        
         """
 
-        convert_ebounds_cols(tab_e)            
-        emin = np.array(tab_e['E_MIN'])
-        emax = np.array(tab_e['E_MAX'])
+        convert_sed_cols(tab_e)            
+        
         try:
-            if str(tab_e['E_MIN'].unit) == 'keV':
-                emin /= 1000.
+            tab_e['e_min'].to(u.MeV)
+            tab_e['e_max'].to(u.MeV)
         except:
             pass
-        try:
-            if str(tab_e['E_MAX'].unit) == 'keV':
-                emax /= 1000.
-        except:
-            pass
+
+        emin = np.array(tab_e['e_min'])
+        emax = np.array(tab_e['e_max'])
         
         ne = len(emin)
         try:
-            ref_dnde = np.array(tab_e['REF_DNDE'])
+            ref_dnde = np.array(tab_e['ref_dnde'])
         except:
             ref_dnde = np.ones((ne))
 
         try:
-            ref_flux = np.array(tab_e['REF_FLUX'])
+            ref_flux = np.array(tab_e['ref_flux'])
         except:
             ref_flux = np.ones((ne))
 
         try:
-            ref_eflux = np.array(tab_e['REF_EFLUX'])
+            ref_eflux = np.array(tab_e['ref_eflux'])
         except:
             ref_eflux = np.ones((ne))
 
         try:
-            ref_npred = np.array(tab_e['REF_NPRED'])
+            ref_npred = np.array(tab_e['ref_npred'])
         except:
             ref_npred = np.ones((ne))
             
@@ -460,88 +441,92 @@ class ReferenceSpec(object):
 
 
     def build_ebound_table(self):
-        """ Build and return a table with the encapsulated data
+        """ Build and return an EBOUNDS table with the encapsulated data.
         """
-        col_emin = Column(name="E_MIN", dtype=float,
-                          shape=self._emin.shape, data=self._emin)
-        col_emax = Column(name="E_MAX", dtype=float,
-                          shape=self._emax.shape, data=self._emax)      
-        col_eref = Column(name="E_REF", dtype=float,
-                          shape=self._eref.shape, data=self._eref)      
-        col_dnde = Column(name="REF_DNDE", dtype=float,
-                          shape=self._ref_dnde.shape, data=self._ref_dnde)      
-        col_flux = Column(name="REF_FLUX", dtype=float,
-                          shape=self._ref_flux.shape, data=self._ref_flux)      
-        col_eflux = Column(name="REF_EFLUX", dtype=float,
-                           shape=self._ref_eflux.shape, data=self._ref_eflux)      
-        col_npred = Column(name="REF_NPRED", dtype=float,
-                           shape=self._ref_npred.shape, data=self._ref_npred)      
-
-        tab = Table(data=[col_emin, col_emax, col_dnde,
-                          col_flux, col_eflux, col_npred])
+        cols = [
+            Column(name="E_MIN", dtype=float, data=self._emin, unit='MeV'),
+            Column(name="E_MAX", dtype=float, data=self._emax, unit='MeV'),
+            Column(name="E_REF", dtype=float, data=self._eref, unit='MeV'),
+            Column(name="REF_DNDE", dtype=float, data=self._ref_dnde,
+                   unit='ph / (MeV cm2 s)'),
+            Column(name="REF_FLUX", dtype=float, data=self._ref_flux,
+                   unit='ph / (cm2 s)'),
+            Column(name="REF_EFLUX", dtype=float, data=self._ref_eflux,
+                   unit='MeV / (cm2 s)'),
+            Column(name="REF_NPRED", dtype=float, data=self._ref_npred,
+                   unit='ph')
+            ]
+        tab = Table(data=cols)
         return tab
 
 
 class SpecData(ReferenceSpec):
-    """ This class wraps spectral data, e.g., energy bin definitions,
-    flux values and number of predicted photons
+    """This class encapsulates spectral analysis results (best-fit
+    normalizations, errors, etc.), energy binning, and reference
+    spectrum definition.
+
+    Parameters
+    ----------
+    norm : `~numpy.ndarray`
+
+    norm_err : `~numpy.ndarray`
+    
+    flux : `~numpy.ndarray`
+        Array of integral photon flux values.
+
+    eflux :  `~numpy.ndarray`
+        Array of integral energy flux values.
+
+    dnde :`~numpy.ndarray`
+        Differential flux values
+
+    dnde_err :`~numpy.ndarray`
+        Uncertainties on differential flux values
+        
+    e2dnde :`~numpy.ndarray`
+        Differential flux values scaled by E^2
+
+    e2dnde_err :`~numpy.ndarray`
+        Uncertainties on differential flux values scaled by E^2
     """
 
-    def __init__(self, ref_spec, norm_dnde, norm_flux, norm_eflux, norm_dnde_err=None):
+    def __init__(self, ref_spec, norm, norm_err):
         """
 
         Parameters
         ----------
-
-        ref_spec : `fermipy.castro.ReferenceSpec'
+        ref_spec : `~fermipy.castro.ReferenceSpec`
             Object with energy bin definitions and reference spectra.
 
-        norm_dnde : `~numpy.ndarray`        
-            Array of differential photon flux values, w.r.t. reference
-            values.
+        norm : `~numpy.ndarray`        
+            Array of best-fit normalizations in units of the reference
+            spectrum amplitude.
                      
-        norm_dnde_err : `~numpy.ndarray`        
-            Array of uncertainties on differential photon flux values,
-            w.r.t reference values.
-
-        norm_flux : `~numpy.ndarray`        
-            Array of integrated photon flux values, w.r.t. reference
-            values.
- 
-        norm_eflux : `~numpy.ndarray`        
-            Array of integrated energy flux values, w.r.t. reference
-            values.
-
-        flux :  `~numpy.ndarray`
-            Array of integral photon flux values.
-
-        eflux :  `~numpy.ndarray`
-            Array of integral energy flux values.
-
-        e2dnde :`~numpy.ndarray`
-            Differential flux values scaled by E^2
-
-        e2dnde_err :`~numpy.ndarray`
-            Uncertainties on differential flux values scaled by E^2
+        norm_err : `~numpy.ndarray`        
+            Array of uncertainties in units of the reference
+            spectrum amplitude.
 
         """
         super(SpecData, self).__init__(ref_spec.emin, ref_spec.emax, 
                                        ref_spec.ref_dnde, ref_spec.ref_flux, 
                                        ref_spec.ref_eflux, ref_spec.ref_npred, 
                                        ref_spec.eref)    
-        self._norm_dnde = norm_dnde
-        self._norm_dnde_err = norm_dnde_err
-        self._norm_flux = norm_flux
-        self._norm_eflux = norm_eflux
-        if self._norm_dnde is not None:
-            self._dnde = self._norm_dnde * self._ref_dnde
-        if self._norm_dnde_err is not None:
-            self._dnde_err = self._norm_dnde_err * self._ref_dnde
-        if self._norm_flux is not None:
-            self._flux = self._norm_flux * self._ref_flux
-        if self._norm_eflux is not None:
-            self._eflux = self._norm_eflux * self._ref_eflux       
 
+        self._norm = norm
+        self._norm_err = norm_err
+        self._dnde = self._norm * self._ref_dnde
+        self._dnde_err = self._norm_err * self._ref_dnde
+        self._flux = self._norm * self._ref_flux
+        self._eflux = self._norm * self._ref_eflux       
+
+    @property
+    def norm(self):
+        return self._norm
+
+    @property
+    def norm_err(self):
+        return self._norm_err
+        
     @property
     def dnde(self):
         return self._dnde
@@ -565,25 +550,13 @@ class SpecData(ReferenceSpec):
     @property
     def e2dnde_err(self):
         return self._dnde_err*self.evals**2
-
-    @property
-    def norm_dnde(self):
-        return self._dnde / self.ref_dnde
-
-    @property
-    def norm_flux(self):
-        return self._flux / self.ref_flux
-
-    @property
-    def norm_eflux(self):
-        return self._eflux / self.ref_eflux
     
     @staticmethod
-    def create_from_table(tab_e):
+    def create_from_table(tab):
         """
         """
-        rs = ReferenceSpec.create_from_table(tab_e)
-        #FIXME
+        rs = ReferenceSpec.create_from_table(tab)
+        return SpecData(rs, tab['norm'], tab['norm_err'])
 
     def build_spec_table(self):
         """
@@ -595,18 +568,16 @@ class SpecData(ReferenceSpec):
         col_ref = Column(name="e_ref", dtype=float,
                           shape=self.eref.shape, data=self.emax)      
         col_list = [col_emin,col_emax,col_ref]
-        if self.dnde is not None:
-            col_list.append(Column(name="dnde", dtype=float,
-                                   shape=self.dnde.shape, data=self.dnde))
-        if self.dnde_err is not None:
-            col_list.append(Column(name="dnde_err", dtype=float,
-                                   shape=self.dnde_err.shape, data=self.dnde_err))
-        if self.flux is not None:
-            col_list.append(Column(name="flux", dtype=float,
-                                   shape=self.flux.shape, data=self.flux))
-        if self.eflux is not None:
-            col_list.append(Column(name="eflux", dtype=float,
-                                   shape=self.eflux.shape, data=self.eflux))
+        col_list.append(Column(name="norm", dtype=float, data=self.norm))
+        col_list.append(Column(name="norm_err", dtype=float, data=self.norm_err))        
+        col_list.append(Column(name="dnde", dtype=float,
+                               shape=self.dnde.shape, data=self.dnde))
+        col_list.append(Column(name="dnde_err", dtype=float,
+                               shape=self.dnde_err.shape, data=self.dnde_err))
+        col_list.append(Column(name="flux", dtype=float,
+                               shape=self.flux.shape, data=self.flux))
+        col_list.append(Column(name="eflux", dtype=float,
+                               shape=self.eflux.shape, data=self.eflux))
 
         tab = Table(data=col_list)
         return tab
@@ -712,7 +683,6 @@ class CastroData_Base(object):
             nll_val += self._loglikes[i].interp(xv)
 
         return nll_val
-
     
     def norm_derivative(self, spec, norm):
         """
@@ -1070,11 +1040,11 @@ class CastroData(CastroData_Base):
         norm_type : str
             Type of normalization to use, options are:
 
-            * NORM : Normalization w.r.t. to test source
-            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-            * NPRED: Number of predicted photons (Not implemented)
-            * DNDE : Differential flux of the test source ( ph cm^-2 s^-1
+            * norm : Normalization w.r.t. to test source
+            * flux : Flux of the test source ( ph cm^-2 s^-1 )
+            * eflux: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * npred: Number of predicted photons (Not implemented)
+            * dnde : Differential flux of the test source ( ph cm^-2 s^-1
               MeV^-1 )
      
         """
@@ -1099,10 +1069,10 @@ class CastroData(CastroData_Base):
 
         tab = Table.read(txtfile, format='ascii.ecsv')
         dnde_unit = u.ph / (u.MeV * u.cm ** 2 * u.s)
-        loge = np.log10(np.array(tab['E_REF'].to(u.MeV)))
-        norm = np.array(tab['NORM'].to(dnde_unit))
-        norm_errp = np.array(tab['NORM_ERRP'].to(dnde_unit))
-        norm_errn = np.array(tab['NORM_ERRN'].to(dnde_unit))
+        loge = np.log10(np.array(tab['e_ref'].to(u.MeV)))
+        norm = np.array(tab['norm'].to(dnde_unit))
+        norm_errp = np.array(tab['norm_errp'].to(dnde_unit))
+        norm_errn = np.array(tab['norm_errn'].to(dnde_unit))
         norm_err = 0.5 * (norm_errp + norm_errn)
         dloge = loge[1:] - loge[:-1]
         dloge = np.insert(dloge, 0, dloge[0])
@@ -1137,10 +1107,10 @@ class CastroData(CastroData_Base):
 
         norm_vals *= flux[:, np.newaxis] / norm[:, np.newaxis]
 
-        return CastroData(norm_vals, nll_vals, spec_data, 'FLUX')
+        return CastroData(norm_vals, nll_vals, spec_data, 'flux')
 
     @staticmethod
-    def create_from_tables(norm_type='EFLUX',
+    def create_from_tables(norm_type='eflux',
                            tab_s="SCANDATA",
                            tab_e="EBOUNDS"):
         """Create a CastroData object from two tables
@@ -1150,14 +1120,12 @@ class CastroData(CastroData_Base):
         norm_type : str
             Type of normalization to use.  Valid options are:
 
-            * NORM : Normalization w.r.t. to test source
-            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-            * NPRED: Number of predicted photons (Not implemented)
-            * DNDE : Differential flux of the test source ( ph cm^-2 s^-1
+            * norm : Normalization w.r.t. to test source
+            * flux : Flux of the test source ( ph cm^-2 s^-1 )
+            * eflux: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * npred: Number of predicted photons (Not implemented)
+            * dnde : Differential flux of the test source ( ph cm^-2 s^-1
               MeV^-1 )
-            * EDNDE: Differential energy flux of the test source ( MeV
-              cm^-2 s^-1 MeV^-1 ) (Not Implemented)
 
         tab_s : str
            table scan data
@@ -1169,10 +1137,10 @@ class CastroData(CastroData_Base):
         -------
         castro : `~fermipy.castro.CastroData`
         """
-        if norm_type in ['FLUX', 'EFLUX', 'DNDE']:
+        if norm_type in ['flux', 'eflux', 'dnde']:
             norm_vals = np.array(tab_s['norm_scan'] *
-                                 tab_e['REF_%s' % norm_type][:, np.newaxis])
-        elif norm_type == "NORM":
+                                 tab_e['ref_%s' % norm_type][:, np.newaxis])
+        elif norm_type == "norm":
             norm_vals = np.array(tab_s['norm_scan'])
         else:
             raise Exception('Unrecognized normalization type: %s' % norm_type)
@@ -1183,11 +1151,11 @@ class CastroData(CastroData_Base):
         return CastroData(norm_vals, nll_vals, rs, norm_type)
 
     @staticmethod
-    def create_from_fits(fitsfile, norm_type='EFLUX',
+    def create_from_fits(fitsfile, norm_type='eflux',
                          hdu_scan="SCANDATA",
                          hdu_energies="EBOUNDS",
                          irow=None):
-        """Create a CastroData object from a fits file.
+        """Create a CastroData object from a tscube FITS file.
 
         Parameters
         ----------
@@ -1197,20 +1165,19 @@ class CastroData(CastroData_Base):
         norm_type : str
             Type of normalization to use.  Valid options are:
 
-            * NORM : Normalization w.r.t. to test source
-            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-            * NPRED: Number of predicted photons (Not implemented)
-            * DNDE : Differential flux of the test source ( ph cm^-2 s^-1
+            * norm : Normalization w.r.t. to test source
+            * flux : Flux of the test source ( ph cm^-2 s^-1 )
+            * eflux: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * npred: Number of predicted photons (Not implemented)
+            * dnde : Differential flux of the test source ( ph cm^-2 s^-1
               MeV^-1 )
-            * EDNDE: Differential energy flux of the test source ( MeV
-              cm^-2 s^-1 MeV^-1 ) (Not Implemented)
 
         hdu_scan : str
             Name of the FITS HDU with the scan data
 
-        hdu_energies : str
-            Name of the FITS HDU with the energy binning and normalization data
+        hdu_energies : str        
+            Name of the FITS HDU with the energy binning and
+            normalization data
 
         irow : int or None
             If none, then this assumes that there is a single row in
@@ -1229,12 +1196,12 @@ class CastroData(CastroData_Base):
         tab_e = Table.read(fitsfile, hdu=hdu_energies)
 
         tab_s = convert_sed_cols(tab_s)
-        tab_e = convert_ebounds_cols(tab_e)
+        tab_e = convert_sed_cols(tab_e)
         
         return CastroData.create_from_tables(norm_type, tab_s, tab_e)
 
     @staticmethod
-    def create_from_sedfile(fitsfile, norm_type='EFLUX'):
+    def create_from_sedfile(fitsfile, norm_type='eflux'):
         """Create a CastroData object from an SED fits file
 
         Parameters
@@ -1245,33 +1212,33 @@ class CastroData(CastroData_Base):
         norm_type : str
             Type of normalization to use, options are:
 
-            * NORM : Normalization w.r.t. to test source
-            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-            * NPRED: Number of predicted photons (Not implemented)
-            * DNDE : Differential flux of the test source ( ph cm^-2 s^-1
+            * norm : Normalization w.r.t. to test source
+            * flux : Flux of the test source ( ph cm^-2 s^-1 )
+            * eflux: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * npred: Number of predicted photons (Not implemented)
+            * dnde : Differential flux of the test source ( ph cm^-2 s^-1
               MeV^-1 )
-            * EDNDE: Differential energy flux of the test source ( MeV
-              cm^-2 s^-1 MeV^-1 ) (Not Implemented)
 
         Returns
         -------
         castro : `~fermipy.castro.CastroData`
         """
         tab_s = Table.read(fitsfile, hdu=1)
-
-        if norm_type in ['FLUX', 'EFLUX', 'DNDE']:
-            norm_vals = np.array(tab_s['NORM_SCAN'] * 
-                                 tab_s['REF_%s' % norm_type][:, np.newaxis])
-        elif norm_type == "NORM":
-            norm_vals = np.array(tab_s['NORM_SCAN'])
+        tab_s = convert_sed_cols(tab_s)
+        
+        if norm_type in ['flux', 'eflux', 'dnde']:
+            ref_colname = 'ref_%s' % norm_type
+            norm_vals = np.array(tab_s['norm_scan'] * 
+                                 tab_s[ref_colname][:, np.newaxis])
+        elif norm_type == "norm":
+            norm_vals = np.array(tab_s['norm_scan'])
         else:
             raise Exception('Unrecognized normalization type: %s' % norm_type)
 
-        nll_vals = -np.array(tab_s['DLOGLIKE_SCAN'])        
-        rs = ReferenceSpec.create_from_table(tab_s)
-
-        return CastroData(norm_vals, nll_vals, rs, norm_type)
+        nll_vals = -np.array(tab_s['dloglike_scan'])        
+        ref_spec = ReferenceSpec.create_from_table(tab_s)
+        spec_data = SpecData(ref_spec, tab_s['norm'], tab_s['norm_err'])
+        return CastroData(norm_vals, nll_vals, spec_data, norm_type)
 
     @staticmethod
     def create_from_stack(shape, components, ylims, weights=None):
@@ -1451,11 +1418,11 @@ class TSCube(object):
         norm_type : str
             Type of normalization to use, options are:
 
-            * NORM : Normalization w.r.t. to test source
-            * FLUX : Flux of the test source ( ph cm^-2 s^-1 )
-            * EFLUX: Energy Flux of the test source ( MeV cm^-2 s^-1 )
-            * NPRED: Number of predicted photons (Not implemented)
-            * DNDE : Differential flux of the test source ( ph cm^-2 s^-1
+            * norm : Normalization w.r.t. to test source
+            * flux : Flux of the test source ( ph cm^-2 s^-1 )
+            * eflux: Energy Flux of the test source ( MeV cm^-2 s^-1 )
+            * npred: Number of predicted photons (Not implemented)
+            * dnde : Differential flux of the test source ( ph cm^-2 s^-1
               MeV^-1 )
 
         """
@@ -1520,7 +1487,7 @@ class TSCube(object):
         return self._nN
 
     @staticmethod
-    def create_from_fits(fitsfile, norm_type='FLUX'):
+    def create_from_fits(fitsfile, norm_type='flux'):
         """Build a TSCube object from a fits file created by gttscube
         Parameters
         ----------
@@ -1537,26 +1504,26 @@ class TSCube(object):
         tab_s = Table.read(fitsfile, 'SCANDATA')
         tab_f = Table.read(fitsfile, 'FITDATA')
 
-        tab_e = convert_ebounds_cols(tab_e)
+        tab_e = convert_sed_cols(tab_e)
         tab_s = convert_sed_cols(tab_s)
         tab_f = convert_sed_cols(tab_f)
         
-        emin = np.array(tab_e['E_MIN'])
-        emax = np.array(tab_e['E_MAX'])
+        emin = np.array(tab_e['e_min'])
+        emax = np.array(tab_e['e_max'])
         try:
-            if str(tab_e['E_MIN'].unit) == 'keV':
+            if str(tab_e['e_min'].unit) == 'keV':
                 emin /= 1000.
         except:
             pass
         try:
-            if str(tab_e['E_MAX'].unit) == 'keV':
+            if str(tab_e['e_max'].unit) == 'keV':
                 emax /= 1000.
         except:
             pass
 
 
         nebins = len(tab_e)
-        npred = tab_e['REF_NPRED']
+        npred = tab_e['ref_npred']
 
         ndim = len(tsmap.counts.shape)
 
@@ -1580,7 +1547,7 @@ class TSCube(object):
         nmap = Map(tab_f['fit_norm'].reshape(tsmap.counts.shape),
                    tsmap.wcs)
 
-        ref_colname = 'REF_%s' % norm_type
+        ref_colname = 'ref_%s' % norm_type
         norm_vals *= tab_e[ref_colname][np.newaxis, :, np.newaxis]
 
         return TSCube(tsmap, nmap, tscube, ncube,
@@ -1753,7 +1720,7 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) == 1:
-        flux_type = "FLUX"
+        flux_type = "flux"
     else:
         flux_type = sys.argv[1]
 

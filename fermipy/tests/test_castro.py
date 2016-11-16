@@ -29,11 +29,13 @@ def test_castro_test_spectra_sed(sedfile):
     assert_allclose(test_dict['PLExpCutoff']['TS'][0], 28.32140, atol=0.01)
 
     assert_allclose(test_dict['PowerLaw']['Result'],
-                    np.array([1.12719216e-12, -2.60937952e+00]))
+                    np.array([1.12719216e-12, -2.60937952e+00]), rtol=1E-4)
     assert_allclose(test_dict['LogParabola']['Result'],
-                    np.array([1.01468889e-12, -2.43974568e+00, 6.66682177e-02]))
+                    np.array([1.01468889e-12, -2.43974568e+00, 6.66682177e-02]),
+                    rtol=1E-4)
     assert_allclose(test_dict['PLExpCutoff']['Result'],
-                    np.array([1.04931290e-12, -2.50472567e+00, 6.35096327e+04]))
+                    np.array([1.04931290e-12, -2.50472567e+00, 6.35096327e+04]),
+                    rtol=1E-4)
 
 
 def test_castro_test_spectra_castro(tmpdir):
