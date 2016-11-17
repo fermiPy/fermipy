@@ -1656,13 +1656,18 @@ class ROIModel(fermipy.config.Configurable):
                     minmax_ts=None, minmax_npred=None,
                     exclude=None, square=False, coordsys='CEL'):
         """Retrieve list of source objects satisfying the following
-        selections:        
-           * Angular separation from ``skydir`` or ROI center (if
+        selections:
+        
+        * Angular separation from ``skydir`` or ROI center (if
              ``skydir`` is None) less than ``distance``.           
-           * Cuts on source properties defined in ``cuts`` list.
-           * TS and Npred in range specified by ``minmax_ts`` and ``minmax_npred``.           
-        Sources can be excluded from the selection by name with ``exclude``.
 
+        * Cuts on source properties defined in ``cuts`` list.
+        
+        * TS and Npred in range specified by ``minmax_ts`` and ``minmax_npred``.
+
+        Sources can be excluded from the selection by adding their
+        name to the ``exclude`` list.
+        
         Returns
         -------
         srcs : list
