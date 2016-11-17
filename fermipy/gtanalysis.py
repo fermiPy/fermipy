@@ -3588,7 +3588,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         sources = roi_data.pop('sources')
         sources = utils.update_keys(sources, key_map)
-
+        for k0, v0 in sources.items():
+            for k, v in defaults.source_flux_output.items():
+                if k not in v0:
+                    continue
+                if v[2] == float and isinstance(v0[k],np.ndarray):
+                    sources[k0][k],sources[k0][k + '_err'] \
+                        = v0[k][0], v0[k][1]
+                    
         self.roi.load_sources(sources.values())
         for i, c in enumerate(self.components):
             c.roi.load_sources(sources.values())

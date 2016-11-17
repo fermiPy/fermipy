@@ -47,6 +47,16 @@ def test_gtanalysis_setup(setup):
     gta.print_roi()
 
 
+def test_print_model(setup):
+    gta = setup
+    gta.print_model()
+
+
+def test_print_params(setup):
+    gta = setup
+    gta.print_params(True)
+
+
 def test_gtanalysis_write_roi(setup):
     gta = setup
     gta.write_roi('test')
@@ -55,6 +65,25 @@ def test_gtanalysis_write_roi(setup):
 def test_gtanalysis_load_roi(setup):
     gta = setup
     gta.load_roi('fit0')
+    src = gta.roi['3FGL J1725.3+5853']
+    assert_allclose(src['params']['Prefactor'][0],
+                    1.6266779e-13, rtol=1E-3)
+    assert_allclose(src['params']['Index'][0], -2.17892, rtol=1E-3)
+    assert_allclose(src['flux'], 4.099648e-10, rtol=1E-3)
+    assert_allclose(src['flux_err'], np.nan, rtol=1E-3)
+    assert_allclose(src['eflux'], 9.76762e-07, rtol=1E-3)
+    assert_allclose(src['eflux_err'], np.nan, rtol=1E-3)
+
+    gta.load_roi('fit1')
+    src = gta.roi['3FGL J1725.3+5853']
+    assert_allclose(src['params']['Prefactor'][0], 2.0878036e-13, rtol=1E-3)
+    assert_allclose(src['params']['Index'][0], -2.053723, rtol=1E-3)
+    assert_allclose(src['flux'], 5.377593e-10, rtol=1E-3)
+    assert_allclose(src['flux_err'], 6.40203e-11, rtol=1E-3)
+    assert_allclose(src['eflux'], 1.34617749e-06, rtol=1E-3)
+    assert_allclose(src['eflux_err'], 1.584814e-07, rtol=1E-3)
+    assert_allclose(src['ts'], 200.604, rtol=1E-3)
+    assert_allclose(src['npred'], 170.258, rtol=1E-3)
 
 
 def test_gtanalysis_optimize(setup):
@@ -75,6 +104,19 @@ def test_gtanalysis_fit(setup):
     assert (np.abs(fit_output0['loglike'] - fit_output1['loglike']) < 0.01)
 
 
+@requires_st_version('11-04-00')
+def test_gtanalysis_fit_newton(setup):
+    gta = setup
+    gta.load_roi('fit0')
+    gta.free_sources(distance=3.0, pars='norm')
+    gta.write_xml('fit_test')
+    fit_output0 = gta.fit(optimizer='MINUIT')
+    gta.load_xml('fit_test')
+    fit_output1 = gta.fit(optimizer='NEWTON')
+
+    assert (np.abs(fit_output0['loglike'] - fit_output1['loglike']) < 0.01)
+    
+    
 def test_gtanalysis_tsmap(setup):
     gta = setup
     gta.load_roi('fit1')
