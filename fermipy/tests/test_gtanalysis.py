@@ -157,7 +157,7 @@ def test_gtanalysis_find_sources(setup):
 
     gta.find_sources()
 
-    diff_sources = [s.name for s in self.roi.sources if s.diffuse]
+    diff_sources = [s.name for s in gta.roi.sources if s.diffuse]
     newsrcs0 = gta.get_sources(skydir=src0.skydir, distance=0.3,
                                exclude=diff_sources)
     newsrcs1 = gta.get_sources(skydir=src1.skydir, distance=0.3,
