@@ -164,22 +164,24 @@ def find_rows_by_string(tab, names, colnames=['assoc']):
 
     Returns
     -------
-    outtab : `astropy.table.Table`
-       Table containing the subset of rows with matching strings.
+    mask : `~numpy.ndarray`
+       Boolean mask for rows with matching strings.
 
     """
     mask = np.empty(len(tab),dtype=bool); mask.fill(False)
     names = [name.lower().replace(' ', '') for name in names]
 
+    for colname in colnames:
 
-    for colname in colnames:    
+        if colname not in tab.columns:
+            continue
+        
         col = tab[[colname]].copy()    
         col[colname] = defchararray.replace(defchararray.lower(col[colname]),
                                ' ', '')
         for name in names:
             mask |= col[colname] == name
-    #mask = create_mask(col, {colname: names})
-    return tab[mask]
+    return mask
 
 
 def join_strings(strings, sep='_'):

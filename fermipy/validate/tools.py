@@ -167,7 +167,8 @@ class Accumulator(object):
         print('calculating separations')
         
         src_tab = catalog.Catalog3FGL().table
-        rows = utils.find_rows_by_string(src_tab,src_list,['Source_Name','ASSOC1','ASSOC2'])
+        m = utils.find_rows_by_string(src_tab,src_list,['Source_Name','ASSOC1','ASSOC2'])
+        rows = src_tab[m]
         src_skydir = SkyCoord(rows['RAJ2000'],rows['DEJ2000'],unit='deg')
         evt_skydir = SkyCoord(tab['RA'],tab['DEC'],unit='deg')
         lat_skydir = SkyCoord(tab['PtRaz'],tab['PtDecz'],unit='deg')
