@@ -20,6 +20,7 @@ import fermipy.skymap as skymap
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 import fermipy.sed as sed
+import fermipy.lightcurve as lightcurve
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
@@ -376,7 +377,7 @@ def filter_dict(d, val):
 
 class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
-                 SourceFinder):
+                 SourceFinder, lightcurve.LightCurve):
     """High-level analysis interface that manages a set of analysis
     component objects.  Most of the functionality of the Fermipy
     package is provided through the methods of this class.  The class
@@ -399,6 +400,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'tscube': defaults.tscube,
                 'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
+                'lightcurve': defaults.lightcurve,
                 'extension': defaults.extension,
                 'localize': defaults.localize,
                 'roiopt': defaults.roiopt,
@@ -471,7 +473,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                     logfile=self.config['fileio']['logfile'],
                                     logging=self.config['logging'],
                                     coordsys=self.config['binning']['coordsys'])
-
+        
         self._like = None
         self._components = []
         configs = self._create_component_configs()
@@ -1266,8 +1268,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             return cs
 
     def get_sources(self, cuts=None, distance=None, skydir=None,
-                    minmax_ts=None, minmax_npred=None,
-                    square=False, exclude_diffuse=False):
+                    minmax_ts=None, minmax_npred=None, exclude=None,
+                    square=False):
         """Retrieve list of sources in the ROI satisfying the given
         selections.
 
@@ -1280,8 +1282,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         coordsys = self.config['binning']['coordsys']
         return self.roi.get_sources(skydir, distance, cuts,
-                                    minmax_ts, minmax_npred, square,
-                                    exclude_diffuse=exclude_diffuse,
+                                    minmax_ts, minmax_npred,
+                                    exclude, square,
                                     coordsys=coordsys)
 
     def add_source(self, name, src_dict, free=False, init_source=True,
@@ -1291,7 +1293,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         Parameters
         ----------
-
         name : str
             Source name.
 
@@ -1407,7 +1408,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def delete_sources(self, cuts=None, distance=None,
                        skydir=None, minmax_ts=None, minmax_npred=None,
-                       square=False, exclude_diffuse=True):
+                       exclude=None, square=False):
         """Delete sources in the ROI model satisfying the given
         selection criteria.
 
@@ -1451,7 +1452,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         srcs = self.roi.get_sources(skydir=skydir, distance=distance, cuts=cuts,
                                     minmax_ts=minmax_ts, minmax_npred=minmax_npred,
-                                    square=square, exclude_diffuse=exclude_diffuse,
+                                    exclude=exclude, square=square,
                                     coordsys=self.config['binning']['coordsys'])
 
         for s in srcs:
@@ -1465,9 +1466,45 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         return srcs
 
+    def free_sources_by_name(self, names, free=True, pars=None,
+                             **kwargs):
+        """Free all sources with names matching ``names``.
+
+        Parameters
+        ----------
+        names : list
+            List of source names.
+
+        free : bool
+            Choose whether to free (free=True) or fix (free=False)
+            source parameters.
+
+        pars : list
+            Set a list of parameters to be freed/fixed for each
+            source.  If none then all source parameters will be
+            freed/fixed.  If pars='norm' then only normalization
+            parameters will be freed.
+
+        Returns
+        -------
+        srcs : list
+            A list of `~fermipy.roi_model.Model` objects.            
+        """
+        
+        if names is None:
+            return
+        
+        names = [names] if not isinstance(names,list) else names
+        names = [self.roi.get_source_by_name(t).name for t in names]
+        srcs = [s for s in self.roi.sources if s.name in names]
+        for s in srcs:
+            self.free_source(s.name, free=free, pars=pars, **kwargs)
+
+        return srcs
+    
     def free_sources(self, free=True, pars=None, cuts=None,
                      distance=None, skydir=None, minmax_ts=None, minmax_npred=None,
-                     square=False, exclude_diffuse=False, **kwargs):
+                     exclude=None, square=False, **kwargs):
         """Free or fix sources in the ROI model satisfying the given
         selection.  When multiple selections are defined, the selected
         sources will be those satisfying the logical AND of all
@@ -1511,17 +1548,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             will be applied.  If this parameter is none no selection
             will be applied.
 
+        exclude : list
+            Names of sources that will be excluded from the selection.
+
         square : bool
             Switch between applying a circular or square (ROI-like)
             selection on the maximum projected distance from the ROI
             center.
 
-        exclude_diffuse : bool
-            Exclude diffuse sources.
-
         Returns
         -------
-
         srcs : list
             A list of `~fermipy.roi_model.Model` objects.
 
@@ -1529,8 +1565,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         srcs = self.roi.get_sources(skydir=skydir, distance=distance,
                                     cuts=cuts, minmax_ts=minmax_ts,
-                                    minmax_npred=minmax_npred, square=square,
-                                    exclude_diffuse=exclude_diffuse,
+                                    minmax_npred=minmax_npred, exclude=exclude,
+                                    square=square,                                    
                                     coordsys=self.config['binning']['coordsys'])
 
         for s in srcs:
@@ -3462,13 +3498,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 free_str = '*'
 
             if s['SpectrumType'] == 'PowerLaw':
-                index = s['dnde1000_index'][0]
+                index = s['dnde1000_index']
             else:
-                index = 0.5 * (s['dnde1000_index'][0] +
-                               s['dnde10000_index'][0])
+                index = 0.5 * (s['dnde1000_index'] +
+                               s['dnde10000_index'])
 
             o += '%-20.19s%8.3f%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
-                s['name'], s['offset'], normVal, s['eflux'][0], index,
+                s['name'], s['offset'], normVal, s['eflux'], index,
                 s['ts'], s['npred'], free_str)
 
         for s in sorted(self.roi.sources, key=lambda t: t['offset']):
@@ -3484,14 +3520,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 free_str = '*'
 
             if s['SpectrumType'] == 'PowerLaw':
-                index = s['dnde1000_index'][0]
+                index = s['dnde1000_index']
             else:
-                index = 0.5 * (s['dnde1000_index'][0] +
-                               s['dnde10000_index'][0])
+                index = 0.5 * (s['dnde1000_index'] +
+                               s['dnde10000_index'])
 
             o += '%-20.19s%8s%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
                 s['name'],
-                '---', normVal, s['eflux'][0], index, s['ts'], s['npred'], free_str)
+                '---', normVal, s['eflux'], index, s['ts'], s['npred'], free_str)
 
         self.logger.log(loglevel, o)
 
@@ -3820,40 +3856,17 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         spectrum = source.spectrum()
         normPar = self.like.normPar(name)
 
-        src_dict = {'name': name,
-                    'flux': np.ones(2) * np.nan,
-                    'flux100': np.ones(2) * np.nan,
-                    'flux1000': np.ones(2) * np.nan,
-                    'flux10000': np.ones(2) * np.nan,
-                    'eflux': np.ones(2) * np.nan,
-                    'eflux100': np.ones(2) * np.nan,
-                    'eflux1000': np.ones(2) * np.nan,
-                    'eflux10000': np.ones(2) * np.nan,
-                    'dnde': np.ones(2) * np.nan,
-                    'dnde100': np.ones(2) * np.nan,
-                    'dnde1000': np.ones(2) * np.nan,
-                    'dnde10000': np.ones(2) * np.nan,
-                    'dnde_index': np.ones(2) * np.nan,
-                    'dnde100_index': np.ones(2) * np.nan,
-                    'dnde1000_index': np.ones(2) * np.nan,
-                    'dnde10000_index': np.ones(2) * np.nan,
-                    'flux_ul95': np.nan,
-                    'flux100_ul95': np.nan,
-                    'flux1000_ul95': np.nan,
-                    'flux10000_ul95': np.nan,
-                    'eflux_ul95': np.nan,
-                    'eflux100_ul95': np.nan,
-                    'eflux1000_ul95': np.nan,
-                    'eflux10000_ul95': np.nan,
-                    'pivot_energy': 1000.,
-                    'ts': np.nan,
-                    'loglike': np.nan,
-                    'npred': 0.0,
-                    'lnlprofile': None,
-                    'dloglike_scan': np.nan * np.ones(npts),
-                    'eflux_scan': np.nan * np.ones(npts),
-                    'flux_scan': np.nan * np.ones(npts),
-                    }
+        src_dict = defaults.make_default_dict(defaults.source_flux_output)        
+        src_dict.update({'name': name,
+                         'pivot_energy': 1000.,
+                         'ts': np.nan,
+                         'loglike': np.nan,
+                         'npred': 0.0,
+                         'lnlprofile': None,
+                         'dloglike_scan': np.nan * np.ones(npts),
+                         'eflux_scan': np.nan * np.ones(npts),
+                         'flux_scan': np.nan * np.ones(npts),
+                         })
 
         src_dict['params'] = gtutils.gtlike_spectrum_to_dict(spectrum)
         src_dict['spectral_pars'] = gtutils.get_function_pars_dict(spectrum)
@@ -3867,27 +3880,27 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # Get the Model Fluxes
         try:
-            src_dict['flux'][0] = self.like.flux(name, self.energies[0],
+            src_dict['flux'] = self.like.flux(name, self.energies[0],
                                                  self.energies[-1])
-            src_dict['flux100'][0] = self.like.flux(name, 100., 10 ** 5.5)
-            src_dict['flux1000'][0] = self.like.flux(name, 1000., 10 ** 5.5)
-            src_dict['flux10000'][0] = self.like.flux(name, 10000., 10 ** 5.5)
-            src_dict['eflux'][0] = self.like.energyFlux(name,
-                                                        self.energies[0],
-                                                        self.energies[-1])
-            src_dict['eflux100'][0] = self.like.energyFlux(name, 100.,
-                                                           10 ** 5.5)
-            src_dict['eflux1000'][0] = self.like.energyFlux(name, 1000.,
-                                                            10 ** 5.5)
-            src_dict['eflux10000'][0] = self.like.energyFlux(name, 10000.,
-                                                             10 ** 5.5)
-            src_dict['dnde'][0] = self.like[name].spectrum()(
+            src_dict['flux100'] = self.like.flux(name, 100., 10 ** 5.5)
+            src_dict['flux1000'] = self.like.flux(name, 1000., 10 ** 5.5)
+            src_dict['flux10000'] = self.like.flux(name, 10000., 10 ** 5.5)
+            src_dict['eflux'] = self.like.energyFlux(name,
+                                                     self.energies[0],
+                                                     self.energies[-1])
+            src_dict['eflux100'] = self.like.energyFlux(name, 100.,
+                                                        10 ** 5.5)
+            src_dict['eflux1000'] = self.like.energyFlux(name, 1000.,
+                                                         10 ** 5.5)
+            src_dict['eflux10000'] = self.like.energyFlux(name, 10000.,
+                                                          10 ** 5.5)
+            src_dict['dnde'] = self.like[name].spectrum()(
                 pyLike.dArg(src_dict['pivot_energy']))
-            src_dict['dnde100'][0] = self.like[name].spectrum()(
+            src_dict['dnde100'] = self.like[name].spectrum()(
                 pyLike.dArg(100.))
-            src_dict['dnde1000'][0] = self.like[name].spectrum()(
+            src_dict['dnde1000'] = self.like[name].spectrum()(
                 pyLike.dArg(1000.))
-            src_dict['dnde10000'][0] = self.like[name].spectrum()(
+            src_dict['dnde10000'] = self.like[name].spectrum()(
                 pyLike.dArg(10000.))
 
             if normPar.getValue() == 0:
@@ -3915,10 +3928,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 dnde10000_index = -get_spectral_index(self.like[name],
                                                       10000.)
 
-            src_dict['dnde_index'][0] = dnde_index
-            src_dict['dnde100_index'][0] = dnde100_index
-            src_dict['dnde1000_index'][0] = dnde1000_index
-            src_dict['dnde10000_index'][0] = dnde10000_index
+            src_dict['dnde_index'] = dnde_index
+            src_dict['dnde100_index'] = dnde100_index
+            src_dict['dnde1000_index'] = dnde1000_index
+            src_dict['dnde10000_index'] = dnde10000_index
 
         except Exception:
             self.logger.error('Failed to update source parameters.',
@@ -3932,20 +3945,20 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         emax = 10 ** 5.5
 
         try:
-            src_dict['flux'][1] = self.like.fluxError(name,
-                                                      self.energies[0],
-                                                      self.energies[-1])
-            src_dict['flux100'][1] = self.like.fluxError(name, 100., emax)
-            src_dict['flux1000'][1] = self.like.fluxError(name, 1000., emax)
-            src_dict['flux10000'][1] = self.like.fluxError(name, 10000., emax)
-            src_dict['eflux'][1] = \
+            src_dict['flux_err'] = self.like.fluxError(name,
+                                                       self.energies[0],
+                                                       self.energies[-1])
+            src_dict['flux100_err'] = self.like.fluxError(name, 100., emax)
+            src_dict['flux1000_err'] = self.like.fluxError(name, 1000., emax)
+            src_dict['flux10000_err'] = self.like.fluxError(name, 10000., emax)
+            src_dict['eflux_err'] = \
                 self.like.energyFluxError(name, self.energies[0],
                                           self.energies[-1])
-            src_dict['eflux100'][1] = self.like.energyFluxError(name, 100.,
+            src_dict['eflux100_err'] = self.like.energyFluxError(name, 100.,
                                                                 emax)
-            src_dict['eflux1000'][1] = self.like.energyFluxError(name, 1000.,
+            src_dict['eflux1000_err'] = self.like.energyFluxError(name, 1000.,
                                                                  emax)
-            src_dict['eflux10000'][1] = self.like.energyFluxError(name, 10000.,
+            src_dict['eflux10000_err'] = self.like.energyFluxError(name, 10000.,
                                                                   emax)
 
         except Exception:
@@ -3988,13 +4001,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             eflux10000_ratio = eflux10000 / eflux
             normPar.setValue(0.0)
         else:
-            flux100_ratio = src_dict['flux100'][0] / src_dict['flux'][0]
-            flux1000_ratio = src_dict['flux1000'][0] / src_dict['flux'][0]
-            flux10000_ratio = src_dict['flux10000'][0] / src_dict['flux'][0]
+            flux100_ratio = src_dict['flux100'] / src_dict['flux']
+            flux1000_ratio = src_dict['flux1000'] / src_dict['flux']
+            flux10000_ratio = src_dict['flux10000'] / src_dict['flux']
 
-            eflux100_ratio = src_dict['eflux100'][0] / src_dict['eflux'][0]
-            eflux1000_ratio = src_dict['eflux1000'][0] / src_dict['eflux'][0]
-            eflux10000_ratio = src_dict['eflux10000'][0] / src_dict['eflux'][0]
+            eflux100_ratio = src_dict['eflux100'] / src_dict['eflux']
+            eflux1000_ratio = src_dict['eflux1000'] / src_dict['eflux']
+            eflux10000_ratio = src_dict['eflux10000'] / src_dict['eflux']
 
         src_dict['flux_ul95'] = flux_ul_data['ul']
         src_dict['flux100_ul95'] = flux_ul_data['ul'] * flux100_ratio
@@ -4021,15 +4034,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             loge = np.linspace(self.log_energies[0],
                                self.log_energies[-1], 50)
             src_dict['model_flux'] = self.bowtie(name, fd=fd, loge=loge)
-            src_dict['dnde100'][1] = fd.error(100.)
-            src_dict['dnde1000'][1] = fd.error(1000.)
-            src_dict['dnde10000'][1] = fd.error(10000.)
+            src_dict['dnde100_err'] = fd.error(100.)
+            src_dict['dnde1000_err'] = fd.error(1000.)
+            src_dict['dnde10000_err'] = fd.error(10000.)
 
             src_dict['pivot_energy'] = src_dict['model_flux']['pivot_energy']
 
             e0 = src_dict['pivot_energy']
-            src_dict['dnde'][0] = self.like[name].spectrum()(pyLike.dArg(e0))
-            src_dict['dnde'][1] = fd.error(e0)
+            src_dict['dnde'] = self.like[name].spectrum()(pyLike.dArg(e0))
+            src_dict['dnde_err'] = fd.error(e0)
 
         if not reoptimize:
             src_dict['ts'] = self.like.Ts2(name, reoptimize=reoptimize)

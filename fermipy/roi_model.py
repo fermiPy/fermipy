@@ -100,22 +100,22 @@ def create_source_table(scan_shape):
         dtype='f8', format='%.3f', unit='deg')
 
     for t in ['eflux', 'eflux100', 'eflux1000', 'eflux10000']:
-        cols_dict[t] = dict(dtype='f8', format='%.3f',
-                            unit='MeV / (cm2 s)', shape=(2,))
+        cols_dict[t] = dict(dtype='f8', format='%.3f', unit='MeV / (cm2 s)')
+        cols_dict[t + '_err'] = dict(dtype='f8', format='%.3f', unit='MeV / (cm2 s)')
 
     for t in ['eflux_ul95', 'eflux100_ul95', 'eflux1000_ul95', 'eflux10000_ul95']:
         cols_dict[t] = dict(dtype='f8', format='%.3f', unit='MeV / (cm2 s)')
 
     for t in ['flux', 'flux100', 'flux1000', 'flux10000']:
-        cols_dict[t] = dict(dtype='f8', format='%.3f',
-                            unit='1 / (cm2 s)', shape=(2,))
+        cols_dict[t] = dict(dtype='f8', format='%.3f', unit='1 / (cm2 s)')
+        cols_dict[t + '_err'] = dict(dtype='f8', format='%.3f', unit='1 / (cm2 s)')
 
     for t in ['flux_ul95', 'flux100_ul95', 'flux1000_ul95', 'flux10000_ul95']:
         cols_dict[t] = dict(dtype='f8', format='%.3f', unit='1 / (cm2 s)')
 
     for t in ['dnde', 'dnde100', 'dnde1000', 'dnde10000']:
-        cols_dict[t] = dict(dtype='f8', format='%.3f',
-                            unit='1 / (MeV cm2 s)', shape=(2,))
+        cols_dict[t] = dict(dtype='f8', format='%.3f', unit='1 / (MeV cm2 s)')
+        cols_dict[t + '_err'] = dict(dtype='f8', format='%.3f', unit='1 / (MeV cm2 s)')
 
     cols = [Column(name=k, **v) for k, v in cols_dict.items()]
     tab = Table(cols)
@@ -635,18 +635,6 @@ class Source(Model):
 
         data = copy.deepcopy(self.data)
         data['names'] = self.names
-
-        try:
-            data['flux'], data['flux_err'] = data['flux'][0], data['flux'][1]
-        except:
-            data['flux'], data['flux_err'] = 0., 0.
-
-        try:
-            data['eflux'], data['eflux_err'] = data[
-                'eflux'][0], data['eflux'][1]
-        except:
-            data['eflux'], data['eflux_err'] = 0., 0.
-
         output = []
         output += ['{:15s}:'.format('Name') + ' {name:s}']
         output += ['{:15s}:'.format('Associations') + ' {names:s}']
@@ -1173,7 +1161,8 @@ class ROIModel(fermipy.config.Configurable):
         self._skydir = kwargs.pop('skydir', SkyCoord(0.0, 0.0, unit=u.deg))
         self._projection = kwargs.get('projection', None)
         coordsys = kwargs.pop('coordsys', 'CEL')
-
+        srcname = kwargs.pop('srcname',None)
+        
         super(ROIModel, self).__init__(config, **kwargs)
 
         self.logger = Logger.get(self.__class__.__name__,
@@ -1195,7 +1184,7 @@ class ROIModel(fermipy.config.Configurable):
         self._src_dict = collections.defaultdict(list)
         self._src_radius = []
 
-        self.load(coordsys=coordsys)
+        self.load(coordsys=coordsys,srcname=srcname)
 
     def __contains__(self, key):
         key = key.replace(' ', '').lower()
@@ -1498,7 +1487,8 @@ class ROIModel(fermipy.config.Configurable):
 
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
-
+        srcname = kwargs.get('srcname', None)
+        
         self.clear()
         self.load_diffuse_srcs()
 
@@ -1506,7 +1496,8 @@ class ROIModel(fermipy.config.Configurable):
 
             extname = os.path.splitext(c)[1]
             if extname != '.xml':
-                self.load_fits_catalog(c, extdir=extdir, coordsys=coordsys)
+                self.load_fits_catalog(c, extdir=extdir, coordsys=coordsys,
+                                       srcname=srcname)
             elif extname == '.xml':
                 self.load_xml(c, extdir=extdir, coordsys=coordsys)
             else:
@@ -1581,7 +1572,8 @@ class ROIModel(fermipy.config.Configurable):
 
         coordsys = kwargs.pop('coordsys', 'CEL')
 
-        roi = ROIModel(config, src_radius=None, src_roiwidth=None, **kwargs)
+        roi = ROIModel(config, src_radius=None, src_roiwidth=None,
+                       srcname=name, **kwargs)
         src = roi.get_source_by_name(name)
 
         return ROIModel.create_from_position(src.skydir, config,
@@ -1651,23 +1643,28 @@ class ROIModel(fermipy.config.Configurable):
         else:
             raise Exception('No source matching name: ' + name)
 
-    def get_nearby_sources(self, name, dist, min_dist=None,
+    def get_nearby_sources(self, name, distance, min_dist=None,
                            square=False):
 
         src = self.get_source_by_name(name)
         return self.get_sources_by_position(src.skydir,
-                                            dist, min_dist,
+                                            distance, min_dist,
                                             square)
 
+    
     def get_sources(self, skydir=None, distance=None, cuts=None,
-                    minmax_ts=None, minmax_npred=None, square=False,
-                    exclude_diffuse=False,
-                    coordsys='CEL'):
-        """Retrieve list of sources satisfying the given selections.
+                    minmax_ts=None, minmax_npred=None,
+                    exclude=None, square=False, coordsys='CEL'):
+        """Retrieve list of source objects satisfying the following
+        selections:        
+           * Angular separation from ``skydir`` or ROI center (if
+             ``skydir`` is None) less than ``distance``.           
+           * Cuts on source properties defined in ``cuts`` list.
+           * TS and Npred in range specified by ``minmax_ts`` and ``minmax_npred``.           
+        Sources can be excluded from the selection by name with ``exclude``.
 
         Returns
         -------
-
         srcs : list
             List of source objects.
         """
@@ -1675,12 +1672,19 @@ class ROIModel(fermipy.config.Configurable):
         if skydir is None:
             skydir = self.skydir
 
+        if exclude is None:
+            exclude = []
+            
         rsrc, srcs = self.get_sources_by_position(skydir,
                                                   distance,
                                                   square=square,
                                                   coordsys=coordsys)
+        
         o = []
-        for s, r in zip(srcs, rsrc):
+        for s in srcs + self.diffuse_sources:
+
+            if s.name in exclude:
+                continue
             if not s.check_cuts(cuts):
                 continue
             ts = s['ts']
@@ -1692,24 +1696,7 @@ class ROIModel(fermipy.config.Configurable):
                 continue
 
             o.append(s)
-
-        for s in self.diffuse_sources:
-
-            if exclude_diffuse:
-                continue
-            if not s.check_cuts(cuts):
-                continue
-
-            ts = s['ts']
-            npred = s['npred']
-
-            if not utils.apply_minmax_selection(ts, minmax_ts):
-                continue
-            if not utils.apply_minmax_selection(npred, minmax_npred):
-                continue
-
-            o.append(s)
-
+                
         return o
 
     def get_sources_by_property(self, pname, pmin, pmax=None):
@@ -1780,7 +1767,8 @@ class ROIModel(fermipy.config.Configurable):
 
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
-
+        srcname = kwargs.get('srcname', None)
+        
         cat = catalog.Catalog.create(name)
 
         m0 = get_skydir_distance_mask(cat.skydir, self.skydir,
@@ -1789,6 +1777,9 @@ class ROIModel(fermipy.config.Configurable):
                                       self.config['src_radius_roi'],
                                       square=True, coordsys=coordsys)
         m = (m0 & m1)
+        if srcname is not None:
+            m &= utils.find_rows_by_string(cat.table,[srcname],
+                                           self.src_name_cols)
 
         offset = self.skydir.separation(cat.skydir).deg
         offset_cel = wcs_utils.sky_to_offset(self.skydir,
