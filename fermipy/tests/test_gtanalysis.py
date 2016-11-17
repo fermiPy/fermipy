@@ -115,10 +115,11 @@ def test_gtanalysis_find_sources(setup):
 
     gta.find_sources()
 
+    diff_sources = [s.name for s in self.roi.sources if s.diffuse]
     newsrcs0 = gta.get_sources(skydir=src0.skydir, distance=0.3,
-                               exclude_diffuse=True)
+                               exclude=diff_sources)
     newsrcs1 = gta.get_sources(skydir=src1.skydir, distance=0.3,
-                               exclude_diffuse=True)
+                               exclude=diff_sources)
 
     assert(len(newsrcs0) == 1)
     assert(len(newsrcs1) == 1)
@@ -132,10 +133,10 @@ def test_gtanalysis_find_sources(setup):
     assert(sep0 < newsrc0['pos_r99'])
     assert(sep1 < newsrc1['pos_r99'])
 
-    flux_diff0 = (np.abs(src0['flux'][0] - newsrc0['flux'][0]) /
-                  newsrc0['flux'][1])
-    flux_diff1 = (np.abs(src1['flux'][0] - newsrc1['flux'][0]) /
-                  newsrc1['flux'][1])
+    flux_diff0 = (np.abs(src0['flux'] - newsrc0['flux']) /
+                  newsrc0['flux_err'])
+    flux_diff1 = (np.abs(src1['flux'] - newsrc1['flux']) /
+                  newsrc1['flux_err'])
 
     assert(flux_diff0 < 3.0)
     assert(flux_diff1 < 3.0)
