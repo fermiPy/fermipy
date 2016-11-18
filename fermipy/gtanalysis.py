@@ -361,9 +361,8 @@ def run_gtapp(appname, logger, kw):
 
         if (appname == 'gtbin' and k == 'scfile' and 
             not v.startswith('@') and
-            not (v.endswith('.fit') or v.endswith('.fits') or
-                 v.endswith('.fit.gz') or v.endswith('.fits.gz'))):
-            v = '@' + v            
+            not utils.is_fits_file(v)):            
+            v = '@' + v
         gtapp[k] = v
 
     logger.info(gtapp.command())
@@ -380,7 +379,7 @@ def filter_dict(d, val):
         if v == val:
             del d[k]
 
-
+            
 class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
                  SourceFinder, lightcurve.LightCurve):
@@ -4107,6 +4106,24 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
         self._files['srcmdl'] = 'srcmdl%s.xml'
 
+        self._data_files = {}
+        self._data_files['evfile'] = self.config['data']['evfile']
+        self._data_files['scfile'] = self.config['data']['scfile']
+
+        for k, v in self._data_files.items():
+            if v is None:
+                continue
+            if not os.path.isfile(v):
+                v = os.path.join(workdir,v)            
+            if not os.path.isfile(v):
+                continue
+            if not utils.is_fits_file(v):
+                self._data_files[k] = utils.resolve_file_path_list(v, workdir,
+                                                                   prefix=k)
+            else:
+                self._data_files[k] = v
+
+                
         # Fill dictionary of exposure corrections
         self._src_expscale = {}
         if self.config['gtlike']['expscale'] is not None:
@@ -4118,9 +4135,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 self._src_expscale[k] = v
 
         for k, v in self._files.items():
-            self._files[k] = os.path.join(
-                workdir, v % self.config['file_suffix'])
+            self._files[k] = os.path.join(workdir,
+                                          v % self.config['file_suffix'])
 
+        
+            
         if self.config['data']['ltcube'] is not None:
             self._ext_ltcube = True
             self._files['ltcube'] = os.path.expandvars(self.config['data']['ltcube'])
@@ -4290,6 +4309,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def files(self):
         return self._files
 
+    @property
+    def data_files(self):
+        return self._data_files
+    
     @property
     def src_expscale(self):
         return self._src_expscale
@@ -4702,7 +4725,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         # Run gtltcube
         kw = dict(evfile=self.files['ft1'],
-                  scfile=self.config['data']['scfile'],
+                  scfile=self.data_files['scfile'],
                   outfile=self.files['ltcube'],
                   binsz=self.config['ltcube']['binsz'],
                   dcostheta=self.config['ltcube']['dcostheta'],
@@ -4731,7 +4754,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       binsz=self.config['binning']['binsz'],
                       evfile=self.files['ft1'],
                       outfile=self.files['ccube'],
-                      scfile=self.config['data']['scfile'],
+                      scfile=self.data_files['scfile'],
                       xref=self._xref,
                       yref=self._yref,
                       axisrot=0,
@@ -4742,18 +4765,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       enumbins=self._enumbins,
                       coordsys=self.config['binning']['coordsys'],
                       chatter=self.config['logging']['chatter'])
-        elif self.projtype == "HPX":
-
-            scfile = self.config['data']['scfile']
-            if os.path.splitext(scfile)[1] not in ['.fit','.fits']:
-                scfile = '@' + scfile
-            
+        elif self.projtype == "HPX":            
             hpx_region = "DISK(%.3f,%.3f,%.3f)" % (
                 self._xref, self._yref, 0.5 * self.config['binning']['roiwidth'])
             kw = dict(algorithm='healpix',
                       evfile=self.files['ft1'],
                       outfile=self.files['ccube'],
-                      scfile=self.config['data']['scfile'],
+                      scfile=self.data_files['scfile'],
                       xref=self._xref,
                       yref=self._yref,
                       proj=self.config['binning']['proj'],
@@ -4844,7 +4862,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.roi.write_xml(srcmdl_file)
 
         # Run gtsrcmaps
-        kw = dict(scfile=self.config['data']['scfile'],
+        kw = dict(scfile=self.data_files['scfile'],
                   expcube=self.files['ltcube'],
                   cmap=self.files['ccube'],
                   srcmdl=srcmdl_file,
@@ -4882,7 +4900,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def _select_data(self, overwrite=False):
 
         # Run gtselect and gtmktime
-        kw_gtselect = dict(infile=self.config['data']['evfile'],
+        kw_gtselect = dict(infile=self.data_files['evfile'],
                            outfile=self.files['ft1'],
                            ra=self.roi.skydir.ra.deg,
                            dec=self.roi.skydir.dec.deg,
@@ -4901,7 +4919,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         kw_gtmktime = dict(evfile=self.files['ft1'],
                            outfile=self.files['ft1_filtered'],
-                           scfile=self.config['data']['scfile'],
+                           scfile=self.data_files['scfile'],
                            roicut=self.config['selection']['roicut'],
                            filter=self.config['selection']['filter'])
 

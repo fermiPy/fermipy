@@ -4,6 +4,7 @@ import os
 import numpy as np
 from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
+from astropy.table import Table
 from fermipy.tests.utils import requires_dependency, requires_st_version
 from fermipy import spectrum
 
@@ -17,24 +18,33 @@ pytestmark = requires_dependency('Fermi ST')
 
 
 @pytest.fixture(scope='module')
-def setup(request, tmpdir_factory):
+def create_draco_analysis(request, tmpdir_factory):
     path = tmpdir_factory.mktemp('data')
-
-    print('\ndownload')
-    url = 'https://www.dropbox.com/s/8a9ebwolxmif1n6/fermipy_test0_small.tar.gz'
-    #    'https://www.dropbox.com/s/b5zln7ku780xvzq/fermipy_test0.tar.gz'
-
-    #    dirname = os.path.abspath(os.path.dirname(__file__))
-    outfile = path.join('fermipy_test0_small.tar.gz')
+    url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/fermipy_test_draco.tar.gz'
+    outfile = path.join('fermipy_test_draco.tar.gz')
     dirname = path.join()
-    # os.system('wget -nc %s -O %s' % (url, outfile))
     os.system('curl -o %s -OL %s' % (outfile, url))
     os.system('cd %s;tar xzf %s' % (dirname, outfile))
-
-    os.system('touch %s' % path.join('test.txt'))
     request.addfinalizer(lambda: path.remove(rec=1))
 
-    cfgfile = path.join('fermipy_test0_small', 'config.yaml')
+    cfgfile = path.join('fermipy_test_draco', 'config.yaml')
+    gta = gtanalysis.GTAnalysis(str(cfgfile))
+    gta.setup()
+
+    return gta
+
+
+@pytest.fixture(scope='module')
+def create_pg1553_analysis(request, tmpdir_factory):
+    path = tmpdir_factory.mktemp('data')
+    url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/fermipy_test_pg1553.tar.gz'
+    outfile = path.join('fermipy_test_pg1553.tar.gz')
+    dirname = path.join()
+    os.system('curl -o %s -OL %s' % (outfile, url))
+    os.system('cd %s;tar xzf %s' % (dirname, outfile))
+    request.addfinalizer(lambda: path.remove(rec=1))
+
+    cfgfile = path.join('fermipy_test_pg1553', 'config.yaml')
 
     gta = gtanalysis.GTAnalysis(str(cfgfile))
     gta.setup()
@@ -42,28 +52,28 @@ def setup(request, tmpdir_factory):
     return gta
 
 
-def test_gtanalysis_setup(setup):
-    gta = setup
+def test_gtanalysis_setup(create_draco_analysis):
+    gta = create_draco_analysis
     gta.print_roi()
 
 
-def test_print_model(setup):
-    gta = setup
+def test_print_model(create_draco_analysis):
+    gta = create_draco_analysis
     gta.print_model()
 
 
-def test_print_params(setup):
-    gta = setup
+def test_print_params(create_draco_analysis):
+    gta = create_draco_analysis
     gta.print_params(True)
 
 
-def test_gtanalysis_write_roi(setup):
-    gta = setup
+def test_gtanalysis_write_roi(create_draco_analysis):
+    gta = create_draco_analysis
     gta.write_roi('test')
 
 
-def test_gtanalysis_load_roi(setup):
-    gta = setup
+def test_gtanalysis_load_roi(create_draco_analysis):
+    gta = create_draco_analysis
     gta.load_roi('fit0')
     src = gta.roi['3FGL J1725.3+5853']
     assert_allclose(src['params']['Prefactor'][0],
@@ -86,14 +96,14 @@ def test_gtanalysis_load_roi(setup):
     assert_allclose(src['npred'], 170.258, rtol=1E-3)
 
 
-def test_gtanalysis_optimize(setup):
-    gta = setup
+def test_gtanalysis_optimize(create_draco_analysis):
+    gta = create_draco_analysis
     gta.load_roi('fit0')
     gta.optimize()
 
 
-def test_gtanalysis_fit(setup):
-    gta = setup
+def test_gtanalysis_fit(create_draco_analysis):
+    gta = create_draco_analysis
     gta.load_roi('fit0')
     gta.free_sources(distance=3.0, pars='norm')
     gta.write_xml('fit_test')
@@ -105,8 +115,8 @@ def test_gtanalysis_fit(setup):
 
 
 @requires_st_version('11-04-00')
-def test_gtanalysis_fit_newton(setup):
-    gta = setup
+def test_gtanalysis_fit_newton(create_draco_analysis):
+    gta = create_draco_analysis
     gta.load_roi('fit0')
     gta.free_sources(distance=3.0, pars='norm')
     gta.write_xml('fit_test')
@@ -117,27 +127,27 @@ def test_gtanalysis_fit_newton(setup):
     assert (np.abs(fit_output0['loglike'] - fit_output1['loglike']) < 0.01)
     
     
-def test_gtanalysis_tsmap(setup):
-    gta = setup
+def test_gtanalysis_tsmap(create_draco_analysis):
+    gta = create_draco_analysis
     gta.load_roi('fit1')
     gta.tsmap(model={})
 
 
 @requires_st_version('11-04-00')
-def test_gtanalysis_tscube(setup):
-    gta = setup
+def test_gtanalysis_tscube(create_draco_analysis):
+    gta = create_draco_analysis
     gta.load_roi('fit1')
     gta.tscube(model={})
 
 
-def test_gtanalysis_residmap(setup):
-    gta = setup
+def test_gtanalysis_residmap(create_draco_analysis):
+    gta = create_draco_analysis
     gta.load_roi('fit1')
     gta.residmap(model={})
 
 
-def test_gtanalysis_find_sources(setup):
-    gta = setup
+def test_gtanalysis_find_sources(create_draco_analysis):
+    gta = create_draco_analysis
     gta.load_roi('fit1')
     np.random.seed(1)
 
@@ -184,8 +194,8 @@ def test_gtanalysis_find_sources(setup):
     assert(flux_diff1 < 3.0)
 
 
-def test_gtanalysis_sed(setup):
-    gta = setup
+def test_gtanalysis_sed(create_draco_analysis):
+    gta = create_draco_analysis
     gta.load_roi('fit1')
     np.random.seed(1)
     gta.simulate_roi()
@@ -224,8 +234,8 @@ def test_gtanalysis_sed(setup):
     gta.simulate_roi(restore=True)
 
 
-def test_gtanalysis_extension_gaussian(setup):
-    gta = setup
+def test_gtanalysis_extension_gaussian(create_draco_analysis):
+    gta = create_draco_analysis
     gta.simulate_roi(restore=True)
     gta.load_roi('fit1')
     np.random.seed(1)
@@ -244,8 +254,8 @@ def test_gtanalysis_extension_gaussian(setup):
     gta.simulate_roi(restore=True)
 
 
-def test_gtanalysis_localization(setup):
-    gta = setup
+def test_gtanalysis_localization(create_draco_analysis):
+    gta = create_draco_analysis
     gta.simulate_roi(restore=True)
     gta.load_roi('fit1')
     np.random.seed(1)
@@ -262,7 +272,7 @@ def test_gtanalysis_localization(setup):
     gta.add_source('testloc', src_dict, free=True)
     gta.fit()
 
-    result = gta.localize('testloc', nstep=5, dtheta_max=0.5, update=True)
+    result = gta.localize('testloc', nstep=4, dtheta_max=0.5, update=True)
 
     assert result['fit_success'] is True
     assert_allclose(result['glon'], 86.0, atol=0.02)
@@ -270,3 +280,16 @@ def test_gtanalysis_localization(setup):
     gta.delete_source('testloc')
 
     gta.simulate_roi(restore=True)
+
+
+def test_gtanalysis_lightcurve(create_pg1553_analysis):
+    gta = create_pg1553_analysis
+    gta.load_roi('fit1')
+    o = gta.lightcurve('3FGL J1555.7+1111', nbins=2)
+
+    assert_allclose(o['flux'],np.array([2.93893765e-08, 2.39095022e-08]),
+                    rtol=1E-4)
+
+    tab = Table.read(os.path.join(gta.workdir,o['file']))
+    assert_allclose(tab['flux'],np.array([2.93893765e-08, 2.39095022e-08]),
+                    rtol=1E-4)

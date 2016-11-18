@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 import copy
+import tempfile
 from collections import OrderedDict
 import xml.etree.cElementTree as et
 import yaml
@@ -102,6 +103,29 @@ def resolve_file_path(path, **kwargs):
             return p
 
     raise Exception('Failed to resolve file path: %s' % path)
+
+
+def resolve_file_path_list(pathlist, workdir=None, prefix=''):
+
+    if workdir is None:
+        return pathlist
+    
+    files = [line.strip() for line in open(pathlist, 'r')]    
+    files = [f if os.path.isfile(f) else
+             os.path.join(workdir,f) for f in files]
+    _, tmppath = tempfile.mkstemp(prefix=prefix,dir=workdir)
+    with open(tmppath, 'w') as tmpfile:
+        tmpfile.write("\n".join(files))
+    return tmppath
+
+
+def is_fits_file(path):
+
+    if (path.endswith('.fit') or path.endswith('.fits') or
+        path.endswith('.fit.gz') or path.endswith('.fits.gz')):
+        return True
+    else:
+        return False
 
 
 def collect_dirs(path, max_depth=1, followlinks=True):
