@@ -19,7 +19,7 @@ pytestmark = requires_dependency('Fermi ST')
 
 @pytest.fixture(scope='module')
 def create_draco_analysis(request, tmpdir_factory):
-    path = tmpdir_factory.mktemp('data')
+    path = tmpdir_factory.mktemp('draco')
     url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/fermipy_test_draco.tar.gz'
     outfile = path.join('fermipy_test_draco.tar.gz')
     dirname = path.join()
@@ -36,12 +36,28 @@ def create_draco_analysis(request, tmpdir_factory):
 
 @pytest.fixture(scope='module')
 def create_pg1553_analysis(request, tmpdir_factory):
-    path = tmpdir_factory.mktemp('data')
+    path = tmpdir_factory.mktemp('pg1553')
     url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/fermipy_test_pg1553.tar.gz'
     outfile = path.join('fermipy_test_pg1553.tar.gz')
     dirname = path.join()
     os.system('curl -o %s -OL %s' % (outfile, url))
     os.system('cd %s;tar xzf %s' % (dirname, outfile))
+
+    ft2_files = ['P8_P302_TRANSIENT020E_239557414_242187214_ft2.fits',
+                 'P8_P302_TRANSIENT020E_247446814_250076614_ft2.fits',
+                 'P8_P302_TRANSIENT020E_255336214_257966014_ft2.fits',
+                 'P8_P302_TRANSIENT020E_242187214_244817014_ft2.fits',
+                 'P8_P302_TRANSIENT020E_250076614_252706414_ft2.fits',
+                 'P8_P302_TRANSIENT020E_257966014_260595814_ft2.fits',
+                 'P8_P302_TRANSIENT020E_244817014_247446814_ft2.fits',
+                 'P8_P302_TRANSIENT020E_252706414_255336214_ft2.fits',
+                 'P8_P302_TRANSIENT020E_260595814_263225614_ft2.fits']
+
+    for f in ft2_files:
+        url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/ft2/%s'%f
+        outfile = path.join('fermipy_test_pg1553', f)
+        os.system('curl -o %s -OL %s' % (outfile, url))
+        
     request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_pg1553', 'config.yaml')
@@ -287,9 +303,13 @@ def test_gtanalysis_lightcurve(create_pg1553_analysis):
     gta.load_roi('fit1')
     o = gta.lightcurve('3FGL J1555.7+1111', nbins=2)
 
-    assert_allclose(o['flux'],np.array([2.93893765e-08, 2.39095022e-08]),
+    assert_allclose(o['flux'],np.array([2.93903999e-08, 2.39105317e-08]),
+                    rtol=1E-4)
+    assert_allclose(o['flux_err'],np.array([1.94350070e-09, 1.83590373e-09]),
+                    rtol=1E-4)
+    assert_allclose(o['ts'],np.array([1460.470, 1121.583]),
                     rtol=1E-4)
 
     tab = Table.read(os.path.join(gta.workdir,o['file']))
-    assert_allclose(tab['flux'],np.array([2.93893765e-08, 2.39095022e-08]),
+    assert_allclose(tab['flux'],np.array([2.93903999e-08, 2.39105317e-08]),
                     rtol=1E-4)

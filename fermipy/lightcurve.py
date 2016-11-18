@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import copy
 import shutil
+import yaml
 from collections import OrderedDict
 
 import numpy as np
@@ -163,12 +164,29 @@ class LightCurve(object):
             config = copy.deepcopy(self.config)
             config['selection']['tmin'] = time[0]
             config['selection']['tmax'] = time[1]
+            config['model']['diffuse_dir'] = [self.workdir]
+            for j, c in enumerate(self.components):
+                if len(config['components']) <= j:
+                    config['components'] += [{}]                    
+                
+                config['components'][j] = \
+                    utils.merge_dict(config['components'][j],
+                                     {'data' : {'evfile': c.data_files['evfile'],
+                                                'scfile': c.data_files['scfile'],
+                                                'ltcube': None } },
+                                     add_new_keys=True)
+                    
             # create out directories labeled in MJD vals
-            outdir = '%.3f_%.3f' % (utils.met_to_mjd(time[0]),
-                                    utils.met_to_mjd(time[1]))
+            outdir = 'lightcurve_%s_%.3f_%.3f' % (name.lower().replace(' ', '_'),
+                                                  utils.met_to_mjd(time[0]),
+                                                  utils.met_to_mjd(time[1]))
             config['fileio']['outdir'] = os.path.join(self.workdir, outdir)
             utils.mkdir(config['fileio']['outdir'])
 
+            yaml.dump(utils.tolist(config),
+                      open(os.path.join(config['fileio']['outdir'],
+                                        'config.yaml'), 'w'))
+            
             xmlfile = os.path.join(config['fileio']['outdir'], 'base.xml')
 
             # Make a copy of the source maps. TODO: Implement a
@@ -179,7 +197,7 @@ class LightCurve(object):
 
             gta = fermipy.gtanalysis.GTAnalysis(config)
             gta.setup()
-
+            
             # Write the current model
             gta.write_xml(xmlfile)
 
@@ -195,7 +213,6 @@ class LightCurve(object):
                     continue
                 if (fit_results['fit_success'] == 1):
                     o[k][i] = output[k]
-
 
         src = self.roi.get_source_by_name(name)
         src.update_data({'lightcurve': copy.deepcopy(o)})

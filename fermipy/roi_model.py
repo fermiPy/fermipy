@@ -1272,14 +1272,13 @@ class ROIModel(fermipy.config.Configurable):
         if 'FERMI_DIR' in os.environ and 'FERMI_DIFFUSE_DIR' not in os.environ:
             os.environ['FERMI_DIFFUSE_DIR'] = \
                 os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
-        if 'FERMIPY_WORKDIR' not in os.environ:
 
-            if self.config['fileio']['workdir'] is not None:
-                os.environ['FERMIPY_WORKDIR'] = self.config[
-                    'fileio']['workdir']
-            else:
-                os.environ['FERMIPY_WORKDIR'] = os.getcwd()
-
+        search_dirs = []
+        search_dirs += self.config['diffuse_dir']
+        search_dirs += [self.config['fileio']['outdir'],
+                        os.path.join('$FERMIPY_ROOT', 'data'),
+                        '$FERMI_DIFFUSE_DIR']
+            
         srcs = []
         if self.config[name] is not None:
             srcs = self.config[name]
@@ -1296,10 +1295,7 @@ class ROIModel(fermipy.config.Configurable):
 
             src_dict['file'] = \
                 utils.resolve_file_path(src_dict['file'],
-                                        search_dirs=['$FERMIPY_WORKDIR',
-                                                     os.path.join('$FERMIPY_ROOT',
-                                                                  'data'),
-                                                     '$FERMI_DIFFUSE_DIR'])
+                                        search_dirs=search_dirs)
 
             if 'name' not in src_dict:
                 if len(srcs) == 1:
