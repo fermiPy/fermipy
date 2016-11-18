@@ -96,13 +96,12 @@ gtlike = {
                       'Provide a list of sources for which the edisp '
                       'correction should be disabled.',
                       list),
-#    'likelihood': ('binned', '', str),
     'minbinsz': (0.05, 'Set the minimum bin size used for resampling diffuse maps.', float),
     'rfactor': (2, '', int),
     'convolve': (True, '', bool),
     'resample': (True, '', bool),
     'srcmap': (None, '', str),
-    'bexpmap': (None, '', str),
+    'bexpmap': (None, '', str),    
     'wmap': (None, 'Likelihood weights map.', str),
     'llscan_npts': (20,'Number of evaluation points to use when performing a likelihood scan.',int),
     'src_expscale': (None, 'Dictionary of exposure corrections for individual sources keyed to source name.  The exposure '
@@ -110,6 +109,12 @@ gtlike = {
     'expscale': (None, 'Exposure correction that is applied to all sources in the analysis component.  '
                  'This correction is superseded by `src_expscale` if it is defined for a source.', float),
 }
+
+# Options for generating livetime cubes
+ltcube = {
+    'binsz': (1.0, 'Set the angular bin size for generating livetime cubes.', float),
+    'dcostheta': (0.025, 'Set the inclination angle binning represented as the cosine of the off-axis angle.', float),
+    }
 
 # Options for binning.
 binning = {

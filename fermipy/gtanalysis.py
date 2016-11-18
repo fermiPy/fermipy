@@ -358,6 +358,12 @@ def run_gtapp(appname, logger, kw):
     gtapp = GtApp.GtApp(str(appname))
 
     for k, v in kw.items():
+
+        if (appname == 'gtbin' and k == 'scfile' and 
+            not v.startswith('@') and
+            not (v.endswith('.fit') or v.endswith('.fits') or
+                 v.endswith('.fit.gz') or v.endswith('.fits.gz'))):
+            v = '@' + v            
         gtapp[k] = v
 
     logger.info(gtapp.command())
@@ -393,6 +399,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'selection': defaults.selection,
                 'model': defaults.model,
                 'data': defaults.data,
+                'ltcube': defaults.ltcube,
                 'gtlike': defaults.gtlike,
                 'mc': defaults.mc,
                 'residmap': defaults.residmap,
@@ -4062,6 +4069,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 class GTBinnedAnalysis(fermipy.config.Configurable):
     defaults = dict(selection=defaults.selection,
                     binning=defaults.binning,
+                    ltcube=defaults.ltcube,
                     gtlike=defaults.gtlike,
                     data=defaults.data,
                     model=defaults.model,
@@ -4696,6 +4704,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         kw = dict(evfile=self.files['ft1'],
                   scfile=self.config['data']['scfile'],
                   outfile=self.files['ltcube'],
+                  binsz=self.config['ltcube']['binsz'],
+                  dcostheta=self.config['ltcube']['dcostheta'],
                   zmax=self.config['selection']['zmax'])
 
         if self._ext_ltcube:
@@ -4733,6 +4743,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       coordsys=self.config['binning']['coordsys'],
                       chatter=self.config['logging']['chatter'])
         elif self.projtype == "HPX":
+
+            scfile = self.config['data']['scfile']
+            if os.path.splitext(scfile)[1] not in ['.fit','.fits']:
+                scfile = '@' + scfile
+            
             hpx_region = "DISK(%.3f,%.3f,%.3f)" % (
                 self._xref, self._yref, 0.5 * self.config['binning']['roiwidth'])
             kw = dict(algorithm='healpix',
