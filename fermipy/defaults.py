@@ -54,27 +54,30 @@ selection = {
 model = {
     'src_radius':
         (None,
-         'Radius of circular selection cut for inclusion of catalog sources in the model.  Includes sources within a circle of this radius '
-         'centered on the ROI.  If this parameter is none then no selection is applied.  This selection '
-         'will be ORed with the ``src_roiwidth`` selection.',
+         'Radius of circular region in degrees centered on the ROI that selects '
+         'sources for inclusion in the model.  If this parameter is none then no '
+         'selection is applied.  This selection is ORed with the ``src_roiwidth`` selection.',
          float),
     'src_roiwidth':
         (None,
-         'Width of square selection cut for inclusion of catalog sources in the model.  Includes sources within a square region with '
-         'side ``src_roiwidth`` centered on the ROI.  If this parameter is '
-         'none then no selection is applied.  This selection will be ORed with the ``src_radius`` selection.', float),
+         'Width of square region in degrees centered on the ROI that selects '
+         'sources for inclusion in the model.  If this parameter is none then no '
+         'selection is applied.  This selection will be ORed with the ``src_radius`` selection.', float),
     'src_radius_roi':
         (None,
          'Half-width of ``src_roiwidth`` selection.  This parameter can be used in '
          'lieu of ``src_roiwidth``.',
          float),
-    'isodiff': (None, 'Set the isotropic template.', list),
-    'galdiff': (None, 'Set the galactic IEM mapcube.', list),
+    'isodiff': (None, 'Set the path to one or more isotropic templates.  A separate component will be '
+                'generated for each item in this list.', list),
+    'galdiff': (None, 'Set the path to one or more galactic IEM mapcubes.  A separate component will be '
+                'generated for each item in this list.', list),
     'limbdiff': (None, '', list),
     'diffuse': (None, '', list),
     'sources': (None, '', list),
     'extdir': (None, 'Set a directory that will be searched for extended source FITS templates.  Template files in this directory '
                'will take precendence over catalog source templates with the same name.', str),
+    'diffuse_dir': (None, '', list),
     'catalogs': (None, '', list),
     'merge_sources' :
         (True, 'Merge properties of sources that appear in multiple '
