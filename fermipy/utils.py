@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 import copy
+import tempfile
 from collections import OrderedDict
 import xml.etree.cElementTree as et
 import yaml
@@ -104,6 +105,29 @@ def resolve_file_path(path, **kwargs):
     raise Exception('Failed to resolve file path: %s' % path)
 
 
+def resolve_file_path_list(pathlist, workdir=None, prefix=''):
+
+    if workdir is None:
+        return pathlist
+    
+    files = [line.strip() for line in open(pathlist, 'r')]    
+    files = [f if os.path.isfile(f) else
+             os.path.join(workdir,f) for f in files]
+    _, tmppath = tempfile.mkstemp(prefix=prefix,dir=workdir)
+    with open(tmppath, 'w') as tmpfile:
+        tmpfile.write("\n".join(files))
+    return tmppath
+
+
+def is_fits_file(path):
+
+    if (path.endswith('.fit') or path.endswith('.fits') or
+        path.endswith('.fit.gz') or path.endswith('.fits.gz')):
+        return True
+    else:
+        return False
+
+
 def collect_dirs(path, max_depth=1, followlinks=True):
     """Recursively find directories under the given path."""
 
@@ -164,22 +188,24 @@ def find_rows_by_string(tab, names, colnames=['assoc']):
 
     Returns
     -------
-    outtab : `astropy.table.Table`
-       Table containing the subset of rows with matching strings.
+    mask : `~numpy.ndarray`
+       Boolean mask for rows with matching strings.
 
     """
     mask = np.empty(len(tab),dtype=bool); mask.fill(False)
     names = [name.lower().replace(' ', '') for name in names]
 
+    for colname in colnames:
 
-    for colname in colnames:    
+        if colname not in tab.columns:
+            continue
+        
         col = tab[[colname]].copy()    
         col[colname] = defchararray.replace(defchararray.lower(col[colname]),
                                ' ', '')
         for name in names:
             mask |= col[colname] == name
-    #mask = create_mask(col, {colname: names})
-    return tab[mask]
+    return mask
 
 
 def join_strings(strings, sep='_'):
@@ -210,6 +236,11 @@ def strip_suffix(filename, suffix):
         filename = re.sub(r'\.%s$' % s, '', filename)
 
     return filename
+
+
+def met_to_mjd(time):
+    """"Convert mission elapsed time to mean julian date."""
+    return 54682.65 + (time-239557414.0)/(86400.)
 
 
 RA_NGP = np.radians(192.8594812065348)

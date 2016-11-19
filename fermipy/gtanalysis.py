@@ -20,6 +20,7 @@ import fermipy.skymap as skymap
 import fermipy.plotting as plotting
 import fermipy.irfs as irfs
 import fermipy.sed as sed
+import fermipy.lightcurve as lightcurve
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
@@ -357,6 +358,11 @@ def run_gtapp(appname, logger, kw):
     gtapp = GtApp.GtApp(str(appname))
 
     for k, v in kw.items():
+
+        if (appname == 'gtbin' and k == 'scfile' and 
+            not v.startswith('@') and
+            not utils.is_fits_file(v)):            
+            v = '@' + v
         gtapp[k] = v
 
     logger.info(gtapp.command())
@@ -373,10 +379,10 @@ def filter_dict(d, val):
         if v == val:
             del d[k]
 
-
+            
 class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
-                 SourceFinder):
+                 SourceFinder, lightcurve.LightCurve):
     """High-level analysis interface that manages a set of analysis
     component objects.  Most of the functionality of the Fermipy
     package is provided through the methods of this class.  The class
@@ -392,6 +398,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'selection': defaults.selection,
                 'model': defaults.model,
                 'data': defaults.data,
+                'ltcube': defaults.ltcube,
                 'gtlike': defaults.gtlike,
                 'mc': defaults.mc,
                 'residmap': defaults.residmap,
@@ -399,6 +406,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'tscube': defaults.tscube,
                 'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
+                'lightcurve': defaults.lightcurve,
                 'extension': defaults.extension,
                 'localize': defaults.localize,
                 'roiopt': defaults.roiopt,
@@ -471,7 +479,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                     logfile=self.config['fileio']['logfile'],
                                     logging=self.config['logging'],
                                     coordsys=self.config['binning']['coordsys'])
-
+        
         self._like = None
         self._components = []
         configs = self._create_component_configs()
@@ -1266,8 +1274,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             return cs
 
     def get_sources(self, cuts=None, distance=None, skydir=None,
-                    minmax_ts=None, minmax_npred=None,
-                    square=False, exclude_diffuse=False):
+                    minmax_ts=None, minmax_npred=None, exclude=None,
+                    square=False):
         """Retrieve list of sources in the ROI satisfying the given
         selections.
 
@@ -1280,8 +1288,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         coordsys = self.config['binning']['coordsys']
         return self.roi.get_sources(skydir, distance, cuts,
-                                    minmax_ts, minmax_npred, square,
-                                    exclude_diffuse=exclude_diffuse,
+                                    minmax_ts, minmax_npred,
+                                    exclude, square,
                                     coordsys=coordsys)
 
     def add_source(self, name, src_dict, free=False, init_source=True,
@@ -1291,7 +1299,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         Parameters
         ----------
-
         name : str
             Source name.
 
@@ -1407,7 +1414,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def delete_sources(self, cuts=None, distance=None,
                        skydir=None, minmax_ts=None, minmax_npred=None,
-                       square=False, exclude_diffuse=True):
+                       exclude=None, square=False):
         """Delete sources in the ROI model satisfying the given
         selection criteria.
 
@@ -1451,7 +1458,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         srcs = self.roi.get_sources(skydir=skydir, distance=distance, cuts=cuts,
                                     minmax_ts=minmax_ts, minmax_npred=minmax_npred,
-                                    square=square, exclude_diffuse=exclude_diffuse,
+                                    exclude=exclude, square=square,
                                     coordsys=self.config['binning']['coordsys'])
 
         for s in srcs:
@@ -1465,9 +1472,45 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         return srcs
 
+    def free_sources_by_name(self, names, free=True, pars=None,
+                             **kwargs):
+        """Free all sources with names matching ``names``.
+
+        Parameters
+        ----------
+        names : list
+            List of source names.
+
+        free : bool
+            Choose whether to free (free=True) or fix (free=False)
+            source parameters.
+
+        pars : list
+            Set a list of parameters to be freed/fixed for each
+            source.  If none then all source parameters will be
+            freed/fixed.  If pars='norm' then only normalization
+            parameters will be freed.
+
+        Returns
+        -------
+        srcs : list
+            A list of `~fermipy.roi_model.Model` objects.            
+        """
+        
+        if names is None:
+            return
+        
+        names = [names] if not isinstance(names,list) else names
+        names = [self.roi.get_source_by_name(t).name for t in names]
+        srcs = [s for s in self.roi.sources if s.name in names]
+        for s in srcs:
+            self.free_source(s.name, free=free, pars=pars, **kwargs)
+
+        return srcs
+    
     def free_sources(self, free=True, pars=None, cuts=None,
                      distance=None, skydir=None, minmax_ts=None, minmax_npred=None,
-                     square=False, exclude_diffuse=False, **kwargs):
+                     exclude=None, square=False, **kwargs):
         """Free or fix sources in the ROI model satisfying the given
         selection.  When multiple selections are defined, the selected
         sources will be those satisfying the logical AND of all
@@ -1511,17 +1554,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             will be applied.  If this parameter is none no selection
             will be applied.
 
+        exclude : list
+            Names of sources that will be excluded from the selection.
+
         square : bool
             Switch between applying a circular or square (ROI-like)
             selection on the maximum projected distance from the ROI
             center.
 
-        exclude_diffuse : bool
-            Exclude diffuse sources.
-
         Returns
         -------
-
         srcs : list
             A list of `~fermipy.roi_model.Model` objects.
 
@@ -1529,8 +1571,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         srcs = self.roi.get_sources(skydir=skydir, distance=distance,
                                     cuts=cuts, minmax_ts=minmax_ts,
-                                    minmax_npred=minmax_npred, square=square,
-                                    exclude_diffuse=exclude_diffuse,
+                                    minmax_npred=minmax_npred, exclude=exclude,
+                                    square=square,                                    
                                     coordsys=self.config['binning']['coordsys'])
 
         for s in srcs:
@@ -3462,13 +3504,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 free_str = '*'
 
             if s['SpectrumType'] == 'PowerLaw':
-                index = s['dnde1000_index'][0]
+                index = s['dnde1000_index']
             else:
-                index = 0.5 * (s['dnde1000_index'][0] +
-                               s['dnde10000_index'][0])
+                index = 0.5 * (s['dnde1000_index'] +
+                               s['dnde10000_index'])
 
             o += '%-20.19s%8.3f%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
-                s['name'], s['offset'], normVal, s['eflux'][0], index,
+                s['name'], s['offset'], normVal, s['eflux'], index,
                 s['ts'], s['npred'], free_str)
 
         for s in sorted(self.roi.sources, key=lambda t: t['offset']):
@@ -3484,14 +3526,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 free_str = '*'
 
             if s['SpectrumType'] == 'PowerLaw':
-                index = s['dnde1000_index'][0]
+                index = s['dnde1000_index']
             else:
-                index = 0.5 * (s['dnde1000_index'][0] +
-                               s['dnde10000_index'][0])
+                index = 0.5 * (s['dnde1000_index'] +
+                               s['dnde10000_index'])
 
             o += '%-20.19s%8s%8.3f%10.3g%7.2f%10.2f%12.1f%5s\n' % (
                 s['name'],
-                '---', normVal, s['eflux'][0], index, s['ts'], s['npred'], free_str)
+                '---', normVal, s['eflux'], index, s['ts'], s['npred'], free_str)
 
         self.logger.log(loglevel, o)
 
@@ -3552,7 +3594,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         sources = roi_data.pop('sources')
         sources = utils.update_keys(sources, key_map)
-
+        for k0, v0 in sources.items():
+            for k, v in defaults.source_flux_output.items():
+                if k not in v0:
+                    continue
+                if v[2] == float and isinstance(v0[k],np.ndarray):
+                    sources[k0][k],sources[k0][k + '_err'] \
+                        = v0[k][0], v0[k][1]
+                    
         self.roi.load_sources(sources.values())
         for i, c in enumerate(self.components):
             c.roi.load_sources(sources.values())
@@ -3820,40 +3869,17 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         spectrum = source.spectrum()
         normPar = self.like.normPar(name)
 
-        src_dict = {'name': name,
-                    'flux': np.ones(2) * np.nan,
-                    'flux100': np.ones(2) * np.nan,
-                    'flux1000': np.ones(2) * np.nan,
-                    'flux10000': np.ones(2) * np.nan,
-                    'eflux': np.ones(2) * np.nan,
-                    'eflux100': np.ones(2) * np.nan,
-                    'eflux1000': np.ones(2) * np.nan,
-                    'eflux10000': np.ones(2) * np.nan,
-                    'dnde': np.ones(2) * np.nan,
-                    'dnde100': np.ones(2) * np.nan,
-                    'dnde1000': np.ones(2) * np.nan,
-                    'dnde10000': np.ones(2) * np.nan,
-                    'dnde_index': np.ones(2) * np.nan,
-                    'dnde100_index': np.ones(2) * np.nan,
-                    'dnde1000_index': np.ones(2) * np.nan,
-                    'dnde10000_index': np.ones(2) * np.nan,
-                    'flux_ul95': np.nan,
-                    'flux100_ul95': np.nan,
-                    'flux1000_ul95': np.nan,
-                    'flux10000_ul95': np.nan,
-                    'eflux_ul95': np.nan,
-                    'eflux100_ul95': np.nan,
-                    'eflux1000_ul95': np.nan,
-                    'eflux10000_ul95': np.nan,
-                    'pivot_energy': 1000.,
-                    'ts': np.nan,
-                    'loglike': np.nan,
-                    'npred': 0.0,
-                    'lnlprofile': None,
-                    'dloglike_scan': np.nan * np.ones(npts),
-                    'eflux_scan': np.nan * np.ones(npts),
-                    'flux_scan': np.nan * np.ones(npts),
-                    }
+        src_dict = defaults.make_default_dict(defaults.source_flux_output)        
+        src_dict.update({'name': name,
+                         'pivot_energy': 1000.,
+                         'ts': np.nan,
+                         'loglike': np.nan,
+                         'npred': 0.0,
+                         'lnlprofile': None,
+                         'dloglike_scan': np.nan * np.ones(npts),
+                         'eflux_scan': np.nan * np.ones(npts),
+                         'flux_scan': np.nan * np.ones(npts),
+                         })
 
         src_dict['params'] = gtutils.gtlike_spectrum_to_dict(spectrum)
         src_dict['spectral_pars'] = gtutils.get_function_pars_dict(spectrum)
@@ -3867,27 +3893,27 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # Get the Model Fluxes
         try:
-            src_dict['flux'][0] = self.like.flux(name, self.energies[0],
+            src_dict['flux'] = self.like.flux(name, self.energies[0],
                                                  self.energies[-1])
-            src_dict['flux100'][0] = self.like.flux(name, 100., 10 ** 5.5)
-            src_dict['flux1000'][0] = self.like.flux(name, 1000., 10 ** 5.5)
-            src_dict['flux10000'][0] = self.like.flux(name, 10000., 10 ** 5.5)
-            src_dict['eflux'][0] = self.like.energyFlux(name,
-                                                        self.energies[0],
-                                                        self.energies[-1])
-            src_dict['eflux100'][0] = self.like.energyFlux(name, 100.,
-                                                           10 ** 5.5)
-            src_dict['eflux1000'][0] = self.like.energyFlux(name, 1000.,
-                                                            10 ** 5.5)
-            src_dict['eflux10000'][0] = self.like.energyFlux(name, 10000.,
-                                                             10 ** 5.5)
-            src_dict['dnde'][0] = self.like[name].spectrum()(
+            src_dict['flux100'] = self.like.flux(name, 100., 10 ** 5.5)
+            src_dict['flux1000'] = self.like.flux(name, 1000., 10 ** 5.5)
+            src_dict['flux10000'] = self.like.flux(name, 10000., 10 ** 5.5)
+            src_dict['eflux'] = self.like.energyFlux(name,
+                                                     self.energies[0],
+                                                     self.energies[-1])
+            src_dict['eflux100'] = self.like.energyFlux(name, 100.,
+                                                        10 ** 5.5)
+            src_dict['eflux1000'] = self.like.energyFlux(name, 1000.,
+                                                         10 ** 5.5)
+            src_dict['eflux10000'] = self.like.energyFlux(name, 10000.,
+                                                          10 ** 5.5)
+            src_dict['dnde'] = self.like[name].spectrum()(
                 pyLike.dArg(src_dict['pivot_energy']))
-            src_dict['dnde100'][0] = self.like[name].spectrum()(
+            src_dict['dnde100'] = self.like[name].spectrum()(
                 pyLike.dArg(100.))
-            src_dict['dnde1000'][0] = self.like[name].spectrum()(
+            src_dict['dnde1000'] = self.like[name].spectrum()(
                 pyLike.dArg(1000.))
-            src_dict['dnde10000'][0] = self.like[name].spectrum()(
+            src_dict['dnde10000'] = self.like[name].spectrum()(
                 pyLike.dArg(10000.))
 
             if normPar.getValue() == 0:
@@ -3915,10 +3941,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 dnde10000_index = -get_spectral_index(self.like[name],
                                                       10000.)
 
-            src_dict['dnde_index'][0] = dnde_index
-            src_dict['dnde100_index'][0] = dnde100_index
-            src_dict['dnde1000_index'][0] = dnde1000_index
-            src_dict['dnde10000_index'][0] = dnde10000_index
+            src_dict['dnde_index'] = dnde_index
+            src_dict['dnde100_index'] = dnde100_index
+            src_dict['dnde1000_index'] = dnde1000_index
+            src_dict['dnde10000_index'] = dnde10000_index
 
         except Exception:
             self.logger.error('Failed to update source parameters.',
@@ -3932,20 +3958,20 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         emax = 10 ** 5.5
 
         try:
-            src_dict['flux'][1] = self.like.fluxError(name,
-                                                      self.energies[0],
-                                                      self.energies[-1])
-            src_dict['flux100'][1] = self.like.fluxError(name, 100., emax)
-            src_dict['flux1000'][1] = self.like.fluxError(name, 1000., emax)
-            src_dict['flux10000'][1] = self.like.fluxError(name, 10000., emax)
-            src_dict['eflux'][1] = \
+            src_dict['flux_err'] = self.like.fluxError(name,
+                                                       self.energies[0],
+                                                       self.energies[-1])
+            src_dict['flux100_err'] = self.like.fluxError(name, 100., emax)
+            src_dict['flux1000_err'] = self.like.fluxError(name, 1000., emax)
+            src_dict['flux10000_err'] = self.like.fluxError(name, 10000., emax)
+            src_dict['eflux_err'] = \
                 self.like.energyFluxError(name, self.energies[0],
                                           self.energies[-1])
-            src_dict['eflux100'][1] = self.like.energyFluxError(name, 100.,
+            src_dict['eflux100_err'] = self.like.energyFluxError(name, 100.,
                                                                 emax)
-            src_dict['eflux1000'][1] = self.like.energyFluxError(name, 1000.,
+            src_dict['eflux1000_err'] = self.like.energyFluxError(name, 1000.,
                                                                  emax)
-            src_dict['eflux10000'][1] = self.like.energyFluxError(name, 10000.,
+            src_dict['eflux10000_err'] = self.like.energyFluxError(name, 10000.,
                                                                   emax)
 
         except Exception:
@@ -3988,13 +4014,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             eflux10000_ratio = eflux10000 / eflux
             normPar.setValue(0.0)
         else:
-            flux100_ratio = src_dict['flux100'][0] / src_dict['flux'][0]
-            flux1000_ratio = src_dict['flux1000'][0] / src_dict['flux'][0]
-            flux10000_ratio = src_dict['flux10000'][0] / src_dict['flux'][0]
+            flux100_ratio = src_dict['flux100'] / src_dict['flux']
+            flux1000_ratio = src_dict['flux1000'] / src_dict['flux']
+            flux10000_ratio = src_dict['flux10000'] / src_dict['flux']
 
-            eflux100_ratio = src_dict['eflux100'][0] / src_dict['eflux'][0]
-            eflux1000_ratio = src_dict['eflux1000'][0] / src_dict['eflux'][0]
-            eflux10000_ratio = src_dict['eflux10000'][0] / src_dict['eflux'][0]
+            eflux100_ratio = src_dict['eflux100'] / src_dict['eflux']
+            eflux1000_ratio = src_dict['eflux1000'] / src_dict['eflux']
+            eflux10000_ratio = src_dict['eflux10000'] / src_dict['eflux']
 
         src_dict['flux_ul95'] = flux_ul_data['ul']
         src_dict['flux100_ul95'] = flux_ul_data['ul'] * flux100_ratio
@@ -4021,15 +4047,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             loge = np.linspace(self.log_energies[0],
                                self.log_energies[-1], 50)
             src_dict['model_flux'] = self.bowtie(name, fd=fd, loge=loge)
-            src_dict['dnde100'][1] = fd.error(100.)
-            src_dict['dnde1000'][1] = fd.error(1000.)
-            src_dict['dnde10000'][1] = fd.error(10000.)
+            src_dict['dnde100_err'] = fd.error(100.)
+            src_dict['dnde1000_err'] = fd.error(1000.)
+            src_dict['dnde10000_err'] = fd.error(10000.)
 
             src_dict['pivot_energy'] = src_dict['model_flux']['pivot_energy']
 
             e0 = src_dict['pivot_energy']
-            src_dict['dnde'][0] = self.like[name].spectrum()(pyLike.dArg(e0))
-            src_dict['dnde'][1] = fd.error(e0)
+            src_dict['dnde'] = self.like[name].spectrum()(pyLike.dArg(e0))
+            src_dict['dnde_err'] = fd.error(e0)
 
         if not reoptimize:
             src_dict['ts'] = self.like.Ts2(name, reoptimize=reoptimize)
@@ -4042,6 +4068,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 class GTBinnedAnalysis(fermipy.config.Configurable):
     defaults = dict(selection=defaults.selection,
                     binning=defaults.binning,
+                    ltcube=defaults.ltcube,
                     gtlike=defaults.gtlike,
                     data=defaults.data,
                     model=defaults.model,
@@ -4079,6 +4106,24 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
         self._files['srcmdl'] = 'srcmdl%s.xml'
 
+        self._data_files = {}
+        self._data_files['evfile'] = self.config['data']['evfile']
+        self._data_files['scfile'] = self.config['data']['scfile']
+
+        for k, v in self._data_files.items():
+            if v is None:
+                continue
+            if not os.path.isfile(v):
+                v = os.path.join(workdir,v)            
+            if not os.path.isfile(v):
+                continue
+            if not utils.is_fits_file(v):
+                self._data_files[k] = utils.resolve_file_path_list(v, workdir,
+                                                                   prefix=k)
+            else:
+                self._data_files[k] = v
+
+                
         # Fill dictionary of exposure corrections
         self._src_expscale = {}
         if self.config['gtlike']['expscale'] is not None:
@@ -4090,9 +4135,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 self._src_expscale[k] = v
 
         for k, v in self._files.items():
-            self._files[k] = os.path.join(
-                workdir, v % self.config['file_suffix'])
+            self._files[k] = os.path.join(workdir,
+                                          v % self.config['file_suffix'])
 
+        
+            
         if self.config['data']['ltcube'] is not None:
             self._ext_ltcube = True
             self._files['ltcube'] = os.path.expandvars(self.config['data']['ltcube'])
@@ -4262,6 +4309,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def files(self):
         return self._files
 
+    @property
+    def data_files(self):
+        return self._data_files
+    
     @property
     def src_expscale(self):
         return self._src_expscale
@@ -4674,8 +4725,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         # Run gtltcube
         kw = dict(evfile=self.files['ft1'],
-                  scfile=self.config['data']['scfile'],
+                  scfile=self.data_files['scfile'],
                   outfile=self.files['ltcube'],
+                  binsz=self.config['ltcube']['binsz'],
+                  dcostheta=self.config['ltcube']['dcostheta'],
                   zmax=self.config['selection']['zmax'])
 
         if self._ext_ltcube:
@@ -4701,7 +4754,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       binsz=self.config['binning']['binsz'],
                       evfile=self.files['ft1'],
                       outfile=self.files['ccube'],
-                      scfile=self.config['data']['scfile'],
+                      scfile=self.data_files['scfile'],
                       xref=self._xref,
                       yref=self._yref,
                       axisrot=0,
@@ -4712,13 +4765,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       enumbins=self._enumbins,
                       coordsys=self.config['binning']['coordsys'],
                       chatter=self.config['logging']['chatter'])
-        elif self.projtype == "HPX":
+        elif self.projtype == "HPX":            
             hpx_region = "DISK(%.3f,%.3f,%.3f)" % (
                 self._xref, self._yref, 0.5 * self.config['binning']['roiwidth'])
             kw = dict(algorithm='healpix',
                       evfile=self.files['ft1'],
                       outfile=self.files['ccube'],
-                      scfile=self.config['data']['scfile'],
+                      scfile=self.data_files['scfile'],
                       xref=self._xref,
                       yref=self._yref,
                       proj=self.config['binning']['proj'],
@@ -4809,7 +4862,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.roi.write_xml(srcmdl_file)
 
         # Run gtsrcmaps
-        kw = dict(scfile=self.config['data']['scfile'],
+        kw = dict(scfile=self.data_files['scfile'],
                   expcube=self.files['ltcube'],
                   cmap=self.files['ccube'],
                   srcmdl=srcmdl_file,
@@ -4847,7 +4900,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def _select_data(self, overwrite=False):
 
         # Run gtselect and gtmktime
-        kw_gtselect = dict(infile=self.config['data']['evfile'],
+        kw_gtselect = dict(infile=self.data_files['evfile'],
                            outfile=self.files['ft1'],
                            ra=self.roi.skydir.ra.deg,
                            dec=self.roi.skydir.dec.deg,
@@ -4866,7 +4919,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         kw_gtmktime = dict(evfile=self.files['ft1'],
                            outfile=self.files['ft1_filtered'],
-                           scfile=self.config['data']['scfile'],
+                           scfile=self.data_files['scfile'],
                            roicut=self.config['selection']['roicut'],
                            filter=self.config['selection']['filter'])
 

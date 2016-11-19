@@ -54,27 +54,30 @@ selection = {
 model = {
     'src_radius':
         (None,
-         'Radius of circular selection cut for inclusion of catalog sources in the model.  Includes sources within a circle of this radius '
-         'centered on the ROI.  If this parameter is none then no selection is applied.  This selection '
-         'will be ORed with the ``src_roiwidth`` selection.',
+         'Radius of circular region in degrees centered on the ROI that selects '
+         'sources for inclusion in the model.  If this parameter is none then no '
+         'selection is applied.  This selection is ORed with the ``src_roiwidth`` selection.',
          float),
     'src_roiwidth':
         (None,
-         'Width of square selection cut for inclusion of catalog sources in the model.  Includes sources within a square region with '
-         'side ``src_roiwidth`` centered on the ROI.  If this parameter is '
-         'none then no selection is applied.  This selection will be ORed with the ``src_radius`` selection.', float),
+         'Width of square region in degrees centered on the ROI that selects '
+         'sources for inclusion in the model.  If this parameter is none then no '
+         'selection is applied.  This selection will be ORed with the ``src_radius`` selection.', float),
     'src_radius_roi':
         (None,
          'Half-width of ``src_roiwidth`` selection.  This parameter can be used in '
          'lieu of ``src_roiwidth``.',
          float),
-    'isodiff': (None, 'Set the isotropic template.', list),
-    'galdiff': (None, 'Set the galactic IEM mapcube.', list),
+    'isodiff': (None, 'Set the path to one or more isotropic templates.  A separate component will be '
+                'generated for each item in this list.', list),
+    'galdiff': (None, 'Set the path to one or more galactic IEM mapcubes.  A separate component will be '
+                'generated for each item in this list.', list),
     'limbdiff': (None, '', list),
     'diffuse': (None, '', list),
     'sources': (None, '', list),
     'extdir': (None, 'Set a directory that will be searched for extended source FITS templates.  Template files in this directory '
                'will take precendence over catalog source templates with the same name.', str),
+    'diffuse_dir': (None, '', list),
     'catalogs': (None, '', list),
     'merge_sources' :
         (True, 'Merge properties of sources that appear in multiple '
@@ -96,13 +99,12 @@ gtlike = {
                       'Provide a list of sources for which the edisp '
                       'correction should be disabled.',
                       list),
-#    'likelihood': ('binned', '', str),
     'minbinsz': (0.05, 'Set the minimum bin size used for resampling diffuse maps.', float),
     'rfactor': (2, '', int),
     'convolve': (True, '', bool),
     'resample': (True, '', bool),
     'srcmap': (None, '', str),
-    'bexpmap': (None, '', str),
+    'bexpmap': (None, '', str),    
     'wmap': (None, 'Likelihood weights map.', str),
     'llscan_npts': (20,'Number of evaluation points to use when performing a likelihood scan.',int),
     'src_expscale': (None, 'Dictionary of exposure corrections for individual sources keyed to source name.  The exposure '
@@ -110,6 +112,12 @@ gtlike = {
     'expscale': (None, 'Exposure correction that is applied to all sources in the analysis component.  '
                  'This correction is superseded by `src_expscale` if it is defined for a source.', float),
 }
+
+# Options for generating livetime cubes
+ltcube = {
+    'binsz': (1.0, 'Set the angular bin size for generating livetime cubes.', float),
+    'dcostheta': (0.025, 'Set the inclination angle binning represented as the cosine of the off-axis angle.', float),
+    }
 
 # Options for binning.
 binning = {
@@ -254,6 +262,36 @@ sourcefind = {
     'sources_per_iter': (3, '', int),
     'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.', str)
 }
+
+# Options for lightcurve analysis
+lightcurve = {
+    'binsz': (86400.0, 'Set the lightcurve bin size in seconds, default is 1 day.', float),
+    'nbins': (None, 'Set the number of lightcurve bins.  The total time range will be evenly '
+              'split into this number of time bins.', int),
+    'time_bins': (None, 'Set the lightcurve bin edge sequence in MET.  This option '
+                  'takes precedence over binsz and nbins.', list),
+    'free_radius': (3.0, 'Free normalizations of background sources within this angular distance in degrees '
+                    'from the source of interest.', float),
+    'free_sources': (None, 'List of sources to be freed.  These sources will be added to the list of sources '
+                     'satisfying the free_radius selection.', list)
+}
+
+#Output for lightcurve Analysis
+lightcurve_output = OrderedDict((
+    ('name', (None, 'Name of Source'', ',str,'str')),
+    ('plottimes', (None, 'Center of Time Bin in MJD', np.ndarray, '`~numpy.ndarray`')),
+    ('model', (None, 'Best fit model to the source', str, 'str')),
+    ('IntFlux', (None, 'Integral Flux in user defined energy range', np.ndarray, '`~numpy.ndarray`')),
+    ('IntFluxErr', (None, 'Error on Integral Flux, if 0 this means IntFlux is an Upperlimit', np.ndarray, '`~np.ndarray`')),
+    ('Index1', (None, 'Spectral Index',np.ndarray, '`~np.ndarray`')),
+    ('Index1Err', (None, 'Error on Spectral Index',np.ndarray, '`~np.ndarray`')),
+    ('Index2', (None, 'Spectral Index',np.ndarray, '`~np.ndarray`')),
+    ('Index2Err', (None, 'Error on Spectral Index',np.ndarray, '`~np.ndarray`')),        
+    ('TS', (None, 'Test Statistic',np.ndarray, '`~np.ndarray`')),
+    ('retCode', (None, 'Did the likelihood fit converge? 0 if yes, anything else means no',np.ndarray, '`~np.ndarray`')),
+    ('npred', (None, 'Number of Predicted photons in time bin from source',np.ndarray, '`~np.ndarray`')),
+    ('config', ({},'Copy of the input configuration to this method.',dict,'dict')),
+))
 
 # Options for SED analysis
 sed = {
@@ -417,7 +455,9 @@ plotting = {
 }
 
 # Source dictionary
-source_output = OrderedDict((
+
+
+source_meta_output = OrderedDict((
     ('name', (None,'Name of the source.',str,'str')),
     ('Source_Name', (None,'Name of the source.',str,'str')),
     ('SpatialModel', (None,'Spatial model.',str,'str')),
@@ -427,6 +467,16 @@ source_output = OrderedDict((
     ('SpectrumType', (None,'Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).',str,'str')),
     ('Spatial_Filename', (None,'Path to spatial template associated to this source.',str,'str')),
     ('Spectrum_Filename' , (None,'Path to file associated to the spectral model of this source.',str,'str')),
+    ('params', (None,'Dictionary of spectral parameters.',dict,'dict')),
+    ('correlation', ({},'Dictionary of correlation coefficients.',dict,'dict')),    
+    ('model_counts', (None,'Vector of predicted counts for this source in each analysis energy bin.',np.ndarray, '`~numpy.ndarray`')),
+    ('sed', (None,'Output of SED analysis.  See :ref:`sed` for more information.',dict,'dict')),
+    ('extension', (None,'Output of extension analysis.  See :ref:`extension` for more information.',dict,'dict')),
+    ('localize', (None,'Output of localization analysis.  See :ref:`localization` for more information.',dict,'dict')),
+    ('lightcurve', (None,'Output of lightcurve analysis.  See :ref:`lightcurve` for more information.',dict,'dict')),
+))
+
+source_pos_output = OrderedDict((
     ('ra', (np.nan,'Right ascension of the source in deg.',float,'float')),
     ('dec', (np.nan,'Declination of the source in deg.',float,'float')),
     ('glon', (np.nan,'Galactic Longitude of the source in deg.',float,'float')),
@@ -445,28 +495,32 @@ source_output = OrderedDict((
     ('pos_r68', (np.nan,'68% uncertainty (deg) on the source position.',float,'float')),
     ('pos_r95', (np.nan,'95% uncertainty (deg) on the source position.',float,'float')),
     ('pos_r99', (np.nan,'99% uncertainty (deg) on the source position.',float,'float')),    
+))
+
+source_flux_output = OrderedDict((
     ('ts', (np.nan,'Source test statistic.',float,'float')),
     ('loglike', (np.nan,'Log-likelihood of the model evaluated at the best-fit normalization of the source.',float,'float')),
-    ('ts', (np.nan,'Source test statistic.',float,'float')),
     ('dloglike_scan', (np.array([np.nan]), 'Delta Log-likelihood values for likelihood scan of source normalization.',np.ndarray, '`~numpy.ndarray`')),
     ('eflux_scan', (np.array([np.nan]), 'Energy flux values for likelihood scan of source normalization.',np.ndarray, '`~numpy.ndarray`')),
     ('flux_scan', (np.array([np.nan]), 'Flux values for likelihood scan of source normalization.',np.ndarray, '`~numpy.ndarray`')),
     ('npred', (np.nan,'Number of predicted counts from this source integrated over the analysis energy range.',float,'float')),
-    ('params', (None,'Dictionary of spectral parameters.',dict,'dict')),
-    ('correlation', ({},'Dictionary of correlation coefficients.',dict,'dict')),    
-    ('model_counts', (None,'Vector of predicted counts for this source in each analysis energy bin.',np.ndarray, '`~numpy.ndarray`')),
-    ('sed', (None,'Output of SED analysis.  See :ref:`sed` for more information.',dict,'dict')),
-    ('extension', (None,'Output of extension analysis.  See :ref:`extension` for more information.',dict,'dict')),
-    ('localize', (None,'Output of localization analysis.  See :ref:`localization` for more information.',dict,'dict')),
     ('pivot_energy', (np.nan,'Decorrelation energy in MeV.',float,'float')),
-    ('flux', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated over analysis energy range'%FLUX_UNIT,
-             np.ndarray, '`~numpy.ndarray`')),
-    ('flux100', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated from 100 MeV to 316 GeV.'%FLUX_UNIT,
-                np.ndarray, '`~numpy.ndarray`')),
-    ('flux1000', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated from 1 GeV to 316 GeV.'%FLUX_UNIT,
-                 np.ndarray, '`~numpy.ndarray`')),
-    ('flux10000', (np.array([np.nan,np.nan]), 'Photon flux and uncertainty (%s) integrated from 10 GeV to 316 GeV.'%FLUX_UNIT,
-                  np.ndarray, '`~numpy.ndarray`')),
+    ('flux', (np.nan, 'Photon flux (%s) integrated over analysis energy range'%FLUX_UNIT,
+              float, 'float')),
+    ('flux100', (np.nan, 'Photon flux (%s) integrated from 100 MeV to 316 GeV.'%FLUX_UNIT,
+                 float, 'float')),
+    ('flux1000', (np.nan, 'Photon flux (%s) integrated from 1 GeV to 316 GeV.'%FLUX_UNIT,
+                  float, 'float')),
+    ('flux10000', (np.nan, 'Photon flux (%s) integrated from 10 GeV to 316 GeV.'%FLUX_UNIT,
+                   float, 'float')),
+    ('flux_err', (np.nan, 'Photon flux uncertainty (%s) integrated over analysis energy range'%FLUX_UNIT,
+                  float, 'float')),
+    ('flux100_err', (np.nan, 'Photon flux uncertainty (%s) integrated from 100 MeV to 316 GeV.'%FLUX_UNIT,
+                     float, 'float')),
+    ('flux1000_err', (np.nan, 'Photon flux uncertainty (%s) integrated from 1 GeV to 316 GeV.'%FLUX_UNIT,
+                      float, 'float')),
+    ('flux10000_err', (np.nan, 'Photon flux uncertainty (%s) integrated from 10 GeV to 316 GeV.'%FLUX_UNIT,
+                       float, 'float')),
     ('flux_ul95', (np.nan, '95%' + ' CL upper limit on the photon flux (%s) integrated over analysis energy range'%FLUX_UNIT,
              float, 'float')),
     ('flux100_ul95', (np.nan, '95%' + ' CL upper limit on the photon flux (%s) integrated from 100 MeV to 316 GeV.'%FLUX_UNIT,
@@ -475,14 +529,22 @@ source_output = OrderedDict((
                  float, 'float')),
     ('flux10000_ul95', (np.nan, '95%' + ' CL upper limit on the photon flux (%s) integrated from 10 GeV to 316 GeV.'%FLUX_UNIT,
                   float, 'float')),
-    ('eflux', (np.array([np.nan,np.nan]), 'Energy flux and uncertainty (%s) integrated over analysis energy range'%ENERGY_FLUX_UNIT,
-             np.ndarray, '`~numpy.ndarray`')),
-    ('eflux100', (np.array([np.nan,np.nan]), 'Energy flux and uncertainty (%s) integrated from 100 MeV to 316 GeV.'%ENERGY_FLUX_UNIT,
-                np.ndarray, '`~numpy.ndarray`')),
-    ('eflux1000', (np.array([np.nan,np.nan]), 'Energy flux and uncertainty (%s) integrated from 1 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
-                 np.ndarray, '`~numpy.ndarray`')),
-    ('eflux10000', (np.array([np.nan,np.nan]), 'Energy flux and uncertainty (%s) integrated from 10 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
-                  np.ndarray, '`~numpy.ndarray`')),
+    ('eflux', (np.nan, 'Energy flux (%s) integrated over analysis energy range'%ENERGY_FLUX_UNIT,
+             float, 'float')),
+    ('eflux100', (np.nan, 'Energy flux (%s) integrated from 100 MeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+                float, 'float')),
+    ('eflux1000', (np.nan, 'Energy flux (%s) integrated from 1 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+                 float, 'float')),
+    ('eflux10000', (np.nan, 'Energy flux (%s) integrated from 10 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+                  float, 'float')),
+    ('eflux_err', (np.nan, 'Energy flux uncertainty (%s) integrated over analysis energy range'%ENERGY_FLUX_UNIT,
+                   float, 'float')),
+    ('eflux100_err', (np.nan, 'Energy flux uncertainty (%s) integrated from 100 MeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+                      float, 'float')),
+    ('eflux1000_err', (np.nan, 'Energy flux uncertainty (%s) integrated from 1 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+                       float, 'float')),
+    ('eflux10000_err', (np.nan, 'Energy flux uncertainty (%s) integrated from 10 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
+                        float, 'float')),    
     ('eflux_ul95', (np.nan, '95%' + ' CL upper limit on the energy flux (%s) integrated over analysis energy range'%ENERGY_FLUX_UNIT,
              float, 'float')),
     ('eflux100_ul95', (np.nan, '95%' + ' CL upper limit on the energy flux (%s) integrated from 100 MeV to 316 GeV.'%ENERGY_FLUX_UNIT,
@@ -491,31 +553,35 @@ source_output = OrderedDict((
                  float, 'float')),
     ('eflux10000_ul95', (np.nan, '95%' + ' CL upper limit on the energy flux (%s) integrated from 10 GeV to 316 GeV.'%ENERGY_FLUX_UNIT,
                   float, 'float')),    
-    ('dnde', (np.array([np.nan,np.nan]), 'Differential photon flux and uncertainty (%s) evaluated at the pivot energy.'%DIFF_FLUX_UNIT,
-             np.ndarray, '`~numpy.ndarray`')),
-    ('dnde100', (np.array([np.nan,np.nan]), 'Differential photon flux and uncertainty (%s) evaluated at 100 MeV.'%DIFF_FLUX_UNIT,
-                np.ndarray, '`~numpy.ndarray`')),
-    ('dnde1000', (np.array([np.nan,np.nan]), 'Differential photon flux and uncertainty (%s) evaluated at 1 GeV.'%DIFF_FLUX_UNIT,
-                 np.ndarray, '`~numpy.ndarray`')),
-    ('dnde10000', (np.array([np.nan,np.nan]), 'Differential photon flux and uncertainty (%s) evaluated at 10 GeV.'%DIFF_FLUX_UNIT,
-                  np.ndarray, '`~numpy.ndarray`')),
-    ('dnde_index', (np.array([np.nan,np.nan]), 'Logarithmic slope of the differential photon spectrum evaluated at the pivot energy.',
-             np.ndarray, '`~numpy.ndarray`')),
-    ('dnde100_index', (np.array([np.nan,np.nan]), 'Logarithmic slope of the differential photon spectrum evaluated at 100 MeV.',
-                np.ndarray, '`~numpy.ndarray`')),
-    ('dnde1000_index', (np.array([np.nan,np.nan]), 'Logarithmic slope of the differential photon spectrum evaluated evaluated at 1 GeV.',
-                 np.ndarray, '`~numpy.ndarray`')),
-    ('dnde10000_index', (np.array([np.nan,np.nan]), 'Logarithmic slope of the differential photon spectrum evaluated at 10 GeV.',
-                  np.ndarray, '`~numpy.ndarray`')),    
-    ('e2dnde', (np.array([np.nan,np.nan]), 'E^2 times the differential photon flux and uncertainty (%s) evaluated at the pivot energy.'%ENERGY_FLUX_UNIT,
-             np.ndarray, '`~numpy.ndarray`')),
-    ('e2dnde100', (np.array([np.nan,np.nan]), 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 100 MeV.'%ENERGY_FLUX_UNIT,
-                np.ndarray, '`~numpy.ndarray`')),
-    ('e2dnde1000', (np.array([np.nan,np.nan]), 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 1 GeV.'%ENERGY_FLUX_UNIT,
-                 np.ndarray, '`~numpy.ndarray`')),
-    ('e2dnde10000', (np.array([np.nan,np.nan]), 'E^2 times the differential photon flux and uncertainty (%s) evaluated at 10 GeV.'%ENERGY_FLUX_UNIT,
-                  np.ndarray, '`~numpy.ndarray`')),  
+    ('dnde', (np.nan, 'Differential photon flux (%s) evaluated at the pivot energy.'%DIFF_FLUX_UNIT,
+             float, 'float')),
+    ('dnde100', (np.nan, 'Differential photon flux (%s) evaluated at 100 MeV.'%DIFF_FLUX_UNIT,
+                float, 'float')),
+    ('dnde1000', (np.nan, 'Differential photon flux (%s) evaluated at 1 GeV.'%DIFF_FLUX_UNIT,
+                 float, 'float')),
+    ('dnde10000', (np.nan, 'Differential photon flux (%s) evaluated at 10 GeV.'%DIFF_FLUX_UNIT,
+                  float, 'float')),
+    ('dnde_err', (np.nan, 'Differential photon flux uncertainty (%s) evaluated at the pivot energy.'%DIFF_FLUX_UNIT,
+             float, 'float')),
+    ('dnde100_err', (np.nan, 'Differential photon flux uncertainty (%s) evaluated at 100 MeV.'%DIFF_FLUX_UNIT,
+                float, 'float')),
+    ('dnde1000_err', (np.nan, 'Differential photon flux uncertainty (%s) evaluated at 1 GeV.'%DIFF_FLUX_UNIT,
+                 float, 'float')),
+    ('dnde10000_err', (np.nan, 'Differential photon flux uncertainty (%s) evaluated at 10 GeV.'%DIFF_FLUX_UNIT,
+                  float, 'float')),
+    ('dnde_index', (np.nan, 'Logarithmic slope of the differential photon spectrum evaluated at the pivot energy.',
+             float, 'float')),
+    ('dnde100_index', (np.nan, 'Logarithmic slope of the differential photon spectrum evaluated at 100 MeV.',
+                float, 'float')),
+    ('dnde1000_index', (np.nan, 'Logarithmic slope of the differential photon spectrum evaluated evaluated at 1 GeV.',
+                 float, 'float')),
+    ('dnde10000_index', (np.nan, 'Logarithmic slope of the differential photon spectrum evaluated at 10 GeV.',
+                  float, 'float')),
 ))
+
+source_output = OrderedDict(list(source_meta_output.items()) +
+                            list(source_pos_output.items()) +
+                            list(source_flux_output.items()))
 
 # Top-level dictionary for output file
 file_output = OrderedDict((
