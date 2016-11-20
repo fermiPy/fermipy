@@ -16,6 +16,7 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 import numpy as np
 from scipy.stats import norm
+from scipy.stats import chi2
 from scipy import interpolate
 
 import fermipy
@@ -918,20 +919,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fmt = kwargs.get('format', self.config['format'])
         workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
         zoom = kwargs.get('zoom', None)
-        
-        if 'sigma' not in maps:
-            return
-
-        # Reload maps from FITS file
-
-        sigma_levels = [-5, -3, 3, 5, 7] + list(np.logspace(1, 3, 17))
 
         kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
         kwargs.setdefault('label_ts_threshold',
                           self.config['label_ts_threshold'])
-        kwargs.setdefault('cmap', self.config['cmap'])
+        cmap = kwargs.setdefault('cmap', self.config['cmap'])
         cmap_resid = kwargs.pop('cmap_resid', self.config['cmap_resid'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
+        sigma_levels = [-5, -3, 3, 5, 7] + list(np.logspace(1, 3, 17))
 
         load_bluered_cmap()
 
@@ -949,13 +944,17 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         # make and draw histogram
         fig, ax = plt.subplots()
-        nBins=50
+        nBins=np.linspace(-6,6,121)
         #import pdb; pdb.set_trace()
         data = np.nan_to_num(maps['sigma'].counts.T)
         # find best fit parameters
         mu, sigma = norm.fit(data.flatten())
         # make and draw the histogram
+        data[data > 6.0] = 6.0
+        data[data < -6.0] = -6.0
+
         n, bins, patches = ax.hist(data.flatten(), nBins, normed=True,
+                                   histtype='stepfilled',
                                    facecolor='green', alpha=0.75)
         # make and draw best fit line
         y = mlab.normpdf(bins, mu, sigma)
@@ -981,7 +980,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['data'], roi=roi, **kwargs)
-        p.plot(cb_label='Counts', interpolation='bicubic')
+        p.plot(cb_label='Counts', interpolation='bicubic',
+               cmap=cmap)
         plt.savefig(utils.format_filename(workdir,
                                           'residmap_data',
                                           prefix=[prefix],
@@ -990,7 +990,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['model'], roi=roi, **kwargs)
-        p.plot(cb_label='Counts', interpolation='bicubic')
+        p.plot(cb_label='Counts', interpolation='bicubic',
+               cmap=cmap)
         plt.savefig(utils.format_filename(workdir,
                                           'residmap_model',
                                           prefix=[prefix],
@@ -999,7 +1000,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         fig = plt.figure()
         p = ROIPlotter(maps['excess'], roi=roi, **kwargs)
-        p.plot(cb_label='Counts', interpolation='bicubic')
+        p.plot(cb_label='Counts', interpolation='bicubic',
+               cmap=cmap_resid)
         plt.savefig(utils.format_filename(workdir,
                                           'residmap_excess',
                                           prefix=[prefix],
@@ -1060,6 +1062,32 @@ class AnalysisPlotter(fermipy.config.Configurable):
                zoom=zoom)
         plt.savefig(utils.format_filename(workdir,
                                           '%s_npred' % suffix,
+                                          prefix=[prefix],
+                                          extension=fmt))
+        plt.close(fig)
+
+        # make and draw histogram
+        fig, ax = plt.subplots()
+        bins=np.linspace(0,25,101)
+
+        data = np.nan_to_num(maps['ts'].counts.T)
+        data[data > 25.0] = 25.0
+        data[data < 0.0] = 0.0
+        n, bins, patches = ax.hist(data.flatten(), bins, normed=True,
+                                   histtype='stepfilled',
+                                   facecolor='green', alpha=0.75)
+        #ax.plot(bins,(1-chi2.cdf(x,dof))/2.,**kwargs)
+        ax.plot(bins,0.5*chi2.pdf(bins,1.0),color='k',
+                label=r"$\chi^2_{1} / 2$")
+        ax.set_yscale('log')
+        ax.set_ylim(1E-4)
+        ax.legend(loc='upper right', frameon=False)
+
+        # labels and such
+        ax.set_xlabel('TS')
+        ax.set_ylabel('Probability')
+        plt.savefig(utils.format_filename(workdir,
+                                          '%s_ts_hist' % suffix,
                                           prefix=[prefix],
                                           extension=fmt))
         plt.close(fig)

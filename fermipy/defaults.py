@@ -250,7 +250,7 @@ tscube = {
     'tol_type': (0, 'Absoulte (0) or relative (1) criteria for convergence.', int),
     'remake_test_source': (False, 'If true, recomputes the test source image (otherwise just shifts it)', bool),
     'st_scan_level': (0, 'Level to which to do ST-based fitting (for testing)', int),
-    'init_lambda': (0, 'Initial value of damping parameter for newton step size calculation.', float),
+    'init_lambda': (0, 'Initial value of damping parameter for newton step size calculation.   A value of zero disables damping.', float),
 }
 
 # Options for Source Finder
@@ -450,7 +450,7 @@ plotting = {
     'graticule_radii': (None, 'Define a list of radii at which circular graticules will be drawn.', list),
     'format': ('png', '', str),
     'cmap': ('magma', 'Set the colormap for 2D plots.', str),
-    'cmap_resid': ('bwr', 'Set the colormap for 2D residual plots.', str),
+    'cmap_resid': ('RdBu_r', 'Set the colormap for 2D residual plots.', str),
     'label_ts_threshold':
         (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),    
 }
