@@ -135,7 +135,7 @@ script:
 after_success:
   - if [[ $NAME == 'main' ]]; then
         coveralls --rcfile='fermipy/tests/coveragerc';
-    elif [[ $NAME == 'py2_slac-st' ]]; then
+    elif [[ $SLAC_ST_BUILD == 'true' ]]; then
         docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy;source condasetup.sh;coveralls --rcfile='fermipy/tests/coveragerc'";
     fi
 
