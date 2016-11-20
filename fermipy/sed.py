@@ -129,7 +129,7 @@ class SEDGenerator(object):
             np.save(filename + '.npy', o)
 
         if config['make_plots']:
-            self._plotter.make_sed_plots(o, name, **config)
+            self._plotter.make_sed_plots(o, **config)
 
         self.logger.info('Finished SED')
 
