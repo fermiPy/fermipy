@@ -600,6 +600,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return self._roi
 
     @property
+    def plotter(self):
+        """Return the plotter instance."""
+        return self._plotter
+
+    @property
     def like(self):
         """Return the global likelihood object."""
         return self._like

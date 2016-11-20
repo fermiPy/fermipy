@@ -44,8 +44,8 @@ class SEDGenerator(object):
             Source name.
 
         prefix : str
-           Optional string that will be prepended to all output files
-           (FITS and rendered images).
+            Optional string that will be prepended to all output files
+            (FITS and rendered images).
 
         loge_bins : `~numpy.ndarray`
             Sequence of energies in log10(E/MeV) defining the edges of
@@ -79,12 +79,14 @@ class SEDGenerator(object):
             sources.  If this parameter is None then no gaussian prior
             will be applied.
 
+        make_plots : bool
+            Generate plots.
+
         write_fits : bool
-            Write a FITS file containing the SED analysis results.
+            Write the output to a FITS file.
 
         write_npy : bool
-            Write a numpy file with the contents of the output
-            dictionary.
+            Write the output dictionary to a numpy file.
 
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
@@ -92,9 +94,7 @@ class SEDGenerator(object):
         Returns
         -------
         sed : dict
-           Dictionary containing output of the SED analysis.  This
-           dictionary is also saved to the 'sed' dictionary of the
-           `~fermipy.roi_model.Source` instance.
+            Dictionary containing output of the SED analysis.
 
         """
 
@@ -104,6 +104,7 @@ class SEDGenerator(object):
         schema = ConfigSchema(self.defaults['sed'],
                               optimizer=self.defaults['optimizer'])
         schema.add_option('prefix', '')
+        schema.add_option('make_plots', False)
         schema.add_option('write_fits', True)
         schema.add_option('write_npy', True)
         schema.add_option('loge_bins', None, '', list)
@@ -127,10 +128,8 @@ class SEDGenerator(object):
         if config['write_npy']:
             np.save(filename + '.npy', o)
 
-        try:
-            self._plotter.make_sed_plot(self, name, **config)
-        except Exception:
-            self.logger.error('SED plotting failed.', exc_info=True)
+        if config['make_plots']:
+            self._plotter.make_sed_plots(o, name, **config)
 
         self.logger.info('Finished SED')
 

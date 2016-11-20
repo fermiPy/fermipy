@@ -715,7 +715,6 @@ class TSMapGenerator(object):
 
         Parameters
         ----------
-
         prefix : str
            Optional string that will be prepended to all output files
            (FITS and rendered images).
@@ -723,7 +722,7 @@ class TSMapGenerator(object):
         model : dict
            Dictionary defining the properties of the test source.
 
-        exclude : str or list of str
+        exclude : list
             Source or sources that will be removed from the model when
             computing the TS map.
 
@@ -740,17 +739,16 @@ class TSMapGenerator(object):
            accuracy.  The default value is 3 degrees.
 
         make_plots : bool
-           Write image files.
+           Generate plots.
 
         write_fits : bool
-           Write a FITS file.
+           Write the output to a FITS file.
 
         write_npy : bool
-           Write a numpy file.
+           Write the output dictionary to a numpy file.
 
         Returns
         -------
-
         maps : dict
            A dictionary containing the `~fermipy.skymap.Map` objects
            for TS and source amplitude.
@@ -760,7 +758,7 @@ class TSMapGenerator(object):
         self.logger.info('Generating TS map')
 
         schema = ConfigSchema(self.defaults['tsmap'])
-        schema.add_option('make_plots', True)
+        schema.add_option('make_plots', False)
         schema.add_option('write_fits', True)
         schema.add_option('write_npy', True)
         schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)

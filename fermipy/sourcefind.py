@@ -251,7 +251,6 @@ class SourceFinder(object):
 
         Parameters
         ----------
-
         name : str
             Source name.
 
@@ -281,12 +280,20 @@ class SourceFinder(object):
             when update=True.  If newname is None then the existing
             source name will be used.
 
+        make_plots : bool
+           Generate plots.
+
+        write_fits : bool
+           Write the output to a FITS file.
+
+        write_npy : bool
+           Write the output dictionary to a numpy file.
+
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
 
         Returns
         -------
-
         localize : dict
             Dictionary containing results of the localization
             analysis.  This dictionary is also saved to the
@@ -297,7 +304,10 @@ class SourceFinder(object):
         name = self.roi.get_source_by_name(name).name
 
         schema = ConfigSchema(self.defaults['localize'],
-                              optimizer=self.defaults['optimizer'])        
+                              optimizer=self.defaults['optimizer'])
+        schema.add_option('make_plots', False)
+        schema.add_option('write_fits', True)
+        schema.add_option('write_npy', True)
         schema.add_option('newname', name)
         schema.add_option('prefix', '')
         config = utils.create_dict(self.config['localize'],
@@ -341,7 +351,8 @@ class SourceFinder(object):
 
         self.zero_source(name)
 
-        o = {'config': config,
+        o = {'name': name,
+             'config': config,
              'fit_success': True,
              'loglike_base': loglike0,
              'loglike_loc' : np.nan,
@@ -439,12 +450,10 @@ class SourceFinder(object):
 
         self.roi[name]['localize'] = copy.deepcopy(o)
 
-        try:
-            self._plotter.make_localization_plot(self, name, tsmap,
-                                                 prefix=prefix,
-                                                 skydir=scan_skydir)
-        except Exception:
-            self.logger.error('Plot failed.', exc_info=True)
+        if config['make_plots']:
+            self._plotter.make_localization_plots(o, tsmap, self.roi,
+                                                  prefix=prefix,
+                                                  skydir=scan_skydir)
 
         if update and o['fit_success']:
             self.logger.info('Updating source %s '
@@ -514,6 +523,8 @@ class SourceFinder(object):
 
         prefix = kwargs.get('prefix', '')
         dtheta_max = kwargs.get('dtheta_max', 0.5)
+        write_fits = kwargs.get('write_fits', False)
+        write_npy = kwargs.get('write_npy', False)
 
         src = self.roi.copy_source(name)
         skydir = src.skydir
@@ -523,7 +534,10 @@ class SourceFinder(object):
                            model=src.data,
                            map_skydir=skydir,
                            map_size=2.0 * dtheta_max,
-                           exclude=[name], make_plots=False)
+                           exclude=[name],
+                           write_fits=write_fits,
+                           write_npy=write_npy,
+                           make_plots=False)
 
         posfit, skydir = fit_error_ellipse(tsmap['ts'], dpix=2)
         pix = skydir.to_pixel(skywcs)

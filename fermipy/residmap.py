@@ -150,13 +150,16 @@ class ResidMapGenerator(object):
            log10(E/MeV) that is a subset of the analysis energy range.
            By default the full analysis energy range will be used.  If
            either emin/emax are None then only an upper/lower bound on
-           the energy range wil be applied.    
+           the energy range wil be applied.
 
-        make_plots : bool        
-            Write image files.
+        make_plots : bool
+           Generate plots.
 
         write_fits : bool
-            Write FITS files.
+           Write the output to a FITS file.
+
+        write_npy : bool
+           Write the output dictionary to a numpy file.
 
         Returns
         -------
@@ -178,7 +181,7 @@ class ResidMapGenerator(object):
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
 
-        make_plots = kwargs.get('make_plots', True)
+        make_plots = kwargs.get('make_plots', False)
         maps = self._make_residual_map(prefix,config,**kwargs)
 
         if make_plots:
@@ -186,7 +189,7 @@ class ResidMapGenerator(object):
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_residual_plots(self, maps)
+            plotter.make_residmap_plots(maps, self.roi)
 
         self.logger.info('Finished residual maps')
 
@@ -290,13 +293,13 @@ class ResidMapGenerator(object):
         data_map = Map(cmst / emst, skywcs)
         excess_map = Map(excess / emst, skywcs)
 
-        o = {'name': '%s_%s' % (prefix, modelname),
+        o = {'name': utils.join_strings([prefix, modelname]),
              'file': None,
              'sigma': sigma_map,
              'model': model_map,
              'data': data_map,
              'excess': excess_map,
-             'config' : config }
+             'config': config }
 
         fits_file = utils.format_filename(self.config['fileio']['workdir'],
                                           'residmap.fits',

@@ -146,20 +146,20 @@ def test_gtanalysis_fit_newton(create_draco_analysis):
 def test_gtanalysis_tsmap(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
-    gta.tsmap(model={})
+    gta.tsmap(model={}, make_plots=True)
 
 
 @requires_st_version('11-04-00')
 def test_gtanalysis_tscube(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
-    gta.tscube(model={})
+    gta.tscube(model={}, make_plots=True)
 
 
 def test_gtanalysis_residmap(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
-    gta.residmap(model={})
+    gta.residmap(model={}, make_plots=True)
 
 
 def test_gtanalysis_find_sources(create_draco_analysis):
@@ -234,7 +234,7 @@ def test_gtanalysis_sed(create_draco_analysis):
     gta.free_source('draco')
     gta.fit()
 
-    o = gta.sed('draco')
+    o = gta.sed('draco', make_plots=True)
 
     flux_resid = (flux_true - o['flux']) / o['flux_err']
     assert_allclose(flux_resid, 0, atol=3.0)
@@ -288,7 +288,8 @@ def test_gtanalysis_localization(create_draco_analysis):
     gta.add_source('testloc', src_dict, free=True)
     gta.fit()
 
-    result = gta.localize('testloc', nstep=4, dtheta_max=0.5, update=True)
+    result = gta.localize('testloc', nstep=4, dtheta_max=0.5, update=True,
+                          make_plots=True)
 
     assert result['fit_success'] is True
     assert_allclose(result['glon'], 86.0, atol=0.02)

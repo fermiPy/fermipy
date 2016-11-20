@@ -449,7 +449,8 @@ plotting = {
     'catalogs': (None, '', list),
     'graticule_radii': (None, 'Define a list of radii at which circular graticules will be drawn.', list),
     'format': ('png', '', str),
-    'cmap': ('ds9_b', 'Set the colormap for 2D plots.', str),
+    'cmap': ('magma', 'Set the colormap for 2D plots.', str),
+    'cmap_resid': ('bwr', 'Set the colormap for 2D residual plots.', str),
     'label_ts_threshold':
         (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),    
 }

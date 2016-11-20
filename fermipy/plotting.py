@@ -213,7 +213,7 @@ class ImagePlotter(object):
     def projtype(self):
         return self._projtype
 
-    def plot(self, subplot=111, cmap='jet', **kwargs):
+    def plot(self, subplot=111, cmap='magma', **kwargs):
 
         kwargs_contour = {'levels': None, 'colors': ['k'],
                           'linewidths': None}
@@ -241,7 +241,11 @@ class ImagePlotter(object):
         ax = fig.add_subplot(subplot, projection=self._wcs)
 
         load_ds9_cmap()
-        colormap = plt.get_cmap(cmap)
+        try:
+            colormap = plt.get_cmap(cmap)
+        except:
+            colormap = plt.get_cmap('ds9_b')
+            
         colormap.set_under(colormap(0))
 
         data = copy.copy(self._data)
@@ -633,10 +637,11 @@ class SEDPlotter(object):
             flux = np.log10(e2dnde_scan)
             logl = sed['dloglike_scan'][i][m]
             logl -= np.max(logl)
-            fn = interpolate.interp1d(flux,logl, fill_value='extrapolate')
-            logli = fn(fluxM)
-            #logli[fluxM > flux[-1]] = logl[-1]
-            #logli[fluxM < flux[0]] = logl[0]
+            try:            
+                fn = interpolate.interp1d(flux,logl, fill_value='extrapolate')
+                logli = fn(fluxM)
+            except:
+                logli = np.interp(fluxM,flux,logl)
             llhMatrix[i, :] = logli
 
         cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
@@ -880,10 +885,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
         for x in loge_bounds:
             self.make_roi_plots(gta, mcube_map, prefix, loge_bounds=x,
                                 format=format)
-        # self.make_extension_plots(gta,prefix, loge_bounds=x,
-        # format=format)
-
-        self.make_sed_plots(gta, prefix, format=format)
 
         imfile = utils.format_filename(gta.config['fileio']['workdir'],
                                        'counts_spectrum', prefix=[prefix],
@@ -893,10 +894,31 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                   gta.log_energies,
                                   imfile)
 
-    def make_residual_plots(self, gta, maps, **kwargs):
+    def make_residmap_plots(self, maps, roi=None, **kwargs):
+        """Make plots from the output of
+        `~fermipy.gtanalysis.GTAnalysis.residmap`.
 
-        format = kwargs.get('format', gta.config['plotting']['format'])
+        Parameters
+        ----------
+        maps : dict
+            Output dictionary of
+            `~fermipy.gtanalysis.GTAnalysis.residmap`.
 
+        roi : `~fermipy.roi_model.ROIModel`
+            ROI Model object.  Generate markers at the positions of
+            the sources in this ROI.
+
+        zoom : float
+            Crop the image by this factor.  If None then no crop is
+            applied.
+
+        """
+
+        
+        fmt = kwargs.get('format', self.config['format'])
+        workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
+        zoom = kwargs.get('zoom', None)
+        
         if 'sigma' not in maps:
             return
 
@@ -908,19 +930,21 @@ class AnalysisPlotter(fermipy.config.Configurable):
         kwargs.setdefault('label_ts_threshold',
                           self.config['label_ts_threshold'])
         kwargs.setdefault('cmap', self.config['cmap'])
-        kwargs.setdefault('catalogs', self._catalogs)
+        cmap_resid = kwargs.pop('cmap_resid', self.config['cmap_resid'])
+        kwargs.setdefault('catalogs', self.config['catalogs'])
 
         load_bluered_cmap()
 
         prefix = maps['name']
         fig = plt.figure()
-        p = ROIPlotter(maps['sigma'], roi=gta.roi, **kwargs)
+        p = ROIPlotter(maps['sigma'], roi=roi, **kwargs)
         p.plot(vmin=-5, vmax=5, levels=sigma_levels,
-               cb_label='Significance [$\sigma$]', interpolation='bicubic', cmap='bluered')
-        plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
+               cb_label='Significance [$\sigma$]', interpolation='bicubic',
+               cmap=cmap_resid, zoom=zoom)
+        plt.savefig(utils.format_filename(workdir,
                                           'residmap_sigma',
                                           prefix=[prefix],
-                                          extension=format))
+                                          extension=fmt))
         plt.close(fig)
 
         # make and draw histogram
@@ -931,50 +955,55 @@ class AnalysisPlotter(fermipy.config.Configurable):
         # find best fit parameters
         mu, sigma = norm.fit(data.flatten())
         # make and draw the histogram
-        n, bins, patches = ax.hist(data.flatten(), nBins, normed=True, facecolor='green', alpha=0.75)
+        n, bins, patches = ax.hist(data.flatten(), nBins, normed=True,
+                                   facecolor='green', alpha=0.75)
         # make and draw best fit line
         y = mlab.normpdf(bins, mu, sigma)
-        l = ax.plot(bins, y, 'r--', linewidth=2)
-
+        ax.plot(bins, y, 'r--', linewidth=2)
+        y = mlab.normpdf(bins, 0.0, 1.0)
+        ax.plot(bins, y, 'k', linewidth=1)
+        
+        
         # labels and such
         ax.set_xlabel(r'Significance ($\sigma$)')
         ax.set_ylabel('Probability')
         paramtext = 'Gaussian fit:\n'
         paramtext += '$\\mu=%.2f$\n'%mu
         paramtext += '$\\sigma=%.2f$'%sigma
-        ax.text(0.05, 0.95, paramtext, verticalalignment='top', horizontalalignment='left', transform=ax.transAxes)
+        ax.text(0.05, 0.95, paramtext, verticalalignment='top',
+                horizontalalignment='left', transform=ax.transAxes)
 
-        plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
-                                        'residmap_sigma_hist',
-                                        prefix=[prefix],
-                                        extension=format))
+        plt.savefig(utils.format_filename(workdir,
+                                          'residmap_sigma_hist',
+                                          prefix=[prefix],
+                                          extension=fmt))
         plt.close(fig)
 
         fig = plt.figure()
-        p = ROIPlotter(maps['data'], roi=gta.roi, **kwargs)
+        p = ROIPlotter(maps['data'], roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic')
-        plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
+        plt.savefig(utils.format_filename(workdir,
                                           'residmap_data',
                                           prefix=[prefix],
-                                          extension=format))
+                                          extension=fmt))
         plt.close(fig)
 
         fig = plt.figure()
-        p = ROIPlotter(maps['model'], roi=gta.roi, **kwargs)
+        p = ROIPlotter(maps['model'], roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic')
-        plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
+        plt.savefig(utils.format_filename(workdir,
                                           'residmap_model',
                                           prefix=[prefix],
-                                          extension=format))
+                                          extension=fmt))
         plt.close(fig)
 
         fig = plt.figure()
-        p = ROIPlotter(maps['excess'], roi=gta.roi, **kwargs)
+        p = ROIPlotter(maps['excess'], roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic')
-        plt.savefig(utils.format_filename(gta.config['fileio']['workdir'],
+        plt.savefig(utils.format_filename(workdir,
                                           'residmap_excess',
                                           prefix=[prefix],
-                                          extension=format))
+                                          extension=fmt))
         plt.close(fig)
 
     def make_tsmap_plots(self, maps, roi=None, **kwargs):
@@ -1004,8 +1033,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
                           self.config['label_ts_threshold'])
         kwargs.setdefault('cmap', self.config['cmap'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
-        format = kwargs.get('format', self.config['format'])
-        workdir = kwargs.get('format', self.config['fileio']['workdir'])
+        fmt = kwargs.get('format', self.config['format'])
+        workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
         suffix = kwargs.pop('suffix', 'tsmap')
         zoom = kwargs.get('zoom', None)
 
@@ -1022,7 +1051,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.savefig(utils.format_filename(workdir,
                                           '%s_sqrt_ts' % suffix,
                                           prefix=[prefix],
-                                          extension=format))
+                                          extension=fmt))
         plt.close(fig)
 
         fig = plt.figure()
@@ -1032,7 +1061,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.savefig(utils.format_filename(workdir,
                                           '%s_npred' % suffix,
                                           prefix=[prefix],
-                                          extension=format))
+                                          extension=fmt))
         plt.close(fig)
 
     def make_roi_plots(self, gta, mcube_map, prefix,
@@ -1048,7 +1077,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         """
 
-        format = kwargs.get('format', gta.config['plotting']['format'])
+        fmt = kwargs.get('format', gta.config['plotting']['format'])
 
         roi_kwargs = {}
         roi_kwargs.setdefault('loge_bounds', loge_bounds)
@@ -1070,7 +1099,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
         plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                  '%s_model_map%s.%s' % (
-                                     prefix, esuffix, format)))
+                                     prefix, esuffix, fmt)))
         plt.close(fig)
 
         # colors = ['k', 'b', 'g', 'r']
@@ -1093,7 +1122,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p.plot(cb_label='Counts', zscale='sqrt')
         plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                  '%s_counts_map%s.%s' % (
-                                     prefix, esuffix, format)))
+                                     prefix, esuffix, fmt)))
         plt.close(fig)
 
         fig = plt.figure()
@@ -1110,7 +1139,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                  '%s_counts_map_xproj%s.%s' % (
-                                     prefix, esuffix, format)))
+                                     prefix, esuffix, fmt)))
         plt.close(fig)
 
         fig = plt.figure()
@@ -1126,7 +1155,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         #        plt.gca().set_yscale('log')
         plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                  '%s_counts_map_yproj%s.%s' % (
-                                     prefix, esuffix, format)))
+                                     prefix, esuffix, fmt)))
 
         plt.close(fig)
 
@@ -1154,7 +1183,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
             p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
             plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                      '%s_model_map%s_%02i.%s' % (
-                                         prefix, esuffix, i, format)))
+                                         prefix, esuffix, i, fmt)))
             plt.close(fig)
 
             plt.figure(figx.number)
@@ -1179,20 +1208,20 @@ class AnalysisPlotter(fermipy.config.Configurable):
         annotate(loge_bounds=loge_bounds)
         figx.savefig(os.path.join(gta.config['fileio']['workdir'],
                                   '%s_counts_map_comp_xproj%s.%s' % (
-                                      prefix, esuffix, format)))
+                                      prefix, esuffix, fmt)))
 
         plt.figure(figy.number)
         ROIPlotter.setup_projection_axis(1)
         annotate(loge_bounds=loge_bounds)
         figy.savefig(os.path.join(gta.config['fileio']['workdir'],
                                   '%s_counts_map_comp_yproj%s.%s' % (
-                                      prefix, esuffix, format)))
+                                      prefix, esuffix, fmt)))
         plt.close(figx)
         plt.close(figy)
 
     def make_extension_plots(self, prefix, loge_bounds=None, **kwargs):
 
-        format = kwargs.get('format', self.config['plotting']['format'])
+        fmt = kwargs.get('format', self.config['plotting']['format'])
 
         for s in self.roi.sources:
 
@@ -1204,80 +1233,45 @@ class AnalysisPlotter(fermipy.config.Configurable):
                 continue
 
             self._plot_extension(
-                prefix, s, loge_bounds=loge_bounds, format=format)
+                prefix, s, loge_bounds=loge_bounds, format=fmt)
 
-    def make_sed_plots(self, gta, prefix='', **kwargs):
-
-        format = kwargs.get('format', gta.config['plotting']['format'])
-
-        for s in gta.roi.sources:
-
-            if 'sed' not in s:
-                continue
-            if s['sed'] is None:
-                continue
-
-            name = s.name.lower().replace(' ', '_')
-
-            self.logger.debug('Making SED plot for %s' % s.name)
-
-            p = SEDPlotter(s['sed'])
-            fig = plt.figure()
-            p.plot()
-            plt.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                     '%s_%s_sed.%s' % (prefix, name, format)))
-            plt.close(fig)
-
-            p = SEDPlotter(s['sed'])
-            fig = plt.figure()
-            p.plot(showlnl=True)
-            plt.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                     '%s_%s_sedlnl.%s' % (
-                                         prefix, name, format)))
-            plt.close(fig)
-
-    def make_sed_plot(self, gta, name, **kwargs):
+    def make_sed_plots(self, sed, **kwargs):
 
         prefix = kwargs.get('prefix', '')
-        src = gta.roi[name]
-
-        name = src.name.lower().replace(' ', '_')
-        format = kwargs.get('format', gta.config['plotting']['format'])
-        p = SEDPlotter(src['sed'])
+        name = sed['name'].lower().replace(' ', '_')
+        fmt = kwargs.get('format', self.config['format'])
+        p = SEDPlotter(sed)
         fig = plt.figure()
         p.plot()
 
-        outfile = utils.format_filename(gta.config['fileio']['workdir'],
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'sed', prefix=[prefix, name],
-                                        extension=format)
+                                        extension=fmt)
 
         plt.savefig(outfile)
         plt.close(fig)
 
-        p = SEDPlotter(src['sed'])
         fig = plt.figure()
         p.plot(showlnl=True)
 
-        outfile = utils.format_filename(gta.config['fileio']['workdir'],
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'sedlnl', prefix=[prefix, name],
-                                        extension=format)
+                                        extension=fmt)
         plt.savefig(outfile)
         plt.close(fig)
 
-    def make_localization_plot(self, gta, name, tsmap, **kwargs):
+    def make_localization_plots(self, loc, tsmap, roi=None, **kwargs):
 
-        tsmap_renorm = copy.deepcopy(tsmap['ts'])
-        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
-
+        fmt = kwargs.get('format', self.config['format'])
         prefix = kwargs.get('prefix', '')
         skydir = kwargs.get('skydir', None)
-        src = gta.roi[name]
-        o = src['localize']
+        name = loc.get('name','')
+        
+        tsmap_renorm = copy.deepcopy(tsmap['ts'])
+        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+        name = name.lower().replace(' ', '_')
 
-        name = src.name.lower().replace(' ', '_')
-        format = kwargs.get('format', gta.config['plotting']['format'])
-
-        p = ROIPlotter(tsmap_renorm, roi=gta.roi)
+        p = ROIPlotter(tsmap_renorm, roi=roi)
         fig = plt.figure()
 
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
@@ -1287,7 +1281,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         cdelt0 = np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
 
-        tsmap_fit = o['tsmap_fit']
+        tsmap_fit = loc['tsmap_fit']
 
         peak_skydir = SkyCoord(tsmap_fit['glon'], tsmap_fit['glat'],
                                frame='galactic', unit='deg')
@@ -1295,7 +1289,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         peak_r68 = tsmap_fit['r68']
         peak_r99 = tsmap_fit['r99']
 
-        scan_skydir = SkyCoord(o['glon'], o['glat'],
+        scan_skydir = SkyCoord(loc['glon'], loc['glat'],
                                frame='galactic', unit='deg')
         scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
 
@@ -1328,19 +1322,19 @@ class AnalysisPlotter(fermipy.config.Configurable):
                            marker='x', color='k')
 
         if np.isfinite(float(scan_pix[0])):
-            sigmax = o['sigma_semimajor']
-            sigmay = o['sigma_semiminor']
+            sigmax = loc['sigma_semimajor']
+            sigmay = loc['sigma_semiminor']
 
             e0 = Ellipse(xy=(float(scan_pix[0]), float(scan_pix[1])),
-                         width=2.0 * sigmax / cdelt0 * o['r68'] / o['sigma'],
-                         height=2.0 * sigmay / cdelt1 * o['r68'] / o['sigma'],
-                         angle=-np.degrees(o['theta']),
+                         width=2.0 * sigmax / cdelt0 * loc['r68'] / loc['sigma'],
+                         height=2.0 * sigmay / cdelt1 * loc['r68'] / loc['sigma'],
+                         angle=-np.degrees(loc['theta']),
                          facecolor='None', edgecolor='r')
 
             e1 = Ellipse(xy=(float(scan_pix[0]), float(scan_pix[1])),
-                         width=2.0 * sigmax / cdelt0 * o['r99'] / o['sigma'],
-                         height=2.0 * sigmay / cdelt1 * o['r99'] / o['sigma'],
-                         angle=-np.degrees(o['theta']),
+                         width=2.0 * sigmax / cdelt0 * loc['r99'] / loc['sigma'],
+                         height=2.0 * sigmay / cdelt1 * loc['r99'] / loc['sigma'],
+                         angle=-np.degrees(loc['theta']),
                          facecolor='None', edgecolor='r')
 
             plt.gca().add_artist(e0)
@@ -1349,20 +1343,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
             plt.gca().plot(float(scan_pix[0]), float(scan_pix[1]),
                            marker='x', color='r')
 
-        #        if gta.config['binning']['coordsys'] == 'GAL':
-        #            plt.gca().scatter(o['peak_glon'], o['peak_glat'],
-        #                              transform=plt.gca().get_transform('galactic'),color='k')
-        #            plt.gca().scatter(o['glon'], o['glat'],
-        #                              transform=plt.gca().get_transform('galactic'),color='r')
-        #        else:
-        #            plt.gca().scatter(o['peak_ra'], o['peak_dec'],
-        #                              transform=plt.gca().get_transform('fk5'),color='k')
-        #            plt.gca().scatter(o['ra'], o['dec'],
-        #                              transform=plt.gca().get_transform('fk5'),color='r')
-
-        outfile = utils.format_filename(gta.config['fileio']['workdir'],
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'localize', prefix=[prefix, name],
-                                        extension=format)
+                                        extension=fmt)
 
         plt.savefig(outfile)
         plt.close(fig)
