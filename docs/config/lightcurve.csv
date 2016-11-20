@@ -1,0 +1,5 @@
+``binsz``	86400.0	Set the lightcurve bin size in seconds, default is 1 day.
+``free_radius``	3.0	Free normalizations of background sources within this angular distance in degrees from the source of interest.
+``free_sources``	None	List of sources to be freed.  These sources will be added to the list of sources satisfying the free_radius selection.
+``nbins``	None	Set the number of lightcurve bins.  The total time range will be evenly split into this number of time bins.
+``time_bins``	None	Set the lightcurve bin edge sequence in MET.  This option takes precedence over binsz and nbins.

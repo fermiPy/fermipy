@@ -3,8 +3,8 @@
 TS Cube
 =======
 
-.. warning:: 
-   This method requires ST 11-04-00 or later.
+.. warning:: This method requires Fermi Science Tools version 11-04-00
+   or later.
 
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.tscube` can be used generate
 both test statistic (TS) maps and bin-by-bin scans of the test source
@@ -21,7 +21,7 @@ model, :py:meth:`~fermipy.gtanalysis.GTAnalysis.tscube` can also fit
 background normalization parameters when scanning the test source
 likelihood.  This method makes no approximations in the
 evaluation of the likelihood and may be somewhat slower than
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.tscube` depending on the ROI
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` depending on the ROI
 dimensions and energy bounds.
 
 For each spatial bin the method calculates the maximum likelihood test
@@ -29,7 +29,7 @@ statistic given by
 
 .. math::
 
-   \mathrm{TS} = 2 \sum_{k} \ln L(\mu,\hat{\theta}|n_{k}) - \ln L(0,\doublehat{\theta}|n_{k})
+   \mathrm{TS} = 2 \sum_{k} \ln L(\mu,\hat{\theta}|n_{k}) - \ln L(0,\hat{\hat{\theta}}|n_{k})
 
 where the summation index *k* runs over both spatial and energy bins,
 μ is the test source normalization parameter, and θ represents the
@@ -38,8 +38,11 @@ background model are refit at every test source position if they are
 free in the model.  All other spectral parameters (indices etc.) are
 kept fixed.
 
-The properties of the test source (spectrum and spatial morphology)
-are controlled with the `model` dictionary argument:
+Examples
+--------
+
+The method is executed by providing a `model` dictionary argument that
+defines the spectrum and spatial morphology of the test source:
 
 .. code-block:: python
    
@@ -89,6 +92,23 @@ classes can be used to analyze a TS cube:
 
    # Fit the likelihoods at pixel 400 with different spectral models
    cd.test_spectra()
+
+Configuration
+-------------
+
+The default configuration of the method is controlled with the
+:ref:`config_tscube` section of the configuration file.  The default
+configuration can be overriden by passing the option as a *kwargs*
+argument to the method.
+
+.. csv-table:: *tscube* Options
+   :header:    Option, Default, Description
+   :file: ../config/tscube.csv
+   :delim: tab
+   :widths: 10,10,80
+   
+Reference/API
+-------------
    
 .. automethod:: fermipy.gtanalysis.GTAnalysis.tscube
    :noindex:

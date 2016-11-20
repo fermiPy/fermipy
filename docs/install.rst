@@ -205,12 +205,18 @@ Scientific Linux 6).
 These instructions describe how to create a docker-based ST
 installation that comes preinstalled with anaconda python and fermipy.
 The installation is fully contained in a docker image that is roughly
-2GB in size.  First download the docker image file:
+2GB in size.  To see a list of the available images go to the `fermipy
+Docker Hub page
+<https://hub.docker.com/r/fermipy/fermist-python/tags/>`_.  Images are
+tagged with the release version of the STs that was used to build the
+image (e.g. 11-04-00).
+
+To install an image first download the image file:
 
 .. code-block:: bash
 
-   $ docker pull mdwood/fermist-python:11-04-00
-   $ docker tag mdwood/fermist-python:11-04-00 fermist
+   $ docker pull mdwood/fermist-python:11-05-00
+   $ docker tag mdwood/fermist-python:11-05-00 fermist
    
 This will create an image called *fermist*.  Now change to the
 directory where you plan to do your analysis and run the following
@@ -228,9 +234,8 @@ the current directory to the working area of the container.
 Additional directories may be mounted by adding more volume arguments
 ``-v`` with host and container paths separated by a colon.
 
-The same docker image may be used to launch python, ipython, or bash
-shell by passing the corresponding command as an argument to ``docker
-run``:
+The same docker image may be used to launch python, ipython, or a bash
+shell by passing the command as an argument to ``docker run``:
 
 .. code-block:: bash
    
@@ -342,7 +347,8 @@ of fermipy with ``pip show``:
    Requires: wcsaxes, astropy, matplotlib, healpy, scipy, numpy, pyyaml
 
 To upgrade your fermipy installation to the latest version run the pip
-installation command with ``--upgrade --no-deps`` (remember to also include the ``--user`` option if you're running at SLAC):
+installation command with ``--upgrade --no-deps`` (remember to also
+include the ``--user`` option if you're running at SLAC):
    
 .. code-block:: bash
    
@@ -364,8 +370,9 @@ These instructions describe how to install fermipy from its git source
 code repository using the ``setup.py`` script.  Installing from source
 can be useful if you want to make your own modifications to the
 fermipy source code or test features in an untagged commit.  Note that
-non-expert users are recommended to install fermipy with ``pip``
-following the :ref:`pipinstall` instructions above.
+non-expert users are recommended to install a tagged release of
+fermipy following the :ref:`pipinstall` or :ref:`condainstall`
+instructions above.
 
 First clone the fermipy git repository and cd to the root directory of
 the repository:
@@ -406,22 +413,9 @@ command with the ``--uninstall`` flag:
    $ python setup.py develop --user --uninstall
    
 You also have the option of installing a previous release tag.  To see
-the list of release tags use ``git tag``:
-
-.. code-block:: bash
-
-   $ git tag
-   0.4.0
-   0.5.0
-   0.5.1
-   0.5.2
-   0.5.3
-   0.5.4
-   0.6.0
-   0.6.1
-
-To install a specific release tag, run ``git checkout`` with the tag
-name followed by ``setup.py install``:
+the list of release tags run ``git tag``.  To install a specific
+release tag, run ``git checkout`` with the tag name followed by
+``setup.py install``:
    
 .. code-block:: bash
    
@@ -442,14 +436,26 @@ instructions to modify your default matplotlibrc file (you can pick
 GTK or WX as an alternative).  Specifically the ``TkAgg`` and
 ``macosx`` backends currently do not work on OSX if you upgrade
 matplotlib to the version required by fermipy.  To get around this
-issue you can enable the ``Agg`` backend at runtime:
+issue you can switch to the ``Agg`` backend at runtime before
+importing fermipy:
 
 .. code-block:: bash
 
    >>> import matplotlib
    >>> matplotlib.use('Agg')
 
-However this backend does not support interactive plotting.
+However note that this backend does not support interactive plotting.
+
+If you are running OSX El Capitan or newer you may see errors like the following:
+
+.. code-block:: bash
+                
+   dyld: Library not loaded
+
+In this case you will need to disable the System Integrity Protections
+(SIP).  See `here
+<http://www.macworld.com/article/2986118/security/how-to-modify-system-integrity-protection-in-el-capitan.html>`_
+for instructions on disabling SIP on your machine.
 
 In some cases the setup.py script will fail to properly install the
 fermipy package dependecies.  If installation fails you can try

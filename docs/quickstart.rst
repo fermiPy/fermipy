@@ -247,8 +247,8 @@ fit quality and look for new sources.
    m0 = gta.residmap('fit_model',model=model)
    m1 = gta.tsmap('fit_model',model=model)
 
-More documentation about these methods is available in
-the :ref:`detection` page.
+More documentation on these methods is available in
+the :ref:`tsmap` and :ref:`residmap` pages.
 
 By default, calls to :py:meth:`~fermipy.gtanalysis.GTAnalysis.fit` will
 execute a global spectral fit over the entire energy range of the

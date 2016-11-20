@@ -1,0 +1,13 @@
+``name``	str	Name of Source, 
+``plottimes``	`~numpy.ndarray`	Center of Time Bin in MJD
+``model``	str	Best fit model to the source
+``IntFlux``	`~numpy.ndarray`	Integral Flux in user defined energy range
+``IntFluxErr``	`~np.ndarray`	Error on Integral Flux, if 0 this means IntFlux is an Upperlimit
+``Index1``	`~np.ndarray`	Spectral Index
+``Index1Err``	`~np.ndarray`	Error on Spectral Index
+``Index2``	`~np.ndarray`	Spectral Index
+``Index2Err``	`~np.ndarray`	Error on Spectral Index
+``TS``	`~np.ndarray`	Test Statistic
+``retCode``	`~np.ndarray`	Did the likelihood fit converge? 0 if yes, anything else means no
+``npred``	`~np.ndarray`	Number of Predicted photons in time bin from source
+``config``	dict	Copy of the input configuration to this method.

@@ -1,0 +1,17 @@
+``ra``	float	Right ascension of the source in deg.
+``dec``	float	Declination of the source in deg.
+``glon``	float	Galactic Longitude of the source in deg.
+``glat``	float	Galactic Latitude of the source in deg.
+``offset_ra``	float	Angular offset from ROI center along RA.
+``offset_dec``	float	Angular offset from ROI center along DEC
+``offset_glon``	float	Angular offset from ROI center along GLON.
+``offset_glat``	float	Angular offset from ROI center along GLAT.
+``offset_roi_edge``	float	Distance from the edge of the ROI in deg.  Negative (positive) values indicate locations inside (outside) the ROI.
+``offset``	float	Angular offset from ROI center.
+``pos_sigma``	float	1-sigma uncertainty (deg) on the source position.
+``pos_sigma_semimajor``	float	1-sigma uncertainty (deg) on the source position along major axis.
+``pos_sigma_semiminor``	float	1-sigma uncertainty (deg) on the source position along minor axis.
+``pos_angle``	float	Position angle (deg) of the positional uncertainty ellipse.
+``pos_r68``	float	68% uncertainty (deg) on the source position.
+``pos_r95``	float	95% uncertainty (deg) on the source position.
+``pos_r99``	float	99% uncertainty (deg) on the source position.

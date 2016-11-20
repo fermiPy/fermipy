@@ -3,27 +3,18 @@
 TS Map
 ======
 
-fermipy provides two methods for generating TS maps of the region of
-interest.  The :ref:`residmap`
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` generates a test
+statistic (TS) map for an additional source component centered at each
+spatial bin in the ROI.  The methodology is similar to that of the
+`gttsmap` ST application but with the following approximations:
 
-that can be used
-to look for unmodeled sources as well as evaluate the fit quality of
-the model.  These methods are
+* Evaluation of the likelihood is limited to pixels in the vicinity of
+  the test source position.
+  
+* The background model is fixed when fitting the test source amplitude.
 
-* :ref:`tsmap`: :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` generates a test
-  statistic (TS) map for a new source centered at each spatial bin in
-  the ROI.
-
-
-
-
-
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` performs a likelihood
-ratio test for an additional source at the center of each spatial bin
-of the ROI.  The methodology is similar to that of the `gttsmap` ST
-application but speeds up the calculation by limiting the evaluation of the 
-
-.  :ref:`tscube` is a closely related method 
+:ref:`tscube` is a related method that can also be used to generate TS
+maps as well as cubes (TS vs. position and energy).  
 
 For each spatial bin the method calculates the maximum likelihood test
 statistic given by
@@ -36,14 +27,17 @@ where the summation index *k* runs over both spatial and energy bins,
 μ is the test source normalization parameter, and θ represents the
 parameters of the background model.  The likelihood fitting
 implementation used by :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap`
-only fits the normalization of the test source and does not re-fit
-parameters of the background model.
+only fits the test source normalization (μ).  Shape parameters of the
+test source and parameters of background components are fixed to their
+current values.
 
-The properties of the test source (spectrum and spatial morphology)
-are controlled with the `model` dictionary argument.  The syntax for
-defining the test source properties follows the same conventions as
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.add_source` as illustrated in
-the following examples.
+Examples
+--------
+
+The spatial and spectral properties of the convolution kernel are
+defined with the ``model`` dictionary argument.  The ``model``
+dictionary format is the same as accepted by
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.add_source`.
 
 .. code-block:: python
    
@@ -63,61 +57,95 @@ the following examples.
        model['Index'] = index
        maps += [gta.tsmap('fit1',model=model)]
 
-If running interactively, the `multithread` option can be enabled to
-split the calculation across all available cores.  However it is not
-recommended to use this option when running in a cluster environment.
+The ``multithread`` option can be enabled to split the calculation
+across all available cores:
        
 .. code-block:: python
                 
-   >>> maps = gta.tsmap('fit1',model=model,multithread=True)
-       
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` returns a `maps`
-dictionary containing `~fermipy.utils.Map` representations of the TS
-and NPred of the best-fit test source at each position.
+   maps = gta.tsmap('fit1',model=model,multithread=True)
+
+Note that care should be taken when using this option in an
+environment where the number of cores per process is restricted such
+as a batch farm.
+
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` returns a ``maps``
+dictionary containing `~fermipy.skymap.Map` representations of the TS
+and predicted counts (NPred) of the best-fit test source at each position.
 
 .. code-block:: python
    
-   >>> model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
-   >>> maps = gta.tsmap('fit1',model=model)
-   >>> print(maps.keys())
-   [u'file', u'name', u'sqrt_ts', u'ts', u'src_dict', u'npred', u'amplitude']
-
-The contents of the output dictionary are described in the following table.
+   model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
+   maps = gta.tsmap('fit1',model=model)   
+   print('TS at Pixel (50,50): ',maps['ts'].counts[50,50])
+   
+The contents of the output dictionary are given in the following table.
 
 ============= ====================== =================================================================
 Key           Type                   Description
 ============= ====================== =================================================================
-amplitude     `~fermipy.utils.Map`   Best-fit test source amplitude
+amplitude     `~fermipy.skymap.Map`  Best-fit test source amplitude
                                      expressed in terms of the spectral prefactor.
-npred         `~fermipy.utils.Map`   Best-fit test source amplitude
+npred         `~fermipy.skymap.Map`  Best-fit test source amplitude
                                      expressed in terms of the total model counts (Npred).
-ts            `~fermipy.utils.Map`   Test source TS (twice the logLike difference between null and
+ts            `~fermipy.skymap.Map`  Test source TS (twice the logLike difference between null and
 	                             alternate hypothese).
-sqrt_ts       `~fermipy.utils.Map`   Square-root of the test source TS.
+sqrt_ts       `~fermipy.skymap.Map`  Square-root of the test source TS.
 file          str                    Path to a FITS file containing the maps (TS, etc.) generated by
                                      this method. 
 src_dict      dict                   Dictionary defining the properties of the test source.
 ============= ====================== =================================================================
 
-Maps are also written as both FITS and rendered image files to the
-analysis working directory.  All output files are prepended with the
-`prefix` argument.  Sample images for `sqrt_ts` and `npred` generated
-by :py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` are shown below.  A
-colormap threshold for the `sqrt_ts` image is applied at 5 sigma with
-iscontours at 2 sigma intervals (3,5,7,9, ...) indicating values above
-this threshold.
+The ``write_fits`` and ``write_npy`` options can used to write the
+output to a FITS or numpy file.  All output files are prepended with
+the `prefix` argument.
 
-.. |image0| image:: tsmap_sqrt_ts.png
+Diagnostic plots can be generated by setting ``make_plots=True`` or by
+passing the output dictionary to
+`~fermipy.plotting.AnalysisPlotter.make_residmap_plots`:
+
+.. code-block:: python
+   
+   maps = gta.tsmap('fit1',model=model, make_plots=True)
+   gta.plotter.make_tsmap_plots(maps, roi=gta.roi)
+
+This will generate the following plots:
+
+* ``tsmap_sqrt_ts`` : Map of sqrt(TS) values.  The color map is truncated at
+  5 sigma with isocontours at 2 sigma intervals indicating values
+  above this threshold.
+
+* ``tsmap_npred`` : Map of best-fit source amplitude in counts.
+  
+* ``tsmap_ts_hist`` : Histogram of TS values for all points in the
+  map. Overplotted is the reference distribution for chi-squared with
+  one degree of freedom (expectation from Chernoff's theorem).
+   
+.. |image_sqrt_ts| image:: tsmap_sqrt_ts.png
    :width: 100%
    
-.. |image1| image:: tsmap_npred.png
+.. |image_ts_hist| image:: tsmap_ts_hist.png
    :width: 100%
 
-+---------------------------------+---------------------------------+
-| Sqrt(TS)                        | NPred                           |
-+=================================+=================================+
-| |image0|                        | |image1|                        |
-+---------------------------------+---------------------------------+
+.. csv-table::
+   :header: Sqrt(TS) Map, TS Histogram
+   :widths: 50, 50
+           
+   |image_sqrt_ts|, |image_ts_hist|
+           
+
+Configuration
+-------------
+
+The default configuration of the method is controlled with the
+:ref:`config_tsmap` section of the configuration file.  The default
+configuration can be overriden by passing the option as a *kwargs*
+argument to the method.
+
+.. csv-table:: *tsmap* Options
+   :header:    Option, Default, Description
+   :file: ../config/tsmap.csv
+   :delim: tab
+   :widths: 10,10,80
 
 Reference/API
 -------------

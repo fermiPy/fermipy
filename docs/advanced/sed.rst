@@ -26,16 +26,8 @@ the ``cov_scale`` parameter.  A larger (smaller) value of
 amplitude.  Setting ``cov_scale`` to None can be used to perform the
 fit without priors.
 
-The default configuration of
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` is defined with the
-*sed* section of the configuration file:
-
-.. csv-table:: *sed* Options
-   :header:    Option, Default, Description
-   :file: ../config/sed.csv
-   :delim: tab
-   :widths: 10,10,80
-
+Examples
+--------
 
 The :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` method is executed
 by passing the name of a source in the ROI as a single argument.
@@ -45,14 +37,14 @@ default configuration of the method:
 .. code-block:: python
    
    # Run analysis with default energy binning
-   >>> sed = gta.sed('sourceA')
+   sed = gta.sed('sourceA')
 
    # Override the energy binning and the assumed power-law index
    # within the bin   
-   >>> sed = gta.sed('sourceA',loge_bins=[2.0,2.5,3.0,3.5,4.0,4.5,5.0], bin_index=2.3)
+   sed = gta.sed('sourceA',loge_bins=[2.0,2.5,3.0,3.5,4.0,4.5,5.0], bin_index=2.3)
 
    # Profile background normalization parameters with prior scale of 5.0
-   >>> sed = gta.sed('sourceA',fix_background=False,cov_scale=5.0)
+   sed = gta.sed('sourceA',fix_background=False,cov_scale=5.0)
    
 By default the method will use the energy bins of the underlying
 analysis.  The ``loge_bins`` keyword argument can be used to override
@@ -74,13 +66,13 @@ from either from the method return value or later accessed from the
 .. code-block:: python
    
    # Get the sed results from the return argument
-   >>> sed = gta.sed('sourceA')
+   sed = gta.sed('sourceA')
 
    # Get the sed results from the source object
-   >>> sed = gta.roi['sourceA']
+   sed = gta.roi['sourceA']
 
    # Print the SED flux values
-   >>> print(sed['flux'])
+   print(sed['flux'])
 
 The contents of the FITS file and output dictionary are documented in
 :ref:`sed_fits` and :ref:`sed_dict`.
@@ -91,7 +83,9 @@ SED FITS File
 -------------
 
 The following table describes the contents of the FITS file written by
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.sed`:
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.sed`.  The ``SED`` HDU uses
+that data format specification for SEDs documented `here
+<https://gamma-astro-data-formats.readthedocs.io/en/latest/results/flux_points/index.html>`_.
 
 .. csv-table:: *sed* Output Dictionary
    :header:    HDU, Column Name, Description
@@ -114,6 +108,20 @@ The following table describes the contents of the
    :widths: 10,10,80
 
 
+Configuration
+-------------
+
+The default configuration of the method is controlled with the
+:ref:`config_sed` section of the configuration file.  The default
+configuration can be overriden by passing the option as a *kwargs*
+argument to the method.
+
+.. csv-table:: *sed* Options
+   :header:    Option, Default, Description
+   :file: ../config/sed.csv
+   :delim: tab
+   :widths: 10,10,80
+            
 Reference/API
 -------------
 

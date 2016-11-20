@@ -1,3 +1,5 @@
+.. _sensitivity:
+
 Sensitivity Tools
 -----------------
 
@@ -9,7 +11,8 @@ shorter or longer observation time.
 
 .. code-block:: bash
 
-   $ fermipy-flux-sensitivity --glon=30 --glat=30 --output=flux.fits --ltcube=ltcube.fits --galdiff=gll_iem_v06.fits --event_class=P8R2_SOURCE_V6
+   $ fermipy-flux-sensitivity --glon=30 --glat=30 --output=flux.fits \
+   --ltcube=ltcube.fits --galdiff=gll_iem_v06.fits --event_class=P8R2_SOURCE_V6
 
 If no livetime cube is provided then the sensitivity will be computed
 assuming an "ideal" survey-mode operation with uniform exposure over
@@ -24,4 +27,4 @@ energy bin.
 
    from astropy.table import Table
    tab = Table.read('flux.fits')
-   print(tab['E_MIN'], tab['E_MAX'], tab['FLUX'])
+   print(tab['e_min'], tab['e_max'], tab['flux'])

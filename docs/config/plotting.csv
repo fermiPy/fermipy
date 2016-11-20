@@ -1,5 +1,6 @@
 ``catalogs``	None	
-``cmap``	ds9_b	Set the colormap for 2D plots.
+``cmap``	magma	Set the colormap for 2D plots.
+``cmap_resid``	RdBu_r	Set the colormap for 2D residual plots.
 ``format``	png	
 ``graticule_radii``	None	Define a list of radii at which circular graticules will be drawn.
 ``label_ts_threshold``	0.0	TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.

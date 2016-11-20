@@ -9,17 +9,7 @@ likelihood ratio test with respect to the no-extension (point-source)
 hypothesis and a best-fit model for extension.  The best-fit extension
 is evaluated by a likelihood profile scan over the source width.
 Currently this method supports two models for extension: a 2D Gaussian
-(*GaussianSource*) or a 2D disk (*DiskSource*).
-
-The default configuration of
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.extension` is defined in the
-*extension* section of the configuration file:
-
-.. csv-table:: *extension* Options
-   :header:    Option, Default, Description
-   :file: ../config/extension.csv
-   :delim: tab
-   :widths: 10,10,80
+(*RadialGaussian*) or a 2D disk (*RadialDisk*).
 
 At runtime the default settings for the extension analysis can be
 overriden by passing one or more *kwargs* when executing
@@ -31,11 +21,11 @@ overriden by passing one or more *kwargs* when executing
    >>> gta.extension('sourceA')
 
    # Override default spatial model
-   >>> gta.extension('sourceA',spatial_model='DiskSource')
+   >>> gta.extension('sourceA',spatial_model='RadialDisk')
 
-By default the extension method will profile over any background parameters
-that were free when the method was executed.  One can optionally fix
-all background parameters with the *fix_background* parameter:
+By default the extension method will profile over any background
+parameters that were free when the method was executed.  One can fix
+all background parameters by setting ``fix_background=True``:
 
 .. code-block:: python
    
@@ -71,6 +61,21 @@ The contents of the output dictionary are described in the following table:
    :delim: tab
    :widths: 10,10,80
 
+
+Configuration
+-------------
+
+The default configuration of the method is controlled with the
+:ref:`config_extension` section of the configuration file.  The default
+configuration can be overriden by passing the option as a *kwargs*
+argument to the method.
+
+.. csv-table:: *extension* Options
+   :header:    Option, Default, Description
+   :file: ../config/extension.csv
+   :delim: tab
+   :widths: 10,10,80
+            
 Reference/API
 -------------
 

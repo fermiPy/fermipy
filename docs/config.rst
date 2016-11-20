@@ -4,7 +4,7 @@ Configuration
 =============
 
 This page describes the configuration management scheme used within
-the fermiPy package and the documents the configuration parameters
+the Fermipy package and the documents the configuration parameters
 that can be set in the configuration file.
 
 
@@ -12,17 +12,16 @@ that can be set in the configuration file.
 Class Configuration
 ##################################
 
-Classes in the fermiPy package follow a common convention for
+Classes in the Fermipy package follow a common convention for
 configuring the runtime behavior of a class instance.  Internally
 every class instance has a dictionary that defines its configuration
 state.  Elements of the configuration dictionary can be scalars (str,
-int ,float) or dictionaries defining nested blocks of the
-configuration.
+int, float) or dictionaries defining nested groups of parameters.
 
 The class configuration dictionary is initialized at the time of
 object creation by passing a dictionary or a path to YAML
 configuration file to the class constructor.  Keyword arguments can be
-optionally passed to the constructor to override configuration
+passed to the constructor to override configuration
 parameters in the input dictionary.  For instance in the following
 example the *config* dictionary defines values for the parameters
 *emin* and *emax*.  By passing a dictionary for the *selection*
@@ -50,7 +49,7 @@ rather than a dictionary:
 Configuration File
 ##################################
 
-fermiPy uses YAML files to read and write its configuration in a
+Fermipy uses YAML files to read and write its configuration in a
 persistent format.  The configuration file has a hierarchical
 organization that groups parameters into dictionaries that are keyed
 to a section name (*data*, *binnig*, etc.).  
@@ -91,11 +90,13 @@ to a section name (*data*, *binnig*, etc.).
      catalogs : ['3FGL']
                           
 The configuration file mirrors the layout of the configuration
-dictionary.  Most of the available configuration parameters are
-optional and if not set explicitly in the configuration file will be
-set to a default value.  The parameters that can be set in each
-section are described below.
-     
+dictionary.  Most of the configuration parameters are optional and if
+not set explicitly in the configuration file will be set to a default
+value.  The parameters that can be set in each section are described
+below.
+
+.. _config_binning:
+
 binning
 -------
 
@@ -127,42 +128,29 @@ components
 The *components* section can be used to define analysis configurations
 for a sequence of independent subselections of the data.  Each
 subselection will have its own binned likelihood instance that will be
-combined in a global likelihood likelihood function for the whole ROI
+combined in a global likelihood function for the whole ROI
 (implemented with the SummedLikelihood class in pyLikelihood).  This
 section is optional and when this section is empty (the default)
 fermiPy will construct a single likelihood with the parameters of the
 root analysis configuration.
 
-The component section can be defined as either a list or dictionary of
-dictionary elements where each element sets analysis parameters for a
-different subcomponent of the analysis.  Dictionary elements have the
-same hierarchy of parameters as the root analysis configuration.
-Parameters not defined in a given element will default to the values
-set in the root analysis configuration.
+The component section is defined as a list of dictionaries where each
+element sets analysis parameters for a different subcomponent of the
+analysis.  Dictionary elements have the same hierarchy of parameters
+as the root analysis configuration.  Parameters not defined in a given
+element will default to the values set in the root analysis
+configuration.
 
 The following example illustrates how to define a Front/Back analysis
-with the a list of dictionaries.  In this case files associated to
-each component will be named according to their order in the list
+with the a list of dictionaries.  Files associated to each component
+will be given a suffix according to their order in the list
 (e.g. file_00.fits, file_01.fits, etc.).
 
 .. code-block:: yaml
 
-   # Component section for Front/Back analysis with list style
-   components:
+   # Component section for Front/Back analysis
      - { selection : { evtype : 1 } } # Front
      - { selection : { evtype : 2 } } # Back
-
-This example illustrates how to define the components as a dictionary
-of dictionaries.  In this case the files of a component will be
-appended with its corresponding key (e.g. file_front.fits,
-file_back.fits).
-
-.. code-block:: yaml
-
-   # Component section for Front/Back analysis with dictionary style
-   components:
-     front : { selection : { evtype : 1 } } # Front
-     back  : { selection : { evtype : 2 } } # Back
 
 .. _config_data:
      
@@ -189,6 +177,8 @@ null a livetime cube will be generated at runtime with ``gtltcube``.
    :delim: tab
    :widths: 10,10,80
 
+.. _config_extension:
+            
 extension
 ---------
 
@@ -201,6 +191,8 @@ about using this method see the :ref:`extension` page.
    :file: config/extension.csv
    :delim: tab
    :widths: 10,10,80
+
+.. _config_fileio:
             
 fileio
 ------
@@ -243,7 +235,21 @@ analysis include the IRF name (``irfs``).
    :delim: tab
    :widths: 10,10,80
 
+.. _config_lightcurve:
+            
+lightcurve
+----------
 
+The options in *lightcurve* control the default behavior of the
+`~fermipy.gtanalysis.GTAnalysis.lightcurve` method.  For more information
+about using this method see the :ref:`lightcurve` page.
+
+.. csv-table:: *lightcurve* Options
+   :header:    Option, Default, Description
+   :file: config/lightcurve.csv
+   :delim: tab
+   :widths: 10,10,80
+            
 .. _config_model:
 
 model
@@ -320,7 +326,7 @@ residmap
 
 The options in *residmap* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.residmap` method.  For more
-information about using this method see the :ref:`detection` page.
+information about using this method see the :ref:`residmap` page.
 
 .. csv-table:: *residmap* Options
    :header:    Option, Default, Description
@@ -396,39 +402,45 @@ explicit sky coordinates with *ra* and *dec* or *glon* and *glat*.
    :file: config/selection.csv
    :delim: tab
    :widths: 10,10,80
+
+.. _config_sourcefind:
             
 sourcefind
 ----------
 
 The options in *sourcefind* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.find_sources` method.  For more information
-about using this method see the :ref:`detection` page.
+about using this method see the :ref:`findsources` page.
 
 .. csv-table:: *sourcefind* Options
    :header:    Option, Default, Description
    :file: config/sourcefind.csv
    :delim: tab
    :widths: 10,10,80
+
+.. _config_tsmap:
             
 tsmap
 -----
 
 The options in *tsmap* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.tsmap` method.  For more information
-about using this method see the :ref:`detection` page.
+about using this method see the :ref:`tsmap` page.
 
 .. csv-table:: *tsmap* Options
    :header:    Option, Default, Description
    :file: config/tsmap.csv
    :delim: tab
    :widths: 10,10,80
-            
+
+.. _config_tscube:
+
 tscube
 ------
 
 The options in *tscube* control the default behavior of the
 `~fermipy.gtanalysis.GTAnalysis.tscube` method.  For more information
-about using this method see the :ref:`detection` page.
+about using this method see the :ref:`tscube` page.
 
 .. csv-table:: *tscube* Options
    :header:    Option, Default, Description

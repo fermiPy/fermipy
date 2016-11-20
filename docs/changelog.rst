@@ -5,6 +5,38 @@ Changelog
 
 This page is a changelog for releases of Fermipy.
 
+0.12.0 (11/20/2016)
+-------------------
+* Add support for phased analysis (`#87
+  <https://github.com/fermiPy/fermipy/pull/87>`_). ``gtlike.expscale``
+  and ``gtlike.src_expscale`` can be used to apply a constant exposure
+  correction to a whole component or individual sources within a
+  component.  See :ref:`phased` for examples.
+* Add script and tools for calculating flux sensitivity (`#88
+  <https://github.com/fermiPy/fermipy/pull/88>`_ and `#95
+  <https://github.com/fermiPy/fermipy/pull/95>`_).  The
+  ``fermipy-flux-sensitivity`` script evaluates both the differential
+  and integral flux sensitivity for a given TS threshold and minimum
+  number of detected counts.  See :ref:`sensitivity` for examples.
+* Add ``fermipy-healview`` script for generating images of healpix
+  maps and cubes.
+* Improvements to HPX-related classes and utilities.
+* Refactoring in ``irfs`` module to support development of new
+  validation tools.
+* Improvements to configuration handling to allow parameter validation
+  when updating configuration at runtime.
+* Add lightcurve method (`#80
+  <https://github.com/fermiPy/fermipy/pull/80>`_).  See
+  :ref:`lightcurve` for documentation.
+* Change convention for flux arrays in source object.  Values and
+  uncertainties are now stored in separate arrays (e.g. ``flux`` and
+  ``flux_err``).  
+* Add :ref:`Docker <dockerinstall>`-based installation instructions.
+  This can be used to run SLAC-based builds of the STs on any machine
+  that supports Docker (e.g. OSX Yosemite or later).
+* Adopt changes to column name conventions in SED format.  All column
+  names are now lowercase.
+
 0.11.0 (08/24/2016)
 -------------------
 * Add support for weighted likelihood fits (supported in ST
@@ -134,7 +166,3 @@ This page is a changelog for releases of Fermipy.
   `~fermipy.gtanalysis.GTAnalysis.tsmap`.
   
   
-0.7.0 (04/19/2016)
-------------------
-
-* some features

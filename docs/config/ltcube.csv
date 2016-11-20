@@ -1,0 +1,2 @@
+``binsz``	1.0	Set the angular bin size for generating livetime cubes.
+``dcostheta``	0.025	Set the inclination angle binning represented as the cosine of the off-axis angle.

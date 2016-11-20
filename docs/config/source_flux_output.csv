@@ -1,36 +1,3 @@
-``name``	str	Name of the source.
-``Source_Name``	str	Name of the source.
-``SpatialModel``	str	Spatial model.
-``SpatialWidth``	float	Spatial size parameter.
-``SpatialType``	str	Spatial type string.  This corresponds to the type attribute of the spatialModel component in the XML model.
-``SourceType``	str	Source type string (PointSource or DiffuseSource).
-``SpectrumType``	str	Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).
-``Spatial_Filename``	str	Path to spatial template associated to this source.
-``Spectrum_Filename``	str	Path to file associated to the spectral model of this source.
-``params``	dict	Dictionary of spectral parameters.
-``correlation``	dict	Dictionary of correlation coefficients.
-``model_counts``	`~numpy.ndarray`	Vector of predicted counts for this source in each analysis energy bin.
-``sed``	dict	Output of SED analysis.  See :ref:`sed` for more information.
-``extension``	dict	Output of extension analysis.  See :ref:`extension` for more information.
-``localize``	dict	Output of localization analysis.  See :ref:`localization` for more information.
-``lightcurve``	dict	Output of lightcurve analysis.  See :ref:`lightcurve` for more information.
-``ra``	float	Right ascension of the source in deg.
-``dec``	float	Declination of the source in deg.
-``glon``	float	Galactic Longitude of the source in deg.
-``glat``	float	Galactic Latitude of the source in deg.
-``offset_ra``	float	Angular offset from ROI center along RA.
-``offset_dec``	float	Angular offset from ROI center along DEC
-``offset_glon``	float	Angular offset from ROI center along GLON.
-``offset_glat``	float	Angular offset from ROI center along GLAT.
-``offset_roi_edge``	float	Distance from the edge of the ROI in deg.  Negative (positive) values indicate locations inside (outside) the ROI.
-``offset``	float	Angular offset from ROI center.
-``pos_sigma``	float	1-sigma uncertainty (deg) on the source position.
-``pos_sigma_semimajor``	float	1-sigma uncertainty (deg) on the source position along major axis.
-``pos_sigma_semiminor``	float	1-sigma uncertainty (deg) on the source position along minor axis.
-``pos_angle``	float	Position angle (deg) of the positional uncertainty ellipse.
-``pos_r68``	float	68% uncertainty (deg) on the source position.
-``pos_r95``	float	95% uncertainty (deg) on the source position.
-``pos_r99``	float	99% uncertainty (deg) on the source position.
 ``ts``	float	Source test statistic.
 ``loglike``	float	Log-likelihood of the model evaluated at the best-fit normalization of the source.
 ``dloglike_scan``	`~numpy.ndarray`	Delta Log-likelihood values for likelihood scan of source normalization.
