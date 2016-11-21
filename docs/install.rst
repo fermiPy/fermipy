@@ -126,15 +126,23 @@ Installing with Anaconda Python
    :ref:`pipinstall` thread above.
 
 These instructions cover how to use fermipy with a new or existing
-conda python installation.  These instructions assume that you have
+anaconda python installation.  These instructions assume that you have
 already downloaded and installed the Fermi STs from the FSSC and you
 have set the ``FERMI_DIR`` environment variable to point to the location
 of this installation.
 
-The ``condainstall.sh`` script can be used to install the fermipy
-dependencies in an existing anaconda python installation or to create
-a minimal anaconda installation from scratch.  In either case download
-and source the ``condainstall.sh`` script from the fermipy repository:
+If you already have an existing anaconda python installation then fermipy
+can be installed from the conda-forge channel as follows:
+
+.. code-block:: bash
+
+   $ conda config --append channels conda-forge
+   $ conda install fermipy
+   
+If you do not have an anaconda installation, the ``condainstall.sh``
+script can be used to create a minimal anaconda installation from
+scratch.  First download and source the ``condainstall.sh`` script
+from the fermipy repository:
 
 .. code-block:: bash
 
@@ -147,11 +155,11 @@ If you already have anaconda installed and the ``conda`` command is in
 your path the script will use your existing installation.  The script
 will create a separate conda environment for your fermipy installation
 called *fermi-env*.  After running ``condainstall.sh`` fermipy can be
-installed with pip:
+installed with conda:
 
 .. code-block:: bash
 
-   $ pip install fermipy
+   $ conda install fermipy
 
 Alternatively fermipy can be installed from source following the
 instructions in :ref:`gitinstall`.
@@ -209,7 +217,7 @@ The installation is fully contained in a docker image that is roughly
 Docker Hub page
 <https://hub.docker.com/r/fermipy/fermist-python/tags/>`_.  Images are
 tagged with the release version of the STs that was used to build the
-image (e.g. 11-04-00).
+image (e.g. 11-05-00).
 
 To install an image first download the image file:
 
@@ -291,8 +299,8 @@ To initialize the ST environment run the ``slacsetup`` function:
 
 This will setup your ``GLAST_EXT`` path and source the setup script
 for one of the pre-built ST installations (the current default is
-11-03-00).  To manually override the ST version you can optionally
-provide the release tag as an argument to ``slacsetup``:
+11-05-00).  To manually override the ST version you can provide the
+release tag as an argument to ``slacsetup``:
 
 .. code-block:: bash
 
@@ -326,7 +334,7 @@ the installation has succeeded by importing
 Upgrading
 ---------
 
-By default installing fermipy with ``pip`` will get the latest tagged
+By default installing fermipy with ``pip`` or ``conda`` will get the latest tagged
 released available on the `PyPi <https://pypi.python.org/pypi>`_
 package respository.  You can check your currently installed version
 of fermipy with ``pip show``:
@@ -334,18 +342,13 @@ of fermipy with ``pip show``:
 .. code-block:: bash
 
    $ pip show fermipy
-   ---
-   Metadata-Version: 2.0
-   Name: fermipy
-   Version: 0.6.7
-   Summary: A Python package for analysis of Fermi-LAT data
-   Home-page: https://github.com/fermiPy/fermipy
-   Author: The Fermipy developers
-   Author-email: fermipy.developers@gmail.com
-   License: BSD
-   Location: /home/vagrant/miniconda/envs/fermi-env/lib/python2.7/site-packages
-   Requires: wcsaxes, astropy, matplotlib, healpy, scipy, numpy, pyyaml
 
+or ``conda info``:
+
+.. code-block:: bash
+
+   $ conda info fermipy
+   
 To upgrade your fermipy installation to the latest version run the pip
 installation command with ``--upgrade --no-deps`` (remember to also
 include the ``--user`` option if you're running at SLAC):
@@ -360,6 +363,12 @@ include the ``--user`` option if you're running at SLAC):
          Successfully uninstalled fermipy-0.6.6
    Successfully installed fermipy-0.6.7
 
+If you installed fermipy with ``conda`` the equivalent command is:
+
+.. code-block:: bash
+
+   $ conda update fermipy
+   
    
 .. _gitinstall:
    

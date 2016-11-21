@@ -35,7 +35,8 @@ if ! type "conda" &> /dev/null; then
 fi
 
 conda update -q conda -y
-conda config --set channel_priority false 
+#conda config --set channel_priority false
+conda config --append channels conda-forge
 conda info -a
 conda create -q -n fermi-env -y python=$PYTHON_VERSION pip numpy astropy pytest $CONDA_DEPS
 source activate fermi-env
