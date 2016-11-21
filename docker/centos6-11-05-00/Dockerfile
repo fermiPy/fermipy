@@ -15,6 +15,7 @@ RUN mkdir -p /home/externals \
     && curl -o /home/externals/f2c-3.4-gl4.tar.gz ${SLAC_EXTERNALS_URL}/f2c-3.4-gl4.tar.gz \
     && curl -o /home/externals/cppunit-1.10.2-gl1.tar.gz ${SLAC_EXTERNALS_URL}/cppunit-1.10.2-gl1.tar.gz \
     && curl -o /home/externals/ROOT-v5.34.34.tar.gz ${SLAC_EXTERNALS_URL}/ROOT-v5.34.34.tar.gz \
+    && curl -o /home/externals/diffuseModels-v5r0.tar.gz ${SLAC_EXTERNALS_URL}/diffuseModels-v5r0.tar.gz \
     && cd /home/externals && for f in *.tar.gz; do tar -xf "$f"; done && rm *.tar.gz
 RUN mkdir -p /home/ScienceTools \
     && curl -o /home/ScienceTools/ScienceTools-11-05-00-user.tar.gz ${SLAC_ST_URL}/11-05-00/ScienceTools-11-05-00-user.tar.gz \

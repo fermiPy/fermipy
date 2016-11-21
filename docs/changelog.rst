@@ -31,9 +31,9 @@ This page is a changelog for releases of Fermipy.
 * Change convention for flux arrays in source object.  Values and
   uncertainties are now stored in separate arrays (e.g. ``flux`` and
   ``flux_err``).  
-* Add :ref:`Docker <dockerinstall>`-based installation instructions.
-  This can be used to run SLAC-based builds of the STs on any machine
-  that supports Docker (e.g. OSX Yosemite or later).
+* Add :ref:`Docker-based installation <dockerinstall>` instructions.
+  This can be used to run the RHEL6 SLAC ST builds on any machine that
+  supports Docker (e.g. OSX Yosemite or later).
 * Adopt changes to column name conventions in SED format.  All column
   names are now lowercase.
 

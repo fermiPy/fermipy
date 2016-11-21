@@ -152,10 +152,8 @@ from the fermipy repository:
 If you do not already have anaconda python installed on your system
 this script will create a new installation under ``$HOME/miniconda``.
 If you already have anaconda installed and the ``conda`` command is in
-your path the script will use your existing installation.  The script
-will create a separate conda environment for your fermipy installation
-called *fermi-env*.  After running ``condainstall.sh`` fermipy can be
-installed with conda:
+your path the script will use your existing installation.  After
+running ``condainstall.sh`` fermipy can be installed with conda:
 
 .. code-block:: bash
 
@@ -164,22 +162,21 @@ installed with conda:
 Alternatively fermipy can be installed from source following the
 instructions in :ref:`gitinstall`.
 
-Once fermipy is installed you can initialize the ST/fermipy environment at
-any time by running ``condasetup.sh``:
+Once fermipy is installed you can initialize the ST/fermipy
+environment by running ``condasetup.sh``:
 
 .. code-block:: bash
 
    $ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condasetup.sh 
    $ source condasetup.sh
 
-This will both activate the *fermi-env* conda environment and set up
-your shell environment to run the Fermi Science Tools.  The
-*fermi-env* python environment can be exited by running:
-
+If you installed fermipy in a specific conda environment you should
+switch to this environment before running the script:
+   
 .. code-block:: bash
 
-   $ source deactivate
-
+   $ source activate fermi-env
+   $ source condasetup.sh
 
 .. _dockerinstall:
 
@@ -223,8 +220,8 @@ To install an image first download the image file:
 
 .. code-block:: bash
 
-   $ docker pull mdwood/fermist-python:11-05-00
-   $ docker tag mdwood/fermist-python:11-05-00 fermist
+   $ docker pull fermipy/fermist-python:11-05-00
+   $ docker tag fermipy/fermist-python:11-05-00 fermist
    
 This will create an image called *fermist*.  Now change to the
 directory where you plan to do your analysis and run the following
@@ -247,15 +244,23 @@ shell by passing the command as an argument to ``docker run``:
 
 .. code-block:: bash
    
-   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermist ipython
-   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermist python
-   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermist /bin/bash
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermist ipython
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermist python
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermist /bin/bash
 
 By default interactive graphics will not be enabled.  The following
-commands can be used to enable X11 forwarding for interactive graphics
-on an OSX machine.  This requires you to have installed XQuartz 2.7.10
-or later.  First enable remote connections by default and start the X
-server:
+code can be inserted at the top of your analysis script to fall-back to a
+non-interactive backend:
+
+.. code-block:: python
+
+   from fermipy.utils import init_matplotlib_backend 
+   init_matplotlib_backend()
+
+The following commands can be used to enable X11 forwarding for
+interactive graphics on an OSX machine.  This requires you to have
+installed XQuartz 2.7.10 or later.  First enable remote connections by
+default and start the X server:
 
 .. code-block:: bash
                 

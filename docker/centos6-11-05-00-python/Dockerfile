@@ -15,6 +15,7 @@ RUN conda install -y python=$PYTHON_VERSION pip numpy astropy pytest $CONDA_DEPS
     if [[ -n $PIP_DEPS ]]; then pip install $PIP_DEPS; fi
 RUN conda install -y fermipy
 RUN mkdir /opt/notebooks
+ENV FERMI_DIFFUSE_DIR=/home/externals/diffuseModels/v5r0
 ENV SLAC_ST_BUILD=true
 ENV INST_DIR=/home/ScienceTools
 ENV GLAST_EXT=/home/externals
