@@ -333,25 +333,21 @@ class PowerLaw(SpectralFunction):
         phi0 = np.array(params[0], ndmin=1)
         index = np.array(params[1], ndmin=1)
         x0 = scale
-
+        
         index1 = index + 1
         m = np.isclose(index1, 0.0)
-
         iindex0 = np.zeros(index.shape)
         iindex1 = np.zeros(index.shape)
         iindex1[~m] = 1. / index1[~m]
         iindex0[m] = 1.
-
-        v0 = phi0 * x0 ** (-index) * (np.log(emax) - np.log(emin)) * iindex0
-        v1 = phi0 * x0 ** (-index) * (emax ** index1 -
-                                      emin ** index1) * iindex1
-
-        return v0 + v1
-
-#        y0 = x0 * phi0 * (emin / x0) ** (index + 1) / (index + 1)
-#        y1 = x0 * phi0 * (emax / x0) ** (index + 1) / (index + 1)
-#        v2 = y1 - y0
-#        return v2
+        
+        xmin = emin/scale
+        xmax = emax/scale        
+        v = phi0 * iindex1 * (emax * xmax**index - 
+                              emin * xmin**index)
+        if np.any(m):
+            v += phi0 * x0 * iindex0 * (np.log(emax) - np.log(emin))
+        return v
 
     @classmethod
     def eval_eflux(cls, emin, emax, params, scale=1.0, extra_params=None):
@@ -362,7 +358,8 @@ class PowerLaw(SpectralFunction):
 
     @staticmethod
     def eval_norm(scale, index, emin, emax, flux):
-        return flux / PowerLaw.eval_flux(emin, emax, [1.0, index], scale)
+        return flux / PowerLaw.eval_flux(emin, emax, [1.0, index],
+                                         scale=scale)
 
 
 class LogParabola(SpectralFunction):
