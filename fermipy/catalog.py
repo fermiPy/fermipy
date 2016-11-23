@@ -192,20 +192,19 @@ class Catalog2FHL(Catalog):
         strip_columns(table)
         strip_columns(table_extsrc)
 
-        join_tables(table, table_extsrc, 'Source_Name', 'Source_Name',
-                    ['Model_Form', 'Model_SemiMajor',
-                     'Model_SemiMinor', 'Model_PosAng',
-                     'Spatial_Filename'])
+        table = join_tables(table, table_extsrc, 'Source_Name', 'Source_Name',
+                            ['Model_Form', 'Model_SemiMajor',
+                             'Model_SemiMinor', 'Model_PosAng',
+                             'Spatial_Filename'])
 
         table.sort('Source_Name')
-        
+
         super(Catalog2FHL, self).__init__(table, extdir)
 
         self._table['Flux_Density'] = \
             PowerLaw.eval_norm(50E3, -np.array(self.table['Spectral_Index']),
                                50E3, 2000E3,
                                np.array(self.table['Flux50']))
-            
         self._table['Pivot_Energy'] = 50E3
         self._table['SpectrumType'] = 'PowerLaw'
 
