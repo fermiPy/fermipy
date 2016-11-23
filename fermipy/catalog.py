@@ -56,7 +56,8 @@ def join_tables(left, right, key_left, key_right,
     if key_left not in cols_right:
         cols_right += [key_left]
 
-    out = join(left, right[cols_right], keys=key_left, join_type='outer')
+    out = join(left, right[cols_right], keys=key_left,
+               join_type='left')
 
     for col in out.colnames:
         if out[col].dtype.kind in ['S', 'U']:
@@ -187,7 +188,7 @@ class Catalog2FHL(Catalog):
         hdulist = fits.open(fitsfile)
         table = Table(hdulist['2FHL Source Catalog'].data)
         table_extsrc = Table(hdulist['Extended Sources'].data)
-
+        table_extsrc.meta.clear()
         strip_columns(table)
         strip_columns(table_extsrc)
 
@@ -196,6 +197,8 @@ class Catalog2FHL(Catalog):
                      'Model_SemiMinor', 'Model_PosAng',
                      'Spatial_Filename'])
 
+        table.sort('Source_Name')
+        
         super(Catalog2FHL, self).__init__(table, extdir)
 
         self._table['Flux_Density'] = \
@@ -221,12 +224,11 @@ class Catalog3FGL(Catalog):
 
         table = Table.read(fitsfile, 'LAT_Point_Source_Catalog')
         table_extsrc = Table.read(fitsfile, 'ExtendedSources')
+        table_extsrc.meta.clear()
         table.remove_column('Flux_History')
         table.remove_column('Unc_Flux_History')
-
         strip_columns(table)
         strip_columns(table_extsrc)
-        self._table_extsrc = table_extsrc
 
         table = join_tables(table, table_extsrc,
                             'Extended_Source_Name', 'Source_Name',
