@@ -14,11 +14,13 @@ RUN conda install -y python=$PYTHON_VERSION pip numpy astropy pytest $CONDA_DEPS
     conda install -y $CONDA_DEPS_EXTRA && \
     if [[ -n $PIP_DEPS ]]; then pip install $PIP_DEPS; fi
 RUN conda install -y fermipy
-RUN mkdir /opt/notebooks
+RUN mkdir /workdir
 ENV FERMI_DIFFUSE_DIR=/home/externals/diffuseModels/v5r0
 ENV SLAC_ST_BUILD=true
 ENV INST_DIR=/home/ScienceTools
 ENV GLAST_EXT=/home/externals
-RUN echo "source $INST_DIR/bin/redhat6-x86_64-64bit-gcc44-Optimized/_setup.sh" >> /root/.bashrc
-CMD ["/opt/conda/bin/jupyter notebook --notebook-dir=/opt/notebooks --ip='*' --port=8888 --no-browser"]
+ENV MATPLOTLIBRC=/home/matplotlib
+RUN echo "source $INST_DIR/bin/redhat6-x86_64-64bit-gcc44-Optimized/_setup.sh" >> /root/.bashrc && \
+    mkdir /home/matplotlib && echo "backend      : Agg" >> /home/matplotlib/matplotlibrc
+CMD ["usleep 10 && /opt/conda/bin/jupyter notebook --notebook-dir=/workdir --ip='*' --port=8888 --no-browser"]
 ENTRYPOINT ["/bin/bash","--login","-c"]
