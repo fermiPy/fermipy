@@ -211,25 +211,25 @@ These instructions describe how to create a docker-based ST
 installation that comes preinstalled with anaconda python and fermipy.
 The installation is fully contained in a docker image that is roughly
 2GB in size.  To see a list of the available images go to the `fermipy
-Docker Hub page
-<https://hub.docker.com/r/fermipy/fermist-python/tags/>`_.  Images are
-tagged with the release version of the STs that was used to build the
-image (e.g. 11-05-00).
+Docker Hub page <https://hub.docker.com/r/fermipy/fermipy/tags/>`_.
+Images are tagged with the release version of the STs that was used to
+build the image (e.g. 11-05-00).  The *latest* tag points to the image
+corresponding to the most recent ST release.
 
-To install an image first download the image file:
+To install the *latest* image first download the image file:
 
 .. code-block:: bash
 
-   $ docker pull fermipy/fermist-python:11-05-00
-   $ docker tag fermipy/fermist-python:11-05-00 fermist
+   $ docker pull fermipy/fermipy
+   $ docker tag fermipy/fermipy fermipy
    
-This will create an image called *fermist*.  Now change to the
+This will create an image called *fermipy*.  Now change to the
 directory where you plan to do your analysis and run the following
 command to launch a docker container instance:
 
 .. code-block:: bash
    
-   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermist
+   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermipy
 
 This will start an ipython notebook server that will be attached to
 port 8888.  Once the server is running you can start a notebook
@@ -244,9 +244,9 @@ shell by passing the command as an argument to ``docker run``:
 
 .. code-block:: bash
    
-   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermist ipython
-   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermist python
-   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermist /bin/bash
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy ipython
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy python
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy /bin/bash
 
 By default interactive graphics will not be enabled.  The following
 code can be inserted at the top of your analysis script to fall-back to a
@@ -282,7 +282,7 @@ DISPLAY environment variable to the IP address of the host machine:
 
    $ export HOST_IP=`ifconfig en0 | grep "inet " | cut -d " " -f2`
    $ xhost +$HOST_IP
-   $ docker run -it --rm -e DISPLAY=$HOST_IP:0 -v $PWD:/workdir -w /workdir fermist ipython
+   $ docker run -it --rm -e DISPLAY=$HOST_IP:0 -v $PWD:/workdir -w /workdir fermipy ipython
 
 Running at SLAC
 ---------------
