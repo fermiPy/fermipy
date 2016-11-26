@@ -2,7 +2,7 @@ FROM fermipy/fermist:11-05-00
 MAINTAINER Matthew Wood <mdwood@slac.stanford.edu>
 ARG PYTHON_VERSION=2.7
 ARG CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
-ARG CONDA_DEPS="scipy matplotlib pyyaml ipython jupyter"
+ARG CONDA_DEPS="scipy matplotlib pyyaml ipython jupyter pandas"
 ARG CONDA_DEPS_EXTRA="wcsaxes healpy"
 ARG PIP_DEPS=""
 ENV PATH /opt/conda/bin:$PATH
