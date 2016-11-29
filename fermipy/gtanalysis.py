@@ -4123,8 +4123,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if not os.path.isfile(v):
                 continue
             if not utils.is_fits_file(v):
-                self._data_files[k] = utils.resolve_file_path_list(v, workdir,
-                                                                   prefix=k)
+                self._data_files[k] = \
+                    utils.resolve_file_path_list(v, workdir,
+                                                 prefix=k + '_' + self.name)
             else:
                 self._data_files[k] = v
 

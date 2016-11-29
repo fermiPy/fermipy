@@ -105,17 +105,29 @@ def resolve_file_path(path, **kwargs):
     raise Exception('Failed to resolve file path: %s' % path)
 
 
-def resolve_file_path_list(pathlist, workdir=None, prefix=''):
+def resolve_file_path_list(pathlist, workdir, prefix='',
+                           randomize=False):
+    """Resolve the path of each file name in the file ``pathlist`` and
+    write the updated paths to a new file.
+    """
+    files = [line.strip() for line in open(pathlist, 'r')]
+    newfiles = []    
+    for f in files:
+        f = os.path.expandvars(f)        
+        if os.path.isfile(f):
+            newfiles += [f]
+        else:
+            newfiles += [os.path.join(workdir,f)]
 
-    if workdir is None:
-        return pathlist
-    
-    files = [line.strip() for line in open(pathlist, 'r')]    
-    files = [f if os.path.isfile(f) else
-             os.path.join(workdir,f) for f in files]
-    _, tmppath = tempfile.mkstemp(prefix=prefix,dir=workdir)
+    if randomize:    
+        _, tmppath = tempfile.mkstemp(prefix=prefix,dir=workdir)
+    else:
+        tmppath = os.path.join(workdir,prefix)
+
+    tmppath += '.txt'
+        
     with open(tmppath, 'w') as tmpfile:
-        tmpfile.write("\n".join(files))
+        tmpfile.write("\n".join(newfiles))
     return tmppath
 
 
