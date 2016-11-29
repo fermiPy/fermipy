@@ -2,7 +2,7 @@ include README.rst
 
 include setup.cfg
 
-recursive-include fermipy *.yaml *.fits *.xml *.fit *.txt *.pyx *.pxd *.c *.h
+recursive-include fermipy *.yaml *.fits *.xml *.fit *.dat *.txt *.pyx *.pxd *.c *.h
 recursive-include licenses *
 recursive-include docs *
 
