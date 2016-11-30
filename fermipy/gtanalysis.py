@@ -424,6 +424,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                          **kwargs)
 
         self._projtype = self.config['binning']['projtype']
+        self._tmin = self.config['selection']['tmin']
+        self._tmax = self.config['selection']['tmax']
 
         # Set random seed
         np.random.seed(self.config['mc']['seed'])
@@ -644,6 +646,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """Return the type of projection to use"""
         return self._projtype
 
+    @property
+    def tmin(self):
+        """Return the MET time for the start of the observation."""
+        return self._tmin
+
+    @property
+    def tmax(self):
+        """Return the MET time for the end of the observation."""
+        return self._tmax
+    
     @staticmethod
     def create(infile, config=None):
         """Create a new instance of GTAnalysis from an analysis output file
@@ -1069,6 +1081,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self._ccube_file = os.path.join(self.workdir,
                                         'ccube.fits')
 
+        # Determine tmin, tmax
+        for i, c in enumerate(self._components):
+            self._tmin = (c.tmin if self._tmin is None
+                          else min(self._tmin, c.tmin))
+            self._tmax = (c.tmax if self._tmax is None
+                          else min(self._tmax, c.tmax))
+        
         self._fitcache = None
         self._init_roi_model()
 
@@ -4215,6 +4234,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._like = None
         self._coordsys = self.config['binning']['coordsys']
+        self._tmin = self.config['selection']['tmin']
+        self._tmax = self.config['selection']['tmax']
 
         if self.projtype == 'HPX':
             self._hpx_region = create_hpx_disk_region_string(self.roi.skydir,
@@ -4294,6 +4315,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def projtype(self):
         """Return the type of projection to use"""
         return self._projtype
+
+    @property
+    def tmin(self):
+        """Return the MET time for the start of the observation."""
+        return self._tmin
+
+    @property
+    def tmax(self):
+        """Return the MET time for the end of the observation."""
+        return self._tmax
 
     @property
     def wcs(self):
@@ -4746,6 +4777,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self.logger.debug('Loading LT Cube %s', self.files['ltcube'])
         self._ltc = irfs.LTCube.create(self.files['ltcube'])
+
+        # Extract tmin, tmax from LT cube
+        self._tmin = self._ltc.tstart
+        self._tmax = self._ltc.tstop
 
         self.logger.debug('Creating PSF model')
         self._psf = irfs.PSFModel.create(self.roi.skydir, self._ltc,

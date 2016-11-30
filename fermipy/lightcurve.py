@@ -138,12 +138,10 @@ class LightCurve(object):
         if kwargs['time_bins']:
             times = kwargs['time_bins']
         elif kwargs['nbins']:
-            times = np.linspace(self.config['selection']['tmin'],
-                                self.config['selection']['tmax'],
+            times = np.linspace(self.tmin, self.tmax,
                                 kwargs['nbins'] + 1)
         else:
-            times = np.arange(self.config['selection']['tmin'],
-                              self.config['selection']['tmax'],
+            times = np.arange(self.tmin, self.tmax,
                               kwargs['binsz'])
 
         # Output Dictionary
