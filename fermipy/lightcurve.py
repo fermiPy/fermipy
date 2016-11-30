@@ -186,15 +186,14 @@ class LightCurve(object):
                 
                 config['components'][j] = \
                     utils.merge_dict(config['components'][j],
-                                     {'data' : {'evfile': c.data_files['evfile'],
+                                     {'data' : {'evfile': c.files['ft1'],
                                                 'scfile': c.data_files['scfile'],
                                                 'ltcube': None } },
                                      add_new_keys=True)
                     
-            # create out directories labeled in MJD vals
-            outdir = 'lightcurve_%s_%.3f_%.3f' % (name.lower().replace(' ', '_'),
-                                                  utils.met_to_mjd(time[0]),
-                                                  utils.met_to_mjd(time[1]))
+            # create output directories labeled in MET vals
+            outdir = 'lightcurve_%s_%.0f_%.0f' % (name.lower().replace(' ', '_'),
+                                                  time[0],time[1])
             config['fileio']['outdir'] = os.path.join(self.workdir, outdir)
             utils.mkdir(config['fileio']['outdir'])
 
