@@ -625,8 +625,14 @@ class SEDPlotter(object):
         cmap = kwargs.pop('cmap', 'BuGn')
         cmap_trunc_lo = kwargs.pop('cmap_trunc_lo', None)
         cmap_trunc_hi = kwargs.pop('cmap_trunc_hi', None)
-        
-        fmin, fmax = SEDPlotter.get_ylims(sed)
+
+        ylim = kwargs.pop('ylim',None)
+
+        if ylim is None:
+            fmin, fmax = SEDPlotter.get_ylims(sed)
+        else:
+            fmin, fmax = np.log10(ylim)
+            
         fluxM = np.arange(fmin, fmax, 0.01)
         fbins = len(fluxM)
         llhMatrix = np.zeros((len(sed['e_ctr']), fbins))
