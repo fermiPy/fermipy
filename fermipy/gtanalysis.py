@@ -3789,14 +3789,22 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         dnde = np.array(dnde)
         dnde_err = np.array(dnde_err)
-        fhi = dnde * (1.0 + dnde_err / dnde)
-        flo = dnde / (1.0 + dnde_err / dnde)
+        m = dnde > 0
 
+        fhi = np.zeros_like(dnde)
+        flo = np.zeros_like(dnde)
+        ferr = np.zeros_like(dnde)
+
+        fhi[m] = dnde[m] * (1.0 + dnde_err[m] / dnde[m])
+        flo[m] = dnde[m] / (1.0 + dnde_err[m] / dnde[m])
+        ferr[m] = 0.5 * (fhi[m] - flo[m]) / dnde[m]
+        fhi[~m] = dnde_err[~m]
+        
         o['dnde'] = dnde
         o['dnde_lo'] = flo
         o['dnde_hi'] = fhi
         o['dnde_err'] = dnde_err
-        o['dnde_ferr'] = 0.5 * (fhi - flo) / dnde
+        o['dnde_ferr'] = ferr
 
         try:
             o['pivot_energy'] = 10 ** utils.interpolate_function_min(loge, o[
