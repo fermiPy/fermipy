@@ -166,7 +166,7 @@ class SEDGenerator(object):
                 ]
 
         tab = Table(cols)
-
+        tab.meta['UL_CONF'] = 0.95
         tab.write(filename, format='fits', overwrite=True)
 
         columns = pyfits.ColDefs([])
@@ -273,7 +273,6 @@ class SEDGenerator(object):
              'loglike_scan': np.zeros((nbins, npts)),
              'fit_quality': np.zeros(nbins),
              'fit_status': np.zeros(nbins),
-             'lnlprofile': [],
              'correlation': {},
              'model_flux': {},
              'params': {},
@@ -478,7 +477,6 @@ class SEDGenerator(object):
             o['loglike_scan'][i] = lnlp['loglike']
             o['dloglike_scan'][i] = lnlp['dloglike']
             o['norm_scan'][i] = lnlp['flux'] / ref_flux
-            o['lnlprofile'] += [lnlp]
 
             ul_data = utils.get_parameter_limits(
                 lnlp['flux'], lnlp['dloglike'])

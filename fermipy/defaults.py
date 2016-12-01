@@ -349,7 +349,6 @@ sed_output = OrderedDict((
                      '0 - Error matrix not calculated at all).',np.ndarray,'`~numpy.ndarray`')),
     ('fit_status', (None, 'Fit status parameter (0=ok).',np.ndarray,'`~numpy.ndarray`')),
     ('index', (None, 'Spectral index of the power-law model used to fit this bin.',np.ndarray,'`~numpy.ndarray`')),
-    ('lnlprofile', (None, 'Likelihood scan for each energy bin.',dict,'dict')),
     ('norm_scan', (None, 'Array of NxM normalization values for the profile likelihood scan in N '
                    'energy bins and M scan points.  A row-wise multiplication with '
                    'any of ``ref`` columns can be used to convert this matrix to the '
