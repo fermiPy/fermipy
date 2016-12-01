@@ -5,6 +5,7 @@ import copy
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
+
 def cast_args(x):
 
     if isinstance(x, np.ndarray) and x.ndim >= 2:
@@ -39,7 +40,7 @@ class SEDFunctor(object):
         self._emin = emin
         self._emax = emax
         self._sfn = sfn
-        
+
     @property
     def emin(self):
         return self._emin
@@ -51,7 +52,7 @@ class SEDFunctor(object):
     @property
     def spectral_fn(self):
         return self._sfn
-    
+
     @property
     def scale(self):
         return self._sfn.scale
@@ -65,7 +66,7 @@ class SEDFunctor(object):
         self._sfn.scale = scale
 
     @params.setter
-    def params(self,params):
+    def params(self, params):
         self._sfn.params = params
 
 
@@ -129,23 +130,23 @@ class SpectralFunction(object):
         self._scale = scale
 
     @params.setter
-    def params(self,params):
+    def params(self, params):
         if params is None:
             self._params = np.zeros(self.nparam)
         else:
             self._params = np.array(params)
-    
+
     @property
     def extra_params(self):
         """Dictionary containing additional parameters needed for
         evaluation of the function."""
         return self._extra_params
-    
+
     @classmethod
     def create_functor(cls, spec_type, func_type, emin, emax,
                        params=None, scale=1.0, extra_params=None):
 
-        if isinstance(spec_type,SpectralFunction):
+        if isinstance(spec_type, SpectralFunction):
             sfn = copy.deepcopy(spec_type)
         else:
             sfn = eval(spec_type)(params, scale, extra_params)
@@ -199,7 +200,7 @@ class SpectralFunction(object):
         params = cast_params(params)
         dnde_deriv = cls._eval_dnde_deriv(x, params, scale, extra_params)
         dnde = cls._eval_dnde(x, params, scale)
-        return x*dnde_deriv + dnde
+        return x * dnde_deriv + dnde
 
     @classmethod
     def eval_e2dnde_deriv(cls, x, params, scale=1.0, extra_params=None):
@@ -207,7 +208,7 @@ class SpectralFunction(object):
         params = cast_params(params)
         dnde_deriv = cls._eval_dnde_deriv(x, params, scale, extra_params)
         dnde = cls._eval_dnde(x, params, scale)
-        return x**2*dnde_deriv + 2*x*dnde
+        return x**2 * dnde_deriv + 2 * x * dnde
 
     @classmethod
     def _integrate(cls, fn, emin, emax, params, scale=1.0, extra_params=None,
@@ -231,8 +232,8 @@ class SpectralFunction(object):
     @classmethod
     def _eval_dnde_deriv(cls, x, params, scale=1.0, extra_params=None,
                          eps=1E-6):
-        return (cls._eval_dnde(x+eps, params, scale) -
-                cls._eval_dnde(x, params, scale))/eps
+        return (cls._eval_dnde(x + eps, params, scale) -
+                cls._eval_dnde(x, params, scale)) / eps
 
     @classmethod
     def eval_flux(cls, emin, emax, params, scale=1.0, extra_params=None):
@@ -249,7 +250,7 @@ class SpectralFunction(object):
         params = cast_params(params)
         return cls._integrate(cls.eval_ednde, emin, emax, params, scale,
                               extra_params)
-            
+
     def dnde(self, x, params=None):
         """Evaluate differential flux."""
         params = self.params if params is None else params
@@ -314,6 +315,7 @@ class PowerLaw(SpectralFunction):
     * params[1] : Index (p_1)
 
     """
+
     def __init__(self, params=None, scale=1.0, extra_params=None):
         params = (params if params is not None else
                   np.array([5e-13, -2.0]))
@@ -322,7 +324,7 @@ class PowerLaw(SpectralFunction):
     @staticmethod
     def nparam():
         return 2
-        
+
     @staticmethod
     def _eval_dnde(x, params, scale=1.0, extra_params=None):
         return params[0] * (x / scale) ** params[1]
@@ -333,17 +335,17 @@ class PowerLaw(SpectralFunction):
         phi0 = np.array(params[0], ndmin=1)
         index = np.array(params[1], ndmin=1)
         x0 = scale
-        
+
         index1 = index + 1
         m = np.isclose(index1, 0.0)
         iindex0 = np.zeros(index.shape)
         iindex1 = np.zeros(index.shape)
         iindex1[~m] = 1. / index1[~m]
         iindex0[m] = 1.
-        
-        xmin = emin/scale
-        xmax = emax/scale        
-        v = phi0 * iindex1 * (emax * xmax**index - 
+
+        xmin = emin / scale
+        xmax = emax / scale
+        v = phi0 * iindex1 * (emax * xmax**index -
                               emin * xmin**index)
         if np.any(m):
             v += phi0 * x0 * iindex0 * (np.log(emax) - np.log(emin))
@@ -375,6 +377,7 @@ class LogParabola(SpectralFunction):
     * params[2] : Curvature (p_2)
 
     """
+
     def __init__(self, params=None, scale=1.0, extra_params=None):
         params = (params if params is not None else
                   np.array([5e-13, -2.0, 0.0]))
@@ -383,7 +386,7 @@ class LogParabola(SpectralFunction):
     @staticmethod
     def nparam():
         return 3
-        
+
     @staticmethod
     def _eval_dnde(x, params, scale=1.0, extra_params=None):
         return (params[0] * (x / scale) **
@@ -403,9 +406,10 @@ class PLExpCutoff(SpectralFunction):
     * params[2] : Curvature (p_2)
 
     """
+
     def __init__(self, params=None, scale=1.0, extra_params=None):
         params = (params if params is not None else
-                  np.array([5e-13, -1.0, 1E4]))        
+                  np.array([5e-13, -1.0, 1E4]))
         super(PLExpCutoff, self).__init__(params, scale)
 
     @staticmethod
@@ -423,7 +427,7 @@ class PLExpCutoff(SpectralFunction):
     @staticmethod
     def nparam():
         return 3
-    
+
     @staticmethod
     def _eval_dnde(x, params, scale=1.0, extra_params=None):
         return params[0] * (x / scale) ** (params[1]) * np.exp(-x / params[2])
@@ -431,7 +435,7 @@ class PLExpCutoff(SpectralFunction):
     @classmethod
     def _eval_dnde_deriv(cls, x, params, scale=1.0, extra_params=None):
         return (cls._eval_dnde(x, params, scale) *
-                (params[1]*params[2] - x)/(params[2]*x))
+                (params[1] * params[2] - x) / (params[2] * x))
 
 
 class DMFitFunction(SpectralFunction):
@@ -453,39 +457,39 @@ class DMFitFunction(SpectralFunction):
     # Mapping between the ST channel codes and the rows in the gammamc
     # file
     channel_index_mapping = {
-        1 : 8, # ee
-        2 : 6, # mumu
-        3 : 3, # tautau
-        4 : 1, # bb
-        5 : 2, # tt
-        6 : 7, # gg
-        7 : 4, # ww
-        8 : 5, # zz
-        9 : 0, # cc
-        10 : 10, # uu
-        11 : 11, # dd
-        12 : 9, # ss
-        }
-    
+        1: 8,  # ee
+        2: 6,  # mumu
+        3: 3,  # tautau
+        4: 1,  # bb
+        5: 2,  # tt
+        6: 7,  # gg
+        7: 4,  # ww
+        8: 5,  # zz
+        9: 0,  # cc
+        10: 10,  # uu
+        11: 11,  # dd
+        12: 9,  # ss
+    }
+
     # Mapping between ST channel codes and string aliases
     channel_name_mapping = {
-        1  :  ["e+e-","ee"],
-        2  :  ["mu+mu-","mumu","musrc"]      ,
-        3  :  ["tau+tau-","tautau","tausrc"] ,
-        4  :  ["bb-bar","bb","bbbar","bbsrc"],
-        5  :  ["tt-bar","tt"]                ,
-        6  :  ["gluons","gg"]                ,
-        7  :  ["W+W-","w+w-","ww","wwsrc"]   ,
-        8  :  ["ZZ","zz"]                    ,
-        9  :  ["cc-bar","cc"]                ,
-        10 :  ["uu-bar","uu"]                ,
-        11 :  ["dd-bar","dd"]                ,
-        12 :  ["ss-bar","ss"] }
+        1:  ["e+e-", "ee"],
+        2:  ["mu+mu-", "mumu", "musrc"],
+        3:  ["tau+tau-", "tautau", "tausrc"],
+        4:  ["bb-bar", "bb", "bbbar", "bbsrc"],
+        5:  ["tt-bar", "tt"],
+        6:  ["gluons", "gg"],
+        7:  ["W+W-", "w+w-", "ww", "wwsrc"],
+        8:  ["ZZ", "zz"],
+        9:  ["cc-bar", "cc"],
+        10:  ["uu-bar", "uu"],
+        11:  ["dd-bar", "dd"],
+        12:  ["ss-bar", "ss"]}
 
-    channel_rev_map = { vv : k for k, v in channel_name_mapping.items()
-                        for vv in v  }
-    
-    def __init__(self, params, chan='bb', jfactor = 1E19, tablepath=None):
+    channel_rev_map = {vv: k for k, v in channel_name_mapping.items()
+                       for vv in v}
+
+    def __init__(self, params, chan='bb', jfactor=1E19, tablepath=None):
         """Constructor.
 
         Parameters
@@ -506,37 +510,37 @@ class DMFitFunction(SpectralFunction):
             grid of energy, mass, and channel.
 
         """
-        
-        if tablepath is None:        
+
+        if tablepath is None:
             tablepath = os.path.join('$FERMIPY_DATA_DIR',
                                      'gammamc_dif.dat')
         data = np.loadtxt(os.path.expandvars(tablepath))
 
         # Number of decades in x = log10(E/M)
-        ndec = 10.0        
-        xedge = np.linspace(0,1.0,251)
-        self._x = 0.5*(xedge[1:]+xedge[:-1])*ndec - ndec
+        ndec = 10.0
+        xedge = np.linspace(0, 1.0, 251)
+        self._x = 0.5 * (xedge[1:] + xedge[:-1]) * ndec - ndec
 
-        chan_code = DMFitFunction.channel_rev_map[chan]        
+        chan_code = DMFitFunction.channel_rev_map[chan]
         ichan = DMFitFunction.channel_index_mapping[chan_code]
         self._chan = chan
         self._chan_code = chan_code
-        
+
         # These are the mass points
-        self._mass = np.array([2.0,4.0,6.0,8.0,10.0,
-                               25.0,50.0,80.3,91.2,100.0,
-                               150.0,176.0,200.0,250.0,350.0,500.0,750.0,
-                               1000.0,1500.0,2000.0,3000.0,5000.0,7000.0,1E4])
-        self._dndx = data.reshape((12,24,250))
-        self._dndx_interp = RegularGridInterpolator([self._mass,self._x],
-                                                    self._dndx[ichan,:,:],
+        self._mass = np.array([2.0, 4.0, 6.0, 8.0, 10.0,
+                               25.0, 50.0, 80.3, 91.2, 100.0,
+                               150.0, 176.0, 200.0, 250.0, 350.0, 500.0, 750.0,
+                               1000.0, 1500.0, 2000.0, 3000.0, 5000.0, 7000.0, 1E4])
+        self._dndx = data.reshape((12, 24, 250))
+        self._dndx_interp = RegularGridInterpolator([self._mass, self._x],
+                                                    self._dndx[ichan, :, :],
                                                     bounds_error=False,
                                                     fill_value=None)
-        extra_params = {'dndx_interp' : self._dndx_interp,
-                        'chan' : chan,
-                        'jfactor' : jfactor }        
+        extra_params = {'dndx_interp': self._dndx_interp,
+                        'chan': chan,
+                        'jfactor': jfactor}
         super(DMFitFunction, self).__init__(params, 1.0, extra_params)
-            
+
     @property
     def chan(self):
         """Return the channel string."""
@@ -546,7 +550,7 @@ class DMFitFunction(SpectralFunction):
     def chan_code(self):
         """Return the channel code."""
         return self._chan_code
-    
+
     @staticmethod
     def nparam():
         return 2
@@ -555,7 +559,7 @@ class DMFitFunction(SpectralFunction):
     def channels():
         """ Return all available DMFit channel strings """
         return DMFitFunction.channel_rev_map.keys()
-    
+
     @staticmethod
     def _eval_dnde(x, params, scale=1.0, extra_params=None):
 
@@ -563,9 +567,9 @@ class DMFitFunction(SpectralFunction):
         jfactor = extra_params.get('jfactor')
         sigmav = params[0]
         mass = params[1]
-        xm = np.log10(x/mass) - 3.0
-        phip = 1./(8.*np.pi)*np.power(mass,-2)*(sigmav*jfactor)
+        xm = np.log10(x / mass) - 3.0
+        phip = 1. / (8. * np.pi) * np.power(mass, -2) * (sigmav * jfactor)
         #dndx = self._dndx_interp[ichan]((np.log10(mass),xm))
-        dndx = dndx_interp((mass,xm))
-        dndx[xm > 0] = 0        
-        return phip*dndx/x
+        dndx = dndx_interp((mass, xm))
+        dndx[xm > 0] = 0
+        return phip * dndx / x
