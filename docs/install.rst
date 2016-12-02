@@ -281,7 +281,7 @@ DISPLAY environment variable to the IP address of the host machine:
 .. code-block:: bash
 
    $ export HOST_IP=`ifconfig en0 | grep "inet " | cut -d " " -f2`
-   $ xhost +$HOST_IP
+   $ xhost +local:
    $ docker run -it --rm -e DISPLAY=$HOST_IP:0 -v $PWD:/workdir -w /workdir fermipy ipython
 
 Running at SLAC
