@@ -620,7 +620,14 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
 
     deltalnl = onesided_cl_to_dlnl(ul_confidence)
 
-    spline = UnivariateSpline(xval, loglike, k=2, s=tol)
+    # EAC FIXME, added try block here b/c sometimes xval is np.nan
+    try:
+        spline = UnivariateSpline(xval, loglike, k=2, s=tol)
+    except:
+        print ("Failed to create spline: ", xval, loglike)
+        return {'x0': np.nan, 'ul': np.nan, 'll': np.nan,
+                'err_lo': np.nan, 'err_hi': np.nan, 'err': np.nan,
+                'lnlmax': np.nan}
     # m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
     # xval = np.concatenate((xval[:1],xval[1:][m]))
     # loglike = np.concatenate((loglike[:1],loglike[1:][m]))
