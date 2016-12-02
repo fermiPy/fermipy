@@ -18,5 +18,5 @@ RUN mkdir -p /home/externals \
     && curl -o /home/externals/diffuseModels-v5r0.tar.gz ${SLAC_EXTERNALS_URL}/diffuseModels-v5r0.tar.gz \
     && cd /home/externals && for f in *.tar.gz; do tar -xf "$f"; done && rm *.tar.gz
 RUN mkdir -p /home/ScienceTools \
-    && curl -o /home/ScienceTools/ScienceTools-11-05-00-user.tar.gz ${SLAC_ST_URL}/11-05-00/ScienceTools-11-05-00-user.tar.gz \
-    && cd /home/ScienceTools && tar xzf ScienceTools-11-05-00-user.tar.gz && rm ScienceTools-11-05-00-user.tar.gz
+    && curl -o /home/ScienceTools/ScienceTools-11-05-01-user.tar.gz ${SLAC_ST_URL}/11-05-01/ScienceTools-11-05-01-user.tar.gz \
+    && cd /home/ScienceTools && tar xzf ScienceTools-11-05-01-user.tar.gz && rm ScienceTools-11-05-01-user.tar.gz
