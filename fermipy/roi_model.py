@@ -203,10 +203,12 @@ def get_params_dict(pars_dict):
 
     params = {}
     for k, p in pars_dict.items():
-        val = p['value'] * p['scale']
+        #EAC, need float cast to handle reading xml dict
+        val = float(p['value']) * float(p['scale'])
         err = np.nan
         if 'error' in p:
-            err = p['error'] * np.abs(p['scale'])
+            #EAC, need float cast to handle reading xml dict
+            err = float(p['error']) * np.abs(float(p['scale']))
         params[k] = np.array([val, err])
 
     return params
@@ -354,6 +356,8 @@ class Model(object):
 
         if src_dict['SpatialModel'] == 'ConstantValue':
             return IsoSource(src_dict['name'], src_dict)
+        elif src_dict['SpatialModel'] == 'CompositeSource':
+            return CompositeSource(src_dict['name'],src_dict)
         elif src_dict['SpatialModel'] == 'MapCubeFunction':
             return MapCubeSource(src_dict['name'], src_dict)
         else:
@@ -533,7 +537,7 @@ class MapCubeSource(Model):
 
     def __init__(self, name, data):
 
-        data['SpectrumType'] = 'PowerLaw'
+        data.setdefault('SpectrumType', 'PowerLaw')
         data['SpatialType'] = 'MapCubeFunction'
         data['SpatialModel'] = 'MapCubeFunction'
         data['SourceType'] = 'DiffuseSource'
@@ -579,7 +583,7 @@ class MapCubeSource(Model):
                                                        type='DiffuseSource'))
 
         spec_el = utils.create_xml_element(source_element, 'spectrum',
-                                           dict(type='PowerLaw'))
+                                           dict(type=self.data['SpectrumType']))
 
         filename = utils.path_to_xmlpath(self.mapcube)
         spat_el = utils.create_xml_element(source_element, 'spatialModel',
@@ -974,17 +978,24 @@ class Source(Model):
     def create_from_xml(root, extdir=None):
         """Create a Source object from an XML node."""
 
-        spec = utils.load_xml_elements(root, 'spectrum')
-        spat = utils.load_xml_elements(root, 'spatialModel')
-        spectral_pars = utils.load_xml_elements(root, 'spectrum/parameter')
-        spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
-
-        spectral_pars = cast_pars_dict(spectral_pars)
-        spatial_pars = cast_pars_dict(spatial_pars)
-
         src_type = root.attrib['type']
-        spatial_type = spat['type']
+        spec = utils.load_xml_elements(root, 'spectrum')
+        spectral_pars = utils.load_xml_elements(root, 'spectrum/parameter')
         spectral_type = spec['type']
+        try:
+            spat = utils.load_xml_elements(root, 'spatialModel')
+            spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
+            spatial_pars = cast_pars_dict(spatial_pars)
+            spatial_type = spat['type']
+        except:
+            spat = {}
+            spatial_pars = {}
+            spatial_type = 'CompositeSource'
+            nested_sources = utils.load_xml_elements(root, 'source_library')
+            try:
+                nested_sources = cast_pars_dict(nested_sources)
+            except AttributeError:
+                nested_sources = []
 
         xml_dict = copy.deepcopy(root.attrib)
         src_dict = {'catalog': xml_dict}
@@ -1008,6 +1019,8 @@ class Source(Model):
 
         if src_type == 'PointSource':
             src_dict['SpatialModel'] = 'PointSource'
+        elif src_type == 'CompositeSource':
+            src_dict['SpatialModel'] = 'CompositeSource'
         elif spatial_type == 'SpatialMap':
             src_dict['SpatialModel'] = 'SpatialMap'
         else:
@@ -1043,11 +1056,15 @@ class Source(Model):
         elif src_type == 'DiffuseSource' and spatial_type == 'MapCubeFunction':
             return MapCubeSource(src_dict['Source_Name'],
                                  {'Spatial_Filename': spat['file'],
+                                  'SpectrumType' : spectral_type,
                                   'spectral_pars': spectral_pars,
                                   'spatial_pars': spatial_pars})
+        elif src_type == 'CompositeSource':
+            return CompositeSource(src_dict['Source_Name'], 
+                                   {'SpectrumType' : spectral_type})
         else:
             raise Exception(
-                'Unrecognized type for source: %s' % src_dict['Source_Name'])
+                'Unrecognized type for source: %s %s' % (src_dict['Source_Name'], src_type))
 
     def write_xml(self, root):
         """Write this source to an XML node."""
@@ -1093,6 +1110,57 @@ class Source(Model):
 
         for k, v in self.spectral_pars.items():
             utils.create_xml_element(el, 'parameter', v)
+
+
+class CompositeSource(Model):
+    def __init__(self, name, data):
+
+        data.setdefault('SpectrumType', 'ConstantValue')
+        data['SpatialType'] = 'CompositeSource'
+        data['SpatialModel'] = 'CompositeSource'
+        data['SourceType'] = 'CompositeSource'
+
+        if not 'spectral_pars' in data:
+            data['spectral_pars'] = {
+                'Value': {'name': 'Value', 'scale': 1.0,
+                          'value': 1.0, 'min': 0.1, 'max': '10.0',
+                          'free': False},
+                }
+
+        super(CompositeSource, self).__init__(name, data)
+        self._build_nested_sources(data)
+
+    @property 
+    def nested_sources(self):
+        return self._nested_sources
+
+    @property
+    def diffuse(self):
+        return True
+
+    def _build_nested_sources(self, data):
+        self._nested_sources = []
+        for nested_source in data.get('nested_sources', []):
+            if isinstance(nested_source, Model):
+                self._nested_sources.append(copy.deepcopy(nested_source))
+            elif isinstance(nested_source, dict):
+                self._nested_sources.append(Source.create_from_dict(nested_source))
+                
+    def write_xml(self, root):
+
+        source_element = utils.create_xml_element(root, 'source',
+                                                  dict(name=self.name,
+                                                       type='CompositeSource'))
+
+        spec_el = utils.create_xml_element(source_element, 'spectrum',
+                                           dict(type=self.data['SpectrumType']))
+
+        for k, v in self.spectral_pars.items():
+            utils.create_xml_element(spec_el, 'parameter', v)
+
+        spat_el = utils.create_xml_element(source_element, 'source_library', dict(title=self.name))
+        for nested_source in self._nested_sources:
+            nested_source.write_xml(spat_el)
 
 
 class ROIModel(fermipy.config.Configurable):
@@ -1490,6 +1558,10 @@ class ROIModel(fermipy.config.Configurable):
 
         for c in self.config['catalogs']:
 
+            if isinstance(c, catalog.Catalog):
+                self.load_existing_catalog(c)
+                continue
+
             extname = os.path.splitext(c)[1]
             if extname != '.xml':
                 self.load_fits_catalog(c, extdir=extdir, coordsys=coordsys,
@@ -1765,12 +1837,24 @@ class ROIModel(fermipy.config.Configurable):
             Catalog name or path to a catalog FITS file.
         """
         self.logger.debug('Loading FITS catalog: %s' % name)
+        
+        # EAC split this function to make it easier to load an existing catalog
+        cat = catalog.Catalog.create(name)
+        self.load_existing_catalog(cat, **kwargs)
+        
 
+    def load_existing_catalog(self, cat, **kwargs):
+        """Load sources from an existing catalog object
+
+        Parameters
+        ----------
+
+        cat : `Catalog'
+            Catalog object        
+        """
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
-        srcname = kwargs.get('srcname', None)
-        
-        cat = catalog.Catalog.create(name)
+        srcname = kwargs.get('srcname', None)       
 
         m0 = get_skydir_distance_mask(cat.skydir, self.skydir,
                                       self.config['src_radius'])
