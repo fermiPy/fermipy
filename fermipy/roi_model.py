@@ -203,12 +203,10 @@ def get_params_dict(pars_dict):
 
     params = {}
     for k, p in pars_dict.items():
-        #EAC, need float cast to handle reading xml dict
-        val = float(p['value']) * float(p['scale'])
+        val = p['value'] * p['scale']
         err = np.nan
         if 'error' in p:
-            #EAC, need float cast to handle reading xml dict
-            err = float(p['error']) * np.abs(float(p['scale']))
+            err = p['error'] * np.abs(p['scale'])
         params[k] = np.array([val, err])
 
     return params
@@ -976,26 +974,36 @@ class Source(Model):
 
     @staticmethod
     def create_from_xml(root, extdir=None):
-        """Create a Source object from an XML node."""
+        """Create a Source object from an XML node.
+
+        Parameters
+        ----------
+        root : `~xml.etree.ElementTree.Element`
+            XML node containing the source.
+
+        extdir : str
+            Path to the extended source archive.
+        """
 
         src_type = root.attrib['type']
         spec = utils.load_xml_elements(root, 'spectrum')
         spectral_pars = utils.load_xml_elements(root, 'spectrum/parameter')
         spectral_type = spec['type']
-        try:
+        spectral_pars = cast_pars_dict(spectral_pars)
+        spat = {}
+        spatial_pars = {}
+        nested_sources = []
+
+        if src_type == 'CompositeSource':
+            spatial_type = 'CompositeSource'
+            source_library = root.findall('source_library')[0]
+            for node in source_library.findall('source'):
+                nested_sources += [Source.create_from_xml(node, extdir=extdir)]
+        else:
             spat = utils.load_xml_elements(root, 'spatialModel')
             spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
             spatial_pars = cast_pars_dict(spatial_pars)
             spatial_type = spat['type']
-        except:
-            spat = {}
-            spatial_pars = {}
-            spatial_type = 'CompositeSource'
-            nested_sources = utils.load_xml_elements(root, 'source_library')
-            try:
-                nested_sources = cast_pars_dict(nested_sources)
-            except AttributeError:
-                nested_sources = []
 
         xml_dict = copy.deepcopy(root.attrib)
         src_dict = {'catalog': xml_dict}
@@ -1061,7 +1069,8 @@ class Source(Model):
                                   'spatial_pars': spatial_pars})
         elif src_type == 'CompositeSource':
             return CompositeSource(src_dict['Source_Name'], 
-                                   {'SpectrumType' : spectral_type})
+                                   {'SpectrumType' : spectral_type,
+                                    'nested_sources' : nested_sources })
         else:
             raise Exception(
                 'Unrecognized type for source: %s %s' % (src_dict['Source_Name'], src_type))
