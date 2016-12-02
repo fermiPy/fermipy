@@ -710,6 +710,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         for name in self.like.sourceNames():
 
+            # EAC, this is one of the only things we need from setup()
+            self.update_source(name)     
+
             src = self.roi.get_source_by_name(name)
             rm['model_counts'] += src['model_counts']
             rm['npred'] += np.sum(src['model_counts'])
@@ -1078,8 +1081,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             c.setup(overwrite=overwrite)
             self._like.addComponent(c.like)
 
-        self._ccube_file = os.path.join(self.workdir,
-                                        'ccube.fits')
+        # EAC FIXME, move this to _init_roi_model()
+        #self._ccube_file = os.path.join(self.workdir,
+        #                                'ccube.fits')
 
         # Determine tmin, tmax
         for i, c in enumerate(self._components):
@@ -1112,6 +1116,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self._init_roi_model()
 
     def _init_roi_model(self):
+
+        # EAC, move this from setup()
+        self._ccube_file = os.path.join(self.workdir,
+                                        'ccube.fits')
 
         rm = self._roi_model
 
@@ -4171,7 +4179,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self._files[k] = os.path.join(workdir,
                                           v % self.config['file_suffix'])
 
-        
+        # EAC: allow overriding file locations from config
+        if self.config['gtlike'].get('srcmap', None) is not None:
+            self._files['srcmap'] = self.config['gtlike']['srcmap']
+        if self.config['gtlike'].get('bexpmap', None) is not None:
+            self._files['bexpmap'] = self.config['gtlike']['bexpmap']
+        if self.config['gtlike'].get('bexpmap_roi', None) is not None:
+            self._files['bexpmap_roi'] = self.config['gtlike']['bexpmap_roi']
+        if self.config['gtlike'].get('srcmdl', None) is not None:
+            self._files['srcmdl'] = self.config['gtlike']['srcmdl']
+
             
         if self.config['data']['ltcube'] is not None:
             self._ext_ltcube = True
@@ -4209,9 +4226,19 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                           self.config['selection']['emin']))
             self._enumbins = int(self._enumbins)
 
-        self._ebin_edges = np.linspace(
-            np.log10(self.config['selection']['emin']),
-            np.log10(self.config['selection']['emax']),
+        # EAC FIXME, allow specifying either (logemin, logemax) or (emin, emax)
+        try:
+            emin = self.config['selection']['emin']
+            emax = self.config['selection']['emax']
+            logemin = np.log10(emin)
+            logemax = np.log10(emax)
+        except AttributeError:
+            logemin = self.config['selection']['logemin']
+            logemax = self.config['selection']['logemax']
+            emin = np.power(10., logemin)
+            emax = np.power(10., logemax)
+
+        self._ebin_edges = np.linspace(logemin, logemax,
             self._enumbins + 1)
         self._ebin_center = 0.5 * \
             (self._ebin_edges[1:] + self._ebin_edges[:-1])
@@ -5031,7 +5058,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Computing fixed weights')
         self.like.logLike.buildFixedModelWts()
         self.logger.debug('Updating source maps')
-        self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
+        # EAC, FIXME, disable for HEALpix testing
+        #self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
 
         # Apply exposure corrections
         self._scale_srcmap(self._src_expscale)
