@@ -213,7 +213,7 @@ def test_load_composite_source_from_xml(tmppath):
 
     root = ElementTree.fromstring(xmlmodel)
     #xmlfile = str(tmppath.join('test.xml'))
-    xmlfile = 'test.xml'
+    xmlfile='test.xml'
     ElementTree.ElementTree(root).write(xmlfile)
 
     roi = roi_model.ROIModel(config={'catalogs': [xmlfile]})
@@ -230,10 +230,10 @@ def test_load_composite_source_from_xml(tmppath):
     par_names = ['Index', 'Prefactor', 'Scale']
 
     for s in src.nested_sources:
-        pars = src.spectral_pars
+        pars = s.spectral_pars
         for par_name in par_names:
             for x in attribs:
-                assert_allclose(sp[par_name][x], values[
+                assert_allclose(pars[par_name][x], values[
                                 'ptsrc_%s_%s' % (par_name, x)])
 
 
