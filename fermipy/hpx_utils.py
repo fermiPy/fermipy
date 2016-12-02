@@ -40,6 +40,7 @@ class HPX_Conv(object):
 
 # Various conventions for storing HEALPix maps in FITS files
 HPX_FITS_CONVENTIONS = {'FGST_CCUBE':HPX_Conv('FGST_CCUBE'),
+                        'FGST_LTCUBE':HPX_Conv('FGST_LTCUBE', colstring='COSBINS', extname='EXPOSURE', energy_hdu='CTHETABOUNDS'),
                         'FGST_BEXPCUBE':HPX_Conv('FGST_BEXPCUBE', colstring='ENERGY', extname='HPXEXPOSURES', energy_hdu='ENERGIES'),
                         'FGST_SRCMAP':HPX_Conv('FGST_SRCMAP', extname=None, quantity_type='differential'),
                         'FGST_TEMPLATE':HPX_Conv('FGST_TEMPLATE', colstring='ENERGY', energy_hdu='ENERGIES'),
@@ -390,6 +391,8 @@ class HPX(object):
             return 'FGST_SRCMAP_SPARSE'
         elif colname == 'ENERGY1':
             return 'FGST_TEMPLATE'
+        elif colname == 'COSBINS':
+            return 'FGST_LTCUBE'
         elif colname == 'BIN0':
             return 'GALPROP'
         elif colname == 'CHANNEL1':
