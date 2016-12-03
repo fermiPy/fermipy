@@ -212,8 +212,7 @@ def test_load_composite_source_from_xml(tmppath):
     """.format(**values)
 
     root = ElementTree.fromstring(xmlmodel)
-    #xmlfile = str(tmppath.join('test.xml'))
-    xmlfile='test.xml'
+    xmlfile = str(tmppath.join('test.xml'))
     ElementTree.ElementTree(root).write(xmlfile)
 
     roi = roi_model.ROIModel(config={'catalogs': [xmlfile]})
