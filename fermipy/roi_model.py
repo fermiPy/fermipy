@@ -1853,13 +1853,13 @@ class ROIModel(fermipy.config.Configurable):
         
 
     def load_existing_catalog(self, cat, **kwargs):
-        """Load sources from an existing catalog object
+        """Load sources from an existing catalog object.
 
         Parameters
         ----------
+        cat : `~fermipy.catalog.Catalog`
+            Catalog object.
 
-        cat : `Catalog'
-            Catalog object        
         """
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
