@@ -495,6 +495,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 if s.name not in self.roi:
                     self.roi.load_source(s)
 
+        self._files = {}
+        self._files['ccube'] = os.path.join(self.workdir, 'ccube.fits')
+                    
         ebin_edges = np.zeros(0)
         roiwidths = np.zeros(0)
         binsz = np.zeros(0)
@@ -655,6 +658,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def tmax(self):
         """Return the MET time for the end of the observation."""
         return self._tmax
+
+    @property
+    def files(self):
+        return self._files
     
     @staticmethod
     def create(infile, config=None):
@@ -711,7 +718,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for name in self.like.sourceNames():
 
             # EAC, this is one of the only things we need from setup()
-            self.update_source(name)     
+            # self.update_source(name)
 
             src = self.roi.get_source_by_name(name)
             rm['model_counts'] += src['model_counts']
@@ -1074,16 +1081,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.info('Running setup')
 
-        # Run data selection step
-
-        self._like = SummedLikelihood()
-        for i, c in enumerate(self._components):
+        # Run setup for each component
+        for i, c in enumerate(self.components):
             c.setup(overwrite=overwrite)
-            self._like.addComponent(c.like)
 
-        # EAC FIXME, move this to _init_roi_model()
-        #self._ccube_file = os.path.join(self.workdir,
-        #                                'ccube.fits')
+        # Create likelihood
+        self._create_likelihood()
 
         # Determine tmin, tmax
         for i, c in enumerate(self._components):
@@ -1092,9 +1095,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self._tmax = (c.tmax if self._tmax is None
                           else min(self._tmax, c.tmax))
         
-        self._fitcache = None
-        self._init_roi_model()
-
         if init_sources:
 
             self.logger.info('Initializing source properties')
@@ -1105,7 +1105,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.info('Finished setup')
 
-    def _create_likelihood(self, srcmdl):
+    def _create_likelihood(self, srcmdl=None):
+        """Instantiate the likelihood object for each component and
+        create a SummedLikelihood."""
+        
         self._like = SummedLikelihood()
         for c in self.components:
             c._create_binned_analysis(srcmdl)
@@ -1116,10 +1119,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self._init_roi_model()
 
     def _init_roi_model(self):
-
-        # EAC, move this from setup()
-        self._ccube_file = os.path.join(self.workdir,
-                                        'ccube.fits')
 
         rm = self._roi_model
 
@@ -1154,7 +1153,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src.update_data({'sed': None,
                          'extension': None,
                          'localize': None})
-        src.update_data(self.get_src_model(name, True))
+        src.update_data(self.get_src_model(name, paramsonly=True))
+
+        for c in self.components:
+            src = c.roi.get_source_by_name(name)
+            src.update_data(sd)
+        
         return src
 
     def cleanup(self):
@@ -3831,14 +3835,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             shape = (self.enumbins, self.npix, self.npix)
             self._ccube = skymap.make_coadd_map(cmaps, self._proj, shape)
             fits_utils.write_fits_image(self._ccube.counts, self._ccube.wcs,
-                                        self._ccube_file)
+                                        self.files['ccube'])
             rm['counts'] += np.squeeze(
                 np.apply_over_axes(np.sum, self._ccube.counts,
                                    axes=[1, 2]))
         elif self.projtype == "HPX":
             self._ccube = skymap.make_coadd_map(cmaps, self._proj, shape)
             fits_utils.write_hpx_image(self._ccube.counts, self._ccube.hpx,
-                                       self._ccube_file)
+                                       self.files['ccube'])
             rm['counts'] += np.squeeze(
                 np.apply_over_axes(np.sum, self._ccube.counts,
                                    axes=[1]))
@@ -4481,7 +4485,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.addSource(pylike_src)
         self.like.syncSrcParams(str(name))
         self.like.logLike.buildFixedModelWts()
-        if save_source_maps:
+        if save_source_maps and \
+                not self.config['gtlike']['use_external_srcmap']:
             self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
 
         self.set_exposure_scale(name)
@@ -4788,11 +4793,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.info("Running setup for Analysis Component: " +
                          self.name)
 
-        srcmdl_file = self.files['srcmdl']
-
+        use_external_srcmap = self.config['gtlike']['use_external_srcmap']
+        
         # If ltcube or ccube do not exist then rerun data selection
-        if not os.path.isfile(self.files['ccube']) or \
-                not os.path.isfile(self.files['ltcube']):
+        if not use_external_srcmap and \
+                (not os.path.isfile(self.files['ccube']) or 
+                 not os.path.isfile(self.files['ltcube'])):
             self._select_data(overwrite=overwrite)
 
         # Run gtltcube
@@ -4822,6 +4828,72 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                          self.config['gtlike']['irfs'],
                                          self.config['selection']['evtype'],
                                          self.energies)
+
+        if not use_external_srcmap:
+            self._bin_data(overwrite=overwrite)
+            self._create_expcube(overwrite=overwrite)
+
+        # Make spatial templates for extended sources
+        for s in self.roi.sources:
+            if s.diffuse:
+                continue
+            if not s.extended:
+                continue
+            self.make_template(s, self.config['file_suffix'])
+
+        # Write ROI XML
+        self.roi.write_xml(self.files['srcmdl'])
+
+        if not use_external_srcmap:
+            self._create_srcmaps(overwrite=overwrite)
+
+        # Create templates for extended sources
+        self._update_srcmap_file(None, True)
+
+        if not self.config['data']['cacheft1'] and os.path.isfile(self.files['ft1']):
+            self.logger.debug('Deleting FT1 file.')
+            os.remove(self.files['ft1'])
+
+        self.logger.info('Finished setup for Analysis Component: %s',
+                         self.name)
+
+    def _select_data(self, overwrite=False):
+
+        # Run gtselect and gtmktime
+        kw_gtselect = dict(infile=self.data_files['evfile'],
+                           outfile=self.files['ft1'],
+                           ra=self.roi.skydir.ra.deg,
+                           dec=self.roi.skydir.dec.deg,
+                           rad=self.config['selection']['radius'],
+                           convtype=self.config['selection']['convtype'],
+                           phasemin=self.config['selection']['phasemin'],
+                           phasemax=self.config['selection']['phasemax'],
+                           evtype=self.config['selection']['evtype'],
+                           evclass=self.config['selection']['evclass'],
+                           tmin=self.config['selection']['tmin'],
+                           tmax=self.config['selection']['tmax'],
+                           emin=self.config['selection']['emin'],
+                           emax=self.config['selection']['emax'],
+                           zmax=self.config['selection']['zmax'],
+                           chatter=self.config['logging']['chatter'])
+
+        kw_gtmktime = dict(evfile=self.files['ft1'],
+                           outfile=self.files['ft1_filtered'],
+                           scfile=self.data_files['scfile'],
+                           roicut=self.config['selection']['roicut'],
+                           filter=self.config['selection']['filter'])
+
+        if not os.path.isfile(self.files['ft1']) or overwrite:
+            run_gtapp('gtselect', self.logger, kw_gtselect)
+            if self.config['selection']['roicut'] == 'yes' or \
+                    self.config['selection']['filter'] is not None:
+                run_gtapp('gtmktime', self.logger, kw_gtmktime)
+                os.system('mv %s %s' % (self.files['ft1_filtered'],
+                                        self.files['ft1']))
+        else:
+            self.logger.debug('Skipping gtselect')
+
+    def _bin_data(self, overwrite=False):
 
         # Run gtbin
         if self.projtype == "WCS":
@@ -4872,7 +4944,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             self.logger.debug('Skipping gtbin')
 
-        evtype = self.config['selection']['evtype']
+    def _create_expcube(self, overwrite=False):
 
         if self.config['gtlike']['irfs'] == 'CALDB':
             if self.projtype == "HPX":
@@ -4891,7 +4963,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   outfile=self.files['bexpmap'], proj='CAR',
                   nxpix=360, nypix=180, binsz=1,
                   xref=0.0, yref=0.0,
-                  evtype=evtype,
+                  evtype=self.config['selection']['evtype'],
                   irfs=self.config['gtlike']['irfs'],
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
@@ -4925,28 +4997,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
 
-        # Make spatial templates for extended sources
-        for s in self.roi.sources:
-            if s.diffuse:
-                continue
-            if not s.extended:
-                continue
-            self.make_template(s, self.config['file_suffix'])
-
-        # Write ROI XML
-        # if not os.path.isfile(srcmdl_file):
-        self.roi.write_xml(srcmdl_file)
+    def _create_srcmaps(self, overwrite=False):
 
         # Run gtsrcmaps
         kw = dict(scfile=self.data_files['scfile'],
                   expcube=self.files['ltcube'],
                   cmap=self.files['ccube'],
-                  srcmdl=srcmdl_file,
+                  srcmdl=self.files['srcmdl'],
                   bexpmap=self.files['bexpmap'],
                   outfile=self.files['srcmap'],
                   irfs=self.config['gtlike']['irfs'],
                   wmap=self.files['wmap'],
-                  evtype=evtype,
+                  evtype=self.config['selection']['evtype'],
                   rfactor=self.config['gtlike']['rfactor'],
                   #                   resample=self.config['resample'],
                   minbinsz=self.config['gtlike']['minbinsz'],
@@ -4960,55 +5022,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 run_gtapp('gtsrcmaps', self.logger, kw)
         else:
             self.logger.debug('Skipping gtsrcmaps')
-
-        # Create templates for extended sources
-        self._update_srcmap_file(None, True)
-
-        self._create_binned_analysis()
-
-        if not self.config['data']['cacheft1'] and os.path.isfile(self.files['ft1']):
-            self.logger.debug('Deleting FT1 file.')
-            os.remove(self.files['ft1'])
-
-        self.logger.info('Finished setup for Analysis Component: %s',
-                         self.name)
-
-    def _select_data(self, overwrite=False):
-
-        # Run gtselect and gtmktime
-        kw_gtselect = dict(infile=self.data_files['evfile'],
-                           outfile=self.files['ft1'],
-                           ra=self.roi.skydir.ra.deg,
-                           dec=self.roi.skydir.dec.deg,
-                           rad=self.config['selection']['radius'],
-                           convtype=self.config['selection']['convtype'],
-                           phasemin=self.config['selection']['phasemin'],
-                           phasemax=self.config['selection']['phasemax'],
-                           evtype=self.config['selection']['evtype'],
-                           evclass=self.config['selection']['evclass'],
-                           tmin=self.config['selection']['tmin'],
-                           tmax=self.config['selection']['tmax'],
-                           emin=self.config['selection']['emin'],
-                           emax=self.config['selection']['emax'],
-                           zmax=self.config['selection']['zmax'],
-                           chatter=self.config['logging']['chatter'])
-
-        kw_gtmktime = dict(evfile=self.files['ft1'],
-                           outfile=self.files['ft1_filtered'],
-                           scfile=self.data_files['scfile'],
-                           roicut=self.config['selection']['roicut'],
-                           filter=self.config['selection']['filter'])
-
-        if not os.path.isfile(self.files['ft1']) or overwrite:
-            run_gtapp('gtselect', self.logger, kw_gtselect)
-            if self.config['selection']['roicut'] == 'yes' or \
-                    self.config['selection']['filter'] is not None:
-                run_gtapp('gtmktime', self.logger, kw_gtmktime)
-                os.system('mv %s %s' % (self.files['ft1_filtered'],
-                                        self.files['ft1']))
-        else:
-            self.logger.debug('Skipping gtselect')
-
+        
     def _create_binned_analysis(self, xmlfile=None):
 
         srcmdl_file = self.files['srcmdl']
@@ -5058,8 +5072,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Computing fixed weights')
         self.like.logLike.buildFixedModelWts()
         self.logger.debug('Updating source maps')
-        # EAC, FIXME, disable for HEALpix testing
-        #self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
+        if not self.config['gtlike']['use_external_srcmap']:
+            self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
 
         # Apply exposure corrections
         self._scale_srcmap(self._src_expscale)
