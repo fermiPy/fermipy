@@ -4793,7 +4793,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.info("Running setup for Analysis Component: " +
                          self.name)
 
-        srcmdl_file = self.files['srcmdl']
         use_external_srcmap = self.config['gtlike']['use_external_srcmap']
         
         # If ltcube or ccube do not exist then rerun data selection
@@ -4843,7 +4842,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.make_template(s, self.config['file_suffix'])
 
         # Write ROI XML
-        self.roi.write_xml(srcmdl_file)
+        self.roi.write_xml(self.files['srcmdl'])
 
         if not use_external_srcmap:
             self._create_srcmaps(overwrite=overwrite)
@@ -5004,7 +5003,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         kw = dict(scfile=self.data_files['scfile'],
                   expcube=self.files['ltcube'],
                   cmap=self.files['ccube'],
-                  srcmdl=srcmdl_file,
+                  srcmdl=self.files['srcmdl'],
                   bexpmap=self.files['bexpmap'],
                   outfile=self.files['srcmap'],
                   irfs=self.config['gtlike']['irfs'],
