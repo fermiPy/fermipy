@@ -1153,7 +1153,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src.update_data({'sed': None,
                          'extension': None,
                          'localize': None})
-        src.update_data(self.get_src_model(name, paramsonly=True))
+        sd = self.get_src_model(name, paramsonly=True)
+        src.update_data(sd)
 
         for c in self.components:
             src = c.roi.get_source_by_name(name)
