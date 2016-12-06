@@ -103,8 +103,11 @@ gtlike = {
     'rfactor': (2, '', int),
     'convolve': (True, '', bool),
     'resample': (True, '', bool),
-    'srcmap': (None, '', str),
+    'srcmap': (None, 'Set the source maps file.  When defined this file will be used instead of the '
+               'local source maps file.', str),
     'bexpmap': (None, '', str),    
+    'bexpmap_roi': (None, '', str),
+    'use_external_srcmap': (False, 'Use an external precomputed source map file.', bool),
     'wmap': (None, 'Likelihood weights map.', str),
     'llscan_npts': (20,'Number of evaluation points to use when performing a likelihood scan.',int),
     'src_expscale': (None, 'Dictionary of exposure corrections for individual sources keyed to source name.  The exposure '

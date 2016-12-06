@@ -23,20 +23,20 @@ def tmppath(request, tmpdir_factory):
 
 
 def test_load_3fgl_catalog_fits():
-    skydir = SkyCoord(0.0,0.0,unit='deg',frame='galactic').icrs
-    rm = roi_model.ROIModel(catalogs=['3FGL'],skydir=skydir,src_radius=20.0)
+    skydir = SkyCoord(0.0, 0.0, unit='deg', frame='galactic').icrs
+    rm = roi_model.ROIModel(catalogs=['3FGL'], skydir=skydir, src_radius=20.0)
     assert len(rm.sources) == 175
 
-    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.fit'],skydir=skydir,
+    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.fit'], skydir=skydir,
                             src_radius=20.0)
     assert len(rm.sources) == 175
 
 
 def test_load_3fgl_catalog_xml():
-    skydir = SkyCoord(0.0,0.0,unit='deg',frame='galactic').icrs
+    skydir = SkyCoord(0.0, 0.0, unit='deg', frame='galactic').icrs
     rm = roi_model.ROIModel(catalogs=['gll_psc_v16.xml'],
                             extdir='Extended_archive_v15',
-                            skydir=skydir,src_radius=20.0)
+                            skydir=skydir, src_radius=20.0)
     assert len(rm.sources) == 175
 
 
@@ -168,6 +168,74 @@ def test_load_source_from_xml(tmppath):
     assert (src['SpatialModel'] == 'ConstantValue')
 
 
+def test_load_composite_source_from_xml(tmppath):
+    values = {'ptsrc_dec': 52.6356, 'ptsrc_ra': 252.367,
+              'ptsrc_Index_value': 2.21879, 'ptsrc_Index_scale': 1.2,
+              'ptsrc_Index_min': 1.3, 'ptsrc_Index_max': 3.5,
+              'ptsrc_Prefactor_value': 0.727, 'ptsrc_Prefactor_scale': 1e-12,
+              'ptsrc_Prefactor_min': 0.01, 'ptsrc_Prefactor_max': 10.0,
+              'ptsrc_Scale_value': 1.3, 'ptsrc_Scale_scale': 1e3,
+              'ptsrc_Scale_min': 0.01, 'ptsrc_Scale_max': 113.0}
+
+    xmlmodel = """
+    <source_library title="source_library">
+    <source name="CompositeSource" type="CompositeSource">
+    <spectrum type="ConstantValue">
+    <parameter free="1" max="3.402823466e+38" min="-3.402823466e+38" name="Value" scale="1" value="1" />
+    </spectrum>
+    <source_library>
+    <source name="SourceA" type="PointSource">
+    <spatialModel type="SkyDirFunction">
+    <parameter free="0" max="90.0" min="-90.0" name="DEC" scale="1.0" value="{ptsrc_dec}"/>
+    <parameter free="0" max="360.0" min="-360.0" name="RA" scale="1.0" value="{ptsrc_ra}"/>
+    </spatialModel>
+    <spectrum type="PowerLaw">
+    <parameter free="0" max="{ptsrc_Index_max}" min="{ptsrc_Index_min}" name="Index" scale="{ptsrc_Index_scale}" value="{ptsrc_Index_value}"/>
+    <parameter free="0" max="{ptsrc_Scale_max}" min="{ptsrc_Scale_min}" name="Scale" scale="{ptsrc_Scale_scale}" value="{ptsrc_Scale_value}"/>
+    <parameter free="0" max="{ptsrc_Prefactor_max}" min="{ptsrc_Prefactor_min}" name="Prefactor" scale="{ptsrc_Prefactor_scale}" value="{ptsrc_Prefactor_value}"/>
+    </spectrum>
+    </source>
+    <source name="SourceB" type="PointSource">
+    <spatialModel type="SkyDirFunction">
+    <parameter free="0" max="90.0" min="-90.0" name="DEC" scale="1.0" value="{ptsrc_dec}"/>
+    <parameter free="0" max="360.0" min="-360.0" name="RA" scale="1.0" value="{ptsrc_ra}"/>
+    </spatialModel>
+    <spectrum type="PowerLaw">
+    <parameter free="0" max="{ptsrc_Index_max}" min="{ptsrc_Index_min}" name="Index" scale="{ptsrc_Index_scale}" value="{ptsrc_Index_value}"/>
+    <parameter free="0" max="{ptsrc_Scale_max}" min="{ptsrc_Scale_min}" name="Scale" scale="{ptsrc_Scale_scale}" value="{ptsrc_Scale_value}"/>
+    <parameter free="0" max="{ptsrc_Prefactor_max}" min="{ptsrc_Prefactor_min}" name="Prefactor" scale="{ptsrc_Prefactor_scale}" value="{ptsrc_Prefactor_value}"/>
+    </spectrum>
+    </source>
+    </source_library>
+    </source>
+    </source_library>
+    """.format(**values)
+
+    root = ElementTree.fromstring(xmlmodel)
+    xmlfile = str(tmppath.join('test.xml'))
+    ElementTree.ElementTree(root).write(xmlfile)
+
+    roi = roi_model.ROIModel(config={'catalogs': [xmlfile]})
+
+    src = roi['CompositeSource']
+
+    assert(type(src) == roi_model.CompositeSource)
+    assert (src['SpectrumType'] == 'ConstantValue')
+    assert (src['SpatialType'] == 'CompositeSource')
+    assert (src['SpatialModel'] == 'CompositeSource')
+    assert (src['SourceType'] == 'CompositeSource')
+
+    attribs = ['value', 'scale', 'min', 'max']
+    par_names = ['Index', 'Prefactor', 'Scale']
+
+    for s in src.nested_sources:
+        pars = s.spectral_pars
+        for par_name in par_names:
+            for x in attribs:
+                assert_allclose(pars[par_name][x], values[
+                                'ptsrc_%s_%s' % (par_name, x)])
+
+
 def test_create_source_from_dict(tmppath):
     ra = 252.367
     dec = 52.6356
@@ -236,7 +304,8 @@ def test_create_source(tmppath):
     dec = 52.6356
     sigma = 0.5
 
-    src_dict = {'SpatialModel': 'GaussianSource', 'ra': ra, 'dec': dec, 'Sigma': sigma}
+    src_dict = {'SpatialModel': 'GaussianSource',
+                'ra': ra, 'dec': dec, 'Sigma': sigma}
     src = Source('testsrc', src_dict)
 
     assert_allclose(src['ra'], ra)
