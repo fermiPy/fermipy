@@ -3708,8 +3708,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.logger.info('Writing %s...', fitsfile)
         self.roi.write_fits(fitsfile)
 
-        for c in self.components:
-            c.like.logLike.saveSourceMaps(str(c.files['srcmap']))
+        if not self.config['gtlike']['use_external_srcmap']:
+            for c in self.components:
+                c.like.logLike.saveSourceMaps(str(c.files['srcmap']))
 
         if save_model_map:
             self.write_model_map(prefix)
