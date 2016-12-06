@@ -1,0 +1,6 @@
+galprop_run : 55_Lorimer_z4kpc_R30kpc_Ts150K_EBV5mag
+ring_limits : [1, 3, 7, 10, 12, 14, 16, 18]
+diffuse_comp_dict :
+  merged_HI : ['pi0_decay_HIR', 'bremss_HIR']
+  merged_CO : ['pi0_decay_H2R', 'bremss_H2R']
+  merged_IC : ['ics_anisotropic_comp_1', 'ics_anisotropic_comp_2', 'ics_anisotropic_comp_3']

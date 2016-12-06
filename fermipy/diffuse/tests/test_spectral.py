@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 from fermipy.diffuse.spectral import SpectralLibrary
 
+
 def test_spectral():
     the_yaml = """
 Constant_Correction :
@@ -72,27 +73,28 @@ LogParabola_Correction :
       free : False
 """
     spectra = SpectralLibrary.create_from_yamlstr(the_yaml)
-        
+
     # spot check some values
     assert(spectra['Constant_Correction']['SpectrumType'] == 'ConstantValue')
     assert(len(spectra['Constant_Correction']['spectral_pars']) == 1)
-    assert(spectra['Constant_Correction']['spectral_pars']['Value']['value'] == 1.0)
-    assert(spectra['Constant_Correction']['spectral_pars']['Value']['scale'] == 1.0)
+    assert(spectra['Constant_Correction'][
+           'spectral_pars']['Value']['value'] == 1.0)
+    assert(spectra['Constant_Correction'][
+           'spectral_pars']['Value']['scale'] == 1.0)
     #assert(spectra['Constant_Correction']['spectral_pars']['Value']['min'] == 1e-4)
     #assert(spectra['Constant_Correction']['spectral_pars']['Value']['max'] == 1e4)
-    assert(spectra['Constant_Correction']['spectral_pars']['Value']['free'] is False)
+    assert(spectra['Constant_Correction'][
+           'spectral_pars']['Value']['free'] is False)
 
     assert(spectra['LogParabola_Correction']['SpectrumType'] == 'LogParabola')
     assert(len(spectra['LogParabola_Correction']['spectral_pars']) == 4)
-    assert(spectra['LogParabola_Correction']['spectral_pars']['norm']['value'] == 1.0)
-    assert(spectra['LogParabola_Correction']['spectral_pars']['norm']['scale'] == 1.0)
-    assert(spectra['LogParabola_Correction']['spectral_pars']['norm']['min'] == 0.1)
-    assert(spectra['LogParabola_Correction']['spectral_pars']['norm']['max'] == 10.0)
-    assert(spectra['LogParabola_Correction']['spectral_pars']['norm']['free'] is False)
-    
-    
-    
-
-
-
-
+    assert(spectra['LogParabola_Correction'][
+           'spectral_pars']['norm']['value'] == 1.0)
+    assert(spectra['LogParabola_Correction'][
+           'spectral_pars']['norm']['scale'] == 1.0)
+    assert(spectra['LogParabola_Correction'][
+           'spectral_pars']['norm']['min'] == 0.1)
+    assert(spectra['LogParabola_Correction'][
+           'spectral_pars']['norm']['max'] == 10.0)
+    assert(spectra['LogParabola_Correction'][
+           'spectral_pars']['norm']['free'] is False)

@@ -270,6 +270,10 @@ class DiffuseModelManager(object):
         diffuse_components = yaml.safe_load(open(yamlfile))
         return diffuse_components
 
+    def sourcekeys(self):
+        """Return the list of source keys"""
+        return self._diffuse_comp_info_dict.keys()
+
     def diffuse_comp_info(self, sourcekey):
         """Return the Component info associated to a particular key
         """
@@ -416,8 +420,8 @@ class DiffuseModelManager(object):
 def make_ring_dicts(**kwargs):
     """Build and return the information about the Galprop rings
     """
-    gmm = kwargs.get('GalpropMapManager', GalpropMapManager())
-    diffuse_yamlfile = kwargs.get('diffuse', 'config/diffuse_components.yaml')
+    diffuse_yamlfile = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
+    gmm = kwargs.get('GalpropMapManager', GalpropMapManager(**kwargs))
     diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(
         diffuse_yamlfile)
     for diffuse_value in diffuse_comps.values():
@@ -432,12 +436,12 @@ def make_ring_dicts(**kwargs):
 def make_diffuse_comp_info_dict(**kwargs):
     """Build and return the information about the diffuse components
     """
-    gmm = kwargs.get('GalpropMapManager', GalpropMapManager())
-    dmm = kwargs.get('DiffuseModelManager', DiffuseModelManager())
-    diffuse_yamlfile = kwargs.get('diffuse', 'config/diffuse_components.yaml')
-    comp_yamlfile = kwargs.get('comp', 'config/binning.yaml')
-    components = kwargs.get(
+    diffuse_yamlfile = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
+    comp_yamlfile = kwargs.pop('comp', 'config/binning.yaml')
+    components = kwargs.pop(
         'components', Component.build_from_yamlfile(comp_yamlfile))
+    gmm = kwargs.get('GalpropMapManager', GalpropMapManager(**kwargs))
+    dmm = kwargs.get('DiffuseModelManager', DiffuseModelManager(**kwargs))    
     diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(
         diffuse_yamlfile)
     diffuse_comp_info_dict = dmm.make_diffuse_comp_info_dict(

@@ -35,7 +35,7 @@ def make_mask(cat_table, cut):
     min_val = cut.get('min_val', None)
     max_val = cut.get('max_val', None)
 
-    nsrc = len(catalog)
+    nsrc = len(cat_table)
     if min_val is None:
         min_mask = np.ones((nsrc), bool)
     else:
@@ -99,7 +99,11 @@ class CatalogSourceManager(object):
         """ Read the yaml file for a particular split key
         """
         catalog_info_yaml = os.path.join('models', '%s.yaml' % splitkey)
-        return yaml.safe_load(open(catalog_info_yaml))
+        yaml_dict = yaml.safe_load(open(catalog_info_yaml))
+        # resolve env vars
+        yaml_dict['catalog_file'] = os.path.expandvars(yaml_dict['catalog_file'])
+        yaml_dict['catalog_extdir'] = os.path.expandvars(yaml_dict['catalog_extdir'])
+        return yaml_dict
 
     def build_catalog_info(self, catalog_info):
         """ Build a CatalogInfo object """

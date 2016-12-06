@@ -1,0 +1,31 @@
+diffuse_components : config/diffuse_components.yaml
+catalog_components : config/catalog_components.yaml
+spectral_models : models/spectral_models.yaml
+sources : 
+  galprop_rings : 
+    model_type : galprop_rings
+    version : ref
+    SpectrumType : 
+      default : LogParabola_Correction
+  loopI : 
+    version : v00
+    SpectrumType : LogParabola_Correction
+  bubbles : 
+    version : v00
+    SpectrumType : LogParabola_Correction
+  isotropic : 
+    version : v00
+    SpectrumType : FileFunction
+  sun : 
+    version : v00
+    SpectrumType : LogParabola_Correction
+  moon :
+    version : v00
+    SpectrumType : LogParabola_Correction
+  3FGL : 
+    model_type : Catalog
+    version : v00
+    SpectrumType : 
+      default : Constant_Correction
+      3FGL_v00_remain : Catalog
+  

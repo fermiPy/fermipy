@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 
 from fermipy.diffuse.binning import Component
 
+
 def test_binning():
     the_yaml = """
 E0:
@@ -51,7 +52,7 @@ E3:
       hpx_order : 9
 """
     components = Component.build_from_yamlstr(the_yaml)
-    
+
     assert(len(components) == 10)
     # spot check first and last components
     assert(components[0].log_emin == 2.0)
@@ -65,8 +66,3 @@ E3:
     assert(components[-1].enumbins == 4)
     assert(components[-1].hpx_order == 7)
     assert(components[-1].zmax == 100)
-    
-     
-    
-
-

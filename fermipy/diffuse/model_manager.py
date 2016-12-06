@@ -410,11 +410,11 @@ class ModelManager(object):
 def make_library(**kwargs):
     """Build and return a ModelManager object and fill the associated model library
     """
-    diffuse_yaml = kwargs.get('diffuse', 'config/diffuse_components.yaml')
-    catalog_yaml = kwargs.get('sources', 'config/catalog_components.yaml')
-    comp_yaml = kwargs.get('comp', 'config/binning.yaml')
-    basedir = kwargs.get(
-        'basedir', '/nfs/slac/kipac/fs1/u/dmcat/data/flight/diffuse_fitting')
+    diffuse_yaml = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
+    catalog_yaml = kwargs.pop('sources', 'config/catalog_components.yaml')
+    comp_yaml = kwargs.pop('comp', 'config/binning.yaml')
+    basedir = kwargs.pop('basedir', 
+                         '/nfs/slac/kipac/fs1/u/dmcat/data/flight/diffuse_fitting')
 
     model_man = kwargs.get('ModelManager', ModelManager(basedir=basedir))
     model_comp_dict = model_man.make_library(diffuse_yaml, catalog_yaml, comp_yaml)

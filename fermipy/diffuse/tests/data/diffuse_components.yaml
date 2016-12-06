@@ -1,0 +1,32 @@
+galprop_rings :
+  model_type : galprop_rings
+  versions : [ref]
+loopI : 
+  model_type : MapCubeSource
+  versions : [v00]
+bubbles : 
+  model_type : MapCubeSource
+  versions : [v00]
+isotropic : 
+  model_type : IsoSource
+  versions : [v00]
+residual_cr : 
+  model_type : MapCubeSource
+  versions : [v00]
+  selection_dependent : True
+limb : 
+  model_type : MapCubeSource
+  versions : [v00]
+  selection_dependent : True
+sun : 
+  model_type : MapCubeSource
+  versions : [v00]
+  moving : True    
+moon :
+  model_type : MapCubeSource
+  versions : [v00]
+  moving : True    
+    
+  
+    
+
