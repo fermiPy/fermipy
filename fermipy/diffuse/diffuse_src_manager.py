@@ -51,12 +51,11 @@ class GalpropMapManager(object):
         self._ring_dicts = {}
         self._diffuse_comp_info_dicts = {}
 
-    @staticmethod
-    def read_galprop_rings_yaml(galkey):
+    def read_galprop_rings_yaml(self, galkey):
         """ Read the yaml file for a partiuclar galprop key
         """
-        galprop_rings_yaml = os.path.join(
-            'models', 'galprop_rings_%s.yaml' % galkey)
+        galprop_rings_yaml = self._name_factory.galprop_rings_yaml(galkey=galkey,
+                                                                   fullpath=True)
         galprop_rings = yaml.safe_load(open(galprop_rings_yaml))
         return galprop_rings
 
@@ -162,7 +161,7 @@ class GalpropMapManager(object):
 
         Returns `dmp_model_component.GalpropMergedRingInfo'
         """
-        galprop_rings = GalpropMapManager.read_galprop_rings_yaml(galkey)
+        galprop_rings = self.read_galprop_rings_yaml(galkey)
         galprop_run = galprop_rings['galprop_run']
         ring_limits = galprop_rings['ring_limits']
         comp_dict = galprop_rings['diffuse_comp_dict']
@@ -215,7 +214,7 @@ class GalpropMapManager(object):
         galkey : str
             A short key identifying the galprop parameters
         """
-        galprop_rings = GalpropMapManager.read_galprop_rings_yaml(galkey)
+        galprop_rings = self.read_galprop_rings_yaml(galkey)
         ring_limits = galprop_rings.get('ring_limits')
         comp_dict = galprop_rings.get('diffuse_comp_dict')
         diffuse_comp_info_dict = {}
@@ -436,10 +435,11 @@ def make_ring_dicts(**kwargs):
 def make_diffuse_comp_info_dict(**kwargs):
     """Build and return the information about the diffuse components
     """
-    diffuse_yamlfile = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
-    comp_yamlfile = kwargs.pop('comp', 'config/binning.yaml')
-    components = kwargs.pop(
-        'components', Component.build_from_yamlfile(comp_yamlfile))
+    diffuse_yamlfile = kwargs.pop('diffuse', 'config/diffuse_components.yaml')    
+    components = kwargs.pop('components', None)
+    if components is None:
+        comp_yamlfile = kwargs.pop('comp', 'config/binning.yaml')
+        components = Component.build_from_yamlfile(comp_yamlfile)
     gmm = kwargs.get('GalpropMapManager', GalpropMapManager(**kwargs))
     dmm = kwargs.get('DiffuseModelManager', DiffuseModelManager(**kwargs))    
     diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(

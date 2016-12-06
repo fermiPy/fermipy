@@ -82,6 +82,13 @@ class NameFactory(object):
     mcube_format = 'model_cubes/mcube_{sourcekey}_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
 
     # Model specific stuff
+    
+    # galprop rings merging yaml file
+    galprop_rings_yaml_format = 'models/galprop_rings_{galkey}.yaml'
+    # catalog split yaml file
+    catalog_split_yaml_format = 'models/{sourcekey}.yaml'
+    # model yaml file
+    model_yaml_format = 'models/model_{modelkey}.yaml'
 
     # Merged source map file for one binning component
     merged_srcmaps_format =\
@@ -334,6 +341,39 @@ class NameFactory(object):
             return self.fullpath(localpath=localpath)
         else:
             return localpath
+
+    def galprop_rings_yaml(self, **kwargs):
+        """ return the name of a galprop rings merging yaml file
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        localpath = NameFactory.galprop_rings_yaml_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath       
+
+    def catalog_split_yaml(self, **kwargs):
+        """ return the name of a catalog split yaml file
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        localpath = NameFactory.catalog_split_yaml_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath       
+
+    def model_yaml(self, **kwargs):
+        """ return the name of a model yaml file
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        localpath = NameFactory.model_yaml_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath       
 
     def merged_srcmaps(self, **kwargs):
         """ return the name of a source map file

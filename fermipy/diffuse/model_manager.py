@@ -185,11 +185,11 @@ class ModelManager(object):
         self._models = {}
         self._spec_lib = SpectralLibrary({})
 
-    @staticmethod
-    def read_model_yaml(modelkey):
+    def read_model_yaml(self, modelkey):
         """ Read the yaml file for the diffuse components
         """
-        model_yaml = os.path.join('models', 'model_%s.yaml' % modelkey)
+        model_yaml = self._name_factory.model_yaml(modelkey=modelkey,
+                                                   fullpath=True)
         model = yaml.safe_load(open(model_yaml))
         return model
 
@@ -244,10 +244,11 @@ class ModelManager(object):
 
         Return `ModelInfo'
         """
-        model = ModelManager.read_model_yaml(modelkey)
+        model = self.read_model_yaml(modelkey)
         sources = model['sources']
         components = OrderedDict()
-        self._spec_lib.update(yaml.safe_load(open(model['spectral_models'])))
+        spec_model_yaml = self._name_factory.fullpath(localpath=model['spectral_models'])
+        self._spec_lib.update(yaml.safe_load(open(spec_model_yaml)))
         for source, source_info in sources.items():
             model_type = source_info.get('model_type', None)
             version = source_info['version']

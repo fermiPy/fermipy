@@ -129,6 +129,7 @@ class SourceFactory(object):
     def build_catalog(catalog_type, catalog_file, catalog_extdir, **kwargs):
         """
         """
+        print (catalog_file, catalog_extdir)
         if catalog_type == '2FHL':
             return catalog.Catalog2FHL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '3FGL':

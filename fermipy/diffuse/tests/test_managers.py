@@ -121,7 +121,7 @@ def test_diffuse_src_manager():
     assert(ret_dict['comp_info_dict']['merged_HI_5_ref'].source_ver == 'ref')
     assert(ret_dict['comp_info_dict']['merged_HI_5_ref'].components is None)
 
-    assert(len(ret_dict['DiffuseModelManager'].sourcekeys()) == 5)
+    assert(len(ret_dict['DiffuseModelManager'].sourcekeys()) == 7)
 
 
 def test_model_manager():

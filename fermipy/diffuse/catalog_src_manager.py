@@ -94,11 +94,11 @@ class CatalogSourceManager(object):
         self._catalog_comp_info_dicts = {}
         self._split_comp_info_dicts = {}
 
-    @staticmethod
-    def read_catalog_info_yaml(splitkey):
+    def read_catalog_info_yaml(self, splitkey):
         """ Read the yaml file for a particular split key
         """
-        catalog_info_yaml = os.path.join('models', '%s.yaml' % splitkey)
+        catalog_info_yaml = self._name_factory.catalog_split_yaml(sourcekey=splitkey,
+                                                                  fullpath=True)
         yaml_dict = yaml.safe_load(open(catalog_info_yaml))
         # resolve env vars
         yaml_dict['catalog_file'] = os.path.expandvars(yaml_dict['catalog_file'])
@@ -199,8 +199,7 @@ class CatalogSourceManager(object):
             versions = value['versions']
             for version in versions:
                 ver_key = "%s_%s" % (key, version)
-                source_dict = CatalogSourceManager.read_catalog_info_yaml(
-                    ver_key)
+                source_dict = self.read_catalog_info_yaml(ver_key)
                 try:
                     full_cat_info = catalog_ret_dict[key]
                 except KeyError:
