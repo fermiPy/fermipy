@@ -76,7 +76,7 @@ class Component(object):
         """
         psf_types = input_dict.pop('psf_types')
         output_list = []
-        for psf_type, val_dict in psf_types.items():
+        for psf_type, val_dict in sorted(psf_types.items()):
             fulldict = input_dict.copy()
             fulldict.update(val_dict)
             fulldict['evtype_name'] = psf_type
@@ -90,7 +90,8 @@ class Component(object):
         """
         top_dict = yaml.safe_load(yamlstr)
         output_list = []
-        for e_key, e_dict in top_dict.items():
+        for e_key, e_dict in sorted(top_dict.items()):
+            e_dict = top_dict[e_key]
             output_list += Component.build_from_energy_dict(e_key, e_dict)
         return output_list
 

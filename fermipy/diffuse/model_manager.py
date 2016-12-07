@@ -42,7 +42,7 @@ class ModelInfo(object):
     @property
     def component_names(self):
         """ Return the list of name of the components """
-        return self.model_components.keys()
+        return sorted(self.model_components.keys())
 
     def __getitem__(self, key):
         """ Return a single model info by name """

@@ -119,11 +119,11 @@ class CatalogSourceManager(object):
 
     def catalogs(self):
         """ Return the list of full catalogs used """
-        return self._catalog_comp_info_dicts.keys()
+        return sorted(self._catalog_comp_info_dicts.keys())
 
     def splitkeys(self):
         """ Return the list of catalog split keys used """
-        return self._split_comp_info_dicts.keys()
+        return sorted(self._split_comp_info_dicts.keys())
 
     def catalog_comp_info_dict(self, catkey):
         """ Return the roi_model for an entire catalog """
@@ -135,7 +135,7 @@ class CatalogSourceManager(object):
 
     def catalog_components(self, catalog_name, split_ver):
         """ Return the set of merged components for a particular split key """
-        return self._split_comp_info_dicts["%s_%s" % (catalog_name, split_ver)].keys()
+        return sorted(self._split_comp_info_dicts["%s_%s" % (catalog_name, split_ver)].keys())
 
     def split_comp_info(self, catalog_name, split_ver, split_key):
         """ Return the info for a particular split key """

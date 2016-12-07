@@ -61,7 +61,7 @@ class GalpropMapManager(object):
 
     def galkeys(self):
         """ Return the list of galprop keys used """
-        return self._ring_dicts.keys()
+        return sorted(self._ring_dicts.keys())
 
     def ring_dict(self, galkey):
         """ Return the ring dictionary for a particular galprop key
@@ -76,7 +76,7 @@ class GalpropMapManager(object):
     def merged_components(self, galkey):
         """ Return the set of merged components for a particular galprop key
         """
-        return self._diffuse_comp_info_dicts[galkey].keys()
+        return sorted(self._diffuse_comp_info_dicts[galkey].keys())
 
     def make_ring_filename(self, source_name, ring, galprop_run):
         """ Make the name of a gasmap file for a single ring
@@ -219,7 +219,7 @@ class GalpropMapManager(object):
         comp_dict = galprop_rings.get('diffuse_comp_dict')
         diffuse_comp_info_dict = {}
         nring = len(ring_limits) - 1
-        for source_key in comp_dict.keys():
+        for source_key in sorted(comp_dict.keys()):
             for iring in range(nring):
                 source_name = "%s_%i" % (source_key, iring)
                 full_key = "%s_%s" % (source_name, galkey)
@@ -271,7 +271,7 @@ class DiffuseModelManager(object):
 
     def sourcekeys(self):
         """Return the list of source keys"""
-        return self._diffuse_comp_info_dict.keys()
+        return sorted(self._diffuse_comp_info_dict.keys())
 
     def diffuse_comp_info(self, sourcekey):
         """Return the Component info associated to a particular key
@@ -401,8 +401,7 @@ class DiffuseModelManager(object):
                     zmax_dict = {}
                     for comp in components:
                         zmax_dict[int(comp.zmax)] = True
-                    zmax_list = zmax_dict.keys()
-                    zmax_list.sort()
+                    zmax_list = sorted(zmax_dict.keys())
                     for zmax in zmax_list:
                         comp_key = "zmax%i" % (zmax)
                         comp_dict[comp_key] = self.make_diffuse_comp_info(
