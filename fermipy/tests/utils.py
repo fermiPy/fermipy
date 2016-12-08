@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 import re
 from astropy.tests.helper import pytest
+from fermipy import get_st_version
 
 __all__ = ['requires_dependency','requires_st_version','get_st_version']
 
@@ -13,16 +14,6 @@ def version_str_to_int(version_str):
         return 0
     else:
         return int(m.group(1))*10000 + int(m.group(2))*100 + int(m.group(3))
-
-
-def get_st_version():
-    """Get the version string of the ST release."""
-    
-    try:
-        import ST_Version
-        return ST_Version.version()
-    except ImportError:
-        return ''
 
     
 def requires_st_version(version_str):
