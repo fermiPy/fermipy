@@ -1263,6 +1263,21 @@ class ROIModel(fermipy.config.Configurable):
 
         self.load(coordsys=coordsys,srcname=srcname)
 
+    def __getstate__(self):
+        d = self.__dict__.copy()
+        if 'logger' in d.keys():
+            d['logger'] = d['logger'].name
+        return d
+
+    def __setstate__(self, d):
+        if 'logger' in d.keys():
+            d['logger'] = \
+                Logger.get(self.__class__.__name__,
+                           d['_config']['logfile'],
+                           log_level(d['_config']['logging']['verbosity']))
+
+        self.__dict__.update(d)
+        
     def __contains__(self, key):
         key = key.replace(' ', '').lower()
         return key in self._src_dict.keys()
