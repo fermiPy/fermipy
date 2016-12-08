@@ -16,6 +16,15 @@ try:
 except ImportError:
     pass
 
+def get_st_version():
+    """Get the version string of the ST release."""
+    
+    try:
+        import ST_Version
+        return ST_Version.version()
+    except ImportError:
+        return ''
+
 PACKAGE_ROOT = os.path.abspath(os.path.dirname(__file__))
 PACKAGE_DATA = os.path.join(PACKAGE_ROOT,'data')
 os.environ['FERMIPY_ROOT'] = PACKAGE_ROOT
