@@ -1224,9 +1224,7 @@ class ROIModel(fermipy.config.Configurable):
     """
 
     defaults = dict(defaults.model.items(),
-                    logfile=(None, '', str),
-                    fileio=defaults.fileio,
-                    logging=defaults.logging)
+                    fileio=defaults.fileio)
 
     src_name_cols = ['Source_Name',
                      'ASSOC', 'ASSOC1', 'ASSOC2', 'ASSOC_GAM',
@@ -1238,13 +1236,8 @@ class ROIModel(fermipy.config.Configurable):
         self._skydir = kwargs.pop('skydir', SkyCoord(0.0, 0.0, unit=u.deg))
         self._projection = kwargs.get('projection', None)
         coordsys = kwargs.pop('coordsys', 'CEL')
-        srcname = kwargs.pop('srcname',None)
-        
+        srcname = kwargs.pop('srcname',None)        
         super(ROIModel, self).__init__(config, **kwargs)
-
-        self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['logfile'],
-                                 log_level(self.config['logging']['verbosity']))
 
         if self.config['extdir'] is not None and \
                 not os.path.isdir(os.path.expandvars(self.config['extdir'])):
@@ -1263,20 +1256,20 @@ class ROIModel(fermipy.config.Configurable):
 
         self.load(coordsys=coordsys,srcname=srcname)
 
-    def __getstate__(self):
-        d = self.__dict__.copy()
-        if 'logger' in d.keys():
-            d['logger'] = d['logger'].name
-        return d
+#    def __getstate__(self):
+#        d = self.__dict__.copy()
+#        if 'logger' in d.keys():
+#            d['logger'] = d['logger'].name
+#        return d
 
-    def __setstate__(self, d):
-        if 'logger' in d.keys():
-            d['logger'] = \
-                Logger.get(self.__class__.__name__,
-                           d['_config']['logfile'],
-                           log_level(d['_config']['logging']['verbosity']))
-
-        self.__dict__.update(d)
+#    def __setstate__(self, d):
+#        if 'logger' in d.keys():
+#            d['logger'] = \
+#                Logger.get(self.__class__.__name__,
+#                           d['_config']['logfile'],
+#                           log_level(d['_config']['logging']['verbosity']))
+#
+#        self.__dict__.update(d)
         
     def __contains__(self, key):
         key = key.replace(' ', '').lower()
@@ -1452,7 +1445,6 @@ class ROIModel(fermipy.config.Configurable):
             src.set_roi_direction(self.skydir)
             src.set_roi_projection(self.projection)
 
-        self.logger.debug('Creating source ' + src.name)
         self.load_source(src, build_index=build_index,
                          merge_sources=merge_sources)
 
@@ -1465,8 +1457,6 @@ class ROIModel(fermipy.config.Configurable):
     def load_sources(self, sources):
         """Delete all sources in the ROI and load the input source list."""
 
-        self.logger.debug('Loading sources')
-
         self.clear()
         for s in sources:
 
@@ -1475,8 +1465,6 @@ class ROIModel(fermipy.config.Configurable):
 
             self.load_source(s, build_index=False)
         self._build_src_index()
-
-        self.logger.debug('Finished')
 
     def _add_source_alias(self, name, src):
 
@@ -1517,22 +1505,19 @@ class ROIModel(fermipy.config.Configurable):
 
         if len(match_srcs) == 1:
 
-            self.logger.debug('Found matching source for %s : %s',
-                              src.name, match_srcs[0].name)
+            #self.logger.debug('Found matching source for %s : %s',
+            #                  src.name, match_srcs[0].name)
 
             if merge_sources:
-                self.logger.debug('Updating source model for %s', src.name)
                 match_srcs[0].update_from_source(src)
             else:
                 match_srcs[0].add_name(src.name)
-                self.logger.debug('Skipping source model for %s', src.name)
 
             self._add_source_alias(src.name.replace(' ', '').lower(),
                                    match_srcs[0])
             return
         elif len(match_srcs) > 2:
-            self.logger.warning('Multiple sources matching %s' % name)
-            return
+            raise Exception('Multiple sources with name %s' % name)
 
         self._add_source_alias(src.name, src)
 
@@ -1570,8 +1555,6 @@ class ROIModel(fermipy.config.Configurable):
 
     def load(self, **kwargs):
         """Load both point source and diffuse components."""
-
-        self.logger.debug('Starting')
 
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
@@ -1859,9 +1842,7 @@ class ROIModel(fermipy.config.Configurable):
 
         name : str
             Catalog name or path to a catalog FITS file.
-        """
-        self.logger.debug('Loading FITS catalog: %s' % name)
-        
+        """        
         # EAC split this function to make it easier to load an existing catalog
         cat = catalog.Catalog.create(name)
         self.load_existing_catalog(cat, **kwargs)
@@ -1946,8 +1927,6 @@ class ROIModel(fermipy.config.Configurable):
         coordsys = kwargs.get('coordsys', 'CEL')
         if not os.path.isfile(xmlfile):
             xmlfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs', xmlfile)
-
-        self.logger.info('Reading XML Model: ' + xmlfile)
 
         root = ElementTree.ElementTree(file=xmlfile).getroot()
 
