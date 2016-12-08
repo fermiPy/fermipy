@@ -2081,4 +2081,5 @@ class ROIModel(fermipy.config.Configurable):
         hdulist = fits.open(fitsfile)
         for h in hdulist:
             h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+            h.header['STVER'] = fermipy.get_st_version()
         hdulist.writeto(fitsfile, clobber=True)

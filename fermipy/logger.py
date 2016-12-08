@@ -60,7 +60,14 @@ class Logger(object):
 
     @staticmethod
     def get(name, logfile, loglevel=logging.DEBUG):
+        """Create a python logger instance.
 
+        Parameters
+        ----------
+        name : str
+            Logger name.
+        """
+        
         #        logging.config.dictConfig({
         #                'version': 1,
         #                'disable_existing_loggers': False})

@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import copy
 import shutil
+import logging
 import yaml
 from collections import OrderedDict
 
@@ -177,7 +178,6 @@ class LightCurve(object):
             self.logger.info('Fitting time range %i %i', time[0], time[1])
 
             config = copy.deepcopy(self.config)
-            config['logging']['verbosity'] = 2
             config['selection']['tmin'] = time[0]
             config['selection']['tmax'] = time[1]
             config['ltcube']['use_local_ltcube'] = kwargs['use_local_ltcube']
@@ -212,7 +212,7 @@ class LightCurve(object):
             #     for c in self.components:
             #        shutil.copy(c._files['srcmap'],config['fileio']['outdir'])
 
-            gta = self.clone(config)            
+            gta = self.clone(config, loglevel=logging.DEBUG)
             gta.setup()
             
             # Write the current model
