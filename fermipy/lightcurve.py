@@ -177,23 +177,26 @@ class LightCurve(object):
             self.logger.info('Fitting time range %i %i', time[0], time[1])
 
             config = copy.deepcopy(self.config)
+            config['logging']['verbosity'] = 2
             config['selection']['tmin'] = time[0]
             config['selection']['tmax'] = time[1]
+            config['ltcube']['use_local_ltcube'] = kwargs['use_local_ltcube']
             config['model']['diffuse_dir'] = [self.workdir]
             for j, c in enumerate(self.components):
                 if len(config['components']) <= j:
                     config['components'] += [{}]                    
+
+                data_cfg =  {'evfile': c.files['ft1'],
+                             'scfile': c.data_files['scfile'],
+                             'ltcube': None }
                 
                 config['components'][j] = \
                     utils.merge_dict(config['components'][j],
-                                     {'data' : {'evfile': c.files['ft1'],
-                                                'scfile': c.data_files['scfile'],
-                                                'ltcube': None } },
+                                     {'data' : data_cfg },
                                      add_new_keys=True)
                     
             # create output directories labeled in MET vals
-            outdir = 'lightcurve_%s_%.0f_%.0f' % (name.lower().replace(' ', '_'),
-                                                  time[0],time[1])
+            outdir = 'lightcurve_%.0f_%.0f' % (time[0],time[1])
             config['fileio']['outdir'] = os.path.join(self.workdir, outdir)
             utils.mkdir(config['fileio']['outdir'])
 
@@ -209,7 +212,7 @@ class LightCurve(object):
             #     for c in self.components:
             #        shutil.copy(c._files['srcmap'],config['fileio']['outdir'])
 
-            gta = fermipy.gtanalysis.GTAnalysis(config)
+            gta = self.clone(config)            
             gta.setup()
             
             # Write the current model
@@ -227,6 +230,7 @@ class LightCurve(object):
                     continue
                 if (fit_results['fit_success'] == 1):
                     o[k][i] = output[k]
+            self.logger.info('Finished time range %i %i', time[0], time[1])
 
         src = self.roi.get_source_by_name(name)
         src.update_data({'lightcurve': copy.deepcopy(o)})
@@ -255,7 +259,8 @@ class LightCurve(object):
             if niter == 0:
                 gta.free_sources_by_name(free_sources)
             elif niter == 1:
-                self.logger.info('Fit Failed.')
+                self.logger.info('Fit Failed. Retrying with free '
+                                 'normalizations.')
                 gta.free_sources_by_name(free_sources, False)
                 gta.free_sources_by_name(free_sources, pars='norm')
             elif niter == 2:

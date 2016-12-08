@@ -7,8 +7,10 @@ import collections
 import logging
 import tempfile
 import filecmp
+import time
 import numpy as np
 from astropy.io import fits
+from astropy.table import Table, Column, vstack
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
@@ -26,9 +28,11 @@ from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
 from fermipy.sourcefind import SourceFinder
 from fermipy.utils import merge_dict
 from fermipy.utils import create_hpx_disk_region_string
+from fermipy.utils import resolve_file_path
 from fermipy.skymap import Map, HpxMap
 from fermipy.hpx_utils import HPX
 from fermipy.roi_model import ROIModel
+from fermipy.ltcube import LTCube
 from fermipy.plotting import AnalysisPlotter
 from fermipy.logger import Logger, log_level
 from fermipy.config import ConfigSchema
@@ -82,6 +86,38 @@ index_parameters = {
     'Gaussian': [],
 }
 
+
+def create_sc_table(scfile, colnames=None):
+    """Load an FT2 file from a file or list of files."""
+    
+    if utils.is_fits_file(scfile) and colnames is None:
+        return create_table_from_fits(scfile,'SC_DATA')
+    
+    if utils.is_fits_file(scfile):
+        files = [scfile]
+    else:
+        files = [line.strip() for line in open(scfile, 'r')]
+        
+    tables = [create_table_from_fits(f, 'SC_DATA', colnames)
+              for f in files]
+    
+    return vstack(tables)
+
+
+def create_table_from_fits(fitsfile, hduname, colnames=None):
+    """Memory efficient function for loading a table from a FITS
+    file."""
+    
+    if colnames is None:
+        return Table.read(fitsfile, hduname)
+    
+    h = fits.open(fitsfile,memmap=True)
+    cols = []    
+    for k in colnames:
+        data = h[hduname].data.field(k)
+        cols += [Column(name=k,data=data)]
+    return Table(cols)
+    
 
 class FitCache(object):
 
@@ -352,7 +388,8 @@ def get_spectral_index(src, egy):
 
 
 def run_gtapp(appname, logger, kw):
-    logger.info('Running %s', appname)
+    logger.info('Running %s.', appname)
+    t0 = time.time()
     filter_dict(kw, None)
     kw = utils.unicode_to_str(kw)
     gtapp = GtApp.GtApp(str(appname))
@@ -373,6 +410,8 @@ def run_gtapp(appname, logger, kw):
 
         # Capture return code?
 
+    t1 = time.time()
+    logger.info('Finished %s. Execution time: %.2f s',appname,t1-t0)
 
 def filter_dict(d, val):
     for k, v in d.items():
@@ -698,6 +737,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         gta.load_roi(infile)
         return gta
 
+    def clone(self, config):
+        """Make a clone of this analysis instance."""
+
+        gta = GTAnalysis(config)
+        gta._roi = copy.deepcopy(self.roi)
+        for c in self.components:
+            gta.components[0]._roi = copy.deepcopy(c.roi)
+
+        return gta            
+    
     def set_log_level(self, level):
         self.logger.handlers[1].setLevel(level)
         for c in self.components:
@@ -4142,6 +4191,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
 
+        search_dirs = [workdir]
+        
         self._files = {}
         self._files['ft1'] = 'ft1%s.fits'
         self._files['ft1_filtered'] = 'ft1_filtered%s.fits'
@@ -4185,54 +4236,34 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self._files[k] = os.path.join(workdir,
                                           v % self.config['file_suffix'])
 
-        # EAC: allow overriding file locations from config
-        if self.config['gtlike'].get('srcmap', None) is not None:
-            self._files['srcmap'] = self.config['gtlike']['srcmap']
-        if self.config['gtlike'].get('bexpmap', None) is not None:
-            self._files['bexpmap'] = self.config['gtlike']['bexpmap']
-        if self.config['gtlike'].get('bexpmap_roi', None) is not None:
-            self._files['bexpmap_roi'] = self.config['gtlike']['bexpmap_roi']
-        if self.config['gtlike'].get('srcmdl', None) is not None:
-            self._files['srcmdl'] = self.config['gtlike']['srcmdl']
+        for k in ['srcmap','bexpmap','bexpmap_roi']:
 
+            if self.config['gtlike'].get(k,None) is None:
+                continue
             
-        if self.config['data']['ltcube'] is not None:
-            self._ext_ltcube = True
-            self._files['ltcube'] = os.path.expandvars(self.config['data']['ltcube'])
-            if not os.path.isfile(self._files['ltcube']):
-                self.files['ltcube'] = os.path.join(
-                    workdir, self.files['ltcube'])
-            if not os.path.isfile(self.files['ltcube']):
-                raise Exception('Invalid livetime cube: %s' %
-                                self.files['ltcube'])
-        else:
-            self._ext_ltcube = False
+            self._files[k] = resolve_file_path(self.config['gtlike'][k],
+                                               search_dirs=search_dirs,
+                                               expand=True)
+
+#        if self.config['gtlike'].get('srcmdl', None) is not None:
+#            self._files['srcmdl'] = self.config['gtlike']['srcmdl']
+
+        self._ext_ltcube = resolve_file_path(self.config['data']['ltcube'],
+                                             search_dirs=search_dirs,
+                                             expand=True)
+        
+        if self._ext_ltcube is None or \
+                self.config['ltcube']['use_local_ltcube']:
             self.files['ltcube'] = os.path.join(workdir,
                                                 'ltcube%s.fits' %
                                                 self.config['file_suffix'])
-
-        if self.config['gtlike']['wmap'] is not None:
-            self._files['wmap'] = os.path.expandvars(
-                self.config['gtlike']['wmap'])
-            if not os.path.isfile(self._files['wmap']):
-                self.files['wmap'] = os.path.join(
-                    workdir, self.files['wmap'])
-            if not os.path.isfile(self.files['wmap']):
-                raise Exception('Invalid likelihood weights map: %s' %
-                                self.files['wmap'])
         else:
-            self._files['wmap'] = None
+            self.files['ltcube'] = self._ext_ltcube
 
-        if self.config['binning']['enumbins'] is not None:
-            self._enumbins = int(self.config['binning']['enumbins'])
-        else:
-            self._enumbins = np.round(self.config['binning']['binsperdec'] *
-                                      np.log10(
-                                          self.config['selection']['emax'] /
-                                          self.config['selection']['emin']))
-            self._enumbins = int(self._enumbins)
+        self._files['wmap'] = resolve_file_path(self.config['gtlike']['wmap'],
+                                                search_dirs=search_dirs,
+                                                expand=True)
 
-        # EAC FIXME, allow specifying either (logemin, logemax) or (emin, emax)
         try:
             emin = self.config['selection']['emin']
             emax = self.config['selection']['emax']
@@ -4244,6 +4275,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             emin = np.power(10., logemin)
             emax = np.power(10., logemax)
 
+        if self.config['binning']['enumbins'] is not None:
+            self._enumbins = int(self.config['binning']['enumbins'])
+        else:
+            self._enumbins = np.round(self.config['binning']['binsperdec'] *
+                                      np.log10(emax/emin))
+            self._enumbins = int(self._enumbins)
+            
         self._ebin_edges = np.linspace(logemin, logemax,
             self._enumbins + 1)
         self._ebin_center = 0.5 * \
@@ -4803,23 +4841,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                  not os.path.isfile(self.files['ltcube'])):
             self._select_data(overwrite=overwrite)
 
-        # Run gtltcube
-        kw = dict(evfile=self.files['ft1'],
-                  scfile=self.data_files['scfile'],
-                  outfile=self.files['ltcube'],
-                  binsz=self.config['ltcube']['binsz'],
-                  dcostheta=self.config['ltcube']['dcostheta'],
-                  zmax=self.config['selection']['zmax'])
-
-        if self._ext_ltcube:
+        if self._ext_ltcube is not None:
             self.logger.debug('Using external LT cube.')
-        elif not os.path.isfile(self.files['ltcube']) or overwrite:
-            run_gtapp('gtltcube', self.logger, kw)
         else:
-            self.logger.debug('Skipping gtltcube')
+            self._create_ltcube(overwrite=overwrite)
 
         self.logger.debug('Loading LT Cube %s', self.files['ltcube'])
-        self._ltc = irfs.LTCube.create(self.files['ltcube'])
+        self._ltc = LTCube.create(self.files['ltcube'])
 
         # Extract tmin, tmax from LT cube
         self._tmin = self._ltc.tstart
@@ -4946,6 +4974,36 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             self.logger.debug('Skipping gtbin')
 
+    def _create_ltcube(self, overwrite=False):
+
+        if os.path.isfile(self.files['ltcube']) and not overwrite:
+            self.logger.debug('Skipping LT Cube.')
+            return
+        
+        # Run gtltcube
+        kw = dict(evfile=self.files['ft1'],
+                  scfile=self.data_files['scfile'],
+                  outfile=self.files['ltcube'],
+                  binsz=self.config['ltcube']['binsz'],
+                  dcostheta=self.config['ltcube']['dcostheta'],
+                  zmax=self.config['selection']['zmax'])
+        
+        if self.config['ltcube']['use_local_ltcube']:
+            self.logger.debug('Generating local LT cube.')
+            colnames=['START','STOP','LIVETIME',
+                      'RA_SCZ', 'DEC_SCZ',
+                      'RA_ZENITH', 'DEC_ZENITH']
+            tab_sc = create_sc_table(self.data_files['scfile'],
+                                     colnames=colnames)
+            tab_gti = Table.read(self.files['ft1'], 'GTI')
+            radius = self.config['selection']['radius']+10.0
+            ltc_new = LTCube.create_from_gti(self.roi.skydir, tab_sc, tab_gti,
+                                             self.config['selection']['zmax'],
+                                             radius=radius)
+            ltc_new.write(self.files['ltcube'])
+        else:
+            run_gtapp('gtltcube', self.logger, kw)            
+            
     def _create_expcube(self, overwrite=False):
 
         if self.config['gtlike']['irfs'] == 'CALDB':
