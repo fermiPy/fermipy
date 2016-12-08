@@ -19,18 +19,18 @@ def test_catalog_src_manager():
     # Test the dictionary of catalogs
     assert(ret_dict['catalog_info_dict']['3FGL'].catalog_name == '3FGL')
     assert(ret_dict['catalog_info_dict']['3FGL'].catalog_type == '3FGL')
-    assert(len(ret_dict['catalog_info_dict']['3FGL'].catalog.table) == 3034)
+    assert(len(ret_dict['catalog_info_dict']['3FGL'].catalog.table) == 63)
     assert(len(ret_dict['catalog_info_dict'][
-           '3FGL'].roi_model.sources) == 3034)
+           '3FGL'].roi_model.sources) == 63)
 
     # Test the split dictionary
     assert(len(ret_dict['comp_info_dict']['3FGL_v00'].keys()) == 3)
     assert(len(ret_dict['comp_info_dict']['3FGL_v00']
-               ['extended'].roi_model.sources) == 25)
+               ['extended'].roi_model.sources) == 1)
     assert(len(ret_dict['comp_info_dict']['3FGL_v00']
-               ['faint'].roi_model.sources) == 2972)
+               ['faint'].roi_model.sources) == 61)
     assert(len(ret_dict['comp_info_dict']['3FGL_v00']
-               ['remain'].roi_model.sources) == 37)
+               ['remain'].roi_model.sources) == 1)
 
     # Test the CatalogSourceManager
     assert(len(ret_dict['CatalogSourceManager'].splitkeys()) == 1)

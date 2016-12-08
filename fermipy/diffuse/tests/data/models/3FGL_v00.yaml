@@ -1,5 +1,5 @@
 catalog_name : 3FGL
-catalog_file : $FERMIPY_DATA_DIR/catalogs/gll_psc_v16.fit
+catalog_file : $FERMIPY_ROOT/diffuse/tests/data/test_catalog.fits
 catalog_extdir : $FERMIPY_DATA_DIR/catalogs/Extended_archive_v15/Templates
 catalog_type : 3FGL
 rules_dict :
