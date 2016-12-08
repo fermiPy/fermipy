@@ -90,20 +90,31 @@ def resolve_path(path, workdir=None):
 
 def resolve_file_path(path, **kwargs):
     dirs = kwargs.get('search_dirs', [])
+    expand = kwargs.get('expand',False)
 
+    if path is None:
+        return None
+    
+    out_path = None
     if os.path.isabs(os.path.expandvars(path)) and \
             os.path.isfile(os.path.expandvars(path)):
-        return path
+        out_path = path
+    else:
+        for d in dirs:            
+            if not os.path.isdir(os.path.expandvars(d)):
+                continue
+            p = os.path.join(os.path.expandvars(d), path)
+            if os.path.isfile(os.path.expandvars(p)):
+                out_path = p
 
-    for d in dirs:
-        if not os.path.isdir(os.path.expandvars(d)):
-            continue
-        p = os.path.join(d, path)
-        if os.path.isfile(os.path.expandvars(p)):
-            return p
+    if out_path is None:
+        raise Exception('Failed to resolve file path: %s' % path)
 
-    raise Exception('Failed to resolve file path: %s' % path)
+    if expand:
+        out_path = os.path.expandvars(out_path)
 
+    return out_path
+        
 
 def resolve_file_path_list(pathlist, workdir, prefix='',
                            randomize=False):
