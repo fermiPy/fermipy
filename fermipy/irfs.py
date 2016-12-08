@@ -17,7 +17,7 @@ from fermipy.utils import edge_to_center
 from fermipy.utils import edge_to_width
 from fermipy.skymap import HpxMap
 from fermipy.hpx_utils import HPX
-
+from fermipy.ltcube import LTCube
 
 evtype_string = {
     1: 'FRONT',
@@ -829,139 +829,14 @@ def calc_wtd_exp(skydir, ltc, event_class, event_types,
     return cnts / flux[:, None]
 
 
-class LTCube(HpxMap):
-    """Class for reading and manipulating livetime cubes generated with
-    gtltcube.
-    """
-
-    def __init__(self, data, hpx, cth_edges, tstart=None, tstop=None):
-        HpxMap.__init__(self, data, hpx)
-        self._cth_edges = cth_edges
-        self._cth_center = edge_to_center(self._cth_edges)
-        self._cth_width = edge_to_width(self._cth_edges)
-        self._domega = (self._cth_edges[1:] -
-                        self._cth_edges[:-1]) * 2 * np.pi
-        self._tstart = tstart
-        self._tstop = tstop
-
-    @property
-    def tstart(self):
-        """Return start time."""
-        return self._tstart
-
-    @property
-    def tstop(self):
-        """Return stop time."""
-        return self._tstop
-
-    @property
-    def domega(self):
-        """Return solid angle of incidence angle bins in steradians."""
-        return self._domega
-
-    @property
-    def costh_edges(self):
-        """Return edges of incidence angle bins in cosine of the incidence
-        angle."""
-        return self._cth_edges
-
-    @property
-    def costh_center(self):
-        """Return centers of incidence angle bins in cosine of the incidence
-        angle.
-        """
-        return self._cth_center
-
-    @staticmethod
-    def create(ltfile):
-        """Create a livetime cube from a single file or list of
-        files."""
-
-        if not re.search('\.txt?', ltfile) is None:
-            files = np.loadtxt(ltfile, unpack=True, dtype='str')
-        elif not isinstance(ltfile, list):
-            files = glob.glob(ltfile)
-
-        ltc = LTCube.create_from_file(files[0])
-        for f in files[1:]:
-            ltc.load_ltfile(f)
-
-        return ltc
-
-    @staticmethod
-    def create_from_file(ltfile):
-
-        hdulist = fits.open(ltfile)
-        data = hdulist['EXPOSURE'].data.field(0)
-        tstart = hdulist[0].header['TSTART']
-        tstop = hdulist[0].header['TSTOP']
-        cth_edges = np.array(hdulist['CTHETABOUNDS'].data.field(0))
-        cth_edges = np.concatenate(([1], cth_edges))
-        cth_edges = cth_edges[::-1]
-        hpx = HPX.create_from_header(hdulist['EXPOSURE'].header, cth_edges)
-        return LTCube(data[:, ::-1].T, hpx, cth_edges, tstart, tstop)
-
-    @staticmethod
-    def create_empty(tstart, tstop, fill=0.0, nside=64):
-        """Create an empty livetime cube."""
-        cth_edges = np.linspace(0, 1.0, 41)
-        domega = utils.edge_to_width(cth_edges)*2.0*np.pi
-        hpx = HPX(nside, True, 'CEL', ebins=cth_edges)
-        data = np.ones((len(cth_edges) - 1, hpx.npix)) * fill
-        return LTCube(data, hpx, cth_edges, tstart, tstop)
-
-    @staticmethod
-    def create_from_obs_time(obs_time,nside=64):
-
-        tstart = 239557417.0
-        tstop = tstart + obs_time        
-        ltc = LTCube.create_empty(tstart, tstop, obs_time, nside)
-        ltc._counts *= ltc.domega[:, np.newaxis] / (4. * np.pi)
-        return ltc        
-        
-    def load_ltfile(self, ltfile):
-
-        ltc = LTCube.create_from_file(ltfile)
-        self._counts += ltc.data
-        self._tstart = min(self.tstart, ltc.tstart)
-        self._tstop = max(self.tstop, ltc.tstop)
-
-    def get_skydir_lthist(self, skydir, cth_bins):
-        """Get the livetime distribution (observing profile) for a given sky
-        direction with binning in incidence angle defined by
-        ``cth_bins``.
-
-        Parameters
-        ----------
-        skydir : `~astropy.coordinates.SkyCoord`
-            Sky coordinate for which the observing profile will be
-            computed.
-
-        cth_bins : `~numpy.ndarray`
-            Bin edges in cosine of the incidence angle.
-
-        """
-        ra = skydir.ra.deg
-        dec = skydir.dec.deg
-
-        bins = np.linspace(cth_bins[0], cth_bins[-1],
-                            (len(cth_bins) - 1) * 4 + 1)
-        center = edge_to_center(bins)
-        width = edge_to_width(bins)
-        ipix = hp.ang2pix(self.hpx.nside, np.pi / 2. - np.radians(dec),
-                          np.radians(ra), nest=self.hpx.nest)
-        lt = np.interp(center, self._cth_center,
-                       self.data[:, ipix] / self._cth_width) * width
-        lt = np.sum(lt.reshape(-1, 4), axis=1)
-        return lt
-
-
 def plot_hpxmap(hpxmap, **kwargs):
 
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     from matplotlib.colors import PowerNorm, Normalize, LogNorm
 
+    zidx = kwargs.pop('zidx',None)
+    
     kwargs_imshow = {'norm': None,
                      'vmin': None, 'vmax': None}
 
@@ -1015,7 +890,9 @@ def plot_hpxmap(hpxmap, **kwargs):
     ax.set_title(title)
     fig.add_axes(ax)
 
-    if hpxmap.data.ndim == 2:
+    if zidx is not None:
+        data = hpxmap.data[zidx]
+    elif hpxmap.data.ndim == 2:
         data = np.sum(hpxmap.data, axis=0)
     else:
         data = hpxmap.data
