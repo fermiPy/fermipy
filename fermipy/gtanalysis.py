@@ -4837,7 +4837,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         
         # If ltcube or ccube do not exist then rerun data selection
         if not use_external_srcmap and \
-                (not os.path.isfile(self.files['ccube']) or 
+                (overwrite or
+                 not os.path.isfile(self.files['ccube']) or 
                  not os.path.isfile(self.files['ltcube'])):
             self._select_data(overwrite=overwrite)
 
