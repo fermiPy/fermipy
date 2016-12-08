@@ -103,9 +103,10 @@ def resolve_file_path(path, **kwargs):
         for d in dirs:            
             if not os.path.isdir(os.path.expandvars(d)):
                 continue
-            p = os.path.join(os.path.expandvars(d), path)
+            p = os.path.join(d, path)
             if os.path.isfile(os.path.expandvars(p)):
                 out_path = p
+                break
 
     if out_path is None:
         raise Exception('Failed to resolve file path: %s' % path)
