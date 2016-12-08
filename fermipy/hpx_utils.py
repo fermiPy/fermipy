@@ -726,13 +726,30 @@ class HPX(object):
         lon = np.degrees(phi)
         return np.vstack([lon, lat]).T
 
+    def get_sky_dirs(self):
+
+        lonlat = self.get_sky_coords()
+        return SkyCoord(ra=lonlat.T[0],dec=lonlat.T[1], unit='deg')
     
     def get_pixel_indices(self, lats, lons):
         """ "Return the indices in the flat array corresponding to a set of coordinates """
         theta = np.radians(90. - lats)
-        phi = np.radians(phi)
-        return hp.ang2pix(self._nside, theta, phi, self._nest)
+        phi = np.radians(lons)
+        return hp.ang2pix(self.nside, theta, phi, self.nest)
 
+    def skydir_to_pixel(self, skydir):
+        """Return the pixel index of a SkyCoord object."""
+        if self.coordsys in ['CEL','EQU']:
+            skydir = skydir.transform_to('icrs')
+            lon = skydir.ra.deg
+            lat = skydir.dec.deg
+        else:
+            skydir = skydir.transform_to('galactic')
+            lon = skydir.l.deg
+            lat = skydir.b.deg
+        
+        return self.get_pixel_indices(lat,lon)
+    
 
 class HpxToWcsMapping(object):
     """ Stores the indices need to conver from HEALPix to WCS """
