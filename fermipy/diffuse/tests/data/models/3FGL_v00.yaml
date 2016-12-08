@@ -1,0 +1,15 @@
+catalog_name : 3FGL
+catalog_file : $FERMIPY_ROOT/diffuse/tests/data/test_catalog.fits
+catalog_extdir : $FERMIPY_DATA_DIR/catalogs/Extended_archive_v15/Templates
+catalog_type : 3FGL
+rules_dict :
+  faint : 
+    cuts :
+      - { cut_var: Signif_Avg, max_val : 100. }
+      - mask_extended
+  extended :
+    cuts :
+      - select_extended
+remainder : 
+  merge : False
+    

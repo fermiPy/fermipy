@@ -1,0 +1,66 @@
+Constant_Correction :
+  SpectrumType : ConstantValue
+  spectral_pars : 
+    Value :
+      name : Value
+      scale : 1.0
+      value : 1.0 
+      min : 1e-4
+      max: 1e4
+      free : False       
+Powerlaw_Correction :
+  SpectrumType : PowerLaw
+  spectral_pars : 
+    Prefactor : 
+      name : Prefactor
+      scale : 1.0
+      value : 1.0 
+      min : 0.1
+      max: 10.0
+      free : False
+    Index : 
+      name:  Index
+      scale : -1.0
+      value : 0.0
+      min : -1.0
+      max : 1.0
+      free : False
+    Scale : 
+      name: Scale
+      scale : 1.0
+      value : 1000.0
+      min : 1000.0
+      max : 1000.0
+      free : False
+LogParabola_Correction :
+  SpectrumType : LogParabola
+  spectral_pars : 
+    norm : 
+      name : norm
+      scale : 1.0
+      value : 1.0 
+      min : 0.1
+      max: 10.0
+      free : False
+    alpha : 
+      name:  alpha
+      scale : 1.0
+      value : 0.0
+      min : -2.0
+      max : 2.0
+      free : False
+    beta : 
+      name:  beta
+      scale : 1.0
+      value : 0.0
+      min : -10.0
+      max : 10.0
+      free : False
+    Eb : 
+      name: Eb
+      scale : 1.0
+      value : 1000.0
+      min : 10.0
+      max : 100000.0
+      free : False
+ 
