@@ -384,6 +384,27 @@ def project(lon0, lat0, lon1, lat1):
     return r * np.cos(phi), r * np.sin(phi)
 
 
+def separation_cos_angle(lon0, lat0, lon1, lat1):
+    """Evaluate the cosine of the angular separation between two
+    direction vectors."""
+    return (np.sin(lat1) * np.sin(lat0) + np.cos(lat1) * np.cos(lat0) *
+            np.cos(lon1 - lon0))
+
+
+def dot_prod(xyz0, xyz1):
+    """Compute the dot product between two cartesian vectors where the
+    second dimension contains the vector components."""
+    return np.sum(xyz0 * xyz1, axis=1)
+
+
+def angle_to_cartesian(lon, lat):
+    """Convert spherical coordinates to cartesian unit vectors."""
+    theta = np.array(np.pi / 2. - lat)
+    return np.vstack((np.sin(theta) * np.cos(lon),
+                      np.sin(theta) * np.sin(lon),
+                      np.cos(theta))).T
+
+
 def scale_parameter(p):
     if isstr(p):
         p = float(p)
