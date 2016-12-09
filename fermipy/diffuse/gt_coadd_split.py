@@ -17,17 +17,17 @@ from fermipy.diffuse.name_policy import NameFactory
 NAME_FACTORY = NameFactory()
 
 
-
 class CoaddSplit(Chain):
     """Small class to merge counts cubes for a series of binning components
     """
+
     def __init__(self, linkname, comp_dict=None):
         """C'tor
         """
         self.comp_dict = comp_dict
         Chain.__init__(self, linkname,
                        links=[],
-                       appname="python %s"%__file__.replace('.pyc', '.py'),
+                       appname="python %s" % __file__.replace('.pyc', '.py'),
                        argmapper=self._map_arguments,
                        parser=CoaddSplit._make_parser())
         if comp_dict is not None:
@@ -69,11 +69,11 @@ class CoaddSplit(Chain):
         links = []
         for key_e, comp_e in sorted(comp_dict.items()):
             for psf_type in sorted(comp_e['psf_types'].keys()):
-                key = "%s_%s"%(key_e, psf_type)
-                link = Link('coadd_%s'%key,
+                key = "%s_%s" % (key_e, psf_type)
+                link = Link('coadd_%s' % key,
                             appname='fermipy-coadd',
-                            mapping={'args':'args_%s'%key,
-                                     'output':'binfile_%s'%key},
+                            mapping={'args': 'args_%s' % key,
+                                     'output': 'binfile_%s' % key},
                             output_file_args=['output'])
                 links.append(link)
         return links
@@ -84,8 +84,8 @@ class CoaddSplit(Chain):
         lout = []
         for key_e, comp_e in sorted(comp_dict.items()):
             for psf_type in sorted(comp_e['psf_types'].keys()):
-                key = "%s_%s"%(key_e, psf_type)
-                lout.append('binfile_%s'%key)
+                key = "%s_%s" % (key_e, psf_type)
+                lout.append('binfile_%s' % key)
         return lout
 
     @staticmethod
@@ -95,11 +95,11 @@ class CoaddSplit(Chain):
         outbasename = os.path.basename(binnedfile)
         filelist = ""
         for i in range(num_files):
-            split_key = "%06i"%i
+            split_key = "%06i" % i
             output_dir = os.path.join(outdir_base, split_key)
             filepath = os.path.join(output_dir,
-                                    outbasename.replace('.fits', '_%s.fits.gz'%split_key))
-            filelist += ' %s'%filepath
+                                    outbasename.replace('.fits', '_%s.fits.gz' % split_key))
+            filelist += ' %s' % filepath
         return filelist
 
     def _map_arguments(self, input_dict):
@@ -116,13 +116,15 @@ class CoaddSplit(Chain):
         output_dict = input_dict.copy()
         for key_e, comp_e in sorted(self.comp_dict.items()):
             for psf_type in sorted(comp_e['psf_types'].keys()):
-                key = "%s_%s"%(key_e, psf_type)
-                suffix = "zmax%i_%s"%(comp_e['zmax'], key)
-                ccube_name = os.path.basename(NAME_FACTORY.ccube(component='_comp_',
-                                                                 coordsys='%s_%s'%(coordsys, key)))
+                key = "%s_%s" % (key_e, psf_type)
+                suffix = "zmax%i_%s" % (comp_e['zmax'], key)
+                ccube_name =\
+                    os.path.basename(NAME_FACTORY.ccube(component='_comp_',
+                                                        coordsys='%s_%s' % (coordsys, key)))
                 binnedfile = os.path.join(outdir_base, ccube_name)
-                output_dict['binfile_%s'%key] = binnedfile.replace('_comp_', suffix)
-                output_dict['args_%s'%key] = CoaddSplit._make_input_file_list(binnedfile, num_files)
+                output_dict['binfile_%s' % key] = binnedfile.replace('_comp_', suffix)
+                output_dict['args_%s' % key] = CoaddSplit._make_input_file_list(
+                    binnedfile, num_files)
         return output_dict
 
     def run_argparser(self, argv):

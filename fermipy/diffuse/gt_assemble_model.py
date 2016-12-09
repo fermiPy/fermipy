@@ -21,11 +21,13 @@ from fermipy.diffuse.name_policy import NameFactory
 
 NAME_FACTORY = NameFactory()
 
+
 class GtAssembleSourceMaps(object):
     """Small class to assemple source map files for fermipy analysis.
 
     This is useful for re-merging after parallelizing source map creation.
     """
+
     def __init__(self):
         """C'tor
         """
@@ -34,10 +36,10 @@ class GtAssembleSourceMaps(object):
 
     @staticmethod
     def _make_parser():
-        """Make an argument parser for this class """   
-        usage = "gt_assemble_srcmaps.py [options]" 
+        """Make an argument parser for this class """
+        usage = "gt_assemble_srcmaps.py [options]"
         description = "Copy source maps from the library to a analysis directory"
-        
+
         parser = argparse.ArgumentParser(usage=usage, description=description)
         parser.add_argument('-i', '--input', type=str, default=None,
                             help='Input yaml file')
@@ -48,8 +50,8 @@ class GtAssembleSourceMaps(object):
         return parser
 
     @staticmethod
-    def _make_link():        
-        link = Link('gt_assemble_srcmaps', 
+    def _make_link():
+        link = Link('gt_assemble_srcmaps',
                     appname='gt-assemble-models',
                     options=dict(input=None, comp=None, hpx_order=None),
                     flags=['gzip'],
@@ -63,10 +65,10 @@ class GtAssembleSourceMaps(object):
         try:
             hdulist_in = fits.open(ccube)
         except IOError:
-            hdulist_in = fits.open("%s.gz"%ccube)
+            hdulist_in = fits.open("%s.gz" % ccube)
 
         hpx_order_in = hdulist_in[1].header['ORDER']
-            
+
         if hpx_order_in > hpx_order:
             hpxmap = HpxMap.create_from_hdulist(hdulist_in)
             hpxmap_out = hpxmap.ud_grade(hpx_order, preserve_counts=True)
@@ -75,8 +77,8 @@ class GtAssembleSourceMaps(object):
             hpxlist_out.writeto(outsrcmap)
             return hpx_order
         else:
-            os.system('cp %s.gz %s.gz'%(ccube, outsrcmap))
-            os.system('gunzip -f %s.gz'%(outsrcmap))
+            os.system('cp %s.gz %s.gz' % (ccube, outsrcmap))
+            os.system('gunzip -f %s.gz' % (outsrcmap))
         return None
 
     @staticmethod
@@ -90,55 +92,52 @@ class GtAssembleSourceMaps(object):
     def _append_hdus(hdulist, srcmap_file, source_names, hpx_order):
         """
         """
-        print ("  Extracting %i sources from %s"%(len(source_names), srcmap_file))
-        try: 
+        print ("  Extracting %i sources from %s" % (len(source_names), srcmap_file))
+        try:
             hdulist_in = fits.open(srcmap_file)
         except IOError:
-            try: 
-                hdulist_in = fits.open('%s.gz'%srcmap_file)
+            try:
+                hdulist_in = fits.open('%s.gz' % srcmap_file)
             except IOError:
-                print ("  Missing file %s"%srcmap_file)
+                print ("  Missing file %s" % srcmap_file)
                 return
-        
+
         for source_name in source_names:
             sys.stdout.write('.')
             sys.stdout.flush()
             if hpx_order is None:
-                hdulist.append( hdulist_in[source_name] )
+                hdulist.append(hdulist_in[source_name])
             else:
                 try:
                     hpxmap = HpxMap.create_from_hdulist(hdulist_in, hdu=source_name)
                 except IndexError:
-                    print ("  Index error on source %s in file %s"%(source_name, srcmap_file))                
+                    print ("  Index error on source %s in file %s" % (source_name, srcmap_file))
                     continue
                 hpxmap_out = hpxmap.ud_grade(hpx_order, preserve_counts=True)
                 hdulist.append(hpxmap_out.create_image_hdu(name=source_name))
-                
+
         hdulist.flush()
         hdulist_in.close()
-
 
     @staticmethod
     def _assemble_component(compname, compinfo, hpx_order):
         """
         """
-        print ("Working on component %s"%compname)
+        print ("Working on component %s" % compname)
         ccube = compinfo['ccube']
         outsrcmap = compinfo['outsrcmap']
         outsrcmap += '.fits'
         source_dict = compinfo['source_dict']
-        
+
         hpx_order = GtAssembleSourceMaps._copy_ccube(ccube, outsrcmap, hpx_order)
         hdulist = GtAssembleSourceMaps._open_outsrcmap(outsrcmap)
-        
-        comp_names = source_dict.keys()
-        comp_names.sort()
-        for comp_name in comp_names:
+
+        for comp_name in sorted(source_dict.keys()):
             source_info = source_dict[comp_name]
             source_names = source_info['source_names']
             srcmap_file = source_info['srcmap_file']
             GtAssembleSourceMaps._append_hdus(hdulist, srcmap_file,
-                                              source_names, hpx_order)    
+                                              source_names, hpx_order)
         print ("Done")
 
     def run(self, argv):
@@ -150,11 +149,10 @@ class GtAssembleSourceMaps(object):
         GtAssembleSourceMaps._assemble_component(key, value, args.hpx_order)
 
 
-
-
 class ConfigMaker_AssembleSrcmaps(ConfigMaker):
     """Small class to generate configurations for this script
     """
+
     def __init__(self, link):
         """C'tor
         """
@@ -168,7 +166,7 @@ class ConfigMaker_AssembleSrcmaps(ConfigMaker):
         ----------------
         parser : `argparse.ArgumentParser' 
             Object we are filling
-            
+
         action : str
             String specifing what we want to do
 
@@ -205,25 +203,25 @@ class ConfigMaker_AssembleSrcmaps(ConfigMaker):
         """
         input_config = {}
         job_configs = {}
-                
+
         components = Component.build_from_yamlfile(args.comp)
         NAME_FACTORY.update_base_dict(args.data)
-        
+
         for modelkey in args.models:
-            manifest = os.path.join('analysis','model_%s'%modelkey,
-                                    'srcmap_manifest_%s.yaml'%modelkey)
-            for comp in components:                
-                zcut = "zmax%i"%comp.zmax
+            manifest = os.path.join('analysis', 'model_%s' % modelkey,
+                                    'srcmap_manifest_%s.yaml' % modelkey)
+            for comp in components:
+                zcut = "zmax%i" % comp.zmax
                 key = comp.make_key('{ebin_name}_{evtype_name}')
                 outfile = NAME_FACTORY.merged_srcmaps(modelkey=modelkey,
                                                       component=key,
                                                       coordsys='GAL',
                                                       irf_ver=args.irf_ver)
-                logfile = outfile.replace('.fits','.log')
+                logfile = outfile.replace('.fits', '.log')
                 job_configs[key] = dict(input=manifest,
                                         comp=key,
                                         logfile=logfile)
-        output_config = {}        
+        output_config = {}
         return input_config, job_configs, output_config
 
 
@@ -232,16 +230,16 @@ def build_scatter_gather():
     gtassemble = GtAssembleSourceMaps()
     link = gtassemble.link
 
-    lsf_args = {'W':1500,
-                'R':'rhel60'}
+    lsf_args = {'W': 1500,
+                'R': 'rhel60'}
 
     usage = "gt_assemble_srcmaps.py [options] input"
     description = "Copy source maps from the library to a analysis directory"
-    
-    config_maker = ConfigMaker_AssembleSrcmaps(link)    
+
+    config_maker = ConfigMaker_AssembleSrcmaps(link)
     lsf_sg = build_sg_from_link(link, config_maker,
                                 scatter_lsf_args=lsf_args,
-                                usage=usage, 
+                                usage=usage,
                                 description=description)
     return lsf_sg
 
@@ -250,6 +248,7 @@ def main_single():
     """Entry point for command line use for single job """
     gtsmp = GtAssembleSourceMaps()
     gtsmp.run(sys.argv[1:])
+
 
 def main_batch():
     """Entry point for command line use  for dispatching batch jobs """

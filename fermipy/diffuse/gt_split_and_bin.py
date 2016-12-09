@@ -7,9 +7,9 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import argparse
+import math
 
 import yaml
-import math
 
 from fermipy.jobs.chain import Chain, Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker
@@ -20,8 +20,12 @@ from fermipy.diffuse.name_policy import NameFactory
 PSF_TYPE_DICT = dict(PSF0=4, PSF1=8, PSF2=16, PSF3=32)
 NAME_FACTORY = NameFactory()
 
-def readlines(arg):
 
+def readlines(arg):
+    """Read lines from a file into a list.
+    
+    Removes whitespace and lines that start with '#'
+    """
     fin = open(arg)
     lines_in = fin.readlines()
     fin.close()
@@ -35,7 +39,11 @@ def readlines(arg):
 
 
 def create_inputlist(arglist):
+    """Read lines from a file and makes a list of file names.
 
+    Removes whitespace and lines that start with '#'
+    Recursively read all files with the extension '.lst'
+    """
     lines = []
     for arg in arglist:
         if os.path.splitext(arg)[1] == '.lst':
@@ -48,6 +56,7 @@ def create_inputlist(arglist):
 class SplitAndBin(Chain):
     """Small class to split and bin data according to some user-provided specification
     """
+
     def __init__(self, linkname, comp_dict=None):
         """C'tor
         """
@@ -95,7 +104,6 @@ class SplitAndBin(Chain):
                             help='Print commands but do not run them')
         return parser
 
-
     @staticmethod
     def _make_energy_select_links(comp_dict):
         """Make the links to run gtselect for each energy bin """
@@ -125,7 +133,7 @@ class SplitAndBin(Chain):
             enumbins = comp_e['enumbins']
             zmax = comp_e['zmax']
             for psf_type, psf_dict in sorted(comp_e['psf_types'].items()):
-                key = "%s_%s"%(key_e, psf_type)
+                key = "%s_%s" % (key_e, psf_type)
                 select_link = Gtlink('gtselect_%s' % key,
                                      appname='gtselect',
                                      mapping={'infile': 'selectfile_%s' % key_e,
@@ -183,16 +191,16 @@ class SplitAndBin(Chain):
         outbase = input_dict.get('output')
         if outbase is None:
             return None
-        binnedfile = "%s"%(outbase)
+        binnedfile = "%s" % (outbase)
         selectfile = binnedfile.replace('ccube', 'select')
 
         output_dict = input_dict.copy()
         for key_e, comp_e in sorted(self.comp_dict.items()):
-            suffix = "zmax%i_%s"%(comp_e['zmax'], key_e)
+            suffix = "zmax%i_%s" % (comp_e['zmax'], key_e)
             output_dict['selectfile_%s' % key_e] = selectfile.replace('_comp_', suffix)
             for psf_type in sorted(comp_e['psf_types'].keys()):
-                key = "%s_%s"%(key_e, psf_type)
-                suffix = "zmax%i_%s"%(comp_e['zmax'], key)
+                key = "%s_%s" % (key_e, psf_type)
+                suffix = "zmax%i_%s" % (comp_e['zmax'], key)
                 output_dict['selectfile_%s' % key] = selectfile.replace('_comp_', suffix)
                 output_dict['binfile_%s' % key] = binnedfile.replace('_comp_', suffix)
         return output_dict
@@ -211,21 +219,21 @@ class SplitAndBin(Chain):
 class ConfigMaker_SplitAndBin(ConfigMaker):
     """Small class to generate configurations for SplitAndBin
     """
+
     def __init__(self, chain):
         """C'tor
         """
         ConfigMaker.__init__(self)
         self.chain = chain
 
-
     def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser 
+        """Hook to add arguments to the command line argparser
 
         Parameters:
         ----------------
-        parser : `argparse.ArgumentParser' 
+        parser : `argparse.ArgumentParser'
             Object we are filling
-            
+
         action : str
             String specifing what we want to do
 
@@ -236,26 +244,25 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
         --coordsys : Coordinate system ['GAL' | 'CEL']
         input      : Input File List
         """
-        parser.add_argument('--comp', type=str, default=None, 
+        parser.add_argument('--comp', type=str, default=None,
                             help='binning component definition yaml file')
-        parser.add_argument('--data', type=str, default=None, 
+        parser.add_argument('--data', type=str, default=None,
                             help='datset definition yaml file')
         parser.add_argument('--coordsys', type=str, default='GAL', help='Coordinate system')
-        parser.add_argument('input', nargs='+', default=None, help='Input File List')       
-
+        parser.add_argument('input', nargs='+', default=None, help='Input File List')
 
     def make_base_config(self, args):
         """Hook to build a baseline job configuration
 
         Parameters:
         ----------------
-        args : `argparse.Namespace' 
+        args : `argparse.Namespace'
             Command line arguments, see add_arguments
         """
         self.chain.update_links(yaml.safe_load(open(args.comp)))
         self.chain.update_links_from_single_dict(args.__dict__)
         return self.chain.options
-       
+
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -266,47 +273,50 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
 
         inputfiles = create_inputlist(args.input)
         outdir_base = NAME_FACTORY.base_dict['basedir']
-        
+
         for idx, infile in enumerate(inputfiles):
-            key = "%06i"%idx
-            output_dir = os.path.join(outdir_base, key)            
-            try: 
+            key = "%06i" % idx
+            output_dir = os.path.join(outdir_base, key)
+            try:
                 os.mkdir(output_dir)
             except OSError:
                 pass
-            ccube_name = os.path.basename(NAME_FACTORY.ccube(component='_comp_',
-                                                             coordsys='%s_%s'%(args.coordsys, key)))
+            ccube_name =\
+                os.path.basename(NAME_FACTORY.ccube(component='_comp_',
+                                                    coordsys='%s_%s' % (args.coordsys, key)))
             binnedfile = os.path.join(output_dir, ccube_name)
             binnedfile_gzip = binnedfile + '.gz'
             selectfile = binnedfile.replace('ccube', 'select')
-            logfile = os.path.join(output_dir, 'scatter_%s.log'%key)
+            logfile = os.path.join(output_dir, 'scatter_%s.log' % key)
             outfiles = [selectfile, binnedfile_gzip]
             job_configs[key] = dict(ft1file=infile,
                                     output=binnedfile,
                                     logfile=logfile,
                                     outfiles=outfiles,
                                     pfiles=output_dir)
-            
+
         output_config = {}
-        
+
         return input_config, job_configs, output_config
+
 
 def build_scatter_gather():
     """Build and return a ScatterGather object that can invoke this script"""
     chain = SplitAndBin('SplitAndBin')
 
-    lsf_args = {'W':1500,
-                'R':'rhel60'}
+    lsf_args = {'W': 1500,
+                'R': 'rhel60'}
 
     usage = "gt_split_and_bin.py [options] input"
     description = "Prepare data for diffuse all-sky analysis"
-    
-    config_maker = ConfigMaker_SplitAndBin(chain)    
+
+    config_maker = ConfigMaker_SplitAndBin(chain)
     lsf_sg = build_sg_from_link(chain, config_maker,
                                 scatter_lsf_args=lsf_args,
-                                usage=usage, 
+                                usage=usage,
                                 description=description)
     return lsf_sg
+
 
 def main_single():
     """Entry point for command line use for single job """
@@ -314,6 +324,7 @@ def main_single():
     args = chain.run_argparser(sys.argv[1:])
     chain.run_chain(sys.stdout, args.dry_run)
     chain.finalize(args.dry_run)
+
 
 def main_batch():
     """Entry point for command line use for dispatching batch jobs """

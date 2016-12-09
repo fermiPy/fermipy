@@ -10,7 +10,6 @@ from collections import OrderedDict
 import yaml
 
 from fermipy import utils
-
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.diffuse_src_manager import GalpropMapManager,\
