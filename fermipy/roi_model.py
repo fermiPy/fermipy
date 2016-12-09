@@ -405,6 +405,8 @@ class Model(object):
             o['Flux_Density'] = self.params['Prefactor'][0]
             o['Pivot_Energy'] = self.params['Scale'][0]
             o['Cutoff'] = self.params['Cutoff'][0]
+        else:
+            raise Exception('Unsupported spectral type.')
 
         return o
 
