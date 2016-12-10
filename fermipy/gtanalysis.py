@@ -2340,7 +2340,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.logger.debug('Baseline Likelihood: %f',loglike0)        
         self.zero_source(name)
 
-        if width is None:
+        if not width:
             width = np.logspace(np.log10(width_min), np.log10(width_max),
                                 width_nstep)
 
