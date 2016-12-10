@@ -96,6 +96,7 @@ def fill_livetime_hist(skydir, tab_sc, tab_gti, zmax, costh_edges):
         cos_zn = utils.dot_prod(t, zn_xyz)
         m = m0 & (cos_zn > cos_zmax) & (cos_sep > 0.0)
         bins = np.digitize(cos_sep[m], bins=costh_edges) - 1
+        bins = np.clip(bins,0,nbin-1)        
         lt[:, i] = np.bincount(bins, weights=sc_live[m], minlength=nbin)
         lt_wt[:, i] = np.bincount(bins, weights=sc_live[m] * sc_lfrac[m],
                                   minlength=nbin)
