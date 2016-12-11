@@ -1471,7 +1471,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             Source name.
 
         save_template : bool
-            Delete the SpatialMap FITS template associated with this
+            Keep the SpatialMap FITS template associated with this
             source.
 
         delete_source_map : bool
@@ -1494,8 +1494,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.logger.log(loglevel, 'Deleting source %s', name)
 
         # STs require a source to be freed before deletion
-        normPar = self.like.normPar(name)
-        if not normPar.isFree():
+        if self.like is not None:
             self.free_norm(name, loglevel=logging.DEBUG)
 
         for c in self.components:
@@ -1505,8 +1504,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         src = self.roi.get_source_by_name(name)
         self.roi.delete_sources([src])
-        self.like.model = self.like.components[0].model
-        self._update_roi()
+        if self.like is not None:
+            self.like.model = self.like.components[0].model
+            self._update_roi()
         return src
 
     def delete_sources(self, cuts=None, distance=None,
@@ -1561,11 +1561,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for s in srcs:
             self.delete_source(s.name, build_fixed_wts=False)
 
-        # Build fixed model weights in one pass
-        for c in self.components:
-            c.like.logLike.buildFixedModelWts()
+        if self.like is not None:            
+            # Build fixed model weights in one pass
+            for c in self.components:
+                c.like.logLike.buildFixedModelWts()
 
-        self._update_roi()
+            self._update_roi()
 
         return srcs
 
