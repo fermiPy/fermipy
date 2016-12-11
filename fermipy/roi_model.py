@@ -244,7 +244,9 @@ class Model(object):
 
         if 'CLASS1' in catalog:
             self['class'] = catalog['CLASS1'].strip()
-
+        elif 'CLASS' in catalog:
+            self['class'] = catalog['CLASS'].strip()
+            
         for k in ROIModel.src_name_cols:
 
             if k not in catalog:
