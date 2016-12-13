@@ -5,6 +5,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 import fermipy
+from fermipy import utils
 from fermipy.hpx_utils import HPX
 
 
@@ -14,8 +15,9 @@ def write_fits(hdulist, outfile, keywords):
         for k, v in keywords.items():
             h.header[k] = v
         h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
-            
+
     hdulist.writeto(outfile, clobber=True)
+
 
 def find_and_read_ebins(hdulist):
     """  Reads and returns the energy bin edges.
@@ -24,17 +26,18 @@ def find_and_read_ebins(hdulist):
     and the case where they are in the EBOUND HDU
     """
     from fermipy import utils
-    ebins = None    
-    if 'ENERGIES' in hdulist:        
+    ebins = None
+    if 'ENERGIES' in hdulist:
         hdu = hdulist['ENERGIES']
         ectr = hdu.data.field(hdu.columns[0].name)
         ebins = np.exp(utils.center_to_edge(np.log(ectr)))
     elif 'EBOUNDS' in hdulist:
         hdu = hdulist['EBOUNDS']
-        emin = hdu.data.field('E_MIN')/1E3
-        emax = hdu.data.field('E_MAX')/1E3
-        ebins = np.append(emin,emax[-1])
+        emin = hdu.data.field('E_MIN') / 1E3
+        emax = hdu.data.field('E_MAX') / 1E3
+        ebins = np.append(emin, emax[-1])
     return ebins
+
 
 def read_energy_bounds(hdu):
     """ Reads and returns the energy bin edges from a FITs HDU
@@ -76,9 +79,9 @@ def write_maps(primary_map, maps, outfile, **kwargs):
 
     if primary_map is None:
         hdu_images = [fits.PrimaryHDU()]
-    else:        
+    else:
         hdu_images = [primary_map.create_primary_hdu()]
-        
+
     for k, v in sorted(maps.items()):
         hdu_images += [v.create_image_hdu(k, **kwargs)]
 
@@ -86,7 +89,12 @@ def write_maps(primary_map, maps, outfile, **kwargs):
     if energy_hdu:
         hdu_images += [energy_hdu]
 
-    hdulist = fits.HDUList(hdu_images)
+    write_hdus(hdu_images, outfile)
+
+
+def write_hdus(hdus, outfile):
+
+    hdulist = fits.HDUList(hdus)
     for h in hdulist:
         h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
         h.header['STVER'] = fermipy.get_st_version()
@@ -182,3 +190,23 @@ def write_tables_to_fits(filepath, tablelist, clobber=False,
     fits.HDUList(outhdulist).writeto(filepath, clobber=clobber)
     for rm in rmlist:
         os.unlink(rm)
+
+
+def dict_to_table(input_dict):
+
+    from astropy.table import Table, Column
+
+    cols = []
+
+    for k, v in sorted(input_dict.items()):
+
+        if isinstance(v, dict):
+            continue
+        elif isinstance(v, float):
+            cols += [Column(name=k, dtype='f8', data=np.array([v]))]
+        elif isinstance(v, bool):
+            cols += [Column(name=k, dtype=bool, data=np.array([v]))]
+        elif utils.isstr(v):
+            cols += [Column(name=k, dtype='S32', data=np.array([v]))]
+
+    return Table(cols)

@@ -55,7 +55,7 @@ def make_srcmap(skydir, psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
                                   xpix * rebin, ypix * rebin,
                                   psf_scale_fn)
     else:
-        raise Exception('Unrecognized spatial model: %s' % spatial_model)
+        raise Exception('Unsupported spatial model: %s' % spatial_model)
 
     if rebin > 1:
         k = utils.rebin_map(k, nebin, npix, rebin)
