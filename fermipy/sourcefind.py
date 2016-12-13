@@ -1,13 +1,17 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
+import os
 import copy
 import pprint
 import logging
 import numpy as np
+from astropy.io import fits
 from astropy.coordinates import SkyCoord
+from astropy.table import Table, Column
 import fermipy.config
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
+from fermipy import fits_utils
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
 from fermipy.skymap import Map
@@ -85,10 +89,10 @@ class SourceFinder(object):
 
         schema.add_option('search_skydir', None, '', SkyCoord)
         schema.add_option('search_minmax_radius', [None, 1.0], '', list)
-        
+
         config = utils.create_dict(self.config['sourcefind'],
                                    tsmap=self.config['tsmap'],
-                                   tscube=self.config['tscube'])        
+                                   tscube=self.config['tscube'])
         config = schema.create_config(config, **kwargs)
 
         # Defining default properties of test source model
@@ -167,14 +171,14 @@ class SourceFinder(object):
         sources_per_iter = kwargs.get('sources_per_iter')
         search_skydir = kwargs.get('search_skydir', None)
         search_minmax_radius = kwargs.get('search_minmax_radius', [None, 1.0])
-        tsmap_fitter = kwargs.get('tsmap_fitter','tsmap')
-        
+        tsmap_fitter = kwargs.get('tsmap_fitter', 'tsmap')
+
         if tsmap_fitter == 'tsmap':
             kw = kwargs.get('tsmap', {})
             kw['model'] = src_dict_template
             m = self.tsmap('%s_sourcefind_%02i' % (prefix, iiter),
                            **kw)
-            
+
         elif tsmap_fitter == 'tscube':
             kw = kwargs.get('tscube', {})
             kw['model'] = src_dict_template
@@ -226,7 +230,7 @@ class SourceFinder(object):
 
         # Re-fit spectral parameters of each source individually
         for name in new_src_names:
-            self.logger.info('Performing spectral fit for %s.',name)
+            self.logger.info('Performing spectral fit for %s.', name)
             self.logger.debug(pprint.pformat(self.roi[name].params))
             self.free_source(name, True)
             self.fit()
@@ -313,18 +317,55 @@ class SourceFinder(object):
         config = utils.create_dict(self.config['localize'],
                                    optimizer=self.config['optimizer'])
         config = schema.create_config(config, **kwargs)
-        
-        nstep = config['nstep']
-        dtheta_max = config['dtheta_max']
-        update = config['update']
-        newname = config['newname']
-        prefix = config['prefix']
 
         self.logger.info('Running localization for %s' % name)
+        loc = self._localize(name, **config)
+
+        self.logger.info('Finished localization.')
+
+        if config['make_plots']:
+            self._plotter.make_localization_plots(loc, self.roi,
+                                                  prefix=config['prefix'])
+
+        outfile = \
+            utils.format_filename(self.workdir, 'loc',
+                                  prefix=[config['prefix'],
+                                          name.lower().replace(' ', '_')])
+
+        if config['write_fits']:
+
+            # fits_utils.write_maps(scan_tsmap,
+            #                      {'TSMAP': o['tsmap']},
+            #                      fits_file)
+            loc['file'] = os.path.basename(outfile) + '.fits'
+            self._make_localize_fits(loc, outfile + '.fits',
+                                     **config)
+
+        return loc
+
+    def _make_localize_fits(self, loc, filename, **kwargs):
+
+        tab = fits_utils.dict_to_table(loc)
+        hdu_data = fits.table_to_hdu(tab)
+        hdu_data.name = 'LOC_DATA'
+
+        hdus = [loc['tsmap_peak'].create_primary_hdu(),
+                loc['tsmap'].create_image_hdu('TSMAP'),
+                hdu_data]
+
+        fits_utils.write_hdus(hdus, filename)
+
+    def _localize(self, name, **kwargs):
+
+        nstep = kwargs.get('nstep')
+        dtheta_max = kwargs.get('dtheta_max')
+        update = kwargs.get('update')
+        newname = kwargs.get('newname')
+        prefix = kwargs.get('prefix', '')
 
         saved_state = LikelihoodState(self.like)
 
-        if config['fix_background']:
+        if kwargs.get('fix_background'):
             self.free_sources(free=False, loglevel=logging.DEBUG)
 
         src = self.roi.copy_source(name)
@@ -343,20 +384,21 @@ class SourceFinder(object):
 
         # Fit baseline (point-source) model
         self.free_norm(name)
-        fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
+        fit_output = self._fit(loglevel=logging.DEBUG, **
+                               kwargs.get('optimizer', {}))
 
         # Save likelihood value for baseline fit
         loglike0 = fit_output['loglike']
-        self.logger.debug('Baseline Model Likelihood: %f',loglike0)
+        self.logger.debug('Baseline Model Likelihood: %f', loglike0)
 
         self.zero_source(name)
 
         o = {'name': name,
-             'config': config,
+             'config': kwargs,
              'fit_success': True,
              'loglike_base': loglike0,
-             'loglike_loc' : np.nan,
-             'dloglike_loc' : np.nan }
+             'loglike_loc': np.nan,
+             'dloglike_loc': np.nan}
 
         cdelt0 = np.abs(skywcs.wcs.cdelt[0])
         cdelt1 = np.abs(skywcs.wcs.cdelt[1])
@@ -378,23 +420,18 @@ class SourceFinder(object):
                        dloglike=np.zeros((nstep, nstep)),
                        dloglike_fit=np.zeros((nstep, nstep)))
 
-        for i, t in enumerate(scan_skydir):
-            model_name = '%s_localize' % (name.replace(' ', '').lower())
-            src.set_name(model_name)
-            src.set_position(t)
-            self.add_source(model_name, src, free=True,
-                            init_source=False, save_source_maps=False,
-                            loglevel=logging.DEBUG)
-            fit_output = self._fit(
-                loglevel=logging.DEBUG, **config['optimizer'])
+        src_loc = copy.deepcopy(src)
+        src_loc.set_name('%s_localize' % (name.lower().replace(' ', '_')))
 
-            loglike1 = fit_output['loglike']
-            lnlscan['loglike'].flat[i] = loglike1
-            self.delete_source(model_name, loglevel=logging.DEBUG)
-
+        loglike_vals = self._scan_position(src_loc, scan_skydir,
+                                           kwargs.get('optimizer', {}))
+        lnlscan['loglike'] = loglike_vals.reshape((nstep, nstep))
         lnlscan['dloglike'] = lnlscan['loglike'] - np.max(lnlscan['loglike'])
         scan_tsmap = Map(2.0 * lnlscan['dloglike'].T, scan_map.wcs)
-        
+
+        o['tsmap'] = tsmap['ts']
+        o['tsmap_peak'] = scan_tsmap
+
         self.unzero_source(name)
         saved_state.restore()
         self._sync_params(name)
@@ -403,9 +440,10 @@ class SourceFinder(object):
         scan_fit, new_skydir = fit_error_ellipse(scan_tsmap, dpix=3)
         o.update(scan_fit)
 
-        o['loglike_loc'] = np.max(lnlscan['loglike'])+0.5*scan_fit['offset']
+        o['loglike_loc'] = np.max(lnlscan['loglike']) + \
+            0.5 * scan_fit['offset']
         o['dloglike_loc'] = o['loglike_loc'] - o['loglike_base']
-        
+
         # lnlscan['dloglike_fit'] = \
         #   utils.parabola(np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
         #                  np.linspace(0,nstep-1.0,nstep)[np.newaxis,:],
@@ -448,12 +486,7 @@ class SourceFinder(object):
                              o['glon'], o['glat'],
                              o['offset'], o['r68'])
 
-        self.roi[name]['localize'] = copy.deepcopy(o)
-
-        if config['make_plots']:
-            self._plotter.make_localization_plots(o, tsmap, self.roi,
-                                                  prefix=prefix,
-                                                  skydir=scan_skydir)
+#        self.roi[name]['localize'] = copy.deepcopy(o)
 
         if update and o['fit_success']:
             self.logger.info('Updating source %s '
@@ -467,11 +500,10 @@ class SourceFinder(object):
             o['loglike_loc'] = fit_output['loglike']
             o['dloglike_loc'] = o['loglike_loc'] - o['loglike_base']
             src = self.roi.get_source_by_name(newname)
-            self.roi[newname]['localize'] = copy.deepcopy(o)
+#            self.roi[newname]['localize'] = copy.deepcopy(o)
             self.logger.info('LogLike: %12.3f DeltaLogLike: %12.3f',
-                             o['loglike_loc'],o['dloglike_loc'])
+                             o['loglike_loc'], o['dloglike_loc'])
 
-        if o['fit_success']:
             src = self.roi.get_source_by_name(newname)
             src['pos_sigma'] = o['sigma']
             src['pos_sigma_semimajor'] = o['sigma_semimajor']
@@ -481,7 +513,6 @@ class SourceFinder(object):
             src['pos_r99'] = o['r99']
             src['pos_angle'] = np.degrees(o['theta'])
 
-        self.logger.info('Finished localization.')
         return o
 
     def _localize_tscube(self, name, **kwargs):
@@ -500,7 +531,7 @@ class SourceFinder(object):
         self.zero_source(name)
         tscube = self.tscube(utils.join_strings([prefix,
                                                  name.lower().
-                                                replace(' ', '_')]),
+                                                 replace(' ', '_')]),
                              wcs=wp.wcs, npix=wp.npix,
                              remake_test_source=False)
         self.unzero_source(name)
@@ -530,7 +561,7 @@ class SourceFinder(object):
         skydir = src.skydir
         skywcs = self._skywcs
         tsmap = self.tsmap(utils.join_strings([prefix, name.lower().
-                                              replace(' ', '_')]),
+                                               replace(' ', '_')]),
                            model=src.data,
                            map_skydir=skydir,
                            map_size=2.0 * dtheta_max,
@@ -548,5 +579,42 @@ class SourceFinder(object):
         o['ypix'] = float(pix[1])
         return o, tsmap
 
-    def _localize_pylike(self, name, **kwargs):
-        pass
+    def _scan_position_pylike(self, src, skydir, optimizer):
+
+        name = src.name
+        loglike = []
+
+        skydir = skydir.transform_to('icrs')
+        for ra, dec in zip(skydir.ra.deg, skydir.dec.deg):
+
+            src.set_radec(ra, dec)
+            self.add_source(name, src, free=True,
+                            init_source=False, save_source_maps=False,
+                            loglevel=logging.DEBUG)
+            fit_output = self._fit(loglevel=logging.DEBUG,
+                                   **optimizer)
+
+            loglike += [fit_output['loglike']]
+            self.delete_source(name, loglevel=logging.DEBUG)
+
+        return np.array(loglike)
+
+    def _scan_position(self, src, skydir, optimizer):
+
+        self.add_source(src.name, src, free=True,
+                        init_source=False, save_source_maps=False,
+                        loglevel=logging.DEBUG)
+
+        loglike = []
+        skydir = skydir.transform_to('icrs')
+        for ra, dec in zip(skydir.ra.deg, skydir.dec.deg):
+
+            src.set_radec(ra, dec)
+            self._update_srcmap(src.name, src)
+            fit_output = self._fit(loglevel=logging.DEBUG,
+                                   **optimizer)
+
+            loglike += [fit_output['loglike']]
+
+        self.delete_source(src.name, loglevel=logging.DEBUG)
+        return np.array(loglike)

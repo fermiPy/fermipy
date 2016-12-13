@@ -787,10 +787,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 rm['components'][i]['model_counts'] += mc[i]
                 rm['components'][i]['npred'] += np.sum(mc[i])
 
-    def _update_srcmap(self, name, skydir, spatial_model, spatial_width):
+    def _update_srcmap(self, name, src):
 
         for c in self.components:
-            c._update_srcmap(name, skydir, spatial_model, spatial_width)
+            c._update_srcmap(name, src)
 
         if self._fitcache is not None:
             self._fitcache.update_source(name)
@@ -1211,8 +1211,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         src = self.roi.get_source_by_name(name)
         src.update_data({'sed': None,
-                         'extension': None,
-                         'localize': None})
+                         'extension': None})
         sd = self.get_src_model(name, paramsonly=True)
         src.update_data(sd)
 
@@ -2519,8 +2518,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         loglike = []
         for i, w in enumerate(width[1:]):
-            self._update_srcmap(src.name, self.roi[src.name].skydir,
-                                spatial_model, w)
+
+            src.set_spatial_model(spatial_model, w)
+            self._update_srcmap(src.name, src)
             fit_output = self._fit(**optimizer)
             self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
                               w,fit_output['loglike'])
@@ -5387,13 +5387,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             srcmap_utils.update_source_maps(self.files['srcmap'], srcmaps,
                                             logger=self.logger)
 
-    def _update_srcmap(self, name, skydir, spatial_model, spatial_width):
+    def _update_srcmap(self, name, src):
 
-        src = self.roi[name]        
+        skydir = src.skydir
+        spatial_model = src['SpatialModel']
+        spatial_width = src['SpatialWidth']
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
         xpix -= (self.npix - 1.0) / 2.
         ypix -= (self.npix - 1.0) / 2.
-        rebin = min(int(np.ceil(self.binsz/0.01)),8)        
+        rebin = min(int(np.ceil(self.binsz/0.01)),8)
         k = srcmap_utils.make_srcmap(self.roi.skydir, self._psf, spatial_model,
                                      spatial_width,
                                      npix=self.npix, xpix=xpix, ypix=ypix,

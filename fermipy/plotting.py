@@ -31,17 +31,18 @@ from fermipy.skymap import Map, HpxMap
 from fermipy.logger import Logger
 from fermipy.logger import log_level
 
-def truncate_colormap( cmap, minval=0.0, maxval=1.0, n=256 ):
+
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=256):
     """Function that extracts a subset of a colormap.
     """
     if minval is None:
         minval = 0.0
     if maxval is None:
         maxval = 0.0
-    
+
     name = "%s-trunc-%.2g-%.2g" % (cmap.name, minval, maxval)
     return LinearSegmentedColormap.from_list(
-        name, cmap( np.linspace( minval, maxval, n )))
+        name, cmap(np.linspace(minval, maxval, n)))
 
 
 def get_xerr(sed):
@@ -178,9 +179,37 @@ def annotate(**kwargs):
                 ha='left', va='top')
 
 
+def plot_error_ellipse(fit, xy, cdelt, **kwargs):
+
+    ax = kwargs.pop('ax', plt.gca())
+    color = kwargs.pop('color', 'k')
+    sigma = fit['sigma']
+    sigmax = fit['sigma_semimajor']
+    sigmay = fit['sigma_semiminor']
+    theta = fit['theta']
+    r68 = fit['r68']
+    r99 = fit['r99']
+
+    e0 = Ellipse(xy=(float(xy[0]), float(xy[1])),
+                 width=2.0 * sigmax / cdelt[0] * r68 / sigma,
+                 height=2.0 * sigmay / cdelt[1] * r68 / sigma,
+                 angle=-np.degrees(theta),
+                 facecolor='None', **kwargs)
+
+    e1 = Ellipse(xy=(float(xy[0]), float(xy[1])),
+                 width=2.0 * sigmax / cdelt[0] * r99 / sigma,
+                 height=2.0 * sigmay / cdelt[1] * r99 / sigma,
+                 angle=-np.degrees(theta),
+                 facecolor='None', edgecolor=color)
+
+    ax.add_artist(e0)
+    ax.add_artist(e1)
+    ax.plot(float(xy[0]), float(xy[1]), marker='x', color=color)
+
+
 class ImagePlotter(object):
 
-    def __init__(self, data, proj, mapping = None):
+    def __init__(self, data, proj, mapping=None):
 
         if isinstance(proj, WCS):
             self._projtype = 'WCS'
@@ -194,17 +223,20 @@ class ImagePlotter(object):
         elif isinstance(proj, hpx_utils.HPX):
             self._projtype = 'HPX'
             self._proj = proj
-            self._wcsproj = proj.make_wcs(naxis=2,proj='AIT',energies=None,oversample=2)
+            self._wcsproj = proj.make_wcs(
+                naxis=2, proj='AIT', energies=None, oversample=2)
             self._wcs = self._wcsproj.wcs
             if mapping is None:
-                self._mapping = hpx_utils.HpxToWcsMapping(self._proj,self._wcsproj)
+                self._mapping = hpx_utils.HpxToWcsMapping(
+                    self._proj, self._wcsproj)
             else:
                 self._mapping = mapping
             if data.ndim == 2:
                 hpx_data = np.sum(copy.deepcopy(data), axis=0)
             else:
                 hpx_data = copy.deepcopy(data)
-            data = self._mapping.make_wcs_data_from_hpx_data(hpx_data,self._wcsproj,normalize=False)
+            data = self._mapping.make_wcs_data_from_hpx_data(
+                hpx_data, self._wcsproj, normalize=False)
         else:
             raise Exception("Can't plot map of unknown type %s" % type(proj))
 
@@ -246,7 +278,7 @@ class ImagePlotter(object):
             colormap = plt.get_cmap(cmap)
         except:
             colormap = plt.get_cmap('ds9_b')
-            
+
         colormap.set_under(colormap(0))
 
         data = copy.copy(self._data)
@@ -264,9 +296,8 @@ class ImagePlotter(object):
 
         if self._projtype == "WCS":
             coordsys = wcs_utils.get_coordsys(self._proj)
-        else: 
+        else:
             coordsys = "GAL"
-
 
         if coordsys == 'CEL':
             ax.set_xlabel('RA')
@@ -320,9 +351,11 @@ class ROIPlotter(fermipy.config.Configurable):
         elif isinstance(data_map, HpxMap):
             self._projtype = 'HPX'
             self._proj = data_map.hpx
-            self._wcsproj = self._proj.make_wcs(naxis=2,proj='AIR',energies=None,oversample=2)
+            self._wcsproj = self._proj.make_wcs(
+                naxis=2, proj='AIR', energies=None, oversample=2)
             self._wcs = self._wcsproj.wcs
-            self._mapping = hpx_utils.HpxToWcsMapping(self._proj,self._wcsproj)
+            self._mapping = hpx_utils.HpxToWcsMapping(
+                self._proj, self._wcsproj)
             self._data = dataT.T
         else:
             raise Exception(
@@ -557,7 +590,6 @@ class ROIPlotter(fermipy.config.Configurable):
         for r in graticule_radii:
             self.draw_circle(self.cmap.skydir, r)
 
-
     def draw_circle(self, skydir, radius):
 
         # coordsys = wcs_utils.get_coordsys(self.proj)
@@ -604,7 +636,7 @@ class SEDPlotter(object):
     @property
     def sed(self):
         return self._sed
-        
+
     @staticmethod
     def get_ylims(sed):
 
@@ -626,17 +658,17 @@ class SEDPlotter(object):
         cmap_trunc_lo = kwargs.pop('cmap_trunc_lo', None)
         cmap_trunc_hi = kwargs.pop('cmap_trunc_hi', None)
 
-        ylim = kwargs.pop('ylim',None)
+        ylim = kwargs.pop('ylim', None)
 
         if ylim is None:
             fmin, fmax = SEDPlotter.get_ylims(sed)
         else:
             fmin, fmax = np.log10(ylim)
-            
+
         fluxM = np.arange(fmin, fmax, 0.01)
         fbins = len(fluxM)
         llhMatrix = np.zeros((len(sed['e_ctr']), fbins))
-        
+
         # loop over energy bins
         for i in range(len(sed['e_ctr'])):
             m = sed['norm_scan'][i] > 0
@@ -644,18 +676,18 @@ class SEDPlotter(object):
             flux = np.log10(e2dnde_scan)
             logl = sed['dloglike_scan'][i][m]
             logl -= np.max(logl)
-            try:            
-                fn = interpolate.interp1d(flux,logl, fill_value='extrapolate')
+            try:
+                fn = interpolate.interp1d(flux, logl, fill_value='extrapolate')
                 logli = fn(fluxM)
             except:
-                logli = np.interp(fluxM,flux,logl)
+                logli = np.interp(fluxM, flux, logl)
             llhMatrix[i, :] = logli
 
         cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
-        #cmap.set_under('w')
+        # cmap.set_under('w')
 
-        if cmap_trunc_lo is not None or cmap_trunc_hi is not None:        
-            cmap = truncate_colormap(cmap,cmap_trunc_lo,cmap_trunc_hi,1024)
+        if cmap_trunc_lo is not None or cmap_trunc_hi is not None:
+            cmap = truncate_colormap(cmap, cmap_trunc_lo, cmap_trunc_hi, 1024)
 
         xedge = 10**np.insert(sed['loge_max'], 0, sed['loge_min'][0])
         yedge = np.logspace(fmin, fmax, fbins)
@@ -674,14 +706,14 @@ class SEDPlotter(object):
     @staticmethod
     def plot_flux_points(sed, **kwargs):
 
-        ax = kwargs.pop('ax',plt.gca())
-        
+        ax = kwargs.pop('ax', plt.gca())
+
         ul_ts_threshold = kwargs.pop('ul_ts_threshold', 4)
 
         kw = {}
-        kw['marker'] = kwargs.get('marker','o')
-        kw['linestyle'] = kwargs.get('linestyle','None')
-        kw['color'] = kwargs.get('color','k')
+        kw['marker'] = kwargs.get('marker', 'o')
+        kw['linestyle'] = kwargs.get('linestyle', 'None')
+        kw['color'] = kwargs.get('color', 'k')
 
         fmin, fmax = SEDPlotter.get_ylims(sed)
 
@@ -711,8 +743,8 @@ class SEDPlotter(object):
     @staticmethod
     def plot_resid(src, model_flux, **kwargs):
 
-        ax = kwargs.pop('ax',plt.gca())
-        
+        ax = kwargs.pop('ax', plt.gca())
+
         sed = src['sed']
 
         m = sed['ts'] < 4
@@ -734,7 +766,7 @@ class SEDPlotter(object):
     @staticmethod
     def plot_model(model_flux, **kwargs):
 
-        ax = kwargs.pop('ax',plt.gca())
+        ax = kwargs.pop('ax', plt.gca())
 
         color = kwargs.pop('color', 'k')
         noband = kwargs.pop('noband', False)
@@ -762,8 +794,8 @@ class SEDPlotter(object):
 
         if not 'name' in sed:
             return
-        
-        ax = kwargs.pop('ax',plt.gca())
+
+        ax = kwargs.pop('ax', plt.gca())
         ax.annotate(sed['name'],
                     xy=xy,
                     xycoords='axes fraction', fontsize=12,
@@ -779,7 +811,7 @@ class SEDPlotter(object):
         showlnl : bool        
             Overlay a map of the delta-loglikelihood values vs. flux
             in each energy bin.
-        
+
         cmap : str        
             Colormap that will be used for the delta-loglikelihood
             map.
@@ -790,10 +822,10 @@ class SEDPlotter(object):
         ul_ts_threshold : float        
             TS threshold that determines whether the MLE or UL
             is plotted in each energy bin.
-            
+
         """
-        
-        ax = kwargs.pop('ax',plt.gca())
+
+        ax = kwargs.pop('ax', plt.gca())
         cmap = kwargs.get('cmap', 'BuGn')
 
         SEDPlotter.annotate(sed, ax=ax)
@@ -814,8 +846,8 @@ class SEDPlotter(object):
         ax.set_ylabel('E$^{2}$dN/dE [MeV cm$^{-2}$ s$^{-1}$]')
 
     def plot(self, showlnl=False, **kwargs):
-        return SEDPlotter.plot_sed(self.sed,showlnl,**kwargs)
-        
+        return SEDPlotter.plot_sed(self.sed, showlnl, **kwargs)
+
 
 class ExtensionPlotter(object):
 
@@ -921,7 +953,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         """
 
-        
         fmt = kwargs.get('format', self.config['format'])
         workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
         zoom = kwargs.get('zoom', None)
@@ -950,7 +981,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         # make and draw histogram
         fig, ax = plt.subplots()
-        nBins=np.linspace(-6,6,121)
+        nBins = np.linspace(-6, 6, 121)
         #import pdb; pdb.set_trace()
         data = np.nan_to_num(maps['sigma'].counts.T)
         # find best fit parameters
@@ -967,14 +998,13 @@ class AnalysisPlotter(fermipy.config.Configurable):
         ax.plot(bins, y, 'r--', linewidth=2)
         y = mlab.normpdf(bins, 0.0, 1.0)
         ax.plot(bins, y, 'k', linewidth=1)
-        
-        
+
         # labels and such
         ax.set_xlabel(r'Significance ($\sigma$)')
         ax.set_ylabel('Probability')
         paramtext = 'Gaussian fit:\n'
-        paramtext += '$\\mu=%.2f$\n'%mu
-        paramtext += '$\\sigma=%.2f$'%sigma
+        paramtext += '$\\mu=%.2f$\n' % mu
+        paramtext += '$\\sigma=%.2f$' % sigma
         ax.text(0.05, 0.95, paramtext, verticalalignment='top',
                 horizontalalignment='left', transform=ax.transAxes)
 
@@ -1074,7 +1104,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         # make and draw histogram
         fig, ax = plt.subplots()
-        bins=np.linspace(0,25,101)
+        bins = np.linspace(0, 25, 101)
 
         data = np.nan_to_num(maps['ts'].counts.T)
         data[data > 25.0] = 25.0
@@ -1082,8 +1112,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         n, bins, patches = ax.hist(data.flatten(), bins, normed=True,
                                    histtype='stepfilled',
                                    facecolor='green', alpha=0.75)
-        #ax.plot(bins,(1-chi2.cdf(x,dof))/2.,**kwargs)
-        ax.plot(bins,0.5*chi2.pdf(bins,1.0),color='k',
+        # ax.plot(bins,(1-chi2.cdf(x,dof))/2.,**kwargs)
+        ax.plot(bins, 0.5 * chi2.pdf(bins, 1.0), color='k',
                 label=r"$\chi^2_{1} / 2$")
         ax.set_yscale('log')
         ax.set_ylim(1E-4)
@@ -1294,91 +1324,96 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.savefig(outfile)
         plt.close(fig)
 
-    def make_localization_plots(self, loc, tsmap, roi=None, **kwargs):
+    def make_localization_plots(self, loc, roi=None, **kwargs):
 
         fmt = kwargs.get('format', self.config['format'])
         prefix = kwargs.get('prefix', '')
         skydir = kwargs.get('skydir', None)
-        name = loc.get('name','')
-        
-        tsmap_renorm = copy.deepcopy(tsmap['ts'])
-        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+        name = loc.get('name', '')
         name = name.lower().replace(' ', '_')
+
+        tsmap = loc['tsmap']
+        tsmap_fit = loc['tsmap_fit']
+        tsmap_renorm = copy.deepcopy(tsmap)
+        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+
+        skydir = loc['tsmap_peak'].get_pixel_skydirs()
 
         p = ROIPlotter(tsmap_renorm, roi=roi)
         fig = plt.figure()
 
+        vmin = max(-50.0, np.min(tsmap_renorm.data))
+
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
-               cmap='BuGn', vmin=-50.0,
+               cmap='BuGn', vmin=vmin,
                interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
 
-        cdelt0 = np.abs(tsmap['ts'].wcs.wcs.cdelt[0])
-        cdelt1 = np.abs(tsmap['ts'].wcs.wcs.cdelt[1])
-
-        tsmap_fit = loc['tsmap_fit']
-
+        cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
+        cdelt1 = np.abs(tsmap.wcs.wcs.cdelt[1])
+        cdelt = [cdelt0, cdelt1]
         peak_skydir = SkyCoord(tsmap_fit['glon'], tsmap_fit['glat'],
                                frame='galactic', unit='deg')
-        peak_pix = peak_skydir.to_pixel(tsmap_renorm.wcs)
-        peak_r68 = tsmap_fit['r68']
-        peak_r99 = tsmap_fit['r99']
-
         scan_skydir = SkyCoord(loc['glon'], loc['glat'],
                                frame='galactic', unit='deg')
+        peak_pix = peak_skydir.to_pixel(tsmap_renorm.wcs)
         scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
 
         if skydir is not None:
             pix = skydir.to_pixel(tsmap_renorm.wcs)
-            plt.gca().plot(pix[0], pix[1], linestyle='None',
-                           marker='+', color='r')
+            # plt.gca().plot(pix[0], pix[1], linestyle='None',
+            #               marker='+', color='r')
+
+            xmin = np.min(pix[0])
+            ymin = np.min(pix[1])
+            xwidth = np.max(pix[0]) - xmin
+            ywidth = np.max(pix[1]) - ymin
+
+            from matplotlib.patches import Rectangle
+            r = Rectangle((xmin, ymin), xwidth, ywidth,
+                          edgecolor='r', facecolor='none')
+            plt.gca().add_patch(r)
 
         if np.isfinite(float(peak_pix[0])):
-            sigma = tsmap_fit['sigma']
-            sigmax = tsmap_fit['sigma_semimajor']
-            sigmay = tsmap_fit['sigma_semiminor']
-            theta = tsmap_fit['theta']
-
-            e0 = Ellipse(xy=(float(peak_pix[0]), float(peak_pix[1])),
-                         width=2.0 * sigmax / cdelt0 * peak_r68 / sigma,
-                         height=2.0 * sigmay / cdelt1 * peak_r68 / sigma,
-                         angle=-np.degrees(theta),
-                         facecolor='None', edgecolor='k')
-
-            e1 = Ellipse(xy=(float(peak_pix[0]), float(peak_pix[1])),
-                         width=2.0 * sigmax / cdelt0 * peak_r99 / sigma,
-                         height=2.0 * sigmay / cdelt1 * peak_r99 / sigma,
-                         angle=-np.degrees(theta),
-                         facecolor='None', edgecolor='k')
-
-            plt.gca().add_artist(e0)
-            plt.gca().add_artist(e1)
-            plt.gca().plot(float(peak_pix[0]), float(peak_pix[1]),
-                           marker='x', color='k')
+            plot_error_ellipse(tsmap_fit, peak_pix, cdelt, edgecolor='k',
+                               color='k')
 
         if np.isfinite(float(scan_pix[0])):
-            sigmax = loc['sigma_semimajor']
-            sigmay = loc['sigma_semiminor']
-
-            e0 = Ellipse(xy=(float(scan_pix[0]), float(scan_pix[1])),
-                         width=2.0 * sigmax / cdelt0 * loc['r68'] / loc['sigma'],
-                         height=2.0 * sigmay / cdelt1 * loc['r68'] / loc['sigma'],
-                         angle=-np.degrees(loc['theta']),
-                         facecolor='None', edgecolor='r')
-
-            e1 = Ellipse(xy=(float(scan_pix[0]), float(scan_pix[1])),
-                         width=2.0 * sigmax / cdelt0 * loc['r99'] / loc['sigma'],
-                         height=2.0 * sigmay / cdelt1 * loc['r99'] / loc['sigma'],
-                         angle=-np.degrees(loc['theta']),
-                         facecolor='None', edgecolor='r')
-
-            plt.gca().add_artist(e0)
-            plt.gca().add_artist(e1)
-
-            plt.gca().plot(float(scan_pix[0]), float(scan_pix[1]),
-                           marker='x', color='r')
+            plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='r',
+                               color='r')
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'localize', prefix=[prefix, name],
+                                        extension=fmt)
+
+        plt.savefig(outfile)
+        plt.close(fig)
+
+        tsmap = loc['tsmap_peak']
+        tsmap_renorm = copy.deepcopy(tsmap)
+        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+
+        p = ROIPlotter(tsmap_renorm, roi=roi)
+        fig = plt.figure()
+
+        vmin = max(-50.0, np.min(tsmap_renorm.data))
+
+        p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
+               cmap='BuGn', vmin=vmin,
+               interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
+
+        cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
+        cdelt1 = np.abs(tsmap.wcs.wcs.cdelt[1])
+        cdelt = [cdelt0, cdelt1]
+        scan_skydir = SkyCoord(loc['glon'], loc['glat'],
+                               frame='galactic', unit='deg')
+        scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
+
+        if np.isfinite(float(scan_pix[0])):
+            plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='r',
+                               color='r')
+
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
+                                        'localize_peak', prefix=[prefix, name],
                                         extension=fmt)
 
         plt.savefig(outfile)
