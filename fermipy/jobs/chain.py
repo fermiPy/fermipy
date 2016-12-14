@@ -314,12 +314,12 @@ class Link(object):
     @property
     def input_files(self):
         """ Returns a list of the input files needed by this link """
-        return self.input_file_dict.values()
+        return sorted(self.input_file_dict.values())
 
     @property
     def output_files(self):
         """ Returns a list of the input files produced by this link """
-        return self.output_file_dict.values()
+        return sorted(self.output_file_dict.values())
 
     def check_input_files(self):
         """ Check if input files exist """
