@@ -1,7 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 
-from fermipy.jobs.gt_chain import Link, Gtlink, Chain
+from fermipy.jobs.chain import Link, Gtlink, Chain
 
 
 def test_comlink():

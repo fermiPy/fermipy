@@ -202,19 +202,22 @@ class JobDetails(object):
         rmfile_refs = np.zeros((2), int)
         f_ptr = len(table_ids['file_id'])
         infile_refs[0] = f_ptr
-        for fid in self.infile_ids:
-            table_ids.add_row(dict(file_id=fid))
-            f_ptr += 1
+        if self.infile_ids is not None:
+            for fid in self.infile_ids:
+                table_ids.add_row(dict(file_id=fid))
+                f_ptr += 1
         infile_refs[1] = f_ptr
         outfile_refs[0] = f_ptr
-        for fid in self.outfile_ids:
-            table_ids.add_row(dict(file_id=fid))
-            f_ptr += 1
+        if self.outfile_ids is not None:
+            for fid in self.outfile_ids:
+                table_ids.add_row(dict(file_id=fid))
+                f_ptr += 1
         outfile_refs[1] = f_ptr
         rmfile_refs[0] = f_ptr
-        for fid in self.rmfile_ids:
-            table_ids.add_row(dict(file_id=fid))
-            f_ptr += 1
+        if self.rmfile_ids is not None:
+            for fid in self.rmfile_ids:
+                table_ids.add_row(dict(file_id=fid))
+                f_ptr += 1
         rmfile_refs[1] = f_ptr
 
         table.add_row(dict(dbkey=self.dbkey,
@@ -295,6 +298,7 @@ class JobArchive(object):
         job_config = kwargs.get('job_config', None)
         if job_config is None:
             job_config = link.args
+        status = kwargs.get('status', JobStatus.no_job)
         job_details = JobDetails(jobname=link.linkname,
                                  jobkey=key,
                                  appname=link.appname,

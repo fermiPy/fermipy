@@ -20,8 +20,8 @@ def test_job_details():
                      rm_ids=[3],
                      status=JobStatus.no_job)
     job_dict = {job.dbkey:job}
-    table = JobDetails.make_table(job_dict)
-    job_dict2 = JobDetails.make_dict(table)    
+    table, table_ids = JobDetails.make_tables(job_dict)
+    job_dict2 = JobDetails.make_dict(table, table_ids)    
     job2 = job_dict2[job.dbkey]
     
     assert(job.jobname == job2.jobname)
@@ -62,10 +62,10 @@ def test_job_archive():
                     outfile2='output2_2.fits')
 
     link.update_args(config_1)
-    job = job_archive.register_job_from_link(link, 'dummy1', 'dummy1.log')
+    job = job_archive.register_job_from_link(link, 'dummy1', logfile='dummy1.log')
     
     link.update_args(config_2)
-    job2 = job_archive.register_job_from_link(link, 'dummy2', 'dummy2.log')
+    job2 = job_archive.register_job_from_link(link, 'dummy2', logfile='dummy2.log')
     
     
 if __name__ == '__main__':
