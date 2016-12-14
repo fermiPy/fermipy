@@ -31,7 +31,8 @@ def test_chain():
                   flags=['gzip'],
                   input_file_args=['expcube', 'cmap', 'bexpmap', 'srcmdl'],
                   output_file_args=['outfile'])
-    gtlink = Gtlink('gtsrcmaps', **kwargs)
+    # This should be a Gtlink, but we only really wanna test the chain functionality here
+    link2 = Link('gtsrcmaps', **kwargs)
 
     def argmapper(args):
         basename = args.basename
@@ -42,6 +43,6 @@ def test_chain():
         return ret_dict
 
     chain = Chain('chain', 
-                  links=[link, gtlink], 
+                  links=[link, link2], 
                   options=dict(basename=None))
     
