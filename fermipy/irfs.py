@@ -15,6 +15,7 @@ from fermipy import utils
 from fermipy import spectrum
 from fermipy.utils import edge_to_center
 from fermipy.utils import edge_to_width
+from fermipy.utils import sum_bins
 from fermipy.skymap import HpxMap
 from fermipy.hpx_utils import HPX
 from fermipy.ltcube import LTCube
@@ -47,13 +48,6 @@ def loglog_quad(x,y,dim):
     xs1[dim] = slice(1,None)
     log_ratio = np.log(x[xs1]/x[xs0])    
     return 0.5*(y[ys0]*x[xs0] + y[ys1]*x[xs1])*log_ratio
-
-
-def sum_bins(x,dim,npts):
-    if npts <= 1:
-        return x    
-    shape = x.shape[:dim] + (int(x.shape[dim]/npts),npts) + x.shape[dim+1:]
-    return np.sum(x.reshape(shape),axis=dim+1)
 
 
 def bins_per_dec(edges):

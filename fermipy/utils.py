@@ -1355,14 +1355,15 @@ def convolve2d_gauss(fn, r, sig, nstep=200):
     return s
 
 
-def make_pixel_offset(npix, xpix=0.0, ypix=0.0):
-    """Make a 2D array with the distance of each pixel from a
-    reference direction in pixel coordinates.  Pixel coordinates are
-    defined such that (0,0) is located at the center of the coordinate
-    grid."""
+def make_pixel_distance(npix, xpix=0.0, ypix=0.0):
+    """Make a 2D array with the distance of each pixel from a reference
+    direction (xpix,ypix) in pixel coordinates.  Pixel coordinates are
+    defined such that (0,0) is located at the center of the corner
+    pixel.
 
-    dx = np.abs(np.linspace(0, npix - 1, npix) - (npix - 1) / 2. - xpix)
-    dy = np.abs(np.linspace(0, npix - 1, npix) - (npix - 1) / 2. - ypix)
+    """
+    dx = np.linspace(0, npix - 1, npix) - xpix
+    dy = np.linspace(0, npix - 1, npix) - ypix
     dxy = np.zeros((npix, npix))
     dxy += np.sqrt(dx[np.newaxis, :] ** 2 + dy[:, np.newaxis] ** 2)
 
@@ -1384,7 +1385,7 @@ def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
 
     fn = lambda t, s: 1. / (2 * np.pi * s ** 2) * np.exp(
         -t ** 2 / (s ** 2 * 2.0))
-    dxy = make_pixel_offset(npix, xpix, ypix)
+    dxy = make_pixel_distance(npix, xpix, ypix)
     k = fn(dxy, sigma)
     k /= (np.sum(k) * np.radians(cdelt) ** 2)
 
@@ -1404,7 +1405,7 @@ def make_disk_kernel(radius, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     radius /= cdelt
     fn = lambda t, s: 0.5 * (np.sign(s - t) + 1.0)
 
-    dxy = make_pixel_offset(npix, xpix, ypix)
+    dxy = make_pixel_distance(npix, xpix, ypix)
     k = fn(dxy, radius)
     k /= (np.sum(k) * np.radians(cdelt) ** 2)
 
@@ -1427,7 +1428,7 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
     dtheta = psf.dtheta
     egy = psf.energies
 
-    x = make_pixel_offset(npix, xpix, ypix)
+    x = make_pixel_distance(npix, xpix, ypix)
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
@@ -1460,7 +1461,7 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
     dtheta = psf.dtheta
     egy = psf.energies
 
-    x = make_pixel_offset(npix, xpix, ypix)
+    x = make_pixel_distance(npix, xpix, ypix)
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
@@ -1493,7 +1494,7 @@ def make_psf_kernel(psf, npix, cdelt, xpix, ypix, psf_scale_fn=None, normalize=F
     """
 
     egy = psf.energies
-    x = make_pixel_offset(npix, xpix, ypix)
+    x = make_pixel_distance(npix, xpix, ypix)
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
@@ -1516,3 +1517,10 @@ def rebin_map(k, nebin, npix, rebin):
     k /= rebin ** 2
 
     return k
+
+
+def sum_bins(x,dim,npts):
+    if npts <= 1:
+        return x
+    shape = x.shape[:dim] + (int(x.shape[dim]/npts),npts) + x.shape[dim+1:]
+    return np.sum(x.reshape(shape),axis=dim+1)
