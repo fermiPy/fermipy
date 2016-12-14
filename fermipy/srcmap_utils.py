@@ -1,12 +1,158 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
+import copy
 import numpy as np
+from scipy.ndimage import map_coordinates
+from scipy.ndimage.interpolation import spline_filter
+from scipy.ndimage.interpolation import shift
 import astropy.io.fits as pyfits
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 
 
-def make_srcmap(skydir, psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
+class MapInterpolator(object):
+    """Object that can efficiently generate source maps by
+    interpolation of a map object."""
+
+    def __init__(self, data, pix_ref, pix_pad, rebin):
+
+        # Trim data Array
+        # self._slices = [slice(None),
+        #                slice(10, data.shape[1]-10),
+        #                slice(10, data.shape[2]-10)]
+
+        self._shape = (data.shape[0], data.shape[
+                       1] / rebin, data.shape[2] / rebin)
+        self._data = data
+        self._data_spline = []
+        for i in range(data.shape[0]):
+            self._data_spline += [spline_filter(self._data[i], order=2)]
+
+        self._axes = []
+        for i in range(data.ndim):
+            self._axes += [np.arange(0, data.shape[i], dtype=float)]
+
+        self._coords = np.meshgrid(*self._axes[1:], indexing='ij')
+        self._rebin = rebin
+        self._pix_ref = pix_ref
+        self._pix_pad = pix_pad
+
+    @property
+    def slices(self):
+        return self._slices
+
+    def shift_to_coords(self, pix):
+        """Create a new map that is shifted to the pixel coordinates
+        ``pix``."""
+
+        pix = pix - self._pix_pad
+
+        coords = copy.deepcopy(self._coords)
+        dpix = np.zeros(2)
+        for i in range(len(coords)):
+            coords[i] -= self._rebin * pix[i] - self._pix_ref[i]
+            dpix[i] = self._rebin * pix[i] - self._pix_ref[i]
+
+        k = np.zeros(self._data.shape)
+        for i in range(k.shape[0]):
+            k[i] = shift(self._data_spline[i], dpix, cval=0.0,
+                         order=2, prefilter=False)
+        t1 = time.time()
+        print(t1 - t0)
+
+        k = utils.sum_bins(k, 1, self._rebin)
+        k = utils.sum_bins(k, 2, self._rebin)
+        return k
+
+
+class SourceMapCache(object):
+    """Object that can efficiently generate source maps by
+    interpolation of a map object."""
+
+    def __init__(self, m0, m1):
+        self._m0 = m0
+        self._m1 = m1
+
+    def create_map(self, pix):
+        """Create a new map that is shifted to the pixel coordinates
+        ``pix``."""
+
+        m0 = self._m0.shift_to_coords(pix)
+        m1 = self._m1.shift_to_coords(pix)
+
+        return m0, m1
+
+        m.data[self._m1.slices] = self._m1.shift_to_coords(pix)
+
+        return k
+
+        coords = copy.deepcopy(self._coords)
+        dpix = np.zeros(2)
+        for i in range(len(coords)):
+            coords[i] -= self._rebin * pix[i] - self._pix_ref[i]
+            dpix[i] = self._rebin * pix[i] - self._pix_ref[i]
+
+        k = np.zeros(self._data.shape)
+        k2 = np.zeros(self._data.shape)
+
+        import time
+
+        t0 = time.time()
+        for i in range(k.shape[0]):
+            k[i] = map_coordinates(self._data_spline[i], coords, cval=0.0,
+                                   order=2, prefilter=False)
+        t1 = time.time()
+        print(t1 - t0)
+
+        t0 = time.time()
+        for i in range(k.shape[0]):
+            k2[i] = shift(self._data_spline[i], dpix, cval=0.0,
+                          order=1, prefilter=False)
+        t1 = time.time()
+        print(t1 - t0)
+
+        k = utils.sum_bins(k, 1, self._rebin)
+        k = utils.sum_bins(k, 2, self._rebin)
+        k2 = utils.sum_bins(k2, 1, self._rebin)
+        k2 = utils.sum_bins(k2, 2, self._rebin)
+
+        return k, k2
+
+    @staticmethod
+    def create(psf, spatial_model, spatial_width, npix, cdelt,
+               rebin=4):
+
+        xpix = (npix - 1.0) / 2.
+        ypix = (npix - 1.0) / 2.
+        pix_ref = np.array([ypix, xpix])
+        pix_pad = np.array([0.0, 0.0])
+
+        k0 = make_srcmap(psf, spatial_model, spatial_width,
+                         npix=npix,
+                         xpix=xpix, ypix=ypix,
+                         cdelt=cdelt,
+                         rebin=1)
+
+        m0 = MapInterpolator(k0, pix_ref, 1)
+
+        npix1 = 10 * rebin
+        xpix1 = (npix1 - 1.0) / 2.
+        ypix1 = (npix1 - 1.0) / 2.
+
+        k1 = make_srcmap(psf, spatial_model, spatial_width,
+                         npix=npix1,
+                         xpix=xpix1, ypix=ypix1,
+                         cdelt=cdelt / rebin,
+                         rebin=1)
+
+        pix_pad = np.array([npix / 2 - 10, npix / 2 - 10])
+
+        m1 = MapInterpolator(k1, pix_ref, pix_pad, rebin)
+
+        return SourceMapCache(m0, m1)
+
+
+def make_srcmap(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
                 cdelt=0.01, rebin=1, psf_scale_fn=None):
     """Compute the source map for a given spatial model.
 
@@ -22,7 +168,7 @@ def make_srcmap(skydir, psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
 
     sigma : float
         Spatial size parameter for extended models.
-        
+
     xpix : float
         Source position in pixel coordinates in X dimension.
 
@@ -74,7 +220,8 @@ def make_cgauss_mapcube(skydir, psf, sigma, outfile, npix=500, cdelt=0.01,
 
     if rebin > 1:
         k = utils.rebin_map(k, nebin, npix, rebin)
-    w = wcs_utils.create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5, naxis=3)
+    w = wcs_utils.create_wcs(skydir, cdelt=cdelt,
+                             crpix=npix / 2. + 0.5, naxis=3)
 
     w.wcs.crpix[2] = 1
     w.wcs.crval[2] = 10 ** energies[0]
@@ -103,7 +250,8 @@ def make_psf_mapcube(skydir, psf, outfile, npix=500, cdelt=0.01, rebin=1):
 
     if rebin > 1:
         k = utils.rebin_map(k, nebin, npix, rebin)
-    w = wcs_utils.create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5, naxis=3)
+    w = wcs_utils.create_wcs(skydir, cdelt=cdelt,
+                             crpix=npix / 2. + 0.5, naxis=3)
 
     w.wcs.crpix[2] = 1
     w.wcs.crval[2] = 10 ** energies[0]
@@ -127,16 +275,17 @@ def make_psf_mapcube(skydir, psf, outfile, npix=500, cdelt=0.01, rebin=1):
 def make_gaussian_spatial_map(skydir, sigma, outfile, cdelt=None, npix=None):
 
     if cdelt is None:
-        cdelt = sigma/10.
-    
+        cdelt = sigma / 10.
+
     if npix is None:
-        npix = int(np.ceil((6.0*(sigma+cdelt))/cdelt))
-    
+        npix = int(np.ceil((6.0 * (sigma + cdelt)) / cdelt))
+
     w = wcs_utils.create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5)
     hdu_image = pyfits.PrimaryHDU(np.zeros((npix, npix)),
                                   header=w.to_header())
 
-    hdu_image.data[:, :] = utils.make_gaussian_kernel(sigma, npix=npix, cdelt=cdelt)
+    hdu_image.data[:, :] = utils.make_gaussian_kernel(sigma, npix=npix,
+                                                      cdelt=cdelt)
     hdulist = pyfits.HDUList([hdu_image])
     hdulist.writeto(outfile, clobber=True)
 
@@ -144,16 +293,17 @@ def make_gaussian_spatial_map(skydir, sigma, outfile, cdelt=None, npix=None):
 def make_disk_spatial_map(skydir, radius, outfile, cdelt=None, npix=None):
 
     if cdelt is None:
-        cdelt = radius/10.
-    
+        cdelt = radius / 10.
+
     if npix is None:
-        npix = int(np.ceil((2.0*(radius+cdelt))/cdelt))
-        
+        npix = int(np.ceil((2.0 * (radius + cdelt)) / cdelt))
+
     w = wcs_utils.create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5)
     hdu_image = pyfits.PrimaryHDU(np.zeros((npix, npix)),
                                   header=w.to_header())
 
-    hdu_image.data[:, :] = utils.make_disk_kernel(radius, npix=npix, cdelt=cdelt)
+    hdu_image.data[:, :] = utils.make_disk_kernel(radius, npix=npix,
+                                                  cdelt=cdelt)
     hdulist = pyfits.HDUList([hdu_image])
     hdulist.writeto(outfile, clobber=True)
 
@@ -173,10 +323,10 @@ def delete_source_map(srcmap_file, names, logger=None):
     hdulist = pyfits.open(srcmap_file)
     hdunames = [hdu.name.upper() for hdu in hdulist]
 
-    if not isinstance(names,list):
+    if not isinstance(names, list):
         names = [names]
 
-    for name in names:        
+    for name in names:
         if not name.upper() in hdunames:
             continue
         del hdulist[name.upper()]

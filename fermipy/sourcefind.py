@@ -333,10 +333,6 @@ class SourceFinder(object):
                                           name.lower().replace(' ', '_')])
 
         if config['write_fits']:
-
-            # fits_utils.write_maps(scan_tsmap,
-            #                      {'TSMAP': o['tsmap']},
-            #                      fits_file)
             loc['file'] = os.path.basename(outfile) + '.fits'
             self._make_localize_fits(loc, outfile + '.fits',
                                      **config)
@@ -423,8 +419,13 @@ class SourceFinder(object):
         src_loc = copy.deepcopy(src)
         src_loc.set_name('%s_localize' % (name.lower().replace(' ', '_')))
 
-        loglike_vals = self._scan_position(src_loc, scan_skydir,
-                                           kwargs.get('optimizer', {}))
+        if hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
+            loglike_vals = self._scan_position(src_loc, scan_skydir,
+                                               kwargs.get('optimizer', {}))
+        else:
+            loglike_vals = self._scan_position_pylike(src_loc, scan_skydir,
+                                                      kwargs.get('optimizer', {}))
+
         lnlscan['loglike'] = loglike_vals.reshape((nstep, nstep))
         lnlscan['dloglike'] = lnlscan['loglike'] - np.max(lnlscan['loglike'])
         scan_tsmap = Map(2.0 * lnlscan['dloglike'].T, scan_map.wcs)
@@ -600,6 +601,40 @@ class SourceFinder(object):
         return np.array(loglike)
 
     def _scan_position(self, src, skydir, optimizer):
+
+        #import time
+
+        for c in self.components:
+            c._cache = None
+
+        self.add_source(src.name, src, free=True,
+                        init_source=False, save_source_maps=False,
+                        loglevel=logging.DEBUG)
+
+        loglike = []
+        skydir = skydir.transform_to('icrs')
+        for ra, dec in zip(skydir.ra.deg, skydir.dec.deg):
+
+            #t0 = time.time()
+
+            src.set_radec(ra, dec)
+            self._update_srcmap(src.name, src)
+
+            #t1 = time.time()
+
+            fit_output = self._fit(loglevel=logging.DEBUG,
+                                   **optimizer)
+
+            #t2 = time.time()
+
+            #print(t1 - t0, t2 - t1)
+
+            loglike += [fit_output['loglike']]
+
+        self.delete_source(src.name, loglevel=logging.DEBUG)
+        return np.array(loglike)
+
+    def _scan_position_cache(self, src, skydir, optimizer):
 
         self.add_source(src.name, src, free=True,
                         init_source=False, save_source_maps=False,

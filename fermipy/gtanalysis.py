@@ -5367,10 +5367,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.logger.debug('Creating source map for %s', src.name)
 
             xpix, ypix = wcs_utils.skydir_to_pix(src.skydir, self._skywcs)
-            xpix -= (self.npix - 1.0) / 2.
-            ypix -= (self.npix - 1.0) / 2.
             rebin = min(int(np.ceil(self.binsz/0.01)),8)
-            k = srcmap_utils.make_srcmap(src.skydir, self._psf,
+            k = srcmap_utils.make_srcmap(self._psf,
                                          src['SpatialModel'],
                                          src['SpatialWidth'],
                                          npix=self.npix,
@@ -5393,10 +5391,19 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
-        xpix -= (self.npix - 1.0) / 2.
-        ypix -= (self.npix - 1.0) / 2.
         rebin = min(int(np.ceil(self.binsz/0.01)),8)
-        k = srcmap_utils.make_srcmap(self.roi.skydir, self._psf, spatial_model,
+
+        #from fermipy.srcmap_utils import SourceMapCache
+        #if self._cache is None:
+        #    self._cache = \
+        #        SourceMapCache.create(self._psf, spatial_model,
+        #                              spatial_width, self.npix, 
+        #                              self.config['binning']['binsz'],
+        #                              rebin=rebin)
+        #import time
+        #t1 = time.time()
+
+        k = srcmap_utils.make_srcmap(self._psf, spatial_model,
                                      spatial_width,
                                      npix=self.npix, xpix=xpix, ypix=ypix,
                                      cdelt=self.config['binning']['binsz'],
@@ -5404,6 +5411,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                      psf_scale_fn=src['psf_scale_fn'])
 
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
+
+        #t2 = time.time()
+        #print(t1-t0,t2-t1,t3-t2)
 
         normPar = self.like.normPar(name)
         if not normPar.isFree():
