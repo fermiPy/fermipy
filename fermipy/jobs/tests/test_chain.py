@@ -1,7 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 
-from fermipy.jobs.chain import Link, Gtlink, Chain
+from fermipy.jobs.chain import Link, Chain
 
 
 def test_comlink():
@@ -13,18 +13,6 @@ def test_comlink():
                   input_file_args=['arg_in'],
                   output_file_args=['arg_out'])
     link = Link('link', **kwargs)
-
-
-def test_gtlink():
-    options=dict(irfs='CALDB', expcube=None,
-                 bexpmap=None, cmap=None,
-                 srcmdl=None, outfile=None)
-    kwargs = dict(options=options,
-                  flags=['gzip'],
-                  input_file_args=['expcube', 'cmap', 'bexpmap', 'srcmdl'],
-                  output_file_args=['outfile'])
-    gtlink = Gtlink('gtsrcmaps', **kwargs)
-
 
 def test_chain():
     defaults = dict(arg_float=4.0, arg_in='test.in', arg_out='test.out')

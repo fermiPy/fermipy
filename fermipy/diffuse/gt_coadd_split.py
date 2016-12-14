@@ -131,7 +131,7 @@ class CoaddSplit(Chain):
         """  Initialize a link with a set of arguments using argparser
         """
         if self._parser is None:
-            raise ValueError('Gtlink was not given a parser on initialization')
+            raise ValueError('CoaddSplit was not given a parser on initialization')
         args = self._parser.parse_args(argv)
         self.update_links(yaml.safe_load(open(args.comp)))
         self.update_links_from_single_dict(args.__dict__)

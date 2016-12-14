@@ -11,7 +11,8 @@ import math
 
 import yaml
 
-from fermipy.jobs.chain import Chain, Gtlink
+from fermipy.jobs.chain import Chain
+from fermipy.jobs.chain import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
@@ -209,7 +210,7 @@ class SplitAndBin(Chain):
         """Initialize a link with a set of arguments using argparser
         """
         if self._parser is None:
-            raise ValueError('Gtlink was not given a parser on initialization')
+            raise ValueError('SplitAndBin was not given a parser on initialization')
         args = self._parser.parse_args(argv)
         self.update_links(yaml.safe_load(open(args.comp)))
         self.update_links_from_single_dict(args.__dict__)
