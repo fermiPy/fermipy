@@ -9,9 +9,8 @@ import os
 import time
 import subprocess
 
-from fermipy.jobs.scatter_gather import remove_file, JobDetails, Checker,\
-    Initializer, Dispatcher, Gatherer, ScatterGather
-
+from fermipy.jobs.job_archive import JobStatus, JobArchive
+from fermipy.jobs.scatter_gather import clean_job, ScatterGather
 
 
 def get_lsf_status():
@@ -92,9 +91,8 @@ def build_bsub_command(command_template, lsf_args):
     return full_command
 
 
-class LsfJobChecker(Checker):
-    """ Class to check status of LSF jobs
-    """
+class LsfScatterGather(ScatterGather):
+    """Implmentation of ScatterGather that uses LSF"""
 
     def __init__(self, **kwargs):
         """ C'tor
@@ -107,135 +105,68 @@ class LsfJobChecker(Checker):
         lsf_successful : str ['Successfully completed']
             String used to identify completed jobs
         """
-        super(LsfJobChecker, self).__init__(**kwargs)
+        super(LsfScatterGather, self).__init__(**kwargs)
         self._exited = kwargs.pop('lsf_exited', 'Exited with exit code')
-        self._successful = kwargs.pop(
-            'lsf_successful', 'Successfully completed')
+        self._successful = kwargs.pop('lsf_successful', 'Successfully completed')
+        self._lsf_args = kwargs.pop('lsf_args', {})
 
-    def check_job(self, key, job_details):
+    def check_job(self, job_details):
         """ Check the status of a single job
 
         Returns str, one of 'Pending', 'Running', 'Done', 'Failed'
         """
         return check_log(job_details.logfile, self._exited, self._successful)
 
-
-class LsfDispatcher(object):
-    """ Class to dispatch jobs to the LSF batch
-    """
-
-    def __init__(self, command_template, **kwargs):
-        """ C'tor
-
-        Parameters:
-        ---------------
-        command_template : str
-            String used as input to format indvidual job command lines
-
-        Keyword arguements
-        ---------------
-        lsf_args : dict
-            Dictionary with options to pass to bsub command
-        """
-        self._command_template = command_template
-        self._lsf_args = kwargs.pop('lsf_args', {})
-        self._base_command = build_bsub_command(
-            self._command_template, self._lsf_args)
-
-    def run(self, job_config, logfile, dry_run=False):
+    def dispatch_job_hook(self, link, key, job_config, logfile):
         """ Send a single job to the LSF batch
 
         Parameters:
         ---------------
+        link : `fermipy.jobs.chain.Link'
+            The link used to invoke the command we are running
+
+        key : str
+            A string that identifies this particular instance of the job
+
         job_config : dict
             A dictionrary with the arguments for the job.  Used with
             the self._command_template job template
 
         logfile : str
             The logfile for this job, may be used to check for success/ failure
-
-        dry_run : bool [False]
-            Print batch commands, but do not submit jobs
         """
         full_sub_dict = job_config.copy()
         full_sub_dict['logfile'] = logfile
 
-        full_command = self._base_command.format(**full_sub_dict)
-        if dry_run:
+        full_command_template = build_bsub_command(link.command_template(), self._lsf_args)
+        full_command = full_command_template.format(**full_sub_dict)
+
+        if self.args.dry_run:
             sys.stdout.write("%s\n" % full_command)
         else:
             os.system(full_command)
 
-    @staticmethod
-    def clean(logfile, outfiles, dry_run=False):
-        """ Removes log file and files created by failed jobs
-        """
-        remove_file(logfile, dry_run)
-        for outfile in outfiles.values():
-            remove_file(outfile, dry_run)
-
-
-class LsfInitializer(LsfDispatcher, Initializer):
-    """ Class to use LSF batch to perform initialization functions
-    """
-
-    def __init__(self, command_template, **kwargs):
-        """ C'tor
-        """
-        LsfDispatcher.__init__(self, command_template, **kwargs)
-        Initializer.__init__(self, checker=kwargs.pop(
-            'checker', LsfJobChecker(**kwargs)))
-
-    def initialize_hook(self, input_config, job_configs, logfile, dry_run):
-        """ Hook to implement things that happen before jobs get dispathced """
-        LsfDispatcher.run(self, input_config, logfile, dry_run)
-        return JobDetails('Initialize', logfile, input_config, 'Pending')
-
-    def clean_initialize(self, input_config, job_configs, logfile, dry_run):
-        """ Hook to clean things up in case initilization fails """
-        LsfDispatcher.clean(logfile, input_config.get('outfiles', []), dry_run)
-
-
-class LsfScatterDispatcher(LsfDispatcher, Dispatcher):
-    """ Class to dispatch jobs to the LSF batch
-    """
-
-    def __init__(self, command_template, **kwargs):
-        """ C'tor
-
-        Parameters:
-        ---------------
-        command_template : str
-            String used as input to format indvidual job command lines
-
-        Keyword arguments
-        ---------------
-        lsf_args : dict
-            Dictionary with options to pass to bsub command
-        """
-        LsfDispatcher.__init__(self, command_template, **kwargs)
-        Dispatcher.__init__(self, **kwargs)
-
-    def submit_jobs(self, job_dict, args):
+    def submit_jobs(self, job_dict=None):
         """ Submit all the jobs in job_dict """
-        dry_run = args.dry_run
-        job_keys = job_dict.keys()
-
-        job_keys.sort()
-        failed = False
+        if self._scatter_link is None:
+            return JobStatus.no_job
+        if job_dict is None:
+            job_dict = self._job_dict
+        job_keys = sorted(job_dict.keys())
 
         # copy & reverse the keys b/c we will be popping item off the back of
         # the list
         unsubmitted_jobs = job_keys
         unsubmitted_jobs.reverse()
-
+ 
+        failed = False 
         while len(unsubmitted_jobs) > 0:
             status = get_lsf_status()
-
-            njob_to_submit = min(args.max_jobs - status['NJOB'],
-                                 args.jobs_per_cycle,
+            njob_to_submit = min(self.args.max_jobs - status['NJOB'],
+                                 self.args.jobs_per_cycle,
                                  len(unsubmitted_jobs))
-            if dry_run:
+            
+            if self.args.dry_run:
                 njob_to_submit = len(unsubmitted_jobs)
 
             for i in range(njob_to_submit):
@@ -243,120 +174,46 @@ class LsfScatterDispatcher(LsfDispatcher, Dispatcher):
 
                 job_details = job_dict[job_key]
                 job_config = job_details.job_config
-
-                if job_details.status == 'Failed':
-                    outfiles = self.make_job_outfile_names(job_key, job_config)
-                    for outfile in outfiles:
-                        remove_file(outfile, dry_run)
-                    remove_file(job_details.logfile, dry_run)
-
-                job_dict[job_key] = self.dispatch_job(
-                    job_key, job_config, dry_run)
-                if job_dict[job_key].status == "Failed":
+                if job_details.status == JobStatus.failed:
+                    clean_job(job_details.logfile, job_details.outfiles, self.args.dry_run)
+                job_config['logfile'] = job_details.logfile
+                new_job_details = self.dispatch_job(self._scatter_link, job_key, job_config)
+                if new_job_details.status == JobStatus.failed:
                     failed = True
+                    clean_job(new_job_details.logfile, new_job_details.outfiles, self.args.dry_run)
+                self._job_dict[job_key] = new_job_details
 
             print('Sleeping %.0f seconds between submission cycles' %
-                  args.time_per_cycle)
-            time.sleep(args.time_per_cycle)
+                  self.args.time_per_cycle)
+            time.sleep(self.args.time_per_cycle)
 
-        return job_dict, failed
+        return failed
 
-    def dispatch_job_hook(self, key, job_config, logfile, dry_run=False):
-        """ Send a single job to the LSF batch
-
-        Parameters:
-        ---------------
-        key : str
-            The key used to identify the job
-
-        job_config : dict
-            A dictionrary with the arguments for the job.  Used with
-            the self._command_template job template
-
-        logfile : str
-            The logfile for this job, may be used to check for success/ failure
-
-        dry_run : bool [False]
-            Print batch commands, but do not submit jobs
-        """
-        LsfDispatcher.run(self, job_config, logfile, dry_run)
-
-    def add_arguments(self, parser, action):
+    def _add_arguments(self, action):
         """ Hook to add arguments to the command link argparser """
-        parser.add_argument('--max_jobs', default=500, type=int,
-                            help='Limit on the number of running or queued jobs.  '
-                            'New jobs will only be dispatched if the number of '
-                            'existing jobs is smaller than this parameter.')
-        parser.add_argument('--jobs_per_cycle', default=20, type=int,
-                            help='Maximum number of jobs to submit in each cycle.')
-        parser.add_argument('--time_per_cycle', default=15, type=float,
-                            help='Time per submission cycle in seconds.')
-        parser.add_argument('--max_job_age', default=90, type=float,
-                            help='Max job age in minutes.  Incomplete jobs without '
-                            'a return code and a logfile modification '
-                            'time older than this parameter will be restarted.')
-
-    def clean_dispatch(self, key, logfile, outfiles, dry_run=False):
-        """ Removes log file and files created by failed jobs
-        """
-        LsfDispatcher.clean(logfile, outfiles, dry_run)
-
-    def make_job_logfile_name(self, key, job_config):
-        """ Hook to construct the name of a logfile for a particular job """
-        return job_config.get('logfile', 'scatter_%s.log' % key)
-
-    def make_job_outfile_names(self, key, job_config):
-        """ Hook to construct the names of the output files for a particular job """
-        return job_config.get('outfiles', [])
-
-
-class LsfGatherer(LsfDispatcher, Gatherer):
-    """ Class to gather jobs from LSF batch
-    """
-
-    def __init__(self, command_template, **kwargs):
-        """
-        """
-        LsfDispatcher.__init__(self, command_template, **kwargs)
-        Gatherer.__init__(self, checker=kwargs.get(
-            'checker', LsfJobChecker(**kwargs)))
-
-    def gather_results_hook(self, output_config, job_dict, logfile, dry_run):
-        """ Hook to dispatch a single job """
-        LsfDispatcher.run(self, output_config, logfile, dry_run)
-        return JobDetails('Gather', logfile, output_config, 'Pending')
-
-    def clean_gather(self, output_config, job_config, logfile, dry_run):
-        """ Hook to clean things up if gathering results fails """
-        LsfDispatcher.clean(logfile,
-                            output_config.get('outfiles', []), dry_run)
+        super(LsfScatterGather, self)._add_arguments(action)
+        if action in ['run', 'resubmit', 'scatter']:
+            self._parser.add_argument('--max_jobs', default=500, type=int,
+                                      help='Limit on the number of running or queued jobs.  '
+                                      'New jobs will only be dispatched if the number of '
+                                      'existing jobs is smaller than this parameter.')
+            self._parser.add_argument('--jobs_per_cycle', default=20, type=int,
+                                      help='Maximum number of jobs to submit in each cycle.')
+            self._parser.add_argument('--time_per_cycle', default=15, type=float,
+                                      help='Time per submission cycle in seconds.')
+            self._parser.add_argument('--max_job_age', default=90, type=float,
+                                      help='Max job age in minutes.  Incomplete jobs without '
+                                      'a return code and a logfile modification '
+                                      'time older than this parameter will be restarted.')
 
 
 def build_sg_from_link(link, config_maker, **kwargs):
     """Build a `ScatterGather' that will run multiple instance of a single link
     """
     kwargs['config_maker'] = config_maker
-    kwargs['dispatcher'] = LsfScatterDispatcher(link.command_template(),
-                                                lsf_args=kwargs.pop('scatter_lsf_args', {}))
-    gather_command_template = kwargs.pop('gather_command', None)
-    kwargs['gatherer'] = LsfGatherer(gather_command_template,
-                                     lsf_args=kwargs.pop('gather_lsf_args', {}))
-
-    lsf_sg = ScatterGather(**kwargs)
-    return lsf_sg
-
-
-def build_sg_from_chain(chain, config_maker, **kwargs):
-    """Build a `ScatterGather' that will run multiple instance of an analysis chain
-    """
-    kwargs['config_maker'] = config_maker
-    pyfile = chain.filename.replace('.pyc', '.py')
-    chain_command_template = chain.command_template("python %s" % pyfile)
-    kwargs['dispatcher'] = LsfScatterDispatcher(chain_command_template,
-                                                lsf_args=kwargs.pop('scatter_lsf_args', {}))
-    gather_command_template = kwargs.pop('gather_command', None)
-    kwargs['gatherer'] = LsfGatherer(gather_command_template,
-                                     lsf_args=kwargs.pop('gather_lsf_args', {}))
-
-    lsf_sg = ScatterGather(**kwargs)
+    kwargs['scatter'] = link
+    job_archive = kwargs.get('job_archive', None)
+    if job_archive is None:
+        kwargs['job_archive'] = JobArchive.build_temp_job_archive()    
+    lsf_sg = LsfScatterGather(**kwargs)
     return lsf_sg
