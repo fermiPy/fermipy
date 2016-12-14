@@ -58,7 +58,7 @@ def create_pg1553_analysis(request, tmpdir_factory):
         outfile = path.join('fermipy_test_pg1553', f)
         os.system('curl -o %s -OL %s' % (outfile, url))
         
-    request.addfinalizer(lambda: path.remove(rec=1))
+    #request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_pg1553', 'config.yaml')
 
@@ -304,13 +304,18 @@ def test_gtanalysis_lightcurve(create_pg1553_analysis):
     gta.load_roi('fit1')
     o = gta.lightcurve('3FGL J1555.7+1111', nbins=2)
 
-    assert_allclose(o['flux'],np.array([2.93903999e-08, 2.39105317e-08]),
-                    rtol=1E-4)
-    assert_allclose(o['flux_err'],np.array([1.94350070e-09, 1.83590373e-09]),
-                    rtol=1E-4)
-    assert_allclose(o['ts'],np.array([1460.470, 1121.583]),
-                    rtol=1E-4)
+    flux = np.array([2.91756869996e-08,
+                     2.36889996939e-08])
+    flux_err = np.array([1.93194096609e-09,
+                         1.82269439301e-09])
+    ts = np.array([1463.06618532,
+                   1123.16013115])
+    
+    assert_allclose(o['flux'], flux, rtol=1E-4)
+    assert_allclose(o['flux_err'], flux_err, rtol=1E-4)
+    assert_allclose(o['ts'], ts, rtol=1E-4)
 
     tab = Table.read(os.path.join(gta.workdir,o['file']))
-    assert_allclose(tab['flux'],np.array([2.93903999e-08, 2.39105317e-08]),
-                    rtol=1E-4)
+    assert_allclose(tab['flux'], flux, rtol=1E-4)
+    assert_allclose(tab['flux_err'], flux_err, rtol=1E-4)
+    assert_allclose(tab['ts'], ts, rtol=1E-4)

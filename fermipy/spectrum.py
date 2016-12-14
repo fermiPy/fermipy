@@ -143,6 +143,22 @@ class SpectralFunction(object):
         return self._extra_params
 
     @classmethod
+    def create_from_flux(cls, params, emin, emax, flux, scale=1.0):
+        """Create a spectral function instance given its flux."""
+        params = params.copy()
+        params[0] = 1.0
+        params[0] = flux/cls.eval_flux(emin, emax, params, scale=scale)
+        return cls(params, scale)
+
+    @classmethod
+    def create_from_eflux(cls, params, emin, emax, eflux, scale=1.0):
+        """Create a spectral function instance given its energy flux."""
+        params = params.copy()
+        params[0] = 1.0
+        params[0] = eflux/cls.eval_eflux(emin, emax, params, scale=scale)
+        return cls(params, scale)
+
+    @classmethod
     def create_functor(cls, spec_type, func_type, emin, emax,
                        params=None, scale=1.0, extra_params=None):
 

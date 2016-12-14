@@ -562,9 +562,14 @@ class HpxMap(Map_Base):
         else:
             return self.data[pix]
 
-    def interpolate(self, lon, lat, egy=None):
+    def interpolate(self, lon, lat, egy=None, interp_log=True):
         """Interpolate map values.
 
+        Parameters
+        ----------
+        interp_log : bool
+            Interpolate the z-coordinate in logspace.
+        
         """
 
         if self.data.ndim == 1:
@@ -573,22 +578,44 @@ class HpxMap(Map_Base):
             return hp.pixelfunc.get_interp_val(self.counts, theta,
                                                phi, nest=self.hpx.nest)
         else:
-            shape = np.broadcast(lon, lat, egy).shape
-            lon *= np.ones(shape)
-            lat *= np.ones(shape)
-            egy *= np.ones(shape)
-            theta = np.pi / 2. - np.radians(lat)
-            phi = np.radians(lon)
-            vals = []
-            for i, _ in enumerate(self.hpx.evals):
-                v = hp.pixelfunc.get_interp_val(self.counts[i], theta,
-                                                phi, nest=self.hpx.nest)
-                vals += [np.expand_dims(np.array(v, ndmin=1), -1)]
+            return self._interpolate_cube(lon, lat, egy, interp_log)
 
-            vals = np.concatenate(vals, axis=-1)
+    def _interpolate_cube(self, lon, lat, egy=None, interp_log=True):
+        """Perform interpolation on a healpix cube.  If egy is None
+        then interpolation will be performed on the existing energy
+        planes.
+
+        """
+        
+        shape = np.broadcast(lon, lat, egy).shape
+        lon = lon*np.ones(shape)
+        lat = lat*np.ones(shape)
+        theta = np.pi / 2. - np.radians(lat)
+        phi = np.radians(lon)
+        vals = []
+        for i, _ in enumerate(self.hpx.evals):
+            v = hp.pixelfunc.get_interp_val(self.counts[i], theta,
+                                            phi, nest=self.hpx.nest)
+            vals += [np.expand_dims(np.array(v, ndmin=1), -1)]
+
+        vals = np.concatenate(vals, axis=-1)
+
+        if egy is None:
+            return vals.T
+
+        egy = egy*np.ones(shape)
+        
+        if interp_log:
             xvals = utils.val_to_pix(np.log(self.hpx.evals), np.log(egy))
-            return map_coordinates(vals, [np.arange(shape[0]), xvals], order=1)
+        else:
+            xvals = utils.val_to_pix(self.hpx.evals, egy)
 
+        vals = vals.reshape((-1,vals.shape[-1]))
+        xvals = np.ravel(xvals)
+        v = map_coordinates(vals, [np.arange(vals.shape[0]), xvals],
+                            order=1)
+        return v.reshape(shape)
+        
     def swap_scheme(self):
         """
         """

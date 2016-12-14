@@ -89,6 +89,7 @@ def write_maps(primary_map, maps, outfile, **kwargs):
     hdulist = fits.HDUList(hdu_images)
     for h in hdulist:
         h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+        h.header['STVER'] = fermipy.get_st_version()
     hdulist.writeto(outfile, clobber=True)
 
 

@@ -120,6 +120,8 @@ gtlike = {
 ltcube = {
     'binsz': (1.0, 'Set the angular bin size for generating livetime cubes.', float),
     'dcostheta': (0.025, 'Set the inclination angle binning represented as the cosine of the off-axis angle.', float),
+    'use_local_ltcube': (False, 'Generate a livetime cube in the vicinity of the ROI using interpolation. '
+                         'This option disables LT cube generation with gtltcube.', bool),
     }
 
 # Options for binning.
@@ -268,6 +270,7 @@ sourcefind = {
 
 # Options for lightcurve analysis
 lightcurve = {
+    'use_local_ltcube': (True,'',bool),
     'binsz': (86400.0, 'Set the lightcurve bin size in seconds, default is 1 day.', float),
     'nbins': (None, 'Set the number of lightcurve bins.  The total time range will be evenly '
               'split into this number of time bins.', int),

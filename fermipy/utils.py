@@ -90,20 +90,32 @@ def resolve_path(path, workdir=None):
 
 def resolve_file_path(path, **kwargs):
     dirs = kwargs.get('search_dirs', [])
+    expand = kwargs.get('expand',False)
 
+    if path is None:
+        return None
+    
+    out_path = None
     if os.path.isabs(os.path.expandvars(path)) and \
             os.path.isfile(os.path.expandvars(path)):
-        return path
+        out_path = path
+    else:
+        for d in dirs:            
+            if not os.path.isdir(os.path.expandvars(d)):
+                continue
+            p = os.path.join(d, path)
+            if os.path.isfile(os.path.expandvars(p)):
+                out_path = p
+                break
 
-    for d in dirs:
-        if not os.path.isdir(os.path.expandvars(d)):
-            continue
-        p = os.path.join(d, path)
-        if os.path.isfile(os.path.expandvars(p)):
-            return p
+    if out_path is None:
+        raise Exception('Failed to resolve file path: %s' % path)
 
-    raise Exception('Failed to resolve file path: %s' % path)
+    if expand:
+        out_path = os.path.expandvars(out_path)
 
+    return out_path
+        
 
 def resolve_file_path_list(pathlist, workdir, prefix='',
                            randomize=False):
@@ -370,6 +382,27 @@ def project(lon0, lat0, lon1, lat1):
     phi = np.arctan2(y1p, x1p)
 
     return r * np.cos(phi), r * np.sin(phi)
+
+
+def separation_cos_angle(lon0, lat0, lon1, lat1):
+    """Evaluate the cosine of the angular separation between two
+    direction vectors."""
+    return (np.sin(lat1) * np.sin(lat0) + np.cos(lat1) * np.cos(lat0) *
+            np.cos(lon1 - lon0))
+
+
+def dot_prod(xyz0, xyz1):
+    """Compute the dot product between two cartesian vectors where the
+    second dimension contains the vector components."""
+    return np.sum(xyz0 * xyz1, axis=1)
+
+
+def angle_to_cartesian(lon, lat):
+    """Convert spherical coordinates to cartesian unit vectors."""
+    theta = np.array(np.pi / 2. - lat)
+    return np.vstack((np.sin(theta) * np.cos(lon),
+                      np.sin(theta) * np.sin(lon),
+                      np.cos(theta))).T
 
 
 def scale_parameter(p):
