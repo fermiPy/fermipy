@@ -1,7 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 
-from fermipy.jobs.gt_chain import comlink, gtlink, gtchain
+from fermipy.jobs.gt_chain import Link, Gtlink, Chain
 
 
 def test_comlink():
@@ -12,12 +12,48 @@ def test_comlink():
                   mapping=mapping,
                   input_file_args=['arg_in'],
                   output_file_args=['arg_out'])
-    link = comlink('link', **kwargs)
-    return link
+    link = Link('link', **kwargs)
 
 
 def test_gtlink():
-    pass
+    options=dict(irfs='CALDB', expcube=None,
+                 bexpmap=None, cmap=None,
+                 srcmdl=None, outfile=None)
+    kwargs = dict(options=options,
+                  flags=['gzip'],
+                  input_file_args=['expcube', 'cmap', 'bexpmap', 'srcmdl'],
+                  output_file_args=['outfile'])
+    gtlink = Gtlink('gtsrcmaps', **kwargs)
 
-def test_gtchain():
-    pass
+
+def test_chain():
+    defaults = dict(arg_float=4.0, arg_in='test.in', arg_out='test.out')
+    mapping = dict(arg_in='alias')
+    kwargs = dict(appname='dummy',
+                  defaults=defaults,
+                  mapping=mapping,
+                  input_file_args=['arg_in'],
+                  output_file_args=['arg_out'])
+    link = Link('link', **kwargs)
+    
+    options=dict(irfs='CALDB', expcube=None,
+                 bexpmap=None, cmap=None,
+                 srcmdl=None, outfile=None)
+    kwargs = dict(options=options,
+                  flags=['gzip'],
+                  input_file_args=['expcube', 'cmap', 'bexpmap', 'srcmdl'],
+                  output_file_args=['outfile'])
+    gtlink = Gtlink('gtsrcmaps', **kwargs)
+
+    def argmapper(args):
+        basename = args.basename
+        ret_dict = dict(expcube="%s_ltcube.fits"%basename,
+                        cmap="%s_ccube.fits"%basename,
+                        bexpmap="%s_bexpmap.fits"%basename,
+                        srcmdl="%s_srcmdl.xml"%basename)
+        return ret_dict
+
+    chain = Chain('chain', 
+                  links=[link, gtlink], 
+                  options=dict(basename=None))
+    
