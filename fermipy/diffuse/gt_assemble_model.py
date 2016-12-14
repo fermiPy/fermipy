@@ -238,7 +238,7 @@ def build_scatter_gather():
 
     config_maker = ConfigMaker_AssembleSrcmaps(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                scatter_lsf_args=lsf_args,
+                                lsf_args=lsf_args,
                                 usage=usage,
                                 description=description)
     return lsf_sg

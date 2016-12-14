@@ -403,7 +403,7 @@ def create_sg_gtexpcube2():
 
     config_maker = ConfigMaker_Gtexpcube2(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                scatter_lsf_args=lsf_args,
+                                lsf_args=lsf_args,
                                 usage=usage,
                                 description=description)
     return lsf_sg
@@ -421,7 +421,7 @@ def create_sg_gtsrcmaps_catalog():
 
     config_maker = ConfigMaker_SrcmapsCatalog(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                scatter_lsf_args=lsf_args,
+                                lsf_args=lsf_args,
                                 usage=usage,
                                 description=description)
     return lsf_sg
@@ -439,7 +439,7 @@ def create_sg_sum_ring_gasmaps():
 
     config_maker = ConfigMaker_SumRings(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                scatter_lsf_args=lsf_args,
+                                lsf_args=lsf_args,
                                 usage=usage,
                                 description=description)
     return lsf_sg
@@ -457,7 +457,7 @@ def create_sg_vstack_diffuse():
 
     config_maker = ConfigMaker_Vstack(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                scatter_lsf_args=lsf_args,
+                                lsf_args=lsf_args,
                                 usage=usage,
                                 description=description)
     return lsf_sg
