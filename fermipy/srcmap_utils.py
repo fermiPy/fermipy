@@ -14,15 +14,10 @@ class MapInterpolator(object):
     """Object that can efficiently generate source maps by
     interpolation of a map object."""
 
-    def __init__(self, data, pix_ref, pix_pad, rebin):
+    def __init__(self, data, pix_ref, npix, rebin):
 
-        # Trim data Array
-        # self._slices = [slice(None),
-        #                slice(10, data.shape[1]-10),
-        #                slice(10, data.shape[2]-10)]
 
-        self._shape = (data.shape[0], data.shape[
-                       1] / rebin, data.shape[2] / rebin)
+        self._shape = data.shape
         self._data = data
         self._data_spline = []
         for i in range(data.shape[0]):
@@ -32,36 +27,95 @@ class MapInterpolator(object):
         for i in range(data.ndim):
             self._axes += [np.arange(0, data.shape[i], dtype=float)]
 
-        self._coords = np.meshgrid(*self._axes[1:], indexing='ij')
+        #self._coords = np.meshgrid(*self._axes[1:], indexing='ij')
         self._rebin = rebin
+        self._npix = npix
+
+        self._shape_out = (np.array(self.shape)/float(rebin)).astype(int)
+        
+        # Reference pixel in output coordinates
         self._pix_ref = pix_ref
-        self._pix_pad = pix_pad
 
     @property
-    def slices(self):
-        return self._slices
+    def data(self):
+        return self._data
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def shape_out(self):
+        return self._shape_out
+    
+    @property
+    def rebin(self):
+        return self._rebin
+    
+    def get_offsets(self, pix):
+        """Get offset of the first pixel in each dimension in the
+        global coordinate system."""
+        
+        idx = []
+        for i in range(len(self.shape)):
+
+            if i == 0:
+                idx += [0]
+                continue
+            
+            npix1 = self.shape_out[i]
+            ipix = int(pix[i-1])            
+            ipix = ipix - max(0,npix1//2 - self._npix + ipix)
+            idx += [max(ipix - npix1//2,0)]
+
+            #xref = pix[i-1]
+            #npix0 = self._npix            
+            #print('here',idx[i],max(int(xref) - max(0,npix1//2 - npix0 + int(xref)) - npix1//2,0))
+
+        return idx
+            
+    def get_slices(self, pix):
+
+        idx = self.get_offsets(pix)
+
+        slices = []
+        for i, t in enumerate(idx):
+            if i == 0:
+                slices += [slice(None)]
+            else:
+                slices += [slice(t,t + self.shape_out[i])]
+
+        return slices
 
     def shift_to_coords(self, pix):
         """Create a new map that is shifted to the pixel coordinates
         ``pix``."""
 
-        pix = pix - self._pix_pad
+        pix_offset = self.get_offsets(pix)
 
-        coords = copy.deepcopy(self._coords)
-        dpix = np.zeros(2)
-        for i in range(len(coords)):
-            coords[i] -= self._rebin * pix[i] - self._pix_ref[i]
-            dpix[i] = self._rebin * pix[i] - self._pix_ref[i]
+        # Calculate the offset in pixel coordinates that should be
+        # applied
+        dpix = np.zeros(len(self.shape)-1)
+        for i in range(len(self.shape)-1):
 
+            x = self.rebin*(pix[i] - pix_offset[i+1]) + (self.rebin-1.0)/2.
+            
+            print(i, pix[i], x, pix_offset[i+1], self._pix_ref[i])
+
+
+            dpix[i] = x - self._pix_ref[i]
+            #dpix[i] = self.rebin * (pix[i] - pix_offset[i+1] - self._pix_ref[i])
+
+        print(pix_offset, dpix, self._pix_ref)
+            
         k = np.zeros(self._data.shape)
         for i in range(k.shape[0]):
             k[i] = shift(self._data_spline[i], dpix, cval=0.0,
                          order=2, prefilter=False)
-        t1 = time.time()
-        print(t1 - t0)
 
-        k = utils.sum_bins(k, 1, self._rebin)
-        k = utils.sum_bins(k, 2, self._rebin)
+        for i in range(1,len(self.shape)):            
+            k = utils.sum_bins(k, i, self.rebin)
+
         return k
 
 
@@ -77,10 +131,14 @@ class SourceMapCache(object):
         """Create a new map that is shifted to the pixel coordinates
         ``pix``."""
 
-        m0 = self._m0.shift_to_coords(pix)
-        m1 = self._m1.shift_to_coords(pix)
+        k0 = self._m0.shift_to_coords(pix)
+        k1 = self._m1.shift_to_coords(pix)
 
-        return m0, m1
+        s1 = self._m1.get_slices(pix)
+
+        k0[s1] = k1
+        
+        return k0
 
         m.data[self._m1.slices] = self._m1.shift_to_coords(pix)
 
