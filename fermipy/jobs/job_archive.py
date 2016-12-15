@@ -22,7 +22,12 @@ def get_timestamp():
 def get_matches(table, colname, value):
     """Get the rows matching a value for a particular column. 
     """
-    return table[colname] == value
+    if table[colname].dtype.kind in ['S', 'U']:
+        matches = table[colname].astype(str) == value
+    else:
+        matches = table[colname] == value
+    return matches
+
 
 
 #@unique
@@ -182,9 +187,12 @@ class JobDetails(object):
     def _create_from_row(table_row, table_id_array):
         """Create a JobDetails object from an `astropy.table.row.Row` """
         kwargs = {}
-        for key, val in zip(table_row.colnames, table_row.as_void()):
-            kwargs[key] = val
-            
+        for key in table_row.colnames:
+            if table_row[key].dtype.kind in ['S', 'U']:
+                kwargs[key] = table_row[key].astype(str)
+            else:            
+                kwargs[key] = table_row[key]
+           
         infile_refs = kwargs.pop('infile_refs')
         outfile_refs = kwargs.pop('outfile_refs')
         rmfile_refs = kwargs.pop('rmfile_refs')

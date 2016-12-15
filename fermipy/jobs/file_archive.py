@@ -8,8 +8,8 @@ import os
 import time
 
 import numpy as np
+from numpy.core import defchararray
 from astropy.table import Table, Column
-
 
 def get_timestamp():
     """Get the current time as an integer"""
@@ -20,7 +20,12 @@ def get_unique_match(table, colname, value):
     If exactly one row matchs, return indsx of that row.
     Otherwise raise KeyError
     """
-    mask = table[colname] == value
+    # FIXME, This is here for python 3.5, where astropy is now returning bytes instead of str
+    if table[colname].dtype.kind in ['S', 'U']:
+        mask = table[colname].astype(str) == value
+    else:
+        mask = table[colname] == value
+
     if mask.sum() != 1:
         raise KeyError("%i rows in column %s match value %s"%(mask.sum(), colname, value))
     return np.argmax(mask)
@@ -76,8 +81,11 @@ class FileHandle(object):
     def _create_from_row(table_row):
         """Create a FileHandle object from an `astropy.table.row.Row` """
         kwargs = {}
-        for key, val in zip(table_row.colnames, table_row.as_void()):
-            kwargs[key] = val
+        for key in table_row.colnames:
+            if table_row[key].dtype.kind in ['S', 'U']:
+                kwargs[key] = table_row[key].astype(str)
+            else:            
+                kwargs[key] = table_row[key]
         return FileHandle(**kwargs)
 
 
