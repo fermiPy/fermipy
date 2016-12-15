@@ -1355,13 +1355,19 @@ def convolve2d_gauss(fn, r, sig, nstep=200):
     return s
 
 
-def make_pixel_distance(npix, xpix=0.0, ypix=0.0):
+def make_pixel_distance(npix, xpix=None, ypix=None):
     """Make a 2D array with the distance of each pixel from a reference
     direction (xpix,ypix) in pixel coordinates.  Pixel coordinates are
     defined such that (0,0) is located at the center of the corner
     pixel.
 
     """
+    if xpix is None:
+        xpix = (npix - 1.0) / 2.
+
+    if ypix is None:
+        ypix = (npix - 1.0) / 2.
+    
     dx = np.linspace(0, npix - 1, npix) - xpix
     dy = np.linspace(0, npix - 1, npix) - ypix
     dxy = np.zeros((npix, npix))
