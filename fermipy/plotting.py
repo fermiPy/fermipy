@@ -1329,6 +1329,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fmt = kwargs.get('format', self.config['format'])
         prefix = kwargs.get('prefix', '')
         skydir = kwargs.get('skydir', None)
+        cmap = kwargs.get('cmap', self.config['cmap'])
         name = loc.get('name', '')
         name = name.lower().replace(' ', '_')
 
@@ -1345,7 +1346,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         vmin = max(-50.0, np.min(tsmap_renorm.data))
 
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
-               cmap='BuGn', vmin=vmin,
+               cmap=cmap, vmin=vmin,
                interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
@@ -1370,7 +1371,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
             from matplotlib.patches import Rectangle
             r = Rectangle((xmin, ymin), xwidth, ywidth,
-                          edgecolor='r', facecolor='none')
+                          edgecolor='w', facecolor='none',linestyle='--')
             plt.gca().add_patch(r)
 
         if np.isfinite(float(peak_pix[0])):
@@ -1378,8 +1379,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                color='k')
 
         if np.isfinite(float(scan_pix[0])):
-            plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='r',
-                               color='r')
+            plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
+                               color='w')
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'localize', prefix=[prefix, name],
@@ -1398,7 +1399,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         vmin = max(-50.0, np.min(tsmap_renorm.data))
 
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
-               cmap='BuGn', vmin=vmin,
+               cmap=cmap, vmin=vmin,
                interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
@@ -1409,8 +1410,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
 
         if np.isfinite(float(scan_pix[0])):
-            plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='r',
-                               color='r')
+            plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
+                               color='w')
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'localize_peak', prefix=[prefix, name],
