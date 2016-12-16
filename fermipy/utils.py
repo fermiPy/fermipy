@@ -1530,3 +1530,56 @@ def sum_bins(x,dim,npts):
         return x
     shape = x.shape[:dim] + (int(x.shape[dim]/npts),npts) + x.shape[dim+1:]
     return np.sum(x.reshape(shape),axis=dim+1)
+
+
+def overlap_slices(large_array_shape, small_array_shape, position):
+    """
+    Modified version of `~astropy.nddata.utils.overlap_slices`.
+
+    Get slices for the overlapping part of a small and a large array.
+
+    Given a certain position of the center of the small array, with
+    respect to the large array, tuples of slices are returned which can be
+    used to extract, add or subtract the small array at the given
+    position. This function takes care of the correct behavior at the
+    boundaries, where the small array is cut of appropriately.
+
+    Parameters
+    ----------
+    large_array_shape : tuple
+        Shape of the large array.
+    small_array_shape : tuple
+        Shape of the small array.
+    position : tuple
+        Position of the small array's center, with respect to the large array.
+        Coordinates should be in the same order as the array shape.
+
+    Returns
+    -------
+    slices_large : tuple of slices
+        Slices in all directions for the large array, such that
+        ``large_array[slices_large]`` extracts the region of the large array
+        that overlaps with the small array.
+    slices_small : slice
+        Slices in all directions for the small array, such that
+        ``small_array[slices_small]`` extracts the region that is inside the
+        large array.
+    """
+    # Get edge coordinates
+    edges_min = [int(pos - small_shape // 2) for (pos, small_shape) in
+                 zip(position, small_array_shape)]
+    edges_max = [int(pos + (small_shape - small_shape // 2)) for
+                 (pos, small_shape) in
+                 zip(position, small_array_shape)]
+    
+    # Set up slices
+    slices_large = tuple(slice(max(0, edge_min), min(large_shape, edge_max))
+                         for (edge_min, edge_max, large_shape) in
+                         zip(edges_min, edges_max, large_array_shape))
+    slices_small = tuple(slice(max(0, -edge_min),
+                               min(large_shape - edge_min,
+                                   edge_max - edge_min))
+                         for (edge_min, edge_max, large_shape) in
+                         zip(edges_min, edges_max, large_array_shape))
+
+    return slices_large, slices_small

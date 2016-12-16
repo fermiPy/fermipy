@@ -258,59 +258,6 @@ def convert_tscube_old(infile, outfile):
     return hdulist
 
 
-def overlap_slices(large_array_shape, small_array_shape, position):
-    """
-    Modified version of `~astropy.nddata.utils.overlap_slices`.
-
-    Get slices for the overlapping part of a small and a large array.
-
-    Given a certain position of the center of the small array, with
-    respect to the large array, tuples of slices are returned which can be
-    used to extract, add or subtract the small array at the given
-    position. This function takes care of the correct behavior at the
-    boundaries, where the small array is cut of appropriately.
-
-    Parameters
-    ----------
-    large_array_shape : tuple
-        Shape of the large array.
-    small_array_shape : tuple
-        Shape of the small array.
-    position : tuple
-        Position of the small array's center, with respect to the large array.
-        Coordinates should be in the same order as the array shape.
-
-    Returns
-    -------
-    slices_large : tuple of slices
-        Slices in all directions for the large array, such that
-        ``large_array[slices_large]`` extracts the region of the large array
-        that overlaps with the small array.
-    slices_small : slice
-        Slices in all directions for the small array, such that
-        ``small_array[slices_small]`` extracts the region that is inside the
-        large array.
-    """
-    # Get edge coordinates
-    edges_min = [int(pos - small_shape // 2) for (pos, small_shape) in
-                 zip(position, small_array_shape)]
-    edges_max = [int(pos + (small_shape - small_shape // 2)) for
-                 (pos, small_shape) in
-                 zip(position, small_array_shape)]
-
-    # Set up slices
-    slices_large = tuple(slice(max(0, edge_min), min(large_shape, edge_max))
-                         for (edge_min, edge_max, large_shape) in
-                         zip(edges_min, edges_max, large_array_shape))
-    slices_small = tuple(slice(max(0, -edge_min),
-                               min(large_shape - edge_min,
-                                   edge_max - edge_min))
-                         for (edge_min, edge_max, large_shape) in
-                         zip(edges_min, edges_max, large_array_shape))
-
-    return slices_large, slices_small
-
-
 def truncate_array(array1, array2, position):
     """Truncate array1 by finding the overlap with array2 when the
     array1 center is located at the given position in array2."""
@@ -348,13 +295,13 @@ def extract_array(array_large, array_small, position):
 
 
 def extract_large_array(array_large, array_small, position):
-    large_slices, small_slices = overlap_slices(array_large.shape,
+    large_slices, small_slices = utils.overlap_slices(array_large.shape,
                                                 array_small.shape, position)
     return array_large[large_slices]
 
 
 def extract_small_array(array_small, array_large, position):
-    large_slices, small_slices = overlap_slices(array_large.shape,
+    large_slices, small_slices = utils.overlap_slices(array_large.shape,
                                                 array_small.shape, position)
     return array_small[small_slices]
 
