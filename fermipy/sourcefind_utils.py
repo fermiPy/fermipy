@@ -116,7 +116,7 @@ def find_peaks(input_map, threshold, min_separation=0.5):
     region_size_pix = int(min_separation / cdelt)
     region_size_pix = max(3, region_size_pix)
 
-    deltaxy = utils.make_pixel_offset(region_size_pix * 2 + 3)
+    deltaxy = utils.make_pixel_distance(region_size_pix * 2 + 3)
     deltaxy *= max(input_map.wcs.wcs.cdelt)
     region = deltaxy < min_separation
 

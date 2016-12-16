@@ -27,7 +27,7 @@ def init_matplotlib_backend(backend=None):
     """
 
     import matplotlib
-    
+
     try:
         os.environ['DISPLAY']
     except KeyError:
@@ -90,17 +90,17 @@ def resolve_path(path, workdir=None):
 
 def resolve_file_path(path, **kwargs):
     dirs = kwargs.get('search_dirs', [])
-    expand = kwargs.get('expand',False)
+    expand = kwargs.get('expand', False)
 
     if path is None:
         return None
-    
+
     out_path = None
     if os.path.isabs(os.path.expandvars(path)) and \
             os.path.isfile(os.path.expandvars(path)):
         out_path = path
     else:
-        for d in dirs:            
+        for d in dirs:
             if not os.path.isdir(os.path.expandvars(d)):
                 continue
             p = os.path.join(d, path)
@@ -115,7 +115,7 @@ def resolve_file_path(path, **kwargs):
         out_path = os.path.expandvars(out_path)
 
     return out_path
-        
+
 
 def resolve_file_path_list(pathlist, workdir, prefix='',
                            randomize=False):
@@ -123,21 +123,21 @@ def resolve_file_path_list(pathlist, workdir, prefix='',
     write the updated paths to a new file.
     """
     files = [line.strip() for line in open(pathlist, 'r')]
-    newfiles = []    
+    newfiles = []
     for f in files:
-        f = os.path.expandvars(f)        
+        f = os.path.expandvars(f)
         if os.path.isfile(f):
             newfiles += [f]
         else:
-            newfiles += [os.path.join(workdir,f)]
+            newfiles += [os.path.join(workdir, f)]
 
-    if randomize:    
-        _, tmppath = tempfile.mkstemp(prefix=prefix,dir=workdir)
+    if randomize:
+        _, tmppath = tempfile.mkstemp(prefix=prefix, dir=workdir)
     else:
-        tmppath = os.path.join(workdir,prefix)
+        tmppath = os.path.join(workdir, prefix)
 
     tmppath += '.txt'
-        
+
     with open(tmppath, 'w') as tmpfile:
         tmpfile.write("\n".join(newfiles))
     return tmppath
@@ -146,7 +146,7 @@ def resolve_file_path_list(pathlist, workdir, prefix='',
 def is_fits_file(path):
 
     if (path.endswith('.fit') or path.endswith('.fits') or
-        path.endswith('.fit.gz') or path.endswith('.fits.gz')):
+            path.endswith('.fit.gz') or path.endswith('.fits.gz')):
         return True
     else:
         return False
@@ -216,17 +216,18 @@ def find_rows_by_string(tab, names, colnames=['assoc']):
        Boolean mask for rows with matching strings.
 
     """
-    mask = np.empty(len(tab),dtype=bool); mask.fill(False)
+    mask = np.empty(len(tab), dtype=bool)
+    mask.fill(False)
     names = [name.lower().replace(' ', '') for name in names]
 
     for colname in colnames:
 
         if colname not in tab.columns:
             continue
-        
-        col = tab[[colname]].copy()    
+
+        col = tab[[colname]].copy()
         col[colname] = defchararray.replace(defchararray.lower(col[colname]),
-                               ' ', '')
+                                            ' ', '')
         for name in names:
             mask |= col[colname] == name
     return mask
@@ -264,7 +265,7 @@ def strip_suffix(filename, suffix):
 
 def met_to_mjd(time):
     """"Convert mission elapsed time to mean julian date."""
-    return 54682.65 + (time-239557414.0)/(86400.)
+    return 54682.65 + (time - 239557414.0) / (86400.)
 
 
 RA_NGP = np.radians(192.8594812065348)
@@ -494,14 +495,14 @@ def twosided_cl_to_dlnl(cl):
     ----------
     cl : float
         Confidence level.
-    
+
     Returns
     -------
     dlnl : float    
         Delta-loglikelihood value with respect to the maximum of the
         likelihood function.
     """
-    return 0.5 * np.power( np.sqrt(2.) * special.erfinv(cl), 2)
+    return 0.5 * np.power(np.sqrt(2.) * special.erfinv(cl), 2)
 
 
 def twosided_dlnl_to_cl(dlnl):
@@ -513,13 +514,13 @@ def twosided_dlnl_to_cl(dlnl):
     dlnl : float
         Delta-loglikelihood value with respect to the maximum of the
         likelihood function.
-    
+
     Returns
     -------
     cl : float
         Confidence level.
     """
-    return special.erf( dlnl**0.5 )
+    return special.erf(dlnl**0.5)
 
 
 def onesided_cl_to_dlnl(cl):
@@ -530,7 +531,7 @@ def onesided_cl_to_dlnl(cl):
     ----------
     cl : float
         Confidence level.
-    
+
     Returns
     -------
     dlnl : float
@@ -550,14 +551,14 @@ def onesided_dlnl_to_cl(dlnl):
     dlnl : float
         Delta-loglikelihood value with respect to the maximum of the
         likelihood function.
-    
+
     Returns
     -------
     cl : float
         Confidence level.
     """
-    alpha = (1.0 - special.erf(dlnl**0.5))/2.0
-    return 1.0-alpha
+    alpha = (1.0 - special.erf(dlnl**0.5)) / 2.0
+    return 1.0 - alpha
 
 
 def interpolate_function_min(x, y):
@@ -708,7 +709,7 @@ def poly_to_parabola(coeff):
 
 def parabola(xy, amplitude, x0, y0, sx, sy, theta):
     """Evaluate a 2D parabola given by:
-    
+
     f(x,y) = f_0 - (1/2) * \delta^T * R * \Sigma * R^T * \delta
 
     where
@@ -729,13 +730,13 @@ def parabola(xy, amplitude, x0, y0, sx, sy, theta):
 
     amplitude : float
        Constant offset value.
-    
+
     x0 : float
        Centroid in x coordinate.
 
     y0 : float
        Centroid in y coordinate.
-       
+
     sx : float
        Standard deviation along first axis (x-axis when theta=0).
 
@@ -750,7 +751,7 @@ def parabola(xy, amplitude, x0, y0, sx, sy, theta):
     vals : `~numpy.ndarray`    
        Values of the parabola evaluated at the points defined in the
        `xy` input tuple.
-    
+
     """
 
     x = xy[0]
@@ -779,10 +780,10 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
     Parameters
     ----------
     z : `~numpy.ndarray`
-    
+
     ix : int
        X index of center pixel of fit region in array `z`.
-    
+
     iy : int
        Y index of center pixel of fit region in array `z`.
 
@@ -884,14 +885,14 @@ def split_bin_edges(edges, npts=2):
 
 def center_to_edge(center):
 
-    if len(center) == 1: 
-        delta = np.array(1.0,ndmin=1)
-    else: 
-        delta = center[1:]-center[:-1]
-    
-    edges = 0.5*(center[1:]+center[:-1])
-    edges = np.insert(edges,0,center[0]-0.5*delta[0])
-    edges = np.append(edges,center[-1]+0.5*delta[-1])
+    if len(center) == 1:
+        delta = np.array(1.0, ndmin=1)
+    else:
+        delta = center[1:] - center[:-1]
+
+    edges = 0.5 * (center[1:] + center[:-1])
+    edges = np.insert(edges, 0, center[0] - 0.5 * delta[0])
+    edges = np.append(edges, center[-1] + 0.5 * delta[-1])
     return edges
 
 
@@ -1079,7 +1080,7 @@ def update_keys(input_dict, key_map):
 
 def create_dict(d0, **kwargs):
     o = copy.deepcopy(d0)
-    o = merge_dict(o,kwargs,add_new_keys=True)
+    o = merge_dict(o, kwargs, add_new_keys=True)
     return o
 
 
@@ -1274,7 +1275,7 @@ def convolve2d_disk(fn, r, sig, nstep=200):
     delta = (rmax - rmin) / nstep
 
     redge = rmin[:, np.newaxis] + \
-            delta[:, np.newaxis] * np.linspace(0, nstep, nstep + 1)[np.newaxis, :]
+        delta[:, np.newaxis] * np.linspace(0, nstep, nstep + 1)[np.newaxis, :]
     rp = 0.5 * (redge[:, 1:] + redge[:, :-1])
     dr = redge[:, 1:] - redge[:, :-1]
     fnv = fn(rp)
@@ -1355,21 +1356,28 @@ def convolve2d_gauss(fn, r, sig, nstep=200):
     return s
 
 
-def make_pixel_offset(npix, xpix=0.0, ypix=0.0):
-    """Make a 2D array with the distance of each pixel from a
-    reference direction in pixel coordinates.  Pixel coordinates are
-    defined such that (0,0) is located at the center of the coordinate
-    grid."""
+def make_pixel_distance(npix, xpix=None, ypix=None):
+    """Make a 2D array with the distance of each pixel from a reference
+    direction (xpix,ypix) in pixel coordinates.  Pixel coordinates are
+    defined such that (0,0) is located at the center of the corner
+    pixel.
 
-    dx = np.abs(np.linspace(0, npix - 1, npix) - (npix - 1) / 2. - xpix)
-    dy = np.abs(np.linspace(0, npix - 1, npix) - (npix - 1) / 2. - ypix)
+    """
+    if xpix is None:
+        xpix = (npix - 1.0) / 2.
+
+    if ypix is None:
+        ypix = (npix - 1.0) / 2.
+
+    dx = np.linspace(0, npix - 1, npix) - xpix
+    dy = np.linspace(0, npix - 1, npix) - ypix
     dxy = np.zeros((npix, npix))
     dxy += np.sqrt(dx[np.newaxis, :] ** 2 + dy[:, np.newaxis] ** 2)
 
     return dxy
 
 
-def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
+def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=None, ypix=None):
     """Make kernel for a 2D gaussian.
 
     Parameters
@@ -1384,14 +1392,14 @@ def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
 
     fn = lambda t, s: 1. / (2 * np.pi * s ** 2) * np.exp(
         -t ** 2 / (s ** 2 * 2.0))
-    dxy = make_pixel_offset(npix, xpix, ypix)
+    dxy = make_pixel_distance(npix, xpix, ypix)
     k = fn(dxy, sigma)
     k /= (np.sum(k) * np.radians(cdelt) ** 2)
 
     return k
 
 
-def make_disk_kernel(radius, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
+def make_disk_kernel(radius, npix=501, cdelt=0.01, xpix=None, ypix=None):
     """Make kernel for a 2D disk.
 
     Parameters
@@ -1404,7 +1412,7 @@ def make_disk_kernel(radius, npix=501, cdelt=0.01, xpix=0.0, ypix=0.0):
     radius /= cdelt
     fn = lambda t, s: 0.5 * (np.sign(s - t) + 1.0)
 
-    dxy = make_pixel_offset(npix, xpix, ypix)
+    dxy = make_pixel_distance(npix, xpix, ypix)
     k = fn(dxy, radius)
     k /= (np.sum(k) * np.radians(cdelt) ** 2)
 
@@ -1427,11 +1435,11 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
     dtheta = psf.dtheta
     egy = psf.energies
 
-    x = make_pixel_offset(npix, xpix, ypix)
+    x = make_pixel_distance(npix, xpix, ypix)
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
-    for i in range(len(egy)):        
+    for i in range(len(egy)):
         fn = lambda t: psf.eval(i, t, scale_fn=psf_scale_fn)
         psfc = convolve2d_disk(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
@@ -1460,7 +1468,7 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
     dtheta = psf.dtheta
     egy = psf.energies
 
-    x = make_pixel_offset(npix, xpix, ypix)
+    x = make_pixel_distance(npix, xpix, ypix)
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
@@ -1493,7 +1501,7 @@ def make_psf_kernel(psf, npix, cdelt, xpix, ypix, psf_scale_fn=None, normalize=F
     """
 
     egy = psf.energies
-    x = make_pixel_offset(npix, xpix, ypix)
+    x = make_pixel_distance(npix, xpix, ypix)
     x *= cdelt
 
     k = np.zeros((len(egy), npix, npix))
@@ -1516,3 +1524,64 @@ def rebin_map(k, nebin, npix, rebin):
     k /= rebin ** 2
 
     return k
+
+
+def sum_bins(x, dim, npts):
+    if npts <= 1:
+        return x
+    shape = x.shape[:dim] + (int(x.shape[dim] / npts),
+                             npts) + x.shape[dim + 1:]
+    return np.sum(x.reshape(shape), axis=dim + 1)
+
+
+def overlap_slices(large_array_shape, small_array_shape, position):
+    """
+    Modified version of `~astropy.nddata.utils.overlap_slices`.
+
+    Get slices for the overlapping part of a small and a large array.
+
+    Given a certain position of the center of the small array, with
+    respect to the large array, tuples of slices are returned which can be
+    used to extract, add or subtract the small array at the given
+    position. This function takes care of the correct behavior at the
+    boundaries, where the small array is cut of appropriately.
+
+    Parameters
+    ----------
+    large_array_shape : tuple
+        Shape of the large array.
+    small_array_shape : tuple
+        Shape of the small array.
+    position : tuple
+        Position of the small array's center, with respect to the large array.
+        Coordinates should be in the same order as the array shape.
+
+    Returns
+    -------
+    slices_large : tuple of slices
+        Slices in all directions for the large array, such that
+        ``large_array[slices_large]`` extracts the region of the large array
+        that overlaps with the small array.
+    slices_small : slice
+        Slices in all directions for the small array, such that
+        ``small_array[slices_small]`` extracts the region that is inside the
+        large array.
+    """
+    # Get edge coordinates
+    edges_min = [int(pos - small_shape // 2) for (pos, small_shape) in
+                 zip(position, small_array_shape)]
+    edges_max = [int(pos + (small_shape - small_shape // 2)) for
+                 (pos, small_shape) in
+                 zip(position, small_array_shape)]
+
+    # Set up slices
+    slices_large = tuple(slice(max(0, edge_min), min(large_shape, edge_max))
+                         for (edge_min, edge_max, large_shape) in
+                         zip(edges_min, edges_max, large_array_shape))
+    slices_small = tuple(slice(max(0, -edge_min),
+                               min(large_shape - edge_min,
+                                   edge_max - edge_min))
+                         for (edge_min, edge_max, large_shape) in
+                         zip(edges_min, edges_max, large_array_shape))
+
+    return slices_large, slices_small

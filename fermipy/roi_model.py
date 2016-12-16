@@ -805,6 +805,9 @@ class Source(Model):
         # if self.params:
         #    self._sync_spectral_pars()
 
+    def set_radec(self, ra, dec):
+        self._set_radec(np.array([ra,dec]))
+
     def set_position(self, skydir):
         """
         Set the position of the source.
