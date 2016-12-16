@@ -157,7 +157,9 @@ class FileArchive(object):
             if not os.path.exists(fullpath):
                 print ("File %s does not exist but register_file was called with FileStatus.exists"%fullpath)
                 status = FileStatus.missing
-            timestamp = int(os.stat(fullpath).st_mtime)
+                timestamp = 0
+            else:
+                timestamp = int(os.stat(fullpath).st_mtime)
         else:
             timestamp = 0
         key = len(self._table) + 1
