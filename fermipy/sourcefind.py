@@ -19,7 +19,7 @@ from fermipy.config import ConfigSchema
 from LikelihoodState import LikelihoodState
 
 
-class SourceFinder(object):
+class SourceFind(object):
     """Mixin class which provides source-finding functionality to
     `~fermipy.gtanalysis.GTAnalysis`."""
 
