@@ -312,6 +312,7 @@ class SourceFinder(object):
         schema.add_option('make_plots', False)
         schema.add_option('write_fits', True)
         schema.add_option('write_npy', True)
+        schema.add_option('use_cache', True)
         schema.add_option('newname', name)
         schema.add_option('prefix', '')
         config = utils.create_dict(self.config['localize'],
@@ -358,6 +359,7 @@ class SourceFinder(object):
         update = kwargs.get('update')
         newname = kwargs.get('newname')
         prefix = kwargs.get('prefix', '')
+        use_cache = kwargs.get('use_cache', False)
 
         saved_state = LikelihoodState(self.like)
 
@@ -421,7 +423,8 @@ class SourceFinder(object):
 
         if hasattr(self.components[0].like.logLike, 'setSourceMapImage'):
             loglike_vals = self._scan_position(src_loc, scan_skydir,
-                                               kwargs.get('optimizer', {}))
+                                               kwargs.get('optimizer', {}),
+                                               use_cache=use_cache)
         else:
             loglike_vals = self._scan_position_pylike(src_loc, scan_skydir,
                                                       kwargs.get('optimizer', {}))
@@ -600,46 +603,15 @@ class SourceFinder(object):
 
         return np.array(loglike)
 
-    def _scan_position(self, src, skydir, optimizer):
-
-        #import time
-
-        for c in self.components:
-            c._cache = None
+    def _scan_position(self, src, skydir, optimizer, use_cache=False):
 
         self.add_source(src.name, src, free=True,
                         init_source=False, save_source_maps=False,
                         loglevel=logging.DEBUG)
 
-        loglike = []
-        skydir = skydir.transform_to('icrs')
-        for ra, dec in zip(skydir.ra.deg, skydir.dec.deg):
-
-            #t0 = time.time()
-
-            src.set_radec(ra, dec)
-            self._update_srcmap(src.name, src)
-
-            #t1 = time.time()
-
-            fit_output = self._fit(loglevel=logging.DEBUG,
-                                   **optimizer)
-
-            #t2 = time.time()
-
-            #print(t1 - t0, t2 - t1)
-
-            loglike += [fit_output['loglike']]
-
-        self.delete_source(src.name, loglevel=logging.DEBUG)
-        return np.array(loglike)
-
-    def _scan_position_cache(self, src, skydir, optimizer):
-
-        self.add_source(src.name, src, free=True,
-                        init_source=False, save_source_maps=False,
-                        loglevel=logging.DEBUG)
-
+        if use_cache:
+            self._create_srcmap_cache(src.name, src)
+        
         loglike = []
         skydir = skydir.transform_to('icrs')
         for ra, dec in zip(skydir.ra.deg, skydir.dec.deg):
@@ -648,8 +620,9 @@ class SourceFinder(object):
             self._update_srcmap(src.name, src)
             fit_output = self._fit(loglevel=logging.DEBUG,
                                    **optimizer)
-
             loglike += [fit_output['loglike']]
 
+        self._clear_srcmap_cache()            
         self.delete_source(src.name, loglevel=logging.DEBUG)
         return np.array(loglike)
+

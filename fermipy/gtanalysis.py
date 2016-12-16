@@ -788,13 +788,21 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 rm['components'][i]['npred'] += np.sum(mc[i])
 
     def _update_srcmap(self, name, src):
-
+        
         for c in self.components:
             c._update_srcmap(name, src)
 
         if self._fitcache is not None:
             self._fitcache.update_source(name)
 
+    def _create_srcmap_cache(self, name, src):
+        for c in self.components:
+            c._create_srcmap_cache(name, src)
+
+    def _clear_srcmap_cache(self):
+        for c in self.components:
+            c._srcmap_cache.clear()
+            
     def reload_source(self, name, init_source=True):
         """Delete and reload a source in the model.  This will refresh
         the spatial model of this source to the one defined in the XML
@@ -4237,6 +4245,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             else:
                 self._data_files[k] = v
 
+
+        self._srcmap_cache = {}
                 
         # Fill dictionary of exposure corrections
         self._src_expscale = {}
@@ -5385,6 +5395,22 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             srcmap_utils.update_source_maps(self.files['srcmap'], srcmaps,
                                             logger=self.logger)
 
+    def _create_srcmap_cache(self, name, src):
+
+        from fermipy.srcmap_utils import SourceMapCache
+        
+        skydir = src.skydir
+        spatial_model = src['SpatialModel']
+        spatial_width = src['SpatialWidth']
+        xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
+        rebin = min(int(np.ceil(self.binsz/0.01)),8)
+        shape_out = (self.enumbins+1,self.npix,self.npix)
+        cache = SourceMapCache.create(self._psf, spatial_model,
+                                     spatial_width, shape_out, 
+                                     self.config['binning']['binsz'],
+                                     rebin=rebin)
+        self._srcmap_cache[name] = cache
+            
     def _update_srcmap(self, name, src):
 
         skydir = src.skydir
@@ -5393,28 +5419,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
         rebin = min(int(np.ceil(self.binsz/0.01)),8)
 
-        #from fermipy.srcmap_utils import SourceMapCache
-        #if self._cache is None:
-        #    self._cache = \
-        #        SourceMapCache.create(self._psf, spatial_model,
-        #                              spatial_width, self.npix, 
-        #                              self.config['binning']['binsz'],
-        #                              rebin=rebin)
-        #import time
-        #t1 = time.time()
-
-        k = srcmap_utils.make_srcmap(self._psf, spatial_model,
-                                     spatial_width,
-                                     npix=self.npix, xpix=xpix, ypix=ypix,
-                                     cdelt=self.config['binning']['binsz'],
-                                     rebin=rebin,
-                                     psf_scale_fn=src['psf_scale_fn'])
+        cache = self._srcmap_cache.get(name,None)
+        if cache is not None:
+            k = cache.create_map([ypix,xpix])
+        else:
+            k = srcmap_utils.make_srcmap(self._psf, spatial_model,
+                                         spatial_width,
+                                         npix=self.npix, xpix=xpix, ypix=ypix,
+                                         cdelt=self.config['binning']['binsz'],
+                                         rebin=rebin,
+                                         psf_scale_fn=src['psf_scale_fn'])
 
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
-
-        #t2 = time.time()
-        #print(t1-t0,t2-t1,t3-t2)
-
         normPar = self.like.normPar(name)
         if not normPar.isFree():
             self.like.logLike.buildFixedModelWts()
