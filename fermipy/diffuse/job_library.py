@@ -399,7 +399,7 @@ def create_sg_gtexpcube2():
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "sg_gtexcube2.py [options] input"
+    usage = "fermipy-gtexcube2-sg [options] input"
     description = "Run gtexpcube2 for a series of event types."
 
     config_maker = ConfigMaker_Gtexpcube2(link)
@@ -417,7 +417,7 @@ def create_sg_gtsrcmaps_catalog():
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "sg_gtsrcmaps_catalog.py [options] input"
+    usage = "fermipy-srcmaps-catalog-sg [options] input"
     description = "Run gtsrcmaps for catalog sources"
 
     config_maker = ConfigMaker_SrcmapsCatalog(link)
@@ -435,7 +435,7 @@ def create_sg_sum_ring_gasmaps():
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "sg_sum_ring_gasmaps.py [options] input"
+    usage = "fermipy-sum-ring-gasmaps-sg [options] input"
     description = "Sum gasmaps to build diffuse model components"
 
     config_maker = ConfigMaker_SumRings(link)
@@ -453,7 +453,7 @@ def create_sg_vstack_diffuse():
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "sg_sum_ring_gasmaps.py [options] input"
+    usage = "fermipy-vstack-diffuse-sg [options] input"
     description = "Sum gasmaps to build diffuse model components"
 
     config_maker = ConfigMaker_Vstack(link)

@@ -27,7 +27,7 @@ class CoaddSplit(Chain):
         self.comp_dict = comp_dict
         Chain.__init__(self, linkname,
                        links=[],
-                       appname="python %s" % __file__.replace('.pyc', '.py'),
+                       appname='fermipy-coadd-split',
                        argmapper=self._map_arguments,
                        parser=CoaddSplit._make_parser())
         if comp_dict is not None:
@@ -46,7 +46,7 @@ class CoaddSplit(Chain):
     @staticmethod
     def _make_parser():
         """Make an argument parser for this chain """
-        usage = "gt_coadd_split.py [options]"
+        usage = "fermipy-coadd-split [options]"
         description = "Merge a set of counts cube files"
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
@@ -140,7 +140,7 @@ class CoaddSplit(Chain):
 
 def main():
     """Entry point for command line use """
-    chain = CoaddSplit('CoaddSplit')
+    chain = CoaddSplit('coadd-split')
     args = chain.run_argparser(sys.argv[1:])
     chain.run_chain(sys.stdout, args.dry_run)
     chain.finalize(args.dry_run)

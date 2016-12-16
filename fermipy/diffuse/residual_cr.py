@@ -70,7 +70,7 @@ class ResidualCRAnalysis(object):
     @staticmethod
     def _make_link():
         link = Link('residual_cr',
-                    appname='gt-residual-cr',
+                    appname='fermipy-residual-cr',
                     options=dict(output=None,
                                  ccube_dirty=None, bexpcube_dirty=None,
                                  ccube_clean=None, bexpcube_clean=None,

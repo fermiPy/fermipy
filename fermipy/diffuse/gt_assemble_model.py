@@ -51,8 +51,8 @@ class GtAssembleSourceMaps(object):
 
     @staticmethod
     def _make_link():
-        link = Link('gt_assemble_srcmaps',
-                    appname='gt-assemble-models',
+        link = Link('assemble-model',
+                    appname='fermipy-assemble-model',
                     options=dict(input=None, comp=None, hpx_order=None),
                     flags=['gzip'],
                     input_file_args=['input'])
@@ -233,7 +233,7 @@ def build_scatter_gather():
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "gt_assemble_srcmaps.py [options] input"
+    usage = "fermipy-assemble-model-sg [options]"
     description = "Copy source maps from the library to a analysis directory"
 
     config_maker = ConfigMaker_AssembleSrcmaps(link)

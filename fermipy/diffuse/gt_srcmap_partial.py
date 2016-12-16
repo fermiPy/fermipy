@@ -46,7 +46,7 @@ class GtSrcmapPartial(object):
     @staticmethod
     def _make_parser():
         """Make an argument parser for this class """
-        usage = "gt_srcmap_partial.py [options]"
+        usage = "fermipy-srcmaps-diffuse [options]"
         description = "Run gtsrcmaps for one or more energy planes for a single source"
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
@@ -74,8 +74,8 @@ class GtSrcmapPartial(object):
 
     @staticmethod
     def _make_link():
-        link = Link('gtsrcmap_partial',
-                    appname=os.path.abspath(__file__).replace('.pyc', '.py'),
+        link = Link('srcmaps-diffuse',
+                    appname='fermipy-srcmaps-diffuse',
                     options=dict(irfs=None, expcube=None, cmap=None,
                                  bexpmap=None, srcmdl=None, source=None,
                                  outfile=None, kmin=0, kmax=-1, gzip=True),
@@ -280,8 +280,8 @@ def build_scatter_gather():
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "gt_split_and_bin.py [options] input"
-    description = "Prepare data for diffuse all-sky analysis"
+    usage = "fermipy-srcmaps-diffuse-sg [options] input"
+    description = "Build source maps for diffuse model components"
 
     config_maker = ConfigMaker_SrcmapPartial(link)
     lsf_sg = build_sg_from_link(link, config_maker,

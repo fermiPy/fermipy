@@ -64,8 +64,8 @@ class GtMergeSourceMaps(object):
 
     @staticmethod
     def _make_link():
-        link = Link('gt_merge_srcmaps',
-                    appname=os.path.abspath(__file__).replace('.pyc', '.py'),
+        link = Link('merge-srcmaps',
+                    appname='fermipy-merge-srcmaps',
                     options=dict(irfs=None, expcube=None, srcmaps=None,
                                  bexpmap=None, srcmdl=None, merged=None,
                                  outfile=None, outxml=None, gzip=True),
@@ -222,7 +222,7 @@ def build_scatter_gather():
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "gt_split_and_bin.py [options] input"
+    usage = "fermipy-merge-srcmaps.py [options] input"
     description = "Prepare data for diffuse all-sky analysis"
 
     config_maker = ConfigMaker_MergeSrcmaps(link)

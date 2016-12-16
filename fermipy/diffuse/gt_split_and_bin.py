@@ -64,7 +64,7 @@ class SplitAndBin(Chain):
         self.comp_dict = comp_dict
         Chain.__init__(self, linkname,
                        links=[],
-                       appname='gt-split-and-bin',
+                       appname='fermipy-split-and-bin',
                        argmapper=self._map_arguments,
                        parser=SplitAndBin._make_parser())
         if comp_dict is not None:
@@ -85,7 +85,7 @@ class SplitAndBin(Chain):
     @staticmethod
     def _make_parser():
         """Make an argument parser for this chain """
-        usage = "gt_select_and_bin.py [options]"
+        usage = "fermipy-split-and-bin [options]"
         description = "Run gtselect and gtbin together"
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
@@ -303,12 +303,12 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
 
 def build_scatter_gather():
     """Build and return a ScatterGather object that can invoke this script"""
-    chain = SplitAndBin('SplitAndBin')
+    chain = SplitAndBin('split-and-bin')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "gt_split_and_bin.py [options] input"
+    usage = "fermipy-split-and-bin-sg [options] input"
     description = "Prepare data for diffuse all-sky analysis"
 
     config_maker = ConfigMaker_SplitAndBin(chain)
