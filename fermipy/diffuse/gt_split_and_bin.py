@@ -12,7 +12,7 @@ import math
 import yaml
 
 from fermipy.jobs.chain import Chain
-from fermipy.jobs.chain import Gtlink
+from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
