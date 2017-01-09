@@ -545,8 +545,6 @@ class SourceFind(object):
 
         scan_skydir = lnlmap.get_pixel_skydirs()
 
-        print(scan_skydir.transform_to('icrs'))
-
         if hasattr(self.components[0].like.logLike, 'setSourceMapImage') and 1:
             loglike_vals = self._scan_position_fast(name, scan_skydir,
                                                     **kwargs)
@@ -617,10 +615,7 @@ class SourceFind(object):
             fit_output = self._fit(loglevel=logging.DEBUG,
                                    **optimizer)
             loglike += [fit_output['loglike']]
-            print(ra, dec, self.get_norm(name), fit_output['loglike'])
-
-        # src.set_radec(radec[0],radec[1])
-        #self._update_srcmap(src.name, src)
+            #print(ra, dec, self.get_norm(name), fit_output['loglike'])
 
         state.restore()
 
