@@ -337,6 +337,43 @@ def get_source_pars(src):
     return spars, ppars
 
 
+def savefreestate(func):
+   def func_wrapper(self, *args, **kwargs):
+       free_params = self.get_free_param_vector()
+       o = func(self, *args, **kwargs)
+       self.set_free_param_vector(free_params)
+       return o
+   return func_wrapper
+
+
+def savestate(func):
+   def func_wrapper(self, *args, **kwargs):
+       saved_state = LikelihoodState(self.like)
+       o = func(self, *args, **kwargs)
+       saved_state.restore()
+       return o
+   return func_wrapper
+
+
+class SourceMapState(object):
+
+    def __init__(self, like, names):
+
+        self._srcmaps = {}
+        self._like = like
+
+        for name in names:
+            self._srcmaps[name] = []
+            for c in self._like.components:
+                self._srcmaps[name] += [c.logLike.sourceMap(str(name)).model()]
+
+    def restore(self):
+        for name in self._srcmaps.keys():
+            for i, c in enumerate(self._like.components):
+                c.logLike.setSourceMapImage(str(name),
+                                            self._srcmaps[name][i])
+
+
 class SummedLikelihood(SummedLikelihood.SummedLikelihood):
 
     def nFreeParams(self):
