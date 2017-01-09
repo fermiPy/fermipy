@@ -1334,7 +1334,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         name = name.lower().replace(' ', '_')
 
         tsmap = loc['tsmap']
-        tsmap_fit = loc['tsmap_fit']
+        fit_init = loc['fit_init']
         tsmap_renorm = copy.deepcopy(tsmap)
         tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
 
@@ -1352,7 +1352,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap.wcs.wcs.cdelt[1])
         cdelt = [cdelt0, cdelt1]
-        peak_skydir = SkyCoord(tsmap_fit['glon'], tsmap_fit['glat'],
+        peak_skydir = SkyCoord(fit_init['glon'], fit_init['glat'],
                                frame='galactic', unit='deg')
         scan_skydir = SkyCoord(loc['glon'], loc['glat'],
                                frame='galactic', unit='deg')
@@ -1375,7 +1375,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
             plt.gca().add_patch(r)
 
         if np.isfinite(float(peak_pix[0])):
-            plot_error_ellipse(tsmap_fit, peak_pix, cdelt, edgecolor='k',
+            plot_error_ellipse(fit_init, peak_pix, cdelt, edgecolor='k',
                                color='k')
 
         if np.isfinite(float(scan_pix[0])):
