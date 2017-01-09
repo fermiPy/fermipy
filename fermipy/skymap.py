@@ -75,6 +75,12 @@ class Map_Base(object):
     def data(self):
         return self._counts
 
+    @data.setter
+    def data(self, val):
+        if val.shape != self.data.shape:
+            raise Exception('Wrong shape.')
+        self._counts = val
+
     def get_pixel_skydirs(self):
         """Get a list of sky coordinates for the centers of every pixel. """
         raise NotImplementedError("MapBase.get_pixel_skydirs()")
