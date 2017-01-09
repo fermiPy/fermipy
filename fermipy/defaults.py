@@ -381,11 +381,13 @@ extension = {
     'spatial_model': ('RadialGaussian', 'Spatial model use for extension test.', str),
     'width': (None, 'Parameter vector for scan over spatial extent.  If none then the parameter '
               'vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.', list),
+    'fit_position': (False,'Perform a simultaneous fit to the source position and extension.',bool),
     'width_min': (0.01, 'Minimum value in degrees for the likelihood scan over spatial extent.', float),
     'width_max': (1.0, 'Maximum value in degrees for the likelihood scan over spatial extent.', float),
     'width_nstep': (21, 'Number of steps for the spatial likelihood scan.', int),
-    'fix_background': (False, 'Fix any background parameters that are currently free in the model when '
-                       'performing the likelihood scan over extension.', bool),
+    'fix_background': (False, 'Fix background parameters when fitting extension.', bool),
+    'free_radius': (None, 'Free normalizations of background sources within this angular distance in degrees '
+                    'from the source of interest.', float),
     'update': (False, 'Update the source model with the best-fit spatial extension.', bool),
     'save_model_map': (False, 'Save model counts cubes for the best-fit model of extension.', bool),
     'sqrt_ts_threshold': (None, 'Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then no'
@@ -422,7 +424,7 @@ localize = {
     'dtheta_max': (0.3, 'Half-width of the search region in degrees used for the first pass of the localization search.', float),
     'fix_background': (True, 'Fix background parameters when fitting the '
                        'source flux in each energy bin.', bool),
-    'update': (False, 'Update the source model with the best-fit position.', bool)
+    'update': (True, 'Update the source model with the best-fit position.', bool)
 }
 
 # Output for localization analysis
