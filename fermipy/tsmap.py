@@ -809,7 +809,7 @@ class TSMapGenerator(object):
             enumbins += [cm.shape[0]]
 
         self.add_source('tsmap_testsource', src_dict, free=True,
-                        init_source=False)
+                        init_source=False, use_single_psf=True)
         src = self.roi['tsmap_testsource']
         # self.logger.info(str(src_dict))
         modelname = utils.create_model_name(src)
@@ -906,6 +906,7 @@ class TSMapGenerator(object):
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
              'amplitude': amp_map,
+             'loglike': -self.like(),
              'config': kwargs
              }
 
