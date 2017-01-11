@@ -94,8 +94,30 @@ def get_spatial_type(spatial_model):
     else:
         return spatial_model
 
-    
-def create_pars_dict(name,pars_dict=None):
+
+def extract_pars_from_dict(name, src_dict):
+
+    par_names = get_function_par_names(name)
+
+    o = {}
+    for k in par_names:
+
+        o[k] = {}
+        
+        if not k in src_dict:
+            continue
+
+        v = src_dict[k]
+        
+        if isinstance(v, dict):
+            o[k] = v.copy()
+        else:
+            o[k] = {'name' : k, 'value' : v}
+
+    return o
+            
+
+def create_pars_from_dict(name, pars_dict, rescale=True, update_bounds=False):
     """Create a dictionary for the parameters of a function.
 
     Parameters
@@ -108,31 +130,37 @@ def create_pars_dict(name,pars_dict=None):
         default dictionary created by this method.
         
     """
+    o = get_function_defaults(name)
+    pars_dict = pars_dict.copy()
     
-    default_pars_dict = get_function_defaults(name)
+    for k in o.keys():
 
-    if pars_dict is None:
-        pars_dict = {}
-    else:
-        pars_dict = copy.deepcopy(pars_dict)
-
-    for k, v in pars_dict.items():
-
-        if not k in default_pars_dict:
+        if not k in pars_dict:
             continue
 
+        v = pars_dict[k]
+        
         if not isinstance(v,dict):
-            pars_dict[k] = {'name' : k, 'value' : v}
+            v = {'name' : k, 'value' : v}
+        
+        o[k].update(v)
 
-    pars_dict = utils.merge_dict(default_pars_dict,pars_dict)
+        kw = dict(update_bounds=update_bounds,
+                  rescale=rescale)
+        
+        if 'min' in v or 'max' in v:
+            kw['update_bounds'] = False
 
-    for k, v in pars_dict.items():
-        pars_dict[k] = make_parameter_dict(v)
-
-    return pars_dict
-
+        if 'scale' in v:
+            kw['rescale'] = False        
+        
+        o[k] = make_parameter_dict(o[k], **kw)
     
-def make_parameter_dict(pdict, fixed_par=False, rescale=True):
+    return o
+
+
+def make_parameter_dict(pdict, fixed_par=False, rescale=True,
+                        update_bounds=True):
     """
     Update a parameter dictionary.  This function will automatically
     set the parameter scale and bounds if they are not defined.
@@ -140,23 +168,17 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True):
     parameter value.
     """
     o = copy.deepcopy(pdict)
-
-    if 'scale' not in o or o['scale'] is None:
-
-        if rescale:        
-            value, scale = utils.scale_parameter(o['value'])
-        else:
-            value, scale = o['value'], 1.0
-
-        o['value'] = value
-        o['scale'] = scale
+    o.setdefault('scale', 1.0)
+    
+    if rescale:
+        value, scale = utils.scale_parameter(o['value']*o['scale'])
+        o['value'] = np.abs(value)*np.sign(o['value'])
+        o['scale'] = np.abs(scale)*np.sign(o['scale'])
         if 'error' in o:
             o['error'] /= np.abs(scale)
 
-    if 'min' not in o:
+    if update_bounds:
         o['min'] = o['value']*1E-3
-
-    if 'max' not in o:
         o['max'] = o['value']*1E3
 
     if fixed_par:
@@ -168,10 +190,7 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True):
 
     if float(o['max']) < float(o['value']):
         o['max'] = o['value']
-
-#    for k, v in o.items():
-#        o[k] = str(v)
-
+        
     return o
 
 
@@ -196,3 +215,6 @@ def cast_pars_dict(pars_dict):
                 o[pname][k] = float(v)
 
     return o
+
+
+

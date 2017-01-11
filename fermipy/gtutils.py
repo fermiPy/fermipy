@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 import copy
+from functools import wraps
 import numpy as np
 import pyLikelihood as pyLike
 from SrcModel import SourceModel
@@ -17,7 +18,6 @@ import SummedLikelihood
 
 from fermipy import utils
 from fermipy import model_utils
-from fermipy.model_utils import create_pars_dict
 
 evtype_string = {
     4: 'PSF0',
@@ -172,7 +172,7 @@ def get_function_defaults(function_type):
     return copy.deepcopy(FUNCTION_DEFAULT_PARS[function_type])
 
 
-def create_spectrum_from_dict(spectrum_type, spectral_pars=None, fn=None):
+def create_spectrum_from_dict(spectrum_type, spectral_pars, fn=None):
     """Create a Function object from a parameter dictionary.
 
     Parameters
@@ -185,15 +185,15 @@ def create_spectrum_from_dict(spectrum_type, spectral_pars=None, fn=None):
 
     """
 
-    pars = create_pars_dict(spectrum_type, spectral_pars)
-
     if fn is None:
         fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
 
-    for k, v in pars.items():
+    for k, v in spectral_pars.items():
 
-        v = model_utils.make_parameter_dict(v)
-
+        v.setdefault('scale', 1.0)
+        v.setdefault('min', v['value']*1E-3)
+        v.setdefault('max', v['value']*1E3)
+        
         par = fn.getParam(str(k))
 
         vmin = min(float(v['value']), float(v['min']))
@@ -208,7 +208,7 @@ def create_spectrum_from_dict(spectrum_type, spectral_pars=None, fn=None):
         else:
             par.setFree(False)
         fn.setParam(par)
-
+        
     return fn
 
 
@@ -338,21 +338,35 @@ def get_source_pars(src):
 
 
 def savefreestate(func):
-   def func_wrapper(self, *args, **kwargs):
-       free_params = self.get_free_param_vector()
-       o = func(self, *args, **kwargs)
-       self.set_free_param_vector(free_params)
-       return o
-   return func_wrapper
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        free_params = self.get_free_param_vector()
+        o = func(self, *args, **kwargs)
+        self.set_free_param_vector(free_params)
+        return o
+    return wrapper
 
 
 def savestate(func):
-   def func_wrapper(self, *args, **kwargs):
-       saved_state = LikelihoodState(self.like)
-       o = func(self, *args, **kwargs)
-       saved_state.restore()
-       return o
-   return func_wrapper
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        saved_state = LikelihoodState(self.like)
+        o = func(self, *args, **kwargs)
+        saved_state.restore()
+        return o
+    return wrapper
+
+
+class FreeParameterState(object):
+
+    def __init__(self, gta):
+        self._gta = gta
+        self._free = gta.get_free_param_vector()
+    
+    def restore(self):
+        self._gta.set_free_param_vector(self._free)
 
 
 class SourceMapState(object):
