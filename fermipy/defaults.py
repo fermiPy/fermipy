@@ -421,7 +421,7 @@ extension_output = OrderedDict((
 # Options for localization analysis
 localize = {
     'nstep': (5, 'Number of steps along each spatial dimension in the refined likelihood scan.', int),
-    'dtheta_max': (0.3, 'Half-width of the search region in degrees used for the first pass of the localization search.', float),
+    'dtheta_max': (0.5, 'Half-width of the search region in degrees used for the first pass of the localization search.', float),
     'fix_background': (True, 'Fix background parameters when fitting the '
                        'source flux in each energy bin.', bool),
     'update': (True, 'Update the source model with the best-fit position.', bool)
