@@ -663,24 +663,22 @@ class Source(Model):
 
     def _update_spatial_width(self, **kwargs):
 
-        if self['SpatialModel'] in ['RadialGaussian']:
+        if 'SpatialWidth' in kwargs:
+            self.data['SpatialWidth'] = kwargs['SpatialWidth']
+        
+        if self['SpatialType'] in ['RadialGaussian']:
 
             if 'SpatialWidth' in kwargs:
                 self.spatial_pars['Sigma']['value'] = kwargs['SpatialWidth'] / 1.5095921854516636
 
             self.data['SpatialWidth'] = self.spatial_pars['Sigma']['value'] * 1.5095921854516636
                 
-        elif self['SpatialModel'] in ['RadialDisk']:
+        elif self['SpatialType'] in ['RadialDisk']:
 
             if 'SpatialWidth' in kwargs:
                 self.spatial_pars['Radius']['value'] = kwargs['SpatialWidth'] / 0.8246211251235321
 
-            self.data['SpatialWidth'] = self.spatial_pars['Radius']['value'] * 0.8246211251235321
-
-        elif self['SpatialModel'] in ['GaussianSource','DiskSource']:
-
-            if 'SpatialWidth' in kwargs:
-                self.data['SpatialWidth'] = kwargs['SpatialWidth']
+            self.data['SpatialWidth'] = self.spatial_pars['Radius']['value'] * 0.8246211251235321            
             
     def _init_spatial_pars(self, **kwargs):
 

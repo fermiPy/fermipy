@@ -363,7 +363,7 @@ class ExtensionFit(object):
             self.set_source_morphology(name,
                                        spatial_model=spatial_model,
                                        spatial_pars=spatial_pars,
-                                       use_pylike=True)
+                                       use_pylike=False)
             fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)
             # self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
             #                  w, fit_output['loglike'])
