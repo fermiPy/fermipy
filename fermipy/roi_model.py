@@ -663,28 +663,29 @@ class Source(Model):
             self.spatial_pars['RA']['value'] = radec[0]
             self.spatial_pars['DEC']['value'] = radec[1]
 
-    def _update_spatial_width(self, **kwargs):
+    def _update_spatial_width(self, spatial_width):
 
-        if 'SpatialWidth' in kwargs:
-            self.data['SpatialWidth'] = kwargs['SpatialWidth']
+        if 'SpatialWidth' is not None:
+            self.data['SpatialWidth'] = spatial_width
         
         if self['SpatialType'] in ['RadialGaussian']:
 
-            if 'SpatialWidth' in kwargs:
-                self.spatial_pars['Sigma']['value'] = kwargs['SpatialWidth'] / 1.5095921854516636
+            if spatial_width is not None:
+                self.spatial_pars['Sigma']['value'] = spatial_width / 1.5095921854516636
 
             self.data['SpatialWidth'] = self.spatial_pars['Sigma']['value'] * 1.5095921854516636
                 
         elif self['SpatialType'] in ['RadialDisk']:
 
-            if 'SpatialWidth' in kwargs:
-                self.spatial_pars['Radius']['value'] = kwargs['SpatialWidth'] / 0.8246211251235321
+            if spatial_width is not None:
+                self.spatial_pars['Radius']['value'] = spatial_width / 0.8246211251235321
 
             self.data['SpatialWidth'] = self.spatial_pars['Radius']['value'] * 0.8246211251235321            
             
     def _init_spatial_pars(self, **kwargs):
 
         spatial_pars = copy.deepcopy(kwargs)
+        spatial_width = spatial_pars.pop('SpatialWidth', None)
         
         if self['SpatialType'] == 'SkyDirFunction':
             self._extended = False
@@ -704,7 +705,7 @@ class Source(Model):
             if k in self.spatial_pars:
                 self.spatial_pars[k].update(spatial_pars[k])
 
-        self._update_spatial_width(**spatial_pars)
+        self._update_spatial_width(spatial_width)
         if 'RA' in spatial_pars or 'DEC' in spatial_pars:
             self._set_radec([spatial_pars['RA']['value'],
                              spatial_pars['DEC']['value']])
