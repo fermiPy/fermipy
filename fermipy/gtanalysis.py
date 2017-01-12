@@ -1477,7 +1477,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         
         self.logger.log(loglevel, 'Adding source ' + name)
 
-        src = self.roi.create_source(name, src_dict)
+        src = self.roi.create_source(name, src_dict, rescale=True)
         
         for c in self.components:
             c.add_source(name, src_dict, free=free,
