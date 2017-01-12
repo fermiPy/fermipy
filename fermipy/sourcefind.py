@@ -18,7 +18,7 @@ from fermipy.skymap import Map
 from fermipy.config import ConfigSchema
 from fermipy.gtutils import FreeParameterState, SourceMapState
 from LikelihoodState import LikelihoodState
-
+import pyLikelihood as pyLike
 
 class SourceFind(object):
     """Mixin class which provides source-finding functionality to

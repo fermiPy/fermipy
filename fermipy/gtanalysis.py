@@ -4290,7 +4290,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if free is not None:
             pylike_src.spectrum().normPar().setFree(free)
         
-        if hasattr(pyLike, 'BinnedLikeConfig'):
+        if hasattr(pyLike, 'PsfIntegConfig') and \
+                hasattr(pyLike.PsfIntegConfig, 'set_use_single_psf'):
             config = pyLike.BinnedLikeConfig(self.like.logLike.config())
             config.psf_integ_config().set_use_single_psf(use_single_psf)
             self.like.addSource(pylike_src, config)

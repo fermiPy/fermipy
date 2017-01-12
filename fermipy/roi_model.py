@@ -920,15 +920,15 @@ class Source(Model):
         src_data['spectral_pars'] = cast_pars_dict(spectral_pars)
         src_data['spatial_pars'] = cast_pars_dict(spatial_pars)
 
-        if 'name' in src_dict:
+        if 'name' in src_data:
             name = src_data['name']
-            src_data['Source_Name'] = src_dict.pop('name')
-        elif 'Source_Name' in src_dict:
-            name = src_dict['Source_Name']
+            src_data['Source_Name'] = src_data.pop('name')
+        elif 'Source_Name' in src_data:
+            name = src_data['Source_Name']
         else:
             raise Exception('Source name undefined.')
 
-        skydir = wcs_utils.get_target_skydir(src_dict, roi_skydir)
+        skydir = wcs_utils.get_target_skydir(src_data, roi_skydir)
 
         src_data['RAJ2000'] = skydir.ra.deg
         src_data['DEJ2000'] = skydir.dec.deg

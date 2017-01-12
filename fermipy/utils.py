@@ -807,8 +807,8 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
         mz &= labels == labels[ix,iy]
         m |= mz
 
-    mx = np.abs(x[iy]-ix) <= dpix
-    my = np.abs(y[ix]-iy) <= dpix
+    mx = np.abs(x[:,iy]-ix) <= dpix
+    my = np.abs(y[ix,:]-iy) <= dpix
 
     coeffx = poly_to_parabola(np.polyfit(x[:,iy][mx],
                                          z[:, iy][mx], 2))
