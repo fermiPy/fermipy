@@ -25,7 +25,7 @@ def mask_extended(cat_table):
 def select_extended(cat_table):
     """Select only rows representing extended sources from a catalog table
     """
-    return np.array([ row.isalnum() for row in cat_table['Extended_Source_Name'].data ], bool)
+    return np.array([len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data ], bool)
 
 def make_mask(cat_table, cut):
     """Mask a bit mask selecting the rows that pass a selection

@@ -55,6 +55,10 @@ def fill_livetime_hist(skydir, tab_sc, tab_gti, zmax, costh_edges):
         fraction).
     """
 
+    if len(tab_gti) == 0:
+        shape = (len(costh_edges)-1,len(skydir))
+        return (np.zeros(shape), np.zeros(shape))
+    
     m = (tab_sc['START'] < tab_gti['STOP'][-1])
     m &= (tab_sc['STOP'] > tab_gti['START'][0])
     tab_sc = tab_sc[m]

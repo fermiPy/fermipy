@@ -26,9 +26,9 @@ def test_catalog_src_manager():
     # Test the split dictionary
     assert(len(ret_dict['comp_info_dict']['3FGL_v00'].keys()) == 3)
     assert(len(ret_dict['comp_info_dict']['3FGL_v00']
-               ['extended'].roi_model.sources) == 1)
+               ['extended'].roi_model.sources) == 2)
     assert(len(ret_dict['comp_info_dict']['3FGL_v00']
-               ['faint'].roi_model.sources) == 61)
+               ['faint'].roi_model.sources) == 60)
     assert(len(ret_dict['comp_info_dict']['3FGL_v00']
                ['remain'].roi_model.sources) == 1)
 

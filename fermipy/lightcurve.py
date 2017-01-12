@@ -137,7 +137,7 @@ class LightCurve(object):
 
         # make array of time values in MET
         if kwargs['time_bins']:
-            times = kwargs['time_bins']
+            times = np.array(kwargs['time_bins'])
         elif kwargs['nbins']:
             times = np.linspace(self.tmin, self.tmax,
                                 kwargs['nbins'] + 1)
@@ -182,6 +182,10 @@ class LightCurve(object):
             config['selection']['tmax'] = time[1]
             config['ltcube']['use_local_ltcube'] = kwargs['use_local_ltcube']
             config['model']['diffuse_dir'] = [self.workdir]
+
+            if config['components'] is None:
+                config['components'] = []
+            
             for j, c in enumerate(self.components):
                 if len(config['components']) <= j:
                     config['components'] += [{}]                    
