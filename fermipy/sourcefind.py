@@ -16,7 +16,7 @@ from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
 from fermipy.skymap import Map
 from fermipy.config import ConfigSchema
-from fermipy.gtutils import savefreestate, SourceMapState
+from fermipy.gtutils import FreeParameterState, SourceMapState
 from LikelihoodState import LikelihoodState
 
 
@@ -244,7 +244,7 @@ class SourceFind(object):
 
         return srcs, peaks
 
-    @savefreestate
+
     def localize(self, name, **kwargs):
         """Find the best-fit position of a source.  Localization is
         performed in two steps.  First a TS map is computed centered
@@ -313,7 +313,10 @@ class SourceFind(object):
         config = schema.create_config(config, **kwargs)
 
         self.logger.info('Running localization for %s' % name)
+
+        free_state = FreeParameterState(self)
         loc = self._localize(name, **config)
+        free_state.restore()
 
         self.logger.info('Finished localization.')
 
