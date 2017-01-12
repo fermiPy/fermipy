@@ -180,12 +180,6 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True,
         if 'error' in o:
             o['error'] /= np.abs(scale)
 
-        if 'min' in o:
-            o['min'] /= np.abs(scale)
-
-        if 'max' in o:
-            o['max'] /= np.abs(scale)
-
     if update_bounds:
         o['min'] = o['value']*1E-3
         o['max'] = o['value']*1E3
