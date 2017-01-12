@@ -326,8 +326,9 @@ class Model(object):
         return self._data['psf_scale']
 
     @staticmethod
-    def create_from_dict(src_dict, roi_skydir=None):
+    def create_from_dict(src_dict, roi_skydir=None, rescale=False):
 
+        src_dict = copy.deepcopy(src_dict)
         src_dict.setdefault('SpatialModel', 'PointSource')
         src_dict.setdefault('SpatialType',
                             get_spatial_type(src_dict['SpatialModel']))
@@ -357,7 +358,8 @@ class Model(object):
         elif src_dict['SpatialModel'] == 'MapCubeFunction':
             return MapCubeSource(src_dict['name'], src_dict)
         else:
-            return Source.create_from_dict(src_dict, roi_skydir)
+            return Source.create_from_dict(src_dict, roi_skydir,
+                                           rescale=rescale)
 
     def _sync_params(self):
         self._data['params'] = get_params_dict(self['spectral_pars'])
@@ -872,7 +874,7 @@ class Source(Model):
         return self._data
 
     @staticmethod
-    def create_from_dict(src_dict, roi_skydir=None):
+    def create_from_dict(src_dict, roi_skydir=None, rescale=False):
         """Create a source object from a python dictionary.
 
         Parameters
@@ -881,17 +883,17 @@ class Source(Model):
            Dictionary defining the properties of the source.
 
         """
-        src_data = src_dict.copy()    
-        src_data.setdefault('SpatialModel', 'PointSource')
-        src_data.setdefault('Spectrum_Filename', None)
-        src_data.setdefault('SpectrumType', 'PowerLaw')
-        src_data['SpatialType'] = get_spatial_type(src_data['SpatialModel'])
+        src_dict = copy.deepcopy(src_dict)
+        src_dict.setdefault('SpatialModel', 'PointSource')
+        src_dict.setdefault('Spectrum_Filename', None)
+        src_dict.setdefault('SpectrumType', 'PowerLaw')
+        src_dict['SpatialType'] = get_spatial_type(src_dict['SpatialModel'])
 
-        spectrum_type = src_data['SpectrumType']
-        spatial_type = src_data['SpatialType']
+        spectrum_type = src_dict['SpectrumType']
+        spatial_type = src_dict['SpatialType']
 
-        spectral_pars = src_data.pop('spectral_pars',{})
-        spatial_pars = src_data.pop('spatial_pars',{})
+        spectral_pars = src_dict.pop('spectral_pars',{})
+        spatial_pars = src_dict.pop('spatial_pars',{})
 
         if not spectral_pars:
             spectral_pars = extract_pars_from_dict(spectrum_type, src_dict)
@@ -906,36 +908,36 @@ class Source(Model):
                     del spatial_pars[k]
                 
         spectral_pars = create_pars_from_dict(spectrum_type, spectral_pars,
-                                              True, False)
+                                              rescale, False)
         spatial_pars = create_pars_from_dict(spatial_type, spatial_pars,
                                              False, False)
         
-        if 'file' in src_data:
-            src_data['Spectrum_Filename'] = src_data.pop('file')
+        if 'file' in src_dict:
+            src_dict['Spectrum_Filename'] = src_dict.pop('file')
 
-        if spectrum_type == 'DMFitFunction' and src_data['Spectrum_Filename'] is None:
-            src_data['Spectrum_Filename'] = os.path.join('$FERMIPY_DATA_DIR',
+        if spectrum_type == 'DMFitFunction' and src_dict['Spectrum_Filename'] is None:
+            src_dict['Spectrum_Filename'] = os.path.join('$FERMIPY_DATA_DIR',
                                                          'gammamc_dif.dat')
                 
-        src_data['spectral_pars'] = cast_pars_dict(spectral_pars)
-        src_data['spatial_pars'] = cast_pars_dict(spatial_pars)
+        src_dict['spectral_pars'] = cast_pars_dict(spectral_pars)
+        src_dict['spatial_pars'] = cast_pars_dict(spatial_pars)
 
-        if 'name' in src_data:
-            name = src_data['name']
-            src_data['Source_Name'] = src_data.pop('name')
-        elif 'Source_Name' in src_data:
-            name = src_data['Source_Name']
+        if 'name' in src_dict:
+            name = src_dict['name']
+            src_dict['Source_Name'] = src_dict.pop('name')
+        elif 'Source_Name' in src_dict:
+            name = src_dict['Source_Name']
         else:
             raise Exception('Source name undefined.')
 
-        skydir = wcs_utils.get_target_skydir(src_data, roi_skydir)
+        skydir = wcs_utils.get_target_skydir(src_dict, roi_skydir)
 
-        src_data['RAJ2000'] = skydir.ra.deg
-        src_data['DEJ2000'] = skydir.dec.deg
+        src_dict['RAJ2000'] = skydir.ra.deg
+        src_dict['DEJ2000'] = skydir.dec.deg
 
         radec = np.array([skydir.ra.deg, skydir.dec.deg])
 
-        return Source(name, src_data, radec=radec)
+        return Source(name, src_dict, radec=radec)
 
     @staticmethod
     def create_from_xml(root, extdir=None):
@@ -1380,7 +1382,7 @@ class ROIModel(fermipy.config.Configurable):
             self.load_source(src, False, self.config['merge_sources'])
 
     def create_source(self, name, src_dict, build_index=True,
-                      merge_sources=True):
+                      merge_sources=True, rescale=True):
         """Add a new source to the ROI model from a dictionary or an
         existing source object.
 
@@ -1401,7 +1403,8 @@ class ROIModel(fermipy.config.Configurable):
 
         if isinstance(src_dict, dict):
             src_dict['name'] = name
-            src = Model.create_from_dict(src_dict, self.skydir)
+            src = Model.create_from_dict(src_dict, self.skydir,
+                                         rescale=rescale)
         else:
             src = src_dict
             src.set_name(name)

@@ -245,7 +245,8 @@ def test_create_source_from_dict(tmppath):
                                    'SpectrumType': 'PowerLaw',
                                    'Index': 2.3,
                                    'Prefactor': 1.3E-9,
-                                   'ra': ra, 'dec': dec})
+                                   'ra': ra, 'dec': dec},
+                                  rescale=True)
 
     assert_allclose(src['ra'], ra)
     assert_allclose(src['dec'], dec)
@@ -263,7 +264,8 @@ def test_create_source_from_dict(tmppath):
                                    'Index': 2.3,
                                    'Prefactor': {'value' : 1.3, 'scale' : 1E-8, 'min' : 0.15, 'max' : 10.0,
                                                  'free' : False},
-                                   'ra': ra, 'dec': dec})
+                                   'ra': ra, 'dec': dec},
+                                  rescale=True)
 
     assert_allclose(src.spectral_pars['Prefactor']['value'], 1.3)
     assert_allclose(src.spectral_pars['Prefactor']['scale'], 1E-8)
