@@ -11,7 +11,7 @@ import fermipy.config
 from fermipy import utils
 from fermipy import defaults
 from fermipy.config import ConfigSchema
-from fermipy.gtutils import savefreestate, SourceMapState
+from fermipy.gtutils import SourceMapState, FreeParameterState
 from LikelihoodState import LikelihoodState
 
 
@@ -19,7 +19,6 @@ class ExtensionFit(object):
     """Mixin class which provides extension fitting to
     `~fermipy.gtanalysis.GTAnalysis`."""
 
-    @savefreestate
     def extension(self, name, **kwargs):
         """Test this source for spatial extension with the likelihood
         ratio method (TS_ext).  This method will substitute an
@@ -98,6 +97,8 @@ class ExtensionFit(object):
             'extension'.
         """
 
+        free_state = FreeParameterState(self)
+
         name = self.roi.get_source_by_name(name).name
 
         schema = ConfigSchema(self.defaults['extension'],
@@ -164,39 +165,25 @@ class ExtensionFit(object):
         o['ext_src_map'] = None
         o['ext_bkg_map'] = None
 
-        self.zero_source(name)
-        src_ptsrc = copy.deepcopy(src)
-        src_ptsrc.set_name('%s_ptsrc' % (name.lower().replace(' ', '_')))
-        src_ptsrc.set_spatial_model('PointSource')
-        src_ptsrc.set_psf_scale_fn(psf_scale_fn)
-
-        src_ext = copy.deepcopy(src)
-        #src_ext.set_name('%s_ext' % (name.lower().replace(' ', '_')))
-        src_ext.set_psf_scale_fn(psf_scale_fn)
+        self.set_source_morphology(name, spatial_model='PointSource',
+                                   use_pylike=False,
+                                   psf_scale_fn=psf_scale_fn)
 
         # Fit a point-source
         self.logger.debug('Fitting point-source model.')
-        self.add_source(src_ptsrc.name, src_ptsrc, free=True, init_source=False,
-                        use_pylike=False, loglevel=logging.DEBUG)
         fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
         o['loglike_ptsrc'] = fit_output['loglike']
         self.logger.debug('Point Source Likelihood: %f', o['loglike_ptsrc'])
 
         if config['save_model_map']:
             o['ptsrc_tot_map'] = self.model_counts_map()
-            o['ptsrc_src_map'] = self.model_counts_map(src_ptsrc.name)
-            o['ptsrc_bkg_map'] = self.model_counts_map(
-                exclude=[src_ptsrc.name])
-
-        self.delete_source(src_ptsrc.name, save_template=False,
-                           loglevel=logging.DEBUG)
-
-        self.unzero_source(name)
+            o['ptsrc_src_map'] = self.model_counts_map(name)
+            o['ptsrc_bkg_map'] = self.model_counts_map(exclude=[name])
 
         # Perform scan over width parameter
         self.logger.debug('Width scan vector:\n %s', width)
 
-        if fit_position:
+        if config['fit_position']:
             ext_fit = self._fit_extension_full(name,
                                                spatial_model=spatial_model,
                                                optimizer=config['optimizer'])
@@ -212,7 +199,6 @@ class ExtensionFit(object):
                                             optimizer=config['optimizer'])
 
         #self.logger.debug('Likelihood: %s',o['loglike'])
-        o['loglike'] = np.concatenate(([o['loglike_ptsrc']], o['loglike']))
         o['dloglike'] = o['loglike'] - o['loglike_ptsrc']
         o['ts_ext'] = 2 * (o['loglike_ext'] - o['loglike_ptsrc'])
 
@@ -223,42 +209,38 @@ class ExtensionFit(object):
 
         # Fit with the best-fit extension model
         self.logger.info('Fitting extended-source model.')
-        self.zero_source(name)
-        src_ext.set_name('%s_ext' % (name.lower().replace(' ', '_')))
-        src_ext.set_radec(o['ra'], o['dec'])
-        src_ext.set_spatial_model(spatial_model, max(o['ext'], 10**-2.5))
-        self.add_source(src_ext.name, src_ext, free=True)
+
+        self.set_source_morphology(name, spatial_model=spatial_model,
+                                   spatial_pars={'ra': o['ra'], 'dec': o['dec'],
+                                                 'SpatialWidth': o['ext']},
+                                   use_pylike=False,
+                                   psf_scale_fn=psf_scale_fn)
 
         fit_output = self._fit(loglevel=logging.DEBUG, update=False,
                                **config['optimizer'])
-        self.update_source(src_ext.name, reoptimize=True,
+        self.update_source(name, reoptimize=True,
                            optimizer=config['optimizer'])
 
-        o['source_fit'] = self.get_src_model(src_ext.name)
+        o['source_fit'] = self.get_src_model(name)
         o['loglike_ext'] = fit_output['loglike']
 
         if config['save_model_map']:
             o['ext_tot_map'] = self.model_counts_map()
-            o['ext_src_map'] = self.model_counts_map(src_ext.name)
-            o['ext_bkg_map'] = self.model_counts_map(exclude=[src_ext.name])
-
-        src_ext = self.delete_source(src_ext.name, save_template=False)
-        self.unzero_source(name)
-
-        # Restore ROI to previous state
-        saved_state.restore()
-        self._sync_params(name)
-        self._update_roi()
+            o['ext_src_map'] = self.model_counts_map(name)
+            o['ext_bkg_map'] = self.model_counts_map(exclude=[name])
 
         if update and (sqrt_ts_threshold is None or
                        np.sqrt(o['ts_ext']) > sqrt_ts_threshold):
             src = self.delete_source(name)
-            src.set_spectral_pars(src_ext.spectral_pars)
-            src.set_spatial_model(src_ext['SpatialModel'],
-                                  src_ext['SpatialWidth'])
-            src.set_psf_scale_fn(psf_scale_fn)
-            self.add_source(name, src, free=True)
+            self.add_source(name, src)
             self.fit(loglevel=logging.DEBUG, **config['optimizer'])
+        else:
+            self.set_source_morphology(name, spatial_model=src['SpatialModel'],
+                                       spatial_pars=src.spatial_pars)
+            # Restore ROI to previous state
+            saved_state.restore()
+            self._sync_params(name)
+            self._update_roi()
 
         filename = utils.format_filename(self.workdir, 'ext',
                                          prefix=[config['prefix'],
@@ -270,6 +252,7 @@ class ExtensionFit(object):
             np.save(filename + '.npy', o)
 
         self.logger.info('Finished')
+        free_state.restore()
 
         return o
 
@@ -338,20 +321,20 @@ class ExtensionFit(object):
 
         src = self.roi.copy_source(name)
 
-        src.set_radec(skydir.ra.deg, skydir.dec.deg)
-
         self._fitcache = None
+
+        spatial_pars = {'ra': skydir.ra.deg, 'dec': skydir.dec.deg}
 
         loglike = []
         for i, w in enumerate(width):
 
-            # print(i,w,spatial_model)
-            src.set_spatial_model(spatial_model, max(w, 0.01))
-            self._update_srcmap(src.name, src)
+            spatial_pars['SpatialWidth'] = max(w, 0.00316)
+            self.set_source_morphology(name,
+                                       spatial_model=spatial_model,
+                                       spatial_pars=spatial_pars)
             fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)
-            self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
-                              w, fit_output['loglike'])
-
+            # self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
+            #                  w, fit_output['loglike'])
             print(i, w, fit_output['loglike'])
             loglike += [fit_output['loglike']]
 
@@ -366,30 +349,27 @@ class ExtensionFit(object):
         spatial_model = kwargs.get('spatial_model')
         skydir = kwargs.pop('skydir', self.roi[name].skydir)
 
-        self.zero_source(name)
+        src = self.roi.copy_source(name)
+
+        self._fitcache = None
+
+        spatial_pars = {'ra': skydir.ra.deg, 'dec': skydir.dec.deg}
 
         loglike = []
-
-        src = self.roi.copy_source(name)
-        src_ext = copy.deepcopy(src)
-        src_ext.set_name('%s_ext' % (name.lower().replace(' ', '_')))
-        src_ext.set_radec(skydir.ra.deg, skydir.dec.deg)
-
         for i, w in enumerate(width):
 
-            src_ext.set_spatial_model(spatial_model, max(w, 0.01))
-            self.add_source(src_ext.name, src_ext, free=True, init_source=False,
-                            loglevel=logging.DEBUG)
-
+            spatial_pars['SpatialWidth'] = max(w, 0.00316)
+            self.set_source_morphology(name,
+                                       spatial_model=spatial_model,
+                                       spatial_pars=spatial_pars)
             fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)
-            self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
-                              w, fit_output['loglike'])
+            # self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
+            #                  w, fit_output['loglike'])
+            print(i, w, fit_output['loglike'])
             loglike += [fit_output['loglike']]
 
-            self.delete_source(src_ext.name, save_template=False,
-                               loglevel=logging.DEBUG)
-
-        self.unzero_source(name)
+        self.set_source_morphology(name, spatial_model=src['SpatialModel'],
+                                   spatial_pars=src.spatial_pars)
 
         return np.array(loglike)
 
@@ -440,21 +420,23 @@ class ExtensionFit(object):
         src = self.roi.copy_source(name)
 
         spatial_model = kwargs.get('spatial_model', 'RadialGaussian')
-        loglike = np.nan
+        loglike = -self.like()
 
         # Perform preliminary fit?
         print('skydir ', skydir.ra.deg, skydir.dec.deg)
 
-        for i in range(5):
+        for i in range(4):
 
             fit_ext = self._fit_extension(name, skydir=skydir, **kwargs)
 
             self.roi[name].set_spatial_model(
                 spatial_model, max(fit_ext['ext'], 0.00316))
 
+            scan_cdelt = 0.05
+            #max(0.5 * fit_ext['ext'], 0.00316)
+
             fit_pos = self._fit_position_scan(name, skydir=skydir,
-                                              scan_cdelt=max(
-                                                  0.5 * fit_ext['ext'], 0.00316),
+                                              scan_cdelt=scan_cdelt,
                                               nstep=5)
             skydir = fit_pos['skydir']
             fit_ext['ra'] = skydir.ra.deg

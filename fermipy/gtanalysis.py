@@ -861,7 +861,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         spatial_pars.setdefault('ra',src['ra'])
         spatial_pars.setdefault('dec',src['dec'])
                 
-        if hasattr(pyLike.BinnedLikelihood, 'setSourceMapImage') and 0:
+        if hasattr(pyLike.BinnedLikelihood, 'setSourceMapImage') and not use_pylike:
             src.set_spatial_model(spatial_model, spatial_pars)
             self._update_srcmap(src.name, src, psf_scale_fn=psf_scale_fn)            
         else:
