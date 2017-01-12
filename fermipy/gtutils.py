@@ -37,10 +37,10 @@ def bitmask_to_bits(mask):
     return bits
 
 DEFAULT_SCALE_DICT = {'value': 1000.0,
-                      'scale': None, 'min': 0.001, 'max': 1000.0}
-DEFAULT_NORM_DICT = {'value': 1E-12, 'scale': None, 'min': 1E-5, 'max': 1000.0}
+                      'scale': 1.0, 'min': 0.001, 'max': 1000.0}
+DEFAULT_NORM_DICT = {'value': 1E-12, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}
 DEFAULT_INTEGRAL_DICT = {'value': 1E-6,
-                         'scale': None, 'min': 1E-5, 'max': 1000.0}
+                         'scale': 1.0, 'min': 1E-5, 'max': 1000.0}
 DEFAULT_INDEX_DICT = {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0}
 
 FUNCTION_NORM_PARS = {}
@@ -137,7 +137,7 @@ def init_function_pars():
                             value=p.getValue(),
                             min=bounds[0],
                             max=bounds[1],
-                            scale=None,
+                            scale=1.0,
                             free=False)
 
             par_dict.update(copy.deepcopy(FUNCTION_DEFAULT_PARS[fname][pname]))
