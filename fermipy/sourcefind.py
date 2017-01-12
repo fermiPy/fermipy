@@ -542,88 +542,43 @@ class SourceFind(object):
         skydir = kwargs.pop('skydir', self.roi[name].skydir)
         scan_cdelt = kwargs.pop('scan_cdelt', 0.02)
         nstep = kwargs.pop('nstep', 5)
-
-        lnlmap = Map.create(skydir, scan_cdelt, (nstep, nstep),
-                            coordsys=wcs_utils.get_coordsys(self._skywcs))
-
-        scan_skydir = lnlmap.get_pixel_skydirs()
-
-        if hasattr(self.components[0].like.logLike, 'setSourceMapImage') and 1:
-            loglike_vals = self._scan_position_fast(name, scan_skydir,
-                                                    **kwargs)
-        else:
-            loglike_vals = self._scan_position_pylike(name, scan_skydir,
-                                                      **kwargs)
-
-        saved_state.restore()
-
-        lnlmap.data = loglike_vals.reshape((nstep, nstep)).T
-        tsmap = Map(2.0 * lnlmap.data, lnlmap.wcs)
-
-        return tsmap
-
-    def _scan_position_pylike(self, name, skydir, **kwargs):
-        """Scan the likelihood vs. position by creating a new source at each
-        position."""
-
-        optimizer = kwargs.get('optimizer', {})
-
-        self.zero_source(name)
-
-        loglike = []
-
-        src = self.roi.copy_source(name)
-        src_loc = copy.deepcopy(src)
-        src_loc.set_name('%s_localize' % (name.lower().replace(' ', '_')))
-
-        skydir = skydir.transform_to('icrs')
-        for ra, dec in zip(skydir.ra.deg, skydir.dec.deg):
-
-            src_loc.set_radec(ra, dec)
-            self.add_source(src_loc.name, src_loc, free=True,
-                            init_source=False, save_source_maps=False,
-                            loglevel=logging.DEBUG)
-            fit_output = self._fit(loglevel=logging.DEBUG,
-                                   **optimizer)
-
-            loglike += [fit_output['loglike']]
-            self.delete_source(src_loc.name, loglevel=logging.DEBUG)
-
-        self.unzero_source(name)
-
-        return np.array(loglike)
-
-    def _scan_position_fast(self, name, skydir, **kwargs):
-
         use_cache = kwargs.get('use_cache', True)
         optimizer = kwargs.get('optimizer', {})
 
-        state = SourceMapState(self.like, [name])
-
         self.free_norm(name)
+        
+        lnlmap = Map.create(skydir, scan_cdelt, (nstep, nstep),
+                            coordsys=wcs_utils.get_coordsys(self._skywcs))
+
+        if hasattr(pyLike.BinnedLikelihood, 'setSourceMapImage'):
+            use_pylike=False
+        else:
+            use_pylike=True
 
         src = self.roi.copy_source(name)
-
-        if use_cache:
+            
+        if use_cache and not use_pylike:
             self._create_srcmap_cache(src.name, src)
 
-        radec = src.radec
+        scan_skydir = lnlmap.get_pixel_skydirs().transform_to('icrs')
+        for ra, dec in zip(scan_skydir.ra.deg, scan_skydir.dec.deg):
 
-        loglike = []
-        skydir = skydir.transform_to('icrs')
-        for ra, dec in zip(skydir.ra.deg, skydir.dec.deg):
-
-            src.set_radec(ra, dec)
-            self._update_srcmap(src.name, src)
+            spatial_pars = {'ra': ra, 'dec': dec}
+            self.set_source_morphology(name,
+                                       spatial_pars=spatial_pars,
+                                       use_pylike=use_pylike)
             fit_output = self._fit(loglevel=logging.DEBUG,
                                    **optimizer)
             loglike += [fit_output['loglike']]
-            #print(ra, dec, self.get_norm(name), fit_output['loglike'])
+           
+        self.set_source_morphology(name, spatial_pars=src.spatial_pars)
+        saved_state.restore()
 
-        state.restore()
+        lnlmap.data = np.array(loglike).reshape((nstep, nstep)).T
+        tsmap = Map(2.0 * lnlmap.data, lnlmap.wcs)
 
         self._clear_srcmap_cache()
-        return np.array(loglike)
+        return tsmap
 
     def _fit_position_opt(self, name, use_cache=True):
 
