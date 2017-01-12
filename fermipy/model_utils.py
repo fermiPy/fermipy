@@ -128,6 +128,9 @@ def create_pars_from_dict(name, pars_dict, rescale=True, update_bounds=False):
     pars_dict : dict    
         Existing parameter dict that will be merged with the
         default dictionary created by this method.
+
+    rescale : bool
+        Rescale parameter values.
         
     """
     o = get_function_defaults(name)
@@ -160,7 +163,7 @@ def create_pars_from_dict(name, pars_dict, rescale=True, update_bounds=False):
 
 
 def make_parameter_dict(pdict, fixed_par=False, rescale=True,
-                        update_bounds=True):
+                        update_bounds=False):
     """
     Update a parameter dictionary.  This function will automatically
     set the parameter scale and bounds if they are not defined.
@@ -176,6 +179,12 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True,
         o['scale'] = np.abs(scale)*np.sign(o['scale'])
         if 'error' in o:
             o['error'] /= np.abs(scale)
+
+        if 'min' in o:
+            o['min'] /= np.abs(scale)
+
+        if 'max' in o:
+            o['max'] /= np.abs(scale)
 
     if update_bounds:
         o['min'] = o['value']*1E-3
