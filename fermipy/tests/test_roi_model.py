@@ -348,11 +348,11 @@ def test_create_gaussian_source(tmppath):
 
     assert_allclose(src['ra'], ra)
     assert_allclose(src['dec'], dec)
-    assert_allclose(src.spatial_pars['RA']['value'], ra)
-    assert_allclose(src.spatial_pars['DEC']['value'], dec)
-    assert_allclose(src.spatial_pars['Sigma']['value'], sigma)
+    if src['SpatialType'] == 'RadialGaussian':
+        assert_allclose(src.spatial_pars['RA']['value'], ra)
+        assert_allclose(src.spatial_pars['DEC']['value'], dec)
+        assert_allclose(src.spatial_pars['Sigma']['value'], sigma)
     assert src['SpatialModel'] == 'RadialGaussian'
-    assert src['SpatialType'] == 'RadialGaussian'
 
 
 def test_set_spatial_model(tmppath):
@@ -372,9 +372,11 @@ def test_set_spatial_model(tmppath):
     assert src['SourceType'] == 'PointSource'
 
     src.set_spatial_model('RadialDisk',{'ra' : 2.0, 'dec' : 3.0, 'Radius' : 2.0})
-    assert_allclose(src.spatial_pars['RA']['value'], 2.0)
-    assert_allclose(src.spatial_pars['DEC']['value'], 3.0)
-    assert_allclose(src.spatial_pars['Radius']['value'], 2.0)
+
+    if src['SpatialType'] == 'RadialDisk':
+        assert_allclose(src.spatial_pars['RA']['value'], 2.0)
+        assert_allclose(src.spatial_pars['DEC']['value'], 3.0)
+        assert_allclose(src.spatial_pars['Radius']['value'], 2.0)
     assert_allclose(src['ra'], 2.0)
     assert_allclose(src['dec'], 3.0)    
     assert src['SpatialModel'] == 'RadialDisk'

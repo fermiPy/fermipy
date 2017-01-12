@@ -561,6 +561,7 @@ class SourceFind(object):
             self._create_srcmap_cache(src.name, src)
 
         scan_skydir = lnlmap.get_pixel_skydirs().transform_to('icrs')
+        loglike = []
         for ra, dec in zip(scan_skydir.ra.deg, scan_skydir.dec.deg):
 
             spatial_pars = {'ra': ra, 'dec': dec}
