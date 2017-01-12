@@ -222,7 +222,7 @@ class Model(object):
     """
 
     def __init__(self, name, data):
-
+        
         self._data = defaults.make_default_dict(defaults.source_output)
         self._data['spectral_pars'] = get_function_defaults(data['SpectrumType'])
         self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
@@ -881,46 +881,47 @@ class Source(Model):
            Dictionary defining the properties of the source.
 
         """
-
-        src_dict = copy.deepcopy(src_dict)
-
-        src_data = {}        
+        src_data = src_dict.copy()    
         src_data.setdefault('SpatialModel', 'PointSource')
         src_data.setdefault('Spectrum_Filename', None)
         src_data.setdefault('SpectrumType', 'PowerLaw')
-        
-        src_data = utils.merge_dict(src_data, src_dict)
         src_data['SpatialType'] = get_spatial_type(src_data['SpatialModel'])
 
         spectrum_type = src_data['SpectrumType']
         spatial_type = src_data['SpatialType']
-        spectral_pars = extract_pars_from_dict(spectrum_type, src_dict)
-        spatial_pars = extract_pars_from_dict(spatial_type, src_dict)
-        norm_par_name = get_function_norm_par_name(spectrum_type)
-        if norm_par_name is not None:
-            spectral_pars[norm_par_name].setdefault('free',True)
+
+        spectral_pars = src_data.pop('spectral_pars',{})
+        spatial_pars = src_data.pop('spatial_pars',{})
+
+        if not spectral_pars:
+            spectral_pars = extract_pars_from_dict(spectrum_type, src_dict)
+            norm_par_name = get_function_norm_par_name(spectrum_type)
+            if norm_par_name is not None:
+                spectral_pars[norm_par_name].setdefault('free',True)
+
+        if not spatial_pars:
+            spatial_pars = extract_pars_from_dict(spatial_type, src_dict)
+            for k in ['RA', 'DEC', 'Prefactor']:
+                if k in spatial_pars:
+                    del spatial_pars[k]
                 
         spectral_pars = create_pars_from_dict(spectrum_type, spectral_pars,
                                               True, False)
         spatial_pars = create_pars_from_dict(spatial_type, spatial_pars,
                                              False, False)
-                    
-        if 'file' in src_dict:
-            src_data['Spectrum_Filename'] = src_dict.pop('file')
+        
+        if 'file' in src_data:
+            src_data['Spectrum_Filename'] = src_data.pop('file')
 
         if spectrum_type == 'DMFitFunction' and src_data['Spectrum_Filename'] is None:
             src_data['Spectrum_Filename'] = os.path.join('$FERMIPY_DATA_DIR',
                                                          'gammamc_dif.dat')
-
-        for k in ['RA', 'DEC', 'Prefactor']:
-            if k in spatial_pars:
-                del spatial_pars[k]
-
+                
         src_data['spectral_pars'] = cast_pars_dict(spectral_pars)
         src_data['spatial_pars'] = cast_pars_dict(spatial_pars)
 
         if 'name' in src_dict:
-            name = src_dict['name']
+            name = src_data['name']
             src_data['Source_Name'] = src_dict.pop('name')
         elif 'Source_Name' in src_dict:
             name = src_dict['Source_Name']
