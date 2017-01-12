@@ -373,6 +373,22 @@ def test_set_spatial_model(tmppath):
     assert src['SpatialType'] == 'SkyDirFunction'
     assert src['SourceType'] == 'PointSource'
 
+    src_dict = {'SpatialModel': 'RadialGaussian', 'ra': ra, 'dec': dec}
+    src = Source('testsrc', src_dict)
+    src.set_spatial_model('PointSource',{'RA' : {'value' : 1.0}, 'DEC' : {'value' : 2.0}})
+    assert_allclose(src.spatial_pars['RA']['value'], 1.0)
+    assert_allclose(src.spatial_pars['DEC']['value'], 2.0)
+    assert_allclose(src['ra'], 1.0)
+    assert_allclose(src['dec'], 2.0)
+
+    src_dict = {'SpatialModel': 'RadialGaussian', 'RA': ra, 'DEC': dec}
+    src = Source('testsrc', src_dict)
+    src.set_spatial_model('PointSource',{'RA' : {'value' : 1.0}, 'DEC' : {'value' : 2.0}})
+    assert_allclose(src.spatial_pars['RA']['value'], 1.0)
+    assert_allclose(src.spatial_pars['DEC']['value'], 2.0)
+    assert_allclose(src['ra'], 1.0)
+    assert_allclose(src['dec'], 2.0)
+    
     src.set_spatial_model('RadialDisk',{'ra' : 2.0, 'dec' : 3.0, 'Radius' : 2.0})
 
     if src['SpatialType'] == 'RadialDisk':

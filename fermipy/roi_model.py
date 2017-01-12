@@ -684,38 +684,30 @@ class Source(Model):
             
     def _init_spatial_pars(self, **kwargs):
 
+        spatial_pars = copy.deepcopy(kwargs)
+        
         if self['SpatialType'] == 'SkyDirFunction':
             self._extended = False
             self._data['SourceType'] = 'PointSource'
         else:
             self._extended = True
             self._data['SourceType'] = 'DiffuseSource'
-            
-        kwargs.setdefault('RA', self['ra'])
-        kwargs.setdefault('DEC', self['dec']) 
 
-        if 'ra' in kwargs:
-            kwargs['RA'] = kwargs.pop('ra')
+        spatial_pars.setdefault('RA', spatial_pars.pop('ra', self['ra']) )
+        spatial_pars.setdefault('DEC', spatial_pars.pop('dec', self['dec']) )
         
-        if 'dec' in kwargs:
-            kwargs['DEC'] = kwargs.pop('dec')
+        for k, v in spatial_pars.items():
+
+            if not isinstance(v,dict):
+                spatial_pars[k] = {'name': k, 'value': v}
             
-        for k, v in kwargs.items():
-            
-            if not k in self.spatial_pars:
-                continue
+            if k in self.spatial_pars:
+                self.spatial_pars[k].update(spatial_pars[k])
 
-            if isinstance(v,dict):
-                self.spatial_pars[k].update(v)
-            else:
-                self.spatial_pars[k].update({'name': k, 'value': v})
-
-        self._update_spatial_width(**kwargs)
-
-        if 'RA' in self.spatial_pars:
-            self._set_radec([self.spatial_pars['RA']['value'],
-                             self.spatial_pars['DEC']['value']])
-        
+        self._update_spatial_width(**spatial_pars)
+        if 'RA' in spatial_pars or 'DEC' in spatial_pars:
+            self._set_radec([spatial_pars['RA']['value'],
+                             spatial_pars['DEC']['value']])
 
     def load_from_catalog(self):
         """Load spectral parameters from catalog values."""
