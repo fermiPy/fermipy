@@ -788,10 +788,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 rm['components'][i]['model_counts'] += mc[i]
                 rm['components'][i]['npred'] += np.sum(mc[i])
 
-    def _update_srcmap(self, name, src):
+    def _update_srcmap(self, name, src, **kwargs):
 
         for c in self.components:
-            c._update_srcmap(name, src)
+            c._update_srcmap(name, src, **kwargs)
 
         if self._fitcache is not None:
             self._fitcache.update_source(name)
@@ -805,7 +805,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             c._srcmap_cache.clear()
 
     def reload_source(self, name, init_source=True):
-        """Delete and reload a source in the model.  This will refresh
+        """Delete and reload a source in the model.  This will update
         the spatial model of this source to the one defined in the XML
         model."""
 
@@ -828,6 +828,50 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.like.model = self.like.components[0].model
 
+    def set_source_morphology(self, name, **kwargs):
+        """Set the spatial model of a source.
+
+        Parameters
+        ----------
+        name : str
+           Source name.
+
+        spatial_model : str
+           Spatial model name (PointSource, RadialGaussian, etc.).
+           
+        spatial_pars : dict
+           Dictionary of spatial parameters (optional).   
+
+        use_cache : bool        
+           Generate the spatial model by interpolating the cached source
+           map.
+
+        use_pylike : bool
+           
+        """
+
+        name = self.roi.get_source_by_name(name).name
+        src = self.roi[name]
+
+        spatial_model = kwargs.get('spatial_model',src['SpatialModel'])
+        spatial_pars = kwargs.get('spatial_pars',{})
+        use_pylike = kwargs.get('use_pylike', True)
+        psf_scale_fn = kwargs.get('psf_scale_fn', None)
+        
+        spatial_pars.setdefault('ra',src['ra'])
+        spatial_pars.setdefault('dec',src['dec'])
+                
+        if hasattr(pyLike.BinnedLikelihood, 'setSourceMapImage') and 0:
+            src.set_spatial_model(spatial_model, spatial_pars)
+            self._update_srcmap(src.name, src, psf_scale_fn=psf_scale_fn)            
+        else:
+            src = self.delete_source(name, loglevel=logging.DEBUG)
+            src.set_spatial_model(spatial_model, spatial_pars)            
+            self.add_source(src.name, src, init_source=False,
+                            use_pylike=use_pylike, loglevel=logging.DEBUG)
+            
+            
+            
     def set_source_spectrum(self, name, spectrum_type='PowerLaw',
                             spectrum_pars=None, update_source=True):
         """Set the spectral model of a source.  This function can be
@@ -1219,8 +1263,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def _init_source(self, name):
 
         src = self.roi.get_source_by_name(name)
-        src.update_data({'sed': None,
-                         'extension': None})
+        src.update_data({'sed': None})
         sd = self.get_src_model(name, paramsonly=True)
         src.update_data(sd)
 
@@ -1397,7 +1440,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                     exclude, square,
                                     coordsys=coordsys)
 
-    def add_source(self, name, src_dict, free=False, init_source=True,
+    def add_source(self, name, src_dict, free=None, init_source=True,
                    save_source_maps=True, use_pylike=True,
                    use_single_psf=False, **kwargs):
         """Add a source to the ROI model.  This function may be called
@@ -1431,13 +1474,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             raise Exception(msg)
 
         loglevel = kwargs.pop('loglevel', self.loglevel)
-
+        
         self.logger.log(loglevel, 'Adding source ' + name)
 
         src = self.roi.create_source(name, src_dict)
-
+        
         for c in self.components:
-            c.add_source(name, src_dict, free=True,
+            c.add_source(name, src_dict, free=free,
                          save_source_maps=save_source_maps,
                          use_pylike=use_pylike,
                          use_single_psf=use_single_psf)
@@ -1451,7 +1494,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.like.syncSrcParams(str(name))
         self.like.model = self.like.components[0].model
-        self.free_norm(name, free, loglevel=logging.DEBUG)
+        #if free is not None:
+        #    self.free_norm(name, free, loglevel=logging.DEBUG)
 
         if init_source:
             self._init_source(name)
@@ -4192,7 +4236,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             for name in names:
                 self.reload_source(name)
 
-    def add_source(self, name, src_dict, free=False, save_source_maps=True,
+    def add_source(self, name, src_dict, free=None, save_source_maps=True,
                    use_pylike=True, use_single_psf=False):
         """Add a new source to the model.  Source properties
         (spectrum, spatial model) are set with the src_dict argument.
@@ -4239,9 +4283,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if not use_pylike:
             self._update_srcmap_file([src], True)
+            
+        pylike_src = self._create_source(src)
 
-        pylike_src = self._create_source(src, free=True)
-
+        # Initialize source as free/fixed
+        if free is not None:
+            pylike_src.spectrum().normPar().setFree(free)
+        
         if hasattr(pyLike, 'BinnedLikeConfig'):
             config = pyLike.BinnedLikeConfig(self.like.logLike.config())
             config.psf_integ_config().set_use_single_psf(use_single_psf)
@@ -4257,7 +4305,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self.set_exposure_scale(name)
 
-    def _create_source(self, src, free=False):
+    def _create_source(self, src):
         """Create a pyLikelihood Source object from a
         `~fermipy.roi_model.Model` object."""
 
@@ -4272,14 +4320,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                               False)
         elif src['SpatialType'] == 'RadialGaussian':
             sm = pyLike.RadialGaussian(src.skydir.ra.deg, src.skydir.dec.deg,
-                                       src['SpatialWidth'])
+                                       src.spatial_pars['Sigma']['value'])
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
 
         elif src['SpatialType'] == 'RadialDisk':
             sm = pyLike.RadialDisk(src.skydir.ra.deg, src.skydir.dec.deg,
-                                   src['SpatialWidth'])
+                                   src.spatial_pars['Radius']['value'])
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
@@ -4313,10 +4361,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         pylike_src.setSpectrum(fn)
         pylike_src.setName(str(src.name))
-
-        # Initialize source as free/fixed
-        pylike_src.spectrum().normPar().setFree(free)
-
+        
         return pylike_src
 
     def delete_source(self, name, save_template=True, delete_source_map=False,
@@ -5071,7 +5116,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             srcmap_utils.update_source_maps(self.files['srcmap'], srcmaps,
                                             logger=self.logger)
 
-    def _create_srcmap_cache(self, name, src):
+    def _create_srcmap_cache(self, name, src, **kwargs):
 
         from fermipy.srcmap_utils import SourceMapCache
 
@@ -5087,9 +5132,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                       rebin=rebin)
         self._srcmap_cache[name] = cache
 
-    def _create_srcmap(self, name, src):
+    def _create_srcmap(self, name, src, **kwargs):
         """Generate the source map for a source."""
 
+        psf_scale_fn = kwargs.get('psf_scale_fn', None)
         skydir = src.skydir
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
@@ -5104,14 +5150,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                          npix=self.npix, xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
                                          rebin=rebin,
-                                         psf_scale_fn=src['psf_scale_fn'])
+                                         psf_scale_fn=psf_scale_fn)
 
         return k
 
-    def _update_srcmap(self, name, src):
+    def _update_srcmap(self, name, src, **kwargs):
         """Update the source map for an existing source in memory."""
 
-        k = self._create_srcmap(name, src)
+        k = self._create_srcmap(name, src, **kwargs)
 
         # Force the source map to be cached
         self.like.logLike.sourceMap(str(name)).model()
