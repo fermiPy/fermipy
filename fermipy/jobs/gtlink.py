@@ -13,8 +13,33 @@ from fermipy.jobs.chain import Link
 import GtApp
 
 
+def extract_parameters(pil, keys=None):
+    """Extract and return parameter names and values from a pil object
+
+    Parameters:
+    ---------------
+    pil : `Pil' object
+
+    keys : list
+        List of parameter names, if None, extact all parameters
+
+    Returns:
+    ---------------
+    out_dict : dict
+        Dictionary with parameter name, value pairs
+    """
+    out_dict = {}
+    if keys is None:
+        keys = pil.keys()
+    for key in keys:
+        try:
+            out_dict[key] = pil[key]
+        except ValueError:
+            out_dict[key] = None
+    return out_dict
+
 def update_gtapp(gtapp, **kwargs):
-    """ Update the parameters of the object that can run ScienceTools applications
+    """Update the parameters of the object that can run ScienceTools applications
 
     Parameters:
     ---------------
@@ -35,7 +60,7 @@ def update_gtapp(gtapp, **kwargs):
 
 
 def build_gtapp(appname, **kwargs):
-    """ Build an object that can run ScienceTools application
+    """Build an object that can run ScienceTools application
 
     Parameters:
     ---------------
@@ -52,7 +77,7 @@ def build_gtapp(appname, **kwargs):
 
 
 def run_gtapp(gtapp, stream, dry_run, **kwargs):
-    """ Runs one on the ScienceTools apps
+    """Runs one on the ScienceTools apps
 
     Taken from fermipy.gtanalysis.run_gtapp by Matt Wood
 
@@ -95,65 +120,81 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
 
 
 class Gtlink(Link):
-    """  A wrapper for a single ScienceTools application
+    """A wrapper for a single ScienceTools application
 
     This class keeps track for the arguments to pass to the application
     as well as input and output files.
 
-    This can be used either with other link to build a chain, or as
+    This can be used either with other `Link` to build a `Chain`, or as
     as standalone wrapper to pass conifguration to the application.
 
     See help for `chain.Link' for additional details
     """
 
     def __init__(self, linkname, **kwargs):
-        """ C'tor
+        """C'tor
 
         See help for `chain.Link' for details
 
         This calls the base class c'tor then builds a GtApp object
         """
         Link.__init__(self, linkname, **kwargs)
-        self.__app = build_gtapp(self.appname, **self.options)
+        self.__app = build_gtapp(self.appname, **self.args)
 
     def update_args(self, override_args):
-        """ Update the argument used to invoke the application
+        """Update the argument used to invoke the application
 
         See help for `chain.Link' for details
 
         This calls the base class function then fills the parameters of the GtApp object
         """
-
         Link.update_args(self, override_args)
         update_gtapp(self.__app, **self.args)
 
     def get_gtapp(self):
-        """ Returns a `GTApp' object that will run this link """
+        """Returns a `GTApp` object that will run this `Link` """
         return self.__app
 
     def run_link(self, stream=sys.stdout, dry_run=False):
-        """ Runs this link
+        """Runs this `Link`
 
         Parameters
         -----------
-        stream : stream object
+        stream : `file`
             Must have 'write' function
 
         dry_run : bool
             Print command but do not run it
         """
+        input_found, input_missing = self.check_input_files()
+        if len(input_missing) != 0:
+            if dry_run:
+                stream.write("Input files are missing: %s: %i\n" % (self.linkname, len(input_missing)))
+            else:
+                raise OSError("Input files are missing: %s" % input_missing)
+
+        output_found, output_missing = self.check_output_files()
+        if len(output_missing) == 0:
+            stream.write("All output files for %s already exist: %i %i %i\n" %
+                         (self.linkname, len(output_found), len(output_missing), len(self.output_files)))
+            if dry_run:
+                pass
+            else:
+                return
+
         run_gtapp(self.__app, stream, dry_run, **self.args)
 
     def command_template(self):
-        """ Build and return a string that can be used as a template invoking
-            this chain from the command line
+        """Build and return a string that can be used as a template invoking
+        this chain from the command line.
+
+        The actual command can be obtainted by using
+        self.command_template().format(**self.args)        
         """
         com_out = self.__app.appName
         for key, val in self.args.items():
-            if self.options.has_key(key):
+            if self._options.has_key(key):
                 com_out += ' %s={%s}' % (key, key)
             else:
                 com_out += ' %s=%s' % (key, val)
         return com_out
-
-

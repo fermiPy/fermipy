@@ -1,13 +1,22 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Utilities to chain together a series of ScienceTools apps
+Utilities to execute command line applications.
+
+The main class is `Link`, which wraps a single command line application.
+
+The `Chain` class inherits from `Link` and allow chaining together several
+applications into a single object.
 """
 from __future__ import absolute_import, division, print_function
 
 import sys
 import os
+import copy
 
 from collections import OrderedDict
+
+from fermipy.jobs.file_archive import FileFlags, FileDict
+from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails, JobArchive
 
 
 def extract_arguments(args, defaults, mapping):
@@ -32,7 +41,7 @@ def extract_arguments(args, defaults, mapping):
 
     Returns dict filled with the arguments to pass to gtapp
     """
-    out_dict = defaults.copy()
+    out_dict = convert_option_dict_to_dict(defaults)
     for key in defaults.keys():
         if mapping is not None:
             try:
@@ -43,77 +52,25 @@ def extract_arguments(args, defaults, mapping):
             mapped_key = key
 
         mapped_val = args.get(mapped_key, None)
-        if mapped_val is not None:
-            out_dict[key] = mapped_val
-    return out_dict
-
-
-def extract_by_keys(in_dict, keys):
-    """ Extract some items from a dictionary, by key
-
-    Parameters:
-    ---------------
-    in_dict : dict
-        Input dictionary
-
-    keys : list
-        List of keys to extract
-
-    Returns:
-    ---------------
-    out_dict : dict
-        Dictionary with only those items in keys
-    """
-    out_dict = {}
-    for key in keys:
-        try:
-            out_value = in_dict[key]
-            out_dict[key] = out_value
-        except KeyError:
+        if mapped_val is None:
             pass
-    return out_dict
-
-
-def add_flags_to_dict(the_dict, flags):
-    """ Add flags to a dict as flag : None pairs """
-    for flag in flags:
-        the_dict[flag] = None
-
-
-def extract_parameters(pil, keys=None):
-    """ Extract parameter names and values from a pil object
-
-    Parameters:
-    ---------------
-    pil : `Pil' object
-
-    keys : list
-        List of parameter names, if None, extact all parameters
-
-    Returns:
-    ---------------
-    out_dict : dict
-        Dictionary with parameter name, value pairs
-    """
-    out_dict = {}
-    if keys is None:
-        keys = pil.keys()
-    for key in keys:
-        try:
-            out_dict[key] = pil[key]
-        except ValueError:
-            out_dict[key] = None
+        else:
+            out_dict[key] = mapped_val
     return out_dict
 
 
 def check_files(filelist):
     """ check that all files in a list exist
 
-    return two lists (found, missing)
+    Return two lists: (found, missing)
     """
     found = []
     missing = []
+    none_count = 0
     for fname in filelist:
+        if fname is None:
+            none_count += 1
+            continue
         if os.path.exists(fname):
             found.append(fname)
         else:
@@ -121,8 +78,52 @@ def check_files(filelist):
     return found, missing
 
 
+def add_argument(parser, dest, info):
+    """ Add an argument to an `argparse.ArgumentParser' object """
+    default, helpstr, typeinfo = info
+
+    if typeinfo == list:
+        parser.add_argument('%s'%dest, nargs='+', default=None, help=helpstr)
+    elif typeinfo == bool:
+        parser.add_argument('--%s'%dest, action='store_true', help=helpstr)
+    else:
+        parser.add_argument('--%s'%dest, action='store', type=typeinfo, 
+                            default=default, help=helpstr)
+
+
+def convert_value_to_option_tuple(value, helpstr=None):
+    """Convert a value to a tuple of the form expected by `Link.options`
+
+    Returns (value, helpstr, type(value)
+    """
+    if helpstr is None:
+        helpstr = "Unknown"
+    return (value, helpstr, type(value))
+
+
+def convert_dict_to_option_dict(input_dict):
+    """Convert a simple key-value dictionary to a dictionary of options tuples"""
+    ret_dict = {}
+    for key, value in input_dict.items():
+        ret_dict[key] = convert_value_to_option_tuple(value)
+    return ret_dict
+
+def convert_option_dict_to_dict(option_dict):
+    """Convert a dictionary of options tuples to a simple key-value dictionary"""
+    ret_dict = {}
+    for key, value in option_dict.items():
+        if value is None:
+            ret_dict[key] = None
+        elif isinstance(value, tuple):
+            ret_dict[key] = value[0]
+        else:
+            ret_dict[key] = value
+    return ret_dict
+
+
+
 class Link(object):
-    """  A wrapper for a command line application
+    """A wrapper for a command line application.
 
     This class keeps track for the arguments to pass to the application
     as well as input and output files.
@@ -144,10 +145,10 @@ class Link(object):
         Dictionary remapping keys in options to arguments sent to the application
         This is useful when two ScienceTools use different names for what is
         effectively the same parameter
-    input_files : list
-        List of input files need to run this application
-    output_files : list
-        List of files produced by this application
+    files : `FileDict`
+        Object that keeps track of input and output files
+    jobs : `OrderedDict`
+        Dictionary mapping keys to `JobDetails`
     """
 
     def __init__(self, linkname, **kwargs):
@@ -165,90 +166,145 @@ class Link(object):
         parser: `argparse.ArguemntParser'
             Parser with the options that we are allow to set and default values
         options : dict
-            Dictionary with the options that we are allowed to set and default values
-        flags : list
-            List with the flags that we are allowed to set
+            Dictionary with the tuples defining that we are allowed to set and default values
         mapping : dict
             Dictionary remapping input argument names
-            This is useful when two ScienceTools use different names for what is
+            This is useful when two `Link` use different names for what is
             effectively the same parameter
-        input_file_args : list
-            List of args which specify input files
-        output_file_args : list
-            List of args which specify output files
+        file_args : dict
+            Dictionary mapping argument to `FileFlags' enum
         """
         self.linkname = linkname
         self.appname = kwargs.get('appname', linkname)
-        self.defaults = kwargs.get('defaults', {})
         self.mapping = kwargs.get('mapping', {})
-        self.input_file_args = kwargs.get('input_file_args', [])
-        self.output_file_args = kwargs.get('output_file_args', [])
         self._parser = kwargs.get('parser', None)
+        self._options = {}
+        for key in self.mapping.keys():
+            self._options[key] = (None, None, None)
+        self._options.update(kwargs.get('options', {}))
         if self._parser is not None:
-            args = self._parser.parse_args([])
-            self.options = args.__dict__
-            self.flags = kwargs.get('flags', [])
-        else:
-            self.options = {}
-            for key in self.mapping.keys():
-                self.options[key] = None
-            self.options.update(kwargs.get('options', {}))
-            self.flags = kwargs.get('flags', [])
-        self.args = self.defaults.copy()
-        self.args.update(self.options)
-        add_flags_to_dict(self.args, self.flags)
-        self.input_file_dict = extract_by_keys(self.args, self.input_file_args)
-        self.output_file_dict = extract_by_keys(
-            self.args, self.output_file_args)
+            self.fill_argparser(self._parser)
+        self.args = {}
+        self.args.update(convert_option_dict_to_dict(self._options))
+        self.files = FileDict(**kwargs)
+        self.sub_files = FileDict()
+        self.jobs = OrderedDict()
+
+        
+    def print_summary(self, stream=sys.stdout, indent="", recurse_level=2):
+        """Print a summary of the activity done by this `Link`. 
+
+        Parameters
+        -----------
+        stream : `file`
+            Stream to print to
+        indent : str
+            Indentation at start of line
+        recurse_level : int
+            Number of recursion levels to print
+        """
+        if recurse_level < 0:
+            return
+        stream.write("%sLink: %s\n"%(indent, self.linkname))
+        stream.write("%sN_jobs: %s\n"%(indent, len(self.get_jobs())))
+        self.sub_files.print_chain_summary(stream, indent)
 
     def _get_args(self):
-        """ Get the arguments """
-        args = self.defaults.copy()
-        args.update(self.options)
+        """Internal function to cast self._options into dictionary 
+
+        Returns dict with argument key : value pairings
+        """
+        args = {}
+        args.update(convert_option_dict_to_dict(self._options))
         return args
 
-    def update_args(self, override_args):
-        """ Update the argument used to invoke the application
+    def _latch_file_info(self):
+        """Internal function to update the dictionaries 
+        keeping track of input and output files 
+        """
+        self.files.file_dict.clear()
+        self.files.latch_file_info(self.args)
 
-        Note that this will also update the dictionary of input and output files
+    def update_options(self, input_dict):
+        """Update the values in self.options 
+
+        Parameters
+        -----------
+        input_dict : dict 
+            Dictionary with argument key : value pairings
+
+        Inserts values into self._options
+        """
+        for key, value in input_dict.items():
+            new_tuple = (value, self._options[key][1], self._options[key][2])
+            self._options[key] = new_tuple
+
+    def update_args(self, override_args):
+        """Update the argument used to invoke the application
+
+        Note that this will also update the dictionary of input and output files.
 
         Parameters
         -----------
         override_args : dict
-            dictionary of arguments to override the current values
-
+            Dictionary of arguments to override the current values
         """
         self.args = extract_arguments(override_args, self.args, self.mapping)
-        self.input_file_dict = extract_by_keys(self.args,
-                                               self.input_file_args)
-        self.output_file_dict = extract_by_keys(self.args,
-                                                self.output_file_args)
+        self._latch_file_info()
+    
+    def get_failed_jobs(self):
+        """Return a dictionary with the subset of jobs that are marked as failed"""
+        failed_jobs = {}
+        for job_key, job_details in self.jobs.items():
+            if job_details.status == JobStatus.failed:
+                failed_jobs[job_key] = job_details
+        return failed_jobs
+
+    def get_jobs(self, recursive=True):
+        """Return a dictionary with all the jobs
+
+        If recursive is True this will include jobs from internal `Link`
+        """
+        if recursive:
+            ret_dict = self.jobs.copy()
+            return ret_dict
+        else:
+            return self.jobs
 
     @property
     def arg_names(self):
-        """ Return the list of option names """
+        """Return the list of arg names """
         return [self.args.keys()]
 
-    @property
-    def input_files(self):
-        """ Returns a list of the input files needed by this link """
-        return sorted(self.input_file_dict.values())
-
-    @property
-    def output_files(self):
-        """ Returns a list of the input files produced by this link """
-        return sorted(self.output_file_dict.values())
+    def update_sub_file_dict(self, sub_files):
+        """Update a file dict with information from self"""
+        sub_files.file_dict.clear()
+        for job_details in self.jobs.values():
+            if job_details.file_dict is not None:
+                sub_files.update(job_details.file_dict)
+            if job_details.sub_file_dict is not None:
+                sub_files.update(job_details.sub_file_dict)
 
     def check_input_files(self):
-        """ Check if input files exist """
-        return check_files(self.input_files)
+        """Check if input files exist.
+
+        Return two lists: (found, missing)
+        """
+        return check_files(self.files.chain_input_files)
 
     def check_output_files(self):
-        """ Check if input files exist """
-        return check_files(self.output_files)
+        """Check if output files exist. 
+        
+        Return two lists: (found, missing)
+        """
+        return check_files(self.files.chain_output_files)
 
     def missing_input_files(self):
-        """ Make a dictionary of the missing input files """
+        """Make and return a dictionary of the missing input files.
+
+        This returns a dictionary mapping 
+        filepath to list of links that use the file as input.
+        """
         found, missing = self.check_input_files()
         ret_dict = {}
         for miss_file in missing:
@@ -256,40 +312,70 @@ class Link(object):
         return ret_dict
 
     def missing_output_files(self):
-        """ Make a dictionary of the missing input files """
+        """Make and return a dictionary of the missing output files.
+
+        This returns a dictionary mapping 
+        filepath to list of links that product the file as output.
+        """
         found, missing = self.check_output_files()
         ret_dict = {}
         for miss_file in missing:
             ret_dict[miss_file] = [self.linkname]
         return ret_dict
 
+    def formatted_command(self):
+        """Build and return the formatted command for this `Link`.
+
+        This is exactly the command as called from the Unix command line.
+        """
+        command_template = self.command_template()
+        format_dict = self.args.copy()
+        command = command_template.format(**format_dict)
+        return command
+
+    def make_argv(self):
+        """Generate the vector of arguments for this `Link`.
+
+        This is exactly the 'argv' generated for the 
+        command as called from the Unix command line.
+        """
+        command = self.formatted_command()
+        tokens = command.split()
+        return tokens[1:]
+
     def run_link(self, stream=sys.stdout, dry_run=False):
-        """ Runs this link
+        """Runs this link.
+
+        This checks if input and output files are present.
+
+        If input files are missing this will raise `OSError` if dry_run is False
+        If all output files are present this will skip execution.
 
         Parameters
         -----------
-        stream : stream object
+        stream : `file`
             Must have 'write' function
 
         dry_run : bool
             Print command but do not run it
         """
-        command_template = self.command_template()
-        format_dict = self.args.copy()
-        for flag in self.flags:
-            if format_dict[flag]:
-                format_dict[flag] = '--%s' % flag
-            else:
-                format_dict[flag] = ''
-        command = command_template.format(**format_dict)
+        command = self.formatted_command()
         input_found, input_missing = self.check_input_files()
         if len(input_missing) != 0:
-            raise OSError("Input files are missing: %s" % input_missing)
+            if dry_run:
+                stream.write("Input files are missing: %s: %i\n" % (self.linkname, len(input_missing)))
+            else:
+                raise OSError("Input files are missing: %s" % input_missing)
 
         output_found, output_missing = self.check_output_files()
         if len(output_missing) == 0:
-            stream.write("All output files for %s already exist: %s" %
-                         (self.linkname, output_found))
+            stream.write("All output files for %s already exist: %i\n" %
+                         (self.linkname, len(output_found)))
+            if dry_run:
+                pass
+            else:
+                return
+
         if dry_run:
             stream.write("%s\n" % command)
             stream.flush()
@@ -297,63 +383,114 @@ class Link(object):
             os.system(command)
 
     def command_template(self):
-        """ Build and return a string that can be used as a template invoking
-            this chain from the command line
+        """Build and return a string that can be used as a template invoking
+        this chain from the command line.
+        
+        The actual command can be obtainted by using
+        self.command_template().format(**self.args)
         """
         com_out = self.appname
         arg_string = ""
         flag_string = ""
         # Loop over the key, value pairs in self.args
         for key, val in self.args.items():
-            try:
-                # Check if the value is set in self.options
-                # If so, get the value from there
-                opt_val = self.options[key]
-                if key == 'args':
-                    # 'args' is special, pull it out and move it to the back
-                    arg_string += ' {%s}' % key
-                elif key in self.flags:
-                    if opt_val:
-                        flag_string += ' --%s' % (key)
-                else:
-                    com_out += ' --%s {%s}' % (key, key)
-            except KeyError:
-                # Not in self.options
-                # So we just take the value from self.args
-                # We
-                if key == 'args':
-                    if isinstance(val, list):
-                        for item in val:
-                            arg_string += ' %s' % item
-                    else:
-                        arg_string += ' %s' % val
-                elif key in self.flags:
-                    if val:
-                        flag_string += ' --%s' % (key)
-                else:
-                    com_out += ' --%s %s' % (key, val)
+            # Check if the value is set in self._options
+            # If so, get the value from there
+            if val is None:
+                opt_val = self._options[key][0]
+            else:
+                opt_val = val
+            opt_type = self._options[key][2]
+            if key == 'args':
+                # 'args' is special, pull it out and move it to the back
+                arg_string += ' {%s}' % key
+            elif opt_type is bool:
+                if opt_val:
+                    flag_string += ' --%s' % (key)
+            elif opt_type is list:
+                if opt_val is None:
+                    continue
+                elif isinstance(opt_val, str):
+                    arg_string += ' %s' % opt_val
+                elif isinstance(opt_val, list):
+                    for arg_val in opt_val:
+                        arg_string += ' %s' % arg_val
+            else:
+                com_out += ' --%s {%s}' % (key, key)
         com_out += flag_string
         com_out += arg_string
         return com_out
 
     def run_argparser(self, argv):
-        """  Initialize a link with a set of arguments
+        """Initialize a link with a set of arguments using an `argparser.ArgumentParser`
         """
         if self._parser is None:
             raise ValueError('Link was not given a parser on initialization')
         args = self._parser.parse_args(argv)
-        self.update_args(args.__dict__)
+        self.update_args(args.__dict__)        
         return args
 
     def fill_argparser(self, parser):
-        """ Fill an argument parser with the options from this chain
+        """Fill an `argparser.ArgumentParser` with the options from this chain
         """
-        for key, val in self.options.items():
-            if val is None:
-                parser.add_argument("--%s" % (key), type=str, default=None)
-            else:
-                parser.add_argument("--%s" %
-                                    (key), type=type(val), default=val)
+        for key, val in self._options.items():
+            add_argument(parser, key, val)
+
+    def create_job_details(self, key, job_config, logfile, status):
+        """Create a `JobDetails` for a single job
+
+        Parameters:
+        ---------------
+        key : str
+            Key used to identify this particular job
+
+        job_config : dict
+            Dictionary with arguements passed to this particular job
+
+        logfile : str
+            Name of the associated log file
+        
+        status : int
+            Current status of the job
+
+        Returns `JobDetails' 
+        """
+        self.update_args(job_config)
+        job_details = JobDetails(jobname=self.linkname,
+                                 jobkey=key, 
+                                 appname=self.appname,
+                                 logfile=logfile,
+                                 job_config=job_config,
+                                 timestamp=get_timestamp(),
+                                 file_dict=copy.deepcopy(self.files),
+                                 sub_file_dict=copy.deepcopy(self.sub_files),
+                                 status=status)
+        return job_details
+
+    def register_job(self, key, job_config, logfile, status):
+        """Create a `JobDetails' for this link
+        and add it to the self.jobs dictionary.
+
+        Parameters:
+        ---------------
+        key : str
+            Key used to identify this particular job
+
+        job_config : dict
+            Dictionary with arguments passed to this particular job
+
+        logfile : str
+            Name of the associated log file
+        
+        status : int
+            Current status of the job
+
+        Returns `JobDetails` 
+        """
+        job_details = self.create_job_details(key, job_config, logfile, status)
+        self.jobs[key] = job_details
+        return job_details
+        
 
 
 class Chain(Link):
@@ -362,31 +499,18 @@ class Chain(Link):
     This class keep track of the arguments to pass to the applications
     as well as input and output files.
 
-    Note that this class is itself a link.  This allows you
-    to write a python module tha implements a chain and also has a
+    Note that this class is itself a `Link`.  This allows you
+    to write a python module that implements a chain and also has a
     __main__ function to allow it to be called from the shell.
 
     Class Members
     -------------
-    links : `collections.OrderedDict'
-       List of the links, in the order they will by executed
-    arg_names : list
-       List of the input options available for this chain
-    args : dict
-       Dictionary of input arguments and associated values
-    options : dict
-       Dictionary of options and associated values, as they will be
-       passed to the links in the chain
     argmapper : function or None
-       Fucntion that maps input options (in self.options) to the
-       format that is passed to the links in the chains.
-       If None, then no mapping is applied.
-       This is useful if you want to build a complicated set of options
-       from a few inputs.
-    input_files_dict : dict
-       Dictionary of the input files for each link in the chain
-    output_file_dict : dict
-       Dictionary of the output files for each link in the chain
+        Function that maps input options (in self._options) to the
+        format that is passed to the links in the chains.
+        If None, then no mapping is applied.
+        This is useful if you want to build a complicated set of options
+        from a few inputs.
     """
 
     def __init__(self, linkname, links, **kwargs):
@@ -394,32 +518,23 @@ class Chain(Link):
 
         Parameters:
         ---------------
+        linkname : str
+            Unique name of this particular link
         links : list
-            A list of gtlink objects
+            A list of `Link` objects
 
         Keyword arguments
         -----------
-        rm_keys : list
-            Keys for files to remove on completion
-        gzip_keys : list
-            Keys for files to compress on completion
         argmapper : function or None
-            Function that maps input options (in self.options) to the
+            Function that maps input options (in self._options) to the
             format that is passed to the links in the chains.
         """
         Link.__init__(self, linkname, **kwargs)
-        self._rm_keys = kwargs.get('rm_keys', [])
-        self._gz_keys = kwargs.get('gz_keys', [])
         self._argmapper = kwargs.get('argmapper', None)
-        self.options.update(self.map_arguments(self.args.copy()))
+        self.update_options(self.map_arguments(self.args.copy()))
         self._links = OrderedDict()
         for link in links:
-            link.update_args(self.options)
             self._links[link.linkname] = link
-
-    def __getitem__(self, key):
-        """ Return the `gtlink' object corresponding to key """
-        return self._links[key]
 
     @property
     def links(self):
@@ -427,23 +542,61 @@ class Chain(Link):
         return self._links
 
     @property
-    def input_file_full_dict(self):
-        """ Return a dictionary of the input files for each link in the chain """
-        ret_dict = OrderedDict()
-        for link in self._links.values():
-            ret_dict[link.linkname] = link.input_files
-        return ret_dict
+    def argmapper(self):
+        """Return the arugment mapping function, if exits """
+        return self._argmapper
+        
+    def __getitem__(self, key):
+        """ Return the `Link` whose linkname is key"""
+        return self._links[key]
 
-    @property
-    def output_file_full_dict(self):
-        """ Return a dictionary of the output files for each link in the chain """
-        ret_dict = OrderedDict()
+    def _latch_file_info(self):
+        """Internal function to update the dictionaries 
+        keeping track of input and output files 
+        """
+        remapped = self.map_arguments(self.args)
+        self.files.latch_file_info(remapped)
+        self.sub_files.file_dict.clear()
+        self.sub_files.update(self.files.file_dict)
         for link in self._links.values():
-            ret_dict[link.linkname] = link.output_files
-        return ret_dict
+            self.sub_files.update(link.files.file_dict)
+            self.sub_files.update(link.sub_files.file_dict)
+
+    def print_summary(self, stream=sys.stdout, indent="", recurse_level=2):
+        """Print a summary of the activity done by this `Chain`. 
+
+        Parameters
+        -----------
+        stream : `file`
+            Stream to print to
+        indent : str
+            Indentation at start of line
+        recurse_level : int
+            Number of recursion levels to print
+        """
+        Link.print_summary(self, stream, indent, recurse_level)
+        if recurse_level > 0:
+            recurse_level -= 1
+            indent += "  "
+            for link in self._links.values():
+                stream.write("\n")
+                link.print_summary(stream, indent, recurse_level)
+
+    def get_jobs(self, recursive=True):
+        """Return a dictionary with all the jobs
+
+        If recursive is True this will include jobs from internal `Link`
+        """
+        if recursive:
+            ret_dict = self.jobs.copy()
+            for link in self._links.values():
+                ret_dict.update(link.get_jobs(recursive))
+            return ret_dict
+        else:
+            return self.jobs
 
     def missing_input_files(self):
-        """ Return a dictionary of the missing input files and links they are associated with """
+        """Return a dictionary of the missing input files and `Link` they are associated with """
         ret_dict = OrderedDict()
         for link in self._links.values():
             link_dict = link.missing_input_files()
@@ -455,7 +608,7 @@ class Chain(Link):
         return ret_dict
 
     def missing_output_files(self):
-        """ Return a dictionary of the missing input files and links they are associated with """
+        """Return a dictionary of the missing output files and `Link` they are associated with """
         ret_dict = OrderedDict()
         for link in self._links.values():
             link_dict = link.missing_output_files()
@@ -466,13 +619,18 @@ class Chain(Link):
                     ret_dict[key] = value
         return ret_dict
 
-    @property
-    def argmapper(self):
-        """ Return the arugment mapping function, if exits """
-        return self._argmapper
-
     def map_arguments(self, args):
-        """ Map arguments to options """
+        """Map arguments to options.
+
+        This will use self._argmapper is it is defined.
+
+        Parameters
+        -------------
+        args : dict or `Namespace`
+            If a namespace is given, it will be cast to dict
+
+        Returns dict
+        """
         if self._argmapper is None:
             try: 
                 return args.__dict__
@@ -489,20 +647,16 @@ class Chain(Link):
                 return mapped
 
     def add_link(self, link):
-        """ Add a link to this chain
-
-        link : `link'
-            Name for this link, used as a key
-        """
+        """Append link to this `Chain` """
         self._links[link.linkname] = link
 
     def run_chain(self, stream=sys.stdout, dry_run=False):
-        """ Run all the links in the chain
+        """Run all the links in the chain
 
         Parameters
         -----------
-        stream : stream object
-            Must have 'write' function
+        stream : `file`
+            Stream to print to
 
         dry_run : bool
             Print commands but do not run them
@@ -511,33 +665,32 @@ class Chain(Link):
             link.run_link(stream=stream, dry_run=dry_run)
 
     def finalize(self, dry_run=False):
-        """ Remove / compress files as requested """
-        rmfiles = extract_by_keys(self.options, self._rm_keys)
-        gzfiles = extract_by_keys(self.options, self._gz_keys)
-        for rmfile in rmfiles.values():
+        """Remove / compress files as requested """
+        for rmfile in self.files.temp_files:
             if dry_run:
                 print ("remove %s" % rmfile)
             else:
                 os.remove(rmfile)
-        for gzfile in gzfiles.values():
+        for gzfile in self.files.gzip_files:
             if dry_run:
                 print ("gzip %s" % gzfile)
             else:
                 os.system('gzip -9 %s' % gzfile)
 
-    def update_links_from_single_dict(self, single_dict):
-        """ Update the argument used to invoke the application
+    def update_args(self, override_args):
+        """Update the argument used to invoke the application
+
+        Note that this will also update the dictionary of input and output files.
 
         Parameters
         -----------
-        single_dict : dict
-            dictionary  pass to the links
+        override_args : dict
+            dictionary passed to the links
 
         """
-        remapped = self.map_arguments(single_dict)
-        reduced = extract_arguments(remapped, self.options, None)
-        
-        self.options.update(reduced)
+        self.args = extract_arguments(override_args, self.args, self.mapping)
+        remapped = self.map_arguments(override_args)
         for link in self._links.values():
             link.update_args(remapped)
+        self._latch_file_info()
 
