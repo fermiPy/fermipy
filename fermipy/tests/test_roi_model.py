@@ -5,12 +5,8 @@ from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
 from astropy.coordinates import SkyCoord
 from fermipy.tests.utils import requires_dependency
-
-try:
-    from fermipy import roi_model
-    from fermipy.roi_model import Source
-except ImportError:
-    pass
+from fermipy import roi_model
+from fermipy.roi_model import Source, ROIModel
 
 # Skip tests in this file if Fermi ST aren't available
 #pytestmark = requires_dependency('Fermi ST')
@@ -24,25 +20,44 @@ def tmppath(request, tmpdir_factory):
 
 def test_load_3fgl_catalog_fits():
     skydir = SkyCoord(0.0, 0.0, unit='deg', frame='galactic').icrs
-    rm = roi_model.ROIModel(catalogs=['3FGL'], skydir=skydir, src_radius=20.0)
+    rm = ROIModel(catalogs=['3FGL'], skydir=skydir, src_radius=20.0)
     assert len(rm.sources) == 175
 
-    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.fit'], skydir=skydir,
+    rm = ROIModel(catalogs=['gll_psc_v16.fit'], skydir=skydir,
                             src_radius=20.0)
     assert len(rm.sources) == 175
 
 
 def test_load_3fgl_catalog_xml():
     skydir = SkyCoord(0.0, 0.0, unit='deg', frame='galactic').icrs
-    rm = roi_model.ROIModel(catalogs=['gll_psc_v16.xml'],
+    rm = ROIModel(catalogs=['gll_psc_v16.xml'],
                             extdir='Extended_archive_v15',
                             skydir=skydir, src_radius=20.0)
     assert len(rm.sources) == 175
 
 
 def test_load_2fhl_catalog_fits():
-    rm = roi_model.ROIModel(catalogs=['2FHL'])
+    rm = ROIModel(catalogs=['2FHL'])
     assert len(rm.sources) == 360
+
+
+def test_create_roi_from_source():
+
+    rm = ROIModel.create_from_source('3FGL J2021.0+4031e',
+                                     {'catalogs' : ['3FGL'], 'src_radius' : 2.0})
+    assert len(rm.sources) == 9
+    src = rm.sources[0]    
+    assert src.name == '3FGL J2021.0+4031e'
+    assert src['SpatialType'] == 'SpatialMap'
+    assert src['SourceType'] == 'DiffuseSource'
+    assert src['SpectrumType'] == 'PowerLaw'
+    assert_allclose(src['ra'], 305.26999, rtol=1E-5)
+    assert_allclose(src['dec'], 40.52, rtol=1E-5)
+    assert_allclose(src.spectral_pars['Index']['value'], 1.53, rtol=1E-4)
+    assert_allclose(src.spectral_pars['Prefactor']['value']*
+                    src.spectral_pars['Prefactor']['scale'], 0.4003659112E-12, rtol=1E-4)
+    assert_allclose(src.spatial_pars['Prefactor']['value'], 1.0, rtol=1E-4)
+    assert_allclose(src.spatial_pars['Prefactor']['scale'], 1.0, rtol=1E-4)
 
 
 def test_load_roi_from_dict(tmppath):
@@ -56,7 +71,7 @@ def test_load_roi_from_dict(tmppath):
                 'Scale': {'value': 134.1, 'scale': 1.2, 'min': 0.0, 'max': 2000.0},
                 }]
 
-    roi = roi_model.ROIModel(sources=sources)
+    roi = ROIModel(sources=sources)
     src = roi['ptsrc0']
 
     assert_allclose(src['dec'], sources[0]['dec'])
@@ -128,7 +143,7 @@ def test_load_source_from_xml(tmppath):
     xmlfile = str(tmppath.join('test.xml'))
     ElementTree.ElementTree(root).write(xmlfile)
 
-    roi = roi_model.ROIModel(config={'catalogs': [xmlfile]})
+    roi = ROIModel(config={'catalogs': [xmlfile]})
 
     src = roi['3FGL J1649.4+5238']
 
@@ -215,7 +230,7 @@ def test_load_composite_source_from_xml(tmppath):
     xmlfile = str(tmppath.join('test.xml'))
     ElementTree.ElementTree(root).write(xmlfile)
 
-    roi = roi_model.ROIModel(config={'catalogs': [xmlfile]})
+    roi = ROIModel(config={'catalogs': [xmlfile]})
 
     src = roi['CompositeSource']
 

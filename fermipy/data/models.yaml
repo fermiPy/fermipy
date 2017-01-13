@@ -721,7 +721,7 @@ SmoothDoubleBrokenPowerLaw:
     Beta23]
 SpatialMap:
   defaults:
-    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
-      scale: 1.0, value: 1.0e-12}
+    Prefactor: {error: .nan, free: false, max: 1.0, min: 1.0, name: Prefactor,
+      scale: 1.0, value: 1.0 }
   norm_par: Prefactor
   par_names: [Prefactor]
