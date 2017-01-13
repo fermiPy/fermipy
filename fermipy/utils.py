@@ -1429,6 +1429,8 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
       68% containment radius in degrees.
     """
 
+    sigma /= 0.8246211251235321
+    
     dtheta = psf.dtheta
     egy = psf.energies
 
