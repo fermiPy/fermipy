@@ -862,7 +862,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             src.set_spatial_model(spatial_model, spatial_pars)            
             self._update_srcmap(src.name, src, psf_scale_fn=psf_scale_fn)            
         else:
-            src = self.delete_source(name, loglevel=logging.DEBUG)
+            src = self.delete_source(name, loglevel=logging.DEBUG,
+                                     save_template=False)
             src.set_spatial_model(spatial_model, spatial_pars)            
             self.add_source(src.name, src, init_source=False,
                             use_pylike=use_pylike, loglevel=logging.DEBUG)            
@@ -5046,8 +5047,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                          '%s_template_gauss_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
                                              suffix))
-            srcmap_utils.make_gaussian_spatial_map(src.skydir,
-                                                   src['SpatialWidth'],
+            
+            sigma = src['SpatialWidth'] / 1.5095921854516636
+            srcmap_utils.make_gaussian_spatial_map(src.skydir, sigma,
                                                    template_file)
             src['Spatial_Filename'] = template_file
         elif src['SpatialModel'] in ['RadialDisk']:
@@ -5055,7 +5057,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                          '%s_template_disk_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
                                              suffix))
-            srcmap_utils.make_disk_spatial_map(src.skydir, src['SpatialWidth'],
+            radius = src['SpatialWidth'] / 0.8246211251235321
+            srcmap_utils.make_disk_spatial_map(src.skydir, radius,
                                                template_file)
             src['Spatial_Filename'] = template_file
 

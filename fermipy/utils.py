@@ -1295,7 +1295,7 @@ def convolve2d_disk(fn, r, sig, nstep=200):
 def convolve2d_gauss(fn, r, sig, nstep=200):
     """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
     azimuthally symmetric function in two dimensions and g is a
-    gaussian given by:
+    2D gaussian with standard deviation s given by:
 
     g(r) = 1/(2*pi*s^2) Exp[-r^2/(2*s^2)]
 
@@ -1383,12 +1383,10 @@ def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=None, ypix=None):
     ----------
 
     sigma : float
-      68% containment radius in degrees.
+      Standard deviation in degrees.
     """
 
-    sigma /= 1.5095921854516636
     sigma /= cdelt
-
     fn = lambda t, s: 1. / (2 * np.pi * s ** 2) * np.exp(
         -t ** 2 / (s ** 2 * 2.0))
     dxy = make_pixel_distance(npix, xpix, ypix)
