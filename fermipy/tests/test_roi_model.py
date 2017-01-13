@@ -275,14 +275,14 @@ def test_create_source_from_dict(tmppath):
     
     
     src = Source.create_from_dict({'name': 'testsrc',
-                                   'SpatialModel': 'GaussianSource',
+                                   'SpatialModel': 'RadialGaussian',
                                    'SpectrumType': 'PowerLaw',
                                    'Index': 2.3,
                                    'ra': ra, 'dec': dec})
 
     assert_allclose(src['ra'], ra)
     assert_allclose(src['dec'], dec)
-    assert src['SpatialModel'] == 'GaussianSource'
+    assert src['SpatialModel'] == 'RadialGaussian'
     assert src['SpatialType'] == 'SpatialMap'
     assert src['SourceType'] == 'DiffuseSource'
     assert src.extended is True
