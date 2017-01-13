@@ -262,7 +262,8 @@ def test_create_source_from_dict(tmppath):
                                    'SpatialModel': 'PointSource',
                                    'SpectrumType': 'PowerLaw',                                   
                                    'Index': 2.3,
-                                   'Prefactor': {'value' : 1.3, 'scale' : 1E-8, 'min' : 0.15, 'max' : 10.0,
+                                   'Prefactor': {'value' : 1.3, 'scale' : 1E-8,
+                                                 'min' : 0.15, 'max' : 10.0,
                                                  'free' : False},
                                    'ra': ra, 'dec': dec},
                                   rescale=True)
@@ -283,7 +284,7 @@ def test_create_source_from_dict(tmppath):
     assert_allclose(src['ra'], ra)
     assert_allclose(src['dec'], dec)
     assert src['SpatialModel'] == 'RadialGaussian'
-    assert src['SpatialType'] == 'SpatialMap'
+    assert (src['SpatialType'] == 'SpatialMap') or (src['SpatialType'] == 'RadialGaussian')
     assert src['SourceType'] == 'DiffuseSource'
     assert src.extended is True
 
