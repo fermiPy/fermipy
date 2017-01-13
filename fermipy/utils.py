@@ -11,6 +11,7 @@ import numpy as np
 import scipy.optimize
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
+from scipy.ndimage.measurements import label
 import scipy.special as special
 from numpy.core import defchararray
 from astropy.extern import six
@@ -770,12 +771,13 @@ def parabola(xy, amplitude, x0, y0, sx, sy, theta):
     return vals
 
 
-def fit_parabola(z, ix, iy, dpix=2, zmin=None):
+def fit_parabola(z, ix, iy, dpix=3, zmin=None):
     """Fit a parabola to a 2D numpy array.  This function will fit a
     parabola with the functional form described in
     `~fermipy.utils.parabola` to a 2D slice of the input array `z`.
-    The boundaries of the fit region within z are set with the pixel
-    centroid (`ix` and `iy`) and region size (`dpix`).
+    The fit region encompasses pixels that are within `dpix` of the
+    pixel coordinate (iz,iy) OR that have a value relative to the peak
+    value greater than `zmin`.
 
     Parameters
     ----------
@@ -788,37 +790,31 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
        Y index of center pixel of fit region in array `z`.
 
     dpix : int
-       Size of fit region expressed as a pixel offset with respect the
-       centroid.  The size of the sub-array will be (dpix*2 + 1) x
-       (dpix*2 + 1).
+       Max distance from center pixel of fit region.
+
+    zmin : float
+
     """
+    offset = make_pixel_distance(z.shape, iy, ix)
+    x, y = np.meshgrid(np.arange(z.shape[0]),np.arange(z.shape[1]),
+                       indexing='ij')
 
-    xmin = max(0, ix - dpix)
-    xmax = min(z.shape[0], ix + dpix + 1)
-
-    ymin = max(0, iy - dpix)
-    ymax = min(z.shape[1], iy + dpix + 1)
-
-    sx = slice(xmin, xmax)
-    sy = slice(ymin, ymax)
-
-    nx = sx.stop - sx.start
-    ny = sy.stop - sy.start
-
-    x = np.arange(sx.start, sx.stop)
-    y = np.arange(sy.start, sy.stop)
-
-    x = x[:, np.newaxis] * np.ones((nx, ny))
-    y = y[np.newaxis, :] * np.ones((nx, ny))
-
-    coeffx = poly_to_parabola(np.polyfit(
-        np.arange(sx.start, sx.stop), z[sx, iy], 2))
-    coeffy = poly_to_parabola(np.polyfit(
-        np.arange(sy.start, sy.stop), z[ix, sy], 2))
-    p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
-    m = np.isfinite(z[sx, sy])
+    m = (offset <= dpix)
+    #m = (np.abs(x-ix) <= dpix) & (np.abs(y-iy) <= dpix)
     if zmin is not None:
-        m = z[sx, sy] > zmin
+        mz = (z - np.max(z[m]) > zmin)
+        labels = label(mz)[0]
+        mz &= labels == labels[ix,iy]
+        m |= mz
+
+    mx = np.abs(x[:,iy]-ix) <= dpix
+    my = np.abs(y[ix,:]-iy) <= dpix
+
+    coeffx = poly_to_parabola(np.polyfit(x[:,iy][mx],
+                                         z[:, iy][mx], 2))
+    coeffy = poly_to_parabola(np.polyfit(y[ix,:][my],
+                                         z[ix, :][my], 2))
+    p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
 
     o = {'fit_success': True, 'p0': p0}
 
@@ -828,13 +824,13 @@ def fit_parabola(z, ix, iy, dpix=2, zmin=None):
     try:
         popt, pcov = scipy.optimize.curve_fit(curve_fit_fn,
                                               (np.ravel(x[m]), np.ravel(y[m])),
-                                              np.ravel(z[sx, sy][m]), p0)
+                                              np.ravel(z[m]), p0)
     except Exception:
         popt = copy.deepcopy(p0)
         o['fit_success'] = False
 
     fm = parabola((x[m], y[m]), *popt)
-    df = fm - z[sx, sy][m]
+    df = fm - z[m]
     rchi2 = np.sum(df ** 2) / len(fm)
 
     o['rchi2'] = rchi2
@@ -1299,7 +1295,7 @@ def convolve2d_disk(fn, r, sig, nstep=200):
 def convolve2d_gauss(fn, r, sig, nstep=200):
     """Evaluate the convolution f'(r) = f(r) * g(r) where f(r) is
     azimuthally symmetric function in two dimensions and g is a
-    gaussian given by:
+    2D gaussian with standard deviation s given by:
 
     g(r) = 1/(2*pi*s^2) Exp[-r^2/(2*s^2)]
 
@@ -1356,22 +1352,25 @@ def convolve2d_gauss(fn, r, sig, nstep=200):
     return s
 
 
-def make_pixel_distance(npix, xpix=None, ypix=None):
-    """Make a 2D array with the distance of each pixel from a reference
-    direction (xpix,ypix) in pixel coordinates.  Pixel coordinates are
-    defined such that (0,0) is located at the center of the corner
-    pixel.
+def make_pixel_distance(shape, xpix=None, ypix=None):
+    """Fill a 2D array with dimensions `shape` with the distance of each
+    pixel from a reference direction (xpix,ypix) in pixel coordinates.
+    Pixel coordinates are defined such that (0,0) is located at the
+    center of the corner pixel.
 
     """
+    if np.isscalar(shape):
+        shape = [shape,shape]
+
     if xpix is None:
-        xpix = (npix - 1.0) / 2.
+        xpix = (shape[1] - 1.0) / 2.
 
     if ypix is None:
-        ypix = (npix - 1.0) / 2.
+        ypix = (shape[0] - 1.0) / 2.
 
-    dx = np.linspace(0, npix - 1, npix) - xpix
-    dy = np.linspace(0, npix - 1, npix) - ypix
-    dxy = np.zeros((npix, npix))
+    dx = np.linspace(0, shape[1] - 1, shape[1]) - xpix
+    dy = np.linspace(0, shape[0] - 1, shape[0]) - ypix
+    dxy = np.zeros(shape)
     dxy += np.sqrt(dx[np.newaxis, :] ** 2 + dy[:, np.newaxis] ** 2)
 
     return dxy
@@ -1384,12 +1383,10 @@ def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=None, ypix=None):
     ----------
 
     sigma : float
-      68% containment radius in degrees.
+      Standard deviation in degrees.
     """
 
-    sigma /= 1.5095921854516636
     sigma /= cdelt
-
     fn = lambda t, s: 1. / (2 * np.pi * s ** 2) * np.exp(
         -t ** 2 / (s ** 2 * 2.0))
     dxy = make_pixel_distance(npix, xpix, ypix)
@@ -1432,6 +1429,8 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
       68% containment radius in degrees.
     """
 
+    sigma /= 0.8246211251235321
+    
     dtheta = psf.dtheta
     egy = psf.energies
 

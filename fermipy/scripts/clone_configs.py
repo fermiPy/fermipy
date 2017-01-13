@@ -77,20 +77,20 @@ def main():
                              'analyzed.')
     parser.add_argument('--script', action='append', required=True,
                         help='The python script.')
+    parser.add_argument('--num_config', default=None, type=int,
+                        help='Number of analyis directories to create.')
     parser.add_argument('configs', nargs='*', default=None,
                         help='One or more configuration files that will be merged '
                              'to construct the analysis configuration.')
 
     args = parser.parse_args()
 
-    # src_dict = {}
-    # src_list = yaml.load(open(args.source_list))
-
-    # for src,sdict in src_list.items():
-    #    src_dict[src] = sdict
-
     src_dict = yaml.load(open(args.source_list))
-
+    
+    if args.num_config:
+        src_dict = { k : src_dict[k] for k in
+                     list(src_dict.keys())[:args.num_config] }
+    
     clone_configs(args.basedir, args.configs, src_dict, args.script)
 
 

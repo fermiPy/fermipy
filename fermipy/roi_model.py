@@ -26,6 +26,8 @@ from fermipy.model_utils import get_function_defaults
 from fermipy.model_utils import get_spatial_type
 from fermipy.model_utils import get_function_norm_par_name
 from fermipy.model_utils import get_function_par_names
+from fermipy.model_utils import extract_pars_from_dict
+from fermipy.model_utils import create_pars_from_dict
 
 
 def create_source_table(scan_shape):
@@ -219,26 +221,23 @@ class Model(object):
     the ROI.
     """
 
-    def __init__(self, name, data=None):
-
+    def __init__(self, name, data):
+        
         self._data = defaults.make_default_dict(defaults.source_output)
-        self._data.setdefault('spectral_pars', {})
-        self._data.setdefault('spatial_pars', {})
+        self._data['spectral_pars'] = get_function_defaults(data['SpectrumType'])
+        self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
         self._data.setdefault('catalog', {})
+        self._data['spectral_pars'] = utils.merge_dict(self._data['spectral_pars'],
+                                                       data.pop('spectral_pars',{}))
+        self._data['spatial_pars'] = utils.merge_dict(self._data['spatial_pars'],
+                                                      data.pop('spatial_pars',{}))
+        
+        self._data.update(data)
+        
         self._data['assoc'] = {}
         self._data['name'] = name
         self._data['class'] = ''
         self._data['psf_scale_fn'] = None
-
-        if data is not None:
-            self._data.update(data)
-
-        if not self.spectral_pars:
-            pdict = get_function_defaults(self['SpectrumType'])
-            self._data['spectral_pars'] = pdict
-            for k, v in self.spectral_pars.items():
-                self._data['spectral_pars'][k] = make_parameter_dict(v)
-
         self._names = [name]
         catalog = self._data['catalog']
 
@@ -257,10 +256,7 @@ class Model(object):
 
             self._data['assoc'][k] = name
 
-        if self.params:
-            self._sync_spectral_pars()
-        else:
-            self._sync_params()
+        self._sync_params()
 
     def __contains__(self, key):
         return key in self._data
@@ -330,8 +326,9 @@ class Model(object):
         return self._data['psf_scale']
 
     @staticmethod
-    def create_from_dict(src_dict, roi_skydir=None):
+    def create_from_dict(src_dict, roi_skydir=None, rescale=False):
 
+        src_dict = copy.deepcopy(src_dict)
         src_dict.setdefault('SpatialModel', 'PointSource')
         src_dict.setdefault('SpatialType',
                             get_spatial_type(src_dict['SpatialModel']))
@@ -361,17 +358,8 @@ class Model(object):
         elif src_dict['SpatialModel'] == 'MapCubeFunction':
             return MapCubeSource(src_dict['name'], src_dict)
         else:
-            return Source.create_from_dict(src_dict, roi_skydir)
-
-    def _sync_spectral_pars(self):
-        """Update spectral parameters dictionary."""
-
-        sp = self['spectral_pars']
-        for k, p in sp.items():
-            sp[k]['value'] = self['params'][k][0] / sp[k]['scale']
-            if np.isfinite(self['params'][k][1]):
-                sp[k]['error'] = self['params'][k][1] / np.abs(sp[k]['scale'])
-            sp[k] = make_parameter_dict(sp[k])
+            return Source.create_from_dict(src_dict, roi_skydir,
+                                           rescale=rescale)
 
     def _sync_params(self):
         self._data['params'] = get_params_dict(self['spectral_pars'])
@@ -465,8 +453,6 @@ class Model(object):
 
     def update_data(self, d):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
-        # if self.params:
-        #    self._sync_spectral_pars()
 
     def update_from_source(self, src):
 
@@ -634,8 +620,9 @@ class Source(Model):
             self._set_radec([catalog['RAJ2000'], catalog['DEJ2000']])
         else:
             raise Exception('Failed to infer RADEC for source: %s' % name)
-
-        self._init_spatial_pars()
+        
+        self._init_spatial_pars(SpatialWidth=self['SpatialWidth'])
+        
 
     def __str__(self):
 
@@ -677,28 +664,18 @@ class Source(Model):
             self.spatial_pars['RA']['value'] = radec[0]
             self.spatial_pars['DEC']['value'] = radec[1]
 
-    def _set_spatial_width(self):
+    def _set_spatial_width(self, spatial_width):
+        self.data['SpatialWidth'] = spatial_width        
+        if self['SpatialType'] in ['RadialGaussian']:
+            self.spatial_pars['Sigma']['value'] = spatial_width / 1.5095921854516636                
+        elif self['SpatialType'] in ['RadialDisk']:
+            self.spatial_pars['Radius']['value'] = spatial_width / 0.8246211251235321
+            
+    def _init_spatial_pars(self, **kwargs):
 
-        if self['SpatialModel'] in ['GaussianSource', 'RadialGaussian']:
-
-            if self['SpatialWidth'] is None:
-                self.data.setdefault('Sigma', 0.5)
-                self['SpatialWidth'] = self['Sigma'] * 1.5095921854516636
-            else:
-                self.data.setdefault(
-                    'Sigma', self['SpatialWidth'] / 1.5095921854516636)
-
-        elif self['SpatialModel'] in ['DiskSource', 'RadialDisk']:
-
-            if self['SpatialWidth'] is None:
-                self.data.setdefault('Radius', 0.5)
-                self['SpatialWidth'] = self['Radius'] * 0.8246211251235321
-            else:
-                self.data.setdefault(
-                    'Radius', self['SpatialWidth'] / 0.8246211251235321)
-
-    def _init_spatial_pars(self):
-
+        spatial_pars = copy.deepcopy(kwargs)
+        spatial_width = spatial_pars.pop('SpatialWidth', None)
+                
         if self['SpatialType'] == 'SkyDirFunction':
             self._extended = False
             self._data['SourceType'] = 'PointSource'
@@ -706,34 +683,27 @@ class Source(Model):
             self._extended = True
             self._data['SourceType'] = 'DiffuseSource'
 
-        self._set_spatial_width()
+        spatial_pars.setdefault('RA', spatial_pars.pop('ra', self['ra']) )
+        spatial_pars.setdefault('DEC', spatial_pars.pop('dec', self['dec']) )
+        
+        for k, v in spatial_pars.items():
 
-        if self['SpatialType'] == 'SpatialMap':
-            self._data['spatial_pars'] = {
-                'Prefactor': {'name': 'Prefactor', 'value': 1.0,
-                              'free': False, 'min': 0.001, 'max': 1000.0,
-                              'scale': 1.0}
-            }
-        else:
-            self.spatial_pars.setdefault('RA',
-                                         {'name': 'RA', 'value': self['ra'],
-                                          'free': False,
-                                          'min': -360.0, 'max': 360.0, 'scale': 1.0})
-            self.spatial_pars.setdefault('DEC',
-                                         {'name': 'DEC', 'value': self['dec'],
-                                          'free': False,
-                                          'min': -90.0, 'max': 90.0, 'scale': 1.0})
+            if not isinstance(v,dict):
+                spatial_pars[k] = {'name': k, 'value': v}
+            
+            if k in self.spatial_pars:
+                self.spatial_pars[k].update(spatial_pars[k])
 
-        if self['SpatialType'] == 'RadialGaussian':
-            self.spatial_pars.setdefault('Sigma',
-                                         {'name': 'Sigma', 'value': self['Sigma'],
-                                          'free': False, 'min': 0.001, 'max': 10,
-                                          'scale': '1.0'})
+        if spatial_width is not None:
+            self._set_spatial_width(spatial_width)
         elif self['SpatialType'] == 'RadialDisk':
-            self.spatial_pars.setdefault('Radius',
-                                         {'name': 'Radius', 'value': self['Radius'],
-                                          'free': False, 'min': 0.001, 'max': 10,
-                                          'scale': 1.0})
+            self['SpatialWidth'] = self.spatial_pars['Radius']['value']*0.8246211251235321
+        elif self['SpatialType'] == 'RadialGaussian':
+            self['SpatialWidth'] = self.spatial_pars['Sigma']['value']*1.5095921854516636
+            
+        if 'RA' in spatial_pars or 'DEC' in spatial_pars:
+            self._set_radec([spatial_pars['RA']['value'],
+                             spatial_pars['DEC']['value']])
 
     def load_from_catalog(self):
         """Load spectral parameters from catalog values."""
@@ -747,7 +717,6 @@ class Source(Model):
         if self['SpectrumType'] == 'PowerLaw':
 
             sp['Prefactor']['value'] = catalog['Flux_Density']
-            sp['Prefactor']['scale'] = None
             sp['Scale']['value'] = catalog['Pivot_Energy']
             sp['Scale']['scale'] = 1.0
             sp['Index']['value'] = catalog['Spectral_Index']
@@ -762,7 +731,6 @@ class Source(Model):
         elif self['SpectrumType'] == 'LogParabola':
 
             sp['norm']['value'] = catalog['Flux_Density']
-            sp['norm']['scale'] = None
             sp['Eb']['value'] = catalog['Pivot_Energy']
             sp['alpha']['value'] = catalog['Spectral_Index']
             sp['beta']['value'] = catalog['beta']
@@ -780,7 +748,6 @@ class Source(Model):
                     'Exp_Index'])
 
             sp['Prefactor']['value'] = flux_density
-            sp['Prefactor']['scale'] = None
             sp['Index1']['value'] = catalog['Spectral_Index']
             sp['Index1']['scale'] = -1.0
             sp['Index2']['value'] = catalog['Exp_Index']
@@ -802,8 +769,6 @@ class Source(Model):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
         if 'ra' in d and 'dec' in d:
             self._set_radec([d['ra'], d['dec']])
-        # if self.params:
-        #    self._sync_spectral_pars()
 
     def set_radec(self, ra, dec):
         self._set_radec(np.array([ra,dec]))
@@ -848,13 +813,16 @@ class Source(Model):
 
         self['offset_roi_edge'] = proj.distance_to_edge(self.skydir)
 
-    def set_spatial_model(self, spatial_model, spatial_width=None):
+    def set_spatial_model(self, spatial_model, spatial_pars):
 
+        update_pars = False
+        if spatial_model != self['SpatialModel']:
+            update_pars = True        
         self._data['SpatialModel'] = spatial_model
-        self._data['SpatialWidth'] = spatial_width
         self._data['SpatialType'] = get_spatial_type(self['SpatialModel'])
-        self._data['spatial_pars'] = {}
-        self._init_spatial_pars()
+        if update_pars:
+            self._data['spatial_pars'] = get_function_defaults(self['SpatialType'])
+        self._init_spatial_pars(**spatial_pars)
 
     def separation(self, src):
 
@@ -894,7 +862,7 @@ class Source(Model):
         return self._data
 
     @staticmethod
-    def create_from_dict(src_dict, roi_skydir=None):
+    def create_from_dict(src_dict, roi_skydir=None, rescale=False):
         """Create a source object from a python dictionary.
 
         Parameters
@@ -903,62 +871,42 @@ class Source(Model):
            Dictionary defining the properties of the source.
 
         """
-
         src_dict = copy.deepcopy(src_dict)
         src_dict.setdefault('SpatialModel', 'PointSource')
         src_dict.setdefault('Spectrum_Filename', None)
-        spectrum_type = src_dict.setdefault('SpectrumType', 'PowerLaw')
-        spatial_type = \
-            src_dict.setdefault('SpatialType',
-                                get_spatial_type(src_dict['SpatialModel']))
+        src_dict.setdefault('SpectrumType', 'PowerLaw')
+        src_dict['SpatialType'] = get_spatial_type(src_dict['SpatialModel'])
 
-        spectral_pars = \
-            src_dict.setdefault('spectral_pars',
-                                get_function_defaults(spectrum_type))
+        spectrum_type = src_dict['SpectrumType']
+        spatial_type = src_dict['SpatialType']
 
-        spatial_pars = \
-            src_dict.setdefault('spatial_pars',
-                                get_function_defaults(spatial_type))
+        spectral_pars = src_dict.pop('spectral_pars',{})
+        spatial_pars = src_dict.pop('spatial_pars',{})
 
+        if not spectral_pars:
+            spectral_pars = extract_pars_from_dict(spectrum_type, src_dict)
+            norm_par_name = get_function_norm_par_name(spectrum_type)
+            if norm_par_name is not None:
+                spectral_pars[norm_par_name].setdefault('free',True)
+
+        if not spatial_pars:
+            spatial_pars = extract_pars_from_dict(spatial_type, src_dict)
+            for k in ['RA', 'DEC', 'Prefactor']:
+                if k in spatial_pars:
+                    del spatial_pars[k]
+                
+        spectral_pars = create_pars_from_dict(spectrum_type, spectral_pars,
+                                              rescale, False)
+        spatial_pars = create_pars_from_dict(spatial_type, spatial_pars,
+                                             False, False)
+        
         if 'file' in src_dict:
             src_dict['Spectrum_Filename'] = src_dict.pop('file')
 
         if spectrum_type == 'DMFitFunction' and src_dict['Spectrum_Filename'] is None:
             src_dict['Spectrum_Filename'] = os.path.join('$FERMIPY_DATA_DIR',
                                                          'gammamc_dif.dat')
-
-        for k in ['RA', 'DEC', 'Prefactor']:
-            if k in spatial_pars:
-                del spatial_pars[k]
-
-        for k, v in spectral_pars.items():
-
-            if k not in src_dict:
-                continue
-
-            if not isinstance(src_dict[k], dict):
-                spectral_pars[k].update({'name': k,
-                                         'value': src_dict.pop(k)})
-            else:
-                spectral_pars[k].update(src_dict.pop(k))
-
-        for k, v in spatial_pars.items():
-
-            if k not in src_dict:
-                continue
-
-            if not isinstance(src_dict[k], dict):
-                spatial_pars[k].update({'name': k, 'value': src_dict[k]})
-            else:
-                spatial_pars[k].update(src_dict.pop(k))
-
-        for k, v in spectral_pars.items():
-            spectral_pars[k] = make_parameter_dict(spectral_pars[k])
-
-        for k, v in spatial_pars.items():
-            spatial_pars[k] = make_parameter_dict(spatial_pars[k],
-                                                  rescale=False)
-
+                
         src_dict['spectral_pars'] = cast_pars_dict(spectral_pars)
         src_dict['spatial_pars'] = cast_pars_dict(spatial_pars)
 
@@ -1422,7 +1370,7 @@ class ROIModel(fermipy.config.Configurable):
             self.load_source(src, False, self.config['merge_sources'])
 
     def create_source(self, name, src_dict, build_index=True,
-                      merge_sources=True):
+                      merge_sources=True, rescale=True):
         """Add a new source to the ROI model from a dictionary or an
         existing source object.
 
@@ -1443,7 +1391,8 @@ class ROIModel(fermipy.config.Configurable):
 
         if isinstance(src_dict, dict):
             src_dict['name'] = name
-            src = Model.create_from_dict(src_dict, self.skydir)
+            src = Model.create_from_dict(src_dict, self.skydir,
+                                         rescale=rescale)
         else:
             src = src_dict
             src.set_name(name)

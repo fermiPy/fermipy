@@ -702,9 +702,8 @@ class TSMapGenerator(object):
 
         """
 
-        self.logger.info('Generating TS map')
-
         schema = ConfigSchema(self.defaults['tsmap'])
+        schema.add_option('loglevel', False)
         schema.add_option('make_plots', False)
         schema.add_option('write_fits', True)
         schema.add_option('write_npy', True)
@@ -720,6 +719,8 @@ class TSMapGenerator(object):
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
 
+        self.logger.log(config['loglevel'], 'Generating TS map')
+        
         maps = self._make_tsmap_fast(prefix, **config)
 
         if config['make_plots']:
@@ -729,7 +730,7 @@ class TSMapGenerator(object):
 
             plotter.make_tsmap_plots(maps, self.roi)
 
-        self.logger.info('Finished TS map')
+        self.logger.log(config['loglevel'], 'Finished TS map')
         return maps
 
     def _make_tsmap_fast(self, prefix, **kwargs):
@@ -749,6 +750,7 @@ class TSMapGenerator(object):
            test source that will be used in the scan.
 
         """
+        loglevel = kwargs.get('loglevel', self.loglevel)
 
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         src_dict = {} if src_dict is None else src_dict
@@ -809,7 +811,8 @@ class TSMapGenerator(object):
             enumbins += [cm.shape[0]]
 
         self.add_source('tsmap_testsource', src_dict, free=True,
-                        init_source=False)
+                        init_source=False, use_single_psf=True,
+                        loglevel=logging.DEBUG)
         src = self.roi['tsmap_testsource']
         # self.logger.info(str(src_dict))
         modelname = utils.create_model_name(src)
@@ -819,7 +822,7 @@ class TSMapGenerator(object):
             model_npred += np.sum(mm)
             model += [mm]
 
-        self.delete_source('tsmap_testsource')
+        self.delete_source('tsmap_testsource', loglevel=logging.DEBUG)
 
         for i, mm in enumerate(model):
 
@@ -906,6 +909,7 @@ class TSMapGenerator(object):
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
              'amplitude': amp_map,
+             'loglike': -self.like(),
              'config': kwargs
              }
 

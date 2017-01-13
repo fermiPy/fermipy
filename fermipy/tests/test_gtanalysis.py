@@ -257,13 +257,13 @@ def test_gtanalysis_extension_gaussian(create_draco_analysis):
     np.random.seed(1)
     spatial_width = 0.5
 
-    gta.simulate_source({'SpatialModel': 'GaussianSource',
+    gta.simulate_source({'SpatialModel': 'RadialGaussian',
                          'SpatialWidth': spatial_width,
                          'Prefactor': 3E-12})
 
     o = gta.extension('draco',
                       width=[0.4, 0.45, 0.5, 0.55, 0.6],
-                      spatial_model='GaussianSource')
+                      spatial_model='RadialGaussian')
 
     assert_allclose(o['ext'], spatial_width, atol=0.1)
 
