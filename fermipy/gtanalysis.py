@@ -857,20 +857,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         spatial_pars = kwargs.get('spatial_pars',{})
         use_pylike = kwargs.get('use_pylike', True)
         psf_scale_fn = kwargs.get('psf_scale_fn', None)
-        
-        spatial_pars.setdefault('ra',src['ra'])
-        spatial_pars.setdefault('dec',src['dec'])
-                
+                        
         if hasattr(pyLike.BinnedLikelihood, 'setSourceMapImage') and not use_pylike:
-            src.set_spatial_model(spatial_model, spatial_pars)
+            src.set_spatial_model(spatial_model, spatial_pars)            
             self._update_srcmap(src.name, src, psf_scale_fn=psf_scale_fn)            
         else:
             src = self.delete_source(name, loglevel=logging.DEBUG)
             src.set_spatial_model(spatial_model, spatial_pars)            
             self.add_source(src.name, src, init_source=False,
-                            use_pylike=use_pylike, loglevel=logging.DEBUG)
-            
-            
+                            use_pylike=use_pylike, loglevel=logging.DEBUG)            
             
     def set_source_spectrum(self, name, spectrum_type='PowerLaw',
                             spectrum_pars=None, update_source=True):
@@ -5043,7 +5038,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if src['SpatialType'] != 'SpatialMap':
             return
-        if src['SpatialFilename'] is not None:
+        if src['Spatial_Filename'] is not None:
             return
 
         if src['SpatialModel'] in ['RadialGaussian']:

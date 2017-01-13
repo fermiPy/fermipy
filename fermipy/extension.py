@@ -336,7 +336,7 @@ class ExtensionFit(object):
             fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)
             # self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
             #                  w, fit_output['loglike'])
-            print(i, w, fit_output['loglike'])
+            #print(i, w, fit_output['loglike'])
             loglike += [fit_output['loglike']]
 
         state.restore()
@@ -367,7 +367,7 @@ class ExtensionFit(object):
             fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)
             # self.logger.debug('Fitting width: %10.3f deg LogLike %10.2f',
             #                  w, fit_output['loglike'])
-            print(i, w, fit_output['loglike'])
+            #print(i, w, fit_output['loglike'])
             loglike += [fit_output['loglike']]
 
         self.set_source_morphology(name, spatial_model=src['SpatialModel'],
@@ -418,50 +418,54 @@ class ExtensionFit(object):
     def _fit_extension_full(self, name, **kwargs):
 
         skydir = self.roi[name].skydir
-
         src = self.roi.copy_source(name)
 
         spatial_model = kwargs.get('spatial_model', 'RadialGaussian')
         loglike = -self.like()
 
-        # Perform preliminary fit?
-        print('skydir ', skydir.ra.deg, skydir.dec.deg)
-
+        scan_cdelt = 0.05
+        nstep=6
+        
         for i in range(4):
 
             fit_ext = self._fit_extension(name, skydir=skydir, **kwargs)
+            self.set_source_morphology(name,
+                                       spatial_model=spatial_model,
+                                       spatial_pars={'SpatialWidth' : max(fit_ext['ext'], 0.00316)},
+                                       use_pylike=False)
 
-            self.roi[name].set_spatial_model(
-                spatial_model, max(fit_ext['ext'], 0.00316))
+            dtheta_max=max(0.5, 2.0*fit_ext['ext'])
+            if i==0:
+                fit_pos = self._fit_position(name, nstep=nstep,
+                                             dtheta_max=dtheta_max)
+            else:
+                fit_pos = self._fit_position_scan(name,
+                                                  scan_cdelt=scan_cdelt,
+                                                  nstep=nstep)
 
-            scan_cdelt = 0.05
-            #max(0.5 * fit_ext['ext'], 0.00316)
-
-            fit_pos = self._fit_position_scan(name, skydir=skydir,
-                                              scan_cdelt=scan_cdelt,
-                                              nstep=5)
+            scan_cdelt = 2.0 * fit_pos['r95'] / (nstep - 1.0)
+            self.set_source_morphology(name,
+                                       spatial_model=spatial_model,
+                                       spatial_pars={'RA' : fit_pos['ra'],
+                                                     'DEC' : fit_pos['dec']},
+                                       use_pylike=False)
+            
             skydir = fit_pos['skydir']
             fit_ext['ra'] = skydir.ra.deg
             fit_ext['dec'] = skydir.dec.deg
-            #
-
-            print('-----------------------')
-            print('skydir ', skydir.ra.deg, skydir.dec.deg)
-            print(i, fit_ext['ext'], loglike, fit_ext['loglike_ext'], fit_pos[
-                  'loglike'], fit_ext['loglike_ext'] - loglike)
+            dloglike = fit_ext['loglike_ext'] - loglike
+            
+            #print('-----------------------')
+            #print('skydir ', skydir.ra.deg, skydir.dec.deg)
+            #print(i, fit_ext['ext'], loglike, fit_ext['loglike_ext'], fit_pos['loglike'], dloglike)
 
             fit_ext['loglike_ext'] = fit_pos['loglike']
 
-            if not np.isfinite(loglike) or fit_ext['loglike_ext'] - loglike > 0.1 or i < 3:
-                loglike = fit_ext['loglike_ext']
-                continue
-            else:
+            if i > 1 and dloglike < 0.1:
                 break
+            
+            loglike = fit_ext['loglike_ext']
 
-#            print(i, skydir.ra.deg, skydir.dec.deg, fit_ext['ext'], fit_ext['loglike_ext'], fit_pos['loglike'])
-
-        self.roi[name].set_spatial_model(
-            src['SpatialModel'], src['SpatialWidth'])
-        self.roi[name].set_radec(src['ra'], src['dec'])
-
+        self.set_source_morphology(name, spatial_pars=src.spatial_pars,
+                                   use_pylike=False)
         return fit_ext
