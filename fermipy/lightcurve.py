@@ -79,7 +79,7 @@ class LightCurve(object):
         config = utils.create_dict(self.config['lightcurve'],
                                    optimizer=self.config['optimizer'])
         config = schema.create_config(config, **kwargs)
-        
+
         self.logger.info('Computing Lightcurve for %s' % name)
 
         o = self._make_lc(name, **config)
@@ -162,12 +162,12 @@ class LightCurve(object):
             v = self.roi[name][k]
 
             if isinstance(v, np.ndarray):
-                o[k] = np.zeros(times[:-1].shape + v.shape)
+                o[k] = np.nan * np.ones(times[:-1].shape + v.shape)
             elif isinstance(v, np.float):
-                o[k] = np.zeros(times[:-1].shape)
+                o[k] = np.nan * np.ones(times[:-1].shape)
 
         diff_sources = [s.name for s in self.roi.sources if s.diffuse]
-        skydir = self.roi[name].skydir        
+        skydir = self.roi[name].skydir
         kwargs['free_sources'] += [s.name for s in
                                    self.roi.get_sources(skydir=skydir,
                                                         distance=kwargs['free_radius'],
@@ -185,29 +185,29 @@ class LightCurve(object):
 
             if config['components'] is None:
                 config['components'] = []
-            
+
             for j, c in enumerate(self.components):
                 if len(config['components']) <= j:
-                    config['components'] += [{}]                    
+                    config['components'] += [{}]
 
-                data_cfg =  {'evfile': c.files['ft1'],
-                             'scfile': c.data_files['scfile'],
-                             'ltcube': None }
-                
+                data_cfg = {'evfile': c.files['ft1'],
+                            'scfile': c.data_files['scfile'],
+                            'ltcube': None}
+
                 config['components'][j] = \
                     utils.merge_dict(config['components'][j],
-                                     {'data' : data_cfg },
+                                     {'data': data_cfg},
                                      add_new_keys=True)
-                    
+
             # create output directories labeled in MET vals
-            outdir = 'lightcurve_%.0f_%.0f' % (time[0],time[1])
+            outdir = 'lightcurve_%.0f_%.0f' % (time[0], time[1])
             config['fileio']['outdir'] = os.path.join(self.workdir, outdir)
             utils.mkdir(config['fileio']['outdir'])
 
             yaml.dump(utils.tolist(config),
                       open(os.path.join(config['fileio']['outdir'],
                                         'config.yaml'), 'w'))
-            
+
             xmlfile = os.path.join(config['fileio']['outdir'], 'base.xml')
 
             # Make a copy of the source maps. TODO: Implement a
@@ -216,9 +216,14 @@ class LightCurve(object):
             #     for c in self.components:
             #        shutil.copy(c._files['srcmap'],config['fileio']['outdir'])
 
-            gta = self.clone(config, loglevel=logging.DEBUG)
-            gta.setup()
-            
+            try:
+                gta = self.clone(config, loglevel=logging.DEBUG)
+                gta.setup()
+            except:
+                self.logger.warning('Analysis failed in time range %i %i',
+                                    time[0], time[1])
+                continue
+
             # Write the current model
             gta.write_xml(xmlfile)
 
@@ -253,11 +258,11 @@ class LightCurve(object):
         # 4.) if that fails then fix sources out to 1dg away from center of ROI
         # 5.) if that fails set values to 0 in output and print warning message
 
-        free_sources = kwargs.get('free_sources',[])
-        
+        free_sources = kwargs.get('free_sources', [])
+
         gta.free_sources(free=False)
         gta.free_source(name)
-        
+
         for niter in range(5):
 
             if niter == 0:
