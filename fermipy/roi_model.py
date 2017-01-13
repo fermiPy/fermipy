@@ -620,8 +620,9 @@ class Source(Model):
             self._set_radec([catalog['RAJ2000'], catalog['DEJ2000']])
         else:
             raise Exception('Failed to infer RADEC for source: %s' % name)
-
-        self._init_spatial_pars()
+        
+        self._init_spatial_pars(SpatialWidth=self['SpatialWidth'])
+        
 
     def __str__(self):
 
@@ -663,30 +664,18 @@ class Source(Model):
             self.spatial_pars['RA']['value'] = radec[0]
             self.spatial_pars['DEC']['value'] = radec[1]
 
-    def _update_spatial_width(self, spatial_width):
-
-        if 'SpatialWidth' is not None:
-            self.data['SpatialWidth'] = spatial_width
-        
+    def _set_spatial_width(self, spatial_width):
+        self.data['SpatialWidth'] = spatial_width        
         if self['SpatialType'] in ['RadialGaussian']:
-
-            if spatial_width is not None:
-                self.spatial_pars['Sigma']['value'] = spatial_width / 1.5095921854516636
-
-            self.data['SpatialWidth'] = self.spatial_pars['Sigma']['value'] * 1.5095921854516636
-                
+            self.spatial_pars['Sigma']['value'] = spatial_width / 1.5095921854516636                
         elif self['SpatialType'] in ['RadialDisk']:
-
-            if spatial_width is not None:
-                self.spatial_pars['Radius']['value'] = spatial_width / 0.8246211251235321
-
-            self.data['SpatialWidth'] = self.spatial_pars['Radius']['value'] * 0.8246211251235321            
+            self.spatial_pars['Radius']['value'] = spatial_width / 0.8246211251235321
             
     def _init_spatial_pars(self, **kwargs):
 
         spatial_pars = copy.deepcopy(kwargs)
         spatial_width = spatial_pars.pop('SpatialWidth', None)
-        
+                
         if self['SpatialType'] == 'SkyDirFunction':
             self._extended = False
             self._data['SourceType'] = 'PointSource'
@@ -705,7 +694,13 @@ class Source(Model):
             if k in self.spatial_pars:
                 self.spatial_pars[k].update(spatial_pars[k])
 
-        self._update_spatial_width(spatial_width)
+        if spatial_width is not None:
+            self._set_spatial_width(spatial_width)
+        elif self['SpatialType'] == 'RadialDisk':
+            self['SpatialWidth'] = self.spatial_pars['Radius']['value']*0.8246211251235321
+        elif self['SpatialType'] == 'RadialGaussian':
+            self['SpatialWidth'] = self.spatial_pars['Sigma']['value']*1.5095921854516636
+            
         if 'RA' in spatial_pars or 'DEC' in spatial_pars:
             self._set_radec([spatial_pars['RA']['value'],
                              spatial_pars['DEC']['value']])
