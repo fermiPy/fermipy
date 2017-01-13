@@ -211,17 +211,17 @@ def make_srcmap(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
         ypix = ypix*rebin + (rebin-1.0)/2.
         cdelt = cdelt/rebin
     
-    if spatial_model == 'GaussianSource' or spatial_model == 'RadialGaussian':
+    if spatial_model == 'RadialGaussian':
         k = utils.make_cgauss_kernel(psf, sigma, npix, cdelt,
                                      xpix, ypix, psf_scale_fn)
-    elif spatial_model == 'DiskSource' or spatial_model == 'RadialDisk':
+    elif spatial_model == 'RadialDisk':
         k = utils.make_cdisk_kernel(psf, sigma, npix, cdelt,
                                     xpix, ypix, psf_scale_fn)
-    elif spatial_model == 'PSFSource' or spatial_model == 'PointSource':
+    elif spatial_model == 'PointSource':
         k = utils.make_psf_kernel(psf, npix, cdelt,
                                   xpix, ypix, psf_scale_fn)
     else:
-        raise Exception('Unsupported spatial model: %s' % spatial_model)
+        raise Exception('Unsupported spatial model: %s', spatial_model)
 
     if rebin > 1:
         k = utils.sum_bins(k,1,rebin)

@@ -78,9 +78,9 @@ def get_spatial_type(spatial_model):
     """Translate a spatial model string to a spatial type."""
 
     if spatial_model in ['SkyDirFunction', 'PointSource',
-                         'Gaussian', 'PSFSource']:
+                         'Gaussian']:
         return 'SkyDirFunction'
-    elif spatial_model in ['GaussianSource', 'DiskSource', 'SpatialMap']:
+    elif spatial_model in ['SpatialMap']:
         return 'SpatialMap'
     elif spatial_model in ['RadialGaussian','RadialDisk']:
         try:

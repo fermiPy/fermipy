@@ -4191,21 +4191,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         return self._src_expscale
 
     def reload_source(self, name):
-        """Delete and reload a single source in the model.  This function will
-        force the recomputation of source maps.
+        """Recompute the source map for a single source in the model.
         """
 
         src = self.roi.get_source_by_name(name)
 
         if hasattr(self.like.logLike, 'loadSourceMap'):
-
-            if src['SpatialModel'] in ['PSFSource', 'GaussianSource',
-                                       'DiskSource']:
-                self._update_srcmap_file([src], True)
-                self.like.logLike.loadSourceMap(str(name), False, False)
-            else:
-                self.like.logLike.loadSourceMap(str(name), True, False)
-
+            self.like.logLike.loadSourceMap(str(name), True, False)
             srcmap_utils.delete_source_map(self.files['srcmap'], name)
             self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
             self.like.logLike.buildFixedModelWts()
@@ -4216,22 +4208,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.load_xml('tmp')
 
     def reload_sources(self, names):
-
+        """Recompute the source map for a list of sources in the model.
+        """
+        
         try:
-            models = ['PSFSource', 'GaussianSource', 'DiskSource']
-
-            srcs = [self.roi.get_source_by_name(name) for name in names]
-            names0 = [str(src.name) for src in srcs if
-                      src['SpatialModel'] not in models]
-
-            srcs1 = [src for src in srcs if src['SpatialModel'] in models]
-            names1 = [str(src.name) for src in srcs1]
-
-            self.like.logLike.loadSourceMaps(names0, True, True)
-            self._update_srcmap_file(srcs1, True)
-            for name in names1:
-                self.like.logLike.eraseSourceMap(name)
-            self.like.logLike.loadSourceMaps(names1, False, False)
+            self.like.logLike.loadSourceMaps(names, True, True)
         except:
             for name in names:
                 self.reload_source(name)
@@ -5060,12 +5041,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
     def make_template(self, src, suffix):
 
-        if 'SpatialModel' not in src:
-            return
         if src['SpatialType'] != 'SpatialMap':
             return
+        if src['SpatialFilename'] is not None:
+            return
 
-        if src['SpatialModel'] in ['GaussianSource', 'RadialGaussian']:
+        if src['SpatialModel'] in ['RadialGaussian']:
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_gauss_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
@@ -5074,7 +5055,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                                    src['SpatialWidth'],
                                                    template_file)
             src['Spatial_Filename'] = template_file
-        elif src['SpatialModel'] in ['DiskSource', 'RadialDisk']:
+        elif src['SpatialModel'] in ['RadialDisk']:
             template_file = os.path.join(self.config['fileio']['workdir'],
                                          '%s_template_disk_%05.3f%s.fits' % (
                                              src.name, src['SpatialWidth'],
@@ -5097,17 +5078,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         for src in sources:
 
-            # if src.diffuse:
-            #    continue
-            # if src['SpatialModel'] in ['PointSource', 'Gaussian',
-            #                           'SpatialMap']:
-            #    continue
             if src.name.upper() in hdunames and not overwrite:
                 continue
-            # if src['SpatialModel'] in ['RadialGaussian', 'RadialDisk'] and \
-            #        hasattr(pyLike, 'RadialGaussian'):
-            #    continue
-
             self.logger.debug('Creating source map for %s', src.name)
             srcmaps[src.name] = self._create_srcmap(src.name, src)
 
