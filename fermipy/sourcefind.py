@@ -474,8 +474,7 @@ class SourceFind(object):
         nstep = kwargs.setdefault('nstep', 3)
         fit0 = self._fit_position_tsmap(name, **kwargs)
 
-        kwargs.pop('skydir')
-        scan_cdelt = 2.0 * fit0['r68'] / (nstep - 1.0)
+        scan_cdelt = 2.0 * fit0['r95'] / (nstep - 1.0)
         fit1 = self._fit_position_scan(name,
                                        skydir=fit0['skydir'],
                                        scan_cdelt=scan_cdelt,
@@ -500,7 +499,8 @@ class SourceFind(object):
                            exclude=[name],
                            write_fits=write_fits,
                            write_npy=write_npy,
-                           make_plots=False)
+                           make_plots=False,
+                           loglevel=logging.DEBUG)
 
         posfit, skydir = fit_error_ellipse(tsmap['ts'], dpix=3,
                                            zmin=-9.0)
@@ -543,18 +543,14 @@ class SourceFind(object):
         scan_cdelt = kwargs.pop('scan_cdelt', 0.02)
         nstep = kwargs.pop('nstep', 5)
         use_cache = kwargs.get('use_cache', True)
+        use_pylike = kwargs.get('use_pylike', False)
         optimizer = kwargs.get('optimizer', {})
 
         self.free_norm(name)
         
         lnlmap = Map.create(skydir, scan_cdelt, (nstep, nstep),
                             coordsys=wcs_utils.get_coordsys(self._skywcs))
-
-        if hasattr(pyLike.BinnedLikelihood, 'setSourceMapImage'):
-            use_pylike=False
-        else:
-            use_pylike=True
-
+        
         src = self.roi.copy_source(name)
             
         if use_cache and not use_pylike:
@@ -572,7 +568,8 @@ class SourceFind(object):
                                    **optimizer)
             loglike += [fit_output['loglike']]
            
-        self.set_source_morphology(name, spatial_pars=src.spatial_pars)
+        self.set_source_morphology(name, spatial_pars=src.spatial_pars,
+                                   use_pylike=use_pylike)
         saved_state.restore()
 
         lnlmap.data = np.array(loglike).reshape((nstep, nstep)).T
