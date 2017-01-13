@@ -16,7 +16,7 @@ import BinnedAnalysis as BinnedAnalysis
 import pyLikelihood as pyLike
 
 from fermipy import utils
-from fermipy.jobs.chain import Link
+from fermipy.jobs.chain import FileFlags, Link
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
@@ -76,12 +76,21 @@ class GtSrcmapPartial(object):
     def _make_link():
         link = Link('srcmaps-diffuse',
                     appname='fermipy-srcmaps-diffuse',
-                    options=dict(irfs=None, expcube=None, cmap=None,
-                                 bexpmap=None, srcmdl=None, source=None,
-                                 outfile=None, kmin=0, kmax=-1, gzip=True),
-                    flags=['gzip'],
-                    input_file_args=['expcube', 'cmap', 'bexpmap', 'srcmdl'],
-                    output_file_args=['outfile'])
+                    options=dict(irfs=('CALDB', 'IRFS to use', str),
+                                 expcube=(None, "Input livetime cube file", str),
+                                 bexpmap=(None, "Input binned exposure cube file", str),
+                                 cmap=(None, "Input counts map file", str),
+                                 srcmdl=(None, "Input source model xml file", str),
+                                 source=(None, "Name of source", str),
+                                 outfile=(None, "Output source map file", str),
+                                 kmin=(0, "Minimum energy bin", int),
+                                 kmin=(-1, "Maximum energy bin", int),
+                                 gzip=(False, "Compress output", bool)),
+                    file_args=dict(expcube=FileFlags.input_mask, 
+                                  cmap=FileFlags.input_mask,
+                                  bexpmap=FileFlags.input_mask,
+                                  srcmdl=FileFlags.input_mask,
+                                  outfile=FileFlags.output_mask))
         return link
 
     def run(self, argv):
@@ -117,13 +126,25 @@ class GtSrcmapPartial(object):
 
 class ConfigMaker_SrcmapPartial(ConfigMaker):
     """Small class to generate configurations for this script
+    
+    This adds the following arguments:
+    --comp     : binning component definition yaml file
+    --data     : datset definition yaml file
+    --irf_ver  : IRF verions string (e.g., 'V6')
+    --diffuse  : Diffuse model component definition yaml file'
+    --make_xml : Write xml files for the individual components
     """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
+                           make_xml=(False, 'Write xml files needed to make source maps', bool))
 
-    def __init__(self, link):
+    def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
-        self.link = link
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options',default_options.copy()))
 
     @staticmethod
     def _write_xml(xmlfile, srcs):
@@ -170,60 +191,20 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                 for sub_comp_info in comp_info.components.values():
                     ConfigMaker_SrcmapPartial._handle_component(sourcekey, sub_comp_info)
 
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser'
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-        --comp     : binning component definition yaml file
-        --data     : datset definition yaml file
-        --irf_ver  : IRF verions string (e.g., 'V6')
-        --diffuse  : Diffuse model component definition yaml file'
-        --make_xml : Write xml files for the individual components
-        """
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Yaml file with component definitions')
-        parser.add_argument('--data', type=str, default=None,
-                            help='Yaml file with dataset definitions')
-        parser.add_argument('--irf_ver', type=str, default='V6',
-                            help='Version of IRFs to use')
-        parser.add_argument('--diffuse', type=str, default=None,
-                            help='Yaml file with input diffuse model definitions')
-        parser.add_argument('--make_xml', action='store_true',
-                            help='Write xml files needed to make source maps')
-
-    def make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters:
-        ----------------
-        args : `argparse.Namespace'
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args.__dict__)
-        return self.link.args
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
         input_config = {}
         job_configs = {}
 
-        components = Component.build_from_yamlfile(args.comp)
-        NAME_FACTORY.update_base_dict(args.data)
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
 
         ret_dict = make_diffuse_comp_info_dict(components=components,
-                                               diffuse=args.diffuse,
+                                               diffuse=args['diffuse'],
                                                basedir='.')
         diffuse_comp_info_dict = ret_dict['comp_info_dict']
-        if args.make_xml:
+        if args['make_xml']:
             ConfigMaker_SrcmapPartial._make_xml_files(diffuse_comp_info_dict)
 
         for diffuse_comp_info_key in sorted(diffuse_comp_info_dict.keys()):
@@ -240,7 +221,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
                                  coordsys='GAL',
-                                 irf_ver=args.irf_ver)
+                                 irf_ver=args['irf_ver'])
 
                 kmin = 0
                 kmax = comp.enumbins + 1

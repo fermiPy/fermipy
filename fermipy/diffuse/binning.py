@@ -13,7 +13,7 @@ EVT_TYPE_DICT = dict(PSF0=4, PSF1=8, PSF2=16, PSF3=32)
 
 
 class Component(object):
-    """ Small helper class to represent the binning used for a single component
+    """Small helper class to represent the binning used for a single component
     of a summed likelihood in diffuse analysis
 
     Data Members:
@@ -31,7 +31,7 @@ class Component(object):
     """
 
     def __init__(self, **kwargs):
-        """ C'tor: copies keyword arguments to data members
+        """C'tor: copies keyword arguments to data members
         """
         self.log_emin = kwargs['log_emin']
         self.log_emax = kwargs['log_emax']

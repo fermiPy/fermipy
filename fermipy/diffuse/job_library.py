@@ -6,8 +6,9 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+import copy
 
-from fermipy.jobs.chain import Link
+from fermipy.jobs.chain import add_argument, FileFlags, Link
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
@@ -16,87 +17,72 @@ from fermipy.diffuse.binning import Component
 from fermipy.diffuse.diffuse_src_manager import make_ring_dicts,\
     make_diffuse_comp_info_dict
 from fermipy.diffuse.catalog_src_manager import make_catalog_comp_dict
+from fermipy.diffuse import defaults as diffuse_defaults
 
 NAME_FACTORY = NameFactory()
 
 GTEXPCUBE2 = Gtlink('gtexpcube2',
-                    options=dict(irfs='CALDB', hpx_order=6,
-                                 infile=None, cmap=None,
-                                 outfile=None, coordsys='GAL'),
-                    input_file_args=['infile', 'cmap'],
-                    output_file_args=['outfile'])
+                    options=dict(irfs=('CALDB', 'IRFS to use', str),
+                                 hpx_order=(6, "HEALPIX order parameter", int),
+                                 infile=(None, "Input livetime cube file", str),
+                                 cmap=(None, "Input counts map file", str),
+                                 outfile=(None, "Output binned exposure cube file", str),
+                                 coordsys=('GAL', 'Coordinate system', str)),
+                    file_args=dict(infile=FileFlags.input_mask, 
+                                   cmap=FileFlags.input_mask,
+                                   outfile=FileFlags.output_mask))
 
 GTSRCMAPS = Gtlink('gtsrcmaps',
-                   options=dict(irfs='CALDB', expcube=None,
-                                bexpmap=None, cmap=None,
-                                srcmdl=None, outfile=None),
-                   flags=['gzip'],
-                   input_file_args=['expcube', 'cmap', 'bexpmap', 'srcmdl'],
-                   output_file_args=['outfile'])
+                   options=dict(irfs=('CALDB', 'IRFS to use', str),
+                                expcube=(None, "Input livetime cube file", str),
+                                bexpmap=(None, "Input binned exposure cube file", str),
+                                cmap=(None, "Input counts map file", str),
+                                srcmdl=(None, "Input source model xml file", str),  
+                                outfile=(None, "Output source map file", str)),
+                   file_args=dict(expcube=FileFlags.input_mask, 
+                                  cmap=FileFlags.input_mask,
+                                  bexpmap=FileFlags.input_mask,
+                                  srcmdl=FileFlags.input_mask,
+                                  outfile=FileFlags.output_mask))
 
 FERMIPYCOADD = Link('fermipy-coadd',
                     appname='fermipy-coadd',
-                    options=dict(args=[], output=None),
-                    output_file_args=['output'])
+                    options=dict(args=([], "List of input files", list),
+                                 output=(None, "Output file", str)),
+                    file_args=dict(args=FileFlags.input_mask,
+                                   output=FileFlags.output_mask))
 
 FERMIPYVSTACK = Link('fermipy-vstack',
                      appname='fermipy-vstack',
-                     options=dict(output=None, hdu=None, args=None,
-                                  gzip=True),
-                     flags=['gzip'],
-                     input_file_args=[],
-                     output_file_args=['output'])
+                     options=dict(output=(None, "Output file name", str),
+                                  hdu=(None, "Name of HDU to stack", str),
+                                  args=([], "List of input files", list),
+                                  gzip=(False, "Compress output", bool)),
+                     file_args=dict(args=FileFlags.input_mask,
+                                    output=FileFlags.output_mask))
 
 
 class ConfigMaker_Gtexpcube2(ConfigMaker):
-    """Small class to generate configurations for gtexpcube2"""
+    """Small class to generate configurations for gtexpcube2
 
-    def __init__(self, link):
+    This takes the following arguments:
+    --comp     : binning component definition yaml file
+    --data     : datset definition yaml file
+    --irf_ver  : IRF verions string (e.g., 'V6')
+    --coordsys : Coordinate system ['GAL' | 'CEL']
+    --hpx_order: HEALPix order parameter
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_expcube'],
+                           coordsys=diffuse_defaults.diffuse['coordsys'])
+
+    def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
-        self.link = link
-
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser'
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-
-        --comp     : binning component definition yaml file
-        --data     : datset definition yaml file
-        --irf_ver  : IRF verions string (e.g., 'V6')
-        --coordsys : Coordinate system ['GAL' | 'CEL']
-        --hpx_order: HEALPix order parameter
-        """
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Yaml file with component definitions')
-        parser.add_argument('--data', type=str, default=None,
-                            help='Yaml file with dataset definitions')
-        parser.add_argument('--irf_ver', type=str, default='V6',
-                            help='Version of IRFs to use')
-        parser.add_argument('--hpx_order', type=int, default=6,
-                            help='HEALPix order parameter')
-        parser.add_argument('--coordsys', type=str, default='CEL',
-                            help='coordinate system')
-
-    def make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters:
-        ----------------
-        args : `argparse.Namespace'
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args.__dict__)
-        return self.link.args
+        ConfigMaker.__init__(self, link, 
+                             options=kwargs.get('options',self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -104,8 +90,8 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
         input_config = {}
         job_configs = {}
 
-        components = Component.build_from_yamlfile(args.comp)
-        NAME_FACTORY.update_base_dict(args.data)
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax
@@ -113,15 +99,16 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
             name_keys = dict(zcut=zcut,
                              ebin=comp.ebin_name,
                              psftype=comp.evtype_name,
-                             coordsys=args.coordsys,
-                             irf_ver=args.irf_ver)
+                             coordsys=args['coordsys'],
+                             irf_ver=args['irf_ver'],
+                             fullpath=True)
             outfile = NAME_FACTORY.bexpcube(**name_keys)
             job_configs[key] = dict(cmap=NAME_FACTORY.ccube(**name_keys).replace('.fits',
                                                                                  '.fits.gz'),
                                     infile=NAME_FACTORY.ltcube(**name_keys),
                                     outfile=outfile,
                                     irfs=NAME_FACTORY.irfs(**name_keys),
-                                    hpx_order=min(comp.hpx_order, args.hpx_order),
+                                    hpx_order=min(comp.hpx_order, args['hpx_order']),
                                     evtype=comp.evtype,
                                     logfile=outfile.replace('.fits', '.log'))
 
@@ -130,12 +117,26 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
 
 
 class ConfigMaker_SrcmapsCatalog(ConfigMaker):
-    """Small class to generate configurations for gtsrcmaps for catalog sources"""
+    """Small class to generate configurations for gtsrcmaps for catalog sources
 
-    def __init__(self, link):
+    This takes the following arguments:
+    --comp     : binning component definition yaml file
+    --data     : datset definition yaml file
+    --irf_ver  : IRF verions string (e.g., 'V6')
+    --sources  : Yaml file with input source model definitions
+    --make_xml : Write xml files for the individual components
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+                           make_xml=(False, 'Write xml files needed to make source maps', bool),)
+
+    def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options',default_options.copy()))
         self.link = link
 
     @staticmethod
@@ -151,61 +152,20 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
                 print ("%s : %06i" % (val2.srcmdl_name, len(val2.roi_model.sources)))
                 #val2.roi_model.write_xml(val2.srcmdl_name)
 
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser'
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-
-        --comp     : binning component definition yaml file
-        --data     : datset definition yaml file
-        --irf_ver  : IRF verions string (e.g., 'V6')
-        --sources  : Yaml file with input source model definitions
-        --make_xml : Write xml files for the individual components
-        """
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Yaml file with component definitions')
-        parser.add_argument('--data', type=str, default=None,
-                            help='Yaml file with dataset definitions')
-        parser.add_argument('--irf_ver', type=str, default='V6',
-                            help='Version of IRFs to use')
-        parser.add_argument('--sources', type=str, default=None,
-                            help='Yaml file with input source model definitions')
-        parser.add_argument('--make_xml', action='store_true',
-                            help='Write xml files needed to make source maps')
-
-    def make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters:
-        ----------------
-        args : `argparse.Namespace'
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args.__dict__)
-        return self.link.args
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
         input_config = {}
         job_configs = {}
 
-        components = Component.build_from_yamlfile(args.comp)
-        NAME_FACTORY.update_base_dict(args.data)
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
 
-        ret_dict = make_catalog_comp_dict(sources=args.sources, basedir='.')
+        ret_dict = make_catalog_comp_dict(sources=args['sources'], basedir='.')
         catalog_info_dict = ret_dict['catalog_info_dict']
         comp_info_dict = ret_dict['comp_info_dict']
 
-        if args.make_xml:
+        if args['make_xml']:
             ConfigMaker_SrcmapsCatalog._make_xml_files(catalog_info_dict, comp_info_dict)
 
         for catalog_name, catalog_info in catalog_info_dict.items():
@@ -217,7 +177,8 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
                                  coordsys='GAL',
-                                 irf_ver=args.irf_ver)
+                                 irf_ver=args['irf_ver'],
+                                 fullpath=True)
                 outfile = NAME_FACTORY.srcmaps(**name_keys)
                 logfile = outfile.replace('.fits', '.log')
                 job_configs[key] = dict(cmap=NAME_FACTORY.ccube(**name_keys),
@@ -236,45 +197,19 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
 class ConfigMaker_SumRings(ConfigMaker):
     """Small class to generate configurations for fermipy-coadd
     to sum galprop ring gasmaps
-    """
 
-    def __init__(self, link):
+    This takes the following arguments:    
+    --diffuse  : Diffuse model component definition yaml file'
+    --outdir   : Output directory
+    """
+    default_options = dict(diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
+                           outdir=(None, 'Output directory', str),)
+
+    def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
-        self.link = link
-
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser'
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-
-        --diffuse  : Diffuse model component definition yaml file'
-        --outdir   : Output directory
-        """
-        parser.add_argument('--diffuse', type=str, default=None,
-                            help='Diffuse model component definition yaml file')
-        parser.add_argument('--outdir', type=str, default=None,
-                            help='Output directory')
-
-    def make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters:
-        ----------------
-        args : `argparse.Namespace'
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args.__dict__)
-        return self.link.args
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options',default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -282,7 +217,7 @@ class ConfigMaker_SumRings(ConfigMaker):
         input_config = {}
         job_configs = {}
 
-        gmm = make_ring_dicts(diffuse=args.diffuse, basedir='.')
+        gmm = make_ring_dicts(diffuse=args['diffuse'], basedir='.')
 
         for galkey in gmm.galkeys():
             ring_dict = gmm.ring_dict(galkey)
@@ -302,50 +237,23 @@ class ConfigMaker_SumRings(ConfigMaker):
 class ConfigMaker_Vstack(ConfigMaker):
     """Small class to generate configurations for fermipy-vstack
     to merge source maps
-    """
 
-    def __init__(self, link):
+    This takes the following arguments:
+    --comp     : binning component definition yaml file
+    --data     : datset definition yaml file
+    --irf_ver  : IRF verions string (e.g., 'V6')
+    --diffuse  : Diffuse model component definition yaml file'
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],)
+
+    def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
-        self.link = link
-
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser'
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-        --comp     : binning component definition yaml file
-        --data     : datset definition yaml file
-        --irf_ver  : IRF verions string (e.g., 'V6')
-        --diffuse  : Diffuse model component definition yaml file'
-        """
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Yaml file with component definitions')
-        parser.add_argument('--data', type=str, default=None,
-                            help='Yaml file with dataset definitions')
-        parser.add_argument('--irf_ver', type=str, default='V6',
-                            help='Version of IRFs to use')
-        parser.add_argument('--diffuse', type=str, default=None,
-                            help='Yaml file with input diffuse model definitions')
-
-    def make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters:
-        ----------------
-        args : `argparse.Namespace'
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args.__dict__)
-        return self.link.args
+        ConfigMaker.__init__(self, link, 
+                             options=kwargs.get('options',default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -353,11 +261,11 @@ class ConfigMaker_Vstack(ConfigMaker):
         input_config = {}
         job_configs = {}
 
-        components = Component.build_from_yamlfile(args.comp)
-        NAME_FACTORY.update_base_dict(args.data)
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
 
         ret_dict = make_diffuse_comp_info_dict(components=components,
-                                               diffuse=args.diffuse,
+                                               diffuse=args['diffuse'],
                                                basedir=NAME_FACTORY.base_dict['basedir'])
         diffuse_comp_info_dict = ret_dict['comp_info_dict']
 
@@ -376,7 +284,8 @@ class ConfigMaker_Vstack(ConfigMaker):
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
                                  coordsys='GAL',
-                                 irf_ver=args.irf_ver)
+                                 irf_ver=args['irf_ver'],
+                                 fullpath=True)
 
                 outfile = NAME_FACTORY.srcmaps(**name_keys)
                 outfile_tokens = os.path.splitext(outfile)
@@ -392,9 +301,10 @@ class ConfigMaker_Vstack(ConfigMaker):
         return input_config, job_configs, output_config
 
 
-def create_sg_gtexpcube2():
+def create_sg_gtexpcube2(**kwargs):
     """Build and return a ScatterGather object that can invoke gtexpcube2"""
-    link = GTEXPCUBE2
+    link = copy.deepcopy(GTEXPCUBE2)
+    link.linkname = kwargs.pop('linkname', 'gtexpcube2')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
@@ -406,13 +316,16 @@ def create_sg_gtexpcube2():
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                linkname=link.linkname,
+                                **kwargs)
     return lsf_sg
 
 
-def create_sg_gtsrcmaps_catalog():
+def create_sg_gtsrcmaps_catalog(**kwargs):
     """Build and return a ScatterGather object that can invoke gtsrcmaps for catalog sources"""
     link = GTSRCMAPS
+    link.linkname = kwargs.pop('linkname', 'gtsrcmaps')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
@@ -424,13 +337,16 @@ def create_sg_gtsrcmaps_catalog():
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                linkname=link.linkname,
+                                **kwargs)
     return lsf_sg
 
 
-def create_sg_sum_ring_gasmaps():
+def create_sg_sum_ring_gasmaps(**kwargs):
     """Build and return a ScatterGather object that can invoke fermipy-coadd"""
     link = FERMIPYCOADD
+    link.linkname = kwargs.pop('linkname', 'sum-gasmaps')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
@@ -442,13 +358,16 @@ def create_sg_sum_ring_gasmaps():
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                linkname=link.linkname,
+                                **kwargs)
     return lsf_sg
 
 
-def create_sg_vstack_diffuse():
+def create_sg_vstack_diffuse(**kwargs):
     """Build and return a ScatterGather object that can invoke fermipy-vstack"""
     link = FERMIPYVSTACK
+    link.linkname = kwargs.pop('linkname', 'fermipy-vstack')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
@@ -460,8 +379,12 @@ def create_sg_vstack_diffuse():
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                linkname=link.linkname,
+                                **kwargs)
     return lsf_sg
+
+
 
 
 def invoke_sg_gtexpcube2():

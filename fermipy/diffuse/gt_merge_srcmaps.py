@@ -12,7 +12,7 @@ import argparse
 import BinnedAnalysis as BinnedAnalysis
 import pyLikelihood as pyLike
 
-from fermipy.jobs.chain import Link
+from fermipy.jobs.chain import FileFlags, Link
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
@@ -66,12 +66,21 @@ class GtMergeSourceMaps(object):
     def _make_link():
         link = Link('merge-srcmaps',
                     appname='fermipy-merge-srcmaps',
-                    options=dict(irfs=None, expcube=None, srcmaps=None,
-                                 bexpmap=None, srcmdl=None, merged=None,
-                                 outfile=None, outxml=None, gzip=True),
-                    flags=['gzip'],
-                    input_file_args=['expcube', 'cmap', 'bexpmap', 'srcmdl'],
-                    output_file_args=['outfile', 'outxml'])
+                    options=dict(irfs=('CALDB', 'IRFS to use', str),
+                                 expcube=(None, "Input livetime cube file", str),
+                                 bexpmap=(None, "Input binned exposure cube file", str),
+                                 srcmaps=(None, "Input source map file", str),
+                                 srcmdl=(None, "Input source model xml file", str),  
+                                 outfile=(None, "Output source map file", str),
+                                 outxml=(None, "Output source model xml file", str),
+                                 merged=(None, "Merged output file", str),
+                                 gzip=(False, "Compress output", bool)),
+                    file_args=dict(expcube=FileFlags.input_mask,
+                                   cmap=FileFlags.input_mask,
+                                   bexpmap=FileFlags.input_mask,
+                                   srcmdl=FileFlags.input_mask,
+                                   outfile=FileFlags.output_mask,
+                                   outxml=FileFlags.output_mask))
         return link
 
     def run(self, argv):
@@ -122,60 +131,33 @@ class GtMergeSourceMaps(object):
 
 class ConfigMaker_MergeSrcmaps(ConfigMaker):
     """Small class to generate configurations for this script
-    """
 
-    def __init__(self, link):
+    This adds the following arguments:
+    --comp     : binning component definition yaml file
+    --data     : datset definition yaml file
+    --irf_ver  : IRF verions string (e.g., 'V6')
+    --sources  : Catalog model component definition yaml file'
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'])
+
+    def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
-        self.link = link
-
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser'
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-        --comp     : binning component definition yaml file
-        --data     : datset definition yaml file
-        --irf_ver  : IRF verions string (e.g., 'V6')
-        --sources  : Catalog model component definition yaml file'
-        """
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Yaml file with component definitions')
-        parser.add_argument('--data', type=str, default=None,
-                            help='Yaml file with dataset definitions')
-        parser.add_argument('--irf_ver', type=str, default='V6',
-                            help='Version of IRFs to use')
-        parser.add_argument('--sources', type=str, default=None,
-                            help='File with source merging configuration')
-
-    def make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters:
-        ----------------
-        args : `argparse.Namespace'
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args.__dict__)
-        return self.link.args
-
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options',default_options.copy()))
+ 
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
         input_config = {}
         job_configs = {}
 
-        components = Component.build_from_yamlfile(args.comp)
-        NAME_FACTORY.update_base_dict(args.data)
-        ret_dict = make_catalog_comp_dict(sources=args.sources, basedir='.')
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
+        ret_dict = make_catalog_comp_dict(sources=args['sources'], basedir='.')
         comp_info_dict = ret_dict['comp_info_dict']
 
         for split_ver, split_dict in comp_info_dict.items():
@@ -193,13 +175,13 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
                                      coordsys='GAL',
-                                     irf_ver=args.irf_ver)
+                                     irf_ver=args['irf_ver'])
                     nested_name_keys = dict(zcut=zcut,
                                             sourcekey=source_dict.catalog_info.catalog_name,
                                             ebin=comp.ebin_name,
                                             psftype=comp.evtype_name,
                                             coordsys='GAL',
-                                            irf_ver=args.irf_ver)
+                                            irf_ver=args['irf_ver'])
 
                     job_configs[key] = dict(srcmaps=NAME_FACTORY.srcmaps(**nested_name_keys),
                                             expcube=NAME_FACTORY.ltcube(**name_keys),

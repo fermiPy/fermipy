@@ -11,11 +11,13 @@ import math
 
 import yaml
 
-from fermipy.jobs.chain import Chain
+from fermipy.jobs.chain import add_argument, FileFlags, Chain
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
+from fermipy.diffuse.gt_coadd_split import CoaddSplit
+from fermipy.diffuse import defaults as diffuse_defaults
 
 
 PSF_TYPE_DICT = dict(PSF0=4, PSF1=8, PSF2=16, PSF3=32)
@@ -46,11 +48,17 @@ def create_inputlist(arglist):
     Recursively read all files with the extension '.lst'
     """
     lines = []
-    for arg in arglist:
-        if os.path.splitext(arg)[1] == '.lst':
-            lines += readlines(arg)
+    if isinstance(arglist, list):
+        for arg in arglist:
+            if os.path.splitext(arg)[1] == '.lst':
+                lines += readlines(arg)
+            else:
+                lines.append(arg)
+    else:
+        if os.path.splitext(arglist)[1] == '.lst':
+            lines += readlines(arglist)
         else:
-            lines.append(arg)
+            lines.append(arglist)
     return lines
 
 
@@ -63,8 +71,15 @@ class SplitAndBin(Chain):
         """
         self.comp_dict = comp_dict
         Chain.__init__(self, linkname,
-                       links=[],
                        appname='fermipy-split-and-bin',
+                       links=[],
+                       options=dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                                    coordsys=diffuse_defaults.diffuse['coordsys'],
+                                    ft1file=(None, 'Input FT1 file', str),
+                                    evclass=(128, 'Event class bit mask', int), 
+                                    output=(None, 'Base name for output files', str),
+                                    pfiles=(None, 'Directory for .par files', str), 
+                                    dry_run=(False, 'Print commands but do not run them', bool)),
                        argmapper=self._map_arguments,
                        parser=SplitAndBin._make_parser())
         if comp_dict is not None:
@@ -75,12 +90,10 @@ class SplitAndBin(Chain):
         """
         self.comp_dict = comp_dict
         links_to_add = []
-        links_to_add += SplitAndBin._make_energy_select_links(self.comp_dict)
-        links_to_add += SplitAndBin._make_PSF_select_and_bin_links(self.comp_dict)
+        links_to_add += self._make_energy_select_links()
+        links_to_add += self._make_PSF_select_and_bin_links()
         for link in links_to_add:
             self.add_link(link)
-        self._rm_keys = SplitAndBin._make_rm_keys(self.comp_dict)
-        self._gz_keys = SplitAndBin._make_gz_keys(self.comp_dict)
 
     @staticmethod
     def _make_parser():
@@ -89,100 +102,78 @@ class SplitAndBin(Chain):
         description = "Run gtselect and gtbin together"
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
-        parser.add_argument('--comp', type=str, default=None,
-                            help='component yaml file')
-        parser.add_argument('--evclass', type=int, default=128,
-                            help='Event class bit mask')
-        parser.add_argument('--coordsys', type=str, default='GAL',
-                            help='Coordinate system')
-        parser.add_argument('--ft1file', type=str, default=None,
-                            help='Input FT1 file')
-        parser.add_argument('--output', type=str, default=None,
-                            help='Base name for output files')
-        parser.add_argument('--pfiles', type=str, default=None,
-                            help='Directory for .par files')
-        parser.add_argument('--dry_run', action='store_true', default=False,
-                            help='Print commands but do not run them')
         return parser
 
-    @staticmethod
-    def _make_energy_select_links(comp_dict):
+    def _make_energy_select_links(self):
         """Make the links to run gtselect for each energy bin """
         links = []
-        for key, comp in sorted(comp_dict.items()):
+        for key, comp in sorted(self.comp_dict.items()):
+            outfilekey='selectfile_%s' % key
+            self.files.file_args[outfilekey] = FileFlags.rm_mask
             link = Gtlink('gtselect_%s' % key,
                           appname='gtselect',
                           mapping={'infile': 'ft1file',
-                                   'outfile': 'selectfile_%s' % key},
-                          defaults={'emin': math.pow(10., comp['log_emin']),
-                                    'emax': math.pow(10., comp['log_emax']),
-                                    'zmax': comp['zmax'],
-                                    'evclass': None,
-                                    'pfiles': None},
-                          input_file_args=['infile'],
-                          output_file_args=['outfile'])
+                                   'outfile': outfilekey},
+                          options={'emin': (math.pow(10., comp['log_emin']), "Minimum energy", float), 
+                                   'emax': (math.pow(10., comp['log_emax']), "Maximum energy", float), 
+                                   'infile': (None, 'Input FT1 File', str),
+                                   'outfile': (None, 'Output FT1 File', str),
+                                   'zmax': (comp['zmax'], "Zenith angle cut", float), 
+                                   'evclass': (None, "Event Class", int), 
+                                   'pfiles': (None, "PFILES directory", str)},
+                          file_args=dict(infile=FileFlags.input_mask,
+                                         outfile=FileFlags.output_mask))
             links.append(link)
         return links
 
-    @staticmethod
-    def _make_PSF_select_and_bin_links(comp_dict):
+    def _make_PSF_select_and_bin_links(self):
         """Make the links to run gtselect and gtbin for each psf type"""
         links = []
-        for key_e, comp_e in sorted(comp_dict.items()):
+        for key_e, comp_e in sorted(self.comp_dict.items()):
             emin = math.pow(10., comp_e['log_emin'])
             emax = math.pow(10., comp_e['log_emax'])
             enumbins = comp_e['enumbins']
             zmax = comp_e['zmax']
             for psf_type, psf_dict in sorted(comp_e['psf_types'].items()):
                 key = "%s_%s" % (key_e, psf_type)
+                selectkey_in = 'selectfile_%s' % key_e
+                selectkey_out = 'selectfile_%s' % key
+                binkey = 'binfile_%s' % key
+                self.files.file_args[selectkey_in] = FileFlags.rm_mask
+                self.files.file_args[selectkey_out] = FileFlags.rm_mask
+                self.files.file_args[binkey] = FileFlags.gz_mask | FileFlags.internal_mask
                 select_link = Gtlink('gtselect_%s' % key,
                                      appname='gtselect',
-                                     mapping={'infile': 'selectfile_%s' % key_e,
-                                              'outfile': 'selectfile_%s' % key},
-                                     defaults={'evtype': PSF_TYPE_DICT[psf_type],
-                                               'zmax': zmax,
-                                               'emin': emin,
-                                               'emax': emax,
-                                               'evclass': None,
-                                               'pfiles': None},
-                                     input_file_args=['infile'],
-                                     output_file_args=['outfile'])
+                                     mapping={'infile': selectkey_in,
+                                              'outfile': selectkey_out},
+                                     options={'evtype': (PSF_TYPE_DICT[psf_type], "PSF type", int), 
+                                              'zmax': (zmax, "Zenith angle cut", float), 
+                                              'emin': (emin, "Minimum energy", float),
+                                              'emax': (emax, "Maximum energy", float), 
+                                              'infile': (None, 'Input FT1 File', str),
+                                              'outfile': (None, 'Output FT1 File', str),
+                                              'evclass': (None, "Event class", int),
+                                              'pfiles': (None, "PFILES directory", str)},
+                                     file_args=dict(infile=FileFlags.input_mask,
+                                                    outfile=FileFlags.output_mask))
                 bin_link = Gtlink('gtbin_%s' % key,
                                   appname='gtbin',
-                                  mapping={'evfile': 'selectfile_%s' % key,
-                                           'outfile': 'binfile_%s' % key},
-                                  defaults={'algorithm': 'HEALPIX',
-                                            'coordsys': 'GAL',
-                                            'hpx_order': psf_dict['hpx_order'],
-                                            'emin': emin,
-                                            'emax': emax,
-                                            'enumbins': enumbins,
-                                            'pfiles': None},
-                                  input_file_args=['evfile'],
-                                  output_file_args=['outfile'])
+                                  mapping={'evfile': selectkey_out,
+                                           'outfile': binkey},
+                                  options={'algorithm': ('HEALPIX', "Binning alogrithm", str), 
+                                           'coordsys': ('GAL', "Coordinate system", str),
+                                           'hpx_order': (psf_dict['hpx_order'], "HEALPIX ORDER", int), 
+                                           'evfile': (None, 'Input FT1 File', str),
+                                           'outfile': (None, 'Output binned data File', str),
+                                           'emin': (emin, "Minimum energy", float), 
+                                           'emax': (emax, "Maximum energy", float),
+                                           'enumbins': (enumbins, "Number of energy bins", int), 
+                                           'pfiles': (None, "PFILES directory", str)},
+                                  file_args=dict(evfile=FileFlags.input_mask,
+                                                 outfile=FileFlags.output_mask))
                 links += [select_link, bin_link]
         return links
 
-    @staticmethod
-    def _make_rm_keys(comp_dict):
-        """ Make the list of arguments corresponding to files to be removed """
-        lout = []
-        for key_e, comp_e in sorted(comp_dict.items()):
-            lout.append('selectfile_%s' % key_e)
-            for psf_type in sorted(comp_e['psf_types'].keys()):
-                key = "%s_%s" % (key_e, psf_type)
-                lout.append('selectfile_%s' % key)
-        return lout
-
-    @staticmethod
-    def _make_gz_keys(comp_dict):
-        """Make the list of arguments corresponding to files to be compressed """
-        lout = []
-        for key_e, comp_e in sorted(comp_dict.items()):
-            for psf_type in sorted(comp_e['psf_types'].keys()):
-                key = "%s_%s" % (key_e, psf_type)
-                lout.append('binfile_%s' % key)
-        return lout
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
@@ -212,57 +203,45 @@ class SplitAndBin(Chain):
         if self._parser is None:
             raise ValueError('SplitAndBin was not given a parser on initialization')
         args = self._parser.parse_args(argv)
+
         self.update_links(yaml.safe_load(open(args.comp)))
-        self.update_links_from_single_dict(args.__dict__)
+        self.update_args(args.__dict__)
         return args
 
 
 class ConfigMaker_SplitAndBin(ConfigMaker):
     """Small class to generate configurations for SplitAndBin
     """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           coordsys=diffuse_defaults.diffuse['coordsys'],
+                           nfiles=(96, 'Number of input files', int),
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_ccube'],
+                           inputlist=(None, 'Input FT1 file', str),)
 
-    def __init__(self, chain):
+    def __init__(self, chain, gather, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
-        self.chain = chain
-
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser'
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-
-        --comp     : binning component definition yaml file
-        --data     : datset definition yaml file
-        --coordsys : Coordinate system ['GAL' | 'CEL']
-        input      : Input File List
-        """
-        parser.add_argument('--comp', type=str, default=None,
-                            help='binning component definition yaml file')
-        parser.add_argument('--data', type=str, default=None,
-                            help='datset definition yaml file')
-        parser.add_argument('--coordsys', type=str, default='GAL', help='Coordinate system')
-        parser.add_argument('input', nargs='+', default=None, help='Input File List')
+        ConfigMaker.__init__(self, chain, 
+                             options=kwargs.get('options',self.default_options.copy()))
+        self.gather = gather
 
     def make_base_config(self, args):
         """Hook to build a baseline job configuration
 
         Parameters:
         ----------------
-        args : `argparse.Namespace'
+        args : dict
             Command line arguments, see add_arguments
         """
-        self.chain.update_links(yaml.safe_load(open(args.comp)))
-        self.chain.update_links_from_single_dict(args.__dict__)
-        return self.chain.options
+        comp_file = args.get('comp', None)
+        if comp_file is not None:
+            comp_dict = yaml.safe_load(open(comp_file))
+            self.link.update_links(comp_dict)
+            self.gather.update_links(comp_dict)    
+        self.link.update_args(args)
+        self.gather.update_args(args)        
+        return self.link.args
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -270,11 +249,12 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
         input_config = {}
         job_configs = {}
 
-        NAME_FACTORY.update_base_dict(args.data)
+        NAME_FACTORY.update_base_dict(args['data'])
+ 
+        inputfiles = create_inputlist(args['inputlist'])
+        outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
 
-        inputfiles = create_inputlist(args.input)
-        outdir_base = NAME_FACTORY.base_dict['basedir']
-
+        nfiles = len(inputfiles)
         for idx, infile in enumerate(inputfiles):
             key = "%06i" % idx
             output_dir = os.path.join(outdir_base, key)
@@ -284,26 +264,34 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
                 pass
             ccube_name =\
                 os.path.basename(NAME_FACTORY.ccube(component='_comp_',
-                                                    coordsys='%s_%s' % (args.coordsys, key)))
-            binnedfile = os.path.join(output_dir, ccube_name)
+                                                    coordsys='%s' % args['coordsys']))
+            binnedfile = os.path.join(output_dir, ccube_name).replace('.fits', '_%s.fits' % key)
             binnedfile_gzip = binnedfile + '.gz'
             selectfile = binnedfile.replace('ccube', 'select')
             logfile = os.path.join(output_dir, 'scatter_%s.log' % key)
             outfiles = [selectfile, binnedfile_gzip]
             job_configs[key] = dict(ft1file=infile,
+                                    comp=args['comp'],
                                     output=binnedfile,
                                     logfile=logfile,
                                     outfiles=outfiles,
                                     pfiles=output_dir)
 
-        output_config = {}
+        output_config = dict(comp=args['comp'],
+                             data=args['data'],
+                             coordsys=args['coordsys'],
+                             nfiles=nfiles,
+                             logfile=os.path.join(outdir_base, 'gather.log'),
+                             dry_run=args['dry_run'])
 
         return input_config, job_configs, output_config
 
 
-def build_scatter_gather():
+def build_scatter_gather(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
-    chain = SplitAndBin('split-and-bin')
+    chainname = kwargs.pop('chainname', 'split-and-bin')
+    chain = SplitAndBin('%s.split'%chainname)
+    gather = CoaddSplit('%s.coadd'%chainname)
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
@@ -311,13 +299,14 @@ def build_scatter_gather():
     usage = "fermipy-split-and-bin-sg [options] input"
     description = "Prepare data for diffuse all-sky analysis"
 
-    config_maker = ConfigMaker_SplitAndBin(chain)
+    config_maker = ConfigMaker_SplitAndBin(chain, gather)
     lsf_sg = build_sg_from_link(chain, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                gather=gather,
+                                **kwargs)
     return lsf_sg
-
 
 def main_single():
     """Entry point for command line use for single job """

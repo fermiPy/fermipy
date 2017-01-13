@@ -15,9 +15,10 @@ from fermipy.skymap import HpxMap
 
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
-from fermipy.jobs.chain import Link
+from fermipy.jobs.chain import add_argument, FileFlags, Link
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
+from fermipy.diffuse import defaults as diffuse_defaults
 
 NAME_FACTORY = NameFactory()
 
@@ -54,8 +55,7 @@ class GtAssembleSourceMaps(object):
         link = Link('assemble-model',
                     appname='fermipy-assemble-model',
                     options=dict(input=None, comp=None, hpx_order=None),
-                    flags=['gzip'],
-                    input_file_args=['input'])
+                    file_args=dict(input=FileFlags.input_mask))
         return link
 
     @staticmethod
@@ -151,52 +151,26 @@ class GtAssembleSourceMaps(object):
 
 class ConfigMaker_AssembleSrcmaps(ConfigMaker):
     """Small class to generate configurations for this script
-    """
 
-    def __init__(self, link):
+     This takes the following arguments:    
+    --comp      : binning component definition yaml file
+    --data      : datset definition yaml file
+    --hpx_order : Maximum HEALPix order to use
+    --irf_ver   : IRF verions string (e.g., 'V6')
+    args        : Names of models to assemble source maps for
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_ccube'],
+                           args=(None, 'Names of input models', list))
+
+    def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
-        self.link = link
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options',default_options.copy()))
 
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser 
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser' 
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-        --comp     : binning component definition yaml file
-        --data     : datset definition yaml file
-        --hpx_order: Maximum HEALPix order to use
-       --irf_ver   : IRF verions string (e.g., 'V6')
-        models     : Names of models to assemble source maps for
-        """
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Yaml file with component definitions')
-        parser.add_argument('--data', type=str, default=None,
-                            help='Yaml file with dataset definitions')
-        parser.add_argument('--hpx_order', type=int, default=7,
-                            help='Maximum HEALPix order to use')
-        parser.add_argument('--irf_ver', type=str, default="V6",
-                            help='IRF Version')
-        parser.add_argument('models', nargs='+', help='Names of input models')
-
-    def make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters:
-        ----------------
-        args : `argparse.Namespace' 
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args.__dict__)
-        return self.link.args
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -204,10 +178,10 @@ class ConfigMaker_AssembleSrcmaps(ConfigMaker):
         input_config = {}
         job_configs = {}
 
-        components = Component.build_from_yamlfile(args.comp)
-        NAME_FACTORY.update_base_dict(args.data)
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
 
-        for modelkey in args.models:
+        for modelkey in args['args']:
             manifest = os.path.join('analysis', 'model_%s' % modelkey,
                                     'srcmap_manifest_%s.yaml' % modelkey)
             for comp in components:
@@ -216,7 +190,7 @@ class ConfigMaker_AssembleSrcmaps(ConfigMaker):
                 outfile = NAME_FACTORY.merged_srcmaps(modelkey=modelkey,
                                                       component=key,
                                                       coordsys='GAL',
-                                                      irf_ver=args.irf_ver)
+                                                      irf_ver=args['irf_ver'])
                 logfile = outfile.replace('.fits', '.log')
                 job_configs[key] = dict(input=manifest,
                                         comp=key,

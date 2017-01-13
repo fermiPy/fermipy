@@ -81,6 +81,9 @@ class NameFactory(object):
     # Model cubes (output of gtmodel outtype=CCUBE)
     mcube_format = 'model_cubes/mcube_{sourcekey}_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
 
+    # residual CR output files
+    residual_cr_format = 'residual_cr/residual_cr_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
+
     # Model specific stuff
     
     # galprop rings merging yaml file
@@ -97,6 +100,9 @@ class NameFactory(object):
     master_srcmdl_xml_format = 'analysis/model_{modelkey}/srcmdl_{modelkey}_master.xml'
     # Component XML model file
     comp_srcmdl_xml_format = 'analysis/model_{modelkey}/srcmdl_{modelkey}_{component}.xml'
+
+    # Stamp files from scatter gather jobs
+    stamp_format = 'stamps/{linkname}.stamp'
 
     # Full filepath
     fullpath_format = '{basedir}/{localpath}'
@@ -342,6 +348,19 @@ class NameFactory(object):
         else:
             return localpath
 
+    def residual_cr(self, **kwargs):
+        """Return the name of the residual CR analysis output files"""
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        kwargs_copy['component'] = kwargs.get(
+            'component', self.component(**kwargs))
+        localpath = NameFactory.residual_cr_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath       
+
     def galprop_rings_yaml(self, **kwargs):
         """ return the name of a galprop rings merging yaml file
         """
@@ -414,8 +433,14 @@ class NameFactory(object):
         else:
             return localpath
 
+    def stamp(self, **kwargs):
+        """Return the path for a stamp file for a scatter gather job"""
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        return NameFactory.stamp_format.format(**kwargs_copy)
+
     def fullpath(self, **kwargs):
-        """ return a full path name for a given file
+        """Return a full path name for a given file
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
