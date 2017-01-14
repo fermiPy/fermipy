@@ -358,12 +358,24 @@ class SourceFind(object):
         update = kwargs.get('update', True)
         prefix = kwargs.get('prefix', '')
         use_cache = kwargs.get('use_cache', False)
-
+        fix_background = kwargs.get('fix_background', True)
+        free_radius = kwargs.get('free_radius', None)
+        
         saved_state = LikelihoodState(self.like)
 
-        if kwargs.get('fix_background'):
+        if fix_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
 
+        if free_radius is not None:
+            diff_sources = [s.name for s in self.roi.sources if s.diffuse]
+            skydir = self.roi[name].skydir
+            free_srcs = [s.name for s in
+                         self.roi.get_sources(skydir=skydir,
+                                              distance=free_radius,
+                                              exclude=diff_sources)]
+            self.free_sources_by_name(free_srcs, pars='norm',
+                                      loglevel=logging.DEBUG)
+            
         src = self.roi.copy_source(name)
         skydir = src.skydir
         skywcs = self._skywcs
@@ -409,10 +421,6 @@ class SourceFind(object):
         o['tsmap'] = fit0.pop('tsmap')
         o['tsmap_peak'] = fit1.pop('tsmap')
         o.update(fit1)
-
-        saved_state.restore()
-        self._sync_params(name)
-        self._update_roi()
 
         # Best fit position and uncertainty from fit to TS map
         o['fit_init'] = fit0
@@ -465,7 +473,11 @@ class SourceFind(object):
             src['pos_r95'] = o['r95']
             src['pos_r99'] = o['r99']
             src['pos_angle'] = np.degrees(o['theta'])
-
+        else:
+            saved_state.restore()
+            self._sync_params(name)
+            self._update_roi()
+            
         return o
 
     def _fit_position(self, name, **kwargs):
@@ -555,7 +567,7 @@ class SourceFind(object):
             
         if use_cache and not use_pylike:
             self._create_srcmap_cache(src.name, src)
-
+            
         scan_skydir = lnlmap.get_pixel_skydirs().transform_to('icrs')
         loglike = []
         for ra, dec in zip(scan_skydir.ra.deg, scan_skydir.dec.deg):
@@ -566,6 +578,7 @@ class SourceFind(object):
                                        use_pylike=use_pylike)
             fit_output = self._fit(loglevel=logging.DEBUG,
                                    **optimizer)
+            print(fit_output['loglike'])
             loglike += [fit_output['loglike']]
            
         self.set_source_morphology(name, spatial_pars=src.spatial_pars,

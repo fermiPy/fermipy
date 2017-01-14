@@ -227,6 +227,7 @@ class SEDGenerator(object):
         bin_index = config['bin_index']
         use_local_index = config['use_local_index']
         fix_background = config['fix_background']
+        free_radius = config['free_radius']
         ul_confidence = config['ul_confidence']
         cov_scale = config['cov_scale']
         loge_bins = config['loge_bins']
@@ -340,7 +341,18 @@ class SEDGenerator(object):
 
         if fix_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
-        elif cov_scale is not None:
+
+        if free_radius is not None:
+            diff_sources = [s.name for s in self.roi.sources if s.diffuse]
+            skydir = self.roi[name].skydir
+            free_srcs = [s.name for s in
+                         self.roi.get_sources(skydir=skydir,
+                                              distance=free_radius,
+                                              exclude=diff_sources)]
+            self.free_sources_by_name(free_srcs, pars='norm',
+                                      loglevel=logging.DEBUG)
+            
+        if cov_scale is not None:
             self._latch_free_params()
             self.zero_source(name)
             self.fit(loglevel=logging.DEBUG, update=False)

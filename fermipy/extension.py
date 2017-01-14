@@ -97,8 +97,6 @@ class ExtensionFit(object):
             'extension'.
         """
 
-        free_state = FreeParameterState(self)
-
         name = self.roi.get_source_by_name(name).name
 
         schema = ConfigSchema(self.defaults['extension'],
@@ -110,33 +108,62 @@ class ExtensionFit(object):
                                    optimizer=self.config['optimizer'])
         config = schema.create_config(config, **kwargs)
 
-        spatial_model = config['spatial_model']
-        width_min = config['width_min']
-        width_max = config['width_max']
-        width_nstep = config['width_nstep']
-        width = config['width']
-        fix_background = config['fix_background']
-        update = config['update']
-        sqrt_ts_threshold = config['sqrt_ts_threshold']
+                
+        self.logger.info('Running extension fit for %s', name)
 
-        if config['psf_scale_fn']:
+        free_state = FreeParameterState(self)
+        ext = self._extension(name, **config)
+        free_state.restore()
+        
+        self.logger.info('Finished extension fit.')
+
+        filename = utils.format_filename(self.workdir, 'ext',
+                                         prefix=[config['prefix'],
+                                                 name.lower().replace(' ', '_')])
+        if config['write_fits']:
+            self._make_extension_fits(ext, filename + '.fits')
+
+        if config['write_npy']:
+            np.save(filename + '.npy', ext)
+
+    def _extension(self, name, **kwargs):
+
+        spatial_model = kwargs['spatial_model']
+        width_min = kwargs['width_min']
+        width_max = kwargs['width_max']
+        width_nstep = kwargs['width_nstep']
+        width = kwargs['width']
+        fix_background = kwargs['fix_background']
+        free_radius = kwargs.get('free_radius', None)
+        update = kwargs['update']
+        sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
+
+        if kwargs['psf_scale_fn']:
             psf_scale_fn = lambda t: 1.0 + np.interp(np.log10(t),
-                                                     config['psf_scale_fn'][0],
-                                                     config['psf_scale_fn'][1])
+                                                     kwargs['psf_scale_fn'][0],
+                                                     kwargs['psf_scale_fn'][1])
         else:
             psf_scale_fn = None
 
-        self.logger.info('Starting')
-        self.logger.info('Running analysis for %s', name)
 
         saved_state = LikelihoodState(self.like)
 
         if fix_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
 
+        if free_radius is not None:
+            diff_sources = [s.name for s in self.roi.sources if s.diffuse]
+            skydir = self.roi[name].skydir
+            free_srcs = [s.name for s in
+                         self.roi.get_sources(skydir=skydir,
+                                              distance=free_radius,
+                                              exclude=diff_sources)]
+            self.free_sources_by_name(free_srcs, pars='norm',
+                                      loglevel=logging.DEBUG)
+            
         # Fit baseline model
         self.free_norm(name, loglevel=logging.DEBUG)
-        fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
+        fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
         src = self.roi.copy_source(name)
 
         # Save likelihood value for baseline fit
@@ -157,7 +184,7 @@ class ExtensionFit(object):
         o['dloglike'] = np.zeros(len(width) + 1)
         o['loglike'] = np.zeros(len(width) + 1)
         o['loglike_base'] = loglike0
-        o['config'] = config
+        o['config'] = kwargs
         o['ptsrc_tot_map'] = None
         o['ptsrc_src_map'] = None
         o['ptsrc_bkg_map'] = None
@@ -171,11 +198,11 @@ class ExtensionFit(object):
 
         # Fit a point-source
         self.logger.debug('Fitting point-source model.')
-        fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
+        fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
         o['loglike_ptsrc'] = fit_output['loglike']
         self.logger.debug('Point Source Likelihood: %f', o['loglike_ptsrc'])
 
-        if config['save_model_map']:
+        if kwargs['save_model_map']:
             o['ptsrc_tot_map'] = self.model_counts_map()
             o['ptsrc_src_map'] = self.model_counts_map(name)
             o['ptsrc_bkg_map'] = self.model_counts_map(exclude=[name])
@@ -183,20 +210,20 @@ class ExtensionFit(object):
         # Perform scan over width parameter
         self.logger.debug('Width scan vector:\n %s', width)
 
-        if config['fit_position']:
+        if kwargs['fit_position']:
             ext_fit = self._fit_extension_full(name,
                                                spatial_model=spatial_model,
-                                               optimizer=config['optimizer'])
+                                               optimizer=kwargs['optimizer'])
         else:
             ext_fit = self._fit_extension(name,
                                           spatial_model=spatial_model,
-                                          optimizer=config['optimizer'])
+                                          optimizer=kwargs['optimizer'])
 
         o.update(ext_fit)
         o['loglike'] = self._scan_extension(name,
                                             spatial_model=spatial_model,
                                             width=width,
-                                            optimizer=config['optimizer'])
+                                            optimizer=kwargs['optimizer'])
 
         #self.logger.debug('Likelihood: %s',o['loglike'])
         o['dloglike'] = o['loglike'] - o['loglike_ptsrc']
@@ -217,14 +244,14 @@ class ExtensionFit(object):
                                    psf_scale_fn=psf_scale_fn)
 
         fit_output = self._fit(loglevel=logging.DEBUG, update=False,
-                               **config['optimizer'])
+                               **kwargs['optimizer'])
         self.update_source(name, reoptimize=True,
-                           optimizer=config['optimizer'])
+                           optimizer=kwargs['optimizer'])
 
         o['source_fit'] = self.get_src_model(name)
         o['loglike_ext'] = fit_output['loglike']
 
-        if config['save_model_map']:
+        if kwargs['save_model_map']:
             o['ext_tot_map'] = self.model_counts_map()
             o['ext_src_map'] = self.model_counts_map(name)
             o['ext_bkg_map'] = self.model_counts_map(exclude=[name])
@@ -233,7 +260,7 @@ class ExtensionFit(object):
                        np.sqrt(o['ts_ext']) > sqrt_ts_threshold):
             src = self.delete_source(name)
             self.add_source(name, src)
-            self.fit(loglevel=logging.DEBUG, **config['optimizer'])
+            self.fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
         else:
             self.set_source_morphology(name, spatial_model=src['SpatialModel'],
                                        spatial_pars=src.spatial_pars)
@@ -241,18 +268,6 @@ class ExtensionFit(object):
             saved_state.restore()
             self._sync_params(name)
             self._update_roi()
-
-        filename = utils.format_filename(self.workdir, 'ext',
-                                         prefix=[config['prefix'],
-                                                 name.lower().replace(' ', '_')])
-        if config['write_fits']:
-            self._make_extension_fits(o, filename + '.fits')
-
-        if config['write_npy']:
-            np.save(filename + '.npy', o)
-
-        self.logger.info('Finished')
-        free_state.restore()
 
         return o
 
@@ -320,9 +335,6 @@ class ExtensionFit(object):
         skydir = kwargs.pop('skydir', self.roi[name].skydir)
 
         src = self.roi.copy_source(name)
-
-        self._fitcache = None
-
         spatial_pars = {'ra': skydir.ra.deg, 'dec': skydir.dec.deg}
 
         loglike = []

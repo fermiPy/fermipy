@@ -170,7 +170,8 @@ class LightCurve(object):
         skydir = self.roi[name].skydir
         kwargs['free_sources'] += [s.name for s in
                                    self.roi.get_sources(skydir=skydir,
-                                                        distance=kwargs['free_radius'],
+                                                        distance=kwargs[
+                                                            'free_radius'],
                                                         exclude=diff_sources)]
 
         for i, time in enumerate(zip(times[:-1], times[1:])):
