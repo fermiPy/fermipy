@@ -302,7 +302,8 @@ def test_gtanalysis_localization(create_draco_analysis):
 def test_gtanalysis_lightcurve(create_pg1553_analysis):
     gta = create_pg1553_analysis
     gta.load_roi('fit1')
-    o = gta.lightcurve('3FGL J1555.7+1111', nbins=2)
+    o = gta.lightcurve('3FGL J1555.7+1111', nbins=2,
+                       free_radius=3.0)
 
     flux = np.array([2.91756869996e-08,
                      2.36889996939e-08])

@@ -126,6 +126,8 @@ class ExtensionFit(object):
         if config['write_npy']:
             np.save(filename + '.npy', ext)
 
+        return ext
+            
     def _extension(self, name, **kwargs):
 
         spatial_model = kwargs['spatial_model']
