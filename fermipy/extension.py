@@ -32,65 +32,16 @@ class ExtensionFit(object):
 
         Parameters
         ----------
-
         name : str
             Source name.
 
-        spatial_model : str
-            Spatial model that will be used to test the source
-            extension.  The spatial scale parameter of the respective
-            model will be set such that the 68% containment radius of
-            the model is equal to the width parameter.  The following
-            spatial models are supported:
-
-            * RadialDisk : Azimuthally symmetric 2D disk.
-            * RadialGaussian : Azimuthally symmetric 2D gaussian.
-
-        width_min : float
-            Minimum value in degrees for the spatial extension scan.
-
-        width_max : float
-            Maximum value in degrees for the spatial extension scan.
-
-        width_nstep : int
-            Number of scan points between width_min and width_max.
-            Scan points will be spaced evenly on a logarithmic scale
-            between log(width_min) and log(width_max).
-
-        width : array-like
-            Sequence of values in degrees for the spatial extension
-            scan.  If this argument is None then the scan points will
-            be determined from width_min/width_max/width_nstep.
-
-        fix_background : bool
-            Fix all background sources when performing the extension fit.
-
-        update : bool
-            Update this source with the best-fit model for spatial
-            extension if TS_ext > ``tsext_threshold``.
-
-        sqrt_ts_threshold : float
-            Threshold on sqrt(TS_ext) that will be applied when ``update``
-            is true.  If None then no threshold will be applied.
-
-        psf_scale_fn : tuple        
-            Tuple of vectors (logE,f) defining an energy-dependent PSF
-            scaling function that will be applied when building
-            spatial models for the source of interest.  The tuple
-            (logE,f) defines the fractional corrections f at the
-            sequence of energies logE = log10(E/MeV) where f=0 means
-            no correction.  The correction function f(E) is evaluated
-            by linearly interpolating the fractional correction
-            factors f in log(E).  The corrected PSF is given by
-            P\'(x;E) = P(x/(1+f(E));E) where x is the angular
-            separation.
+        {options}
 
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
 
         Returns
         -------
-
         extension : dict
             Dictionary containing results of the extension analysis.  The same
             dictionary is also saved to the dictionary of this source under

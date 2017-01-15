@@ -37,6 +37,7 @@ from fermipy.ltcube import LTCube
 from fermipy.plotting import AnalysisPlotter
 from fermipy.logger import Logger, log_level
 from fermipy.config import ConfigSchema
+from fermipy.docstring_utils import DocstringMeta
 # pylikelihood
 import GtApp
 import FluxDensity
@@ -435,6 +436,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     for the analysis.  Keyword arguments to the constructor can be
     used to override parameters in the configuration dictionary.
     """
+
+    __metaclass__ = DocstringMeta
+
+    _docstring_registry = {'extension' : defaults.extension}
 
     defaults = {'logging': defaults.logging,
                 'fileio': defaults.fileio,

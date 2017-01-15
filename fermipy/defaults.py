@@ -19,12 +19,11 @@ ENERGY_FLUX_UNIT = ':math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`'
 
 # Options that are common to several sections
 common = {
-    'fix_background': (True, 'Fix all background parameters before starting the fit. If False then any '
+    'free_background': (False, 'Leave background parameters free when performing the fit. If True then any '
                        'parameters that are currently free in the model will be fit simultaneously '
                        'with the source of interest.', bool),
     'free_radius': (None, 'Free normalizations of background sources within this angular distance in degrees '
-                    'from the source of interest.  If None then no sources will be freed.  Note that '
-                    'this parameter supersedes `fix_background`.', float),
+                    'from the source of interest.  If None then no sources will be freed.', float),
 }
 
 # Options for defining input data files
@@ -286,7 +285,7 @@ lightcurve = {
               'split into this number of time bins.', int),
     'time_bins': (None, 'Set the lightcurve bin edge sequence in MET.  This option '
                   'takes precedence over binsz and nbins.', list),
-    'fix_background': common['fix_background'],
+    'free_background': common['free_background'],
     'free_radius': common['free_radius'],
     'free_sources': (None, 'List of sources to be freed.  These sources will be added to the list of sources '
                      'satisfying the free_radius selection.', list)
@@ -319,7 +318,7 @@ sed = {
     'use_local_index': (False, 'Use a power-law approximation to the shape of the global spectrum in '
                         'each bin.  If this is false then a constant index set to `bin_index` '
                         'will be used.', bool),
-    'fix_background': common['fix_background'],
+    'free_background': common['free_background'],
     'free_radius': common['free_radius'],
     'ul_confidence': (0.95, 'Confidence level for upper limit calculation.',
                       float),
@@ -423,23 +422,30 @@ sed_output = OrderedDict((
 
 # Options for extension analysis
 extension = {
-    'spatial_model': ('RadialGaussian', 'Spatial model use for extension test.', str),
-    'width': (None, 'Parameter vector for scan over spatial extent.  If none then the parameter '
-              'vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.', list),
+    'spatial_model': ('RadialGaussian', 'Spatial model that will be used to test the source'
+                      'extension.  The spatial scale parameter of the '
+                      'model will be set such that the 68% containment radius of '
+                      'the model is equal to the width parameter.', str),
+    'width': (None,'Sequence of values in degrees for the likelihood scan over spatial extension '
+              '(68% containment radius).  If this argument is None then the scan points will '
+              'be determined from width_min/width_max/width_nstep.', list),
     'fit_position': (False, 'Perform a simultaneous fit to the source position and extension.', bool),
     'width_min': (0.01, 'Minimum value in degrees for the likelihood scan over spatial extent.', float),
     'width_max': (1.0, 'Maximum value in degrees for the likelihood scan over spatial extent.', float),
-    'width_nstep': (21, 'Number of steps for the spatial likelihood scan.', int),
-    'fix_background': common['fix_background'],
+    'width_nstep': (21, 'Number of scan points between width_min and width_max. '
+                    'Scan points will be spaced evenly on a logarithmic scale '
+                    'between `width_min` and `width_max`.',int),
+    'free_background': common['free_background'],
     'free_radius': common['free_radius'],
-    'update': (False, 'Update the source model with the best-fit spatial extension.', bool),
+    'update': (False, 'Update this source with the best-fit model for spatial '
+               'extension if TS_ext > ``tsext_threshold``.', bool),
     'save_model_map': (False, 'Save model counts cubes for the best-fit model of extension.', bool),
     'sqrt_ts_threshold': (None, 'Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then no'
                           'threshold is applied.', float),
-    'psf_scale_fn': (None, 'Tuple of vectors (logE,f) defining an energy-dependent PSF scaling function '
+    'psf_scale_fn': (None, 'Tuple of two vectors (logE,f) defining an energy-dependent PSF scaling function '
                      'that will be applied when building spatial models for the source of interest.  '
                      'The tuple (logE,f) defines the fractional corrections f at the sequence of energies '
-                     'logE = log10(E/MeV) where f=0 means no correction.  The correction function f(E) is evaluated '
+                     'logE = log10(E/MeV) where f=0 corresponds to no correction.  The correction function f(E) is evaluated '
                      'by linearly interpolating the fractional correction factors f in log(E).  The '
                      'corrected PSF is given by P\'(x;E) = P(x/(1+f(E));E) where x is the angular separation.',
                      tuple),
@@ -470,7 +476,7 @@ extension_output = OrderedDict((
 localize = {
     'nstep': (5, 'Number of steps along each spatial dimension in the refined likelihood scan.', int),
     'dtheta_max': (0.5, 'Half-width of the search region in degrees used for the first pass of the localization search.', float),
-    'fix_background': common['fix_background'],
+    'free_background': common['free_background'],
     'free_radius': common['free_radius'],
     'update': (True, 'Update the source model with the best-fit position.', bool)
 }

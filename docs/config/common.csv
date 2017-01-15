@@ -1,5 +1,2 @@
-``dtheta_max``	0.5	Half-width of the search region in degrees used for the first pass of the localization search.
 ``fix_background``	True	Fix all background parameters before starting the fit. If False then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
 ``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.  Note that this parameter supersedes `fix_background`.
-``nstep``	5	Number of steps along each spatial dimension in the refined likelihood scan.
-``update``	True	Update the source model with the best-fit position.

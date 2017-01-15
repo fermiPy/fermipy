@@ -1,4 +1,5 @@
 ``bexpmap``	None	
+``bexpmap_roi``	None	
 ``convolve``	True	
 ``edisp``	True	Enable the correction for energy dispersion.
 ``edisp_disable``	None	Provide a list of sources for which the edisp correction should be disabled.
@@ -9,5 +10,6 @@
 ``resample``	True	
 ``rfactor``	2	
 ``src_expscale``	None	Dictionary of exposure corrections for individual sources keyed to source name.  The exposure for a given source will be scaled by this value.  A value of 1.0 corresponds to the nominal exposure.
-``srcmap``	None	
+``srcmap``	None	Set the source maps file.  When defined this file will be used instead of the local source maps file.
+``use_external_srcmap``	False	Use an external precomputed source map file.
 ``wmap``	None	Likelihood weights map.
