@@ -26,7 +26,7 @@ available in Fermipy:
 * :ref:`sed`: Compute the spectral energy distribution of a source by
   fitting its amplitude in a sequence of energy bins.
 
-* :ref:`sed`: Compute the lightcurve of a source by fitting its
+* :ref:`lightcurve`: Compute the lightcurve of a source by fitting its
   amplitude in a sequence of time bins.
   
 * :ref:`extension`: Fit the angular extension of a source.

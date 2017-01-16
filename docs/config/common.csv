@@ -1,2 +1,6 @@
-``fix_background``	True	Fix all background parameters before starting the fit. If False then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
-``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.  Note that this parameter supersedes `fix_background`.
+``free_background``	False	Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
+``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
+``loge_bounds``	None	Restrict the analysis to an energy range (emin,emax) in log10(E/MeV) that is a subset of the analysis energy range. By default the full analysis energy range will be used.  If either emin/emax are None then only an upper/lower bound on the energy range wil be applied.
+``make_plots``	False	Generate diagnostic plots.
+``write_fits``	True	Write the output to a FITS file.
+``write_npy``	True	Write the output dictionary to a numpy file.
