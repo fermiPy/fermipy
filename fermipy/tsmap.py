@@ -88,11 +88,11 @@ def convert_tscube(infile, outfile):
         for col in hdu.columns:
 
             if hdu.name == 'EBOUNDS':
-                col.name = col.name.replace('DFDE','DNDE')
+                col.name = col.name.replace('DFDE', 'DNDE')
             else:
                 colname = col.name.lower()
                 col.name = colname.replace('dfde', 'dnde')
-                
+
     inhdulist.writeto(outfile, clobber=True)
     return inhdulist
 
@@ -296,13 +296,13 @@ def extract_array(array_large, array_small, position):
 
 def extract_large_array(array_large, array_small, position):
     large_slices, small_slices = utils.overlap_slices(array_large.shape,
-                                                array_small.shape, position)
+                                                      array_small.shape, position)
     return array_large[large_slices]
 
 
 def extract_small_array(array_small, array_large, position):
     large_slices, small_slices = utils.overlap_slices(array_large.shape,
-                                                array_small.shape, position)
+                                                      array_small.shape, position)
     return array_small[small_slices]
 
 
@@ -690,7 +690,7 @@ class TSMapGenerator(object):
         config['model'].setdefault('Prefactor', 1E-13)
 
         self.logger.log(config['loglevel'], 'Generating TS map')
-        
+
         maps = self._make_tsmap_fast(prefix, **config)
 
         if config['make_plots']:

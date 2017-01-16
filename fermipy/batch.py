@@ -69,6 +69,7 @@ def add_lsf_args(parser):
     parser.add_argument('--resources', default='rhel60', type=str,
                         help='Set the resource string.')
 
+
 def dispatch_jobs(exe, args, opts, batch_opts, dry_run=False):
     batch_opts.setdefault('W', 300)
     batch_opts.setdefault('R', 'rhel60')

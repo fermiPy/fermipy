@@ -796,7 +796,7 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
 
     """
     offset = make_pixel_distance(z.shape, iy, ix)
-    x, y = np.meshgrid(np.arange(z.shape[0]),np.arange(z.shape[1]),
+    x, y = np.meshgrid(np.arange(z.shape[0]), np.arange(z.shape[1]),
                        indexing='ij')
 
     m = (offset <= dpix)
@@ -804,15 +804,15 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
     if zmin is not None:
         mz = (z - np.max(z[m]) > zmin)
         labels = label(mz)[0]
-        mz &= labels == labels[ix,iy]
+        mz &= labels == labels[ix, iy]
         m |= mz
 
-    mx = np.abs(x[:,iy]-ix) <= dpix
-    my = np.abs(y[ix,:]-iy) <= dpix
+    mx = np.abs(x[:, iy] - ix) <= dpix
+    my = np.abs(y[ix, :] - iy) <= dpix
 
-    coeffx = poly_to_parabola(np.polyfit(x[:,iy][mx],
+    coeffx = poly_to_parabola(np.polyfit(x[:, iy][mx],
                                          z[:, iy][mx], 2))
-    coeffy = poly_to_parabola(np.polyfit(y[ix,:][my],
+    coeffy = poly_to_parabola(np.polyfit(y[ix, :][my],
                                          z[ix, :][my], 2))
     p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
 
@@ -1360,7 +1360,7 @@ def make_pixel_distance(shape, xpix=None, ypix=None):
 
     """
     if np.isscalar(shape):
-        shape = [shape,shape]
+        shape = [shape, shape]
 
     if xpix is None:
         xpix = (shape[1] - 1.0) / 2.
@@ -1430,7 +1430,7 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
     """
 
     sigma /= 0.8246211251235321
-    
+
     dtheta = psf.dtheta
     egy = psf.energies
 

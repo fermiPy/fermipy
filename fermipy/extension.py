@@ -57,13 +57,12 @@ class ExtensionFit(object):
                                    optimizer=self.config['optimizer'])
         config = schema.create_config(config, **kwargs)
 
-                
         self.logger.info('Running extension fit for %s', name)
 
         free_state = FreeParameterState(self)
         ext = self._extension(name, **config)
         free_state.restore()
-        
+
         self.logger.info('Finished extension fit.')
 
         filename = utils.format_filename(self.workdir, 'ext',
@@ -76,7 +75,7 @@ class ExtensionFit(object):
             np.save(filename + '.npy', ext)
 
         return ext
-            
+
     def _extension(self, name, **kwargs):
 
         spatial_model = kwargs['spatial_model']
@@ -96,7 +95,6 @@ class ExtensionFit(object):
         else:
             psf_scale_fn = None
 
-
         saved_state = LikelihoodState(self.like)
 
         if not free_background:
@@ -111,7 +109,7 @@ class ExtensionFit(object):
                                               exclude=diff_sources)]
             self.free_sources_by_name(free_srcs, pars='norm',
                                       loglevel=logging.DEBUG)
-            
+
         # Fit baseline model
         self.free_norm(name, loglevel=logging.DEBUG)
         fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
@@ -387,18 +385,19 @@ class ExtensionFit(object):
         loglike = -self.like()
 
         scan_cdelt = 0.05
-        nstep=6
-        
+        nstep = 6
+
         for i in range(4):
 
             fit_ext = self._fit_extension(name, skydir=skydir, **kwargs)
             self.set_source_morphology(name,
                                        spatial_model=spatial_model,
-                                       spatial_pars={'SpatialWidth' : max(fit_ext['ext'], 0.00316)},
+                                       spatial_pars={'SpatialWidth': max(
+                                           fit_ext['ext'], 0.00316)},
                                        use_pylike=False)
 
-            dtheta_max=max(0.5, 2.0*fit_ext['ext'])
-            if i==0:
+            dtheta_max = max(0.5, 2.0 * fit_ext['ext'])
+            if i == 0:
                 fit_pos = self._fit_position(name, nstep=nstep,
                                              dtheta_max=dtheta_max)
             else:
@@ -409,16 +408,16 @@ class ExtensionFit(object):
             scan_cdelt = 2.0 * fit_pos['r95'] / (nstep - 1.0)
             self.set_source_morphology(name,
                                        spatial_model=spatial_model,
-                                       spatial_pars={'RA' : fit_pos['ra'],
-                                                     'DEC' : fit_pos['dec']},
+                                       spatial_pars={'RA': fit_pos['ra'],
+                                                     'DEC': fit_pos['dec']},
                                        use_pylike=False)
-            
+
             skydir = fit_pos['skydir']
             fit_ext['ra'] = skydir.ra.deg
             fit_ext['dec'] = skydir.dec.deg
             dloglike = fit_ext['loglike_ext'] - loglike
-            
-            #print('-----------------------')
+
+            # print('-----------------------')
             #print('skydir ', skydir.ra.deg, skydir.dec.deg)
             #print(i, fit_ext['ext'], loglike, fit_ext['loglike_ext'], fit_pos['loglike'], dloglike)
 
@@ -426,7 +425,7 @@ class ExtensionFit(object):
 
             if i > 1 and dloglike < 0.1:
                 break
-            
+
             loglike = fit_ext['loglike_ext']
 
         self.set_source_morphology(name, spatial_pars=src.spatial_pars,

@@ -191,9 +191,9 @@ def create_spectrum_from_dict(spectrum_type, spectral_pars, fn=None):
     for k, v in spectral_pars.items():
 
         v.setdefault('scale', 1.0)
-        v.setdefault('min', v['value']*1E-3)
-        v.setdefault('max', v['value']*1E3)
-        
+        v.setdefault('min', v['value'] * 1E-3)
+        v.setdefault('max', v['value'] * 1E3)
+
         par = fn.getParam(str(k))
 
         vmin = min(float(v['value']), float(v['min']))
@@ -208,7 +208,7 @@ def create_spectrum_from_dict(spectrum_type, spectral_pars, fn=None):
         else:
             par.setFree(False)
         fn.setParam(par)
-        
+
     return fn
 
 
@@ -364,7 +364,7 @@ class FreeParameterState(object):
     def __init__(self, gta):
         self._gta = gta
         self._free = gta.get_free_param_vector()
-    
+
     def restore(self):
         self._gta.set_free_param_vector(self._free)
 

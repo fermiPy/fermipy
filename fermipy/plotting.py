@@ -1371,7 +1371,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
             from matplotlib.patches import Rectangle
             r = Rectangle((xmin, ymin), xwidth, ywidth,
-                          edgecolor='w', facecolor='none',linestyle='--')
+                          edgecolor='w', facecolor='none', linestyle='--')
             plt.gca().add_patch(r)
 
         if np.isfinite(float(peak_pix[0])):

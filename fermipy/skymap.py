@@ -84,19 +84,19 @@ class Map_Base(object):
     def get_pixel_skydirs(self):
         """Get a list of sky coordinates for the centers of every pixel. """
         raise NotImplementedError("MapBase.get_pixel_skydirs()")
- 
+
     def get_pixel_indices(self, lats, lons):
         """Return the indices in the flat array corresponding to a set of coordinates """
         raise NotImplementedError("MapBase.get_pixel_indices()")
-       
+
     def sum_over_energy(self):
         """Reduce a counts cube to a counts map by summing over the energy planes """
         raise NotImplementedError("MapBase.sum_over_energy()")
-    
+
     def get_map_values(self, lons, lats, ibin=None):
         """Return the map values corresponding to a set of coordinates. """
         raise NotImplementedError("MapBase.get_map_values()")
-    
+
     def interpolate(self, lon, lat, egy=None):
         """Return the interpolated map values corresponding to a set of coordinates. """
         raise NotImplementedError("MapBase.interpolate()")
@@ -396,14 +396,14 @@ class HpxMap(Map_Base):
             keys = hdu.data.field('KEY')
             vals = hdu.data.field('VALUE')
             nebin = len(ebins)
-            data = np.zeros((nebin, hpx.npix))    
+            data = np.zeros((nebin, hpx.npix))
             data.flat[keys] = vals
         else:
             for c in colnames:
                 if c.find(hpx.conv.colstring) == 0:
                     cnames.append(c)
             nebin = len(cnames)
-            data = np.ndarray((nebin, hpx.npix))    
+            data = np.ndarray((nebin, hpx.npix))
             for i, cname in enumerate(cnames):
                 data[i, 0:] = hdu.data.field(cname)
         return HpxMap(data, hpx)
@@ -415,21 +415,19 @@ class HpxMap(Map_Base):
         extname : The name of the HDU with the map data
         ebounds : The name of the HDU with the energy bin data
         """
-        extname = kwargs.get('hdu','SKYMAP')
+        extname = kwargs.get('hdu', 'SKYMAP')
         ebins = fits_utils.find_and_read_ebins(hdulist)
         hpxMap = HpxMap.create_from_hdu(hdulist[extname], ebins)
         return hpxMap
-    
+
     @staticmethod
     def create_from_fits(fitsfile, **kwargs):
         hdulist = fits.open(fitsfile)
         return HpxMap.create_from_hdulist(hdulist, **kwargs)
 
-
     def create_image_hdu(self, name=None, **kwargs):
         kwargs['extname'] = name
-        return self.hpx.make_hdu(self.counts,**kwargs)
-
+        return self.hpx.make_hdu(self.counts, **kwargs)
 
     def make_wcs_from_hpx(self, sum_ebins=False, proj='CAR', oversample=2,
                           normalize=True):
@@ -521,7 +519,7 @@ class HpxMap(Map_Base):
         return wcs, wcs_data
 
     def get_pixel_skydirs(self):
-        """Get a list of sky coordinates for the centers of every pixel. """ 
+        """Get a list of sky coordinates for the centers of every pixel. """
         sky_coords = self._hpx.get_sky_coords()
         if self.hpx.coordsys == 'GAL':
             frame = Galactic
@@ -531,12 +529,13 @@ class HpxMap(Map_Base):
 
     def get_pixel_indices(self, lats, lons):
         """Return the indices in the flat array corresponding to a set of coordinates """
-        return self._hpx.get_pixel_indices(lats, lons)       
-       
+        return self._hpx.get_pixel_indices(lats, lons)
+
     def sum_over_energy(self):
         """ Reduce a counts cube to a counts map """
-        # We sum over axis 0 in the array, and drop the energy binning in the hpx object
-        return HpxMap(np.sum(self.counts, axis=0), self.hpx.copy_and_drop_energy())    
+        # We sum over axis 0 in the array, and drop the energy binning in the
+        # hpx object
+        return HpxMap(np.sum(self.counts, axis=0), self.hpx.copy_and_drop_energy())
 
     def get_map_values(self, lons, lats, ibin=None):
         """Return the indices in the flat array corresponding to a set of coordinates
@@ -575,7 +574,7 @@ class HpxMap(Map_Base):
         ----------
         interp_log : bool
             Interpolate the z-coordinate in logspace.
-        
+
         """
 
         if self.data.ndim == 1:
@@ -592,10 +591,10 @@ class HpxMap(Map_Base):
         planes.
 
         """
-        
+
         shape = np.broadcast(lon, lat, egy).shape
-        lon = lon*np.ones(shape)
-        lat = lat*np.ones(shape)
+        lon = lon * np.ones(shape)
+        lat = lat * np.ones(shape)
         theta = np.pi / 2. - np.radians(lat)
         phi = np.radians(lon)
         vals = []
@@ -609,59 +608,59 @@ class HpxMap(Map_Base):
         if egy is None:
             return vals.T
 
-        egy = egy*np.ones(shape)
-        
+        egy = egy * np.ones(shape)
+
         if interp_log:
             xvals = utils.val_to_pix(np.log(self.hpx.evals), np.log(egy))
         else:
             xvals = utils.val_to_pix(self.hpx.evals, egy)
 
-        vals = vals.reshape((-1,vals.shape[-1]))
+        vals = vals.reshape((-1, vals.shape[-1]))
         xvals = np.ravel(xvals)
         v = map_coordinates(vals, [np.arange(vals.shape[0]), xvals],
                             order=1)
         return v.reshape(shape)
-        
+
     def swap_scheme(self):
         """
         """
         hpx_out = self.hpx.make_swapped_hpx()
-        if self.hpx.nest:            
+        if self.hpx.nest:
             if self.data.ndim == 2:
-                data_out = np.vstack( [ hp.pixelfunc.reorder(self.data[i], n2r=True) for i in range(self.data.shape[0]) ] )
+                data_out = np.vstack([hp.pixelfunc.reorder(
+                    self.data[i], n2r=True) for i in range(self.data.shape[0])])
             else:
                 data_out = hp.pixelfunc.reorder(self.data, n2r=True)
         else:
             if self.data.ndim == 2:
-                data_out = np.vstack( [ hp.pixelfunc.reorder(self.data[i], r2n=True) for i in range(self.data.shape[0]) ] )
+                data_out = np.vstack([hp.pixelfunc.reorder(
+                    self.data[i], r2n=True) for i in range(self.data.shape[0])])
             else:
                 data_out = hp.pixelfunc.reorder(self.data, r2n=True)
         return HpxMap(data_out, hpx_out)
-
 
     def ud_grade(self, order, preserve_counts=False):
         """
         """
         new_hpx = self.hpx.ud_graded_hpx(order)
-        nebins = len(new_hpx.evals)        
+        nebins = len(new_hpx.evals)
         shape = self.counts.shape
-       
+
         if preserve_counts:
             power = -2.
         else:
             power = 0
 
         if len(shape) == 1:
-            new_data = hp.pixelfunc.ud_grade(self.counts, 
-                                             nside_out=new_hpx.nside, 
+            new_data = hp.pixelfunc.ud_grade(self.counts,
+                                             nside_out=new_hpx.nside,
                                              order_in=new_hpx.ordering,
                                              order_out=ew_hpx.ordering,
                                              power=power)
         else:
-            new_data = np.vstack([ hp.pixelfunc.ud_grade(self.counts[i], 
-                                                         nside_out=new_hpx.nside, 
-                                                         order_in=new_hpx.ordering,
-                                                         order_out=new_hpx.ordering,
-                                                         power=power) for i in range(shape[0]) ] )
+            new_data = np.vstack([hp.pixelfunc.ud_grade(self.counts[i],
+                                                        nside_out=new_hpx.nside,
+                                                        order_in=new_hpx.ordering,
+                                                        order_out=new_hpx.ordering,
+                                                        power=power) for i in range(shape[0])])
         return HpxMap(new_data, new_hpx)
-                                         

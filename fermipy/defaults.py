@@ -20,18 +20,18 @@ ENERGY_FLUX_UNIT = ':math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`'
 # Options that are common to several sections
 common = {
     'free_background': (False, 'Leave background parameters free when performing the fit. If True then any '
-                       'parameters that are currently free in the model will be fit simultaneously '
-                       'with the source of interest.', bool),
+                        'parameters that are currently free in the model will be fit simultaneously '
+                        'with the source of interest.', bool),
     'free_radius': (None, 'Free normalizations of background sources within this angular distance in degrees '
                     'from the source of interest.  If None then no sources will be freed.', float),
-    'make_plots' : (False, 'Generate diagnostic plots.', bool),    
-    'write_fits' : (True, 'Write the output to a FITS file.', bool),
-    'write_npy' : (True, 'Write the output dictionary to a numpy file.', bool),
-    'loge_bounds' :  (None, 'Restrict the analysis to an energy range (emin,emax) in '
-                      'log10(E/MeV) that is a subset of the analysis energy range. '
-                      'By default the full analysis energy range will be used.  If '
-                      'either emin/emax are None then only an upper/lower bound on '
-                      'the energy range wil be applied.', list),
+    'make_plots': (False, 'Generate diagnostic plots.', bool),
+    'write_fits': (True, 'Write the output to a FITS file.', bool),
+    'write_npy': (True, 'Write the output dictionary to a numpy file.', bool),
+    'loge_bounds':  (None, 'Restrict the analysis to an energy range (emin,emax) in '
+                     'log10(E/MeV) that is a subset of the analysis energy range. '
+                     'By default the full analysis energy range will be used.  If '
+                     'either emin/emax are None then only an upper/lower bound on '
+                     'the energy range wil be applied.', list),
 }
 
 # Options for defining input data files
@@ -249,9 +249,9 @@ residmap = {
     'exclude': (None, 'List of sources that will be removed from the model when '
                 'computing the residual map.', list),
     'loge_bounds': common['loge_bounds'],
-    'make_plots' : common['make_plots'],
-    'write_fits' : common['write_fits'],
-    'write_npy' : common['write_npy'],
+    'make_plots': common['make_plots'],
+    'write_fits': common['write_fits'],
+    'write_npy': common['write_npy'],
 }
 
 # TS Map
@@ -264,9 +264,9 @@ tsmap = {
                           'smaller value will speed up the TS calculation at the loss of '
                           'accuracy.', float),
     'loge_bounds': common['loge_bounds'],
-    'make_plots' : common['make_plots'],
-    'write_fits' : common['write_fits'],
-    'write_npy' : common['write_npy'],
+    'make_plots': common['make_plots'],
+    'write_fits': common['write_fits'],
+    'write_npy': common['write_npy'],
 }
 
 # TS Cube
@@ -309,9 +309,9 @@ lightcurve = {
     'free_radius': common['free_radius'],
     'free_sources': (None, 'List of sources to be freed.  These sources will be added to the list of sources '
                      'satisfying the free_radius selection.', list),
-    'make_plots' : common['make_plots'],
-    'write_fits' : common['write_fits'],
-    'write_npy' : common['write_npy'],
+    'make_plots': common['make_plots'],
+    'write_fits': common['write_fits'],
+    'write_npy': common['write_npy'],
 }
 
 # Output for lightcurve Analysis
@@ -347,9 +347,9 @@ sed = {
                       float),
     'cov_scale': (3.0, 'Scale factor that sets the strength of the prior on nuisance '
                   'parameters that are free.  Setting this to None disables the prior.', float),
-    'make_plots' : common['make_plots'],
-    'write_fits' : common['write_fits'],
-    'write_npy' : common['write_npy'],
+    'make_plots': common['make_plots'],
+    'write_fits': common['write_fits'],
+    'write_npy': common['write_npy'],
 }
 
 # Output for SED analysis
@@ -452,7 +452,7 @@ extension = {
                       'extension.  The spatial scale parameter of the '
                       'model will be set such that the 68% containment radius of '
                       'the model is equal to the width parameter.', str),
-    'width': (None,'Sequence of values in degrees for the likelihood scan over spatial extension '
+    'width': (None, 'Sequence of values in degrees for the likelihood scan over spatial extension '
               '(68% containment radius).  If this argument is None then the scan points will '
               'be determined from width_min/width_max/width_nstep.', list),
     'fit_position': (False, 'Perform a simultaneous fit to the source position and extension.', bool),
@@ -460,7 +460,7 @@ extension = {
     'width_max': (1.0, 'Maximum value in degrees for the likelihood scan over spatial extent.', float),
     'width_nstep': (21, 'Number of scan points between width_min and width_max. '
                     'Scan points will be spaced evenly on a logarithmic scale '
-                    'between `width_min` and `width_max`.',int),
+                    'between `width_min` and `width_max`.', int),
     'free_background': common['free_background'],
     'free_radius': common['free_radius'],
     'update': (False, 'Update this source with the best-fit model for spatial '
@@ -475,9 +475,9 @@ extension = {
                      'by linearly interpolating the fractional correction factors f in log(E).  The '
                      'corrected PSF is given by P\'(x;E) = P(x/(1+f(E));E) where x is the angular separation.',
                      tuple),
-    'make_plots' : common['make_plots'],
-    'write_fits' : common['write_fits'],
-    'write_npy' : common['write_npy'],
+    'make_plots': common['make_plots'],
+    'write_fits': common['write_fits'],
+    'write_npy': common['write_npy'],
 }
 
 extension_output = OrderedDict((
@@ -512,9 +512,9 @@ localize = {
     'free_background': common['free_background'],
     'free_radius': common['free_radius'],
     'update': (True, 'Update the source model with the best-fit position.', bool),
-    'make_plots' : common['make_plots'],
-    'write_fits' : common['write_fits'],
-    'write_npy' : common['write_npy'],
+    'make_plots': common['make_plots'],
+    'write_fits': common['write_fits'],
+    'write_npy': common['write_npy'],
 }
 
 # Output for localization analysis

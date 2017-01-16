@@ -20,6 +20,7 @@ from fermipy.gtutils import FreeParameterState, SourceMapState
 from LikelihoodState import LikelihoodState
 import pyLikelihood as pyLike
 
+
 class SourceFind(object):
     """Mixin class which provides source-finding functionality to
     `~fermipy.gtanalysis.GTAnalysis`."""
@@ -244,7 +245,6 @@ class SourceFind(object):
 
         return srcs, peaks
 
-
     def localize(self, name, **kwargs):
         """Find the best-fit position of a source.  Localization is
         performed in two steps.  First a TS map is computed centered
@@ -330,7 +330,7 @@ class SourceFind(object):
         use_cache = kwargs.get('use_cache', False)
         free_background = kwargs.get('free_background', False)
         free_radius = kwargs.get('free_radius', None)
-        
+
         saved_state = LikelihoodState(self.like)
 
         if not free_background:
@@ -345,7 +345,7 @@ class SourceFind(object):
                                               exclude=diff_sources)]
             self.free_sources_by_name(free_srcs, pars='norm',
                                       loglevel=logging.DEBUG)
-            
+
         src = self.roi.copy_source(name)
         skydir = src.skydir
         skywcs = self._skywcs
@@ -447,7 +447,7 @@ class SourceFind(object):
             saved_state.restore()
             self._sync_params(name)
             self._update_roi()
-            
+
         return o
 
     def _fit_position(self, name, **kwargs):
@@ -529,15 +529,15 @@ class SourceFind(object):
         optimizer = kwargs.get('optimizer', {})
 
         self.free_norm(name)
-        
+
         lnlmap = Map.create(skydir, scan_cdelt, (nstep, nstep),
                             coordsys=wcs_utils.get_coordsys(self._skywcs))
-        
+
         src = self.roi.copy_source(name)
-            
+
         if use_cache and not use_pylike:
             self._create_srcmap_cache(src.name, src)
-            
+
         scan_skydir = lnlmap.get_pixel_skydirs().transform_to('icrs')
         loglike = []
         for ra, dec in zip(scan_skydir.ra.deg, scan_skydir.dec.deg):
@@ -550,7 +550,7 @@ class SourceFind(object):
                                    **optimizer)
             print(fit_output['loglike'])
             loglike += [fit_output['loglike']]
-           
+
         self.set_source_morphology(name, spatial_pars=src.spatial_pars,
                                    use_pylike=use_pylike)
         saved_state.restore()

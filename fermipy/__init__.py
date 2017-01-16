@@ -16,9 +16,10 @@ try:
 except ImportError:
     pass
 
+
 def get_st_version():
     """Get the version string of the ST release."""
-    
+
     try:
         import ST_Version
         return ST_Version.version()
@@ -26,14 +27,16 @@ def get_st_version():
         return ''
 
 PACKAGE_ROOT = os.path.abspath(os.path.dirname(__file__))
-PACKAGE_DATA = os.path.join(PACKAGE_ROOT,'data')
+PACKAGE_DATA = os.path.join(PACKAGE_ROOT, 'data')
 os.environ['FERMIPY_ROOT'] = PACKAGE_ROOT
 os.environ['FERMIPY_DATA_DIR'] = PACKAGE_DATA
+
 
 def _get_test_runner():
     import os
     from astropy.tests.helper import TestRunner
     return TestRunner(os.path.dirname(__file__))
+
 
 def test(package=None, test_path=None, args=None, plugins=None,
          verbose=False, pastebin=None, remote_data=False, pep8=False,

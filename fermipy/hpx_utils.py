@@ -23,31 +23,32 @@ HPX_ORDER_TO_PIXSIZE = [32.0, 16.0, 8.0, 4.0, 2.0, 1.0,
 
 class HPX_Conv(object):
     """ Data structure to define how a HEALPix map is stored to FITS """
+
     def __init__(self, convname, **kwargs):
         """
         """
         self.convname = convname
-        self.colstring = kwargs.get('colstring','CHANNEL')
+        self.colstring = kwargs.get('colstring', 'CHANNEL')
         self.firstcol = kwargs.get('firstcol', 1)
-        self.extname = kwargs.get('extname','SKYMAP')
-        self.energy_hdu = kwargs.get('energy_hdu','EBOUNDS')
-        self.quantity_type = kwargs.get('quantity_type','integral')
-        self.coordsys = kwargs.get('coordsys','COORDSYS')
-        
+        self.extname = kwargs.get('extname', 'SKYMAP')
+        self.energy_hdu = kwargs.get('energy_hdu', 'EBOUNDS')
+        self.quantity_type = kwargs.get('quantity_type', 'integral')
+        self.coordsys = kwargs.get('coordsys', 'COORDSYS')
+
     def colname(self, indx):
-        return "%s%i"%(self.colstring,indx)
+        return "%s%i" % (self.colstring, indx)
 
 
 # Various conventions for storing HEALPix maps in FITS files
-HPX_FITS_CONVENTIONS = {'FGST_CCUBE':HPX_Conv('FGST_CCUBE'),
-                        'FGST_LTCUBE':HPX_Conv('FGST_LTCUBE', colstring='COSBINS', extname='EXPOSURE', energy_hdu='CTHETABOUNDS'),
-                        'FGST_BEXPCUBE':HPX_Conv('FGST_BEXPCUBE', colstring='ENERGY', extname='HPXEXPOSURES', energy_hdu='ENERGIES'),
-                        'FGST_SRCMAP':HPX_Conv('FGST_SRCMAP', extname=None, quantity_type='differential'),
-                        'FGST_TEMPLATE':HPX_Conv('FGST_TEMPLATE', colstring='ENERGY', energy_hdu='ENERGIES'),
-                        'FGST_SRCMAP_SPARSE':HPX_Conv('FGST_SRCMAP_SPARSE', colstring=None, extname=None, quantity_type='differential'),
-                        'GALPROP':HPX_Conv('GALPROP', colstring='BIN{idx}', extname='SKYMAP2', 
-                                           energy_hdu='ENERGIES', quantity_type='differential',
-                                           coordsys='COORDTYPE')}
+HPX_FITS_CONVENTIONS = {'FGST_CCUBE': HPX_Conv('FGST_CCUBE'),
+                        'FGST_LTCUBE': HPX_Conv('FGST_LTCUBE', colstring='COSBINS', extname='EXPOSURE', energy_hdu='CTHETABOUNDS'),
+                        'FGST_BEXPCUBE': HPX_Conv('FGST_BEXPCUBE', colstring='ENERGY', extname='HPXEXPOSURES', energy_hdu='ENERGIES'),
+                        'FGST_SRCMAP': HPX_Conv('FGST_SRCMAP', extname=None, quantity_type='differential'),
+                        'FGST_TEMPLATE': HPX_Conv('FGST_TEMPLATE', colstring='ENERGY', energy_hdu='ENERGIES'),
+                        'FGST_SRCMAP_SPARSE': HPX_Conv('FGST_SRCMAP_SPARSE', colstring=None, extname=None, quantity_type='differential'),
+                        'GALPROP': HPX_Conv('GALPROP', colstring='BIN{idx}', extname='SKYMAP2',
+                                            energy_hdu='ENERGIES', quantity_type='differential',
+                                            coordsys='COORDTYPE')}
 
 
 def coords_to_vec(lon, lat):
@@ -321,9 +322,10 @@ class HPX(object):
         """
         """
         if self._order < 0:
-            raise RuntimeError("Upgrade and degrade only implemented for standard maps")
+            raise RuntimeError(
+                "Upgrade and degrade only implemented for standard maps")
         return HPX(-1, self.nest, self.coordsys, order, self.region, self.ebins, self.conv)
- 
+
     def make_swapped_hpx(self):
         """
         """
@@ -339,7 +341,6 @@ class HPX(object):
             return HPX(-1, not self.nest, self.coordsys, self.order, self.region, None, self.conv)
         else:
             return HPX(self.nside, not self.nest, self.coordsys, -1, self.region, None, self.conv)
-       
 
     @staticmethod
     def create_hpx(nside, nest, coordsys='CEL', order=-1, region=None,
@@ -376,7 +377,7 @@ class HPX(object):
             pass
 
         # Try based on the EXTNAME keyword
-        extname = header.get('EXTNAME',None)
+        extname = header.get('EXTNAME', None)
         if extname == 'HPXEXPOSURES':
             return 'FGST_BEXPCUBE'
         elif extname == 'SKYMAP2':
@@ -386,7 +387,7 @@ class HPX(object):
         colname = header['TTYPE1']
         if colname == 'PIX':
             colname = header['TTYPE2']
-        
+
         if colname == 'KEY':
             return 'FGST_SRCMAP_SPARSE'
         elif colname == 'ENERGY1':
@@ -402,7 +403,6 @@ class HPX(object):
                 return 'FGST_SRCMAP'
         else:
             raise ValueError("Could not identify HEALPix convention")
-
 
     @staticmethod
     def create_from_header(header, ebins=None):
@@ -434,7 +434,7 @@ class HPX(object):
             nside = -1
 
         coordsys = header[conv.coordsys]
- 
+
         try:
             region = header["HPX_REG"]
         except KeyError:
@@ -444,7 +444,6 @@ class HPX(object):
                 region = None
 
         return HPX(nside, nest, coordsys, order, region, ebins=ebins, conv=conv)
-
 
     def make_header(self):
         """ Builds and returns FITS header for this HEALPix map """
@@ -458,7 +457,7 @@ class HPX(object):
                  fits.Card("FIRSTPIX", 0),
                  fits.Card("LASTPIX", self._maxpix - 1),
                  fits.Card("HPX_CONV", self._conv.convname)]
-        
+
         if self._coordsys == "CEL":
             cards.append(fits.Card("EQUINOX", 2000.0,
                                    "Equinox of RA & DEC specifications"))
@@ -481,38 +480,44 @@ class HPX(object):
         """
         shape = data.shape
         extname = kwargs.get('extname', self.conv.extname)
-        
+
         if shape[-1] != self._npix:
             raise Exception(
                 "Size of data array does not match number of pixels")
         cols = []
         if self._region:
             cols.append(fits.Column("PIX", "J", array=self._ipix))
-            
+
         if self.conv.convname == 'FGST_SRCMAP_SPARSE':
-            nonzero = data.nonzero()         
+            nonzero = data.nonzero()
             nfilled = len(nonzero[0])
             print ('Nfilled ', nfilled)
-            if len(shape) == 1:   
+            if len(shape) == 1:
                 nonzero = nonzero[0]
-                cols.append(fits.Column("KEY", "%iJ"%nfilled, array=nonzero.reshape(1,nfilled)))
-                cols.append(fits.Column("VALUE", "%iE"%nfilled, array=data[nonzero].astype(float).reshape(1,nfilled)))
+                cols.append(fits.Column("KEY", "%iJ" %
+                                        nfilled, array=nonzero.reshape(1, nfilled)))
+                cols.append(fits.Column("VALUE", "%iE" % nfilled, array=data[
+                            nonzero].astype(float).reshape(1, nfilled)))
             elif len(shape) == 2:
-                nonzero = self._npix*nonzero[0] + nonzero[1]
-                cols.append(fits.Column("KEY", "%iJ"%nfilled, array=nonzero.reshape(1,nfilled)))
-                cols.append(fits.Column("VALUE", "%iE"%nfilled, array=data.flat[nonzero].astype(float).reshape(1,nfilled)))
+                nonzero = self._npix * nonzero[0] + nonzero[1]
+                cols.append(fits.Column("KEY", "%iJ" %
+                                        nfilled, array=nonzero.reshape(1, nfilled)))
+                cols.append(fits.Column("VALUE", "%iE" % nfilled, array=data.flat[
+                            nonzero].astype(float).reshape(1, nfilled)))
             else:
                 raise Exception("HPX.write_fits only handles 1D and 2D maps")
-                
+
         else:
             if len(shape) == 1:
-                cols.append(fits.Column(self.conv.colname(indx=i+self.conv.firstcol), "E", array=data.astype(float)))
+                cols.append(fits.Column(self.conv.colname(
+                    indx=i + self.conv.firstcol), "E", array=data.astype(float)))
             elif len(shape) == 2:
                 for i in range(shape[0]):
-                    cols.append(fits.Column(self.conv.colname(indx=i+self.conv.firstcol), "E", array=data[i].astype(float)))
+                    cols.append(fits.Column(self.conv.colname(
+                        indx=i + self.conv.firstcol), "E", array=data[i].astype(float)))
             else:
                 raise Exception("HPX.write_fits only handles 1D and 2D maps")
-        
+
         header = self.make_header()
         hdu = fits.BinTableHDU.from_columns(cols, header=header, name=extname)
 
@@ -528,7 +533,7 @@ class HPX(object):
         cols = [fits.Column("CHANNEL", "I", array=np.arange(1, len(self._ebins + 1))),
                 fits.Column("E_MIN", "1E", unit='keV',
                             array=1000 * self._ebins[0:-1]),
-                fits.Column("E_MAX", "1E", unit='keV', array=1000*self._ebins[1:])]
+                fits.Column("E_MAX", "1E", unit='keV', array=1000 * self._ebins[1:])]
         hdu = fits.BinTableHDU.from_columns(
             cols, self.make_header(), name=extname)
         return hdu
@@ -729,8 +734,8 @@ class HPX(object):
     def get_sky_dirs(self):
 
         lonlat = self.get_sky_coords()
-        return SkyCoord(ra=lonlat.T[0],dec=lonlat.T[1], unit='deg')
-    
+        return SkyCoord(ra=lonlat.T[0], dec=lonlat.T[1], unit='deg')
+
     def get_pixel_indices(self, lats, lons):
         """ "Return the indices in the flat array corresponding to a set of coordinates """
         theta = np.radians(90. - lats)
@@ -739,7 +744,7 @@ class HPX(object):
 
     def skydir_to_pixel(self, skydir):
         """Return the pixel index of a SkyCoord object."""
-        if self.coordsys in ['CEL','EQU']:
+        if self.coordsys in ['CEL', 'EQU']:
             skydir = skydir.transform_to('icrs')
             lon = skydir.ra.deg
             lat = skydir.dec.deg
@@ -747,9 +752,9 @@ class HPX(object):
             skydir = skydir.transform_to('galactic')
             lon = skydir.l.deg
             lat = skydir.b.deg
-        
-        return self.get_pixel_indices(lat,lon)
-    
+
+        return self.get_pixel_indices(lat, lon)
+
 
 class HpxToWcsMapping(object):
     """ Stores the indices need to conver from HEALPix to WCS """

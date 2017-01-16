@@ -29,7 +29,7 @@ def poisson_lnl(nc, mu):
     return lnl
 
 
-def convolve_map(m, k, cpix, threshold=0.001,imin=0,imax=None):
+def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None):
     """
     Perform an energy-dependent convolution on a sequence of 2-D spatial maps.
 
@@ -57,15 +57,15 @@ def convolve_map(m, k, cpix, threshold=0.001,imin=0,imax=None):
        Maximum index in energy dimension.
 
     """
-    islice = slice(imin,imax)
+    islice = slice(imin, imax)
 
-    o = np.zeros(m[islice,...].shape)
+    o = np.zeros(m[islice, ...].shape)
 
     # Loop over energy
-    for i in range(m[islice,...].shape[0]):
+    for i in range(m[islice, ...].shape[0]):
 
-        ks = k[islice,...][i,...]
-        ms = m[islice,...][i,...]
+        ks = k[islice, ...][i, ...]
+        ms = m[islice, ...][i, ...]
 
         mx = ks[cpix[0], :] > ks[cpix[0], cpix[1]] * threshold
         my = ks[:, cpix[1]] > ks[cpix[0], cpix[1]] * threshold
@@ -75,8 +75,8 @@ def convolve_map(m, k, cpix, threshold=0.001,imin=0,imax=None):
 
         # Ensure that there is an odd number of pixels in the kernel
         # array
-        if cpix[0] + nx + 1 >= ms.shape[0] or cpix[0]-nx < 0:
-            nx -= 1        
+        if cpix[0] + nx + 1 >= ms.shape[0] or cpix[0] - nx < 0:
+            nx -= 1
             ny -= 1
 
         sx = slice(cpix[0] - nx, cpix[0] + nx + 1)
@@ -90,9 +90,10 @@ def convolve_map(m, k, cpix, threshold=0.001,imin=0,imax=None):
 #        o[i,...] = ndimage.convolve(ms, ks, mode='constant',
 #                                     origin=origin, cval=0.0)
 
-        o[i,...] = scipy.signal.fftconvolve(ms, ks, mode='same')
+        o[i, ...] = scipy.signal.fftconvolve(ms, ks, mode='same')
 
     return o
+
 
 def get_source_kernel(gta, name, kernel=None):
     """Get the PDF for the given source."""
@@ -120,6 +121,7 @@ def get_source_kernel(gta, name, kernel=None):
         sm[i] /= sm2
 
     return sm
+
 
 class ResidMapGenerator(object):
     """Mixin class for `~fermipy.gtanalysis.GTAnalysis` that generates
@@ -178,21 +180,21 @@ class ResidMapGenerator(object):
         write_fits = kwargs.get('write_fits', True)
         write_npy = kwargs.get('write_npy', True)
 
-        src_dict = copy.deepcopy(kwargs.setdefault('model',{}))        
+        src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         exclude = kwargs.setdefault('exclude', None)
         loge_bounds = kwargs.setdefault('loge_bounds', None)
 
-        if loge_bounds is not None:            
+        if loge_bounds is not None:
             if len(loge_bounds) == 0:
-                loge_bounds = [None,None]
+                loge_bounds = [None, None]
             elif len(loge_bounds) == 1:
-                loge_bounds += [None]            
-            loge_bounds[0] = (loge_bounds[0] if loge_bounds[0] is not None 
-                         else self.energies[0])
-            loge_bounds[1] = (loge_bounds[1] if loge_bounds[1] is not None 
-                         else self.energies[-1])
+                loge_bounds += [None]
+            loge_bounds[0] = (loge_bounds[0] if loge_bounds[0] is not None
+                              else self.energies[0])
+            loge_bounds[1] = (loge_bounds[1] if loge_bounds[1] is not None
+                              else self.energies[-1])
         else:
-            loge_bounds = [self.energies[0],self.energies[-1]]
+            loge_bounds = [self.energies[0], self.energies[-1]]
 
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
@@ -220,7 +222,7 @@ class ResidMapGenerator(object):
             cpix = [50, 50]
 
         self.add_source('residmap_testsource', src_dict, free=True,
-                       init_source=False,save_source_maps=False)
+                        init_source=False, save_source_maps=False)
         src = self.roi.get_source_by_name('residmap_testsource')
 
         modelname = utils.create_model_name(src)
@@ -230,7 +232,7 @@ class ResidMapGenerator(object):
         cmst = np.zeros((npix, npix))
         emst = np.zeros((npix, npix))
 
-        sm = get_source_kernel(self,'residmap_testsource', kernel)
+        sm = get_source_kernel(self, 'residmap_testsource', kernel)
         ts = np.zeros((npix, npix))
         sigma = np.zeros((npix, npix))
         excess = np.zeros((npix, npix))
@@ -239,16 +241,16 @@ class ResidMapGenerator(object):
 
         for i, c in enumerate(self.components):
 
-            imin = utils.val_to_edge(c.energies,loge_bounds[0])[0]
-            imax = utils.val_to_edge(c.energies,loge_bounds[1])[0]
+            imin = utils.val_to_edge(c.energies, loge_bounds[0])[0]
+            imax = utils.val_to_edge(c.energies, loge_bounds[1])[0]
 
             mc = c.model_counts_map(exclude=exclude).counts.astype('float')
             cc = c.counts_map().counts.astype('float')
             ec = np.ones(mc.shape)
 
-            ccs = convolve_map(cc, sm[i], cpix,imin=imin,imax=imax)
-            mcs = convolve_map(mc, sm[i], cpix,imin=imin,imax=imax)
-            ecs = convolve_map(ec, sm[i], cpix,imin=imin,imax=imax)
+            ccs = convolve_map(cc, sm[i], cpix, imin=imin, imax=imax)
+            mcs = convolve_map(mc, sm[i], cpix, imin=imin, imax=imax)
+            ecs = convolve_map(ec, sm[i], cpix, imin=imin, imax=imax)
 
             cms = np.sum(ccs, axis=0)
             mms = np.sum(mcs, axis=0)
@@ -277,17 +279,17 @@ class ResidMapGenerator(object):
              'model': model_map,
              'data': data_map,
              'excess': excess_map,
-             'config': kwargs }
+             'config': kwargs}
 
         fits_file = utils.format_filename(self.config['fileio']['workdir'],
                                           'residmap.fits',
-                                          prefix=[prefix,modelname])
+                                          prefix=[prefix, modelname])
 
-        if write_fits:            
+        if write_fits:
             fits_utils.write_maps(sigma_map,
                                   {'DATA_MAP': data_map,
                                    'MODEL_MAP': model_map,
-                                   'EXCESS_MAP': excess_map },
+                                   'EXCESS_MAP': excess_map},
                                   fits_file)
             o['file'] = os.path.basename(fits_file)
 

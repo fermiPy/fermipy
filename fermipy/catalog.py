@@ -151,13 +151,13 @@ class Catalog(object):
             name = ''
             if 'CDS-NAME' in h[1].header:
                 name = h[1].header['CDS-NAME']
-                
+
             # Try to guess the catalog type from its name
             if name == '3FGL':
                 return Catalog3FGL(fitsfile)
             elif 'gll_psch_v08' in fitsfile:
                 return Catalog2FHL(fitsfile)
-            
+
             tab = Table.read(fitsfile)
 
             if 'NickName' in tab.columns:
@@ -236,7 +236,7 @@ class Catalog3FGL(Catalog):
                              'Spatial_Filename'])
 
         table.sort('Source_Name')
-        
+
         super(Catalog3FGL, self).__init__(table, extdir)
 
         m = self.table['SpectrumType'] == 'PLExpCutoff'

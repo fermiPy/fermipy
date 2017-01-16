@@ -103,21 +103,24 @@ def create_source_table(scan_shape):
 
     for t in ['eflux', 'eflux100', 'eflux1000', 'eflux10000']:
         cols_dict[t] = dict(dtype='f8', format='%.3f', unit='MeV / (cm2 s)')
-        cols_dict[t + '_err'] = dict(dtype='f8', format='%.3f', unit='MeV / (cm2 s)')
+        cols_dict[t + '_err'] = dict(dtype='f8',
+                                     format='%.3f', unit='MeV / (cm2 s)')
 
     for t in ['eflux_ul95', 'eflux100_ul95', 'eflux1000_ul95', 'eflux10000_ul95']:
         cols_dict[t] = dict(dtype='f8', format='%.3f', unit='MeV / (cm2 s)')
 
     for t in ['flux', 'flux100', 'flux1000', 'flux10000']:
         cols_dict[t] = dict(dtype='f8', format='%.3f', unit='1 / (cm2 s)')
-        cols_dict[t + '_err'] = dict(dtype='f8', format='%.3f', unit='1 / (cm2 s)')
+        cols_dict[t + '_err'] = dict(dtype='f8',
+                                     format='%.3f', unit='1 / (cm2 s)')
 
     for t in ['flux_ul95', 'flux100_ul95', 'flux1000_ul95', 'flux10000_ul95']:
         cols_dict[t] = dict(dtype='f8', format='%.3f', unit='1 / (cm2 s)')
 
     for t in ['dnde', 'dnde100', 'dnde1000', 'dnde10000']:
         cols_dict[t] = dict(dtype='f8', format='%.3f', unit='1 / (MeV cm2 s)')
-        cols_dict[t + '_err'] = dict(dtype='f8', format='%.3f', unit='1 / (MeV cm2 s)')
+        cols_dict[t + '_err'] = dict(dtype='f8',
+                                     format='%.3f', unit='1 / (MeV cm2 s)')
 
     cols = [Column(name=k, **v) for k, v in cols_dict.items()]
     tab = Table(cols)
@@ -222,18 +225,19 @@ class Model(object):
     """
 
     def __init__(self, name, data):
-        
+
         self._data = defaults.make_default_dict(defaults.source_output)
-        self._data['spectral_pars'] = get_function_defaults(data['SpectrumType'])
+        self._data['spectral_pars'] = get_function_defaults(
+            data['SpectrumType'])
         self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
         self._data.setdefault('catalog', {})
         self._data['spectral_pars'] = utils.merge_dict(self._data['spectral_pars'],
-                                                       data.pop('spectral_pars',{}))
+                                                       data.pop('spectral_pars', {}))
         self._data['spatial_pars'] = utils.merge_dict(self._data['spatial_pars'],
-                                                      data.pop('spatial_pars',{}))
-        
+                                                      data.pop('spatial_pars', {}))
+
         self._data.update(data)
-        
+
         self._data['assoc'] = {}
         self._data['name'] = name
         self._data['class'] = ''
@@ -245,7 +249,7 @@ class Model(object):
             self['class'] = catalog['CLASS1'].strip()
         elif 'CLASS' in catalog:
             self['class'] = catalog['CLASS'].strip()
-            
+
         for k in ROIModel.src_name_cols:
 
             if k not in catalog:
@@ -354,7 +358,7 @@ class Model(object):
         if src_dict['SpatialModel'] == 'ConstantValue':
             return IsoSource(src_dict['name'], src_dict)
         elif src_dict['SpatialModel'] == 'CompositeSource':
-            return CompositeSource(src_dict['name'],src_dict)
+            return CompositeSource(src_dict['name'], src_dict)
         elif src_dict['SpatialModel'] == 'MapCubeFunction':
             return MapCubeSource(src_dict['name'], src_dict)
         else:
@@ -618,9 +622,8 @@ class Source(Model):
             self._set_radec([catalog['RAJ2000'], catalog['DEJ2000']])
         else:
             raise Exception('Failed to infer RADEC for source: %s' % name)
-        
+
         self._init_spatial_pars(SpatialWidth=self['SpatialWidth'])
-        
 
     def __str__(self):
 
@@ -663,17 +666,19 @@ class Source(Model):
             self.spatial_pars['DEC']['value'] = radec[1]
 
     def _set_spatial_width(self, spatial_width):
-        self.data['SpatialWidth'] = spatial_width        
+        self.data['SpatialWidth'] = spatial_width
         if self['SpatialType'] in ['RadialGaussian']:
-            self.spatial_pars['Sigma']['value'] = spatial_width / 1.5095921854516636                
+            self.spatial_pars['Sigma'][
+                'value'] = spatial_width / 1.5095921854516636
         elif self['SpatialType'] in ['RadialDisk']:
-            self.spatial_pars['Radius']['value'] = spatial_width / 0.8246211251235321
-            
+            self.spatial_pars['Radius'][
+                'value'] = spatial_width / 0.8246211251235321
+
     def _init_spatial_pars(self, **kwargs):
 
         spatial_pars = copy.deepcopy(kwargs)
         spatial_width = spatial_pars.pop('SpatialWidth', None)
-                
+
         if self['SpatialType'] == 'SkyDirFunction':
             self._extended = False
             self._data['SourceType'] = 'PointSource'
@@ -681,24 +686,26 @@ class Source(Model):
             self._extended = True
             self._data['SourceType'] = 'DiffuseSource'
 
-        spatial_pars.setdefault('RA', spatial_pars.pop('ra', self['ra']) )
-        spatial_pars.setdefault('DEC', spatial_pars.pop('dec', self['dec']) )
-        
+        spatial_pars.setdefault('RA', spatial_pars.pop('ra', self['ra']))
+        spatial_pars.setdefault('DEC', spatial_pars.pop('dec', self['dec']))
+
         for k, v in spatial_pars.items():
 
-            if not isinstance(v,dict):
+            if not isinstance(v, dict):
                 spatial_pars[k] = {'name': k, 'value': v}
-            
+
             if k in self.spatial_pars:
                 self.spatial_pars[k].update(spatial_pars[k])
 
         if spatial_width is not None:
             self._set_spatial_width(spatial_width)
         elif self['SpatialType'] == 'RadialDisk':
-            self['SpatialWidth'] = self.spatial_pars['Radius']['value']*0.8246211251235321
+            self['SpatialWidth'] = self.spatial_pars[
+                'Radius']['value'] * 0.8246211251235321
         elif self['SpatialType'] == 'RadialGaussian':
-            self['SpatialWidth'] = self.spatial_pars['Sigma']['value']*1.5095921854516636
-            
+            self['SpatialWidth'] = self.spatial_pars[
+                'Sigma']['value'] * 1.5095921854516636
+
         if 'RA' in spatial_pars or 'DEC' in spatial_pars:
             self._set_radec([spatial_pars['RA']['value'],
                              spatial_pars['DEC']['value']])
@@ -769,7 +776,7 @@ class Source(Model):
             self._set_radec([d['ra'], d['dec']])
 
     def set_radec(self, ra, dec):
-        self._set_radec(np.array([ra,dec]))
+        self._set_radec(np.array([ra, dec]))
 
     def set_position(self, skydir):
         """
@@ -815,11 +822,12 @@ class Source(Model):
 
         update_pars = False
         if spatial_model != self['SpatialModel']:
-            update_pars = True        
+            update_pars = True
         self._data['SpatialModel'] = spatial_model
         self._data['SpatialType'] = get_spatial_type(self['SpatialModel'])
         if update_pars:
-            self._data['spatial_pars'] = get_function_defaults(self['SpatialType'])
+            self._data['spatial_pars'] = get_function_defaults(
+                self['SpatialType'])
         self._init_spatial_pars(**spatial_pars)
 
     def separation(self, src):
@@ -878,33 +886,33 @@ class Source(Model):
         spectrum_type = src_dict['SpectrumType']
         spatial_type = src_dict['SpatialType']
 
-        spectral_pars = src_dict.pop('spectral_pars',{})
-        spatial_pars = src_dict.pop('spatial_pars',{})
+        spectral_pars = src_dict.pop('spectral_pars', {})
+        spatial_pars = src_dict.pop('spatial_pars', {})
 
         if not spectral_pars:
             spectral_pars = extract_pars_from_dict(spectrum_type, src_dict)
             norm_par_name = get_function_norm_par_name(spectrum_type)
             if norm_par_name is not None:
-                spectral_pars[norm_par_name].setdefault('free',True)
+                spectral_pars[norm_par_name].setdefault('free', True)
 
         if not spatial_pars:
             spatial_pars = extract_pars_from_dict(spatial_type, src_dict)
             for k in ['RA', 'DEC', 'Prefactor']:
                 if k in spatial_pars:
                     del spatial_pars[k]
-                
+
         spectral_pars = create_pars_from_dict(spectrum_type, spectral_pars,
                                               rescale, False)
         spatial_pars = create_pars_from_dict(spatial_type, spatial_pars,
                                              False, False)
-        
+
         if 'file' in src_dict:
             src_dict['Spectrum_Filename'] = src_dict.pop('file')
 
         if spectrum_type == 'DMFitFunction' and src_dict['Spectrum_Filename'] is None:
             src_dict['Spectrum_Filename'] = os.path.join('$FERMIPY_DATA_DIR',
                                                          'gammamc_dif.dat')
-                
+
         src_dict['spectral_pars'] = cast_pars_dict(spectral_pars)
         src_dict['spatial_pars'] = cast_pars_dict(spatial_pars)
 
@@ -954,7 +962,8 @@ class Source(Model):
                 nested_sources += [Source.create_from_xml(node, extdir=extdir)]
         else:
             spat = utils.load_xml_elements(root, 'spatialModel')
-            spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
+            spatial_pars = utils.load_xml_elements(
+                root, 'spatialModel/parameter')
             spatial_pars = cast_pars_dict(spatial_pars)
             spatial_type = spat['type']
 
@@ -1017,13 +1026,13 @@ class Source(Model):
         elif src_type == 'DiffuseSource' and spatial_type == 'MapCubeFunction':
             return MapCubeSource(src_dict['Source_Name'],
                                  {'Spatial_Filename': spat['file'],
-                                  'SpectrumType' : spectral_type,
+                                  'SpectrumType': spectral_type,
                                   'spectral_pars': spectral_pars,
                                   'spatial_pars': spatial_pars})
         elif src_type == 'CompositeSource':
-            return CompositeSource(src_dict['Source_Name'], 
-                                   {'SpectrumType' : spectral_type,
-                                    'nested_sources' : nested_sources })
+            return CompositeSource(src_dict['Source_Name'],
+                                   {'SpectrumType': spectral_type,
+                                    'nested_sources': nested_sources})
         else:
             raise Exception(
                 'Unrecognized type for source: %s %s' % (src_dict['Source_Name'], src_type))
@@ -1075,6 +1084,7 @@ class Source(Model):
 
 
 class CompositeSource(Model):
+
     def __init__(self, name, data):
 
         data.setdefault('SpectrumType', 'ConstantValue')
@@ -1087,12 +1097,12 @@ class CompositeSource(Model):
                 'Value': {'name': 'Value', 'scale': 1.0,
                           'value': 1.0, 'min': 0.1, 'max': '10.0',
                           'free': False},
-                }
+            }
 
         super(CompositeSource, self).__init__(name, data)
         self._build_nested_sources(data)
 
-    @property 
+    @property
     def nested_sources(self):
         return self._nested_sources
 
@@ -1106,8 +1116,9 @@ class CompositeSource(Model):
             if isinstance(nested_source, Model):
                 self._nested_sources.append(copy.deepcopy(nested_source))
             elif isinstance(nested_source, dict):
-                self._nested_sources.append(Source.create_from_dict(nested_source))
-                
+                self._nested_sources.append(
+                    Source.create_from_dict(nested_source))
+
     def write_xml(self, root):
 
         source_element = utils.create_xml_element(root, 'source',
@@ -1120,7 +1131,8 @@ class CompositeSource(Model):
         for k, v in self.spectral_pars.items():
             utils.create_xml_element(spec_el, 'parameter', v)
 
-        spat_el = utils.create_xml_element(source_element, 'source_library', dict(title=self.name))
+        spat_el = utils.create_xml_element(
+            source_element, 'source_library', dict(title=self.name))
         for nested_source in self._nested_sources:
             nested_source.write_xml(spat_el)
 
@@ -1189,7 +1201,7 @@ class ROIModel(fermipy.config.Configurable):
         self._skydir = kwargs.pop('skydir', SkyCoord(0.0, 0.0, unit=u.deg))
         self._projection = kwargs.get('projection', None)
         coordsys = kwargs.pop('coordsys', 'CEL')
-        srcname = kwargs.pop('srcname',None)        
+        srcname = kwargs.pop('srcname', None)
         super(ROIModel, self).__init__(config, **kwargs)
 
         if self.config['extdir'] is not None and \
@@ -1207,7 +1219,7 @@ class ROIModel(fermipy.config.Configurable):
         self._src_dict = collections.defaultdict(list)
         self._src_radius = []
 
-        self.load(coordsys=coordsys,srcname=srcname)
+        self.load(coordsys=coordsys, srcname=srcname)
 
 #    def __getstate__(self):
 #        d = self.__dict__.copy()
@@ -1223,7 +1235,7 @@ class ROIModel(fermipy.config.Configurable):
 #                           log_level(d['_config']['logging']['verbosity']))
 #
 #        self.__dict__.update(d)
-        
+
     def __contains__(self, key):
         key = key.replace(' ', '').lower()
         return key in self._src_dict.keys()
@@ -1316,7 +1328,7 @@ class ROIModel(fermipy.config.Configurable):
         search_dirs += [self.config['fileio']['outdir'],
                         os.path.join('$FERMIPY_ROOT', 'data'),
                         '$FERMI_DIFFUSE_DIR']
-            
+
         srcs = []
         if self.config[name] is not None:
             srcs = self.config[name]
@@ -1459,7 +1471,7 @@ class ROIModel(fermipy.config.Configurable):
 
         if len(match_srcs) == 1:
 
-            #self.logger.debug('Found matching source for %s : %s',
+            # self.logger.debug('Found matching source for %s : %s',
             #                  src.name, match_srcs[0].name)
 
             if merge_sources:
@@ -1513,7 +1525,7 @@ class ROIModel(fermipy.config.Configurable):
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
         srcname = kwargs.get('srcname', None)
-        
+
         self.clear()
         self.load_diffuse_srcs()
 
@@ -1680,23 +1692,22 @@ class ROIModel(fermipy.config.Configurable):
                                             distance, min_dist,
                                             square)
 
-    
     def get_sources(self, skydir=None, distance=None, cuts=None,
                     minmax_ts=None, minmax_npred=None,
                     exclude=None, square=False, coordsys='CEL'):
         """Retrieve list of source objects satisfying the following
         selections:
-        
+
         * Angular separation from ``skydir`` or ROI center (if
              ``skydir`` is None) less than ``distance``.           
 
         * Cuts on source properties defined in ``cuts`` list.
-        
+
         * TS and Npred in range specified by ``minmax_ts`` and ``minmax_npred``.
 
         Sources can be excluded from the selection by adding their
         name to the ``exclude`` list.
-        
+
         Returns
         -------
         srcs : list
@@ -1708,12 +1719,12 @@ class ROIModel(fermipy.config.Configurable):
 
         if exclude is None:
             exclude = []
-            
+
         rsrc, srcs = self.get_sources_by_position(skydir,
                                                   distance,
                                                   square=square,
                                                   coordsys=coordsys)
-        
+
         o = []
         for s in srcs + self.diffuse_sources:
 
@@ -1730,7 +1741,7 @@ class ROIModel(fermipy.config.Configurable):
                 continue
 
             o.append(s)
-                
+
         return o
 
     def get_sources_by_property(self, pname, pmin, pmax=None):
@@ -1796,11 +1807,10 @@ class ROIModel(fermipy.config.Configurable):
 
         name : str
             Catalog name or path to a catalog FITS file.
-        """        
+        """
         # EAC split this function to make it easier to load an existing catalog
         cat = catalog.Catalog.create(name)
         self.load_existing_catalog(cat, **kwargs)
-        
 
     def load_existing_catalog(self, cat, **kwargs):
         """Load sources from an existing catalog object.
@@ -1813,7 +1823,7 @@ class ROIModel(fermipy.config.Configurable):
         """
         coordsys = kwargs.get('coordsys', 'CEL')
         extdir = kwargs.get('extdir', self.config['extdir'])
-        srcname = kwargs.get('srcname', None)       
+        srcname = kwargs.get('srcname', None)
 
         m0 = get_skydir_distance_mask(cat.skydir, self.skydir,
                                       self.config['src_radius'])
@@ -1822,7 +1832,7 @@ class ROIModel(fermipy.config.Configurable):
                                       square=True, coordsys=coordsys)
         m = (m0 & m1)
         if srcname is not None:
-            m &= utils.find_rows_by_string(cat.table,[srcname],
+            m &= utils.find_rows_by_string(cat.table, [srcname],
                                            self.src_name_cols)
 
         offset = self.skydir.separation(cat.skydir).deg

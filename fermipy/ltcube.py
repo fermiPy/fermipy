@@ -41,7 +41,7 @@ def fill_livetime_hist(skydir, tab_sc, tab_gti, zmax, costh_edges):
 
     zmax : float
         Zenith cut.
-        
+
     costh_edges : `~numpy.ndarray`
         Incidence angle bin edges in cos(angle).
 
@@ -56,9 +56,9 @@ def fill_livetime_hist(skydir, tab_sc, tab_gti, zmax, costh_edges):
     """
 
     if len(tab_gti) == 0:
-        shape = (len(costh_edges)-1,len(skydir))
+        shape = (len(costh_edges) - 1, len(skydir))
         return (np.zeros(shape), np.zeros(shape))
-    
+
     m = (tab_sc['START'] < tab_gti['STOP'][-1])
     m &= (tab_sc['STOP'] > tab_gti['START'][0])
     tab_sc = tab_sc[m]
@@ -100,7 +100,7 @@ def fill_livetime_hist(skydir, tab_sc, tab_gti, zmax, costh_edges):
         cos_zn = utils.dot_prod(t, zn_xyz)
         m = m0 & (cos_zn > cos_zmax) & (cos_sep > 0.0)
         bins = np.digitize(cos_sep[m], bins=costh_edges) - 1
-        bins = np.clip(bins,0,nbin-1)        
+        bins = np.clip(bins, 0, nbin - 1)
         lt[:, i] = np.bincount(bins, weights=sc_live[m], minlength=nbin)
         lt_wt[:, i] = np.bincount(bins, weights=sc_live[m] * sc_lfrac[m],
                                   minlength=nbin)

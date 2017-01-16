@@ -15,7 +15,7 @@ def get_function_par_names(name):
     name : str
         Name of the function.
     """
-    
+
     fn_spec = get_function_spec(name)
     return copy.deepcopy(fn_spec['par_names'])
 
@@ -28,7 +28,7 @@ def get_function_norm_par_name(name):
     name : str
         Name of the function.
     """
-    
+
     fn_spec = get_function_spec(name)
     return fn_spec['norm_par']
 
@@ -49,21 +49,21 @@ def get_function_spec(name):
 
     norm_par : str
         Name of normalization parameter.
-    
+
     default : dict
         Parameter defaults dictionary.
     """
-    if not hasattr(get_function_spec,'fndict'):
+    if not hasattr(get_function_spec, 'fndict'):
         modelfile = os.path.join('$FERMIPY_ROOT',
-                                 'data','models.yaml')
+                                 'data', 'models.yaml')
         modelfile = os.path.expandvars(modelfile)
         get_function_spec.fndict = yaml.load(open(modelfile))
 
     if not name in get_function_spec.fndict.keys():
-        raise Exception('Invalid Function Name: %s'%name)
-        
+        raise Exception('Invalid Function Name: %s' % name)
+
     return get_function_spec.fndict[name]
-    
+
 
 def get_source_type(spatial_type):
     """Translate a spatial type string to a source type."""
@@ -82,15 +82,15 @@ def get_spatial_type(spatial_model):
         return 'SkyDirFunction'
     elif spatial_model in ['SpatialMap']:
         return 'SpatialMap'
-    elif spatial_model in ['RadialGaussian','RadialDisk']:
+    elif spatial_model in ['RadialGaussian', 'RadialDisk']:
         try:
-            import pyLikelihood        
-            if hasattr(pyLikelihood,'RadialGaussian'):
+            import pyLikelihood
+            if hasattr(pyLikelihood, 'RadialGaussian'):
                 return spatial_model
             else:
                 return 'SpatialMap'
         except Exception:
-            return spatial_model            
+            return spatial_model
     else:
         return spatial_model
 
@@ -103,19 +103,19 @@ def extract_pars_from_dict(name, src_dict):
     for k in par_names:
 
         o[k] = {}
-        
+
         if not k in src_dict:
             continue
 
         v = src_dict[k]
-        
+
         if isinstance(v, dict):
             o[k] = v.copy()
         else:
-            o[k] = {'name' : k, 'value' : v}
+            o[k] = {'name': k, 'value': v}
 
     return o
-            
+
 
 def create_pars_from_dict(name, pars_dict, rescale=True, update_bounds=False):
     """Create a dictionary for the parameters of a function.
@@ -131,34 +131,34 @@ def create_pars_from_dict(name, pars_dict, rescale=True, update_bounds=False):
 
     rescale : bool
         Rescale parameter values.
-        
+
     """
     o = get_function_defaults(name)
     pars_dict = pars_dict.copy()
-    
+
     for k in o.keys():
 
         if not k in pars_dict:
             continue
 
         v = pars_dict[k]
-        
-        if not isinstance(v,dict):
-            v = {'name' : k, 'value' : v}
-        
+
+        if not isinstance(v, dict):
+            v = {'name': k, 'value': v}
+
         o[k].update(v)
 
         kw = dict(update_bounds=update_bounds,
                   rescale=rescale)
-        
+
         if 'min' in v or 'max' in v:
             kw['update_bounds'] = False
 
         if 'scale' in v:
-            kw['rescale'] = False        
-        
+            kw['rescale'] = False
+
         o[k] = make_parameter_dict(o[k], **kw)
-    
+
     return o
 
 
@@ -172,17 +172,17 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True,
     """
     o = copy.deepcopy(pdict)
     o.setdefault('scale', 1.0)
-    
+
     if rescale:
-        value, scale = utils.scale_parameter(o['value']*o['scale'])
-        o['value'] = np.abs(value)*np.sign(o['value'])
-        o['scale'] = np.abs(scale)*np.sign(o['scale'])
+        value, scale = utils.scale_parameter(o['value'] * o['scale'])
+        o['value'] = np.abs(value) * np.sign(o['value'])
+        o['scale'] = np.abs(scale) * np.sign(o['scale'])
         if 'error' in o:
             o['error'] /= np.abs(scale)
 
     if update_bounds:
-        o['min'] = o['value']*1E-3
-        o['max'] = o['value']*1E3
+        o['min'] = o['value'] * 1E-3
+        o['max'] = o['value'] * 1E3
 
     if fixed_par:
         o['min'] = o['value']
@@ -193,7 +193,7 @@ def make_parameter_dict(pdict, fixed_par=False, rescale=True,
 
     if float(o['max']) < float(o['value']):
         o['max'] = o['value']
-        
+
     return o
 
 
@@ -201,14 +201,14 @@ def cast_pars_dict(pars_dict):
     """Cast the bool and float elements of a parameters dict to
     the appropriate python types.
     """
-    
+
     o = {}
 
     for pname, pdict in pars_dict.items():
 
         o[pname] = {}
 
-        for k,v in pdict.items():
+        for k, v in pdict.items():
 
             if k == 'free':
                 o[pname][k] = bool(int(v))
@@ -218,6 +218,3 @@ def cast_pars_dict(pars_dict):
                 o[pname][k] = float(v)
 
     return o
-
-
-
