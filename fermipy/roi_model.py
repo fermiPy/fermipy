@@ -723,8 +723,8 @@ class Source(Model):
             sp['Index']['scale'] = -1.0
 
             sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
-            sp['Scale'] = make_parameter_dict(sp['Scale'], True)
-            sp['Index'] = make_parameter_dict(sp['Index'])
+            sp['Scale'] = make_parameter_dict(sp['Scale'], True, False)
+            sp['Index'] = make_parameter_dict(sp['Index'], False, False)
 
         elif self['SpectrumType'] == 'LogParabola':
 
@@ -733,10 +733,10 @@ class Source(Model):
             sp['alpha']['value'] = catalog['Spectral_Index']
             sp['beta']['value'] = catalog['beta']
 
-            sp['norm'] = make_parameter_dict(sp['norm'])
-            sp['Eb'] = make_parameter_dict(sp['Eb'], True)
-            sp['alpha'] = make_parameter_dict(sp['alpha'])
-            sp['beta'] = make_parameter_dict(sp['beta'])
+            sp['norm'] = make_parameter_dict(sp['norm'], False, True)
+            sp['Eb'] = make_parameter_dict(sp['Eb'], True, False)
+            sp['alpha'] = make_parameter_dict(sp['alpha'], False, True)
+            sp['beta'] = make_parameter_dict(sp['beta'], False, True)
 
         elif self['SpectrumType'] == 'PLSuperExpCutoff':
 
@@ -754,10 +754,10 @@ class Source(Model):
             sp['Cutoff']['value'] = catalog['Cutoff']
 
             sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
-            sp['Scale'] = make_parameter_dict(sp['Scale'], True)
-            sp['Index1'] = make_parameter_dict(sp['Index1'])
-            sp['Index2'] = make_parameter_dict(sp['Index2'])
-            sp['Cutoff'] = make_parameter_dict(sp['Cutoff'])
+            sp['Scale'] = make_parameter_dict(sp['Scale'], True, False)
+            sp['Index1'] = make_parameter_dict(sp['Index1'], False, False)
+            sp['Index2'] = make_parameter_dict(sp['Index2'], False, False)
+            sp['Cutoff'] = make_parameter_dict(sp['Cutoff'], False, True)
 
         else:
             raise Exception('Unsupported spectral type:' +

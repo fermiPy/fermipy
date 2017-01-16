@@ -703,7 +703,7 @@ class TSMapGenerator(object):
         """
 
         schema = ConfigSchema(self.defaults['tsmap'])
-        schema.add_option('loglevel', False)
+        schema.add_option('loglevel', logging.INFO)
         schema.add_option('make_plots', False)
         schema.add_option('write_fits', True)
         schema.add_option('write_npy', True)
@@ -880,6 +880,7 @@ class TSMapGenerator(object):
             p = [[k // 2, i, j] for k in enumbins]
             positions += [p]
 
+        self.logger.log(loglevel, 'Fitting test source.')
         if multithread:
             pool = Pool()
             results = pool.map(wrap, positions)
