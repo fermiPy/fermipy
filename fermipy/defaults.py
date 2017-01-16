@@ -24,6 +24,14 @@ common = {
                        'with the source of interest.', bool),
     'free_radius': (None, 'Free normalizations of background sources within this angular distance in degrees '
                     'from the source of interest.  If None then no sources will be freed.', float),
+    'make_plots' : (False, 'Generate diagnostic plots.', bool),    
+    'write_fits' : (True, 'Write the output to a FITS file.', bool),
+    'write_npy' : (True, 'Write the output dictionary to a numpy file.', bool),
+    'loge_bounds' :  (None, 'Restrict the analysis to an energy range (emin,emax) in '
+                      'log10(E/MeV) that is a subset of the analysis energy range. '
+                      'By default the full analysis energy range will be used.  If '
+                      'either emin/emax are None then only an upper/lower bound on '
+                      'the energy range wil be applied.', list),
 }
 
 # Options for defining input data files
@@ -237,16 +245,28 @@ roiopt_output = {
 
 # Residual Maps
 residmap = {
-    'model': (None, 'Dictionary defining the properties of the test source.  By default the test source will be a PointSource with an Index 2 power-law specturm.', dict),
-    'loge_bounds': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
+    'model': (None, 'Dictionary defining the properties of the test source.', dict),
+    'exclude': (None, 'List of sources that will be removed from the model when '
+                'computing the residual map.', list),
+    'loge_bounds': common['loge_bounds'],
+    'make_plots' : common['make_plots'],
+    'write_fits' : common['write_fits'],
+    'write_npy' : common['write_npy'],
 }
 
 # TS Map
 tsmap = {
     'model': (None, 'Dictionary defining the properties of the test source.', dict),
+    'exclude': (None, 'List of sources that will be removed from the model when '
+                'computing the TS map.', list),
     'multithread': (False, 'Split the TS map calculation across multiple cores.', bool),
-    'max_kernel_radius': (3.0, '', float),
-    'loge_bounds': (None, 'Lower and upper energy bounds in log10(E/MeV).  By default the calculation will be performed over the full analysis energy range.', list),
+    'max_kernel_radius': (3.0, 'Set the maximum radius of the test source kernel.  Using a '
+                          'smaller value will speed up the TS calculation at the loss of '
+                          'accuracy.', float),
+    'loge_bounds': common['loge_bounds'],
+    'make_plots' : common['make_plots'],
+    'write_fits' : common['write_fits'],
+    'write_npy' : common['write_npy'],
 }
 
 # TS Cube
@@ -280,7 +300,7 @@ sourcefind = {
 # Options for lightcurve analysis
 lightcurve = {
     'use_local_ltcube': (True, '', bool),
-    'binsz': (86400.0, 'Set the lightcurve bin size in seconds, default is 1 day.', float),
+    'binsz': (86400.0, 'Set the lightcurve bin size in seconds.', float),
     'nbins': (None, 'Set the number of lightcurve bins.  The total time range will be evenly '
               'split into this number of time bins.', int),
     'time_bins': (None, 'Set the lightcurve bin edge sequence in MET.  This option '
@@ -288,7 +308,10 @@ lightcurve = {
     'free_background': common['free_background'],
     'free_radius': common['free_radius'],
     'free_sources': (None, 'List of sources to be freed.  These sources will be added to the list of sources '
-                     'satisfying the free_radius selection.', list)
+                     'satisfying the free_radius selection.', list),
+    'make_plots' : common['make_plots'],
+    'write_fits' : common['write_fits'],
+    'write_npy' : common['write_npy'],
 }
 
 # Output for lightcurve Analysis
@@ -320,10 +343,13 @@ sed = {
                         'will be used.', bool),
     'free_background': common['free_background'],
     'free_radius': common['free_radius'],
-    'ul_confidence': (0.95, 'Confidence level for upper limit calculation.',
+    'ul_confidence': (0.95, 'Confidence level for flux upper limit.',
                       float),
     'cov_scale': (3.0, 'Scale factor that sets the strength of the prior on nuisance '
-                  'parameters that are free.  Setting this to None disables the prior.', float)
+                  'parameters that are free.  Setting this to None disables the prior.', float),
+    'make_plots' : common['make_plots'],
+    'write_fits' : common['write_fits'],
+    'write_npy' : common['write_npy'],
 }
 
 # Output for SED analysis
@@ -449,6 +475,9 @@ extension = {
                      'by linearly interpolating the fractional correction factors f in log(E).  The '
                      'corrected PSF is given by P\'(x;E) = P(x/(1+f(E));E) where x is the angular separation.',
                      tuple),
+    'make_plots' : common['make_plots'],
+    'write_fits' : common['write_fits'],
+    'write_npy' : common['write_npy'],
 }
 
 extension_output = OrderedDict((
@@ -474,11 +503,18 @@ extension_output = OrderedDict((
 
 # Options for localization analysis
 localize = {
-    'nstep': (5, 'Number of steps along each spatial dimension in the refined likelihood scan.', int),
+    'nstep': (5, 'Number of steps in longitude/latitude that will be taken '
+              'when refining the source position.  The bounds of the scan '
+              'range are set to the 99% positional uncertainty as '
+              'determined from the TS map peak fit.  The total number of '
+              'sampling points will be nstep**2.', int),
     'dtheta_max': (0.5, 'Half-width of the search region in degrees used for the first pass of the localization search.', float),
     'free_background': common['free_background'],
     'free_radius': common['free_radius'],
-    'update': (True, 'Update the source model with the best-fit position.', bool)
+    'update': (True, 'Update the source model with the best-fit position.', bool),
+    'make_plots' : common['make_plots'],
+    'write_fits' : common['write_fits'],
+    'write_npy' : common['write_npy'],
 }
 
 # Output for localization analysis

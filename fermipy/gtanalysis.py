@@ -439,7 +439,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     __metaclass__ = DocstringMeta
 
-    _docstring_registry = {'extension' : defaults.extension}
+    _docstring_registry = {
+        'extension' : defaults.extension,
+        'sed' : defaults.sed,
+        'localize' : defaults.localize,
+        'tsmap' : defaults.tsmap,
+        'residmap' : defaults.residmap,
+        'lightcurve' : defaults.lightcurve,
+    }
 
     defaults = {'logging': defaults.logging,
                 'fileio': defaults.fileio,

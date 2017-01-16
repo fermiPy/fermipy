@@ -666,33 +666,7 @@ class TSMapGenerator(object):
            Optional string that will be prepended to all output files
            (FITS and rendered images).
 
-        model : dict
-           Dictionary defining the properties of the test source.
-
-        exclude : list
-            Source or sources that will be removed from the model when
-            computing the TS map.
-
-        loge_bounds : list
-           Restrict the analysis to an energy range (emin,emax) in
-           log10(E/MeV) that is a subset of the analysis energy range.
-           By default the full analysis energy range will be used.  If
-           either emin/emax are None then only an upper/lower bound on
-           the energy range wil be applied.
-
-        max_kernel_radius : float
-           Set the maximum radius of the test source kernel.  Using a
-           smaller value will speed up the TS calculation at the loss of
-           accuracy.  The default value is 3 degrees.
-
-        make_plots : bool
-           Generate plots.
-
-        write_fits : bool
-           Write the output to a FITS file.
-
-        write_npy : bool
-           Write the output dictionary to a numpy file.
+        {options}
 
         Returns
         -------
@@ -704,12 +678,8 @@ class TSMapGenerator(object):
 
         schema = ConfigSchema(self.defaults['tsmap'])
         schema.add_option('loglevel', logging.INFO)
-        schema.add_option('make_plots', False)
-        schema.add_option('write_fits', True)
-        schema.add_option('write_npy', True)
         schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)
         schema.add_option('map_size', 1.0)
-        schema.add_option('exclude', None, '', list)
         schema.add_option('threshold', 1E-2, '', float)
         config = schema.create_config(self.config['tsmap'], **kwargs)
 

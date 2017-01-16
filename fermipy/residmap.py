@@ -134,36 +134,13 @@ class ResidMapGenerator(object):
 
         Parameters
         ----------
-
         prefix : str
             String that will be prefixed to the output residual map files.
 
-        model : dict
-           Dictionary defining the properties of the convolution kernel.
-
-        exclude : str or list of str
-            Source or sources that will be removed from the model when
-            computing the residual map.
-
-        loge_bounds : list
-           Restrict the analysis to an energy range (emin,emax) in
-           log10(E/MeV) that is a subset of the analysis energy range.
-           By default the full analysis energy range will be used.  If
-           either emin/emax are None then only an upper/lower bound on
-           the energy range wil be applied.
-
-        make_plots : bool
-           Generate plots.
-
-        write_fits : bool
-           Write the output to a FITS file.
-
-        write_npy : bool
-           Write the output dictionary to a numpy file.
+        {options}
 
         Returns
         -------
-
         maps : dict
            A dictionary containing the `~fermipy.utils.Map` objects
            for the residual significance and amplitude.    
@@ -172,8 +149,9 @@ class ResidMapGenerator(object):
 
         self.logger.info('Generating residual maps')
 
-        config = copy.deepcopy(self.config['residmap'])
-        config = utils.merge_dict(config,kwargs,add_new_keys=True)
+        schema = ConfigSchema(self.defaults['residmap'])
+
+        config = schema.create_config(self.config['residmap'], **kwargs)
 
         # Defining default properties of test source model
         config['model'].setdefault('Index', 2.0)
@@ -181,10 +159,9 @@ class ResidMapGenerator(object):
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
 
-        make_plots = kwargs.get('make_plots', False)
-        maps = self._make_residual_map(prefix,config,**kwargs)
+        maps = self._make_residual_map(prefix, **config)
 
-        if make_plots:
+        if config['make_plots']:
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
@@ -195,14 +172,14 @@ class ResidMapGenerator(object):
 
         return maps
 
-    def _make_residual_map(self, prefix, config, **kwargs):
+    def _make_residual_map(self, prefix, **kwargs):
 
         write_fits = kwargs.get('write_fits', True)
         write_npy = kwargs.get('write_npy', True)
 
-        src_dict = copy.deepcopy(config.setdefault('model',{}))        
-        exclude = config.setdefault('exclude', None)
-        loge_bounds = config.setdefault('loge_bounds', None)
+        src_dict = copy.deepcopy(kwargs.setdefault('model',{}))        
+        exclude = kwargs.setdefault('exclude', None)
+        loge_bounds = kwargs.setdefault('loge_bounds', None)
 
         if loge_bounds is not None:            
             if len(loge_bounds) == 0:
@@ -299,7 +276,7 @@ class ResidMapGenerator(object):
              'model': model_map,
              'data': data_map,
              'excess': excess_map,
-             'config': config }
+             'config': kwargs }
 
         fits_file = utils.format_filename(self.config['fileio']['workdir'],
                                           'residmap.fits',

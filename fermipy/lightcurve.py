@@ -41,25 +41,7 @@ class LightCurve(object):
         name: str
             source name
 
-        binsz : float
-            Set the lightcurve bin size in seconds, default is 1 day.
-
-        nbins : int
-            Set the number of lightcurve bins.  The total time range
-            will be evenly split into this number of time bins.
-
-        time_bins : list
-            Set the lightcurve bin edge sequence in MET.  When defined
-            this option takes precedence over binsz and nbins.
-
-        free_radius : float
-            Free normalizations of background sources within this
-            angular distance in degrees from the source of interest.
-
-        free_sources : list
-            List of sources to be freed.  These sources will be added
-            to the list of sources satisfying the free_radius
-            selection
+        {options}
 
         Returns
         ---------
@@ -74,8 +56,6 @@ class LightCurve(object):
         schema = ConfigSchema(self.defaults['lightcurve'],
                               optimizer=self.defaults['optimizer'])
         schema.add_option('prefix', '')
-        schema.add_option('write_fits', True)
-        schema.add_option('write_npy', True)
         config = utils.create_dict(self.config['lightcurve'],
                                    optimizer=self.config['optimizer'])
         config = schema.create_config(config, **kwargs)

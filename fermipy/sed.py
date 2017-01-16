@@ -54,39 +54,7 @@ class SEDGenerator(object):
             sequence must align with the bin edges of the underyling
             analysis instance.
 
-        bin_index : float
-            Spectral index that will be use when fitting the energy
-            distribution within an energy bin.
-
-        use_local_index : bool
-            Use a power-law approximation to the shape of the global
-            spectrum in each bin.  If this is false then a constant
-            index set to `bin_index` will be used.
-
-        fix_background : bool
-            Fix background components when fitting the flux
-            normalization in each energy bin.  If fix_background=False
-            then all background parameters that are currently free in
-            the fit will be profiled.  By default fix_background=True.
-
-        ul_confidence : float
-            Set the confidence level that will be used for the
-            calculation of flux upper limits in each energy bin.
-
-        cov_scale : float
-            Scaling factor that will be applied when setting the
-            gaussian prior on the normalization of free background
-            sources.  If this parameter is None then no gaussian prior
-            will be applied.
-
-        make_plots : bool
-            Generate plots.
-
-        write_fits : bool
-            Write the output to a FITS file.
-
-        write_npy : bool
-            Write the output dictionary to a numpy file.
+        {options}
 
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
@@ -104,9 +72,6 @@ class SEDGenerator(object):
         schema = ConfigSchema(self.defaults['sed'],
                               optimizer=self.defaults['optimizer'])
         schema.add_option('prefix', '')
-        schema.add_option('make_plots', False)
-        schema.add_option('write_fits', True)
-        schema.add_option('write_npy', True)
         schema.add_option('loge_bins', None, '', list)
         config = utils.create_dict(self.config['sed'],
                                    optimizer=self.config['optimizer'])
@@ -226,7 +191,7 @@ class SEDGenerator(object):
 
         bin_index = config['bin_index']
         use_local_index = config['use_local_index']
-        fix_background = config['fix_background']
+        free_background = config['free_background']
         free_radius = config['free_radius']
         ul_confidence = config['ul_confidence']
         cov_scale = config['cov_scale']
@@ -339,7 +304,7 @@ class SEDGenerator(object):
         self.free_sources(False, pars='shape')
         self.free_norm(name)
 
-        if fix_background:
+        if not free_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
 
         if free_radius is not None:

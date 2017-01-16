@@ -260,33 +260,7 @@ class SourceFind(object):
         name : str
             Source name.
 
-        dtheta_max : float
-            Maximum offset in RA/DEC in deg from the nominal source
-            position that will be used to define the boundaries of the
-            TS map search region.
-
-        nstep : int
-            Number of steps in longitude/latitude that will be taken
-            when refining the source position.  The bounds of the scan
-            range are set to the 99% positional uncertainty as
-            determined from the TS map peak fit.  The total number of
-            sampling points will be nstep**2.
-
-        fix_background : bool
-            Fix background parameters when fitting the source position.
-
-        update : bool
-            Update the model for this source with the best-fit
-            position.
-
-        make_plots : bool
-           Generate plots.
-
-        write_fits : bool
-           Write the output to a FITS file.
-
-        write_npy : bool
-           Write the output dictionary to a numpy file.
+        {options}
 
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
@@ -295,17 +269,13 @@ class SourceFind(object):
         -------
         localize : dict
             Dictionary containing results of the localization
-            analysis.  This dictionary is also saved to the
-            dictionary of this source in 'localize'.
+            analysis.
 
         """
         name = self.roi.get_source_by_name(name).name
 
         schema = ConfigSchema(self.defaults['localize'],
                               optimizer=self.defaults['optimizer'])
-        schema.add_option('make_plots', False)
-        schema.add_option('write_fits', True)
-        schema.add_option('write_npy', True)
         schema.add_option('use_cache', True)
         schema.add_option('prefix', '')
         config = utils.create_dict(self.config['localize'],
@@ -358,12 +328,12 @@ class SourceFind(object):
         update = kwargs.get('update', True)
         prefix = kwargs.get('prefix', '')
         use_cache = kwargs.get('use_cache', False)
-        fix_background = kwargs.get('fix_background', True)
+        free_background = kwargs.get('free_background', False)
         free_radius = kwargs.get('free_radius', None)
         
         saved_state = LikelihoodState(self.like)
 
-        if fix_background:
+        if not free_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
 
         if free_radius is not None:

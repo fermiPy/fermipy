@@ -53,8 +53,6 @@ class ExtensionFit(object):
         schema = ConfigSchema(self.defaults['extension'],
                               optimizer=self.defaults['optimizer'])
         schema.add_option('prefix', '')
-        schema.add_option('write_fits', True)
-        schema.add_option('write_npy', True)
         config = utils.create_dict(self.config['extension'],
                                    optimizer=self.config['optimizer'])
         config = schema.create_config(config, **kwargs)
@@ -86,7 +84,7 @@ class ExtensionFit(object):
         width_max = kwargs['width_max']
         width_nstep = kwargs['width_nstep']
         width = kwargs['width']
-        fix_background = kwargs['fix_background']
+        free_background = kwargs['free_background']
         free_radius = kwargs.get('free_radius', None)
         update = kwargs['update']
         sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
@@ -101,7 +99,7 @@ class ExtensionFit(object):
 
         saved_state = LikelihoodState(self.like)
 
-        if fix_background:
+        if not free_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
 
         if free_radius is not None:
