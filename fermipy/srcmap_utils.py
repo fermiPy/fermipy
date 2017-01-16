@@ -16,7 +16,6 @@ class MapInterpolator(object):
 
     def __init__(self, data, pix_ref, shape_out, rebin):
 
-
         self._data = data
         self._data_spline = []
         for i in range(data.shape[0]):
@@ -33,10 +32,10 @@ class MapInterpolator(object):
         self._shape_out = shape_out
 
         self._shape = np.array(self.data.shape)
-        for i in range(1,self.data.ndim):
-            self._shape[i] = int(self._shape[i]/self.rebin)
+        for i in range(1, self.data.ndim):
+            self._shape[i] = int(self._shape[i] / self.rebin)
         self._shape = tuple(self._shape)
-        
+
         # Reference pixel coordinates
         self._pix_ref = pix_ref
 
@@ -51,7 +50,7 @@ class MapInterpolator(object):
     @property
     def shape_out(self):
         return self._shape_out
-    
+
     @property
     def rebin(self):
         return self._rebin
@@ -59,7 +58,7 @@ class MapInterpolator(object):
     @property
     def ndim(self):
         return self._data.ndim
-    
+
     def get_offsets(self, pix):
         """Get offset of the first pixel in each dimension in the
         global coordinate system.
@@ -69,42 +68,43 @@ class MapInterpolator(object):
         pix : `~numpy.ndarray`
             Pixel coordinates in global coordinate system.
         """
-        
+
         idx = []
         for i in range(self.ndim):
 
             if i == 0:
                 idx += [0]
-            else:            
+            else:
                 npix1 = int(self.shape[i])
-                pix0 = int(pix[i-1]) - npix1//2
+                pix0 = int(pix[i - 1]) - npix1 // 2
                 idx += [pix0]
-            
+
         return idx
-                
+
     def shift_to_coords(self, pix, fill_value=np.nan):
         """Create a new map that is shifted to the pixel coordinates
         ``pix``."""
 
         pix_offset = self.get_offsets(pix)
-        dpix = np.zeros(len(self.shape)-1)
-        for i in range(len(self.shape)-1):
-            x = self.rebin*(pix[i] - pix_offset[i+1]) + (self.rebin-1.0)/2.
+        dpix = np.zeros(len(self.shape) - 1)
+        for i in range(len(self.shape) - 1):
+            x = self.rebin * (pix[i] - pix_offset[i + 1]
+                              ) + (self.rebin - 1.0) / 2.
             dpix[i] = x - self._pix_ref[i]
 
-        pos = [pix_offset[i]+self.shape[i]//2
-               for i  in range(self.data.ndim)]
+        pos = [pix_offset[i] + self.shape[i] // 2
+               for i in range(self.data.ndim)]
         s0, s1 = utils.overlap_slices(self.shape_out, self.shape, pos)
-            
+
         k = np.zeros(self.data.shape)
         for i in range(k.shape[0]):
             k[i] = shift(self._data_spline[i], dpix, cval=np.nan,
                          order=2, prefilter=False)
 
-        for i in range(1,len(self.shape)):            
+        for i in range(1, len(self.shape)):
             k = utils.sum_bins(k, i, self.rebin)
 
-        k0 = np.ones(self.shape_out)*fill_value
+        k0 = np.ones(self.shape_out) * fill_value
 
         if k[s1].size == 0 or k0[s0].size == 0:
             return k0
@@ -136,7 +136,7 @@ class SourceMapCache(object):
         """
         k0 = self._m0.shift_to_coords(pix)
         k1 = self._m1.shift_to_coords(pix)
-        
+
         k0[np.isfinite(k1)] = k1[np.isfinite(k1)]
         k0[~np.isfinite(k0)] = 0
         return k0
@@ -146,11 +146,11 @@ class SourceMapCache(object):
                rebin=4):
 
         npix = shape_out[1]
-        pad_pix = npix//2
-        
+        pad_pix = npix // 2
+
         xpix = (npix + pad_pix - 1.0) / 2.
         ypix = (npix + pad_pix - 1.0) / 2.
-        pix_ref = np.array([ypix, xpix])        
+        pix_ref = np.array([ypix, xpix])
 
         k0 = make_srcmap(psf, spatial_model, spatial_width,
                          npix=npix + pad_pix,
@@ -160,7 +160,7 @@ class SourceMapCache(object):
 
         m0 = MapInterpolator(k0, pix_ref, shape_out, 1)
 
-        npix1 = max(10,int(0.5/cdelt)) * rebin
+        npix1 = max(10, int(0.5 / cdelt)) * rebin
         xpix1 = (npix1 - 1.0) / 2.
         ypix1 = (npix1 - 1.0) / 2.
         pix_ref = np.array([ypix1, xpix1])
@@ -206,11 +206,11 @@ def make_srcmap(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
 
     """
     if rebin > 1:
-        npix = npix*rebin
-        xpix = xpix*rebin + (rebin-1.0)/2.
-        ypix = ypix*rebin + (rebin-1.0)/2.
-        cdelt = cdelt/rebin
-    
+        npix = npix * rebin
+        xpix = xpix * rebin + (rebin - 1.0) / 2.
+        ypix = ypix * rebin + (rebin - 1.0) / 2.
+        cdelt = cdelt / rebin
+
     if spatial_model == 'RadialGaussian':
         k = utils.make_cgauss_kernel(psf, sigma, npix, cdelt,
                                      xpix, ypix, psf_scale_fn)
@@ -224,8 +224,8 @@ def make_srcmap(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
         raise Exception('Unsupported spatial model: %s', spatial_model)
 
     if rebin > 1:
-        k = utils.sum_bins(k,1,rebin)
-        k = utils.sum_bins(k,2,rebin)
+        k = utils.sum_bins(k, 1, rebin)
+        k = utils.sum_bins(k, 2, rebin)
 
     k *= psf.exp[:, np.newaxis, np.newaxis] * np.radians(cdelt) ** 2
     return k
