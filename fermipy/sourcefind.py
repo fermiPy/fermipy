@@ -17,6 +17,7 @@ from fermipy.sourcefind_utils import find_peaks
 from fermipy.skymap import Map
 from fermipy.config import ConfigSchema
 from fermipy.gtutils import FreeParameterState, SourceMapState
+from fermipy.model_utils import get_function_norm_par_name
 from LikelihoodState import LikelihoodState
 import pyLikelihood as pyLike
 
@@ -143,7 +144,8 @@ class SourceFind(object):
 
             name = utils.create_source_name(skydir)
             src_dict = copy.deepcopy(src_dict_template)
-            src_dict.update({'Prefactor': amp.counts[p['iy'], p['ix']],
+            norm_par = get_function_norm_par_name(src_dict_template['SpectrumType'])
+            src_dict.update({norm_par: amp.counts[p['iy'], p['ix']],
                              'ra': skydir.icrs.ra.deg,
                              'dec': skydir.icrs.dec.deg})
 
