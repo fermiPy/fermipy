@@ -577,9 +577,6 @@ source_meta_output = OrderedDict((
     ('model_counts', (None, 'Vector of predicted counts for this source in each analysis energy bin.',
                       np.ndarray, '`~numpy.ndarray`')),
     ('sed', (None, 'Output of SED analysis.  See :ref:`sed` for more information.', dict, 'dict')),
-    ('extension', (None, 'Output of extension analysis.  See :ref:`extension` for more information.', dict, 'dict')),
-    ('localize', (None, 'Output of localization analysis.  See :ref:`localization` for more information.', dict, 'dict')),
-    ('lightcurve', (None, 'Output of lightcurve analysis.  See :ref:`lightcurve` for more information.', dict, 'dict')),
 ))
 
 source_pos_output = OrderedDict((
