@@ -176,7 +176,10 @@ class SourceFind(object):
         search_skydir = kwargs.get('search_skydir', None)
         search_minmax_radius = kwargs.get('search_minmax_radius', [None, 1.0])
         tsmap_fitter = kwargs.get('tsmap_fitter', 'tsmap')
-
+        free_params = kwargs.get('free_params', None)
+        if not free_params:
+            free_params = None
+        
         if tsmap_fitter == 'tsmap':
             kw = kwargs.get('tsmap', {})
             kw['model'] = src_dict_template
@@ -236,7 +239,7 @@ class SourceFind(object):
         for name in new_src_names:
             self.logger.info('Performing spectral fit for %s.', name)
             self.logger.debug(pprint.pformat(self.roi[name].params))
-            self.free_source(name, True)
+            self.free_source(name, True, pars=free_params)
             self.fit()
             self.logger.info(pprint.pformat(self.roi[name].params))
             self.free_source(name, False)
@@ -550,7 +553,6 @@ class SourceFind(object):
                                        use_pylike=use_pylike)
             fit_output = self._fit(loglevel=logging.DEBUG,
                                    **optimizer)
-            print(fit_output['loglike'])
             loglike += [fit_output['loglike']]
 
         self.set_source_morphology(name, spatial_pars=src.spatial_pars,

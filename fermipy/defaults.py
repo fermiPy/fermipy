@@ -294,7 +294,8 @@ sourcefind = {
     'sqrt_ts_threshold': (5.0, 'Set the threshold on sqrt(TS).', float),
     'max_iter': (3, 'Set the number of search iterations.', int),
     'sources_per_iter': (3, '', int),
-    'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.', str)
+    'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.', str),
+    'free_params': (None, '', list)
 }
 
 # Options for lightcurve analysis
