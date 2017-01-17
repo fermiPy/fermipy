@@ -60,6 +60,8 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None):
     islice = slice(imin, imax)
 
     o = np.zeros(m[islice, ...].shape)
+    ix = int(cpix[0])
+    iy = int(cpix[1])
 
     # Loop over energy
     for i in range(m[islice, ...].shape[0]):
@@ -67,20 +69,20 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None):
         ks = k[islice, ...][i, ...]
         ms = m[islice, ...][i, ...]
 
-        mx = ks[cpix[0], :] > ks[cpix[0], cpix[1]] * threshold
-        my = ks[:, cpix[1]] > ks[cpix[0], cpix[1]] * threshold
+        mx = ks[ix, :] > ks[ix, iy] * threshold
+        my = ks[:, iy] > ks[ix, iy] * threshold
 
-        nx = max(3, np.round(np.sum(mx) / 2.))
-        ny = max(3, np.round(np.sum(my) / 2.))
+        nx = int(max(3, np.round(np.sum(mx) / 2.)))
+        ny = int(max(3, np.round(np.sum(my) / 2.)))
 
         # Ensure that there is an odd number of pixels in the kernel
         # array
-        if cpix[0] + nx + 1 >= ms.shape[0] or cpix[0] - nx < 0:
+        if ix + nx + 1 >= ms.shape[0] or ix - nx < 0:
             nx -= 1
             ny -= 1
 
-        sx = slice(cpix[0] - nx, cpix[0] + nx + 1)
-        sy = slice(cpix[1] - ny, cpix[1] + ny + 1)
+        sx = slice(ix - nx, ix + nx + 1)
+        sy = slice(iy - ny, iy + ny + 1)
 
         ks = ks[sx, sy]
 
