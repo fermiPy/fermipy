@@ -227,21 +227,14 @@ class Model(object):
     def __init__(self, name, data):
 
         self._data = defaults.make_default_dict(defaults.source_output)
-        self._data['spectral_pars'] = get_function_defaults(
-            data['SpectrumType'])
+        self._data['spectral_pars'] = get_function_defaults(data['SpectrumType'])
         self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
-        self._data.setdefault('catalog', {})
-        self._data['spectral_pars'] = utils.merge_dict(self._data['spectral_pars'],
-                                                       data.pop('spectral_pars', {}))
-        self._data['spatial_pars'] = utils.merge_dict(self._data['spatial_pars'],
-                                                      data.pop('spatial_pars', {}))
-
-        self._data.update(data)
-
-        self._data['assoc'] = {}
+        self._data.setdefault('catalog', data.pop('catalog', {}))
+        self._data.setdefault('assoc', data.pop('assoc', {}))
+        self._data.setdefault('class', '')
         self._data['name'] = name
-        self._data['class'] = ''
-        self._data['psf_scale_fn'] = None
+        self._data.setdefault('psf_scale_fn', None)
+        self._data = utils.merge_dict(self._data, data)        
         self._names = [name]
         catalog = self._data['catalog']
 
@@ -902,9 +895,9 @@ class Source(Model):
                     del spatial_pars[k]
 
         spectral_pars = create_pars_from_dict(spectrum_type, spectral_pars,
-                                              rescale, False)
+                                              rescale)
         spatial_pars = create_pars_from_dict(spatial_type, spatial_pars,
-                                             False, False)
+                                             False)
 
         if 'file' in src_dict:
             src_dict['Spectrum_Filename'] = src_dict.pop('file')

@@ -272,6 +272,8 @@ def test_create_source_from_dict(tmppath):
     assert src['SpatialType'] == 'SkyDirFunction'
     assert src['SourceType'] == 'PointSource'
     assert src.extended is False
+    assert 'Prefactor' not in src.data
+    assert 'Index' not in src.data
 
     src = Source.create_from_dict({'name': 'testsrc',
                                    'SpatialModel': 'PointSource',

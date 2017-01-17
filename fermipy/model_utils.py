@@ -107,7 +107,7 @@ def extract_pars_from_dict(name, src_dict):
         if not k in src_dict:
             continue
 
-        v = src_dict[k]
+        v = src_dict.pop(k)
 
         if isinstance(v, dict):
             o[k] = v.copy()
