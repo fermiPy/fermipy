@@ -735,8 +735,8 @@ class Source(Model):
 
             sp['norm'] = make_parameter_dict(sp['norm'], False, True)
             sp['Eb'] = make_parameter_dict(sp['Eb'], True, False)
-            sp['alpha'] = make_parameter_dict(sp['alpha'], False, True)
-            sp['beta'] = make_parameter_dict(sp['beta'], False, True)
+            sp['alpha'] = make_parameter_dict(sp['alpha'], False, False)
+            sp['beta'] = make_parameter_dict(sp['beta'], False, False)
 
         elif self['SpectrumType'] == 'PLSuperExpCutoff':
 
@@ -821,6 +821,10 @@ class Source(Model):
         if update_pars:
             self._data['spatial_pars'] = get_function_defaults(
                 self['SpatialType'])
+
+        if spatial_model == 'PointSource':
+            self._data['SpatialWidth'] = None
+
         self._init_spatial_pars(**spatial_pars)
 
     def separation(self, src):
