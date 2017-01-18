@@ -72,6 +72,7 @@ class SEDGenerator(object):
         schema = ConfigSchema(self.defaults['sed'],
                               optimizer=self.defaults['optimizer'])
         schema.add_option('prefix', '')
+        schema.add_option('outfile', None, '', str)
         schema.add_option('loge_bins', None, '', list)
         config = utils.create_dict(self.config['sed'],
                                    optimizer=self.config['optimizer'])
@@ -80,23 +81,28 @@ class SEDGenerator(object):
         self.logger.info('Computing SED for %s' % name)
 
         o = self._make_sed(name, **config)
-        filename = \
-            utils.format_filename(self.workdir, 'sed',
-                                  prefix=[config['prefix'],
-                                          name.lower().replace(' ', '_')])
 
+        self.logger.info('Finished SED')
+        
+        outfile = config.get('outfile', None)
+        if outfile is None:        
+            outfile = utils.format_filename(self.workdir, 'sed',
+                                            prefix=[config['prefix'],
+                                                    name.lower().replace(' ', '_')])
+        else:
+            outfile = os.path.join(self.workdir,
+                                   os.path.splitext(outfile)[0])
+        
         o['file'] = None
         if config['write_fits']:
-            o['file'] = os.path.basename(filename) + '.fits'
-            self._make_sed_fits(o, filename + '.fits', **config)
+            o['file'] = os.path.basename(outfile) + '.fits'
+            self._make_sed_fits(o, outfile + '.fits', **config)
 
         if config['write_npy']:
-            np.save(filename + '.npy', o)
+            np.save(outfile + '.npy', o)
 
         if config['make_plots']:
             self._plotter.make_sed_plots(o, **config)
-
-        self.logger.info('Finished SED')
 
         return o
 
