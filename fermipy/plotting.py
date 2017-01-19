@@ -365,8 +365,8 @@ class ROIPlotter(fermipy.config.Configurable):
 
         if self._loge_bounds:
             axes = wcs_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
-            i0 = utils.val_to_edge(axes[2], self._loge_bounds[0])
-            i1 = utils.val_to_edge(axes[2], self._loge_bounds[1])
+            i0 = utils.val_to_edge(axes[2], self._loge_bounds[0])[0]
+            i1 = utils.val_to_edge(axes[2], self._loge_bounds[1])[0]
             imdata = self._data[:, :, i0:i1]
         else:
             imdata = self._data
@@ -439,19 +439,19 @@ class ROIPlotter(fermipy.config.Configurable):
         s2 = slice(None, None)
 
         if iaxis == 0:
-            i0 = utils.val_to_edge(axes[iaxis], xmin)
-            i1 = utils.val_to_edge(axes[iaxis], xmax)
+            i0 = utils.val_to_edge(axes[iaxis], xmin)[0]
+            i1 = utils.val_to_edge(axes[iaxis], xmax)[0]
             s1 = slice(i0, i1)
             saxes = [1, 2]
         else:
-            i0 = utils.val_to_edge(axes[iaxis], xmin)
-            i1 = utils.val_to_edge(axes[iaxis], xmax)
+            i0 = utils.val_to_edge(axes[iaxis], xmin)[0]
+            i1 = utils.val_to_edge(axes[iaxis], xmax)[0]
             s0 = slice(i0, i1)
             saxes = [0, 2]
 
         if loge_bounds is not None:
-            j0 = utils.val_to_edge(axes[2], loge_bounds[0])
-            j1 = utils.val_to_edge(axes[2], loge_bounds[1])
+            j0 = utils.val_to_edge(axes[2], loge_bounds[0])[0]
+            j1 = utils.val_to_edge(axes[2], loge_bounds[1])[0]
             s2 = slice(j0, j1)
 
         c = np.apply_over_axes(np.sum, data[s0, s1, s2], axes=saxes)
@@ -557,7 +557,7 @@ class ROIPlotter(fermipy.config.Configurable):
         im_kwargs = dict(cmap=self.config['cmap'],
                          interpolation='nearest',
                          vmin=None, vmax=None, levels=None,
-                         zscale='lin', subplot=111)
+                         zscale='lin', subplot=111, colors=['k'])
 
         cb_kwargs = dict(orientation='vertical', shrink=1.0, pad=0.1,
                          fraction=0.1, cb_label=None)
@@ -1343,10 +1343,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p = ROIPlotter(tsmap_renorm, roi=roi)
         fig = plt.figure()
 
-        vmin = max(-50.0, np.min(tsmap_renorm.data))
+        vmin = max(-100.0, np.min(tsmap_renorm.data))
 
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
-               cmap=cmap, vmin=vmin,
+               cmap=cmap, vmin=vmin, colors=['k'],
                interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
@@ -1399,7 +1399,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         vmin = max(-50.0, np.min(tsmap_renorm.data))
 
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
-               cmap=cmap, vmin=vmin,
+               cmap=cmap, vmin=vmin, colors=['k'],
                interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
