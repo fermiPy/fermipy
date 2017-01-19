@@ -8,6 +8,7 @@ import logging
 import tempfile
 import filecmp
 import time
+import json
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table, Column, vstack
@@ -3514,7 +3515,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.write_xml(xmlfile)
         self.logger.info('Writing %s...', fitsfile)
-        self.roi.write_fits(fitsfile)
+
+        tab = self.roi.create_table()
+        hdu_data = fits.table_to_hdu(tab)
+        hdus = [fits.PrimaryHDU(), hdu_data]
+        hdus[0].header['CONFIG'] = json.dumps(self.config)
+        hdus[1].header['CONFIG'] = json.dumps(self.config)
+        fits_utils.write_hdus(hdus, fitsfile)
 
         if not self.config['gtlike']['use_external_srcmap']:
             for c in self.components:
@@ -3527,6 +3534,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         o['roi'] = copy.deepcopy(self._roi_model)
         o['config'] = copy.deepcopy(self.config)
         o['version'] = fermipy.__version__
+        o['stversion'] = fermipy.get_st_version()
         o['sources'] = {}
 
         for s in self.roi.sources:
