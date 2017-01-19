@@ -8,7 +8,11 @@ from fermipy import utils
 
 
 def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
-    """Fit a positional uncertainty ellipse from a TS map.
+    """Fit a positional uncertainty ellipse from a TS map.  The fit
+    will be performed over pixels in the vicinity of the peak pixel
+    with D < dpix OR z > zmin where D is the distance from the peak
+    pixel in pixel coordinates and z is the difference in amplitude
+    from the peak pixel.
 
     Parameters
     ----------
@@ -16,7 +20,9 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
 
     xy : tuple
 
-    dpix : int
+    dpix : float
+
+    zmin : float
     """
 
     if xy is None:
@@ -34,16 +40,32 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     npix0 = tsmap.counts.T.shape[0]
     npix1 = tsmap.counts.T.shape[1]
 
-    skydir = SkyCoord.from_pixel(pbfit['x0'], pbfit['y0'], wcs)
+    peak_offset = np.sqrt((float(ix) - pbfit['x0'])**2 +
+                          (float(iy) - pbfit['y0'])**2)
 
+    o = {}
+
+    if (pbfit['x0'] < 0 or pbfit['x0'] > npix0 - 1 or
+        pbfit['y0'] < 0 or pbfit['y0'] > npix1 - 1 or
+            peak_offset > 1.5):
+        o['fit_success'] = False
+    else:
+        o['fit_success'] = pbfit['fit_success']
+
+    if o['fit_success']:
+        o['xpix'] = pbfit['x0']
+        o['ypix'] = pbfit['y0']
+    else:
+        o['xpix'] = float(ix)
+        o['ypix'] = float(iy)
+
+    skydir = SkyCoord.from_pixel(o['xpix'], o['ypix'], wcs)
     sigmax = 2.0**0.5 * pbfit['sigmax'] * np.abs(cdelt0)
     sigmay = 2.0**0.5 * pbfit['sigmay'] * np.abs(cdelt1)
     sigma = (sigmax * sigmay)**0.5
     r68 = 2.30**0.5 * sigma
     r95 = 5.99**0.5 * sigma
     r99 = 9.21**0.5 * sigma
-
-    o = {}
 
     if sigmax < sigmay:
         o['sigma_semimajor'] = sigmay
@@ -65,17 +87,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     o['glon'] = skydir.galactic.l.deg
     o['glat'] = skydir.galactic.b.deg
     o['zoffset'] = pbfit['z0']
-
-    pix = skydir.to_pixel(wcs)
-    o['xpix'] = float(pix[0])
-    o['ypix'] = float(pix[1])
-
-    if o['xpix'] < 0 or o['xpix'] > npix0 - 1:
-        o['fit_success'] = False
-    elif o['ypix'] < 0 or o['ypix'] > npix1 - 1:
-        o['fit_success'] = False
-    else:
-        o['fit_success'] = pbfit['fit_success']
+    o['peak_offset'] = peak_offset
 
     a = o['sigma_semimajor']
     b = o['sigma_semiminor']

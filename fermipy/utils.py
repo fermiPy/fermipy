@@ -842,6 +842,7 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
     o['z0'] = popt[0]
     o['theta'] = popt[5]
     o['popt'] = popt
+    o['mask'] = m
 
     a = max(o['sigmax'], o['sigmay'])
     b = min(o['sigmax'], o['sigmay'])
