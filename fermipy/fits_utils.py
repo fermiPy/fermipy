@@ -208,5 +208,7 @@ def dict_to_table(input_dict):
             cols += [Column(name=k, dtype=bool, data=np.array([v]))]
         elif utils.isstr(v):
             cols += [Column(name=k, dtype='S32', data=np.array([v]))]
-
+        elif isinstance(v, np.ndarray):
+            cols += [Column(name=k, dtype='f8', data=np.array([v]))]
+            
     return Table(cols)
