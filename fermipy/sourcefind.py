@@ -144,7 +144,8 @@ class SourceFind(object):
 
             name = utils.create_source_name(skydir)
             src_dict = copy.deepcopy(src_dict_template)
-            norm_par = get_function_norm_par_name(src_dict_template['SpectrumType'])
+            norm_par = get_function_norm_par_name(
+                src_dict_template['SpectrumType'])
             src_dict.update({norm_par: amp.counts[p['iy'], p['ix']],
                              'ra': skydir.icrs.ra.deg,
                              'dec': skydir.icrs.dec.deg})
@@ -179,7 +180,7 @@ class SourceFind(object):
         free_params = kwargs.get('free_params', None)
         if not free_params:
             free_params = None
-        
+
         if tsmap_fitter == 'tsmap':
             kw = kwargs.get('tsmap', {})
             kw['model'] = src_dict_template
@@ -478,7 +479,7 @@ class SourceFind(object):
         write_npy = kwargs.get('write_npy', False)
         use_pylike = kwargs.get('use_pylike', True)
         zmin = kwargs.get('zmin', -9.0)
-        
+
         src = self.roi.copy_source(name)
         skydir = kwargs.get('skydir', src.skydir)
         tsmap = self.tsmap(utils.join_strings([prefix, name.lower().
@@ -494,7 +495,7 @@ class SourceFind(object):
                            loglevel=logging.DEBUG)
 
         ts_value = np.max(tsmap['ts'].counts)
-        zmin = max(zmin,-ts_value*0.5)
+        zmin = max(zmin, -ts_value * 0.5)
         posfit, skydir = fit_error_ellipse(tsmap['ts'], dpix=2,
                                            zmin=zmin)
         pix = skydir.to_pixel(self._skywcs)
@@ -513,7 +514,7 @@ class SourceFind(object):
     def _fit_position_scan(self, name, **kwargs):
 
         zmin = kwargs.get('zmin', -9.0)
-        
+
         tsmap = self._scan_position(name, **kwargs)
         posfit, skydir = fit_error_ellipse(tsmap, dpix=2,
                                            zmin=zmin)
