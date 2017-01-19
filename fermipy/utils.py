@@ -836,8 +836,8 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
     o['rchi2'] = rchi2
     o['x0'] = popt[1]
     o['y0'] = popt[2]
-    o['sigmax'] = popt[3]
-    o['sigmay'] = popt[4]
+    o['sigmax'] = np.abs(popt[3])
+    o['sigmay'] = np.abs(popt[4])
     o['sigma'] = np.sqrt(o['sigmax'] ** 2 + o['sigmay'] ** 2)
     o['z0'] = popt[0]
     o['theta'] = popt[5]
