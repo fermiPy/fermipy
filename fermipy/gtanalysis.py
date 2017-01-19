@@ -869,6 +869,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         spatial_pars = kwargs.get('spatial_pars', {})
         use_pylike = kwargs.get('use_pylike', True)
         psf_scale_fn = kwargs.get('psf_scale_fn', None)
+        update_source = kwargs.get('update_source', False)
 
         if hasattr(pyLike.BinnedLikelihood, 'setSourceMapImage') and not use_pylike:
             src.set_spatial_model(spatial_model, spatial_pars)
@@ -879,6 +880,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             src.set_spatial_model(spatial_model, spatial_pars)
             self.add_source(src.name, src, init_source=False,
                             use_pylike=use_pylike, loglevel=logging.DEBUG)
+
+        if update_source:
+            self.update_source(name)
 
     def set_source_spectrum(self, name, spectrum_type='PowerLaw',
                             spectrum_pars=None, update_source=True):
