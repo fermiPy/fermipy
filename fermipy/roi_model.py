@@ -2037,10 +2037,6 @@ class ROIModel(fermipy.config.Configurable):
         """Write the ROI model to a FITS file."""
 
         tab = self.create_table()
-        tab.write(fitsfile, format='fits', overwrite=True)
-
-        hdulist = fits.open(fitsfile)
-        for h in hdulist:
-            h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
-            h.header['STVER'] = fermipy.get_st_version()
-        hdulist.writeto(fitsfile, clobber=True)
+        hdu_data = fits.table_to_hdu(tab)
+        hdus = [fits.PrimaryHDU(), hdu_data]
+        fits_utils.write_hdus(hdus, fitsfile)
