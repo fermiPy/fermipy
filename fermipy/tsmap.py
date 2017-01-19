@@ -681,6 +681,7 @@ class TSMapGenerator(object):
         schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)
         schema.add_option('map_size', 1.0)
         schema.add_option('threshold', 1E-2, '', float)
+        schema.add_option('use_pylike', False, '', bool)
         config = schema.create_config(self.config['tsmap'], **kwargs)
 
         # Defining default properties of test source model
@@ -729,6 +730,7 @@ class TSMapGenerator(object):
         threshold = kwargs.setdefault('threshold', 1E-2)
         max_kernel_radius = kwargs.get('max_kernel_radius')
         loge_bounds = kwargs.setdefault('loge_bounds', None)
+        use_pylike = kwargs.setdefault('use_pylike', True)
 
         if loge_bounds is not None:
             if len(loge_bounds) == 0:
@@ -782,6 +784,7 @@ class TSMapGenerator(object):
 
         self.add_source('tsmap_testsource', src_dict, free=True,
                         init_source=False, use_single_psf=True,
+                        use_pylike=use_pylike,
                         loglevel=logging.DEBUG)
         src = self.roi['tsmap_testsource']
         # self.logger.info(str(src_dict))
