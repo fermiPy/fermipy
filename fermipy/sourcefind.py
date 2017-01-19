@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 import os
+import json
 import copy
 import pprint
 import logging
@@ -325,6 +326,8 @@ class SourceFind(object):
                 loc['tsmap'].create_image_hdu('TSMAP'),
                 hdu_data]
 
+        hdus[0].header['CONFIG'] = json.dumps(loc['config'])
+        hdus[2].header['CONFIG'] = json.dumps(loc['config']) 
         fits_utils.write_hdus(hdus, filename)
 
     def _localize(self, name, **kwargs):
