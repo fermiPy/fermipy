@@ -418,17 +418,17 @@ class SourceFind(object):
         self.logger.info('Localization completed with coordinates:\n'
                          '(ra,dec) = (%10.4f,%10.4f)\n'
                          '(glon,glat) = (%10.4f,%10.4f)\n'
-                         'offset = %8.4f r68 = %8.4f',
+                         'offset = %8.4f r68 = %8.4f r99 = %8.4f',
                          o['ra'], o['dec'],
                          o['glon'], o['glat'],
-                         o['offset'], o['r68'])
+                         o['offset'], o['r68'], o['r99'])
 
         if not o['fit_success']:
-            self.logger.error('Localization failed.')
+            self.logger.warning('Fit to localization contour failed.')
         else:
             self.logger.info('Localization succeeded.')
 
-        if update and o['fit_success']:
+        if update:
             self.logger.info('Updating source %s '
                              'to localized position.', name)
             src = self.delete_source(name)
@@ -458,10 +458,11 @@ class SourceFind(object):
     def _fit_position(self, name, **kwargs):
 
         dtheta_max = kwargs.setdefault('dtheta_max', 0.5)
-        nstep = kwargs.setdefault('nstep', 3)
+        nstep = kwargs.setdefault('nstep', 5)
         fit0 = self._fit_position_tsmap(name, **kwargs)
 
-        scan_cdelt = 2.0 * fit0['r95'] / (nstep - 1.0)
+        scan_cdelt = min(2.0 * fit0['r68'] / (nstep - 1.0),
+                         self._binsz)
         fit1 = self._fit_position_scan(name,
                                        skydir=fit0['skydir'],
                                        scan_cdelt=scan_cdelt,
@@ -475,7 +476,9 @@ class SourceFind(object):
         dtheta_max = kwargs.get('dtheta_max', 0.5)
         write_fits = kwargs.get('write_fits', False)
         write_npy = kwargs.get('write_npy', False)
-
+        use_pylike = kwargs.get('use_pylike', True)
+        zmin = kwargs.get('zmin', -9.0)
+        
         src = self.roi.copy_source(name)
         skydir = kwargs.get('skydir', src.skydir)
         tsmap = self.tsmap(utils.join_strings([prefix, name.lower().
@@ -486,11 +489,14 @@ class SourceFind(object):
                            exclude=[name],
                            write_fits=write_fits,
                            write_npy=write_npy,
+                           use_pylike=use_pylike,
                            make_plots=False,
                            loglevel=logging.DEBUG)
 
-        posfit, skydir = fit_error_ellipse(tsmap['ts'], dpix=3,
-                                           zmin=-9.0)
+        ts_value = np.max(tsmap['ts'].counts)
+        zmin = max(zmin,-ts_value*0.5)
+        posfit, skydir = fit_error_ellipse(tsmap['ts'], dpix=2,
+                                           zmin=zmin)
         pix = skydir.to_pixel(self._skywcs)
 
         o = {}
@@ -506,9 +512,11 @@ class SourceFind(object):
 
     def _fit_position_scan(self, name, **kwargs):
 
+        zmin = kwargs.get('zmin', -9.0)
+        
         tsmap = self._scan_position(name, **kwargs)
-        posfit, skydir = fit_error_ellipse(tsmap, dpix=3,
-                                           zmin=-9.0)
+        posfit, skydir = fit_error_ellipse(tsmap, dpix=2,
+                                           zmin=zmin)
         pix = skydir.to_pixel(self._skywcs)
 
         o = {}
