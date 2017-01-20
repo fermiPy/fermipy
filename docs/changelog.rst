@@ -3,7 +3,8 @@
 Changelog
 =========
 
-This page is a changelog for releases of Fermipy.
+This page is a changelog for releases of Fermipy.  You can also browse
+releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
 0.13.0 (01/16/2017)
 -------------------
