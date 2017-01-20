@@ -5,6 +5,7 @@ import copy
 import logging
 import itertools
 import functools
+import json
 from multiprocessing import Pool
 import numpy as np
 import warnings
@@ -663,14 +664,13 @@ class TSMapGenerator(object):
         Parameters
         ----------
         prefix : str
-           Optional string that will be prepended to all output files
-           (FITS and rendered images).
+           Optional string that will be prepended to all output files.
 
         {options}
 
         Returns
         -------
-        maps : dict
+        tsmap : dict
            A dictionary containing the `~fermipy.skymap.Map` objects
            for TS and source amplitude.
 
@@ -681,28 +681,61 @@ class TSMapGenerator(object):
         schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)
         schema.add_option('map_size', 1.0)
         schema.add_option('threshold', 1E-2, '', float)
-        schema.add_option('use_pylike', False, '', bool)
+        schema.add_option('use_pylike', True, '', bool)
         config = schema.create_config(self.config['tsmap'], **kwargs)
 
         # Defining default properties of test source model
         config['model'].setdefault('Index', 2.0)
         config['model'].setdefault('SpectrumType', 'PowerLaw')
         config['model'].setdefault('SpatialModel', 'PointSource')
-        config['model'].setdefault('Prefactor', 1E-13)
 
         self.logger.log(config['loglevel'], 'Generating TS map')
-
-        maps = self._make_tsmap_fast(prefix, **config)
+        
+        o = self._make_tsmap_fast(prefix, **config)
 
         if config['make_plots']:
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_tsmap_plots(maps, self.roi)
+            plotter.make_tsmap_plots(o, self.roi)
 
         self.logger.log(config['loglevel'], 'Finished TS map')
-        return maps
+
+        outfile = utils.format_filename(self.workdir, 'tsmap',
+                                        prefix=[o['name']])
+            
+        if config['write_fits']:
+            o['file'] = os.path.basename(outfile) + '.fits'
+            self._make_tsmap_fits(o, outfile + '.fits')
+
+        if config['write_npy']:
+            np.save(outfile + '.npy', o)
+            
+        return o
+
+    def _make_tsmap_fits(self, data, filename, **kwargs):
+
+        maps =  {'SQRT_TS_MAP': data['sqrt_ts'],
+                 'NPRED_MAP': data['npred'],
+                 'N_MAP': data['amplitude']}
+
+        hdu_images = []
+        for k, v in sorted(maps.items()):
+            if v is None:
+                continue
+            hdu_images += [v.create_image_hdu(k)]
+        
+        tab = fits_utils.dict_to_table(data)
+        hdu_data = fits.table_to_hdu(tab)
+        hdu_data.name = 'TSMAP_DATA'
+
+        hdus = [data['ts'].create_primary_hdu(),
+                hdu_data] + hdu_images
+
+        hdus[0].header['CONFIG'] = json.dumps(data['config'])
+        hdus[1].header['CONFIG'] = json.dumps(data['config'])        
+        fits_utils.write_hdus(hdus, filename)
 
     def _make_tsmap_fast(self, prefix, **kwargs):
         """
@@ -886,22 +919,6 @@ class TSMapGenerator(object):
              'loglike': -self.like(),
              'config': kwargs
              }
-
-        fits_file = utils.format_filename(self.config['fileio']['workdir'],
-                                          'tsmap.fits',
-                                          prefix=[prefix, modelname])
-
-        if kwargs['write_fits']:
-
-            fits_utils.write_maps(ts_map,
-                                  {'SQRT_TS_MAP': sqrt_ts_map,
-                                   'NPRED_MAP': npred_map,
-                                   'N_MAP': amp_map},
-                                  fits_file)
-            o['file'] = os.path.basename(fits_file)
-
-        if kwargs['write_npy']:
-            np.save(os.path.splitext(fits_file)[0] + '.npy', o)
 
         return o
 
