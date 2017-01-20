@@ -257,7 +257,8 @@ class ImagePlotter(object):
 
         zscale = kwargs.get('zscale', 'lin')
         gamma = kwargs.get('gamma', 0.5)
-
+        transform = kwargs.get('transform', None)
+        
         if zscale == 'pow':
             kwargs_imshow['norm'] = PowerNorm(gamma=gamma)
         elif zscale == 'sqrt':
@@ -283,6 +284,9 @@ class ImagePlotter(object):
 
         data = copy.copy(self._data)
 
+        if transform == 'sqrt':
+            data = np.sqrt(data)
+        
         kwargs_imshow = merge_dict(kwargs_imshow, kwargs)
         kwargs_contour = merge_dict(kwargs_contour, kwargs)
 
@@ -555,7 +559,7 @@ class ROIPlotter(fermipy.config.Configurable):
                                         self.config['label_ts_threshold'])
 
         im_kwargs = dict(cmap=self.config['cmap'],
-                         interpolation='nearest',
+                         interpolation='nearest', transform=None,
                          vmin=None, vmax=None, levels=None,
                          zscale='lin', subplot=111, colors=['k'])
 
@@ -588,9 +592,9 @@ class ROIPlotter(fermipy.config.Configurable):
             cb.set_label(cb_label)
 
         for r in graticule_radii:
-            self.draw_circle(self.cmap.skydir, r)
+            self.draw_circle(r)
 
-    def draw_circle(self, skydir, radius):
+    def draw_circle(self, radius, **kwargs):
 
         # coordsys = wcs_utils.get_coordsys(self.proj)
         # if coordsys == 'GAL':
@@ -602,10 +606,17 @@ class ROIPlotter(fermipy.config.Configurable):
         #               radius,facecolor='none',edgecolor='w',linestyle='--',
         #               transform=self._ax.get_transform('fk5'))
 
-        c = Circle(self.cmap.pix_center, radius / max(self.cmap.pix_size),
-                   facecolor='none', edgecolor='w', linestyle='--',
-                   linewidth=0.5)
+        skydir = kwargs.get('skydir', None)
 
+        if skydir is None:
+            pix = self.cmap.pix_center
+        else:
+            pix = skydir.to_pixel(self.cmap.wcs)
+        
+        kw = dict(facecolor='none', edgecolor='w', linestyle='--',
+                   linewidth=0.5, label='__nolabel__')
+        kw = merge_dict(kw,kwargs)        
+        c = Circle(pix, radius / max(self.cmap.pix_size), **kw)
         self._ax.add_patch(c)
 
     def zoom(self, zoom):
@@ -1283,22 +1294,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(figx)
         plt.close(figy)
 
-    def make_extension_plots(self, prefix, loge_bounds=None, **kwargs):
-
-        fmt = kwargs.get('format', self.config['plotting']['format'])
-
-        for s in self.roi.sources:
-
-            if 'extension' not in s:
-                continue
-            if s['extension'] is None:
-                continue
-            if not s['extension']['config']['save_model_map']:
-                continue
-
-            self._plot_extension(
-                prefix, s, loge_bounds=loge_bounds, format=fmt)
-
     def make_sed_plots(self, sed, **kwargs):
 
         prefix = kwargs.get('prefix', '')
@@ -1420,6 +1415,44 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.savefig(outfile)
         plt.close(fig)
 
+    def make_extension_plots(self, ext, roi=None, **kwargs):
+
+        if 'tsmap' in ext:
+            self._plot_extension_tsmap(ext,roi=roi,**kwargs)
+
+    def _plot_extension_tsmap(self, ext, roi=None, **kwargs):
+
+        fmt = kwargs.get('format', self.config['format'])
+        prefix = kwargs.get('prefix', '')
+        cmap = kwargs.get('cmap', self.config['cmap'])
+        name = ext.get('name', '')
+        name = name.lower().replace(' ', '_')
+        
+        p = ROIPlotter(ext['tsmap'], roi=roi)
+        fig = plt.figure()
+
+        sigma_levels = [3, 5, 7] + list(np.logspace(1, 3, 17))
+        
+        p.plot(cmap=cmap, interpolation='bicubic',levels=sigma_levels,
+               transform='sqrt')
+        c = SkyCoord(ext['ra'], ext['dec'], unit='deg')
+        p.draw_circle(ext['ext'], skydir=c, edgecolor='lime', linestyle='-',
+                      linewidth=1.0,label='R$_{68}$')
+
+        p.draw_circle(ext['ext_ul95'], skydir=c, edgecolor='lime', linestyle='--',
+                      linewidth=1.0,label='R$_{68}$ 95% UL')
+        leg = plt.gca().legend(frameon=False, loc='upper left')
+
+        for text in leg.get_texts():
+            text.set_color('lime')
+
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
+                                        'extension', prefix=[prefix, name],
+                                        extension=fmt)
+
+        plt.savefig(outfile)
+        plt.close(fig)
+            
     def _plot_extension(self, gta, prefix, src, loge_bounds=None, **kwargs):
         """Utility function for generating diagnostic plots for the
         extension analysis."""

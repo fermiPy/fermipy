@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 import os
 import copy
+import json
 import pprint
 import logging
 import numpy as np
@@ -12,6 +13,7 @@ from fermipy import utils
 from fermipy import defaults
 from fermipy.config import ConfigSchema
 from fermipy.gtutils import SourceMapState, FreeParameterState
+from fermipy import fits_utils
 from LikelihoodState import LikelihoodState
 
 
@@ -26,9 +28,13 @@ class ExtensionFit(object):
         one-dimensional scan of the spatial extension parameter over
         the range specified with the width parameters.  The 1-D
         profile likelihood is then used to compute the best-fit value,
-        upper limit, and TS for extension.  Any background parameters
-        that are free will also be simultaneously profiled in the
-        likelihood scan.
+        upper limit, and TS for extension.  The background parameters
+        that will be simultaneously profiled when performing the
+        spatial scan can be controlled with the ``free_background``
+        and ``free_radius`` options.  By default the position of the
+        source will be fixed to its current position.  A simultaneous
+        fit to position and extension can be performed by setting
+        ``fit_position`` to True.
 
         Parameters
         ----------
@@ -66,6 +72,10 @@ class ExtensionFit(object):
 
         self.logger.info('Finished extension fit.')
 
+        if config['make_plots']:
+            self._plotter.make_extension_plots(ext, self.roi,
+                                               prefix=config['prefix'])
+        
         outfile = config.get('outfile', None)
         if outfile is None:
             outfile = utils.format_filename(self.workdir, 'ext',
@@ -217,6 +227,18 @@ class ExtensionFit(object):
             o['ext_src_map'] = self.model_counts_map(name)
             o['ext_bkg_map'] = self.model_counts_map(exclude=[name])
 
+        tsmap = self.tsmap(model=src.data,
+                           map_skydir=src.skydir,
+                           map_size=max(1.0,3.0*o['ext_ul95']),
+                           exclude=[name],
+                           write_fits=False,
+                           write_npy=False,
+                           use_pylike=True,
+                           make_plots=False,
+                           loglevel=logging.DEBUG)
+
+        o['tsmap'] = tsmap['ts']
+        
         if update and (sqrt_ts_threshold is None or
                        np.sqrt(o['ts_ext']) > sqrt_ts_threshold):
             src = self.delete_source(name)
@@ -248,29 +270,16 @@ class ExtensionFit(object):
                 continue
             hdu_images += [v.create_image_hdu(k)]
 
-        columns = fits.ColDefs([])
-        for k, v in sorted(ext.items()):
+        tab = fits_utils.dict_to_table(ext)
+        hdu_data = fits.table_to_hdu(tab)
+        hdu_data.name = 'EXT_DATA'
 
-            if np.isscalar(v) and isinstance(v, float):
-                columns.add_col(fits.Column(name=str(k),
-                                            format='E',
-                                            array=np.array(v, ndmin=1)))
-            elif np.isscalar(v) and isinstance(v, str):
-                columns.add_col(fits.Column(name=str(k),
-                                            format='A32',
-                                            array=np.array(v, ndmin=1)))
-            elif isinstance(v, np.ndarray):
-                columns.add_col(fits.Column(name=str(k),
-                                            format='%iE' % len(v),
-                                            array=v[None, :]))
+        hdus = [ext['tsmap'].create_primary_hdu(),
+                hdu_data] + hdu_images
 
-        hdu_table = fits.BinTableHDU.from_columns(columns, name='EXTENSION')
-
-        hdulist = fits.HDUList([fits.PrimaryHDU(), hdu_table] + hdu_images)
-        for h in hdulist:
-            h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
-            h.header['STVER'] = fermipy.get_st_version()
-        hdulist.writeto(filename, clobber=True)
+        hdus[0].header['CONFIG'] = json.dumps(ext['config'])
+        hdus[1].header['CONFIG'] = json.dumps(ext['config'])        
+        fits_utils.write_hdus(hdus, filename)
 
     def _scan_extension(self, name, **kwargs):
 
@@ -402,7 +411,7 @@ class ExtensionFit(object):
         loglike = -self.like()
 
         nstep = 7
-        for i in range(3):
+        for i in range(4):
 
             self.logger.info('Extension Fit Iteration %i', i)
 
