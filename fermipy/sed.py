@@ -271,8 +271,6 @@ class SEDGenerator(object):
                               min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
         spectral_pars = gtutils.get_function_pars_dict(source.spectrum())
-        #o['params'] = roi_model.get_params_dict(spectral_pars)
-        
         o['SpectrumType'] = self.roi[name]['SpectrumType']
         o.update(model_utils.pars_dict_to_vectors(o['SpectrumType'],
                                                   spectral_pars))
