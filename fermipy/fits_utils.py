@@ -15,6 +15,7 @@ def write_fits(hdulist, outfile, keywords):
         for k, v in keywords.items():
             h.header[k] = v
         h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+        h.header['STVER'] = fermipy.get_st_version()
 
     hdulist.writeto(outfile, clobber=True)
 
@@ -92,10 +93,16 @@ def write_maps(primary_map, maps, outfile, **kwargs):
     write_hdus(hdu_images, outfile)
 
 
-def write_hdus(hdus, outfile):
+def write_hdus(hdus, outfile, **kwargs):
+
+    keywords = kwargs.get('keywords', {})
 
     hdulist = fits.HDUList(hdus)
     for h in hdulist:
+
+        for k, v in keywords.items():
+            h.header[k] = v
+
         h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
         h.header['STVER'] = fermipy.get_st_version()
     hdulist.writeto(outfile, clobber=True)
@@ -209,6 +216,6 @@ def dict_to_table(input_dict):
         elif utils.isstr(v):
             cols += [Column(name=k, dtype='S32', data=np.array([v]))]
         elif isinstance(v, np.ndarray):
-            cols += [Column(name=k, dtype='f8', data=np.array([v]))]
-            
+            cols += [Column(name=k, dtype=v.dtype, data=np.array([v]))]
+
     return Table(cols)
