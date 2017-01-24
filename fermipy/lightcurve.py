@@ -6,6 +6,7 @@ import copy
 import shutil
 import logging
 import yaml
+import json
 from collections import OrderedDict
 
 import numpy as np
@@ -18,6 +19,7 @@ import fermipy.gtanalysis
 from fermipy import defaults
 from fermipy import fits_utils
 from fermipy.config import ConfigSchema
+from fermipy.gtutils import FreeParameterState
 
 import pyLikelihood as pyLike
 from astropy.io import fits
@@ -94,24 +96,18 @@ class LightCurve(object):
 
         # add in columns for model parameters
         for k, v in lc.items():
-
             if k in cols:
                 continue
-
             if isinstance(v, np.ndarray):
-                cols[k] = Column(name=k, data=v, dtype='f8')
-
-        # for fields in lc:
-        #    if (str(fields[:3]) == 'par'):
-        #        cols.append(Column(name=fields, dtype='f8', data=lc[str(fields)], unit=''))
+                cols[k] = Column(name=k, data=v, dtype=v.dtype)
 
         tab = Table(cols.values())
-        tab.write(filename, format='fits', overwrite=True)
-
-        hdulist = fits.open(filename)
-        hdulist[1].name = 'LIGHTCURVE'
-        hdulist = fits.HDUList([hdulist[0], hdulist[1]])
-        fits_utils.write_fits(hdulist, filename, {'SRCNAME': lc['name']})
+        hdu_lc = fits.table_to_hdu(tab)
+        hdu_lc.name = 'LIGHTCURVE'
+        hdus = [fits.PrimaryHDU(), hdu_lc]
+        keywords = {'SRCNAME': lc['name'],
+                    'CONFIG': json.dumps(lc['config'])}
+        fits_utils.write_hdus(hdus, filename, keywords=keywords)
 
     def _make_lc(self, name, **kwargs):
 
@@ -141,18 +137,22 @@ class LightCurve(object):
 
             v = self.roi[name][k]
 
-            if isinstance(v, np.ndarray):
+            if isinstance(v, np.ndarray) and v.dtype.kind in ['S', 'U']:
+                o[k] = np.zeros(times[:-1].shape + v.shape, dtype=v.dtype)
+            elif isinstance(v, np.ndarray):
                 o[k] = np.nan * np.ones(times[:-1].shape + v.shape)
             elif isinstance(v, np.float):
                 o[k] = np.nan * np.ones(times[:-1].shape)
 
         diff_sources = [s.name for s in self.roi.sources if s.diffuse]
         skydir = self.roi[name].skydir
-        kwargs['free_sources'] += [s.name for s in
-                                   self.roi.get_sources(skydir=skydir,
-                                                        distance=kwargs[
-                                                            'free_radius'],
-                                                        exclude=diff_sources)]
+
+        if kwargs.get('free_radius', None) is not None:
+            kwargs['free_sources'] += [s.name for s in
+                                       self.roi.get_sources(skydir=skydir,
+                                                            distance=kwargs[
+                                                                'free_radius'],
+                                                            exclude=diff_sources)]
 
         for i, time in enumerate(zip(times[:-1], times[1:])):
 
@@ -240,11 +240,20 @@ class LightCurve(object):
         # 5.) if that fails set values to 0 in output and print warning message
 
         free_sources = kwargs.get('free_sources', [])
+        free_background = kwargs.get('free_background', False)
+        free_params = kwargs.get('free_params', None)
 
+        if name in free_sources:
+            free_sources.remove(name)
+
+        free_state = FreeParameterState(gta)
         gta.free_sources(free=False)
-        gta.free_source(name)
 
         for niter in range(5):
+
+            if free_background:
+                free_state.restore()
+            gta.free_source(name, pars=free_params)
 
             if niter == 0:
                 gta.free_sources_by_name(free_sources)
