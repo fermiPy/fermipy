@@ -208,7 +208,7 @@ def get_dist_to_edge(skydir, lon, lat, width, coordsys='CEL'):
     return dtheta
 
 
-def get_params_dict(pars_dict):
+def get_true_params_dict(pars_dict):
 
     params = {}
     for k, p in pars_dict.items():
@@ -216,13 +216,9 @@ def get_params_dict(pars_dict):
         err = np.nan
         if 'error' in p:
             err = p['error'] * np.abs(p['scale'])
-        params[k] = np.array([val, err])
+        params[k] = {'value' : val, 'error' : err }
 
     return params
-
-
-def get_true_value(par_dict):
-    return par_dict['value']*par_dict['scale']
 
 
 class Model(object):
@@ -303,7 +299,7 @@ class Model(object):
     @property
     def data(self):
         return self._data
-
+    
     @property
     def spectral_pars(self):
         return self._data['spectral_pars']
@@ -312,6 +308,10 @@ class Model(object):
     def spatial_pars(self):
         return self._data['spatial_pars']
 
+    @property
+    def params(self):
+        return get_true_params_dict(self._data['spectral_pars'])
+    
     @property
     def name(self):
         return self._data['name']
@@ -385,21 +385,22 @@ class Model(object):
              'Exp_Index': np.nan,
              'Cutoff': np.nan}
 
+        params = get_true_params_dict(self.spectral_pars)        
         if self['SpectrumType'] == 'PowerLaw':
-            o['Spectral_Index'] = -1.0 * get_true_value(self.spectral_pars['Index'])
-            o['Flux_Density'] = get_true_value(self.spectral_pars['Prefactor'])
-            o['Pivot_Energy'] = get_true_value(self.spectral_pars['Scale'])
+            o['Spectral_Index'] = -1.0 * params['Index']['value']
+            o['Flux_Density'] = params['Prefactor']['value']
+            o['Pivot_Energy'] = params['Scale']['value']
         elif self['SpectrumType'] == 'LogParabola':
-            o['Spectral_Index'] = get_true_value(self.spectral_pars['alpha'])
-            o['Flux_Density'] = get_true_value(self.spectral_pars['norm'])
-            o['Pivot_Energy'] = get_true_value(self.spectral_pars['Eb'])
-            o['beta'] = get_true_value(self.spectral_pars['beta'])
+            o['Spectral_Index'] = params['alpha']['value']
+            o['Flux_Density'] = params['norm']['value']
+            o['Pivot_Energy'] = params['Eb']['value']
+            o['beta'] = params['beta']['value']
         elif self['SpectrumType'] == 'PLSuperExpCutoff':
-            o['Spectral_Index'] = -1.0 * get_true_value(self.spectral_pars['Index1'])
-            o['Exp_Index'] = get_true_value(self.spectral_pars['Index2'])
-            o['Flux_Density'] = get_true_value(self.spectral_pars['Prefactor'])
-            o['Pivot_Energy'] = get_true_value(self.spectral_pars['Scale'])
-            o['Cutoff'] = get_true_value(self.spectral_pars['Cutoff'])
+            o['Spectral_Index'] = -1.0 * params['Index1']['value']
+            o['Exp_Index'] = params['Index2']['value']
+            o['Flux_Density'] = params['Prefactor']['value']
+            o['Pivot_Energy'] = params['Scale']['value']
+            o['Cutoff'] = params['Cutoff']['value']
 
         return o
 

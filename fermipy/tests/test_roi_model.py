@@ -85,15 +85,15 @@ def test_load_roi_from_dict(tmppath):
 
     for p in ['Index', 'Prefactor', 'Scale']:
         if p == 'Index':
-            assert_allclose(sources[0][p], -src.params[p][0])
+            assert_allclose(sources[0][p], -src.params[p]['value'])
         else:
-            assert_allclose(sources[0][p], src.params[p][0])
+            assert_allclose(sources[0][p], src.params[p]['value'])
 
     src = roi['ptsrc1']
     sp = src['spectral_pars']
     for p in ['Index', 'Prefactor', 'Scale']:
         assert_allclose(sources[1][p]['value'] * sources[1][p]['scale'],
-                        src.params[p][0])
+                        src.params[p]['value'])
 
 
 def test_load_source_from_xml(tmppath):
@@ -167,11 +167,11 @@ def test_load_source_from_xml(tmppath):
     for x in attribs:
         assert_allclose(sp['Scale'][x], values['ptsrc_scale_%s' % x])
 
-    assert_allclose(src.params['Prefactor'][0],
+    assert_allclose(src.params['Prefactor']['value'],
                     values['ptsrc_prefactor_value'] * values['ptsrc_prefactor_scale'])
-    assert_allclose(src.params['Index'][0],
+    assert_allclose(src.params['Index']['value'],
                     values['ptsrc_index_value'] * values['ptsrc_index_scale'])
-    assert_allclose(src.params['Scale'][0],
+    assert_allclose(src.params['Scale']['value'],
                     values['ptsrc_scale_value'] * values['ptsrc_scale_scale'])
 
     src = roi['galdiff']

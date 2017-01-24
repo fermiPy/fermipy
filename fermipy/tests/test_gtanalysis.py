@@ -54,10 +54,10 @@ def create_pg1553_analysis(request, tmpdir_factory):
                  'P8_P302_TRANSIENT020E_260595814_263225614_ft2.fits']
 
     for f in ft2_files:
-        url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/ft2/%s'%f
+        url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/ft2/%s' % f
         outfile = path.join('fermipy_test_pg1553', f)
         os.system('curl -o %s -OL %s' % (outfile, url))
-        
+
     #request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_pg1553', 'config.yaml')
@@ -92,9 +92,12 @@ def test_gtanalysis_load_roi(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
     src = gta.roi['3FGL J1725.3+5853']
-    assert_allclose(src['params']['Prefactor'][0],
+
+    prefactor = src.spectral_pars['Prefactor']
+    index = src.spectral_pars['Index']
+    assert_allclose(prefactor['value'] * prefactor['scale'],
                     1.6266779e-13, rtol=1E-3)
-    assert_allclose(src['params']['Index'][0], -2.17892, rtol=1E-3)
+    assert_allclose(index['value'] * index['scale'], -2.17892, rtol=1E-3)
     assert_allclose(src['flux'], 4.099648e-10, rtol=1E-3)
     assert_allclose(src['flux_err'], np.nan, rtol=1E-3)
     assert_allclose(src['eflux'], 9.76762e-07, rtol=1E-3)
@@ -102,8 +105,11 @@ def test_gtanalysis_load_roi(create_draco_analysis):
 
     gta.load_roi('fit1')
     src = gta.roi['3FGL J1725.3+5853']
-    assert_allclose(src['params']['Prefactor'][0], 2.0878036e-13, rtol=1E-3)
-    assert_allclose(src['params']['Index'][0], -2.053723, rtol=1E-3)
+    prefactor = src.spectral_pars['Prefactor']
+    index = src.spectral_pars['Index']
+    assert_allclose(prefactor['value'] *
+                    prefactor['scale'], 2.0878036e-13, rtol=1E-3)
+    assert_allclose(index['value'] * index['scale'], -2.053723, rtol=1E-3)
     assert_allclose(src['flux'], 5.377593e-10, rtol=1E-3)
     assert_allclose(src['flux_err'], 6.40203e-11, rtol=1E-3)
     assert_allclose(src['eflux'], 1.34617749e-06, rtol=1E-3)
@@ -141,8 +147,8 @@ def test_gtanalysis_fit_newton(create_draco_analysis):
     fit_output1 = gta.fit(optimizer='NEWTON')
 
     assert (np.abs(fit_output0['loglike'] - fit_output1['loglike']) < 0.01)
-    
-    
+
+
 def test_gtanalysis_tsmap(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
@@ -216,10 +222,11 @@ def test_gtanalysis_sed(create_draco_analysis):
     np.random.seed(1)
     gta.simulate_roi()
 
+    params = gta.roi['draco'].params
+    
     prefactor = 3E-12
     index = 1.9
-    scale = gta.roi['draco'].params['Scale'][0]
-
+    scale = params['Scale']['value']
     emin = gta.energies[:-1]
     emax = gta.energies[1:]
 
@@ -240,11 +247,11 @@ def test_gtanalysis_sed(create_draco_analysis):
     assert_allclose(flux_resid, 0, atol=3.0)
 
     params = gta.roi['draco'].params
-    index_resid = (-params['Index'][0] - index) / params['Index'][1]
+    index_resid = (-params['Index']['value'] - index) / params['Index']['error']
     assert_allclose(index_resid, 0, atol=3.0)
 
-    prefactor_resid = (params['Prefactor'][0] -
-                       prefactor) / params['Prefactor'][1]
+    prefactor_resid = (params['Prefactor']['value'] -
+                       prefactor) / params['Prefactor']['error']
     assert_allclose(prefactor_resid, 0, atol=3.0)
 
     gta.simulate_roi(restore=True)
@@ -311,12 +318,12 @@ def test_gtanalysis_lightcurve(create_pg1553_analysis):
                          1.82269439301e-09])
     ts = np.array([1463.06618532,
                    1123.16013115])
-    
+
     assert_allclose(o['flux'], flux, rtol=1E-4)
     assert_allclose(o['flux_err'], flux_err, rtol=1E-4)
     assert_allclose(o['ts'], ts, rtol=1E-4)
 
-    tab = Table.read(os.path.join(gta.workdir,o['file']))
+    tab = Table.read(os.path.join(gta.workdir, o['file']))
     assert_allclose(tab['flux'], flux, rtol=1E-4)
     assert_allclose(tab['flux_err'], flux_err, rtol=1E-4)
     assert_allclose(tab['ts'], ts, rtol=1E-4)

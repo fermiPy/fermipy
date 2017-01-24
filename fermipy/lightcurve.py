@@ -109,6 +109,32 @@ class LightCurve(object):
                     'CONFIG': json.dumps(lc['config'])}
         fits_utils.write_hdus(hdus, filename, keywords=keywords)
 
+    def _create_lc_dict(self, name, times):
+
+        # Output Dictionary
+        o = {}
+        o['name'] = name
+        o['tmin'] = times[:-1]
+        o['tmax'] = times[1:]
+        o['tmin_mjd'] = utils.met_to_mjd(o['tmin'])
+        o['tmax_mjd'] = utils.met_to_mjd(o['tmax'])
+        
+        for k, v in defaults.source_flux_output.items():
+
+            if not k in self.roi[name]:
+                continue
+
+            v = self.roi[name][k]
+
+            if isinstance(v, np.ndarray) and v.dtype.kind in ['S', 'U']:
+                o[k] = np.zeros(o['tmin'].shape + v.shape, dtype=v.dtype)
+            elif isinstance(v, np.ndarray):
+                o[k] = np.nan * np.ones(o['tmin'].shape + v.shape)
+            elif isinstance(v, np.float):
+                o[k] = np.nan * np.ones(o['tmin'].shape)
+
+        return o
+        
     def _make_lc(self, name, **kwargs):
 
         # make array of time values in MET
@@ -121,29 +147,9 @@ class LightCurve(object):
             times = np.arange(self.tmin, self.tmax,
                               kwargs['binsz'])
 
-        # Output Dictionary
-        o = {}
-        o['name'] = name
-        o['tmin'] = times[:-1]
-        o['tmax'] = times[1:]
-        o['tmin_mjd'] = utils.met_to_mjd(o['tmin'])
-        o['tmax_mjd'] = utils.met_to_mjd(o['tmax'])
+        o = self._create_lc_dict(name, times)
         o['config'] = kwargs
-
-        for k, v in defaults.source_flux_output.items():
-
-            if not k in self.roi[name]:
-                continue
-
-            v = self.roi[name][k]
-
-            if isinstance(v, np.ndarray) and v.dtype.kind in ['S', 'U']:
-                o[k] = np.zeros(times[:-1].shape + v.shape, dtype=v.dtype)
-            elif isinstance(v, np.ndarray):
-                o[k] = np.nan * np.ones(times[:-1].shape + v.shape)
-            elif isinstance(v, np.float):
-                o[k] = np.nan * np.ones(times[:-1].shape)
-
+        
         diff_sources = [s.name for s in self.roi.sources if s.diffuse]
         skydir = self.roi[name].skydir
 
@@ -215,16 +221,19 @@ class LightCurve(object):
             gta.write_xml('fit_model_final.xml')
             output = gta.get_src_model(name)
 
-            for k in defaults.source_flux_output.keys():
-                if not k in output:
-                    continue
-                if (fit_results['fit_success'] == 1):
+            if fit_results['fit_success'] == 1:            
+                for k in defaults.source_flux_output.keys():
+                    if not k in output:
+                        continue
+                    if (isinstance(output[k],np.ndarray) and
+                         o[k][i].shape != output[k].shape):
+                        self.logger.warning('Incompatible shape for column %s',k)
+                        continue                        
                     o[k][i] = output[k]
+                        
             self.logger.info('Finished time range %i %i', time[0], time[1])
 
         src = self.roi.get_source_by_name(name)
-        src.update_data({'lightcurve': copy.deepcopy(o)})
-
         return o
 
     def _fit_lc(self, gta, name, **kwargs):
