@@ -940,7 +940,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                        'counts_spectrum', prefix=[prefix],
                                        extension=format)
 
-        make_counts_spectrum_plot(gta._roi_model, gta.roi,
+        make_counts_spectrum_plot(gta._roi_data, gta.roi,
                                   gta.log_energies,
                                   imfile)
 
