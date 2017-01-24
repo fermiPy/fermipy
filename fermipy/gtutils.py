@@ -231,6 +231,26 @@ def gtlike_spectrum_to_dict(spectrum):
     return d
 
 
+def gtlike_spectrum_to_vectors(spectrum):
+    """ Convert a pyLikelihood object to a python dictionary which can
+        be easily saved to a file."""
+
+    o = {'param_names' : np.zeros(10, dtype='S32'),
+         'param_values' : np.empty(10, dtype=float) * np.nan,
+         'param_errors' : np.empty(10, dtype=float) * np.nan,
+         }
+    
+    parameters = pyLike.ParameterVector()
+    spectrum.getParams(parameters)
+    for i, p in enumerate(parameters):
+        o['param_names'][i] = p.getName()
+        o['param_values'][i] = p.getTrueValue()
+        perr = abs(p.error() * p.getScale()) if p.isFree() else np.nan
+        o['param_errors'][i] = perr
+
+    return o
+
+
 def get_function_pars_dict(fn):
 
     pars = get_function_pars(fn)
