@@ -279,7 +279,8 @@ class ExtensionFit(object):
 
         hdus[0].header['CONFIG'] = json.dumps(ext['config'])
         hdus[1].header['CONFIG'] = json.dumps(ext['config'])
-        fits_utils.write_hdus(hdus, filename)
+        fits_utils.write_hdus(hdus, filename,
+                              keywords={'SRCNAME': ext['name']})
 
     def _scan_extension(self, name, **kwargs):
 
