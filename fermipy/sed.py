@@ -19,10 +19,11 @@ import astropy.io.fits as pyfits
 from astropy.table import Table, Column
 
 import fermipy.config
-import fermipy.utils as utils
-import fermipy.gtutils as gtutils
-import fermipy.roi_model as roi_model
+from fermipy import utils
+from fermipy import gtutils
+from fermipy import roi_model
 from fermipy.config import ConfigSchema
+from fermipy import model_utils
 
 from LikelihoodState import LikelihoodState
 
@@ -249,7 +250,6 @@ class SEDGenerator(object):
              'fit_status': np.zeros(nbins),
              'correlation': {},
              'model_flux': {},
-             'params': {},
              'config': config
              }
 
@@ -271,15 +271,15 @@ class SEDGenerator(object):
                               min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
         spectral_pars = gtutils.get_function_pars_dict(source.spectrum())
-        o['params'] = roi_model.get_params_dict(spectral_pars)
+        #o['params'] = roi_model.get_params_dict(spectral_pars)
+        
         o['SpectrumType'] = self.roi[name]['SpectrumType']
-
+        o.update(model_utils.pars_dict_to_vectors(o['SpectrumType'],
+                                                  spectral_pars))
+        
         param_names = gtutils.get_function_par_names(o['SpectrumType'])
         npar = len(param_names)
         o['param_covariance'] = np.empty((npar, npar), dtype=float) * np.nan
-        o['param_names'] = np.array(param_names)
-        o['param_values'] = np.empty(npar, dtype=float) * np.nan
-        o['param_errors'] = np.empty(npar, dtype=float) * np.nan
 
         pmask0 = np.empty(len(fit_output['par_names']), dtype=bool)
         pmask0.fill(False)
@@ -287,8 +287,6 @@ class SEDGenerator(object):
         pmask1.fill(False)
         for i, pname in enumerate(param_names):
 
-            o['param_values'][i] = o['params'][pname][0]
-            o['param_errors'][i] = o['params'][pname][1]
             for j, pname2 in enumerate(fit_output['par_names']):
                 if name != fit_output['src_names'][j]:
                     continue
@@ -308,6 +306,8 @@ class SEDGenerator(object):
 
         self._restore_free_params()
 
+        self.logger.info('Fitting SED')
+        
         # Setup background parameters for SED
         self.free_sources(False, pars='shape')
         self.free_norm(name)
@@ -357,16 +357,22 @@ class SEDGenerator(object):
                 gf_bin_flux += [min_flux]
 
         old_spectrum = source.spectrum()
-        self.like.setSpectrum(str(name), str('PowerLaw'))
-        self.free_parameter(name, 'Index', False)
-        self.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
-                           true_value=False,
-                           bounds=[1E-10, 1E10],
-                           update_source=False)
-        self.free_parameter(name, 'Prefactor', True)
-        self.set_parameter(name, 'Scale', 1E3, scale=1.0,
-                           bounds=[1, 1E6], update_source=False)
-
+        old_pars = copy.deepcopy(self.roi[name].spectral_pars)        
+        old_type = self.roi[name]['SpectrumType']
+        
+        spectrum_pars = {
+            'Prefactor' :
+                {'value' : 1.0, 'scale' : 1E-13, 'min' : 1E-10, 'max' : 1E10, 'free' : True},
+            'Index' :
+                {'value' : 2.0, 'scale' : -1.0, 'min' : 0.0, 'max' : 5.0, 'free' : False},
+            'Scale' :
+                {'value' : 1E3, 'scale' : 1.0, 'min' : 1., 'max' : 1E6, 'free' : False},
+            }
+        
+        self.set_source_spectrum(str(name), 'PowerLaw',
+                                 spectrum_pars=spectrum_pars,
+                                 update_source=False)
+        
         src_norm_idx = -1
         free_params = self.get_params(True)
         for j, p in enumerate(free_params):
@@ -424,7 +430,7 @@ class SEDGenerator(object):
             self.logger.debug('Fitting %s SED from %.0f MeV to %.0f MeV' %
                               (name, emin, emax))
             self.set_energy_range(logemin, logemax)
-
+            
             fit_output = self._fit(**config['optimizer'])
             free_params = self.get_params(True)
             for j, p in enumerate(free_params):
@@ -493,7 +499,11 @@ class SEDGenerator(object):
             o['%s_ul' % t] = o['norm_ul'] * o['ref_%s' % t]
 
         self.set_energy_range(loge_bounds[0], loge_bounds[1])
-        self.like.setSpectrum(str(name), old_spectrum)
+        self.set_source_spectrum(str(name), old_type,
+                                 spectrum_pars=old_pars)
+        
+        #self.like.setSpectrum(str(name), old_spectrum)
+        
         saved_state.restore()
         self._sync_params(name)
 
