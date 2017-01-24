@@ -16,7 +16,7 @@ env:
       - SLAC_ST_BUILD=false      
       - PIP_DEPS='coverage pytest-cov coveralls'
       - CONDA2='conda install -y -c conda-forge healpy wcsaxes'
-      - INSTALL_CMD='python setup.py install --no-deps'
+      - INSTALL_CMD='python setup.py install'
 
 matrix:
     include:
@@ -94,7 +94,7 @@ install:
         source condainstall.sh;
     else
         $DOCKER_INSTALL;
-        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy && python setup.py install --no-deps";
+        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy && python setup.py install";
     fi
 
 #docker exec fermipy-testing /bin/bash -c "cd /home/fermipy;source /home/fermipy/condainstall.sh";
