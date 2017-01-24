@@ -569,7 +569,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self._loge_bounds = np.array([self._ebin_edges[0],
                                       self._ebin_edges[-1]])
 
-        self._roi_model = {
+        self._roi_data = {
             'loglike': np.nan,
             'npred': 0.0,
             'counts': np.zeros(self.enumbins),
@@ -590,7 +590,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                            'src_expscale': copy.deepcopy(c.src_expscale),
                            }]
 
-            self._roi_model['components'] += comp_model
+            self._roi_data['components'] += comp_model
 
         self._roiwidth = max(roiwidths)
         self._binsz = min(binsz)
@@ -777,7 +777,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def _update_roi(self):
 
-        rm = self._roi_model
+        rm = self._roi_data
 
         rm['loglike'] = -self.like()
         rm['model_counts'].fill(0)
@@ -924,11 +924,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src = self.components[0].like.logLike.getSource(str(name))
         pars_dict = gtutils.get_function_pars_dict(src.spectrum())
 
-        self.roi[name].set_spectral_pars(pars_dict)
         self.roi[name]['SpectrumType'] = spectrum_type
+        self.roi[name].set_spectral_pars(pars_dict)
         for c in self.components:
-            c.roi[name].set_spectral_pars(pars_dict)
             c.roi[name]['SpectrumType'] = spectrum_type
+            c.roi[name].set_spectral_pars(pars_dict)
 
         if update_source:
             self.update_source(name)
@@ -1246,7 +1246,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def _init_roi_model(self):
 
-        rm = self._roi_model
+        rm = self._roi_data
 
         rm['counts'] = np.zeros(self.enumbins)
         rm['loglike'] = -self.like()
@@ -1344,7 +1344,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             logemax = self.log_energies[imax]
 
         self._loge_bounds = np.array([logemin, logemax])
-        self._roi_model['loge_bounds'] = np.copy(self.loge_bounds)
+        self._roi_data['loge_bounds'] = np.copy(self.loge_bounds)
         for c in self.components:
             c.set_energy_range(logemin, logemax)
 
@@ -1903,7 +1903,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src = self.roi.get_source_by_name(name)
         name = src.name
 
-        if pars is None:
+        if pars is None or (isinstance(pars, list) and not pars):
             pars = []
             pars += norm_parameters.get(src['SpectrumType'], [])
             pars += shape_parameters.get(src['SpectrumType'], [])
@@ -2226,7 +2226,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                         reverse=True):
 
             npred_sum += s['npred']
-            npred_frac = npred_sum / self._roi_model['npred']
+            npred_frac = npred_sum / self._roi_data['npred']
 
             if s.name in skip_sources:
                 continue
@@ -3430,12 +3430,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                    'ref_dfde_emax': 'ref_dnde_e_max',
                    }
 
-        self._roi_model = utils.update_keys(roi_data['roi'], key_map)
+        self._roi_data = utils.update_keys(roi_data['roi'], key_map)
 
-        if 'erange' in self._roi_model:
-            self._roi_model['loge_bounds'] = self._roi_model.pop('erange')
+        if 'erange' in self._roi_data:
+            self._roi_data['loge_bounds'] = self._roi_data.pop('erange')
 
-        self._loge_bounds = self._roi_model.setdefault('loge_bounds',
+        self._loge_bounds = self._roi_data.setdefault('loge_bounds',
                                                        self.loge_bounds)
 
         sources = roi_data.pop('sources')
@@ -3451,8 +3451,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.roi.load_sources(sources.values())
         for i, c in enumerate(self.components):
             c.roi.load_sources(sources.values())
-            if 'src_expscale' in self._roi_model['components'][i]:
-                c._src_expscale = copy.deepcopy(self._roi_model['components']
+            if 'src_expscale' in self._roi_data['components'][i]:
+                c._src_expscale = copy.deepcopy(self._roi_data['components']
                                                 [i]['src_expscale'])
 
         self._create_likelihood(infile)
@@ -3514,14 +3514,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         ymlfile = pathprefix + '.yaml'
 
         self.write_xml(xmlfile)
-        self.logger.info('Writing %s...', fitsfile)
-
-        tab = self.roi.create_table()
-        hdu_data = fits.table_to_hdu(tab)
-        hdus = [fits.PrimaryHDU(), hdu_data]
-        hdus[0].header['CONFIG'] = json.dumps(self.config)
-        hdus[1].header['CONFIG'] = json.dumps(self.config)
-        fits_utils.write_hdus(hdus, fitsfile)
+        self.write_fits(fitsfile)
 
         if not self.config['gtlike']['use_external_srcmap']:
             for c in self.components:
@@ -3531,7 +3524,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self.write_model_map(prefix)
 
         o = {}
-        o['roi'] = copy.deepcopy(self._roi_model)
+        o['roi'] = copy.deepcopy(self._roi_data)
         o['config'] = copy.deepcopy(self.config)
         o['version'] = fermipy.__version__
         o['stversion'] = fermipy.get_st_version()
@@ -3557,6 +3550,72 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self.make_plots(prefix, None,
                             **kwargs.get('plotting', {}))
 
+    def write_fits(self, fitsfile):
+
+        self.logger.info('Writing %s...', fitsfile)
+
+        tab = self.roi.create_table()
+        hdu_data = fits.table_to_hdu(tab)
+        hdu_data.name = 'CATALOG'
+
+        tab_srcs = []
+        tab_params = []
+        for i, c in enumerate(self.components):
+            tab = self.roi.create_source_table()
+            tab['component'] = i
+            tab['expscale'] = np.nan
+            
+            for k,v in c.src_expscale.items():
+                m = tab['source_name'] == k
+                tab['expscale'][m] = v
+            
+            tab_srcs += [tab]
+
+            tab = self.roi.create_param_table()
+            tab['component'] = i
+            tab_params += [tab]
+
+        from astropy.table import vstack
+            
+        hdu_srcs = fits.table_to_hdu(vstack(tab_srcs))
+        hdu_srcs.name = 'SOURCES'
+        hdu_params = fits.table_to_hdu(vstack(tab_params))
+        hdu_params.name = 'PARAMS'        
+        hdu_roi = fits.table_to_hdu(self.create_roi_table())
+        hdu_roi.name = 'ROI'
+        
+        hdus = [fits.PrimaryHDU(), hdu_data, hdu_roi, hdu_srcs, hdu_params]
+        hdus[0].header['CONFIG'] = json.dumps(self.config)
+        hdus[1].header['CONFIG'] = json.dumps(self.config)
+        fits_utils.write_hdus(hdus, fitsfile)
+
+    def create_roi_table(self):
+
+        rd = copy.deepcopy(self._roi_data)
+        loge_bounds = rd.pop('loge_bounds').tolist()
+        
+        tab = fits_utils.dict_to_table(rd)
+        tab['component'] = -1
+        tab.meta['loge_bounds'] = loge_bounds
+        
+        row_dict = {}
+        for i, c in enumerate(rd['components']):
+            c['component'] = i
+
+            row = []
+            for k in tab.columns:
+
+                shape = tab.columns[k].shape
+                ndim = tab.columns[k].ndim                
+                if ndim == 1:
+                    val = c[k]
+                else:
+                    val = np.ones(shape[1:])*np.nan
+                    val[:len(c[k])] = c[k]
+                row += [val]
+            tab.add_row(row)
+        return tab
+        
     def make_plots(self, prefix, mcube_map=None, **kwargs):
         """Make diagnostic plots using the current ROI model."""
 
@@ -3738,13 +3797,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                          'ts': np.nan,
                          'loglike': np.nan,
                          'npred': 0.0,
-                         'lnlprofile': None,
+                         'loglike_scan': np.nan * np.ones(npts),
                          'dloglike_scan': np.nan * np.ones(npts),
                          'eflux_scan': np.nan * np.ones(npts),
                          'flux_scan': np.nan * np.ones(npts),
+                         'norm_scan': np.nan * np.ones(npts),
                          })
 
-        src_dict['params'] = gtutils.gtlike_spectrum_to_dict(spectrum)
+        src_dict.update(gtutils.gtlike_spectrum_to_vectors(spectrum))
         src_dict['spectral_pars'] = gtutils.get_function_pars_dict(spectrum)
 
         # Get Counts Spectrum
@@ -3845,11 +3905,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                  reoptimize=reoptimize, npts=npts,
                                  optimizer=optimizer)
 
-        src_dict['lnlprofile'] = lnlp
-
+        src_dict['loglike_scan'] = lnlp['loglike']
         src_dict['dloglike_scan'] = lnlp['dloglike']
         src_dict['eflux_scan'] = lnlp['eflux']
         src_dict['flux_scan'] = lnlp['flux']
+        src_dict['norm_scan'] = lnlp['xvals']
         src_dict['loglike'] = np.max(lnlp['loglike'])
 
         flux_ul_data = utils.get_parameter_limits(

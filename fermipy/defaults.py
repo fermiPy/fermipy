@@ -310,6 +310,8 @@ lightcurve = {
     'free_radius': common['free_radius'],
     'free_sources': (None, 'List of sources to be freed.  These sources will be added to the list of sources '
                      'satisfying the free_radius selection.', list),
+    'free_params': (None, 'Set the parameters of the source of interest that will be re-fit in each time bin. '
+                    'If this list is empty then all parameters will be freed.', list),    
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
@@ -434,7 +436,6 @@ sed_output = OrderedDict((
                        'scan in N energy bins and M scan points.', np.ndarray, '`~numpy.ndarray`')),
     ('loglike_scan', (None, 'Array of NxM loglikelihood values for the profile likelihood scan '
                       'in N energy bins and M scan points.', np.ndarray, '`~numpy.ndarray`')),
-    ('params', (None, 'Dictionary of best-fit spectral parameters with 1-sigma uncertainties.', dict, 'dict')),
     ('param_covariance', (None, 'Covariance matrix for the best-fit spectral parameters of the source.',
                           np.ndarray, '`~numpy.ndarray`')),
     ('param_names', (None, 'Array of names for the parameters in the global spectral parameterization of this source.',
@@ -572,7 +573,6 @@ source_meta_output = OrderedDict((
      (None, 'Path to spatial template associated to this source.', str, 'str')),
     ('Spectrum_Filename', (None,
                            'Path to file associated to the spectral model of this source.', str, 'str')),
-    ('params', (None, 'Dictionary of spectral parameters.', dict, 'dict')),
     ('correlation', ({}, 'Dictionary of correlation coefficients.', dict, 'dict')),
     ('model_counts', (None, 'Vector of predicted counts for this source in each analysis energy bin.',
                       np.ndarray, '`~numpy.ndarray`')),
@@ -603,14 +603,24 @@ source_pos_output = OrderedDict((
 ))
 
 source_flux_output = OrderedDict((
+    ('param_names', (np.zeros(10, dtype='S32'),
+                     'Names of spectral parameters.', np.ndarray, '`~numpy.ndarray`')),
+    ('param_values', (np.empty(10, dtype=float) * np.nan,
+                      'Spectral parameter values.', np.ndarray, '`~numpy.ndarray`')),
+    ('param_errors', (np.empty(10, dtype=float) * np.nan,
+                      'Spectral parameters errors.', np.ndarray, '`~numpy.ndarray`')),
     ('ts', (np.nan, 'Source test statistic.', float, 'float')),
     ('loglike', (np.nan, 'Log-likelihood of the model evaluated at the best-fit normalization of the source.', float, 'float')),
+    ('loglike_scan', (np.array(
+        [np.nan]), 'Log-likelihood values for scan of source normalization.', np.ndarray, '`~numpy.ndarray`')),
     ('dloglike_scan', (np.array(
-        [np.nan]), 'Delta Log-likelihood values for likelihood scan of source normalization.', np.ndarray, '`~numpy.ndarray`')),
+        [np.nan]), 'Delta Log-likelihood values for scan of source normalization.', np.ndarray, '`~numpy.ndarray`')),
     ('eflux_scan', (np.array(
-        [np.nan]), 'Energy flux values for likelihood scan of source normalization.', np.ndarray, '`~numpy.ndarray`')),
+        [np.nan]), 'Energy flux values for scan of source normalization.', np.ndarray, '`~numpy.ndarray`')),
     ('flux_scan', (np.array(
-        [np.nan]), 'Flux values for likelihood scan of source normalization.', np.ndarray, '`~numpy.ndarray`')),
+        [np.nan]), 'Flux values for scan of source normalization.', np.ndarray, '`~numpy.ndarray`')),
+    ('norm_scan', (np.array(
+        [np.nan]), 'Normalization parameters values for scan of source normalization.', np.ndarray, '`~numpy.ndarray`')),
     ('npred', (np.nan, 'Number of predicted counts from this source integrated over the analysis energy range.', float, 'float')),
     ('pivot_energy', (np.nan, 'Decorrelation energy in MeV.', float, 'float')),
     ('flux', (np.nan, 'Photon flux (%s) integrated over analysis energy range' % FLUX_UNIT,
