@@ -75,7 +75,7 @@ class ExtensionFit(object):
         if config['make_plots']:
             self._plotter.make_extension_plots(ext, self.roi,
                                                prefix=config['prefix'])
-        
+
         outfile = config.get('outfile', None)
         if outfile is None:
             outfile = utils.format_filename(self.workdir, 'ext',
@@ -229,7 +229,7 @@ class ExtensionFit(object):
 
         tsmap = self.tsmap(model=src.data,
                            map_skydir=src.skydir,
-                           map_size=max(1.0,3.0*o['ext_ul95']),
+                           map_size=max(1.0, 3.0 * o['ext_ul95']),
                            exclude=[name],
                            write_fits=False,
                            write_npy=False,
@@ -238,7 +238,7 @@ class ExtensionFit(object):
                            loglevel=logging.DEBUG)
 
         o['tsmap'] = tsmap['ts']
-        
+
         if update and (sqrt_ts_threshold is None or
                        np.sqrt(o['ts_ext']) > sqrt_ts_threshold):
             src = self.delete_source(name)
@@ -278,7 +278,7 @@ class ExtensionFit(object):
                 hdu_data] + hdu_images
 
         hdus[0].header['CONFIG'] = json.dumps(ext['config'])
-        hdus[1].header['CONFIG'] = json.dumps(ext['config'])        
+        hdus[1].header['CONFIG'] = json.dumps(ext['config'])
         fits_utils.write_hdus(hdus, filename)
 
     def _scan_extension(self, name, **kwargs):
@@ -382,7 +382,7 @@ class ExtensionFit(object):
 
         err = max(10**-2.0, ul_data['err'])
         lolim = max(ul_data['x0'] - 2.0 * err, 0)
-        hilim = ul_data['x0'] + 2.0 * err
+        hilim = 1.5 * ul_data['ul']
         width2 = np.linspace(lolim, hilim, 11)
 
         loglike2 = self._scan_extension(name, spatial_model=spatial_model,
