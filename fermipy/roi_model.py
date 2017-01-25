@@ -65,7 +65,7 @@ def create_source_table(scan_shape):
     cols_dict['eflux_scan'] = dict(dtype='f8', format='%.3f',
                                    shape=scan_shape)
     cols_dict['norm_scan'] = dict(dtype='f8', format='%.3f',
-                                   shape=scan_shape)
+                                  shape=scan_shape)
     cols_dict['dloglike_scan'] = dict(dtype='f8', format='%.3f',
                                       shape=scan_shape)
     cols_dict['loglike_scan'] = dict(dtype='f8', format='%.3f',
@@ -216,9 +216,72 @@ def get_true_params_dict(pars_dict):
         err = np.nan
         if 'error' in p:
             err = p['error'] * np.abs(p['scale'])
-        params[k] = {'value' : val, 'error' : err }
+        params[k] = {'value': val, 'error': err}
 
     return params
+
+
+def spectral_pars_from_catalog(cat):
+    """Create spectral parameters from 3FGL catalog columns."""
+
+    spectrum_type = cat['SpectrumType']
+    pars = get_function_defaults(cat['SpectrumType'])
+
+    if spectrum_type == 'PowerLaw':
+
+        pars['Prefactor']['value'] = cat['Flux_Density']
+        pars['Scale']['value'] = cat['Pivot_Energy']
+        pars['Scale']['scale'] = 1.0
+        pars['Index']['value'] = cat['Spectral_Index']
+        pars['Index']['max'] = max(5.0, pars['Index']['value'] + 1.0)
+        pars['Index']['min'] = min(0.0, pars['Index']['value'] - 1.0)
+        pars['Index']['scale'] = -1.0
+
+        pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
+        pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
+        pars['Index'] = make_parameter_dict(pars['Index'], False, False)
+
+    elif spectrum_type == 'LogParabola':
+
+        pars['norm']['value'] = cat['Flux_Density']
+        pars['Eb']['value'] = cat['Pivot_Energy']
+        pars['alpha']['value'] = cat['Spectral_Index']
+        pars['beta']['value'] = cat['beta']
+
+        pars['norm'] = make_parameter_dict(pars['norm'], False, True)
+        pars['Eb'] = make_parameter_dict(pars['Eb'], True, False)
+        pars['alpha'] = make_parameter_dict(pars['alpha'], False, False)
+        pars['beta'] = make_parameter_dict(pars['beta'], False, False)
+
+    elif spectrum_type == 'PLSuperExpCutoff':
+
+        flux_density = cat['Flux_Density']
+        prefactor = (cat['Flux_Density'] *
+                     np.exp((cat['Pivot_Energy'] / cat['Cutoff']) **
+                            cat['Exp_Index']))
+
+        pars['Prefactor']['value'] = prefactor
+        pars['Index1']['value'] = cat['Spectral_Index']
+        pars['Index1']['scale'] = -1.0
+        pars['Index2']['value'] = cat['Exp_Index']
+        pars['Index2']['scale'] = 1.0
+        pars['Scale']['value'] = cat['Pivot_Energy']
+        pars['Cutoff']['value'] = cat['Cutoff']
+
+        print(cat['Flux_Density'], flux_density, prefactor,
+              cat['Spectral_Index'], cat['Exp_Index'], cat['Pivot_Energy'],
+              cat['Cutoff'])
+
+        pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
+        pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
+        pars['Index1'] = make_parameter_dict(pars['Index1'], False, False)
+        pars['Index2'] = make_parameter_dict(pars['Index2'], False, False)
+        pars['Cutoff'] = make_parameter_dict(pars['Cutoff'], False, True)
+
+    else:
+        raise Exception('Unsupported spectral type:' + spectrum_type)
+
+    return pars
 
 
 class Model(object):
@@ -231,14 +294,15 @@ class Model(object):
     def __init__(self, name, data):
 
         self._data = defaults.make_default_dict(defaults.source_output)
-        self._data['spectral_pars'] = get_function_defaults(data['SpectrumType'])
+        self._data['spectral_pars'] = get_function_defaults(
+            data['SpectrumType'])
         self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
         self._data.setdefault('catalog', data.pop('catalog', {}))
         self._data.setdefault('assoc', data.pop('assoc', {}))
         self._data.setdefault('class', '')
         self._data['name'] = name
         self._data.setdefault('psf_scale_fn', None)
-        self._data = utils.merge_dict(self._data, data)        
+        self._data = utils.merge_dict(self._data, data)
         self._names = [name]
         catalog = self._data['catalog']
 
@@ -290,7 +354,7 @@ class Model(object):
             val = self['param_values'][i]
             err = self['param_errors'][i]
             output += ['{:15s}: {:10.4g} +/- {:10.4g}'.format(p, val, err)]
-        
+
         return '\n'.join(output).format(**data)
 
     def items(self):
@@ -299,7 +363,7 @@ class Model(object):
     @property
     def data(self):
         return self._data
-    
+
     @property
     def spectral_pars(self):
         return self._data['spectral_pars']
@@ -311,7 +375,7 @@ class Model(object):
     @property
     def params(self):
         return get_true_params_dict(self._data['spectral_pars'])
-    
+
     @property
     def name(self):
         return self._data['name']
@@ -368,7 +432,7 @@ class Model(object):
         pars = model_utils.pars_dict_to_vectors(self['SpectrumType'],
                                                 self.spectral_pars)
         self._data.update(pars)
-        
+
     def get_norm(self):
 
         par_name = get_function_norm_par_name(self['SpectrumType'])
@@ -385,7 +449,7 @@ class Model(object):
              'Exp_Index': np.nan,
              'Cutoff': np.nan}
 
-        params = get_true_params_dict(self.spectral_pars)        
+        params = get_true_params_dict(self.spectral_pars)
         if self['SpectrumType'] == 'PowerLaw':
             o['Spectral_Index'] = -1.0 * params['Index']['value']
             o['Flux_Density'] = params['Prefactor']['value']
@@ -714,66 +778,6 @@ class Source(Model):
             self._set_radec([spatial_pars['RA']['value'],
                              spatial_pars['DEC']['value']])
 
-    def load_from_catalog(self):
-        """Load spectral parameters from catalog values."""
-
-        self._data['spectral_pars'] = get_function_defaults(
-            self['SpectrumType'])
-        sp = self['spectral_pars']
-
-        catalog = self.data.get('catalog', {})
-
-        if self['SpectrumType'] == 'PowerLaw':
-
-            sp['Prefactor']['value'] = catalog['Flux_Density']
-            sp['Scale']['value'] = catalog['Pivot_Energy']
-            sp['Scale']['scale'] = 1.0
-            sp['Index']['value'] = catalog['Spectral_Index']
-            sp['Index']['max'] = max(5.0, sp['Index']['value'] + 1.0)
-            sp['Index']['min'] = min(0.0, sp['Index']['value'] - 1.0)
-            sp['Index']['scale'] = -1.0
-
-            sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
-            sp['Scale'] = make_parameter_dict(sp['Scale'], True, False)
-            sp['Index'] = make_parameter_dict(sp['Index'], False, False)
-
-        elif self['SpectrumType'] == 'LogParabola':
-
-            sp['norm']['value'] = catalog['Flux_Density']
-            sp['Eb']['value'] = catalog['Pivot_Energy']
-            sp['alpha']['value'] = catalog['Spectral_Index']
-            sp['beta']['value'] = catalog['beta']
-
-            sp['norm'] = make_parameter_dict(sp['norm'], False, True)
-            sp['Eb'] = make_parameter_dict(sp['Eb'], True, False)
-            sp['alpha'] = make_parameter_dict(sp['alpha'], False, False)
-            sp['beta'] = make_parameter_dict(sp['beta'], False, False)
-
-        elif self['SpectrumType'] == 'PLSuperExpCutoff':
-
-            flux_density = catalog['Flux_Density']
-            flux_density *= np.exp(
-                (catalog['Pivot_Energy'] / catalog['Cutoff']) ** catalog[
-                    'Exp_Index'])
-
-            sp['Prefactor']['value'] = flux_density
-            sp['Index1']['value'] = catalog['Spectral_Index']
-            sp['Index1']['scale'] = -1.0
-            sp['Index2']['value'] = catalog['Exp_Index']
-            sp['Index2']['scale'] = 1.0
-            sp['Scale']['value'] = catalog['Pivot_Energy']
-            sp['Cutoff']['value'] = catalog['Cutoff']
-
-            sp['Prefactor'] = make_parameter_dict(sp['Prefactor'])
-            sp['Scale'] = make_parameter_dict(sp['Scale'], True, False)
-            sp['Index1'] = make_parameter_dict(sp['Index1'], False, False)
-            sp['Index2'] = make_parameter_dict(sp['Index2'], False, False)
-            sp['Cutoff'] = make_parameter_dict(sp['Cutoff'], False, True)
-
-        else:
-            raise Exception('Unsupported spectral type:' +
-                            self['SpectrumType'])
-
     def update_data(self, d):
         self._data = utils.merge_dict(self._data, d, add_new_keys=True)
         if 'ra' in d and 'dec' in d:
@@ -940,6 +944,24 @@ class Source(Model):
         radec = np.array([skydir.ra.deg, skydir.dec.deg])
 
         return Source(name, src_dict, radec=radec)
+
+    @staticmethod
+    def create_from_xmlfile(xmlfile, extdir=None):
+        """Create a Source object from an XML file.
+
+        Parameters
+        ----------
+        xmlfile : str
+            Path to XML file.
+
+        extdir : str
+            Path to the extended source archive.
+        """
+        root = ElementTree.ElementTree(file=xmlfile).getroot()
+        srcs = root.findall('source')
+        if len(srcs) == 0:
+            raise Exception('No sources found.')
+        return Source.create_from_xml(srcs[0], extdir=extdir)
 
     @staticmethod
     def create_from_xml(root, extdir=None):
@@ -1880,8 +1902,9 @@ class ROIModel(fermipy.config.Configurable):
                 src_dict['SpatialType'] = 'SkyDirFunction'
                 src_dict['SpatialModel'] = 'PointSource'
 
+            src_dict['spectral_pars'] = spectral_pars_from_catalog(
+                catalog_dict)
             src = Source(src_dict['Source_Name'], src_dict, radec=radec)
-            src.load_from_catalog()
             src.data['offset'] = offset[m][i]
             src.data['offset_ra'] = offset_cel[:, 0][m][i]
             src.data['offset_dec'] = offset_cel[:, 1][m][i]
@@ -1992,15 +2015,15 @@ class ROIModel(fermipy.config.Configurable):
 
         row_dict = {}
         for s in self.sources:
-            row_dict['source_name'] = s.name            
+            row_dict['source_name'] = s.name
             row_dict['spectrum_type'] = s['SpectrumType']
             row_dict['spatialModel_type'] = s['SpatialType']
             row_dict['spectrum_file'] = s['Spectrum_Filename']
-            row_dict['spatialModel_file'] = s['Spatial_Filename']            
+            row_dict['spatialModel_file'] = s['Spatial_Filename']
             tab.add_row([row_dict[k] for k in tab.columns])
 
         return tab
-        
+
     def create_param_table(self):
 
         cols_dict = collections.OrderedDict()
@@ -2021,23 +2044,23 @@ class ROIModel(fermipy.config.Configurable):
         row_dict = {}
         for s in self.sources:
             row_dict['source_name'] = s.name
-            
+
             row_dict['type'] = s['SpectrumType']
             row_dict['group'] = 'spectrum'
             for k, v in s.spectral_pars.items():
                 row_dict['name'] = k
-                row_dict.update(v)               
+                row_dict.update(v)
                 tab.add_row([row_dict[k] for k in tab.columns])
 
             row_dict['type'] = s['SpatialType']
             row_dict['group'] = 'spatialModel'
             for k, v in s.spatial_pars.items():
                 row_dict['name'] = k
-                row_dict.update(v)               
+                row_dict.update(v)
                 tab.add_row([row_dict[k] for k in tab.columns])
-                
+
         return tab
-        
+
     def create_table(self, names=None):
         """Create an astropy Table object with the contents of the ROI model.
         """
@@ -2054,7 +2077,7 @@ class ROIModel(fermipy.config.Configurable):
 
             if names is not None and s.name not in names:
                 continue
-            
+
             row_dict['Source_Name'] = s['name']
             row_dict['RAJ2000'] = s['ra']
             row_dict['DEJ2000'] = s['dec']
@@ -2065,7 +2088,7 @@ class ROIModel(fermipy.config.Configurable):
                 pars = model_utils.pars_dict_to_vectors(s['SpectrumType'],
                                                         s.spectral_pars)
                 row_dict.update(pars)
-            
+
             r68_semimajor = s['pos_sigma_semimajor'] * \
                 s['pos_r68'] / s['pos_sigma']
             r68_semiminor = s['pos_sigma_semiminor'] * \
