@@ -3,7 +3,7 @@ MAINTAINER Matthew Wood <mdwood@slac.stanford.edu>
 ARG PYTHON_VERSION=2.7
 ARG CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
 ARG CONDA_DEPS="scipy matplotlib pyyaml ipython jupyter pandas"
-ARG CONDA_DEPS_EXTRA="wcsaxes healpy"
+ARG CONDA_DEPS_EXTRA="wcsaxes healpy subprocess32"
 ARG PIP_DEPS=""
 ENV PATH /opt/conda/bin:$PATH
 RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
