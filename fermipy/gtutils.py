@@ -325,6 +325,44 @@ def get_params(like):
     return params
 
 
+def get_priors(like):
+    """Extract priors from a likelihood object."""
+
+    npar = len(like.params())
+
+    vals = np.ones(npar)
+    errs = np.ones(npar)
+    has_prior = np.array([False] * npar)
+
+    for i, p in enumerate(like.params()):
+
+        prior = like[i].log_prior()
+
+        if prior is None:
+            continue
+
+        par_names = pyLike.StringVector()
+        prior.getParamNames(par_names)
+
+        if not 'Mean' in par_names:
+            raise Exception('Failed to find Mean in prior parameters.')
+
+        if not 'Sigma' in par_names:
+            raise Exception('Failed to find Sigma in prior parameters.')
+
+        for t in par_names:
+
+            if t == 'Mean':
+                vals[i] = prior.parameter(t).getValue()
+
+            if t == 'Sigma':
+                errs[i] = prior.parameter(t).getValue()
+
+        has_prior[i] = True
+
+    return vals, errs, has_prior
+
+
 def get_source_pars(src):
     """Extract the parameters associated with a pyLikelihood Source object.
 
