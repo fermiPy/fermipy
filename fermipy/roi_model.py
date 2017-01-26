@@ -268,10 +268,6 @@ def spectral_pars_from_catalog(cat):
         pars['Scale']['value'] = cat['Pivot_Energy']
         pars['Cutoff']['value'] = cat['Cutoff']
 
-        print(cat['Flux_Density'], flux_density, prefactor,
-              cat['Spectral_Index'], cat['Exp_Index'], cat['Pivot_Energy'],
-              cat['Cutoff'])
-
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
         pars['Index1'] = make_parameter_dict(pars['Index1'], False, False)
