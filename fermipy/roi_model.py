@@ -436,6 +436,48 @@ class Model(object):
         scale = self.spectral_pars[par_name]['scale']
         return float(val) * float(scale)
 
+    def add_to_table(self, tab):
+
+        row_dict = {}
+        row_dict['Source_Name'] = self['name']
+        row_dict['RAJ2000'] = self['ra']
+        row_dict['DEJ2000'] = self['dec']
+        row_dict['GLON'] = self['glon']
+        row_dict['GLAT'] = self['glat']
+
+        if not 'param_names' in self.data:
+            pars = model_utils.pars_dict_to_vectors(self['SpectrumType'],
+                                                    self.spectral_pars)
+            row_dict.update(pars)
+
+        r68_semimajor = self['pos_sigma_semimajor'] * \
+            self['pos_r68'] / self['pos_sigma']
+        r68_semiminor = self['pos_sigma_semiminor'] * \
+            self['pos_r68'] / self['pos_sigma']
+        r95_semimajor = self['pos_sigma_semimajor'] * \
+            self['pos_r95'] / self['pos_sigma']
+        r95_semiminor = self['pos_sigma_semiminor'] * \
+            self['pos_r95'] / self['pos_sigma']
+
+        row_dict['Conf_68_PosAng'] = self['pos_angle']
+        row_dict['Conf_68_SemiMajor'] = r68_semimajor
+        row_dict['Conf_68_SemiMinor'] = r68_semiminor
+        row_dict['Conf_95_PosAng'] = self['pos_angle']
+        row_dict['Conf_95_SemiMajor'] = r95_semimajor
+        row_dict['Conf_95_SemiMinor'] = r95_semiminor
+
+        row_dict.update(self.get_catalog_dict())
+
+        for t in self.data.keys():
+
+            if t == 'params':
+                continue
+            if t in tab.columns:
+                row_dict[t] = self[t]
+
+        row = [row_dict[k] for k in tab.columns]
+        tab.add_row(row)
+    
     def get_catalog_dict(self):
 
         o = {'Spectral_Index': np.nan,
@@ -2066,53 +2108,11 @@ class ROIModel(fermipy.config.Configurable):
             scan_shape = max(scan_shape, src['dloglike_scan'].shape)
 
         tab = create_source_table(scan_shape)
-
-        row_dict = {}
-
         for s in self._srcs:
-
             if names is not None and s.name not in names:
                 continue
-
-            row_dict['Source_Name'] = s['name']
-            row_dict['RAJ2000'] = s['ra']
-            row_dict['DEJ2000'] = s['dec']
-            row_dict['GLON'] = s['glon']
-            row_dict['GLAT'] = s['glat']
-
-            if not 'param_names' in s.data:
-                pars = model_utils.pars_dict_to_vectors(s['SpectrumType'],
-                                                        s.spectral_pars)
-                row_dict.update(pars)
-
-            r68_semimajor = s['pos_sigma_semimajor'] * \
-                s['pos_r68'] / s['pos_sigma']
-            r68_semiminor = s['pos_sigma_semiminor'] * \
-                s['pos_r68'] / s['pos_sigma']
-            r95_semimajor = s['pos_sigma_semimajor'] * \
-                s['pos_r95'] / s['pos_sigma']
-            r95_semiminor = s['pos_sigma_semiminor'] * \
-                s['pos_r95'] / s['pos_sigma']
-
-            row_dict['Conf_68_PosAng'] = s['pos_angle']
-            row_dict['Conf_68_SemiMajor'] = r68_semimajor
-            row_dict['Conf_68_SemiMinor'] = r68_semiminor
-            row_dict['Conf_95_PosAng'] = s['pos_angle']
-            row_dict['Conf_95_SemiMajor'] = r95_semimajor
-            row_dict['Conf_95_SemiMinor'] = r95_semiminor
-
-            row_dict.update(s.get_catalog_dict())
-
-            for t in s.data.keys():
-
-                if t == 'params':
-                    continue
-                if t in tab.columns:
-                    row_dict[t] = s[t]
-
-            row = [row_dict[k] for k in tab.columns]
-            tab.add_row(row)
-
+            s.add_to_table(tab)
+            
         return tab
 
     def write_fits(self, fitsfile):
