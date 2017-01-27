@@ -37,7 +37,6 @@
 ``norm_scan``	`~numpy.ndarray`	Array of NxM normalization values for the profile likelihood scan in N energy bins and M scan points.  A row-wise multiplication with any of ``ref`` columns can be used to convert this matrix to the respective unit.
 ``dloglike_scan``	`~numpy.ndarray`	Array of NxM delta-loglikelihood values for the profile likelihood scan in N energy bins and M scan points.
 ``loglike_scan``	`~numpy.ndarray`	Array of NxM loglikelihood values for the profile likelihood scan in N energy bins and M scan points.
-``params``	dict	Dictionary of best-fit spectral parameters with 1-sigma uncertainties.
 ``param_covariance``	`~numpy.ndarray`	Covariance matrix for the best-fit spectral parameters of the source.
 ``param_names``	`~numpy.ndarray`	Array of names for the parameters in the global spectral parameterization of this source.
 ``param_values``	`~numpy.ndarray`	Array of parameter values.

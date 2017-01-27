@@ -1,3 +1,4 @@
+``free_params``	None	
 ``max_iter``	3	Set the number of search iterations.
 ``min_separation``	1.0	Set the minimum separation in deg for sources added in each iteration.
 ``model``	None	Set the source model dictionary.  By default the test source will be a PointSource with an Index 2 power-law specturm.
