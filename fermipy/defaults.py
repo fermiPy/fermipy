@@ -554,6 +554,7 @@ plotting = {
     'format': ('png', '', str),
     'cmap': ('magma', 'Set the colormap for 2D plots.', str),
     'cmap_resid': ('RdBu_r', 'Set the colormap for 2D residual plots.', str),
+    'figsize': ([8.0,6.0], 'Set the default figure size.', list),
     'label_ts_threshold':
         (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),
 }

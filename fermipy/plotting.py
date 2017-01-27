@@ -52,8 +52,11 @@ def get_xerr(sed):
     return xerr
 
 
-def make_counts_spectrum_plot(o, roi, energies, imfile):
-    fig = plt.figure()
+def make_counts_spectrum_plot(o, roi, energies, imfile, **kwargs):
+
+    figsize = kwargs.get('figsize',(8.0,6.0))
+    
+    fig = plt.figure(figsize=figsize)
 
     gs = gridspec.GridSpec(2, 1, height_ratios=[1.4, 1])
     ax0 = fig.add_subplot(gs[0, 0])
@@ -249,7 +252,7 @@ class ImagePlotter(object):
     def plot(self, subplot=111, cmap='magma', **kwargs):
 
         kwargs_contour = {'levels': None, 'colors': ['k'],
-                          'linewidths': None}
+                          'linewidths': 1.0}
 
         kwargs_imshow = {'interpolation': 'nearest',
                          'origin': 'lower', 'norm': None,
@@ -319,7 +322,7 @@ class ImagePlotter(object):
 
         # plt.colorbar(im,orientation='horizontal',shrink=0.7,pad=0.15,
         #                     fraction=0.05)
-        ax.coords.grid(color='white')  # , alpha=0.5)
+        ax.coords.grid(color='white', linestyle=':', linewidth=0.5)  # , alpha=0.5)
         #       ax.locator_params(axis="x", nbins=12)
 
         return im, ax
@@ -916,33 +919,33 @@ class AnalysisPlotter(fermipy.config.Configurable):
     def __init__(self, config, **kwargs):
         fermipy.config.Configurable.__init__(self, config, **kwargs)
 
+        matplotlib.rcParams['font.size'] = 12
+        matplotlib.interactive(False)
+        
         self._catalogs = []
         for c in self.config['catalogs']:
             self._catalogs += [catalog.Catalog.create(c)]
-
-        self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['fileio']['logfile'],
-                                 log_level(self.config['logging']['verbosity']))
+            
 
     def run(self, gta, mcube_map, **kwargs):
         """Make all plots."""
 
         prefix = kwargs.get('prefix', 'test')
-        format = kwargs.get('format', gta.config['plotting']['format'])
+        format = kwargs.get('format', self.config['format'])
 
-        loge_bounds = [None] + gta.config['plotting']['loge_bounds']
+        loge_bounds = [None] + self.config['loge_bounds']
 
         for x in loge_bounds:
-            self.make_roi_plots(gta, mcube_map, prefix, loge_bounds=x,
-                                format=format)
+            self.make_roi_plots(gta, mcube_map, loge_bounds=x,
+                                **kwargs)
 
-        imfile = utils.format_filename(gta.config['fileio']['workdir'],
+        imfile = utils.format_filename(self.config['fileio']['workdir'],
                                        'counts_spectrum', prefix=[prefix],
                                        extension=format)
 
         make_counts_spectrum_plot(gta._roi_data, gta.roi,
                                   gta.log_energies,
-                                  imfile)
+                                  imfile, **kwargs)
 
     def make_residmap_plots(self, maps, roi=None, **kwargs):
         """Make plots from the output of
@@ -965,6 +968,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         """
 
         fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
         workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
         zoom = kwargs.get('zoom', None)
 
@@ -979,7 +983,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         load_bluered_cmap()
 
         prefix = maps['name']
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['sigma'], roi=roi, **kwargs)
         p.plot(vmin=-5, vmax=5, levels=sigma_levels,
                cb_label='Significance [$\sigma$]', interpolation='bicubic',
@@ -991,7 +995,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         # make and draw histogram
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=figsize)
         nBins = np.linspace(-6, 6, 121)
         #import pdb; pdb.set_trace()
         data = np.nan_to_num(maps['sigma'].counts.T)
@@ -1025,7 +1029,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['data'], roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic',
                cmap=cmap)
@@ -1035,7 +1039,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['model'], roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic',
                cmap=cmap)
@@ -1045,7 +1049,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['excess'], roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic',
                cmap=cmap_resid)
@@ -1083,6 +1087,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         kwargs.setdefault('cmap', self.config['cmap'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
         fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
         workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
         suffix = kwargs.pop('suffix', 'tsmap')
         zoom = kwargs.pop('zoom', None)
@@ -1092,7 +1097,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         sigma_levels = [3, 5, 7] + list(np.logspace(1, 3, 17))
         prefix = maps['name']
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['sqrt_ts'], roi=roi, **kwargs)
         p.plot(vmin=0, vmax=5, levels=sigma_levels,
                cb_label='Sqrt(TS) [$\sigma$]', interpolation='bicubic',
@@ -1103,7 +1108,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['npred'], roi=roi, **kwargs)
         p.plot(vmin=0, cb_label='NPred [Counts]', interpolation='bicubic',
                zoom=zoom)
@@ -1114,7 +1119,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         # make and draw histogram
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=figsize)
         bins = np.linspace(0, 25, 101)
 
         data = np.nan_to_num(maps['ts'].counts.T)
@@ -1139,8 +1144,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
-    def make_roi_plots(self, gta, mcube_map, prefix,
-                       loge_bounds=None, **kwargs):
+    def make_roi_plots(self, gta, mcube_map, **kwargs):
         """Make various diagnostic plots for the 1D and 2D
         counts/model distributions.
 
@@ -1152,8 +1156,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         """
 
-        fmt = kwargs.get('format', gta.config['plotting']['format'])
-
+        fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
+        prefix = kwargs.get('prefix','')
+        loge_bounds  = kwargs.get('loge_bounds',None)
+        
         roi_kwargs = {}
         roi_kwargs.setdefault('loge_bounds', loge_bounds)
         roi_kwargs.setdefault(
@@ -1169,7 +1176,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         mcube_diffuse = gta.model_counts_map('diffuse')
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p = ROIPlotter(mcube_map, roi=gta.roi, **roi_kwargs)
         p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
         plt.savefig(os.path.join(gta.config['fileio']['workdir'],
@@ -1180,7 +1187,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         # colors = ['k', 'b', 'g', 'r']
         data_style = {'marker': 's', 'linestyle': 'None'}
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p = ROIPlotter(gta.counts_map(), roi=gta.roi, **roi_kwargs)
 
         if p.projtype == "WCS":
@@ -1200,7 +1207,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                      prefix, esuffix, fmt)))
         plt.close(fig)
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p.plot_projection(0, label='Data', color='k', **data_style)
 
         p.plot_projection(0, data=model_data, label='Model',
@@ -1217,7 +1224,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                      prefix, esuffix, fmt)))
         plt.close(fig)
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p.plot_projection(1, label='Data', color='k', **data_style)
         p.plot_projection(1, data=model_data, label='Model',
                           noerror=True)
@@ -1299,8 +1306,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
         prefix = kwargs.get('prefix', '')
         name = sed['name'].lower().replace(' ', '_')
         fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
         p = SEDPlotter(sed)
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p.plot()
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
@@ -1310,7 +1318,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.savefig(outfile)
         plt.close(fig)
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
         p.plot(showlnl=True)
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
@@ -1322,6 +1330,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
     def make_localization_plots(self, loc, roi=None, **kwargs):
 
         fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
         prefix = kwargs.get('prefix', '')
         skydir = kwargs.get('skydir', None)
         cmap = kwargs.get('cmap', self.config['cmap'])
@@ -1336,7 +1345,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         skydir = loc['tsmap_peak'].get_pixel_skydirs()
 
         p = ROIPlotter(tsmap_renorm, roi=roi)
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
 
         vmin = max(-100.0, np.min(tsmap_renorm.data))
 
@@ -1389,7 +1398,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
 
         p = ROIPlotter(tsmap_renorm, roi=roi)
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
 
         vmin = max(-50.0, np.min(tsmap_renorm.data))
 
@@ -1423,13 +1432,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
     def _plot_extension_tsmap(self, ext, roi=None, **kwargs):
 
         fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
         prefix = kwargs.get('prefix', '')
         cmap = kwargs.get('cmap', self.config['cmap'])
         name = ext.get('name', '')
         name = name.lower().replace(' ', '_')
         
         p = ROIPlotter(ext['tsmap'], roi=roi)
-        fig = plt.figure()
+        fig = plt.figure(figsize=figsize)
 
         sigma_levels = [3, 5, 7] + list(np.logspace(1, 3, 17))
         
