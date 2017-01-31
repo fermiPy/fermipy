@@ -16,13 +16,14 @@ import BinnedAnalysis as BinnedAnalysis
 import pyLikelihood as pyLike
 
 from fermipy import utils
-from fermipy.jobs.chain import FileFlags, Link
+from fermipy.jobs.chain import add_argument, FileFlags, Link
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.diffuse_src_manager import make_diffuse_comp_info_dict
 from fermipy.diffuse.source_factory import make_sources
+from fermipy.diffuse import defaults as diffuse_defaults
 
 
 NAME_FACTORY = NameFactory()
@@ -37,11 +38,22 @@ class GtSrcmapPartial(object):
     """
     NULL_MODEL = 'srcmdls/null.xml'
 
-    def __init__(self):
+    default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
+                           expcube=diffuse_defaults.gtopts['expcube'],
+                           bexpmap=diffuse_defaults.gtopts['bexpmap'],
+                           cmap=diffuse_defaults.gtopts['cmap'],
+                           srcmdl=diffuse_defaults.gtopts['srcmdl'],
+                           outfile=diffuse_defaults.gtopts['outfile'],
+                           source=(None, 'Input source', str),
+                           kmin=(0, 'Minimum Energy Bin', int),
+                           kmax=(-1, 'Maximum Energy Bin', int),
+                           gzip=(False, 'Compress output file', bool))
+
+    def __init__(self, **kwargs):
         """C'tor
         """
         self.parser = GtSrcmapPartial._make_parser()
-        self.link = GtSrcmapPartial._make_link()
+        self.link = GtSrcmapPartial._make_link(**kwargs)
 
     @staticmethod
     def _make_parser():
@@ -50,47 +62,20 @@ class GtSrcmapPartial(object):
         description = "Run gtsrcmaps for one or more energy planes for a single source"
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
-        parser.add_argument('--irfs', type=str, default='CALDB',
-                            help='Instrument response functions')
-        parser.add_argument('--expcube', type=str, default=None,
-                            help='Input Livetime cube file')
-        parser.add_argument('--cmap', type=str, default=None,
-                            help='Input counts map file')
-        parser.add_argument('--bexpmap', type=str, default=None,
-                            help='Input binned exposure map file')
-        parser.add_argument('--srcmdl', type=str, default=None,
-                            help='Input source model xml file')
-        parser.add_argument('--source', type=str, default=None,
-                            help='Input source')
-        parser.add_argument('--outfile', type=str, default=None,
-                            help='Output file')
-        parser.add_argument('--kmin', type=int, default=0,
-                            help='Minimum Energy Bin')
-        parser.add_argument('--kmax', type=int, default=-1,
-                            help='Maximum Energy Bin (-1 for all bins)')
-        parser.add_argument('--gzip', action='store_true',
-                            help='Compress output file')
+        for key, val in GtSrcmapPartial.default_options.items():
+            add_argument(parser, key, val)
         return parser
 
     @staticmethod
-    def _make_link():
-        link = Link('srcmaps-diffuse',
+    def _make_link(**kwargs):
+        link = Link(kwargs.pop('linkname', 'srcmaps-diffuse'),
                     appname='fermipy-srcmaps-diffuse',
-                    options=dict(irfs=('CALDB', 'IRFS to use', str),
-                                 expcube=(None, "Input livetime cube file", str),
-                                 bexpmap=(None, "Input binned exposure cube file", str),
-                                 cmap=(None, "Input counts map file", str),
-                                 srcmdl=(None, "Input source model xml file", str),
-                                 source=(None, "Name of source", str),
-                                 outfile=(None, "Output source map file", str),
-                                 kmin=(0, "Minimum energy bin", int),
-                                 kmin=(-1, "Maximum energy bin", int),
-                                 gzip=(False, "Compress output", bool)),
+                    options=GtSrcmapPartial.default_options.copy(),
                     file_args=dict(expcube=FileFlags.input_mask, 
-                                  cmap=FileFlags.input_mask,
-                                  bexpmap=FileFlags.input_mask,
-                                  srcmdl=FileFlags.input_mask,
-                                  outfile=FileFlags.output_mask))
+                                   cmap=FileFlags.input_mask,
+                                   bexpmap=FileFlags.input_mask,
+                                   srcmdl=FileFlags.input_mask,
+                                   outfile=FileFlags.output_mask))
         return link
 
     def run(self, argv):
@@ -144,7 +129,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',default_options.copy()))
+                             options=kwargs.get('options', ConfigMaker_SrcmapPartial.default_options.copy()))
 
     @staticmethod
     def _write_xml(xmlfile, srcs):
@@ -252,23 +237,31 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
         output_config = {}
         return input_config, job_configs, output_config
 
+def create_link_srcmap_partial(**kwargs):
+    """Build and return a `Link` object that can invoke GtAssembleModel"""
+    gtsrcmap_partial = GtSrcmapPartial(**kwargs)
+    return gtsrcmap_partial.link
 
-def build_scatter_gather():
+def create_sg_srcmap_partial(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
     gtsmp = GtSrcmapPartial()
     link = gtsmp.link
+    link.linkname = kwargs.pop('linkname', link.linkname)
+    appname = kwargs.pop('appname', 'fermipy-srcmaps-diffuse-sg')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "fermipy-srcmaps-diffuse-sg [options] input"
+    usage = "%s [options]"%(appname)
     description = "Build source maps for diffuse model components"
 
     config_maker = ConfigMaker_SrcmapPartial(link)
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                appname=appname,
+                                **kwargs)
     return lsf_sg
 
 

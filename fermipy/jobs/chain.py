@@ -15,15 +15,16 @@ import copy
 
 from collections import OrderedDict
 
-from fermipy.jobs.file_archive import FileFlags, FileDict
-from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails, JobArchive
+from fermipy.jobs.file_archive import FileDict, FileStageManager
+from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails
 
 
 def extract_arguments(args, defaults, mapping):
     """ Extract a set of arguments from a large dictionary
 
-    Parameters:
-    ---------------
+    Parameters
+    ----------
+
     args : dict
         Dictionary with the arguments values to use
 
@@ -46,6 +47,9 @@ def extract_arguments(args, defaults, mapping):
         if mapping is not None:
             try:
                 mapped_key = mapping[key]
+                mapped_val = args.get(mapped_key, None)
+                if mapped_val is None:
+                    mapped_key = key
             except KeyError:
                 mapped_key = key
         else:
@@ -59,8 +63,11 @@ def extract_arguments(args, defaults, mapping):
     return out_dict
 
 
-def check_files(filelist):
-    """ check that all files in a list exist
+def check_files(filelist,
+                file_stage_manager=None,
+                return_found=True,
+                return_missing=True):
+    """Check that all files in a list exist
 
     Return two lists: (found, missing)
     """
@@ -68,26 +75,42 @@ def check_files(filelist):
     missing = []
     none_count = 0
     for fname in filelist:
+
         if fname is None:
             none_count += 1
             continue
         if os.path.exists(fname):
             found.append(fname)
-        else:
-            missing.append(fname)
-    return found, missing
+            continue
+        if os.path.exists(fname + '.gz'):
+            found.append(fname)
+            continue
+        if file_stage_manager is not None:
+            fname = file_stage_manager.get_scratch_path(fname)
+            if os.path.exists(fname):
+                found.append(fname)
+                continue
+        missing.append(fname)
+    if return_found and return_missing:
+        return found, missing
+    elif return_found:
+        return found
+    elif return_missing:
+        return missing
+    else:
+        return None
 
 
 def add_argument(parser, dest, info):
-    """ Add an argument to an `argparse.ArgumentParser' object """
+    """ Add an argument to an `argparse.ArgumentParser` object """
     default, helpstr, typeinfo = info
 
     if typeinfo == list:
-        parser.add_argument('%s'%dest, nargs='+', default=None, help=helpstr)
+        parser.add_argument('%s' % dest, nargs='+', default=None, help=helpstr)
     elif typeinfo == bool:
-        parser.add_argument('--%s'%dest, action='store_true', help=helpstr)
+        parser.add_argument('--%s' % dest, action='store_true', help=helpstr)
     else:
-        parser.add_argument('--%s'%dest, action='store', type=typeinfo, 
+        parser.add_argument('--%s' % dest, action='store', type=typeinfo,
                             default=default, help=helpstr)
 
 
@@ -108,6 +131,7 @@ def convert_dict_to_option_dict(input_dict):
         ret_dict[key] = convert_value_to_option_tuple(value)
     return ret_dict
 
+
 def convert_option_dict_to_dict(option_dict):
     """Convert a dictionary of options tuples to a simple key-value dictionary"""
     ret_dict = {}
@@ -121,7 +145,6 @@ def convert_option_dict_to_dict(option_dict):
     return ret_dict
 
 
-
 class Link(object):
     """A wrapper for a command line application.
 
@@ -131,8 +154,9 @@ class Link(object):
     This can be used either with other Link to build a chain, or as
     as standalone wrapper to pass conifguration to the application.
 
-    Class Members
-    -------------
+    Parameters
+    ----------
+
     appname : str
         Name of the application
     args : dict
@@ -173,15 +197,16 @@ class Link(object):
             effectively the same parameter
         file_args : dict
             Dictionary mapping argument to `FileFlags' enum
+        file_stage : `FileStageManager`
+            Manager for staging files to and from a scratch area
         """
         self.linkname = linkname
-        self.appname = kwargs.get('appname', linkname)
-        self.mapping = kwargs.get('mapping', {})
-        self._parser = kwargs.get('parser', None)
+        self.appname = kwargs.pop('appname', linkname)
+        self.mapping = kwargs.pop('mapping', {})
+        self._parser = kwargs.pop('parser', None)
+        self._file_stage = kwargs.pop('file_stage', None)
         self._options = {}
-        for key in self.mapping.keys():
-            self._options[key] = (None, None, None)
-        self._options.update(kwargs.get('options', {}))
+        self._options.update(kwargs.pop('options', {}))
         if self._parser is not None:
             self.fill_argparser(self._parser)
         self.args = {}
@@ -190,9 +215,8 @@ class Link(object):
         self.sub_files = FileDict()
         self.jobs = OrderedDict()
 
-        
     def print_summary(self, stream=sys.stdout, indent="", recurse_level=2):
-        """Print a summary of the activity done by this `Link`. 
+        """Print a summary of the activity done by this `Link`.
 
         Parameters
         -----------
@@ -205,12 +229,12 @@ class Link(object):
         """
         if recurse_level < 0:
             return
-        stream.write("%sLink: %s\n"%(indent, self.linkname))
-        stream.write("%sN_jobs: %s\n"%(indent, len(self.get_jobs())))
+        stream.write("%sLink: %s\n" % (indent, self.linkname))
+        stream.write("%sN_jobs: %s\n" % (indent, len(self.get_jobs())))
         self.sub_files.print_chain_summary(stream, indent)
 
     def _get_args(self):
-        """Internal function to cast self._options into dictionary 
+        """Internal function to cast self._options into dictionary
 
         Returns dict with argument key : value pairings
         """
@@ -219,18 +243,18 @@ class Link(object):
         return args
 
     def _latch_file_info(self):
-        """Internal function to update the dictionaries 
-        keeping track of input and output files 
+        """Internal function to update the dictionaries
+        keeping track of input and output files
         """
         self.files.file_dict.clear()
         self.files.latch_file_info(self.args)
 
     def update_options(self, input_dict):
-        """Update the values in self.options 
+        """Update the values in self.options
 
         Parameters
-        -----------
-        input_dict : dict 
+        ----------
+        input_dict : dict
             Dictionary with argument key : value pairings
 
         Inserts values into self._options
@@ -251,7 +275,10 @@ class Link(object):
         """
         self.args = extract_arguments(override_args, self.args, self.mapping)
         self._latch_file_info()
-    
+        scratch_dir = self.args.get('scratch', None)
+        if scratch_dir is not None:
+            self._file_stage = FileStageManager(scratch_dir, '.')
+
     def get_failed_jobs(self):
         """Return a dictionary with the subset of jobs that are marked as failed"""
         failed_jobs = {}
@@ -285,27 +312,33 @@ class Link(object):
             if job_details.sub_file_dict is not None:
                 sub_files.update(job_details.sub_file_dict)
 
-    def check_input_files(self):
+    def check_input_files(self,
+                          return_found=True,
+                          return_missing=True):
         """Check if input files exist.
 
         Return two lists: (found, missing)
         """
-        return check_files(self.files.chain_input_files)
+        return check_files(self.files.chain_input_files, self._file_stage,
+                           return_found, return_missing)
 
-    def check_output_files(self):
-        """Check if output files exist. 
-        
+    def check_output_files(self,
+                           return_found=True,
+                           return_missing=True):
+        """Check if output files exist.
+
         Return two lists: (found, missing)
         """
-        return check_files(self.files.chain_output_files)
+        return check_files(self.files.chain_output_files, self._file_stage,
+                           return_found, return_missing)
 
     def missing_input_files(self):
         """Make and return a dictionary of the missing input files.
 
-        This returns a dictionary mapping 
+        This returns a dictionary mapping
         filepath to list of links that use the file as input.
         """
-        found, missing = self.check_input_files()
+        missing = self.check_input_files(return_found=False)
         ret_dict = {}
         for miss_file in missing:
             ret_dict[miss_file] = [self.linkname]
@@ -314,10 +347,10 @@ class Link(object):
     def missing_output_files(self):
         """Make and return a dictionary of the missing output files.
 
-        This returns a dictionary mapping 
+        This returns a dictionary mapping
         filepath to list of links that product the file as output.
         """
-        found, missing = self.check_output_files()
+        missing = self.check_output_files(return_found=False)
         ret_dict = {}
         for miss_file in missing:
             ret_dict[miss_file] = [self.linkname]
@@ -336,14 +369,58 @@ class Link(object):
     def make_argv(self):
         """Generate the vector of arguments for this `Link`.
 
-        This is exactly the 'argv' generated for the 
+        This is exactly the 'argv' generated for the
         command as called from the Unix command line.
         """
         command = self.formatted_command()
         tokens = command.split()
         return tokens[1:]
 
-    def run_link(self, stream=sys.stdout, dry_run=False):
+    def pre_run_checks(self, stream=sys.stdout, dry_run=False):
+        """Do some checks before running this link
+
+        This checks if input and output files are present.
+
+        If input files are missing this will raise `OSError` if dry_run is False
+        If all output files are present this return False.
+
+        Parameters
+        -----------
+        stream : `file`
+            Must have 'write' function
+
+        dry_run : bool
+            Print command but do not run it
+
+        Returns bool
+            True if it is ok to proceed with running the link
+        """
+        input_missing = self.check_input_files(return_found=False)
+        if len(input_missing) != 0:
+            if dry_run:
+                stream.write("Input files are missing: %s: %i\n" %
+                             (self.linkname, len(input_missing)))
+            else:
+                raise OSError("Input files are missing: %s" % input_missing)
+
+        output_found, output_missing = self.check_output_files()
+        if len(output_missing) == 0:
+            stream.write("All output files for %s already exist: %i %i %i\n" %
+                         (self.linkname, len(output_found),
+                          len(output_missing), len(self.files.output_files)))
+            if dry_run:
+                pass
+            else:
+                return False
+        return True
+
+    def set_file_stage(self, file_stage):
+        """Set this link to use a `FileStageManager` to copy files
+        to and from a scratch area
+        """
+        self._file_stage = file_stage
+
+    def run_link(self, stream=sys.stdout, dry_run=False, stage_files=True):
         """Runs this link.
 
         This checks if input and output files are present.
@@ -358,36 +435,70 @@ class Link(object):
 
         dry_run : bool
             Print command but do not run it
+
+        stage_files : bool
+            Stage files to and from the scratch area
+        """
+        check_ok = self.pre_run_checks(stream, dry_run)
+        if not check_ok:
+            return
+
+        if self._file_stage is not None:
+            input_file_mapping, output_file_mapping = self.map_scratch_files(
+                self.files)
+            if stage_files:
+                self._file_stage.make_scratch_dirs(input_file_mapping, dry_run)
+                self._file_stage.make_scratch_dirs(
+                    output_file_mapping, dry_run)
+                self.stage_input_files(input_file_mapping, dry_run)
+
+        self.run_command(stream, dry_run)
+        if self._file_stage is not None and stage_files:
+            self.stage_output_files(output_file_mapping, dry_run)
+        self.finalize(dry_run)
+
+    def run_command(self, stream=sys.stdout, dry_run=False):
+        """Runs the command for this link.  This method can be overridden by
+        sub-classes to invoke a different command
+
+        Parameters
+        -----------
+        stream : `file`
+            Must have 'write' function
+
+        dry_run : bool
+            Print command but do not run it
         """
         command = self.formatted_command()
-        input_found, input_missing = self.check_input_files()
-        if len(input_missing) != 0:
-            if dry_run:
-                stream.write("Input files are missing: %s: %i\n" % (self.linkname, len(input_missing)))
-            else:
-                raise OSError("Input files are missing: %s" % input_missing)
-
-        output_found, output_missing = self.check_output_files()
-        if len(output_missing) == 0:
-            stream.write("All output files for %s already exist: %i\n" %
-                         (self.linkname, len(output_found)))
-            if dry_run:
-                pass
-            else:
-                return
-
         if dry_run:
             stream.write("%s\n" % command)
             stream.flush()
         else:
             os.system(command)
 
+    def run(self, stream=sys.stdout, dry_run=False):
+        """Runs this link.
+
+        This version is intended to be overwritten by sub-classes so
+        as to provide a single function that behaves the same
+        for all version of `Link`
+
+        Parameters
+        -----------
+        stream : `file`
+            Must have 'write' function
+
+        dry_run : bool
+            Print command but do not run it
+        """
+        self.run_link(stream, dry_run)
+
     def command_template(self):
         """Build and return a string that can be used as a template invoking
         this chain from the command line.
-        
+
         The actual command can be obtainted by using
-        self.command_template().format(**self.args)
+        `self.command_template().format(**self.args)`
         """
         com_out = self.appname
         arg_string = ""
@@ -427,7 +538,7 @@ class Link(object):
         if self._parser is None:
             raise ValueError('Link was not given a parser on initialization')
         args = self._parser.parse_args(argv)
-        self.update_args(args.__dict__)        
+        self.update_args(args.__dict__)
         return args
 
     def fill_argparser(self, parser):
@@ -439,8 +550,9 @@ class Link(object):
     def create_job_details(self, key, job_config, logfile, status):
         """Create a `JobDetails` for a single job
 
-        Parameters:
-        ---------------
+        Parameters
+        ----------
+
         key : str
             Key used to identify this particular job
 
@@ -449,15 +561,15 @@ class Link(object):
 
         logfile : str
             Name of the associated log file
-        
+
         status : int
             Current status of the job
 
-        Returns `JobDetails' 
+        Returns `JobDetails`
         """
         self.update_args(job_config)
         job_details = JobDetails(jobname=self.linkname,
-                                 jobkey=key, 
+                                 jobkey=key,
                                  appname=self.appname,
                                  logfile=logfile,
                                  job_config=job_config,
@@ -468,11 +580,12 @@ class Link(object):
         return job_details
 
     def register_job(self, key, job_config, logfile, status):
-        """Create a `JobDetails' for this link
+        """Create a `JobDetails` for this link
         and add it to the self.jobs dictionary.
 
-        Parameters:
-        ---------------
+        Parameters
+        ----------
+
         key : str
             Key used to identify this particular job
 
@@ -481,16 +594,61 @@ class Link(object):
 
         logfile : str
             Name of the associated log file
-        
+
         status : int
             Current status of the job
 
-        Returns `JobDetails` 
+        Returns `JobDetails`
         """
         job_details = self.create_job_details(key, job_config, logfile, status)
         self.jobs[key] = job_details
         return job_details
-        
+
+    def map_scratch_files(self, file_dict):
+        """Build and return the mapping for copying files to and from scratch area"""
+        if self._file_stage is None:
+            return ({}, {})
+        input_files = file_dict.input_files_to_stage
+        output_files = file_dict.output_files_to_stage
+        input_file_mapping = self._file_stage.map_files(input_files)
+        output_file_mapping = self._file_stage.map_files(output_files)
+        self.update_file_args(input_file_mapping)
+        self.update_file_args(output_file_mapping)
+        return input_file_mapping, output_file_mapping
+
+    def update_file_args(self, file_mapping):
+        """Adjust the arguments to deal with staging files to the scratch area"""
+        for key, value in self.args.items():
+            new_value = file_mapping.get(value, value)
+            if new_value != value:
+                self.args[key] = new_value
+
+    def stage_input_files(self, file_mapping, dry_run=True):
+        """Stage the input files to the scratch area and adjust the arguments accordingly"""
+        print ("Staging input ", file_mapping)
+        if self._file_stage is None:
+            return
+        self._file_stage.copy_to_scratch(file_mapping, dry_run)
+
+    def stage_output_files(self, file_mapping, dry_run=True):
+        """Stage the input files to the scratch area and adjust the arguments accordingly"""
+        print ("Staging output ", file_mapping)
+        if self._file_stage is None:
+            return
+        self._file_stage.copy_from_scratch(file_mapping, dry_run)
+
+    def finalize(self, dry_run=False):
+        """Remove / compress files as requested """
+        for rmfile in self.files.temp_files:
+            if dry_run:
+                print ("remove %s" % rmfile)
+            else:
+                os.remove(rmfile)
+        for gzfile in self.files.gzip_files:
+            if dry_run:
+                print ("gzip %s" % gzfile)
+            else:
+                os.system('gzip -9 %s' % gzfile)
 
 
 class Chain(Link):
@@ -503,8 +661,9 @@ class Chain(Link):
     to write a python module that implements a chain and also has a
     __main__ function to allow it to be called from the shell.
 
-    Class Members
-    -------------
+    Parameters
+    ----------
+
     argmapper : function or None
         Function that maps input options (in self._options) to the
         format that is passed to the links in the chains.
@@ -516,15 +675,16 @@ class Chain(Link):
     def __init__(self, linkname, links, **kwargs):
         """ C'tor
 
-        Parameters:
-        ---------------
+        Parameters
+        ----------
+
         linkname : str
             Unique name of this particular link
         links : list
             A list of `Link` objects
 
         Keyword arguments
-        -----------
+        -----------------
         argmapper : function or None
             Function that maps input options (in self._options) to the
             format that is passed to the links in the chains.
@@ -545,14 +705,14 @@ class Chain(Link):
     def argmapper(self):
         """Return the arugment mapping function, if exits """
         return self._argmapper
-        
+
     def __getitem__(self, key):
         """ Return the `Link` whose linkname is key"""
         return self._links[key]
 
     def _latch_file_info(self):
-        """Internal function to update the dictionaries 
-        keeping track of input and output files 
+        """Internal function to update the dictionaries
+        keeping track of input and output files
         """
         remapped = self.map_arguments(self.args)
         self.files.latch_file_info(remapped)
@@ -563,7 +723,7 @@ class Chain(Link):
             self.sub_files.update(link.sub_files.file_dict)
 
     def print_summary(self, stream=sys.stdout, indent="", recurse_level=2):
-        """Print a summary of the activity done by this `Chain`. 
+        """Print a summary of the activity done by this `Chain`.
 
         Parameters
         -----------
@@ -632,25 +792,25 @@ class Chain(Link):
         Returns dict
         """
         if self._argmapper is None:
-            try: 
+            try:
                 return args.__dict__
             except AttributeError:
                 return args
         else:
             mapped = self._argmapper(args)
             if mapped is None:
-                try: 
+                try:
                     return args.__dict__
                 except AttributeError:
                     return args
-            else: 
+            else:
                 return mapped
 
     def add_link(self, link):
         """Append link to this `Chain` """
         self._links[link.linkname] = link
 
-    def run_chain(self, stream=sys.stdout, dry_run=False):
+    def run_chain(self, stream=sys.stdout, dry_run=False, stage_files=True):
         """Run all the links in the chain
 
         Parameters
@@ -660,22 +820,31 @@ class Chain(Link):
 
         dry_run : bool
             Print commands but do not run them
-        """
-        for link in self._links.values():
-            link.run_link(stream=stream, dry_run=dry_run)
 
-    def finalize(self, dry_run=False):
-        """Remove / compress files as requested """
-        for rmfile in self.files.temp_files:
-            if dry_run:
-                print ("remove %s" % rmfile)
-            else:
-                os.remove(rmfile)
-        for gzfile in self.files.gzip_files:
-            if dry_run:
-                print ("gzip %s" % gzfile)
-            else:
-                os.system('gzip -9 %s' % gzfile)
+        stage_files : bool
+            Stage files to and from the scratch area
+        """
+        #ok = self.pre_run_checks(stream, dry_run)
+        # if not ok:
+        #    return
+
+        if self._file_stage is not None:
+            input_file_mapping, output_file_mapping = self.map_scratch_files(
+                self.sub_files)
+            if stage_files:
+                self._file_stage.make_scratch_dirs(input_file_mapping, dry_run)
+                self._file_stage.make_scratch_dirs(
+                    output_file_mapping, dry_run)
+                self.stage_input_files(input_file_mapping, dry_run)
+
+        for link in self._links.values():
+            link.run_link(stream=stream, dry_run=dry_run, stage_files=False)
+
+        if self._file_stage is not None and stage_files:
+            self.stage_output_files(output_file_mapping, dry_run)
+
+    def run(self, stream=sys.stdout, dry_run=False):
+        self.run_chain(stream, dry_run)
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application
@@ -690,7 +859,11 @@ class Chain(Link):
         """
         self.args = extract_arguments(override_args, self.args, self.mapping)
         remapped = self.map_arguments(override_args)
+
+        scratch_dir = self.args.get('scratch', None)
+        if scratch_dir is not None:
+            self._file_stage = FileStageManager(scratch_dir, '.')
         for link in self._links.values():
             link.update_args(remapped)
+            link.set_file_stage(self._file_stage)
         self._latch_file_info()
-

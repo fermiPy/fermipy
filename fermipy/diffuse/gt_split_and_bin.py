@@ -75,10 +75,12 @@ class SplitAndBin(Chain):
                        links=[],
                        options=dict(comp=diffuse_defaults.diffuse['binning_yaml'],
                                     coordsys=diffuse_defaults.diffuse['coordsys'],
+                                    hpx_order=diffuse_defaults.diffuse['hpx_order_ccube'],
                                     ft1file=(None, 'Input FT1 file', str),
                                     evclass=(128, 'Event class bit mask', int), 
                                     output=(None, 'Base name for output files', str),
                                     pfiles=(None, 'Directory for .par files', str), 
+                                    scratch=(None, 'Scratch area', str), 
                                     dry_run=(False, 'Print commands but do not run them', bool)),
                        argmapper=self._map_arguments,
                        parser=SplitAndBin._make_parser())
@@ -119,10 +121,10 @@ class SplitAndBin(Chain):
                                    'infile': (None, 'Input FT1 File', str),
                                    'outfile': (None, 'Output FT1 File', str),
                                    'zmax': (comp['zmax'], "Zenith angle cut", float), 
-                                   'evclass': (None, "Event Class", int), 
+                                   'evclass': (None, "Event Class", int),
                                    'pfiles': (None, "PFILES directory", str)},
-                          file_args=dict(infile=FileFlags.input_mask,
-                                         outfile=FileFlags.output_mask))
+                          file_args=dict(infile=FileFlags.in_stage_mask,
+                                         outfile=FileFlags.out_stage_mask))
             links.append(link)
         return links
 
@@ -154,8 +156,8 @@ class SplitAndBin(Chain):
                                               'outfile': (None, 'Output FT1 File', str),
                                               'evclass': (None, "Event class", int),
                                               'pfiles': (None, "PFILES directory", str)},
-                                     file_args=dict(infile=FileFlags.input_mask,
-                                                    outfile=FileFlags.output_mask))
+                                     file_args=dict(infile=FileFlags.in_stage_mask,
+                                                    outfile=FileFlags.out_stage_mask))
                 bin_link = Gtlink('gtbin_%s' % key,
                                   appname='gtbin',
                                   mapping={'evfile': selectkey_out,
@@ -165,12 +167,12 @@ class SplitAndBin(Chain):
                                            'hpx_order': (psf_dict['hpx_order'], "HEALPIX ORDER", int), 
                                            'evfile': (None, 'Input FT1 File', str),
                                            'outfile': (None, 'Output binned data File', str),
-                                           'emin': (emin, "Minimum energy", float), 
+                                           'emin': (emin, "Minimum energy", float),
                                            'emax': (emax, "Maximum energy", float),
-                                           'enumbins': (enumbins, "Number of energy bins", int), 
+                                           'enumbins': (enumbins, "Number of energy bins", int),
                                            'pfiles': (None, "PFILES directory", str)},
-                                  file_args=dict(evfile=FileFlags.input_mask,
-                                                 outfile=FileFlags.output_mask))
+                                  file_args=dict(evfile=FileFlags.in_stage_mask,
+                                                 outfile=FileFlags.out_stage_mask))
                 links += [select_link, bin_link]
         return links
 
@@ -215,9 +217,9 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
     default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
                            data=diffuse_defaults.diffuse['dataset_yaml'],
                            coordsys=diffuse_defaults.diffuse['coordsys'],
-                           nfiles=(96, 'Number of input files', int),
                            hpx_order=diffuse_defaults.diffuse['hpx_order_ccube'],
-                           inputlist=(None, 'Input FT1 file', str),)
+                           inputlist=(None, 'Input FT1 file', str),
+                           scratch=(None,'Path to scratch area', str))
 
     def __init__(self, chain, gather, **kwargs):
         """C'tor
@@ -229,8 +231,9 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
     def make_base_config(self, args):
         """Hook to build a baseline job configuration
 
-        Parameters:
-        ----------------
+        Parameters
+        ----------
+
         args : dict
             Command line arguments, see add_arguments
         """
@@ -286,17 +289,22 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
 
         return input_config, job_configs, output_config
 
+def create_chain_split_and_bin(**kwargs):
+    chain = SplitAndBin(linkname=kwargs.pop('linkname', 'SplitAndBin'),
+                        comp_dict=kwargs.get('comp_dict', None))
+    return chain
 
-def build_scatter_gather(**kwargs):
+def create_sg_split_and_bin(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
-    chainname = kwargs.pop('chainname', 'split-and-bin')
-    chain = SplitAndBin('%s.split'%chainname)
-    gather = CoaddSplit('%s.coadd'%chainname)
+    linkname = kwargs.pop('linkname', 'split-and-bin')
+    chain = SplitAndBin('%s.split'%linkname)
+    gather = CoaddSplit('%s.coadd'%linkname)
+    appname = kwargs.pop('appname', 'fermipy-split-and-bin-sg')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "fermipy-split-and-bin-sg [options] input"
+    usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
     config_maker = ConfigMaker_SplitAndBin(chain, gather)
@@ -305,6 +313,8 @@ def build_scatter_gather(**kwargs):
                                 usage=usage,
                                 description=description,
                                 gather=gather,
+                                linkname=linkname,
+                                appname=appname,
                                 **kwargs)
     return lsf_sg
 
@@ -318,7 +328,7 @@ def main_single():
 
 def main_batch():
     """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = build_scatter_gather()
+    lsf_sg = create_sg_split_and_bin()
     lsf_sg(sys.argv)
 
 if __name__ == "__main__":

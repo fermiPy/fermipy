@@ -23,17 +23,20 @@ from fermipy.diffuse import defaults as diffuse_defaults
 NAME_FACTORY = NameFactory()
 
 
-class GtAssembleSourceMaps(object):
+class GtAssembleModel(object):
     """Small class to assemple source map files for fermipy analysis.
 
     This is useful for re-merging after parallelizing source map creation.
     """
+    default_options = dict(input=(None, 'Input yaml file', str),
+                           comp=diffuse_defaults.diffuse['binning_yaml'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'])
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """C'tor
         """
-        self.parser = GtAssembleSourceMaps._make_parser()
-        self.link = GtAssembleSourceMaps._make_link()
+        self.parser = GtAssembleModel._make_parser()
+        self.link = GtAssembleModel._make_link(**kwargs)
 
     @staticmethod
     def _make_parser():
@@ -42,20 +45,17 @@ class GtAssembleSourceMaps(object):
         description = "Copy source maps from the library to a analysis directory"
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
-        parser.add_argument('-i', '--input', type=str, default=None,
-                            help='Input yaml file')
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Component')
-        parser.add_argument('--hpx_order', type=int, default=7,
-                            help='Maximum healpix order')
+        for key, val in GtAssembleSourceMaps.default_options.items():
+            add_argument(parser, key, val)
         return parser
 
     @staticmethod
-    def _make_link():
-        link = Link('assemble-model',
+    def _make_link(**kwargs):
+        link = Link(kwargs.pop('linkname', 'assemble-model'),
                     appname='fermipy-assemble-model',
-                    options=dict(input=None, comp=None, hpx_order=None),
-                    file_args=dict(input=FileFlags.input_mask))
+                    options=GtAssembleModel.default_options.copy(),
+                    file_args=dict(input=FileFlags.input_mask),
+                    **kwargs)
         return link
 
     @staticmethod
@@ -129,8 +129,8 @@ class GtAssembleSourceMaps(object):
         outsrcmap += '.fits'
         source_dict = compinfo['source_dict']
 
-        hpx_order = GtAssembleSourceMaps._copy_ccube(ccube, outsrcmap, hpx_order)
-        hdulist = GtAssembleSourceMaps._open_outsrcmap(outsrcmap)
+        hpx_order = GtAssembleModel._copy_ccube(ccube, outsrcmap, hpx_order)
+        hdulist = GtAssembleModel._open_outsrcmap(outsrcmap)
 
         for comp_name in sorted(source_dict.keys()):
             source_info = source_dict[comp_name]
@@ -149,27 +149,30 @@ class GtAssembleSourceMaps(object):
         GtAssembleSourceMaps._assemble_component(key, value, args.hpx_order)
 
 
-class ConfigMaker_AssembleSrcmaps(ConfigMaker):
+class ConfigMaker_AssembleModel(ConfigMaker):
     """Small class to generate configurations for this script
 
-     This takes the following arguments:    
+    Parameters
+    ----------
+
     --comp      : binning component definition yaml file
     --data      : datset definition yaml file
     --hpx_order : Maximum HEALPix order to use
     --irf_ver   : IRF verions string (e.g., 'V6')
     args        : Names of models to assemble source maps for
+
     """
     default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
                            data=diffuse_defaults.diffuse['dataset_yaml'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           hpx_order=diffuse_defaults.diffuse['hpx_order_ccube'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
                            args=(None, 'Names of input models', list))
 
     def __init__(self, link, **kwargs):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',default_options.copy()))
+                             options=kwargs.get('options', ConfigMaker_AssembleModel.default_options.copy()))
 
 
     def build_job_configs(self, args):
@@ -199,34 +202,43 @@ class ConfigMaker_AssembleSrcmaps(ConfigMaker):
         return input_config, job_configs, output_config
 
 
-def build_scatter_gather():
+def create_link_assemble_model(**kwargs):
+    """Build and return a `Link` object that can invoke GtAssembleModel"""
+    gtassemble = GtAssembleModel(**kwargs)
+    return gtassemble.link
+
+
+def create_sg_assemble_model(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
-    gtassemble = GtAssembleSourceMaps()
+    gtassemble = GtAssembleModel(**kwargs)
     link = gtassemble.link
+    appname = kwargs.pop('appname', 'fermipy-assemble-model-sg')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "fermipy-assemble-model-sg [options]"
+    usage = "%s [options]"%(appname)
     description = "Copy source maps from the library to a analysis directory"
 
-    config_maker = ConfigMaker_AssembleSrcmaps(link)
+    config_maker = ConfigMaker_AssembleModel(link)
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                appname=appname,
+                                **kwargs)
     return lsf_sg
 
 
 def main_single():
     """Entry point for command line use for single job """
-    gtsmp = GtAssembleSourceMaps()
+    gtsmp = GtAssembleModel()
     gtsmp.run(sys.argv[1:])
 
 
 def main_batch():
     """Entry point for command line use  for dispatching batch jobs """
-    lsf_sg = build_scatter_gather()
+    lsf_sg = create_sg_assemble_model()
     lsf_sg(sys.argv)
 
 if __name__ == '__main__':

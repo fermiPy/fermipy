@@ -7,8 +7,6 @@ from __future__ import absolute_import, division, print_function
 import sys
 import os
 
-from collections import OrderedDict
-
 from fermipy.jobs.chain import Link
 import GtApp
 
@@ -16,15 +14,17 @@ import GtApp
 def extract_parameters(pil, keys=None):
     """Extract and return parameter names and values from a pil object
 
-    Parameters:
-    ---------------
-    pil : `Pil' object
+    Parameters
+    ----------
+
+    pil : `Pil` object
 
     keys : list
         List of parameter names, if None, extact all parameters
 
-    Returns:
-    ---------------
+    Returns
+    -------
+
     out_dict : dict
         Dictionary with parameter name, value pairs
     """
@@ -38,38 +38,43 @@ def extract_parameters(pil, keys=None):
             out_dict[key] = None
     return out_dict
 
+
 def update_gtapp(gtapp, **kwargs):
     """Update the parameters of the object that can run ScienceTools applications
 
-    Parameters:
-    ---------------
-    gtapp :  `GtApp.GtApp'
+    Parameters
+    ----------
+
+    gtapp :  `GtApp.GtApp`
         Object that will run the application in question
 
     kwargs : arguments used to invoke the application
     """
     for key, val in kwargs.items():
-        if key in ['pfiles']:
+        if key in ['pfiles', 'scratch']:
             continue
         if val is None:
             continue
         try:
             gtapp[key] = val
         except ValueError:
-            raise ValueError("gtapp failed to set parameter %s %s"%(key, val))
+            raise ValueError(
+                "gtapp failed to set parameter %s %s" % (key, val))
+        except KeyError:
+            raise KeyError("gtapp failed to set parameter %s %s" % (key, val))
 
 
 def build_gtapp(appname, **kwargs):
     """Build an object that can run ScienceTools application
 
-    Parameters:
-    ---------------
+    Parameters
+    ----------
     appname : str
         Name of the application (e.g., gtbin)
 
     kwargs : arguments used to invoke the application
 
-    Returns `GtApp.GtApp' object that will run the application in question
+    Returns `GtApp.GtApp` object that will run the application in question
     """
     gtapp = GtApp.GtApp(appname)
     update_gtapp(gtapp, **kwargs)
@@ -81,9 +86,10 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
 
     Taken from fermipy.gtanalysis.run_gtapp by Matt Wood
 
-    Parameters:
-    ---------------
-    gtapp : `GtApp.GtApp' object
+    Parameters
+    ----------
+
+    gtapp : `GtApp.GtApp` object
         The application (e.g., gtbin)
 
     stream : stream object
@@ -101,8 +107,16 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
     pfiles = kwargs.get('pfiles', None)
     pfiles_orig = os.environ['PFILES']
     if pfiles:
+        if dry_run:
+            print ("mkdir %s" % pfiles)
+        else:
+            try:
+                os.makedirs(pfiles)
+            except OSError:
+                pass
         pfiles = "%s:%s" % (pfiles, pfiles_orig)
         print ("Setting PFILES=%s" % pfiles)
+
         os.environ['PFILES'] = pfiles
 
     stream.write("%s\n" % gtapp.command())
@@ -118,7 +132,6 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
     os.environ['PFILES'] = pfiles_orig
 
 
-
 class Gtlink(Link):
     """A wrapper for a single ScienceTools application
 
@@ -128,23 +141,26 @@ class Gtlink(Link):
     This can be used either with other `Link` to build a `Chain`, or as
     as standalone wrapper to pass conifguration to the application.
 
-    See help for `chain.Link' for additional details
+    See help for `chain.Link` for additional details
     """
 
     def __init__(self, linkname, **kwargs):
         """C'tor
 
-        See help for `chain.Link' for details
+        See help for `chain.Link` for details
 
         This calls the base class c'tor then builds a GtApp object
         """
         Link.__init__(self, linkname, **kwargs)
-        self.__app = build_gtapp(self.appname, **self.args)
+        try:
+            self.__app = build_gtapp(self.appname, **self.args)
+        except:
+            raise ValueError("Failed to build link %s" % self.linkname)
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application
 
-        See help for `chain.Link' for details
+        See help for `chain.Link` for details
 
         This calls the base class function then fills the parameters of the GtApp object
         """
@@ -155,8 +171,9 @@ class Gtlink(Link):
         """Returns a `GTApp` object that will run this `Link` """
         return self.__app
 
-    def run_link(self, stream=sys.stdout, dry_run=False):
-        """Runs this `Link`
+    def run_command(self, stream=sys.stdout, dry_run=False):
+        """Runs the command for this link.  This method can be overridden by
+        sub-classes to invoke a different command
 
         Parameters
         -----------
@@ -166,22 +183,6 @@ class Gtlink(Link):
         dry_run : bool
             Print command but do not run it
         """
-        input_found, input_missing = self.check_input_files()
-        if len(input_missing) != 0:
-            if dry_run:
-                stream.write("Input files are missing: %s: %i\n" % (self.linkname, len(input_missing)))
-            else:
-                raise OSError("Input files are missing: %s" % input_missing)
-
-        output_found, output_missing = self.check_output_files()
-        if len(output_missing) == 0:
-            stream.write("All output files for %s already exist: %i %i %i\n" %
-                         (self.linkname, len(output_found), len(output_missing), len(self.output_files)))
-            if dry_run:
-                pass
-            else:
-                return
-
         run_gtapp(self.__app, stream, dry_run, **self.args)
 
     def command_template(self):
@@ -189,7 +190,7 @@ class Gtlink(Link):
         this chain from the command line.
 
         The actual command can be obtainted by using
-        self.command_template().format(**self.args)        
+        `self.command_template().format(**self.args)`
         """
         com_out = self.__app.appName
         for key, val in self.args.items():

@@ -12,12 +12,13 @@ import argparse
 import BinnedAnalysis as BinnedAnalysis
 import pyLikelihood as pyLike
 
-from fermipy.jobs.chain import FileFlags, Link
+from fermipy.jobs.chain import add_argument, FileFlags, Link
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.catalog_src_manager import make_catalog_comp_dict
+from fermipy.diffuse import defaults as diffuse_defaults
 
 NAME_FACTORY = NameFactory()
 
@@ -29,11 +30,21 @@ class GtMergeSourceMaps(object):
     """
     NULL_MODEL = 'srcmdls/null.xml'
 
-    def __init__(self):
+    default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
+                           expcube=diffuse_defaults.gtopts['expcube'],
+                           bexpmap=diffuse_defaults.gtopts['bexpmap'],
+                           srcmaps=diffuse_defaults.gtopts['srcmaps'],
+                           srcmdl=diffuse_defaults.gtopts['srcmdl'],
+                           outfile=diffuse_defaults.gtopts['outfile'],
+                           merged=(None, 'Name of merged source', str),
+                           outxml=(None, 'Output source model xml file', str),
+                           gzip=(False, 'Compress output file', bool))
+
+    def __init__(self, **kwargs):
         """C'tor
         """
         self.parser = GtMergeSourceMaps._make_parser()
-        self.link = GtMergeSourceMaps._make_link()
+        self.link = GtMergeSourceMaps._make_link(**kwargs)
 
     @staticmethod
     def _make_parser():
@@ -42,45 +53,22 @@ class GtMergeSourceMaps(object):
         description = "Run gtsrcmaps for one or more energy planes for a single source"
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
-        parser.add_argument('--irfs', type=str, default='CALDB',
-                            help='Instrument response functions')
-        parser.add_argument('--expcube', type=str, default=None,
-                            help='Input Livetime cube file')
-        parser.add_argument('--srcmaps', type=str, default=None,
-                            help='Input source maps file')
-        parser.add_argument('--bexpmap', type=str, default=None,
-                            help='Input binned exposure map file')
-        parser.add_argument('--srcmdl', type=str, default=None,
-                            help='Input source model xml file')
-        parser.add_argument('--merged', type=str, default=None,
-                            help='Name of merged source')
-        parser.add_argument('--outfile', type=str, default=None,
-                            help='Output source map file')
-        parser.add_argument('--outxml', type=str, default=None,
-                            help='Output source model xml file')
-        parser.add_argument('--gzip', action='store_true',
-                            help='Compress output file')
+        for key, val in GtMergeSourceMaps.default_options.items():
+            add_argument(parser, key, val)
         return parser
 
     @staticmethod
-    def _make_link():
-        link = Link('merge-srcmaps',
+    def _make_link(**kwargs):
+        link = Link(kwargs.pop('linkname', 'merge-srcmaps'),
                     appname='fermipy-merge-srcmaps',
-                    options=dict(irfs=('CALDB', 'IRFS to use', str),
-                                 expcube=(None, "Input livetime cube file", str),
-                                 bexpmap=(None, "Input binned exposure cube file", str),
-                                 srcmaps=(None, "Input source map file", str),
-                                 srcmdl=(None, "Input source model xml file", str),  
-                                 outfile=(None, "Output source map file", str),
-                                 outxml=(None, "Output source model xml file", str),
-                                 merged=(None, "Merged output file", str),
-                                 gzip=(False, "Compress output", bool)),
+                    options=GtMergeSourceMaps.default_options.copy(),
                     file_args=dict(expcube=FileFlags.input_mask,
                                    cmap=FileFlags.input_mask,
                                    bexpmap=FileFlags.input_mask,
                                    srcmdl=FileFlags.input_mask,
                                    outfile=FileFlags.output_mask,
-                                   outxml=FileFlags.output_mask))
+                                   outxml=FileFlags.output_mask),
+                    **kwargs)
         return link
 
     def run(self, argv):
@@ -147,7 +135,7 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',default_options.copy()))
+                             options=kwargs.get('options', ConfigMaker_MergeSrcmaps.default_options.copy()))
  
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -195,23 +183,31 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
         output_config = {}
         return input_config, job_configs, output_config
 
+def create_link_merge_srcmaps(**kwargs):
+    """Build and return a `Link` object that can invoke GtAssembleModel"""
+    gtmerge = GtMergeSourceMaps(**kwargs)
+    return gtmerge.link
 
-def build_scatter_gather():
+def create_sg_merge_srcmaps(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
     gtmerge = GtMergeSourceMaps()
     link = gtmerge.link
+    link.linkname = kwargs.pop('linkname', link.linkname)
+    appname = kwargs.pop('appname', 'fermipy-merge-srcmaps-sg')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "fermipy-merge-srcmaps.py [options] input"
+    usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
     config_maker = ConfigMaker_MergeSrcmaps(link)
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                appname=appname,
+                                **kwargs)
     return lsf_sg
 
 

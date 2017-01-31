@@ -15,6 +15,7 @@ diffuse = {
     'hpx_order_fitting': (7, 'Maximum HEALPIX order for model fitting.', int),
     'coordsys': ('GAL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
     'irf_ver': ('V6', 'Version of IRFs to use.', str),
+    'dry_run' : (False, 'Print commands but do not run them', bool),
     }
 
 # Options for residual cosmic-ray analysis
@@ -28,4 +29,18 @@ residual_cr = {
     'coordsys' : ('GAL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
     'irf_ver': ('V6', 'Version of IRFs to use.', str),
     'dry_run' : (False, 'Print commands but do not run them', bool),
-}
+    }
+
+# Options relating to gtapps
+gtopts = {
+    'irfs' : ('CALDB', 'Instrument response functions', str),
+    'expcube' : (None, 'Input Livetime cube file', str),
+    'cmap' : (None, 'Input counts cube file', str),
+    'srcmaps' : (None, 'Input source maps file', str),
+    'bexpmap' : (None, 'Input binned exposure map file', str),
+    'srcmdl' : (None, 'Input source model xml file', str),
+    'outfile' : (None, 'Output file', str),
+    'coordsys' : ('GAL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
+    'hpx_order': (6, 'HEALPIX order parameter', int),
+    }
+

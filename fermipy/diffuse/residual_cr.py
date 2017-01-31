@@ -19,7 +19,7 @@ from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.jobs.chain import add_argument, FileFlags, Link, Chain
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
-from fermipy.diffuse.gt_split_and_bin import build_scatter_gather as sg_split_and_bin
+from fermipy.diffuse.gt_split_and_bin import create_sg_split_and_bin
 from fermipy.diffuse.job_library import create_sg_gtexpcube2
 from fermipy.diffuse import defaults as diffuse_defaults
 
@@ -47,11 +47,11 @@ class ResidualCRAnalysis(object):
                            full_output=(False, 'Width of gaussian to smooth output maps [degrees]', bool),
                            clobber=(False, 'Overwrite output file', bool),)
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """C'tor
         """
         self.parser = ResidualCRAnalysis._make_parser()
-        self.link = ResidualCRAnalysis._make_link()
+        self.link = ResidualCRAnalysis._make_link(**kwargs)
 
     @staticmethod
     def _make_parser():
@@ -65,15 +65,16 @@ class ResidualCRAnalysis(object):
         return parser
 
     @staticmethod
-    def _make_link():
-        link = Link('residual_cr',
+    def _make_link(**kwargs):
+        link = Link(kwargs.pop('linkname', 'residual_cr'),
                     appname='fermipy-residual-cr',
                     options=ResidualCRAnalysis.default_options.copy(),
                     file_args=dict(ccube_dirty=FileFlags.input_mask,
                                    bexpcube_dirty=FileFlags.input_mask,
                                    ccube_clean=FileFlags.input_mask,
                                    bexpcube_clean=FileFlags.input_mask,
-                                   outfile=FileFlags.output_mask))
+                                   outfile=FileFlags.output_mask),
+                    **kwargs)
         return link
 
     @staticmethod
@@ -428,17 +429,21 @@ class ConfigMaker_ResidualCR(ConfigMaker):
         output_config = {}
         return input_config, job_configs, output_config
 
+def create_link_residual_cr(**kwargs):
+    analyzer = ResidualCRAnalysis(**kwargs)
+    return analyzer.link
 
-def build_scatter_gather(**kwargs):
+def create_sg_residual_cr(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
     analyzer = ResidualCRAnalysis()
     link = analyzer.link
-    link.linkname = kwargs.pop('linkname', 'residual_cr_analysis')
+    link.linkname = kwargs.pop('linkname', link.linkname)
+    appname = kwargs.pop('appname', 'gt-residual-cr-sg')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "gt-residual-cr-sg [options] input"
+    usage = "%s [options]"%(appname)
     description = "Copy source maps from the library to a analysis directory"
 
     config_maker = ConfigMaker_ResidualCR(link)
@@ -447,6 +452,7 @@ def build_scatter_gather(**kwargs):
                                 usage=usage,
                                 description=description,
                                 linkname=link.linkname,
+                                appname=appname,
                                 **kwargs)
     return lsf_sg
 
@@ -458,38 +464,33 @@ class ResidualCRChain(Chain):
     def __init__(self, linkname):
         """C'tor
         """
-        link_sb_clean = sg_split_and_bin(linkname="%s.sb_clean"%linkname,
-                                         appname='fermipy-split-and-bin-sg',
-                                         mapping={'data':'dataset_clean_yaml',
-                                                  'hpx_order':'hpx_order_binning',
-                                                  'inputlist':'ft1file',
-                                                  'comp':'binning_yaml'})
-        link_sb_dirty = sg_split_and_bin(linkname="%s.sb_dirty"%linkname,
-                                         appname='fermipy-split-and-bin-sg',
-                                         mapping={'data':'dataset_dirty_yaml',
-                                                  'hpx_order':'hpx_order_binning',
-                                                  'inputlist':'ft1file',
-                                                  'comp':'binning_yaml'})        
+        link_sb_clean = create_sg_split_and_bin(linkname="%s.sb_clean"%linkname,
+                                                mapping={'data':'dataset_clean_yaml',
+                                                         'hpx_order':'hpx_order_binning',
+                                                         'inputlist':'ft1file',
+                                                         'comp':'binning_yaml'})
+        link_sb_dirty = create_sg_split_and_bin(linkname="%s.sb_dirty"%linkname,
+                                                mapping={'data':'dataset_dirty_yaml',
+                                                         'hpx_order':'hpx_order_binning',
+                                                         'inputlist':'ft1file',
+                                                         'comp':'binning_yaml'})        
         link_excube_clean = create_sg_gtexpcube2(linkname="%s.expcube_clean"%linkname,
-                                                 appname='fermipy-gtexcube2-sg',
                                                  mapping={'cmap':'ccube_clean',
                                                           'outfile':'bexpcube_clean',
                                                           'data':'dataset_clean_yaml',
                                                           'hpx_order':'hpx_order_binning',
                                                           'comp':'binning_yaml'})
         link_excube_dirty = create_sg_gtexpcube2(linkname="%s.expcube_dirty"%linkname,
-                                                 appname='fermipy-gtexcube2-sg',
                                                  mapping={'cmap':'ccube_dirty',
                                                           'outfile':'bexpcube_dirty',
                                                           'data':'dataset_dirty_yaml',
                                                           'hpx_order':'hpx_order_binning',
                                                           'comp':'binning_yaml'})
-        link_cr_analysis = build_scatter_gather(linkname="%s.cr_analysis"%linkname,
-                                                appname='fermipy-residual-cr-sg',
-                                                mapping={'data_dirty':'dataset_dirty_yaml',
-                                                         'data_clean':'dataset_clean_yaml',
-                                                         'hpx_order':'hpx_order_fitting',
-                                                         'comp':'binning_yaml'})
+        link_cr_analysis = create_sg_residual_cr(linkname="%s.cr_analysis"%linkname,
+                                                 mapping={'data_dirty':'dataset_dirty_yaml',
+                                                          'data_clean':'dataset_clean_yaml',
+                                                          'hpx_order':'hpx_order_fitting',
+                                                          'comp':'binning_yaml'})
 
         options = diffuse_defaults.residual_cr.copy()
         options['dry_run'] = (False, 'Print commands but do not run', bool)
@@ -537,6 +538,11 @@ class ResidualCRChain(Chain):
             link.run_link(stream=sys.stdout, dry_run=True)
 
 
+def create_chain_residual_cr(**kwargs):
+    chain = ResidualCRChain(linkname=kwargs.pop('linkname', 'ResidualCR'))
+    return chain
+
+
 def main_single():
     """Entry point for command line use for single job """
     gtsmp = ResidualCRAnalysis()
@@ -545,7 +551,7 @@ def main_single():
 
 def main_batch():
     """Entry point for command line use  for dispatching batch jobs """
-    lsf_sg = build_scatter_gather()
+    lsf_sg = create_sg_residual_cr()
     lsf_sg(sys.argv)
 
 def main_chain():
@@ -566,6 +572,8 @@ if __name__ == '__main__':
                                            file_archive_table='file_archive_temp.fits',
                                            base_path=os.path.abspath('.')+'/')
     
+    
+
     job_dict = chain.get_jobs()
     for i, job_details in enumerate(job_dict.values()):
         if i % 10 == 0:

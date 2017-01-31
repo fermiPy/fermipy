@@ -102,7 +102,7 @@ class CoaddSplit(Chain):
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
         coordsys = input_dict.get('coordsys', 'GAL')
 
-        num_files = input_dict.get('nfiles')
+        num_files = input_dict.get('nfiles', 96)
         output_dict = input_dict.copy()
         for key_e, comp_e in sorted(self.comp_dict.items()):
             for psf_type in sorted(comp_e['psf_types'].keys()):
@@ -127,6 +127,11 @@ class CoaddSplit(Chain):
         self.update_args(args.__dict__)
         return args
 
+
+def create_chain_coadd_split(**kwargs):
+    chain = CoaddSplit(linkname=kwargs.pop('linkname', 'coadd-split'),
+                       comp_dict=kwargs.get('comp_dict', None))
+    return chain
 
 def main():
     """Entry point for command line use """

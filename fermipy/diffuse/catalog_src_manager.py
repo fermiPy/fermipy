@@ -5,6 +5,8 @@ Classes and utilities that manage catalog sources
 from __future__ import absolute_import, division, print_function
 
 import os
+import sys
+import argparse
 
 import yaml
 import numpy as np
@@ -12,9 +14,13 @@ import numpy as np
 from astropy.table import Table
 from fermipy import catalog
 
+from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.chain import add_argument, FileFlags, Link, Chain
+
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.source_factory import SourceFactory
 from fermipy.diffuse.model_component import CatalogInfo, CompositeSourceInfo, CatalogSourcesInfo
+from fermipy.diffuse import defaults as diffuse_defaults
 
 
 def mask_extended(cat_table):
@@ -70,7 +76,7 @@ class CatalogSourceManager(object):
 
     One of the dictionaries is keyed by catalog name, and contains information
     about complete catalogs
-    catalog_comp_info_dicts[catalog_name] : `dmpipe.dmp_model_component.CatalogInfo'
+    catalog_comp_info_dicts[catalog_name] : `model_component.CatalogInfo`
 
     The other dictionary is keyed by [{catalog_name}_{split_ver}][{split_key}]
     Where:
@@ -78,14 +84,15 @@ class CatalogSourceManager(object):
     {split_ver} is somthing like 'v00' and specifes how to divide sources in the catalog
     {split_key} refers to a specific sub-selection of sources
 
-    split_comp_info_dicts[splitkey] : `dmpipe.dmp_model_component.ModelComponentInfo'
+    split_comp_info_dicts[splitkey] : `model_component.ModelComponentInfo`
     """
 
     def __init__(self, **kwargs):
         """ C'tor
 
         Keyword arguments
-        -------------------
+        -----------------
+
         basedir : str
             Top level directory for finding files
         """
@@ -144,8 +151,9 @@ class CatalogSourceManager(object):
         """ Make the information about a single merged component
 
         Parameters
-        -------------------
-        full_cat_info : `dmpipe.dmp_model_component.CatalogInfo'
+        ----------
+
+        full_cat_info : `_model_component.CatalogInfo`
             Information about the full catalog
         split_key : str
             Key identifying the version of the spliting used
@@ -156,7 +164,7 @@ class CatalogSourceManager(object):
         sources : list
             List of the names of the sources in this component
 
-        Returns `CompositeSourceInfo' or `CatalogSourcesInfo'
+        Returns `CompositeSourceInfo` or `CatalogSourcesInfo`
         """
         merge = rule_val.get('merge', True)
         sourcekey = "%s_%s_%s" % (
@@ -180,16 +188,18 @@ class CatalogSourceManager(object):
         """ Make the information about the catalog components
 
         Parameters
-        -------------------
+        ----------
+
         catalog_sources : dict
             Dictionary with catalog source defintions
 
         Returns
-        -------------------
+        -------
+
         catalog_ret_dict : dict
-            Dictionary mapping catalog_name to `dmpipe.dmp_model_component.CatalogInfo'
+            Dictionary mapping catalog_name to `model_component.CatalogInfo`
         split_ret_dict : dict
-            Dictionary mapping sourcekey to `dmpipe.dmp_model_component.ModelComponentInfo'
+            Dictionary mapping sourcekey to `model_component.ModelComponentInfo`
         """
         catalog_ret_dict = {}
         split_ret_dict = {}
@@ -247,4 +257,79 @@ def make_catalog_comp_dict(**kwargs):
                 comp_info_dict=comp_info_dict,
                 CatalogSourceManager=csm)
 
+
+class CatalogComponentChain(Chain):
+    """Small class to build srcmaps for diffuse components
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+                           make_xml=(False, "Make XML files for diffuse components", bool),
+                           dry_run=diffuse_defaults.diffuse['dry_run'])
+
+    def __init__(self, linkname):
+        """C'tor
+        """
+        from fermipy.diffuse.job_library import create_sg_gtsrcmaps_catalog
+        from fermipy.diffuse.gt_merge_srcmaps import create_sg_merge_srcmaps
+
+        link_srcmaps_catalogs = create_sg_gtsrcmaps_catalog(linkname="%s.catalog"%linkname,
+                                                            appname='fermipy-srcmaps-catalog-sg')
+
+        link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
+                                                         appname='fermipy-merge-srcmaps-sg')
+ 
+        Chain.__init__(self, linkname,
+                       appname='FIXME',
+                       links=[link_srcmaps_catalogs, link_srcmaps_composite],
+                       options=CatalogComponentChain.default_options.copy(),
+                       parser=CatalogComponentChain._make_parser())
+        
+  
+    @staticmethod
+    def _make_parser():
+        """Make an argument parser for this chain """
+        usage = "FIXME [options]"
+        description = "Run diffuse component analysis"
+
+        parser = argparse.ArgumentParser(usage=usage, description=description)
+        return parser
+
+    def run_argparser(self, argv):
+        """Initialize a link with a set of arguments using argparser
+        """
+        args = Link.run_argparser(self, argv)
+        for link in self._links.values():
+            link.run_link(stream=sys.stdout, dry_run=True)
+
+
+def create_chain_catalog_comps(**kwargs):
+    chain = CatalogComponentChain(linkname=kwargs.pop('linkname', 'diffuse.catalog_comps'))
+    return chain
+
+def main_chain():
+    """Entry point for command line use for single job """
+    chain = CatalogComponentChain("diffuse.catalog_comps")
+    chain.run_argparser(sys.argv[1:])
+    return chain
+    #chain.run_chain(sys.stdout, args.dry_run)
+    #chain.finalize(args.dry_run)
+
+
+
+if __name__ == '__main__':
+
+    from fermipy.jobs.job_archive import JobArchive
+    chain = main_chain()
+
+
+    job_archive = JobArchive.build_archive(job_archive_table='job_archive_temp.fits',
+                                           file_archive_table='file_archive_temp.fits',
+                                           base_path=os.path.abspath('.')+'/')
+    
+    job_dict = chain.get_jobs()
+    for i, job_details in enumerate(job_dict.values()):
+        if i % 10 == 0:
+            print ("Working on job %i"%i)
+        job_archive.register_job(job_details)
 

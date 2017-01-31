@@ -16,8 +16,9 @@ class Component(object):
     """Small helper class to represent the binning used for a single component
     of a summed likelihood in diffuse analysis
 
-    Data Members:
-    -------------------
+    Parameters
+    ----------
+
     log_emin : float
         Log base 10 of minimum energy for this component
     log_emax : float

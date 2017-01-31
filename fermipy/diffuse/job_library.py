@@ -21,45 +21,61 @@ from fermipy.diffuse import defaults as diffuse_defaults
 
 NAME_FACTORY = NameFactory()
 
-GTEXPCUBE2 = Gtlink('gtexpcube2',
-                    options=dict(irfs=('CALDB', 'IRFS to use', str),
-                                 hpx_order=(6, "HEALPIX order parameter", int),
+
+def create_link_gtexpcube2(**kwargs):
+    gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtexpcube2'),
+                    appname='gtexpcube2',
+                    options=dict(irfs=diffuse_defaults.gtopts['irfs'],
+                                 #hpx_order=diffuse_defaults.gtopts['hpx_order'],
                                  infile=(None, "Input livetime cube file", str),
-                                 cmap=(None, "Input counts map file", str),
-                                 outfile=(None, "Output binned exposure cube file", str),
-                                 coordsys=('GAL', 'Coordinate system', str)),
+                                 cmap=diffuse_defaults.gtopts['cmap'],
+                                 outfile=diffuse_defaults.gtopts['outfile'],
+                                 coordsys=diffuse_defaults.gtopts['coordsys']),
                     file_args=dict(infile=FileFlags.input_mask, 
                                    cmap=FileFlags.input_mask,
-                                   outfile=FileFlags.output_mask))
+                                   outfile=FileFlags.output_mask),
+                    **kwargs)
+    return gtlink
 
-GTSRCMAPS = Gtlink('gtsrcmaps',
-                   options=dict(irfs=('CALDB', 'IRFS to use', str),
-                                expcube=(None, "Input livetime cube file", str),
-                                bexpmap=(None, "Input binned exposure cube file", str),
-                                cmap=(None, "Input counts map file", str),
-                                srcmdl=(None, "Input source model xml file", str),  
-                                outfile=(None, "Output source map file", str)),
-                   file_args=dict(expcube=FileFlags.input_mask, 
-                                  cmap=FileFlags.input_mask,
-                                  bexpmap=FileFlags.input_mask,
-                                  srcmdl=FileFlags.input_mask,
-                                  outfile=FileFlags.output_mask))
 
-FERMIPYCOADD = Link('fermipy-coadd',
-                    appname='fermipy-coadd',
-                    options=dict(args=([], "List of input files", list),
-                                 output=(None, "Output file", str)),
-                    file_args=dict(args=FileFlags.input_mask,
-                                   output=FileFlags.output_mask))
+def create_link_gtscrmaps(**kwargs):
+    gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtsrcmaps'),
+                    appname='gtsrcmaps',
+                    options=dict(irfs=diffuse_defaults.gtopts['irfs'],
+                                 expcube=diffuse_defaults.gtopts['expcube'],
+                                 bexpmap=diffuse_defaults.gtopts['bexpmap'],
+                                 cmap=diffuse_defaults.gtopts['cmap'],
+                                 srcmdl=diffuse_defaults.gtopts['srcmdl'],
+                                 outfile=diffuse_defaults.gtopts['outfile']),
+                    file_args=dict(expcube=FileFlags.input_mask, 
+                                   cmap=FileFlags.input_mask,
+                                   bexpmap=FileFlags.input_mask,
+                                   srcmdl=FileFlags.input_mask,
+                                   outfile=FileFlags.output_mask),
+                    **kwargs)
+    return gtlink
 
-FERMIPYVSTACK = Link('fermipy-vstack',
-                     appname='fermipy-vstack',
-                     options=dict(output=(None, "Output file name", str),
-                                  hdu=(None, "Name of HDU to stack", str),
-                                  args=([], "List of input files", list),
-                                  gzip=(False, "Compress output", bool)),
-                     file_args=dict(args=FileFlags.input_mask,
-                                    output=FileFlags.output_mask))
+def create_link_fermipy_coadd(**kwargs):
+    link = Link(linkname=kwargs.pop('linkname', 'fermipy-coadd'),
+                appname='fermipy-coadd',
+                options=dict(args=([], "List of input files", list),
+                             output=(None, "Output file", str)),
+                file_args=dict(args=FileFlags.input_mask,
+                               output=FileFlags.output_mask),
+                **kwargs)
+    return link
+
+def create_link_fermipy_vstack(**kwargs):
+    link = Link(linkname=kwargs.pop('linkname', 'fermipy-vstack'),
+                appname='fermipy-vstack',
+                options=dict(output=(None, "Output file name", str),
+                             hdu=(None, "Name of HDU to stack", str),
+                             args=([], "List of input files", list),
+                             gzip=(False, "Compress output", bool)),
+                file_args=dict(args=FileFlags.input_mask,
+                               output=FileFlags.output_mask),
+                **kwargs)
+    return link
 
 
 class ConfigMaker_Gtexpcube2(ConfigMaker):
@@ -136,7 +152,7 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',default_options.copy()))
+                             options=kwargs.get('options', ConfigMaker_SrcmapsCatalog.default_options.copy()))
         self.link = link
 
     @staticmethod
@@ -209,7 +225,7 @@ class ConfigMaker_SumRings(ConfigMaker):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',default_options.copy()))
+                             options=kwargs.get('options', ConfigMaker_SumRings.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -253,7 +269,7 @@ class ConfigMaker_Vstack(ConfigMaker):
         """C'tor
         """
         ConfigMaker.__init__(self, link, 
-                             options=kwargs.get('options',default_options.copy()))
+                             options=kwargs.get('options', ConfigMaker_Vstack.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -303,13 +319,14 @@ class ConfigMaker_Vstack(ConfigMaker):
 
 def create_sg_gtexpcube2(**kwargs):
     """Build and return a ScatterGather object that can invoke gtexpcube2"""
-    link = copy.deepcopy(GTEXPCUBE2)
-    link.linkname = kwargs.pop('linkname', 'gtexpcube2')
+    appname = kwargs.pop('appname', 'fermipy-gtexcube2-sg')
+    link = create_link_gtexpcube2(**kwargs)
+    linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "fermipy-gtexcube2-sg [options] input"
+    usage = "%s [options]"%(appname)
     description = "Run gtexpcube2 for a series of event types."
 
     config_maker = ConfigMaker_Gtexpcube2(link)
@@ -317,20 +334,22 @@ def create_sg_gtexpcube2(**kwargs):
                                 lsf_args=lsf_args,
                                 usage=usage,
                                 description=description,
-                                linkname=link.linkname,
+                                linkname=linkname,
+                                appname=appname,
                                 **kwargs)
     return lsf_sg
 
 
 def create_sg_gtsrcmaps_catalog(**kwargs):
     """Build and return a ScatterGather object that can invoke gtsrcmaps for catalog sources"""
-    link = GTSRCMAPS
-    link.linkname = kwargs.pop('linkname', 'gtsrcmaps')
+    appname = kwargs.pop('appname', 'fermipy-srcmaps-catalog-sg')
+    link = create_link_gtscrmaps(**kwargs)
+    linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "fermipy-srcmaps-catalog-sg [options] input"
+    usage = "%s [options]"%(appname)
     description = "Run gtsrcmaps for catalog sources"
 
     config_maker = ConfigMaker_SrcmapsCatalog(link)
@@ -339,19 +358,21 @@ def create_sg_gtsrcmaps_catalog(**kwargs):
                                 usage=usage,
                                 description=description,
                                 linkname=link.linkname,
+                                appname=appname,
                                 **kwargs)
     return lsf_sg
 
 
 def create_sg_sum_ring_gasmaps(**kwargs):
     """Build and return a ScatterGather object that can invoke fermipy-coadd"""
-    link = FERMIPYCOADD
-    link.linkname = kwargs.pop('linkname', 'sum-gasmaps')
+    appname = kwargs.pop('appname', 'fermipy-sum-ring-gasmaps-sg')
+    link = create_link_fermipy_coadd(**kwargs)
+    linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "fermipy-sum-ring-gasmaps-sg [options] input"
+    usage = "%s [options]"%(appname)
     description = "Sum gasmaps to build diffuse model components"
 
     config_maker = ConfigMaker_SumRings(link)
@@ -360,19 +381,21 @@ def create_sg_sum_ring_gasmaps(**kwargs):
                                 usage=usage,
                                 description=description,
                                 linkname=link.linkname,
+                                appname=appname,
                                 **kwargs)
     return lsf_sg
 
 
 def create_sg_vstack_diffuse(**kwargs):
     """Build and return a ScatterGather object that can invoke fermipy-vstack"""
-    link = FERMIPYVSTACK
-    link.linkname = kwargs.pop('linkname', 'fermipy-vstack')
+    appname = kwargs.pop('appname', 'fermipy-vstack-diffuse-sg')
+    link = create_link_fermipy_vstack(**kwargs)
+    linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "fermipy-vstack-diffuse-sg [options] input"
+    usage = "%s [options]"%(appname)
     description = "Sum gasmaps to build diffuse model components"
 
     config_maker = ConfigMaker_Vstack(link)
@@ -381,6 +404,7 @@ def create_sg_vstack_diffuse(**kwargs):
                                 usage=usage,
                                 description=description,
                                 linkname=link.linkname,
+                                appname=appname,
                                 **kwargs)
     return lsf_sg
 
