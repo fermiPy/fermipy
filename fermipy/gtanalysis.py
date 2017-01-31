@@ -4186,9 +4186,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             if not isFree and build_fixed_wts:
                 self.like.logLike.buildFixedModelWts()
 
-        if not save_template and 'Spatial_Filename' in src and \
-                src['Spatial_Filename'] is not None and \
-                os.path.isfile(src['Spatial_Filename']):
+        if (not save_template and
+            src['Spatial_Filename'] is not None and
+            os.path.isfile(src['Spatial_Filename']) and
+            os.path.dirname(src['Spatial_Filename']) == self.config['fileio']['workdir']):
             os.remove(src['Spatial_Filename'])
 
         self.roi.delete_sources([src])
