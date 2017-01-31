@@ -1,41 +1,47 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 
+from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Link, Chain
 
 
 def test_comlink():
-    defaults = dict(arg_float=4.0, arg_in='test.in', arg_out='test.out')
-    mapping = dict(arg_in='alias')
     kwargs = dict(appname='dummy',
-                  defaults=defaults,
-                  mapping=mapping,
-                  input_file_args=['arg_in'],
-                  output_file_args=['arg_out'])
+                  options=dict(arg_float=(4.0, 'a float', float), 
+                               arg_in=('test.in', 'an input file', str),  
+                               arg_out=('test.out', 'an output file', str)),
+                  mapping=dict(arg_in='alias'),
+                  file_args=dict(arg_in=FileFlags.input_mask,
+                                 arg_out=FileFlags.output_mask))
     link = Link('link', **kwargs)
 
+
 def test_chain():
-    defaults = dict(arg_float=4.0, arg_in='test.in', arg_out='test.out')
-    mapping = dict(arg_in='alias')
     kwargs = dict(appname='dummy',
-                  defaults=defaults,
-                  mapping=mapping,
-                  input_file_args=['arg_in'],
-                  output_file_args=['arg_out'])
+                  options=dict(arg_float=(4.0, 'a float', float),
+                               arg_in=('test.in', 'an input file', str),
+                               arg_out=('test.out', 'an output file', str)),
+                  mapping=dict(arg_in='alias'),
+                  file_args=dict(arg_in=FileFlags.input_mask,
+                                 arg_out=FileFlags.output_mask))
     link = Link('link', **kwargs)
-    
-    options=dict(irfs='CALDB', expcube=None,
-                 bexpmap=None, cmap=None,
-                 srcmdl=None, outfile=None)
-    kwargs = dict(options=options,
-                  flags=['gzip'],
-                  input_file_args=['expcube', 'cmap', 'bexpmap', 'srcmdl'],
-                  output_file_args=['outfile'])
+
+    kwargs = dict(options=dict(irfs=('CALDB', 'IRF version', str),
+                               expcube=(None, 'Livetime cube file', str),
+                               bexpmap=(None, 'Binned exposure map', str),
+                               cmap=(None, 'Binned counts map', str),
+                               srcmdl=(None, 'Input source model xml file',  str),
+                               outfile=(None, 'Output file', str)),
+                  file_args=dict(expcube=FileFlags.input_mask, 
+                                 cmap=FileFlags.input_mask, 
+                                 bexpmap=FileFlags.input_mask, 
+                                 srcmdl=FileFlags.input_mask,
+                                 outfile=FileFlags.output_mask))
     # This should be a Gtlink, but we only really wanna test the chain functionality here
     link2 = Link('gtsrcmaps', **kwargs)
 
     def argmapper(args):
-        basename = args.basename
+        basename = args['basename']
         ret_dict = dict(expcube="%s_ltcube.fits"%basename,
                         cmap="%s_ccube.fits"%basename,
                         bexpmap="%s_bexpmap.fits"%basename,
@@ -44,5 +50,7 @@ def test_chain():
 
     chain = Chain('chain', 
                   links=[link, link2], 
-                  options=dict(basename=None))
+                  options=dict(basename=(None, 'Base file name', str)),
+                  argmapper=argmapper)
     
+
