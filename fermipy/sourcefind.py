@@ -327,7 +327,7 @@ class SourceFind(object):
                 hdu_data]
 
         hdus[0].header['CONFIG'] = json.dumps(loc['config'])
-        hdus[2].header['CONFIG'] = json.dumps(loc['config']) 
+        hdus[2].header['CONFIG'] = json.dumps(loc['config'])
         fits_utils.write_hdus(hdus, filename)
 
     def _localize(self, name, **kwargs):
@@ -385,11 +385,15 @@ class SourceFind(object):
              'loglike_loc': np.nan,
              'dloglike_loc': np.nan}
 
+        if fit0['fit_success']:
+            scan_cdelt = 2.0 * fit0['r95'] / (nstep - 1.0)
+        else:
+            scan_cdelt = np.abs(skywcs.wcs.cdelt[0])
+
         self.logger.debug('Refining localization search to '
                           'region of width: %.4f deg',
-                          fit0['r95'])
+                          scan_cdelt * nstep)
 
-        scan_cdelt = 2.0 * fit0['r95'] / (nstep - 1.0)
         fit1 = self._fit_position_scan(name,
                                        skydir=fit0['skydir'],
                                        scan_cdelt=scan_cdelt,
@@ -415,6 +419,10 @@ class SourceFind(object):
         o['deltax'] = (o['xpix'] - src_pix[0]) * cdelt0
         o['deltay'] = (o['ypix'] - src_pix[1]) * cdelt1
         o['offset'] = skydir.separation(fit1['skydir']).deg
+        o['ra_preloc'] = skydir.ra.deg
+        o['dec_preloc'] = skydir.dec.deg
+        o['glon_preloc'] = skydir.galactic.l.deg
+        o['glat_preloc'] = skydir.galactic.b.deg
 
         if o['offset'] > dtheta_max:
             o['fit_success'] = False
