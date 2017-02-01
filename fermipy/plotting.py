@@ -1407,7 +1407,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                            color='w', colname='r68', label='68% Uncertainty')
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
                            color='w', colname='r99', label='99% Uncertainty',
-                           linestyle=':')
+                           linestyle='--')
 
         handles, labels = plt.gca().get_legend_handles_labels()
         h0 = Line2D([], [], color='w', marker='None',
@@ -1464,7 +1464,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                     label='68% Uncertainty', linewidth=1.0)
         h1 = Line2D([], [], color='w', marker='None',
                     label='99% Uncertainty', linewidth=1.0,
-                    linestyle=':')
+                    linestyle='--')
         plt.legend(handles=handles + [h0, h1])
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
