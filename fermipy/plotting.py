@@ -6,7 +6,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patheffects as PathEffects
-from matplotlib.patches import Circle, Ellipse
+from matplotlib.patches import Circle, Ellipse, Rectangle
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
@@ -1381,10 +1381,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
                          marker='+', color='w', path_effects=[path_effect],
                          label='Old Position')
 
-        plot_markers(scan_skydir.ra.deg, scan_skydir.dec.deg,
+        plot_markers(peak_skydir.ra.deg, peak_skydir.dec.deg,
                      marker='x', color='lime', path_effects=[path_effect])
 
-        plot_markers(peak_skydir.ra.deg, peak_skydir.dec.deg,
+        plot_markers(scan_skydir.ra.deg, scan_skydir.dec.deg,
                      marker='x', color='w', path_effects=[path_effect],
                      label='New Position')
 
@@ -1394,8 +1394,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
             ymin = np.min(pix[1])
             xwidth = np.max(pix[0]) - xmin
             ywidth = np.max(pix[1]) - ymin
-
-            from matplotlib.patches import Rectangle
             r = Rectangle((xmin, ymin), xwidth, ywidth,
                           edgecolor='w', facecolor='none', linestyle='--')
             plt.gca().add_patch(r)
@@ -1416,7 +1414,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                     label='68% Uncertainty', linewidth=1.0)
         h1 = Line2D([], [], color='w', marker='None',
                     label='99% Uncertainty', linewidth=1.0,
-                    linestyle=':')
+                    linestyle='--')
         plt.legend(handles=handles + [h0, h1])
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
@@ -1442,8 +1440,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
         cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap.wcs.wcs.cdelt[1])
         cdelt = [cdelt0, cdelt1]
-        scan_skydir = SkyCoord(loc['glon'], loc['glat'],
-                               frame='galactic', unit='deg')
         scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
 
         if 'ra_preloc' in loc:
@@ -1453,7 +1449,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                          marker='+', color='w', path_effects=[path_effect],
                          label='Old Position')
 
-        plot_markers(peak_skydir.ra.deg, peak_skydir.dec.deg,
+        plot_markers(scan_skydir.ra.deg, scan_skydir.dec.deg,
                      marker='x', color='w', path_effects=[path_effect],
                      label='New Position')
 
@@ -1461,7 +1457,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                            color='w', colname='r68', label='68% Uncertainty')
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
                            color='w', colname='r99', label='99% Uncertainty',
-                           linestyle=':')
+                           linestyle='--')
 
         handles, labels = plt.gca().get_legend_handles_labels()
         h0 = Line2D([], [], color='w', marker='None',
