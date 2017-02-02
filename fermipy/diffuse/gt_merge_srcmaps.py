@@ -12,7 +12,8 @@ import argparse
 import BinnedAnalysis as BinnedAnalysis
 import pyLikelihood as pyLike
 
-from fermipy.jobs.chain import add_argument, FileFlags, Link
+from fermipy.jobs.file_archive import FileFlags
+from fermipy.jobs.chain import add_argument, Link
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
@@ -43,11 +44,11 @@ class GtMergeSourceMaps(object):
     def __init__(self, **kwargs):
         """C'tor
         """
-        self.parser = GtMergeSourceMaps._make_parser()
-        self.link = GtMergeSourceMaps._make_link(**kwargs)
+        self.parser = GtMergeSourceMaps.make_parser()
+        self.link = GtMergeSourceMaps.make_link(**kwargs)
 
     @staticmethod
-    def _make_parser():
+    def make_parser():
         """Make an argument parser for this class """
         usage = "gt_merge_srcmaps.py [options]"
         description = "Run gtsrcmaps for one or more energy planes for a single source"
@@ -58,7 +59,8 @@ class GtMergeSourceMaps(object):
         return parser
 
     @staticmethod
-    def _make_link(**kwargs):
+    def make_link(**kwargs):
+        """Make a `fermipy.jobs.Link object to run `GtMergeSourceMaps` """
         link = Link(kwargs.pop('linkname', 'merge-srcmaps'),
                     appname='fermipy-merge-srcmaps',
                     options=GtMergeSourceMaps.default_options.copy(),
@@ -135,8 +137,9 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options', ConfigMaker_MergeSrcmaps.default_options.copy()))
- 
+                             options=kwargs.get('options',
+                                                ConfigMaker_MergeSrcmaps.default_options.copy()))
+
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -219,7 +222,7 @@ def main_single():
 
 def main_batch():
     """Entry point for command line use  for dispatching batch jobs """
-    lsf_sg = build_scatter_gather()
+    lsf_sg = create_sg_merge_srcmaps()
     lsf_sg(sys.argv)
 
 if __name__ == '__main__':

@@ -12,10 +12,8 @@ import yaml
 import numpy as np
 
 from astropy.table import Table
-from fermipy import catalog
 
-from fermipy.jobs.lsf_impl import build_sg_from_link
-from fermipy.jobs.chain import add_argument, FileFlags, Link, Chain
+from fermipy.jobs.chain import Link, Chain
 
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.source_factory import SourceFactory
@@ -31,7 +29,7 @@ def mask_extended(cat_table):
 def select_extended(cat_table):
     """Select only rows representing extended sources from a catalog table
     """
-    return np.array([len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data ], bool)
+    return np.array([len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data], bool)
 
 def make_mask(cat_table, cut):
     """Mask a bit mask selecting the rows that pass a selection
@@ -112,7 +110,7 @@ class CatalogSourceManager(object):
         return yaml_dict
 
     def build_catalog_info(self, catalog_info):
-        """ Build a CatalogInfo object """
+        """ Build a CatalogInfo object """        
         cat = SourceFactory.build_catalog(**catalog_info)
         catalog_info['catalog'] = cat
         catalog_info['catalog_table'] =\
@@ -278,14 +276,13 @@ class CatalogComponentChain(Chain):
 
         link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
                                                          appname='fermipy-merge-srcmaps-sg')
- 
+
         Chain.__init__(self, linkname,
                        appname='FIXME',
                        links=[link_srcmaps_catalogs, link_srcmaps_composite],
                        options=CatalogComponentChain.default_options.copy(),
                        parser=CatalogComponentChain._make_parser())
-        
-  
+
     @staticmethod
     def _make_parser():
         """Make an argument parser for this chain """
@@ -301,35 +298,19 @@ class CatalogComponentChain(Chain):
         args = Link.run_argparser(self, argv)
         for link in self._links.values():
             link.run_link(stream=sys.stdout, dry_run=True)
-
+        return args
 
 def create_chain_catalog_comps(**kwargs):
-    chain = CatalogComponentChain(linkname=kwargs.pop('linkname', 'diffuse.catalog_comps'))
-    return chain
+    """Create and return a `CatalogComponentChain` object """
+    ret_chain = CatalogComponentChain(linkname=kwargs.pop('linkname', 'diffuse.catalog_comps'))
+    return ret_chain
 
 def main_chain():
     """Entry point for command line use for single job """
-    chain = CatalogComponentChain("diffuse.catalog_comps")
-    chain.run_argparser(sys.argv[1:])
-    return chain
-    #chain.run_chain(sys.stdout, args.dry_run)
-    #chain.finalize(args.dry_run)
-
-
+    the_chain = CatalogComponentChain("diffuse.catalog_comps")
+    args = the_chain.run_argparser(sys.argv[1:])
+    the_chain.run_chain(sys.stdout, args.dry_run)
+    the_chain.finalize(args.dry_run)
 
 if __name__ == '__main__':
-
-    from fermipy.jobs.job_archive import JobArchive
-    chain = main_chain()
-
-
-    job_archive = JobArchive.build_archive(job_archive_table='job_archive_temp.fits',
-                                           file_archive_table='file_archive_temp.fits',
-                                           base_path=os.path.abspath('.')+'/')
-    
-    job_dict = chain.get_jobs()
-    for i, job_details in enumerate(job_dict.values()):
-        if i % 10 == 0:
-            print ("Working on job %i"%i)
-        job_archive.register_job(job_details)
-
+    main_chain()

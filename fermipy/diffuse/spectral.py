@@ -30,7 +30,7 @@ class SpectralLibrary(object):
         """
         spectral_dict = yaml.load(yamlstr)
         return SpectralLibrary(spectral_dict)
-    
+
     @staticmethod
     def create_from_yaml(yamlfile):
         """Create the dictionary for a yaml file

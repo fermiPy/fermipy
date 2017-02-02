@@ -6,9 +6,9 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-import copy
 
-from fermipy.jobs.chain import add_argument, FileFlags, Link
+from fermipy.jobs.file_archive import FileFlags
+from fermipy.jobs.chain import Link
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
@@ -23,6 +23,7 @@ NAME_FACTORY = NameFactory()
 
 
 def create_link_gtexpcube2(**kwargs):
+    """Make a `fermipy.jobs.Gtlink` object to run gtexpcube2  """
     gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtexpcube2'),
                     appname='gtexpcube2',
                     options=dict(irfs=diffuse_defaults.gtopts['irfs'],
@@ -31,7 +32,7 @@ def create_link_gtexpcube2(**kwargs):
                                  cmap=diffuse_defaults.gtopts['cmap'],
                                  outfile=diffuse_defaults.gtopts['outfile'],
                                  coordsys=diffuse_defaults.gtopts['coordsys']),
-                    file_args=dict(infile=FileFlags.input_mask, 
+                    file_args=dict(infile=FileFlags.input_mask,
                                    cmap=FileFlags.input_mask,
                                    outfile=FileFlags.output_mask),
                     **kwargs)
@@ -39,6 +40,7 @@ def create_link_gtexpcube2(**kwargs):
 
 
 def create_link_gtscrmaps(**kwargs):
+    """Make a `fermipy.jobs.Gtlink` object to run gtsrcmaps  """
     gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtsrcmaps'),
                     appname='gtsrcmaps',
                     options=dict(irfs=diffuse_defaults.gtopts['irfs'],
@@ -47,7 +49,7 @@ def create_link_gtscrmaps(**kwargs):
                                  cmap=diffuse_defaults.gtopts['cmap'],
                                  srcmdl=diffuse_defaults.gtopts['srcmdl'],
                                  outfile=diffuse_defaults.gtopts['outfile']),
-                    file_args=dict(expcube=FileFlags.input_mask, 
+                    file_args=dict(expcube=FileFlags.input_mask,
                                    cmap=FileFlags.input_mask,
                                    bexpmap=FileFlags.input_mask,
                                    srcmdl=FileFlags.input_mask,
@@ -56,6 +58,7 @@ def create_link_gtscrmaps(**kwargs):
     return gtlink
 
 def create_link_fermipy_coadd(**kwargs):
+    """Make a `fermipy.jobs.Link` object to run fermipy-coadd  """
     link = Link(linkname=kwargs.pop('linkname', 'fermipy-coadd'),
                 appname='fermipy-coadd',
                 options=dict(args=([], "List of input files", list),
@@ -66,6 +69,7 @@ def create_link_fermipy_coadd(**kwargs):
     return link
 
 def create_link_fermipy_vstack(**kwargs):
+    """Make a `fermipy.jobs.Link` object to run fermipy-vstack  """
     link = Link(linkname=kwargs.pop('linkname', 'fermipy-vstack'),
                 appname='fermipy-vstack',
                 options=dict(output=(None, "Output file name", str),
@@ -97,8 +101,8 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
     def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self, link, 
-                             options=kwargs.get('options',self.default_options.copy()))
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options', self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -152,7 +156,8 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options', ConfigMaker_SrcmapsCatalog.default_options.copy()))
+                             options=kwargs.get('options',
+                                                ConfigMaker_SrcmapsCatalog.default_options.copy()))
         self.link = link
 
     @staticmethod
@@ -214,8 +219,8 @@ class ConfigMaker_SumRings(ConfigMaker):
     """Small class to generate configurations for fermipy-coadd
     to sum galprop ring gasmaps
 
-    This takes the following arguments:    
-    --diffuse  : Diffuse model component definition yaml file'
+    This takes the following arguments:
+    --diffuse  : Diffuse model component definition yaml file
     --outdir   : Output directory
     """
     default_options = dict(diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
@@ -225,7 +230,8 @@ class ConfigMaker_SumRings(ConfigMaker):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options', ConfigMaker_SumRings.default_options.copy()))
+                             options=kwargs.get('options',
+                                                ConfigMaker_SumRings.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -268,8 +274,9 @@ class ConfigMaker_Vstack(ConfigMaker):
     def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self, link, 
-                             options=kwargs.get('options', ConfigMaker_Vstack.default_options.copy()))
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options',
+                                                ConfigMaker_Vstack.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -344,7 +351,7 @@ def create_sg_gtsrcmaps_catalog(**kwargs):
     """Build and return a ScatterGather object that can invoke gtsrcmaps for catalog sources"""
     appname = kwargs.pop('appname', 'fermipy-srcmaps-catalog-sg')
     link = create_link_gtscrmaps(**kwargs)
-    linkname = kwargs.pop('linkname', link.linkname)
+    linkname=kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
@@ -357,7 +364,7 @@ def create_sg_gtsrcmaps_catalog(**kwargs):
                                 lsf_args=lsf_args,
                                 usage=usage,
                                 description=description,
-                                linkname=link.linkname,
+                                linkname=linkname,
                                 appname=appname,
                                 **kwargs)
     return lsf_sg
@@ -380,7 +387,7 @@ def create_sg_sum_ring_gasmaps(**kwargs):
                                 lsf_args=lsf_args,
                                 usage=usage,
                                 description=description,
-                                linkname=link.linkname,
+                                linkname=linkname,
                                 appname=appname,
                                 **kwargs)
     return lsf_sg
@@ -403,12 +410,10 @@ def create_sg_vstack_diffuse(**kwargs):
                                 lsf_args=lsf_args,
                                 usage=usage,
                                 description=description,
-                                linkname=link.linkname,
+                                linkname=linkname,
                                 appname=appname,
                                 **kwargs)
     return lsf_sg
-
-
 
 
 def invoke_sg_gtexpcube2():

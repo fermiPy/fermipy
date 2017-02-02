@@ -50,7 +50,7 @@ def test_chain():
 
     chain = Chain('chain', 
                   links=[link, link2], 
-                  options=dict(basename=(None, 'Base file name', str)),
+                  options=dict(basename=('dummy', 'Base file name', str)),
                   argmapper=argmapper)
     
 

@@ -4,14 +4,12 @@ Classes and utilities that manage the diffuse emission background models
 """
 from __future__ import absolute_import, division, print_function
 
-import os
 import sys
 import argparse
 
 import yaml
 
-from fermipy.jobs.lsf_impl import build_sg_from_link
-from fermipy.jobs.chain import add_argument, FileFlags, Link, Chain
+from fermipy.jobs.chain import Link, Chain
 
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
@@ -453,13 +451,13 @@ def make_ring_dicts(**kwargs):
 def make_diffuse_comp_info_dict(**kwargs):
     """Build and return the information about the diffuse components
     """
-    diffuse_yamlfile = kwargs.pop('diffuse', 'config/diffuse_components.yaml')    
+    diffuse_yamlfile = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
     components = kwargs.pop('components', None)
     if components is None:
         comp_yamlfile = kwargs.pop('comp', 'config/binning.yaml')
         components = Component.build_from_yamlfile(comp_yamlfile)
     gmm = kwargs.get('GalpropMapManager', GalpropMapManager(**kwargs))
-    dmm = kwargs.get('DiffuseModelManager', DiffuseModelManager(**kwargs))    
+    dmm = kwargs.get('DiffuseModelManager', DiffuseModelManager(**kwargs))
     diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(
         diffuse_yamlfile)
     diffuse_comp_info_dict = dmm.make_diffuse_comp_info_dict(
@@ -496,15 +494,14 @@ class DiffuseComponentChain(Chain):
         link_srcmaps = create_sg_srcmap_partial(linkname="%s.srcmaps"%linkname)
 
         link_vstack_srcmaps = create_sg_vstack_diffuse(linkname="%s.vstack"%linkname)
- 
+
         Chain.__init__(self, linkname,
                        appname='FIXME',
                        links=[link_gasmaps, link_srcmaps,
                               link_vstack_srcmaps],
                        options=DiffuseComponentChain.default_options.copy(),
                        parser=DiffuseComponentChain._make_parser())
-        
-  
+
     @staticmethod
     def _make_parser():
         """Make an argument parser for this chain """
@@ -520,36 +517,23 @@ class DiffuseComponentChain(Chain):
         args = Link.run_argparser(self, argv)
         for link in self._links.values():
             link.run_link(stream=sys.stdout, dry_run=True)
+        return args
 
 def create_chain_diffuse_comps(**kwargs):
+    """Create and return a `DiffuseComponentChain` object """
     chain = DiffuseComponentChain(linkname=kwargs.get('linkname', 'diffuse.diffuse_comps'))
     return chain
-                                  
 
 def main_chain():
     """Entry point for command line use for single job """
     chain = DiffuseComponentChain("diffuse.diffuse_comps")
-    chain.run_argparser(sys.argv[1:])
-    return chain
-    #chain.run_chain(sys.stdout, args.dry_run)
-    #chain.finalize(args.dry_run)
-
+    args = chain.run_argparser(sys.argv[1:])
+    chain.run_chain(sys.stdout, args.dry_run)
+    chain.finalize(args.dry_run)
 
 
 if __name__ == '__main__':
+    main_chain()
 
-    from fermipy.jobs.job_archive import JobArchive
-    chain = main_chain()
-
-
-    job_archive = JobArchive.build_archive(job_archive_table='job_archive_temp.fits',
-                                           file_archive_table='file_archive_temp.fits',
-                                           base_path=os.path.abspath('.')+'/')
-    
-    job_dict = chain.get_jobs()
-    for i, job_details in enumerate(job_dict.values()):
-        if i % 10 == 0:
-            print ("Working on job %i"%i)
-        job_archive.register_job(job_details)
 
 

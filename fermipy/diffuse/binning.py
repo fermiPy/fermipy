@@ -43,11 +43,12 @@ class Component(object):
         self.ebin_name = kwargs['ebin_name']
 
     def __repr__(self):
-        s = "Binning component %s_%s\n"%(self.ebin_name, self.evtype_name)
-        s += "  log_10(E/MeV) : %.2f %.2f %i bins\n"%(self.log_emin, self.log_emax, self.enumbins)
-        s += "  HPX order     : %i\n"%self.hpx_order
-        s += "  Zenith cut    : %.0f"%self.zmax
-        return s
+        retstr = "Binning component %s_%s\n"%(self.ebin_name, self.evtype_name)
+        retstr += "  log_10(E/MeV) : %.2f %.2f %i bins\n"%(self.log_emin,
+                                                           self.log_emax, self.enumbins)
+        retstr += "  HPX order     : %i\n"%self.hpx_order
+        retstr += "  Zenith cut    : %.0f"%self.zmax
+        return retstr
 
     def make_key(self, format_str):
         """ Make a key to identify this compoment

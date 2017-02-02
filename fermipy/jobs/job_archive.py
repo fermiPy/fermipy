@@ -10,15 +10,18 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+import argparse
 
 import copy
+from collections import OrderedDict
 
 #from enum import Enum
 
 import numpy as np
 from astropy.table import Table, Column
 
-from fermipy.jobs.file_archive import get_timestamp, FileStatus, FileArchive
+from fermipy.fits_utils import write_tables_to_fits
+from fermipy.jobs.file_archive import get_timestamp, FileStatus, FileDict, FileArchive
 
 
 def get_matches(table, colname, value):
@@ -109,6 +112,20 @@ class JobDetails(object):
         self.status = kwargs.get('status', JobStatus.pending)
 
     @staticmethod
+    def make_fullkey(jobkey, jobname):
+        """Combine jobname and jobkey to make a unique key
+        fullkey = <jobkey>@<jobname>
+        """
+        return "%s@%s"%(jobkey, jobname)
+
+    @staticmethod
+    def split_fullkey(fullkey):
+        """Split fullkey to make extract jobname, jobkey
+        fullkey = <jobkey>@<jobname>
+        """
+        return fullkey.split('@')
+        
+    @staticmethod
     def make_tables(job_dict):
         """Build and return an `astropy.table.Table' to store `JobDetails`"""
         col_dbkey = Column(name='dbkey', dtype=int)
@@ -137,6 +154,13 @@ class JobDetails(object):
         for val in job_dict.values():
             val.append_to_tables(table, table_ids)
         return table, table_ids
+
+    @property
+    def fullkey(self):
+        """Return the fullkey for this job
+        fullkey = <jobkey>@<jobname>
+        """
+        return JobDetails.make_fullkey(self.jobkey, self.jobname)
 
     def get_file_ids(self, file_archive, creator=None, status=FileStatus.no_file):
         """Fill the file id arrays from the file lists
@@ -194,9 +218,20 @@ class JobDetails(object):
             else:
                 self.intfile_ids = np.zeros((0), int)
 
-    def get_file_paths(self, file_archive):
+    def get_file_paths(self, file_archive, file_id_array):
         """Get the full paths of the files used by this object from the the id arrays  """
-        raise NotImplementedError('JobDetails.get_file_paths')
+        full_list = []
+        status_dict = {}
+        full_list += file_archive.get_file_paths(file_id_array[self.infile_ids])
+        full_list += file_archive.get_file_paths(file_id_array[self.outfile_ids])
+        full_list += file_archive.get_file_paths(file_id_array[self.rmfile_ids])
+        full_list += file_archive.get_file_paths(file_id_array[self.intfile_ids])
+        for filepath in full_list:
+            handle = file_archive.get_handle(filepath)
+            status_dict[filepath] = handle.status
+        if self.file_dict is None:
+            self.file_dict = FileDict()
+        self.file_dict.update(status_dict)
 
     @staticmethod
     def _fill_array_from_list(the_list, the_array):
@@ -242,7 +277,7 @@ class JobDetails(object):
         return JobDetails(**kwargs)
 
     def append_to_tables(self, table, table_ids):
-        """Add this instance as a row on a `astropy.Table' """
+        """Add this instance as a row on a `astropy.Table` """
         infile_refs = np.zeros((2), int)
         outfile_refs = np.zeros((2), int)
         rmfile_refs = np.zeros((2), int)
@@ -286,10 +321,15 @@ class JobDetails(object):
                            intfile_refs=intfile_refs,
                            status=self.status))
 
-    def update_table_row(self, table_row):
-        """Add this instance as a row on a `astropy.Table' """
-        table_row.update(dict(timestamp=self.timestamp,
-                              status=self.status))
+    def update_table_row(self, table, row_idx):
+        """Add this instance as a row on a `astropy.Table` """
+        table[row_idx]['timestamp'] = self.timestamp
+        table[row_idx]['status'] = status=self.status
+
+    def check_status_logfile(self, checker_func):
+        """Check on the status of this particular job using the logfile"""
+        self.status = checker_func(self.logfile)
+        return self.status
 
 
 class JobArchive(object):
@@ -320,8 +360,13 @@ class JobArchive(object):
         self._table = None
         self._table_ids = None
         self._table_id_array = None
-        self._read_table_file(kwargs['job_archive_table'])
+        self._cache = OrderedDict()
         self._file_archive = FileArchive.build_archive(**kwargs)
+        self._read_table_file(kwargs['job_archive_table'])
+
+    def __getitem__(self, fullkey):
+        """ Return the `JobDetails` matching fullkey"""
+        return self._cache[key]
 
     @property
     def table_file(self):
@@ -344,6 +389,17 @@ class JobArchive(object):
         the files used and produced by this analysis"""
         return self._file_archive
 
+    @property
+    def cache(self):
+        """Return the transiet representation of this `JobArchive` """
+        return self._cache
+
+    def _fill_cache(self):
+        """Fill the cache from the `astropy.table.Table`"""
+        for irow in xrange(len(self._table)):
+            job_details = self.make_job_details(irow)
+            self._cache[job_details.fullkey] = job_details
+
     def _read_table_file(self, table_file):
         """Read an `astropy.table.Table` from table_file to set up the `JobArchive`"""
         self._table_file = table_file
@@ -353,23 +409,20 @@ class JobArchive(object):
         else:
             self._table, self._table_ids = JobDetails.make_tables({})
         self._table_id_array = self._table_ids['file_id'].data
+        self._fill_cache()
 
     def make_job_details(self, row_idx):
         """Create a `JobDetails` from an `astropy.table.row.Row` """
         row = self._table[row_idx]
         job_details = JobDetails.create_from_row(row, self._table_id_array)
-        job_details.get_file_paths(self._file_archive)
+        job_details.get_file_paths(self._file_archive, self._table_id_array)
+        self._cache[job_details.fullkey] = job_details
+        return job_details
 
     def get_details(self, jobname, jobkey):
         """Get the `JobDetails` associated to a particular job instance"""
-        match_job = get_matches(self._table, 'jobname', jobname)
-        match_key = get_matches(self._table, 'jobkey', jobkey)
-        mask = match_job * match_key
-        if mask.sum() != 1:
-            raise KeyError("%i rows match jobname=%s, jobkey=%s" %
-                           (mask.sum(), jobname, jobkey))
-        row_idx = np.argmax(mask)
-        return self.make_job_details(row_idx)
+        fullkey = JobDetails.make_fullkey(jobkey, jobname)
+        return self._cache[fullkey]
 
     def register_job(self, job_details):
         """Register a job in this `JobArchive` """
@@ -385,6 +438,7 @@ class JobArchive(object):
         job_details.get_file_ids(self._file_archive, creator=job_details.dbkey)
         job_details.append_to_tables(self._table, self._table_ids)
         self._table_id_array = self._table_ids['file_id'].data
+        self._cache[job_details.fullkey] = job_details
         return job_details
 
     def register_jobs(self, job_dict):
@@ -422,7 +476,7 @@ class JobArchive(object):
                                  job_details.jobkey)
         other.timestamp = job_details.timestamp
         other.status = job_details.status
-        other.update_table_row(self._table[other.dbkey - 1])
+        other.update_table_row(self._table, other.dbkey - 1)
         return other
 
     @staticmethod
@@ -439,6 +493,43 @@ class JobArchive(object):
                                          base_path=os.path.abspath('.') + '/')
         return JobArchive._archive
 
+    def write_table_file(self, job_table_file=None, file_table_file=None):
+        """Write the table to self._table_file"""
+        if self._table is None:
+            raise RuntimeError("No table to write")
+        if self._table_ids is None:
+            raise RuntimeError("No ID table to write")
+        if job_table_file is not None:
+            self._table_file = table_file
+        if self._table_file is None:
+            raise RuntimeError("No output file specified for table")           
+        write_tables_to_fits(self._table_file, [self._table, self._table_ids], clobber=True,
+                             namelist=['JOB_ARCHIVE', 'FILE_IDS'])
+        self._file_archive.write_table_file(file_table_file)
+
+    def update_job_status(self, checker_func):
+        """Update the status of all the jobs in the archive"""
+        njobs = len(self.cache.keys())
+        status_vect = np.zeros((5), int)
+        print ("Updating status of %i jobs: "%njobs)
+        for i, key in enumerate(self.cache.keys()):
+            if i % 200 == 0:
+                sys.stdout.write('.')
+                sys.stdout.flush()
+            job_details = self.cache[key]
+            job_details.check_status_logfile(checker_func)
+            job_details.update_table_row(self._table, job_details.dbkey - 1)
+            status_vect[job_details.status] += 1
+            
+        sys.stdout.write("!\n")
+        sys.stdout.flush()
+        sys.stdout.write("Summary:\n")
+        sys.stdout.write("  no_job:   %i\n"%status_vect[0])
+        sys.stdout.write("  pending:  %i\n"%status_vect[1])
+        sys.stdout.write("  running:  %i\n"%status_vect[2])
+        sys.stdout.write("  done:     %i\n"%status_vect[3])
+        sys.stdout.write("  failed:   %i\n"%status_vect[4])
+
     @staticmethod
     def get_archive():
         """Return the singleton `JobArchive` instance """
@@ -450,3 +541,27 @@ class JobArchive(object):
         if JobArchive._archive is None:
             JobArchive._archive = JobArchive(**kwargs)
         return JobArchive._archive
+
+
+def main_browse():
+    """Entry point for command line use for browsing a JobArchive """
+    parser = argparse.ArgumentParser(usage="job_archive.py [options]",
+                                     description="Browse a job archive")
+
+    parser.add_argument('--jobs', action='store', dest='job_archive_table',
+                        type=str, default='job_archive_temp.fits', help="Job archive file")
+    parser.add_argument('--files', action='store', dest='file_archive_table',
+                        type=str, default='file_archive_temp.fits', help="File archive file")
+    parser.add_argument('--base', action='store', dest='base_path',
+                        type=str, default=os.path.abspath('.'), help="File archive base path")
+    
+    args = parser.parse_args(sys.argv[1:])    
+    JobArchive.build_archive(**args.__dict__)
+
+
+if __name__ == '__main__':
+    main_browse()
+    ja = JobArchive.get_archive()
+
+    from fermipy.jobs.lsf_impl import check_log
+    ja.update_job_status(check_log)

@@ -16,7 +16,8 @@ import BinnedAnalysis as BinnedAnalysis
 import pyLikelihood as pyLike
 
 from fermipy import utils
-from fermipy.jobs.chain import add_argument, FileFlags, Link
+from fermipy.jobs.file_archive import FileFlags
+from fermipy.jobs.chain import add_argument, Link
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
@@ -71,7 +72,7 @@ class GtSrcmapPartial(object):
         link = Link(kwargs.pop('linkname', 'srcmaps-diffuse'),
                     appname='fermipy-srcmaps-diffuse',
                     options=GtSrcmapPartial.default_options.copy(),
-                    file_args=dict(expcube=FileFlags.input_mask, 
+                    file_args=dict(expcube=FileFlags.input_mask,
                                    cmap=FileFlags.input_mask,
                                    bexpmap=FileFlags.input_mask,
                                    srcmdl=FileFlags.input_mask,
@@ -100,7 +101,7 @@ class GtSrcmapPartial(object):
         try:
             diffuse_source = pyLike.DiffuseSource.cast(source)
             diffuse_source.mapBaseObject().projmap().setExtrapolation(False)
-        except:
+        except TypeError:
             pass
 
         like.logLike.saveSourceMap_partial(args.outfile, source, args.kmin, args.kmax)
@@ -111,7 +112,7 @@ class GtSrcmapPartial(object):
 
 class ConfigMaker_SrcmapPartial(ConfigMaker):
     """Small class to generate configurations for this script
-    
+
     This adds the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
@@ -129,7 +130,8 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options', ConfigMaker_SrcmapPartial.default_options.copy()))
+                             options=kwargs.get('options',
+                                                ConfigMaker_SrcmapPartial.default_options.copy()))
 
     @staticmethod
     def _write_xml(xmlfile, srcs):
@@ -273,7 +275,7 @@ def main_single():
 
 def main_batch():
     """Entry point for command line use  for dispatching batch jobs """
-    lsf_sg = build_scatter_gather()
+    lsf_sg = create_sg_srcmap_partial()
     lsf_sg(sys.argv)
 
 

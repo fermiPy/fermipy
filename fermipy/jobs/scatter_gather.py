@@ -360,6 +360,9 @@ class ScatterGather(Link):
             if self.args['print_update']:
                 self.print_update()
 
+            if self._job_archive is not None:
+                self._job_archive.write()
+
         if failed:
             self.print_update()
             self.print_failed()
@@ -624,7 +627,7 @@ class ScatterGather(Link):
             full_init_config = self._input_config.copy()
             ScatterGather._make_init_logfile_name(full_init_config)
             logfile = full_init_config.get('logfile')
-            self._initialize_link.register_job(key=self.linkname + '.init',
+            self._initialize_link.register_job(key='init',
                                                job_config=full_init_config,
                                                logfile=logfile,
                                                status=status)
@@ -633,7 +636,7 @@ class ScatterGather(Link):
             full_job_config = self._merge_config(job_config)
             ScatterGather._make_scatter_logfile_name(jobkey, full_job_config)
             logfile = full_job_config.get('logfile')
-            self._scatter_link.register_job(key=self.linkname + '.' + jobkey,
+            self._scatter_link.register_job(key=jobkey,
                                             job_config=full_job_config,
                                             logfile=logfile,
                                             status=status)
@@ -642,7 +645,7 @@ class ScatterGather(Link):
             full_gather_config = self._output_config.copy()
             ScatterGather._make_gather_logfile_name(full_gather_config)
             logfile = full_gather_config.get('logfile')
-            self._gather_link.register_job(key=self.linkname + '.gather',
+            self._gather_link.register_job(key='gather',
                                            job_config=full_gather_config,
                                            logfile=logfile,
                                            status=status)

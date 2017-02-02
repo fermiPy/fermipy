@@ -11,7 +11,8 @@ import argparse
 
 import yaml
 
-from fermipy.jobs.chain import add_argument, FileFlags, Chain, Link
+from fermipy.jobs.chain import Chain, Link
+from fermipy.jobs.file_archive import FileFlags
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse import defaults as diffuse_defaults
 
@@ -66,7 +67,7 @@ class CoaddSplit(Chain):
                 key = "%s_%s" % (key_e, psf_type)
                 binkey = 'binfile_%s' % key
                 argkey = 'args_%s' % key
-                self.files.file_args[argkey] = FileFlags.gz_mask               
+                self.files.file_args[argkey] = FileFlags.gz_mask
                 link = Link('coadd_%s' % key,
                             appname='fermipy-coadd',
                             options=dict(args=([], "List of input files", list),
@@ -129,6 +130,7 @@ class CoaddSplit(Chain):
 
 
 def create_chain_coadd_split(**kwargs):
+    """Build and return a `CoaddSplit` object"""
     chain = CoaddSplit(linkname=kwargs.pop('linkname', 'coadd-split'),
                        comp_dict=kwargs.get('comp_dict', None))
     return chain

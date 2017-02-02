@@ -19,6 +19,8 @@ import numpy as np
 #from numpy.core import defchararray
 from astropy.table import Table, Column
 
+from fermipy.fits_utils import write_tables_to_fits
+
 
 def get_timestamp():
     """Get the current time as an integer"""
@@ -52,12 +54,12 @@ class FileStatus(object):
     exists = 2  # File exists
     missing = 3  # File should exist, but does not
     superseded = 4  # File exists, but has been superseded
-    temp_removed = 5  # File was temporaray and has been removed
+    temp_removed = 5  # File was temporary and has been removed
 
 
 # class FileFlags(Enum):
 class FileFlags(object):
-    """Enumeration of file status types"""
+    """Bit masks to indicate file types"""
     no_flags = 0  # No flags are set for this file
     input_mask = 1  # File is input to job
     output_mask = 2  # File is output from job
@@ -69,6 +71,7 @@ class FileFlags(object):
     out_ch_mask = output_mask | rm_mask | internal_mask
     in_stage_mask = input_mask | stageable
     out_stage_mask = output_mask | stageable
+    rmint_mask = rm_mask | internal_mask
 
 
 class FileDict(object):
@@ -480,7 +483,39 @@ class FileHandle(object):
                 kwargs[key] = table_row[key].astype(str)
             else:
                 kwargs[key] = table_row[key]
-        return FileHandle(**kwargs)
+        try:
+            return FileHandle(**kwargs)
+        except KeyError:
+            print (kwargs)
+
+    def check_status(self, basepath=None):
+        """Check on the status of this particular file"""
+        if basepath is None:
+            fullpath = self.path
+        else:
+            fullpath = os.path.join(basepath, self.path)
+        exists = os.path.exists(fullpath)
+        if not exists:
+            if self.flags & FileFlags.gz_mask != 0:
+                fullpath += '.gz'
+                exists = os.path.exists(fullpath)
+        if exists:
+            if self.status == FileStatus.superseded:
+                pass
+            else:
+                self.status = FileStatus.exists
+        else:
+            if self.status in [FileStatus.no_file,
+                               FileStatus.expected,
+                               FileStatus.missing,
+                               FileStatus.temp_removed]:
+                if self.flags & FileFlags.rmint_mask != 0:
+                    self.status = FileStatus.temp_removed
+            elif self.status == FileStatus.exists:
+                self.status = FileStatus.missing
+            elif self.status == FileStatus.exists:
+                self.status = FileStatus.temp_removed
+        return self.status
 
     def append_to_table(self, table):
         """Add this instance as a row on a `astropy.Table` """
@@ -491,14 +526,14 @@ class FileHandle(object):
                            status=self.status,
                            flags=self.flags))
 
-    def update_table_row(self, table_row):
+    def update_table_row(self, table, row_idx):
         """Update the values in an `astropy.Table` for this instances"""
-        table_row.update(dict(path=self.path,
-                              key=self.key,
-                              creator=self.creator,
-                              timestamp=self.timestamp,
-                              status=self.status,
-                              flags=self.flags))
+        table[row_idx]['path'] = self.path
+        table[row_idx]['key'] = self.key
+        table[row_idx]['creator'] = self.creator
+        table[row_idx]['timestamp'] = self.timestamp
+        table[row_idx]['status'] = self.status
+        table[row_idx]['flags'] = self.flags
 
 
 class FileArchive(object):
@@ -553,6 +588,7 @@ class FileArchive(object):
     @property
     def base_path(self):
         """Return the base file path for all files in this `FileArchive """
+        return self._base_path
 
     def _get_fullpath(self, filepath):
         """Return filepath with the base_path prefixed """
@@ -667,7 +703,7 @@ class FileArchive(object):
         file_handle.creator = creator
         file_handle.timestamp = timestamp
         file_handle.status = status
-        file_handle.update_table_row(self._table[file_handle.key - 1])
+        file_handle.update_table_row(self._table, file_handle.key - 1)
         return file_handle
 
     def get_file_ids(self, file_list, creator=None,
@@ -717,8 +753,48 @@ class FileArchive(object):
         """
         if id_list is None:
             return []
-        path_array = self._table[id_list - 1]['path']
+        try:
+            path_array = self._table[id_list - 1]['path']
+        except IndexError:
+            print ("IndexError ", len(self._table), id_list)
+            path_array = []
         return [path for path in path_array]
+
+    def write_table_file(self, table_file=None):
+        """Write the table to self._table_file"""
+        if self._table is None:
+            raise RuntimeError("No table to write")
+        if table_file is not None:
+            self._table_file = table_file
+        if self._table_file is None:
+            raise RuntimeError("No output file specified for table")           
+        write_tables_to_fits(self._table_file, [self._table], clobber=True,
+                             namelist=['FILE_ARCHIVE'])
+
+
+    def update_file_status(self):
+        """Update the status of all the files in the archive"""
+        nfiles = len(self.cache.keys())
+        status_vect = np.zeros((6), int)
+        print ("Updating status of %i files: "%nfiles)
+        for i, key in enumerate(self.cache.keys()):
+            if i % 200 == 0:
+                sys.stdout.write('.')
+                sys.stdout.flush()
+            fhandle = self.cache[key]
+            fhandle.check_status(self._base_path)
+            fhandle.update_table_row(self._table, fhandle.key - 1)
+            status_vect[fhandle.status] += 1
+            
+        sys.stdout.write("!\n")
+        sys.stdout.flush()
+        sys.stdout.write("Summary:\n")
+        sys.stdout.write("  no_file:      %i\n"%status_vect[0])
+        sys.stdout.write("  expected:     %i\n"%status_vect[1])
+        sys.stdout.write("  exists:       %i\n"%status_vect[2])
+        sys.stdout.write("  missing:      %i\n"%status_vect[3])
+        sys.stdout.write("  superseded:   %i\n"%status_vect[4])
+        sys.stdout.write("  temp_removed: %i\n"%status_vect[5])
 
     @staticmethod
     def get_archive():
@@ -727,7 +803,25 @@ class FileArchive(object):
 
     @staticmethod
     def build_archive(**kwargs):
-        """Return the singleton `FileArchive` instance, building it if needed """
+        """Return the singleton `FileArchive` instance, building it if needed"""
         if FileArchive._archive is None:
             FileArchive._archive = FileArchive(**kwargs)
         return FileArchive._archive
+
+
+def main_browse():
+    """Entry point for command line use for browsing a FileArchive """
+    parser = argparse.ArgumentParser(usage="file_archive.py [options]",
+                                     description="Browse a job archive")
+
+    parser.add_argument('--files', action='store', dest='file_archive_table',
+                        type=str, default='file_archive_temp.fits', help="File archive file")
+    parser.add_argument('--base', action='store', dest='base_path',
+                        type=str, default=os.path.abspath('.'), help="File archive base path")
+    
+    args = parser.parse_args(sys.argv[1:])    
+    FileArchive.build_archive(**args.__dict__)
+
+
+if __name__ == '__main__':
+    main_browse()

@@ -11,7 +11,8 @@ import math
 
 import yaml
 
-from fermipy.jobs.chain import add_argument, FileFlags, Chain
+from fermipy.jobs.file_archive import FileFlags
+from fermipy.jobs.chain import Chain
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
@@ -26,7 +27,7 @@ NAME_FACTORY = NameFactory()
 
 def readlines(arg):
     """Read lines from a file into a list.
-    
+
     Removes whitespace and lines that start with '#'
     """
     fin = open(arg)
@@ -77,10 +78,10 @@ class SplitAndBin(Chain):
                                     coordsys=diffuse_defaults.diffuse['coordsys'],
                                     hpx_order=diffuse_defaults.diffuse['hpx_order_ccube'],
                                     ft1file=(None, 'Input FT1 file', str),
-                                    evclass=(128, 'Event class bit mask', int), 
+                                    evclass=(128, 'Event class bit mask', int),
                                     output=(None, 'Base name for output files', str),
-                                    pfiles=(None, 'Directory for .par files', str), 
-                                    scratch=(None, 'Scratch area', str), 
+                                    pfiles=(None, 'Directory for .par files', str),
+                                    scratch=(None, 'Scratch area', str),
                                     dry_run=(False, 'Print commands but do not run them', bool)),
                        argmapper=self._map_arguments,
                        parser=SplitAndBin._make_parser())
@@ -110,17 +111,19 @@ class SplitAndBin(Chain):
         """Make the links to run gtselect for each energy bin """
         links = []
         for key, comp in sorted(self.comp_dict.items()):
-            outfilekey='selectfile_%s' % key
+            outfilekey = 'selectfile_%s' % key
             self.files.file_args[outfilekey] = FileFlags.rm_mask
             link = Gtlink('gtselect_%s' % key,
                           appname='gtselect',
                           mapping={'infile': 'ft1file',
                                    'outfile': outfilekey},
-                          options={'emin': (math.pow(10., comp['log_emin']), "Minimum energy", float), 
-                                   'emax': (math.pow(10., comp['log_emax']), "Maximum energy", float), 
+                          options={'emin': (math.pow(10., comp['log_emin']), "Minimum energy",
+                                            float),
+                                   'emax': (math.pow(10., comp['log_emax']), "Maximum energy",
+                                            float),
                                    'infile': (None, 'Input FT1 File', str),
                                    'outfile': (None, 'Output FT1 File', str),
-                                   'zmax': (comp['zmax'], "Zenith angle cut", float), 
+                                   'zmax': (comp['zmax'], "Zenith angle cut", float),
                                    'evclass': (None, "Event Class", int),
                                    'pfiles': (None, "PFILES directory", str)},
                           file_args=dict(infile=FileFlags.in_stage_mask,
@@ -148,10 +151,10 @@ class SplitAndBin(Chain):
                                      appname='gtselect',
                                      mapping={'infile': selectkey_in,
                                               'outfile': selectkey_out},
-                                     options={'evtype': (PSF_TYPE_DICT[psf_type], "PSF type", int), 
-                                              'zmax': (zmax, "Zenith angle cut", float), 
+                                     options={'evtype': (PSF_TYPE_DICT[psf_type], "PSF type", int),
+                                              'zmax': (zmax, "Zenith angle cut", float),
                                               'emin': (emin, "Minimum energy", float),
-                                              'emax': (emax, "Maximum energy", float), 
+                                              'emax': (emax, "Maximum energy", float),
                                               'infile': (None, 'Input FT1 File', str),
                                               'outfile': (None, 'Output FT1 File', str),
                                               'evclass': (None, "Event class", int),
@@ -162,9 +165,10 @@ class SplitAndBin(Chain):
                                   appname='gtbin',
                                   mapping={'evfile': selectkey_out,
                                            'outfile': binkey},
-                                  options={'algorithm': ('HEALPIX', "Binning alogrithm", str), 
+                                  options={'algorithm': ('HEALPIX', "Binning alogrithm", str),
                                            'coordsys': ('GAL', "Coordinate system", str),
-                                           'hpx_order': (psf_dict['hpx_order'], "HEALPIX ORDER", int), 
+                                           'hpx_order': (psf_dict['hpx_order'], "HEALPIX ORDER",
+                                                         int),
                                            'evfile': (None, 'Input FT1 File', str),
                                            'outfile': (None, 'Output binned data File', str),
                                            'emin': (emin, "Minimum energy", float),
@@ -219,13 +223,13 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
                            coordsys=diffuse_defaults.diffuse['coordsys'],
                            hpx_order=diffuse_defaults.diffuse['hpx_order_ccube'],
                            inputlist=(None, 'Input FT1 file', str),
-                           scratch=(None,'Path to scratch area', str))
+                           scratch=(None, 'Path to scratch area', str))
 
     def __init__(self, chain, gather, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self, chain, 
-                             options=kwargs.get('options',self.default_options.copy()))
+        ConfigMaker.__init__(self, chain,
+                             options=kwargs.get('options', self.default_options.copy()))
         self.gather = gather
 
     def make_base_config(self, args):
@@ -241,9 +245,9 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
         if comp_file is not None:
             comp_dict = yaml.safe_load(open(comp_file))
             self.link.update_links(comp_dict)
-            self.gather.update_links(comp_dict)    
+            self.gather.update_links(comp_dict)
         self.link.update_args(args)
-        self.gather.update_args(args)        
+        self.gather.update_args(args)
         return self.link.args
 
     def build_job_configs(self, args):
@@ -253,7 +257,7 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
         job_configs = {}
 
         NAME_FACTORY.update_base_dict(args['data'])
- 
+
         inputfiles = create_inputlist(args['inputlist'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
 
@@ -290,12 +294,13 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
         return input_config, job_configs, output_config
 
 def create_chain_split_and_bin(**kwargs):
+    """Make a `fermipy.jobs.SplitAndBin` """
     chain = SplitAndBin(linkname=kwargs.pop('linkname', 'SplitAndBin'),
                         comp_dict=kwargs.get('comp_dict', None))
     return chain
 
 def create_sg_split_and_bin(**kwargs):
-    """Build and return a ScatterGather object that can invoke this script"""
+    """Build and return a `fermipy.jobs.ScatterGather` object that can invoke this script"""
     linkname = kwargs.pop('linkname', 'split-and-bin')
     chain = SplitAndBin('%s.split'%linkname)
     gather = CoaddSplit('%s.coadd'%linkname)

@@ -85,7 +85,7 @@ class NameFactory(object):
     residual_cr_format = 'residual_cr/residual_cr_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
 
     # Model specific stuff
-    
+
     # galprop rings merging yaml file
     galprop_rings_yaml_format = 'models/galprop_rings_{galkey}.yaml'
     # catalog split yaml file
@@ -359,7 +359,7 @@ class NameFactory(object):
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
         else:
-            return localpath       
+            return localpath
 
     def galprop_rings_yaml(self, **kwargs):
         """ return the name of a galprop rings merging yaml file
@@ -370,7 +370,7 @@ class NameFactory(object):
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
         else:
-            return localpath       
+            return localpath
 
     def catalog_split_yaml(self, **kwargs):
         """ return the name of a catalog split yaml file
@@ -381,7 +381,7 @@ class NameFactory(object):
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
         else:
-            return localpath       
+            return localpath
 
     def model_yaml(self, **kwargs):
         """ return the name of a model yaml file
@@ -392,7 +392,7 @@ class NameFactory(object):
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
         else:
-            return localpath       
+            return localpath
 
     def merged_srcmaps(self, **kwargs):
         """ return the name of a source map file

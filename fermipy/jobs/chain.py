@@ -601,7 +601,7 @@ class Link(object):
         Returns `JobDetails`
         """
         job_details = self.create_job_details(key, job_config, logfile, status)
-        self.jobs[key] = job_details
+        self.jobs[job_details.fullkey] = job_details
         return job_details
 
     def map_scratch_files(self, file_dict):
@@ -691,7 +691,7 @@ class Chain(Link):
         """
         Link.__init__(self, linkname, **kwargs)
         self._argmapper = kwargs.get('argmapper', None)
-        self.update_options(self.map_arguments(self.args.copy()))
+        self.update_options(self.args.copy())
         self._links = OrderedDict()
         for link in links:
             self._links[link.linkname] = link

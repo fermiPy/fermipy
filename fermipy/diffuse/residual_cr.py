@@ -5,7 +5,6 @@ Compute the residual cosmic-ray contamination
 from __future__ import absolute_import, division, print_function
 
 import sys
-import os
 import argparse
 
 import numpy as np
@@ -14,9 +13,10 @@ import healpy
 
 from fermipy.skymap import HpxMap
 from fermipy import fits_utils
+from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
-from fermipy.jobs.chain import add_argument, FileFlags, Link, Chain
+from fermipy.jobs.chain import add_argument, Link, Chain
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.gt_split_and_bin import create_sg_split_and_bin
@@ -34,17 +34,17 @@ class ResidualCRAnalysis(object):
     """
     default_options = dict(ccube_dirty=(None, 'Input counts cube for dirty event class.', str),
                            ccube_clean=(None, 'Input counts cube for clean event class.', str),
-                           bexpcube_dirty=(None, 'Input binned exposure cube for dirty event class.', str),
-                           bexpcube_clean=(None, 'Input binned exposure cube for clean event class.', str),
+                           bexpcube_dirty=(None, 'Input exposure cube for dirty event class.', str),
+                           bexpcube_clean=(None, 'Input exposure cube for clean event class.', str),
                            hpx_order=diffuse_defaults.residual_cr['hpx_order_fitting'],
                            coordsys=diffuse_defaults.residual_cr['coordsys'],
                            outfile=(None, 'Name of output file', str),
-                           select_factor=(5.0, 'Select pixels this many times mean intensity for Aeff Correction',
+                           select_factor=(5.0, 'Pixel selection factor for Aeff Correction',
                                           float),
-                           mask_factor=(2.0, 'Mask pixels this many times mean intensity when filling map',
+                           mask_factor=(2.0, 'Pixel selection factor for output mask',
                                         float),
                            sigma=(3.0, 'Width of gaussian to smooth output maps [degrees]', float),
-                           full_output=(False, 'Width of gaussian to smooth output maps [degrees]', bool),
+                           full_output=(False, 'Include diagnostic output', bool),
                            clobber=(False, 'Overwrite output file', bool),)
 
     def __init__(self, **kwargs):
@@ -381,16 +381,18 @@ class ConfigMaker_ResidualCR(ConfigMaker):
                            irf_ver=diffuse_defaults.residual_cr['irf_ver'],
                            hpx_order=diffuse_defaults.residual_cr['hpx_order_fitting'],
                            coordsys=diffuse_defaults.residual_cr['coordsys'],
-                           select_factor=(5.0, 'Select pixels this many times mean intensity for Aeff Correction', float),
-                           mask_factor=(2.0, 'Mask pixels this many times mean intensity when filling map', float),
+                           select_factor=(5.0, 'Pixel selection factor for Aeff Correction',
+                                          float),
+                           mask_factor=(2.0, 'Pixel selection factor for output mask',
+                                        float),
                            sigma=(3.0, 'Width of gaussian to smooth output maps [degrees]', float),
-                           full_output=(False, 'Write additional output', bool))
+                           full_output=(False, 'Include diagnostic output', bool))
 
     def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self, link, 
-                             options=kwargs.get('options',self.default_options.copy()))
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options', self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -430,6 +432,7 @@ class ConfigMaker_ResidualCR(ConfigMaker):
         return input_config, job_configs, output_config
 
 def create_link_residual_cr(**kwargs):
+    """Build and return a `Link` object that can invoke `ResidualCRAnalysis` """
     analyzer = ResidualCRAnalysis(**kwargs)
     return analyzer.link
 
@@ -473,7 +476,7 @@ class ResidualCRChain(Chain):
                                                 mapping={'data':'dataset_dirty_yaml',
                                                          'hpx_order':'hpx_order_binning',
                                                          'inputlist':'ft1file',
-                                                         'comp':'binning_yaml'})        
+                                                         'comp':'binning_yaml'})
         link_excube_clean = create_sg_gtexpcube2(linkname="%s.expcube_clean"%linkname,
                                                  mapping={'cmap':'ccube_clean',
                                                           'outfile':'bexpcube_clean',
@@ -502,8 +505,7 @@ class ResidualCRChain(Chain):
                        options=diffuse_defaults.residual_cr,
                        argmapper=self._map_arguments,
                        parser=ResidualCRChain._make_parser())
-        
-  
+
     @staticmethod
     def _make_parser():
         """Make an argument parser for this chain """
@@ -512,7 +514,6 @@ class ResidualCRChain(Chain):
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
         return parser
-
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
@@ -536,11 +537,13 @@ class ResidualCRChain(Chain):
         args = Link.run_argparser(self, argv)
         for link in self._links.values():
             link.run_link(stream=sys.stdout, dry_run=True)
+        return args
 
 
 def create_chain_residual_cr(**kwargs):
-    chain = ResidualCRChain(linkname=kwargs.pop('linkname', 'ResidualCR'))
-    return chain
+    """Build and return a `ResidualCRChain` object """
+    ret_chain = ResidualCRChain(linkname=kwargs.pop('linkname', 'ResidualCR'))
+    return ret_chain
 
 
 def main_single():
@@ -550,34 +553,19 @@ def main_single():
 
 
 def main_batch():
-    """Entry point for command line use  for dispatching batch jobs """
+    """Entry point for command line use for dispatching batch jobs """
     lsf_sg = create_sg_residual_cr()
     lsf_sg(sys.argv)
 
 def main_chain():
     """Energy point for running the entire Cosmic-ray analysis """
-    chain = ResidualCRChain('ResidualCR')
-    args = chain.run_argparser(sys.argv[1:])
-    return chain
-    #chain.run_chain(sys.stdout, args.dry_run)
-    #chain.finalize(args.dry_run)
+    the_chain = ResidualCRChain('ResidualCR')
+    args = the_chain.run_argparser(sys.argv[1:])
+    the_chain.run_chain(sys.stdout, args.dry_run)
+    the_chain.finalize(args.dry_run)
+
 
 if __name__ == '__main__':
-
-    from fermipy.jobs.job_archive import JobArchive
-    chain = main_chain()
-
-
-    job_archive = JobArchive.build_archive(job_archive_table='job_archive_temp.fits',
-                                           file_archive_table='file_archive_temp.fits',
-                                           base_path=os.path.abspath('.')+'/')
-    
-    
-
-    job_dict = chain.get_jobs()
-    for i, job_details in enumerate(job_dict.values()):
-        if i % 10 == 0:
-            print ("Working on job %i"%i)
-        job_archive.register_job(job_details)
+    main_chain()
 
 
