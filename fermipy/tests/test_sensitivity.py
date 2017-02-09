@@ -8,10 +8,14 @@ from astropy.coordinates import SkyCoord
 from astropy.table import Table
 from fermipy.tests.utils import requires_dependency
 from fermipy import spectrum
-from fermipy.scripts.flux_sensitivity import SensitivityCalc, run_flux_sensitivity
 from fermipy.ltcube import LTCube
 from fermipy.skymap import Map
 
+try:
+    from fermipy.scripts import flux_sensitivity
+except ImportError:
+    pass
+    
 # Skip tests in this file if Fermi ST aren't available
 pytestmark = requires_dependency('Fermi ST')
 
@@ -26,8 +30,8 @@ def test_calc_diff_flux_sensitivity():
                                               'gll_iem_v06.fits'))
     iso = np.loadtxt(os.path.expandvars('$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt'),
                      unpack=True)
-    scalc = SensitivityCalc(gdiff, iso, ltc, ebins,
-                            'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
+    scalc = flux_sensitivity.SensitivityCalc(gdiff, iso, ltc, ebins,
+                                             'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
 
     fn = spectrum.PowerLaw([1E-13, -2.0], scale=1E3)
     o = scalc.diff_flux_threshold(c, fn, 25.0, 3.0)
@@ -64,8 +68,8 @@ def test_calc_int_flux_sensitivity():
                                               'gll_iem_v06.fits'))
     iso = np.loadtxt(os.path.expandvars('$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt'),
                      unpack=True)
-    scalc = SensitivityCalc(gdiff, iso, ltc, ebins,
-                            'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
+    scalc = flux_sensitivity.SensitivityCalc(gdiff, iso, ltc, ebins,
+                                             'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
 
     fn = spectrum.PowerLaw([1E-13, -2.0], scale=1E3)
     o = scalc.int_flux_threshold(c, fn, 25.0, 3.0)
@@ -97,11 +101,11 @@ def test_flux_sensitivity_script(tmpdir):
         '$FERMI_DIFFUSE_DIR'), 'gll_iem_v06.fits')
     isodiff = os.path.expandvars(
         '$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt')
-    run_flux_sensitivity(ltcube=None, galdiff=galdiff, isodiff=isodiff,
-                         glon=10.0, glat=10.0,
-                         emin=10**2.0, emax=10**5.0, nbin=24, output=outpath,
-                         obs_time_yr=10.0, ts_thresh=25.0, min_counts=3.0)
-
+    flux_sensitivity.run_flux_sensitivity(ltcube=None, galdiff=galdiff, isodiff=isodiff,
+                                          glon=10.0, glat=10.0,
+                                          emin=10**2.0, emax=10**5.0, nbin=24, output=outpath,
+                                          obs_time_yr=10.0, ts_thresh=25.0, min_counts=3.0)
+    
     tab = Table.read(outpath, 'DIFF_FLUX')
     assert_allclose(tab['flux'],
                     np.array([8.22850449e-09,   5.33257909e-09,   3.46076145e-09,
