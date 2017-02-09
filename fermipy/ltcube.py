@@ -199,8 +199,10 @@ class LTCube(HpxMap):
     def create_from_fits(ltfile):
 
         hdulist = fits.open(ltfile)
-        data = hdulist['EXPOSURE'].data.field(0)
-        data_wt = hdulist['WEIGHTED_EXPOSURE'].data.field(0)
+        data = hdulist['EXPOSURE'].data.field('COSBINS')
+        data_wt = hdulist['WEIGHTED_EXPOSURE'].data.field('COSBINS')
+        data = data.astype(float)
+        data_wt = data_wt.astype(float)
         tstart = hdulist[0].header['TSTART']
         tstop = hdulist[0].header['TSTOP']
         zmin = hdulist['EXPOSURE'].header['ZENMIN']
@@ -208,6 +210,8 @@ class LTCube(HpxMap):
 
         cth_min = np.array(hdulist['CTHETABOUNDS'].data.field('CTHETA_MIN'))
         cth_max = np.array(hdulist['CTHETABOUNDS'].data.field('CTHETA_MAX'))
+        cth_min = cth_min.astype(float)
+        cth_max = cth_max.astype(float)
         cth_edges = np.concatenate((cth_max[:1], cth_min))[::-1]
         hpx = HPX.create_from_header(hdulist['EXPOSURE'].header, cth_edges)
         #header = dict(hdulist['EXPOSURE'].header)
