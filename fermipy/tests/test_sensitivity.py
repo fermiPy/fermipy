@@ -6,7 +6,7 @@ from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
-from fermipy.tests.utils import requires_dependency
+from fermipy.tests.utils import requires_dependency, requires_file
 from fermipy import spectrum
 from fermipy.ltcube import LTCube
 from fermipy.skymap import Map
@@ -19,15 +19,18 @@ except ImportError:
 # Skip tests in this file if Fermi ST aren't available
 pytestmark = requires_dependency('Fermi ST')
 
+galdiff_path = os.path.join(os.path.expandvars('$FERMI_DIFFUSE_DIR'),
+                            'gll_iem_v06.fits')
 
+
+@requires_file(galdiff_path)
 def test_calc_diff_flux_sensitivity():
 
     ltc = LTCube.create_from_obs_time(3.1536E8)
     c = SkyCoord(10.0, 10.0, unit='deg', frame='galactic')
     ebins = 10**np.linspace(2.0, 5.0, 8 * 3 + 1)
 
-    gdiff = Map.create_from_fits(os.path.join(os.path.expandvars('$FERMI_DIFFUSE_DIR'),
-                                              'gll_iem_v06.fits'))
+    gdiff = Map.create_from_fits(galdiff_path)
     iso = np.loadtxt(os.path.expandvars('$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt'),
                      unpack=True)
     scalc = flux_sensitivity.SensitivityCalc(gdiff, iso, ltc, ebins,
@@ -58,14 +61,14 @@ def test_calc_diff_flux_sensitivity():
                     rtol=1E-3)
 
 
+@requires_file(galdiff_path)
 def test_calc_int_flux_sensitivity():
 
     ltc = LTCube.create_from_obs_time(3.1536E8)
     c = SkyCoord(10.0, 10.0, unit='deg', frame='galactic')
     ebins = 10**np.linspace(2.0, 5.0, 8 * 3 + 1)
 
-    gdiff = Map.create_from_fits(os.path.join(os.path.expandvars('$FERMI_DIFFUSE_DIR'),
-                                              'gll_iem_v06.fits'))
+    gdiff = Map.create_from_fits(galdiff_path)
     iso = np.loadtxt(os.path.expandvars('$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt'),
                      unpack=True)
     scalc = flux_sensitivity.SensitivityCalc(gdiff, iso, ltc, ebins,
@@ -92,16 +95,16 @@ def test_calc_int_flux_sensitivity():
                     rtol=1E-3)
 
 
+@requires_file(galdiff_path)
 def test_flux_sensitivity_script(tmpdir):
 
     p = tmpdir.mkdir("sub").join('output.fits')
     outpath = str(p)
     outpath = 'test.fits'
-    galdiff = os.path.join(os.path.expandvars(
-        '$FERMI_DIFFUSE_DIR'), 'gll_iem_v06.fits')
     isodiff = os.path.expandvars(
         '$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt')
-    flux_sensitivity.run_flux_sensitivity(ltcube=None, galdiff=galdiff, isodiff=isodiff,
+    flux_sensitivity.run_flux_sensitivity(ltcube=None, galdiff=galdiff_path,
+                                          isodiff=isodiff,
                                           glon=10.0, glat=10.0,
                                           emin=10**2.0, emax=10**5.0, nbin=24, output=outpath,
                                           obs_time_yr=10.0, ts_thresh=25.0, min_counts=3.0)
