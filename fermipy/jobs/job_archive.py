@@ -101,7 +101,10 @@ class JobDetails(object):
         self.logfile = kwargs.get('logfile')
         self.job_config = kwargs.get('job_config', {})
         if isinstance(self.job_config, str):
-            self.job_config = eval(self.job_config)
+            try:
+                self.job_config = eval(self.job_config)
+            except SyntaxError:
+                self.job_config = {}
         self.timestamp = kwargs.get('timestamp', 0)
         self.file_dict = kwargs.get('file_dict', None)
         self.sub_file_dict = kwargs.get('sub_file_dict', None)
