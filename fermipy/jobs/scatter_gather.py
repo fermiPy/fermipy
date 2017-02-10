@@ -345,6 +345,8 @@ class ScatterGather(Link):
         while running:
             if first:
                 first = False
+            elif self.args['dry_run']:
+                break
             else:
                 print ("Sleeping %.0f seconds between status checks" %
                        self.args['job_check_sleep'])
@@ -361,7 +363,7 @@ class ScatterGather(Link):
                 self.print_update()
 
             if self._job_archive is not None:
-                self._job_archive.write()
+                self._job_archive.write_table_file()
 
         if failed:
             self.print_update()
