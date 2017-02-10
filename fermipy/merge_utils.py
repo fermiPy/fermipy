@@ -212,7 +212,7 @@ def merge_hpx_counts_cubes(filelist):
         sys.stdout.write('.')
         sys.stdout.flush()
         out_prim = update_null_primary(fin[0], out_prim)
-        out_skymap = update_hpx_skymap_allsky(fin["SKYMAP"], out_skymap)
+        out_skymap = update_hpx_skymap_allsky(fin[1], out_skymap)
         try:
             out_ebounds = update_ebounds(fin["EBOUNDS"], out_ebounds)
         except KeyError:

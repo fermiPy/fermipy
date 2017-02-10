@@ -47,7 +47,9 @@ HPX_FITS_CONVENTIONS = {'FGST_CCUBE':HPX_Conv('FGST_CCUBE'),
                         'FGST_SRCMAP_SPARSE':HPX_Conv('FGST_SRCMAP_SPARSE', colstring=None, extname=None, quantity_type='differential'),
                         'GALPROP':HPX_Conv('GALPROP', colstring='BIN{idx}', extname='SKYMAP2', 
                                            energy_hdu='ENERGIES', quantity_type='differential',
-                                           coordsys='COORDTYPE')}
+                                           coordsys='COORDTYPE'),
+                        'GALPROP2':HPX_Conv('GALPROP', colstring='BIN{idx}', extname='SKYMAP2', 
+                                            energy_hdu='ENERGIES', quantity_type='differential')}
 
 
 def coords_to_vec(lon, lat):
@@ -380,7 +382,10 @@ class HPX(object):
         if extname == 'HPXEXPOSURES':
             return 'FGST_BEXPCUBE'
         elif extname == 'SKYMAP2':
-            return 'GALPROP'
+            if 'COORDTYPE' in header.keys():
+                return 'GALPROP'
+            else:
+                return 'GALPROP2'
 
         # Check the name of the first column
         colname = header['TTYPE1']
@@ -414,8 +419,9 @@ class HPX(object):
         convname = HPX.identify_HPX_convention(header)
         conv = HPX_FITS_CONVENTIONS[convname]
 
-        if header["PIXTYPE"] != "HEALPIX":
-            raise Exception("PIXTYPE != HEALPIX")
+        if conv.convname != 'GALPROP':
+            if header["PIXTYPE"] != "HEALPIX":
+                raise Exception("PIXTYPE != HEALPIX")
         if header["ORDERING"] == "RING":
             nest = False
         elif header["ORDERING"] == "NESTED":

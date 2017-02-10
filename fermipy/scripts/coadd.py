@@ -27,7 +27,9 @@ def main():
         hdulist = merge_utils.merge_wcs_counts_cubes(args.files)
     elif isinstance(proj, HPX):
         hdulist = merge_utils.merge_hpx_counts_cubes(args.files)
- 
+    else:
+        raise TypeError("Could not read projection from file %s"%args.files[0])
+
     if args.output:
         hdulist.writeto(args.output, clobber=args.clobber)
 
