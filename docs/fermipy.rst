@@ -3,8 +3,6 @@
 fermipy package
 ===============
 
-Submodules
-----------
 
 fermipy.config module
 ---------------------

@@ -53,6 +53,7 @@ Documentation Contents
 ----------------------
 
 .. toctree::
+   :includehidden:
    :maxdepth: 3
 
    install
@@ -63,6 +64,8 @@ Documentation Contents
    model
    advanced/index
    fermipy
+   fermipy_jobs
+   fermipy_diffuse
    changelog
 
 Indices and tables
