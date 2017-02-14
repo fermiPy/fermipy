@@ -443,13 +443,19 @@ def apply_minmax_selection(val, val_minmax):
     return (min_cut and max_cut)
 
 
-def create_source_name(skydir):
+def create_source_name(skydir, floor=True, prefix='PS'):
     hms = skydir.icrs.ra.hms
     dms = skydir.icrs.dec.dms
-    return 'PS J%02.f%04.1f%+03.f%02.f' % (hms.h,
-                                           hms.m + hms.s / 60.,
-                                           dms.d,
-                                           np.abs(dms.m + dms.s / 60.))
+
+    if floor:
+        ra_ms = np.floor(10.*(hms.m + hms.s / 60.))/10.
+        dec_ms = np.floor(np.abs(dms.m + dms.s / 60.))
+    else:
+        ra_ms = (hms.m + hms.s / 60.)
+        dec_ms = np.abs(dms.m + dms.s / 60.)
+        
+    return '%s J%02.f%04.1f%+03.f%02.f' % (prefix, hms.h, ra_ms,
+                                           dms.d, dec_ms)
 
 
 def create_model_name(src):
