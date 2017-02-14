@@ -1873,12 +1873,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             name = self.roi.get_source_by_name(name).name
         return name
 
-    def zero_source(self, name):
+    def zero_source(self, name, **kwargs):
         normPar = self.like.normPar(name).getName()
         self.scale_parameter(name, normPar, 1E-10)
-        self.free_source(name, free=False)
+        self.free_source(name, free=False, **kwargs)
 
-    def unzero_source(self, name):
+    def unzero_source(self, name, **kwargs):
         normPar = self.like.normPar(name).getName()
         self.scale_parameter(name, normPar, 1E10)
 

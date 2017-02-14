@@ -44,20 +44,18 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
                           (float(iy) - pbfit['y0'])**2)
 
     o = {}
+    o['fit_success'] = pbfit['fit_success']
+    o['fit_inbounds'] = True
 
     if (pbfit['x0'] < 0 or pbfit['x0'] > npix0 - 1 or
-        pbfit['y0'] < 0 or pbfit['y0'] > npix1 - 1 or
-            peak_offset > 1.5):
-        o['fit_success'] = False
-    else:
-        o['fit_success'] = pbfit['fit_success']
+            pbfit['y0'] < 0 or pbfit['y0'] > npix1 - 1):
+        o['fit_inbounds'] = False
 
-    if o['fit_success']:
-        o['xpix'] = pbfit['x0']
-        o['ypix'] = pbfit['y0']
-    else:
-        o['xpix'] = float(ix)
-        o['ypix'] = float(iy)
+    if peak_offset > 1.5:
+        o['fit_success'] = False
+
+    o['xpix'] = pbfit['x0']
+    o['ypix'] = pbfit['y0']
 
     skydir = SkyCoord.from_pixel(o['xpix'], o['ypix'], wcs)
     sigmax = 2.0**0.5 * pbfit['sigmax'] * np.abs(cdelt0)
