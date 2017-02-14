@@ -14,7 +14,7 @@ def cmd_exists(cmd):
                            stderr=subprocess.PIPE) == 0
 
 
-def clone_configs(basedir, base_configs, opt_configs, scripts):
+def clone_configs(basedir, base_configs, opt_configs, scripts, args=''):
     """
     """
     config = {}
@@ -28,7 +28,7 @@ def clone_configs(basedir, base_configs, opt_configs, scripts):
     for script_in in scripts:
         bash_script = """
 cat $0
-{scriptexe} --config={config}
+{scriptexe} --config={config} {args}
 """
 
         if os.path.isfile(script_in):
@@ -56,7 +56,8 @@ cat $0
             with open(os.path.join(runscript), 'wt') as f:
                 f.write(bash_script[2].format(source=name,
                                               scriptexe=bash_script[1],
-                                              config=cfgfile))
+                                              config=cfgfile,
+                                              args=args))
 
         if not config:
             continue
@@ -77,6 +78,8 @@ def main():
                              'analyzed.')
     parser.add_argument('--script', action='append', required=True,
                         help='The python script.')
+    parser.add_argument('--args', default='',
+                        help='Extra script arguments.')
     parser.add_argument('--num_config', default=None, type=int,
                         help='Number of analyis directories to create.')
     parser.add_argument('configs', nargs='*', default=None,
@@ -91,7 +94,7 @@ def main():
         src_dict = { k : src_dict[k] for k in
                      list(src_dict.keys())[:args.num_config] }
     
-    clone_configs(args.basedir, args.configs, src_dict, args.script)
+    clone_configs(args.basedir, args.configs, src_dict, args.script, args.args)
 
 
 if __name__ == "__main__":
