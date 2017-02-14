@@ -543,7 +543,7 @@ class SourceFind(object):
     def _fit_position_scan(self, name, **kwargs):
 
         zmin = kwargs.get('zmin', -9.0)
-        tsmap = self._scan_position(name, **kwargs)
+        tsmap, loglike = self._scan_position(name, **kwargs)
         ts_value = np.max(tsmap.counts)
         posfit, skydir = fit_error_ellipse(tsmap, dpix=2,
                                            zmin=max(zmin, -ts_value * 0.5))
@@ -555,7 +555,7 @@ class SourceFind(object):
         o['ypix'] = float(pix[1])
         o['skydir'] = skydir.transform_to('icrs')
         o['offset'] = skydir.separation(self.roi[name].skydir).deg
-        o['loglike'] = 0.5 * posfit['zoffset']
+        o['loglike'] = 0.5 * posfit['zoffset'] + loglike
         o['tsmap'] = tsmap
 
         return o
@@ -608,7 +608,7 @@ class SourceFind(object):
         tsmap = Map(2.0 * lnlmap.data, lnlmap.wcs)
 
         self._clear_srcmap_cache()
-        return tsmap
+        return tsmap, fit_output_nosrc['loglike']
 
     def _fit_position_opt(self, name, use_cache=True):
 

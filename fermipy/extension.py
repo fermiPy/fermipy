@@ -421,11 +421,6 @@ class ExtensionFit(object):
             fit_pos = self._fit_position(name, nstep=nstep,
                                          dtheta_max=dtheta_max,
                                          zmin=-3.0, use_pylike=False)
-            # else:
-            #    fit_pos = self._fit_position_scan(name,
-            #                                      scan_cdelt=scan_cdelt,
-            #                                      nstep=nstep,
-            #                                      zmin=-4.0)
 
             scan_cdelt = min(2.0 * fit_pos['r68'] / (nstep - 1.0), self._binsz)
             self.set_source_morphology(name,
@@ -440,11 +435,6 @@ class ExtensionFit(object):
             fit_ext['offset'] = skydir.separation(src.skydir).deg
             fit_ext['loglike_ext'] = fit_pos['loglike']
             dloglike = fit_pos['loglike'] - loglike
-
-            # print('-----------------------')
-            #print('skydir ', skydir.ra.deg, skydir.dec.deg)
-            #print('offset ', skydir.separation(src.skydir).deg)
-            #print(i, fit_ext['ext'], loglike, fit_ext['loglike_ext'], fit_pos['loglike'], dloglike)
 
             if i > 0 and dloglike < 0.1:
                 break
