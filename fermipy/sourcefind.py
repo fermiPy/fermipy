@@ -480,8 +480,12 @@ class SourceFind(object):
         nstep = kwargs.setdefault('nstep', 5)
         fit0 = self._fit_position_tsmap(name, **kwargs)
 
-        scan_cdelt = min(2.0 * fit0['r68'] / (nstep - 1.0),
-                         self._binsz)
+        if np.isfinite(fit0['r68']):
+            scan_cdelt = min(2.0 * fit0['r68'] / (nstep - 1.0),
+                             self._binsz)
+        else:
+            scan_cdelt = self._binsz
+
         fit1 = self._fit_position_scan(name,
                                        skydir=fit0['skydir'],
                                        scan_cdelt=scan_cdelt,
@@ -513,7 +517,7 @@ class SourceFind(object):
                            loglevel=logging.DEBUG)
 
         peaks = find_peaks(tsmap['ts'], 4.0, 0.2)
-
+        peak_best = None
         o = {}
         for p in sorted(peaks, key=lambda t: t['amp'], reverse=True):
             xy = p['ix'], p['iy']
@@ -522,9 +526,10 @@ class SourceFind(object):
                                                zmin=max(zmin, -ts_value * 0.5))
             offset = skydir.separation(self.roi[name].skydir).deg
             if posfit['fit_success'] and posfit['fit_inbounds']:
+                peak_best = p
                 break
 
-        if not (posfit['fit_success'] and posfit['fit_inbounds']):
+        if peak_best is None:
             ts_value = np.max(tsmap['ts'].counts)
             posfit, skydir = fit_error_ellipse(tsmap['ts'], dpix=2,
                                                zmin=max(zmin, -ts_value * 0.5))
