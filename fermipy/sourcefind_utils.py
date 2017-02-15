@@ -40,26 +40,39 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     npix0 = tsmap.counts.T.shape[0]
     npix1 = tsmap.counts.T.shape[1]
 
-    peak_offset = np.sqrt((float(ix) - pbfit['x0'])**2 +
-                          (float(iy) - pbfit['y0'])**2)
+
 
     o = {}
     o['fit_success'] = pbfit['fit_success']
     o['fit_inbounds'] = True
 
-    if (pbfit['x0'] < 0 or pbfit['x0'] > npix0 - 1 or
-            pbfit['y0'] < 0 or pbfit['y0'] > npix1 - 1):
+    if pbfit['fit_success']:
+        sigmax = 2.0**0.5 * pbfit['sigmax'] * np.abs(cdelt0)
+        sigmay = 2.0**0.5 * pbfit['sigmay'] * np.abs(cdelt1)
+        theta = pbfit['theta']
+        sigmax = min(sigmax, np.abs(2.0 * npix0 * cdelt0))
+        sigmay = min(sigmay, np.abs(2.0 * npix1 * cdelt1))
+        o['xpix'] = pbfit['x0']
+        o['ypix'] = pbfit['y0']
+        o['zoffset'] = pbfit['z0']
+    else:
+        sigmax = np.nan
+        sigmay = np.nan
+        theta = np.nan
+        o['xpix'] = float(ix)
+        o['ypix'] = float(iy)
+        o['zoffset'] = tsmap.counts.T[ix,iy]
+        
+    if (o['xpix'] <= 0 or o['xpix'] >= npix0 - 1 or
+        o['ypix'] <= 0 or o['ypix'] >= npix1 - 1):
         o['fit_inbounds'] = False
+        o['xpix'] = float(ix)
+        o['ypix'] = float(iy)
 
-    if peak_offset > 1.5:
-        o['fit_success'] = False
-
-    o['xpix'] = pbfit['x0']
-    o['ypix'] = pbfit['y0']
-
+    o['peak_offset'] = np.sqrt((float(ix) - o['xpix'])**2 +
+                               (float(iy) - o['ypix'])**2)
+        
     skydir = SkyCoord.from_pixel(o['xpix'], o['ypix'], wcs)
-    sigmax = 2.0**0.5 * pbfit['sigmax'] * np.abs(cdelt0)
-    sigmay = 2.0**0.5 * pbfit['sigmay'] * np.abs(cdelt1)
     sigma = (sigmax * sigmay)**0.5
     r68 = 2.30**0.5 * sigma
     r95 = 5.99**0.5 * sigma
@@ -68,11 +81,11 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     if sigmax < sigmay:
         o['sigma_semimajor'] = sigmay
         o['sigma_semiminor'] = sigmax
-        o['theta'] = np.fmod(2 * np.pi + np.pi / 2. + pbfit['theta'], np.pi)
+        o['theta'] = np.fmod(2 * np.pi + np.pi / 2. + theta, np.pi)
     else:
         o['sigma_semimajor'] = sigmax
         o['sigma_semiminor'] = sigmay
-        o['theta'] = np.fmod(2 * np.pi + pbfit['theta'], np.pi)
+        o['theta'] = np.fmod(2 * np.pi + theta, np.pi)
 
     o['sigmax'] = sigmax
     o['sigmay'] = sigmay
@@ -83,10 +96,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     o['ra'] = skydir.icrs.ra.deg
     o['dec'] = skydir.icrs.dec.deg
     o['glon'] = skydir.galactic.l.deg
-    o['glat'] = skydir.galactic.b.deg
-    o['zoffset'] = pbfit['z0']
-    o['peak_offset'] = peak_offset
-
+    o['glat'] = skydir.galactic.b.deg    
     a = o['sigma_semimajor']
     b = o['sigma_semiminor']
 
