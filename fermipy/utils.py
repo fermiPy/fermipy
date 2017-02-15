@@ -448,12 +448,12 @@ def create_source_name(skydir, floor=True, prefix='PS'):
     dms = skydir.icrs.dec.dms
 
     if floor:
-        ra_ms = np.floor(10.*(hms.m + hms.s / 60.))/10.
+        ra_ms = np.floor(10. * (hms.m + hms.s / 60.)) / 10.
         dec_ms = np.floor(np.abs(dms.m + dms.s / 60.))
     else:
         ra_ms = (hms.m + hms.s / 60.)
         dec_ms = np.abs(dms.m + dms.s / 60.)
-        
+
     return '%s J%02.f%04.1f%+03.f%02.f' % (prefix, hms.h, ra_ms,
                                            dms.d, dec_ms)
 
@@ -690,10 +690,21 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     lnlmax = float(spline(x0))
 
     fn = lambda t: spline(t) - lnlmax
-    ul = find_function_root(fn, x0, xval[-1], deltalnl)
-    ll = find_function_root(fn, x0, xval[0], deltalnl)
-    err_lo = np.abs(x0 - find_function_root(fn, x0, xval[0], 0.5))
-    err_hi = np.abs(x0 - find_function_root(fn, x0, xval[-1], 0.5))
+    fn_val = fn(xval)
+    if np.any(fn_val[imax:] < -deltalnl):
+        xhi = xval[imax:][fn_val[imax:] < -deltalnl][0]
+    else:
+        xhi = xval[-1]
+
+    if np.any(fn_val[:imax] < -deltalnl):
+        xlo = xval[:imax][fn_val[:imax] < -deltalnl][-1]
+    else:
+        xlo = xval[0]
+
+    ul = find_function_root(fn, x0, xhi, deltalnl)
+    ll = find_function_root(fn, x0, xlo, deltalnl)
+    err_lo = np.abs(x0 - find_function_root(fn, x0, xlo, 0.5))
+    err_hi = np.abs(x0 - find_function_root(fn, x0, xhi, 0.5))
 
     if np.isfinite(err_lo):
         err = 0.5 * (err_lo + err_hi)
