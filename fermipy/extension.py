@@ -8,6 +8,7 @@ import logging
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table, Column
+from astropy.coordinates import SkyCoord
 import fermipy.config
 from fermipy import utils
 from fermipy import defaults
@@ -228,8 +229,8 @@ class ExtensionFit(object):
             o['ext_bkg_map'] = self.model_counts_map(exclude=[name])
 
         tsmap = self.tsmap(model=src.data,
-                           map_skydir=src.skydir,
-                           map_size=max(1.0, 3.0 * o['ext_ul95']),
+                           map_skydir=SkyCoord(o['ra'], o['dec'], unit='deg'),
+                           map_size=max(1.0, 4.0 * o['ext_ul95']),
                            exclude=[name],
                            write_fits=False,
                            write_npy=False,
@@ -378,7 +379,9 @@ class ExtensionFit(object):
         err = max(10**-2.0, ul_data['err'])
         lolim = max(ul_data['x0'] - 2.0 * err, 0)
         hilim = 1.5 * ul_data['ul']
-        width2 = np.linspace(lolim, hilim, 11)
+
+        nstep = max(11, int((hilim - lolim) / err))
+        width2 = np.linspace(lolim, hilim, nstep)
 
         loglike2 = self._scan_extension(name, spatial_model=spatial_model,
                                         width=width2, optimizer=optimizer,
@@ -395,20 +398,17 @@ class ExtensionFit(object):
         o['ra'] = skydir.ra.deg
         o['dec'] = skydir.dec.deg
         o['offset'] = 0.0
-
         return o
 
     def _fit_extension_full(self, name, **kwargs):
 
-        skydir = self.roi[name].skydir
+        skydir = self.roi[name].skydir.copy()
         src = self.roi.copy_source(name)
         spatial_model = kwargs.get('spatial_model', 'RadialGaussian')
         loglike = -self.like()
 
         nstep = 7
         for i in range(4):
-
-            self.logger.info('Extension Fit Iteration %i', i)
 
             fit_ext = self._fit_extension(name, skydir=skydir, **kwargs)
             self.set_source_morphology(name,
@@ -435,6 +435,10 @@ class ExtensionFit(object):
             fit_ext['offset'] = skydir.separation(src.skydir).deg
             fit_ext['loglike_ext'] = fit_pos['loglike']
             dloglike = fit_pos['loglike'] - loglike
+
+            self.logger.info('Extension Fit Iteration %i', i)
+            self.logger.info('R68 = %8.3f Offset = %8.3f Delta-LogLikelihood = %8.2f',
+                             fit_ext['ext'], fit_ext['offset'], dloglike)
 
             if i > 0 and dloglike < 0.1:
                 break
