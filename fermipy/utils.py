@@ -677,8 +677,8 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     sd = spline.derivative()
 
     imax = np.argmax(loglike)
-    ilo = max(imax - 2, 0)
-    ihi = min(imax + 2, len(xval) - 1)
+    ilo = max(imax - 1, 0)
+    ihi = min(imax + 1, len(xval) - 1)
 
     # Find the peak
     x0 = xval[imax]
