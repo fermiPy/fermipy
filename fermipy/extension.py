@@ -230,7 +230,7 @@ class ExtensionFit(object):
 
         tsmap = self.tsmap(model=src.data,
                            map_skydir=SkyCoord(o['ra'], o['dec'], unit='deg'),
-                           map_size=max(1.0, 4.0 * o['ext_ul95']),
+                           map_size=max(1.0, 4.0 * o['ext']),
                            exclude=[name],
                            write_fits=False,
                            write_npy=False,
@@ -378,7 +378,11 @@ class ExtensionFit(object):
 
         err = max(10**-2.0, ul_data['err'])
         lolim = max(ul_data['x0'] - 2.0 * err, 0)
-        hilim = 1.5 * ul_data['ul']
+
+        if np.isfinite(ul_data['ul']):
+            hilim = 1.5 * ul_data['ul']
+        else:
+            hilim = ul_data['x0'] + 2.0 * err
 
         nstep = max(11, int((hilim - lolim) / err))
         width2 = np.linspace(lolim, hilim, nstep)
