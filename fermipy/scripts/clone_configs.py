@@ -73,7 +73,7 @@ def main():
     parser = argparse.ArgumentParser(usage=usage, description=description)
 
     parser.add_argument('--basedir', default=None, required=True)
-    parser.add_argument('--source_list', default=None, required=True,
+    parser.add_argument('--source_list', default=None, required=True, action='append',
                         help='YAML file containing a list of sources to be '
                              'analyzed.')
     parser.add_argument('--script', action='append', required=True,
@@ -88,8 +88,10 @@ def main():
 
     args = parser.parse_args()
 
-    src_dict = yaml.load(open(args.source_list))
-    
+    src_dict = {}
+    for x in args.source_list:
+        src_dict.update(yaml.load(open(x)))
+        
     if args.num_config:
         src_dict = { k : src_dict[k] for k in
                      list(src_dict.keys())[:args.num_config] }
