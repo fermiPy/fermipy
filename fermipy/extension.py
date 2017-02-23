@@ -166,6 +166,11 @@ class ExtensionFit(object):
         # Fit a point-source
         self.logger.debug('Fitting point-source model.')
         fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
+
+        if src['SpatialModel'] != 'PointSource':
+            self.localize(name, update=True)
+            fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
+
         o['loglike_ptsrc'] = fit_output['loglike']
         self.logger.debug('Point Source Likelihood: %f', o['loglike_ptsrc'])
 
@@ -210,7 +215,6 @@ class ExtensionFit(object):
 
         #self.logger.debug('Likelihood: %s',o['loglike'])
         o['dloglike'] = o['loglike'] - o['loglike_ptsrc']
-        o['ts_ext'] = 2 * (o['loglike_ext'] - o['loglike_ptsrc'])
 
         self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
                          % (o['ext'], o['ext_err_hi'], o['ext_err_lo']))
@@ -222,6 +226,7 @@ class ExtensionFit(object):
         o['source_fit'] = self.get_src_model(name, reoptimize=True,
                                              optimizer=kwargs['optimizer'])
         o['loglike_ext'] = fit_output['loglike']
+        o['ts_ext'] = 2 * (o['loglike_ext'] - o['loglike_ptsrc'])
 
         if kwargs['save_model_map']:
             o['ext_tot_map'] = self.model_counts_map()
