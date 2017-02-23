@@ -167,11 +167,13 @@ class ExtensionFit(object):
         self.logger.debug('Fitting point-source model.')
         fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
 
-        if src['SpatialModel'] != 'PointSource':
-            self.localize(name, update=True)
-            fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
-
-        o['loglike_ptsrc'] = fit_output['loglike']
+        if src['SpatialModel'] != 'PointSource' and kwargs['fit_position']:
+            loc = self.localize(name,update=False,
+                                dtheta_max=max(0.5,src['SpatialWidth']))
+            o['loglike_ptsrc'] = loc['loglike_loc']
+        else:            
+            o['loglike_ptsrc'] = fit_output['loglike']
+        
         self.logger.debug('Point Source Likelihood: %f', o['loglike_ptsrc'])
 
         if kwargs['save_model_map']:
@@ -216,11 +218,6 @@ class ExtensionFit(object):
         #self.logger.debug('Likelihood: %s',o['loglike'])
         o['dloglike'] = o['loglike'] - o['loglike_ptsrc']
 
-        self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
-                         % (o['ext'], o['ext_err_hi'], o['ext_err_lo']))
-        self.logger.info('TS_ext:        %.3f' % o['ts_ext'])
-        self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
-
         fit_output = self._fit(loglevel=logging.DEBUG, update=False,
                                **kwargs['optimizer'])
         o['source_fit'] = self.get_src_model(name, reoptimize=True,
@@ -228,6 +225,11 @@ class ExtensionFit(object):
         o['loglike_ext'] = fit_output['loglike']
         o['ts_ext'] = 2 * (o['loglike_ext'] - o['loglike_ptsrc'])
 
+        self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
+                         % (o['ext'], o['ext_err_hi'], o['ext_err_lo']))
+        self.logger.info('TS_ext:        %.3f' % o['ts_ext'])
+        self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
+        
         if kwargs['save_model_map']:
             o['ext_tot_map'] = self.model_counts_map()
             o['ext_src_map'] = self.model_counts_map(name)
