@@ -400,7 +400,7 @@ class SourceFind(object):
                                        scan_cdelt=scan_cdelt,
                                        **kwargs)
 
-        o['loglike_loc'] = 0.5 * (np.max(fit1['tsmap'].data) + fit1['zoffset'])
+        o['loglike_loc'] = fit1['loglike']
         o['dloglike_loc'] = o['loglike_loc'] - o['loglike_base']
         o['tsmap'] = fit0.pop('tsmap')
         o['tsmap_peak'] = fit1.pop('tsmap')
