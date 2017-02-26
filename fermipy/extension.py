@@ -250,7 +250,9 @@ class ExtensionFit(object):
         if update and (sqrt_ts_threshold is None or
                        np.sqrt(o['ts_ext']) > sqrt_ts_threshold):
             src = self.delete_source(name)
-            self.add_source(name, src)
+            # FIXME: Issue with source map cache with source is
+            # initialized as fixed.
+            self.add_source(name, src, free=True)
             self.fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
         else:
             self.set_source_morphology(name, spatial_model=src['SpatialModel'],

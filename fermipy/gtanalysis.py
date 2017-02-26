@@ -4955,6 +4955,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         """Update the source map for an existing source in memory."""
 
         k = self._create_srcmap(name, src, **kwargs)
+        scale = self._src_expscale.get(name, 1.0)
+        k *= scale
 
         # Force the source map to be cached
         self.like.logLike.sourceMap(str(name)).model()
