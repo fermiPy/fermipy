@@ -765,11 +765,9 @@ class TSMapGenerator(object):
         loge_bounds = kwargs.setdefault('loge_bounds', None)
         use_pylike = kwargs.setdefault('use_pylike', True)
 
-        if loge_bounds is not None:
-            if len(loge_bounds) == 0:
-                loge_bounds = [None, None]
-            elif len(loge_bounds) == 1:
-                loge_bounds += [None]
+        if loge_bounds:
+            if len(loge_bounds) != 2:
+                raise Exception('Wrong size of loge_bounds array.')
             loge_bounds[0] = (loge_bounds[0] if loge_bounds[0] is not None
                               else self.log_energies[0])
             loge_bounds[1] = (loge_bounds[1] if loge_bounds[1] is not None
