@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 import copy
 import os
+import json
 import numpy as np
 import scipy.signal
 import fermipy.utils as utils
@@ -164,39 +165,61 @@ class ResidMapGenerator(object):
         config['model'].setdefault('SpatialModel', 'PointSource')
         config['model'].setdefault('Prefactor', 1E-13)
 
-        maps = self._make_residual_map(prefix, **config)
+        o = self._make_residual_map(prefix, **config)
 
         if config['make_plots']:
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_residmap_plots(maps, self.roi)
+            plotter.make_residmap_plots(o, self.roi)
 
         self.logger.info('Finished residual maps')
 
-        return maps
+        outfile = utils.format_filename(self.workdir, 'residmap',
+                                        prefix=[o['name']])
+
+        if config['write_fits']:
+            o['file'] = os.path.basename(outfile) + '.fits'
+            self._make_residmap_fits(o, outfile + '.fits')
+
+        if config['write_npy']:
+            np.save(outfile + '.npy', o)
+
+        return o
+
+    def _make_residmap_fits(self, data, filename, **kwargs):
+
+        maps = {'DATA_MAP': data['data'],
+                'MODEL_MAP': data['model'],
+                'EXCESS_MAP': data['excess']}
+
+        hdu_images = []
+        for k, v in sorted(maps.items()):
+            if v is None:
+                continue
+            hdu_images += [v.create_image_hdu(k)]
+
+        hdus = [data['sigma'].create_primary_hdu()] + hdu_images
+        hdus[0].header['CONFIG'] = json.dumps(data['config'])
+        hdus[1].header['CONFIG'] = json.dumps(data['config'])
+        fits_utils.write_hdus(hdus, filename)
 
     def _make_residual_map(self, prefix, **kwargs):
-
-        write_fits = kwargs.get('write_fits', True)
-        write_npy = kwargs.get('write_npy', True)
 
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         exclude = kwargs.setdefault('exclude', None)
         loge_bounds = kwargs.setdefault('loge_bounds', None)
 
-        if loge_bounds is not None:
-            if len(loge_bounds) == 0:
-                loge_bounds = [None, None]
-            elif len(loge_bounds) == 1:
-                loge_bounds += [None]
+        if loge_bounds:
+            if len(loge_bounds) != 2:
+                raise Exception('Wrong size of loge_bounds array.')
             loge_bounds[0] = (loge_bounds[0] if loge_bounds[0] is not None
-                              else self.energies[0])
+                              else self.log_energies[0])
             loge_bounds[1] = (loge_bounds[1] if loge_bounds[1] is not None
-                              else self.energies[-1])
+                              else self.log_energies[-1])
         else:
-            loge_bounds = [self.energies[0], self.energies[-1]]
+            loge_bounds = [self.log_energies[0], self.log_energies[-1]]
 
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
@@ -243,8 +266,8 @@ class ResidMapGenerator(object):
 
         for i, c in enumerate(self.components):
 
-            imin = utils.val_to_edge(c.energies, loge_bounds[0])[0]
-            imax = utils.val_to_edge(c.energies, loge_bounds[1])[0]
+            imin = utils.val_to_edge(c.log_energies, loge_bounds[0])[0]
+            imax = utils.val_to_edge(c.log_energies, loge_bounds[1])[0]
 
             mc = c.model_counts_map(exclude=exclude).counts.astype('float')
             cc = c.counts_map().counts.astype('float')
@@ -282,20 +305,5 @@ class ResidMapGenerator(object):
              'data': data_map,
              'excess': excess_map,
              'config': kwargs}
-
-        fits_file = utils.format_filename(self.config['fileio']['workdir'],
-                                          'residmap.fits',
-                                          prefix=[prefix, modelname])
-
-        if write_fits:
-            fits_utils.write_maps(sigma_map,
-                                  {'DATA_MAP': data_map,
-                                   'MODEL_MAP': model_map,
-                                   'EXCESS_MAP': excess_map},
-                                  fits_file)
-            o['file'] = os.path.basename(fits_file)
-
-        if write_npy:
-            np.save(os.path.splitext(fits_file)[0] + '.npy', o)
 
         return o
