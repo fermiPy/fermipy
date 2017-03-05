@@ -1035,10 +1035,13 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
+        vmax = max(np.max(maps['data'].data), np.max(maps['model'].data))
+        vmin = min(np.min(maps['data'].data), np.min(maps['model'].data))
+
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['data'], roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic',
-               cmap=cmap)
+               cmap=cmap, zscale='sqrt', vmin=vmin, vmax=vmax)
         plt.savefig(utils.format_filename(workdir,
                                           'residmap_data',
                                           prefix=[prefix],
@@ -1048,7 +1051,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['model'], roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic',
-               cmap=cmap)
+               cmap=cmap, zscale='sqrt', vmin=vmin, vmax=vmax)
         plt.savefig(utils.format_filename(workdir,
                                           'residmap_model',
                                           prefix=[prefix],
