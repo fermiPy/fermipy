@@ -686,6 +686,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             rm['components'][i]['npred'] = 0
 
         for name in self.like.sourceNames():
+            
+            # EAC
+            self.update_source(name)
 
             src = self.roi.get_source_by_name(name)
             rm['model_counts'] += src['model_counts']
@@ -1055,8 +1058,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             c.setup(overwrite=overwrite)
             self._like.addComponent(c.like)
 
-        self._ccube_file = os.path.join(self.workdir,
-                                        'ccube.fits')
+        # EAC, move to _init_roi_model
+        #self._ccube_file = os.path.join(self.workdir,
+        #                                'ccube.fits')
 
         self._fitcache = None
         self._init_roi_model()
@@ -1071,6 +1075,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.info('Finished setup')
 
+
     def _create_likelihood(self, srcmdl):
         self._like = SummedLikelihood()
         for c in self.components:
@@ -1083,6 +1088,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def _init_roi_model(self):
 
+        # EAC, move from setup
+        self._ccube_file = os.path.join(self.workdir,
+                                        'ccube.fits')
         rm = self._roi_model
 
         rm['counts'] = np.zeros(self.enumbins)
@@ -2519,7 +2527,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                             loge_bounds[1],
                                             summed=True)
             npred = np.sum(cs)
-            val = 1. / npred
+            val = 1. / max(npred, 1.)
             npred = 1.0
             par.setValue(0.0)
             self.like.syncSrcParams(str(name))
@@ -3802,6 +3810,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         name = self.get_source_name(name)
         source = self.like[name].src
+
         spectrum = source.spectrum()
         normPar = self.like.normPar(name)
 
@@ -3851,7 +3860,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src_dict['npred'] = self.like.NpredValue(str(name))
 
         # Get the Model Fluxes
-        try:
+        try:            
             src_dict['flux'][0] = self.like.flux(name, self.energies[0],
                                                  self.energies[-1])
             src_dict['flux100'][0] = self.like.flux(name, 100., 10 ** 5.5)
@@ -3900,6 +3909,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 dfde10000_index = -get_spectral_index(self.like[name],
                                                       10000.)
 
+  
             src_dict['dfde_index'][0] = dfde_index
             src_dict['dfde100_index'][0] = dfde100_index
             src_dict['dfde1000_index'][0] = dfde1000_index
@@ -3937,6 +3947,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             pass
         # self.logger.error('Failed to update source parameters.',
         #  exc_info=True)
+
         lnlp = self.profile_norm(name, savestate=True,
                                  reoptimize=reoptimize, npts=npts,
                                  optimizer=optimizer)
@@ -4001,7 +4012,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         # if ex.message == 'Covariance matrix has not been
         # computed.':
 
-        # Extract bowtie
+       # Extract bowtie
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
             loge = np.linspace(self.log_energies[0],
                                self.log_energies[-1], 50)
@@ -4054,15 +4065,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
 
+        file_suffix = self.config['file_suffix']
         self._files = {}
-        self._files['ft1'] = 'ft1%s.fits'
-        self._files['ft1_filtered'] = 'ft1_filtered%s.fits'
-        self._files['ccube'] = 'ccube%s.fits'
-        self._files['ccubemc'] = 'ccubemc%s.fits'
-        self._files['srcmap'] = 'srcmap%s.fits'
-        self._files['bexpmap'] = 'bexpmap%s.fits'
-        self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
-        self._files['srcmdl'] = 'srcmdl%s.xml'
+        self._files['ft1'] = 'ft1%s.fits'% file_suffix
+        self._files['ft1_filtered'] = 'ft1_filtered%s.fits'% file_suffix
+        self._files['ccube'] = 'ccube%s.fits'% file_suffix
+        self._files['ccubemc'] = 'ccubemc%s.fits'% file_suffix
+        self._files['srcmap'] = self.config['gtlike'].get('srcmap','srcmap%s.fits'% file_suffix)
+        self._files['bexpmap'] = self.config['gtlike'].get('bexpmap', 'bexpmap%s.fits'% file_suffix)
+        self._files['bexpmap_roi'] = self.config['gtlike'].get('bexpmap_roi', 'bexpmap_roi%s.fits'% file_suffix)
+        self._files['srcmdl'] = 'srcmdl%s.xml'% file_suffix
 
         # Fill dictionary of exposure corrections
         self._src_expscale = {}
@@ -4074,9 +4086,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             for k, v in self.config['gtlike']['src_expscale'].items():
                 self._src_expscale[k] = v
 
-        for k, v in self._files.items():
-            self._files[k] = os.path.join(
-                workdir, v % self.config['file_suffix'])
+        #for k, v in self._files.items():
+        #    self._files[k] = os.path.join(
+        #        workdir, v % self.config['file_suffix'])
 
         if self.config['data']['ltcube'] is not None:
             self._ext_ltcube = True
@@ -4114,9 +4126,19 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                           self.config['selection']['emin']))
             self._enumbins = int(self._enumbins)
 
+        try:
+            emin = self.config['selection']['emin']
+            emax = self.config['selection']['emax']
+            logemin = np.log10(emin)
+            logemax = np.log10(emax)
+        except AttributeError:
+            logemin = self.config['selection']['logemin']
+            logemax = self.config['selection']['logemax']
+            emin = np.power(10., logemin)
+            emax = np.power(10., logemax)
+
         self._ebin_edges = np.linspace(
-            np.log10(self.config['selection']['emin']),
-            np.log10(self.config['selection']['emax']),
+            logemin, logemax,
             self._enumbins + 1)
         self._ebin_center = 0.5 * \
             (self._ebin_edges[1:] + self._ebin_edges[:-1])
@@ -4865,6 +4887,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             self.logger.debug('Skipping gtselect')
 
+
     def _create_binned_analysis(self, xmlfile=None):
 
         srcmdl_file = self.files['srcmdl']
@@ -4914,7 +4937,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.logger.debug('Computing fixed weights')
         self.like.logLike.buildFixedModelWts()
         self.logger.debug('Updating source maps')
-        self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
+        #self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
 
         # Apply exposure corrections
         self._scale_srcmap(self._src_expscale)
