@@ -74,8 +74,27 @@ class Map_Base(object):
     def data(self):
         return self._counts
 
+    def get_pixel_skydirs(self):
+        """Get a list of sky coordinates for the centers of every pixel. """
+        raise NotImplementedError("MapBase.get_pixel_skydirs()")
+ 
     def get_pixel_indices(self, lats, lons):
-        raise NotImplementedError("MapBase.get_pixel_indices)")
+        """Return the indices in the flat array corresponding to a set of coordinates """
+        raise NotImplementedError("MapBase.get_pixel_indices()")
+       
+    def sum_over_energy(self):
+        """Reduce a counts cube to a counts map by summing over the energy planes """
+        raise NotImplementedError("MapBase.sum_over_energy()")
+    
+    def get_map_values(self, lons, lats, ibin=None):
+        """Return the map values corresponding to a set of coordinates. """
+        raise NotImplementedError("MapBase.get_map_values()")
+    
+    def interpolate(self, lon, lat, egy=None):
+        """Return the interpolated map values corresponding to a set of coordinates. """
+        raise NotImplementedError("MapBase.interpolate()")
+
+
 
 
 class Map(Map_Base):
@@ -183,7 +202,7 @@ class Map(Map_Base):
                                    cdelt, crpix)
         return Map(np.zeros(npix).T, wcs)
 
-    def create_image_hdu(self, name=None):
+    def create_image_hdu(self, name=None, **kwargs):
         return fits.ImageHDU(self.counts, header=self.wcs.to_header(),
                              name=name)
 
@@ -356,55 +375,53 @@ class HpxMap(Map_Base):
         return self._hpx
 
     @staticmethod
-    def create_from_hdu(hdu, ebins, colstring="CHANNEL", first_bin=1):
+    def create_from_hdu(hdu, ebins):
         """ Creates and returns an HpxMap object from a FITS HDU.
 
         hdu    : The FITS
         ebins  : Energy bin edges [optional]
-        colstring  : String to build colum names [optional]
-        firstbin : Index number for the first energy bin
         """
         hpx = HPX.create_from_header(hdu.header, ebins)
         colnames = hdu.columns.names
-        nebin = 0
-        for c in colnames:
-            if c.find(colstring) == 0:
-                nebin += 1
-            pass
-        data = np.ndarray((nebin, hpx.npix))
-        for i in range(first_bin,first_bin+nebin):
-            cname = "%s%i" % (colstring, i)
-            data[i-first_bin, 0:] = hdu.data.field(cname)
-            pass
+        cnames = []
+        if hpx.conv.convname == 'FGST_SRCMAP_SPARSE':
+            keys = hdu.data.field('KEY')
+            vals = hdu.data.field('VALUE')
+            nebin = len(ebins)
+            data = np.zeros((nebin, hpx.npix))    
+            data.flat[keys] = vals
+        else:
+            for c in colnames:
+                if c.find(hpx.conv.colstring) == 0:
+                    cnames.append(c)
+            nebin = len(cnames)
+            data = np.ndarray((nebin, hpx.npix))    
+            for i, cname in enumerate(cnames):
+                data[i, 0:] = hdu.data.field(cname)
         return HpxMap(data, hpx)
 
     @staticmethod
-    def create_from_hdulist(hdulist, extname="SKYMAP", ebounds="EBOUNDS"):
+    def create_from_hdulist(hdulist, **kwargs):
         """ Creates and returns an HpxMap object from a FITS HDUList
 
         extname : The name of the HDU with the map data
         ebounds : The name of the HDU with the energy bin data
         """
-        if ebounds is not None:
-            try:
-                ebins = utils.fits_read_energy_bounds(hdulist[ebounds])
-            except:
-                ebins = None
-        else:
-            ebins = None
-            
-        if extname == "HPXEXPOSURES":
-            colstring = "ENERGY"
-            firstbin = 1
-        elif extname == "SKYMAP2":
-            colstring = "Bin "
-            firstbin = 0
-        else:
-            colstring = "CHANNEL"
-            firstbin = 1
-        
-        hpxMap = HpxMap.create_from_hdu(hdulist[extname], ebins, colstring, firstbin)
+        extname = kwargs.get('hdu','SKYMAP')
+        ebins = fits_utils.find_and_read_ebins(hdulist)
+        hpxMap = HpxMap.create_from_hdu(hdulist[extname], ebins)
         return hpxMap
+
+    @staticmethod
+    def create_from_fits(fitsfile, **kwargs):
+        hdulist = fits.open(fitsfile)
+        return HpxMap.create_from_hdulist(hdulist, **kwargs)
+
+
+    def create_image_hdu(self, name=None, **kwargs):
+        kwargs['extname'] = name
+        return self.hpx.make_hdu(self.counts,**kwargs)
+
 
     def make_wcs_from_hpx(self, sum_ebins=False, proj='CAR', oversample=2,
                           normalize=True):
@@ -495,6 +512,24 @@ class HpxMap(Map_Base):
 
         return wcs, wcs_data
 
+    def get_pixel_skydirs(self):
+        """Get a list of sky coordinates for the centers of every pixel. """ 
+        sky_coords = self._hpx.get_sky_coords()
+        if self.hpx.coordsys == 'GAL':
+            frame = Galactic
+        else:
+            frame = ICRS
+        return SkyCoord(sky_coords[0], sky_coords[1], frame=frame, unit='deg')
+
+    def get_pixel_indices(self, lats, lons):
+        """Return the indices in the flat array corresponding to a set of coordinates """
+        return self._hpx.get_pixel_indices(lats, lons)       
+       
+    def sum_over_energy(self):
+        """ Reduce a counts cube to a counts map """
+        # We sum over axis 0 in the array, and drop the energy binning in the hpx object
+        return HpxMap(np.sum(self.counts, axis=0), self.hpx.copy_and_drop_energy())    
+
     def get_map_values(self, lons, lats, ibin=None):
         """Return the indices in the flat array corresponding to a set of coordinates
 
@@ -525,3 +560,54 @@ class HpxMap(Map_Base):
         else:
             return self.data[pix]
         
+    def interpolate(self, lon, lat, egy=None):
+        """Return the interpolated map values corresponding to a set of coordinates. """
+        theta = np.pi/2.-np.radians(lats)
+        phi = np.radians(lons)
+        ebin_vals = np.array(utils.val_to_pix(np.log(self._hpx.evals), np.log(egy)),ndmin=1)
+        # FIXME, what exacty do we want here?
+        return hpx.pixelfunc.get_interp_val(self.data[ebin_vals], theta, phi, nest-self.hpx.nest)
+
+    def swap_scheme(self):
+        """
+        """
+        hpx_out = self.hpx.make_swapped_hpx()
+        if self.hpx.nest:            
+            if self.data.ndim == 2:
+                data_out = np.vstack( [ hp.pixelfunc.reorder(self.data[i], n2r=True) for i in range(self.data.shape[0]) ] )
+            else:
+                data_out = hp.pixelfunc.reorder(self.data, n2r=True)
+        else:
+            if self.data.ndim == 2:
+                data_out = np.vstack( [ hp.pixelfunc.reorder(self.data[i], r2n=True) for i in range(self.data.shape[0]) ] )
+            else:
+                data_out = hp.pixelfunc.reorder(self.data, r2n=True)
+        return HpxMap(data_out, hpx_out)
+
+
+    def ud_grade(self, order, preserve_counts=False):
+        """
+        """
+        new_hpx = self.hpx.ud_graded_hpx(order)
+        nebins = len(new_hpx.evals)        
+        shape = self.counts.shape
+       
+        if preserve_counts:
+            power = -2.
+        else:
+            power = 0
+
+        if len(shape) == 1:
+            new_data = hp.pixelfunc.ud_grade(self.counts, 
+                                             nside_out=new_hpx.nside, 
+                                             order_in=new_hpx.ordering,
+                                             order_out=ew_hpx.ordering,
+                                             power=power)
+        else:
+            new_data = np.vstack([ hp.pixelfunc.ud_grade(self.counts[i], 
+                                                         nside_out=new_hpx.nside, 
+                                                         order_in=new_hpx.ordering,
+                                                         order_out=new_hpx.ordering,
+                                                         power=power) for i in range(shape[0]) ] )
+        return HpxMap(new_data, new_hpx)
+                                         
