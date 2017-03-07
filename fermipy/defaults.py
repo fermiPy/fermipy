@@ -103,6 +103,7 @@ gtlike = {
     'resample': (True, '', bool),
     'srcmap': (None, '', str),
     'bexpmap': (None, '', str),
+    'bexpmap_roi': (None, '', str),
     'wmap': (None, 'Likelihood weights map.', str),
     'llscan_npts': (20,'Number of evaluation points to use when performing a likelihood scan.',int),
     'src_expscale': (None, 'Dictionary of exposure corrections for individual sources keyed to source name.  The exposure '
