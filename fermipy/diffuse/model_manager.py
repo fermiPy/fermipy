@@ -306,6 +306,12 @@ class ModelManager(object):
                                modelkey, 'srcmap_manifest_%s.yaml' % modelkey)
         manifest = model_info.make_srcmap_manifest(
             components, self._name_factory)
+
+        outdir = os.path.dirname(outfile)
+        try:
+            os.makedirs(outdir)
+        except OSError:
+            pass
         utils.write_yaml(manifest, outfile)
 
     def make_fermipy_config_yaml(self, modelkey, components, data, **kwargs):
@@ -392,6 +398,10 @@ class ModelManager(object):
                             gtlike=comp_gtlike,
                             model=comp_model)
             fermipy_dict['components'].append(sub_dict)
+
+        outfile = os.path.join(model_dir, 'config.yaml')
+        print ("Writing fermipy config file %s"%outfile)
+        utils.write_yaml(fermipy_dict, outfile)
         return fermipy_dict
 
     @staticmethod

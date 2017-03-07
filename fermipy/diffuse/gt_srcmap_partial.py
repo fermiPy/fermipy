@@ -100,9 +100,14 @@ class GtSrcmapPartial(object):
 
         try:
             diffuse_source = pyLike.DiffuseSource.cast(source)
-            diffuse_source.mapBaseObject().projmap().setExtrapolation(False)
         except TypeError:
-            pass
+            diffuse_source = None
+
+        if diffuse_source is not None:
+            try:
+                diffuse_source.mapBaseObject().projmap().setExtrapolation(False)
+            except RuntimeError:
+                pass
 
         like.logLike.saveSourceMap_partial(args.outfile, source, args.kmin, args.kmax)
 
@@ -224,17 +229,21 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
 
                 if kstep < 0:
                     kstep = kmax
-                    for k in range(kmin, kmax, kstep):
-                        full_key = "%s_%s_%02i" % (diffuse_comp_info_key, key, k)
-                        khi = min(kmax, k + kstep)
+                else:
+                    #pass
+                    continue
 
-                        full_dict = base_dict.copy()
-                        full_dict.update(dict(outfile=\
-                                                  outfile_base.replace('.fits', '_%02i.fits' % k),
-                                              kmin=k, kmax=khi,
-                                              logfile=\
-                                                  outfile_base.replace('.fits', '_%02i.log' % k)))
-                        job_configs[full_key] = full_dict
+                for k in range(kmin, kmax, kstep):
+                    full_key = "%s_%s_%02i" % (diffuse_comp_info_key, key, k)
+                    khi = min(kmax, k + kstep)
+                    
+                    full_dict = base_dict.copy()
+                    full_dict.update(dict(outfile=\
+                                              outfile_base.replace('.fits', '_%02i.fits' % k),
+                                          kmin=k, kmax=khi,
+                                          logfile=\
+                                              outfile_base.replace('.fits', '_%02i.log' % k)))
+                    job_configs[full_key] = full_dict
 
         output_config = {}
         return input_config, job_configs, output_config

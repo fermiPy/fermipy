@@ -502,7 +502,7 @@ class ResidualCRChain(Chain):
                        links=[link_sb_clean, link_sb_dirty,
                               link_excube_clean, link_excube_dirty,
                               link_cr_analysis],
-                       options=diffuse_defaults.residual_cr,
+                       options=options,
                        argmapper=self._map_arguments,
                        parser=ResidualCRChain._make_parser())
 

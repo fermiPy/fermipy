@@ -19,9 +19,9 @@ from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.gt_coadd_split import CoaddSplit
 from fermipy.diffuse import defaults as diffuse_defaults
+from fermipy.diffuse.binning import EVT_TYPE_DICT 
 
 
-PSF_TYPE_DICT = dict(PSF0=4, PSF1=8, PSF2=16, PSF3=32)
 NAME_FACTORY = NameFactory()
 
 
@@ -76,7 +76,7 @@ class SplitAndBin(Chain):
                        links=[],
                        options=dict(comp=diffuse_defaults.diffuse['binning_yaml'],
                                     coordsys=diffuse_defaults.diffuse['coordsys'],
-                                    hpx_order=diffuse_defaults.diffuse['hpx_order_ccube'],
+                                    hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                                     ft1file=(None, 'Input FT1 file', str),
                                     evclass=(128, 'Event class bit mask', int),
                                     output=(None, 'Base name for output files', str),
@@ -151,7 +151,7 @@ class SplitAndBin(Chain):
                                      appname='gtselect',
                                      mapping={'infile': selectkey_in,
                                               'outfile': selectkey_out},
-                                     options={'evtype': (PSF_TYPE_DICT[psf_type], "PSF type", int),
+                                     options={'evtype': (EVT_TYPE_DICT[psf_type], "PSF type", int),
                                               'zmax': (zmax, "Zenith angle cut", float),
                                               'emin': (emin, "Minimum energy", float),
                                               'emax': (emax, "Maximum energy", float),
@@ -167,8 +167,7 @@ class SplitAndBin(Chain):
                                            'outfile': binkey},
                                   options={'algorithm': ('HEALPIX', "Binning alogrithm", str),
                                            'coordsys': ('GAL', "Coordinate system", str),
-                                           'hpx_order': (psf_dict['hpx_order'], "HEALPIX ORDER",
-                                                         int),
+                                           'hpx_order': (psf_dict['hpx_order'], "HEALPIX ORDER", int),
                                            'evfile': (None, 'Input FT1 File', str),
                                            'outfile': (None, 'Output binned data File', str),
                                            'emin': (emin, "Minimum energy", float),
@@ -221,7 +220,7 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
     default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
                            data=diffuse_defaults.diffuse['dataset_yaml'],
                            coordsys=diffuse_defaults.diffuse['coordsys'],
-                           hpx_order=diffuse_defaults.diffuse['hpx_order_ccube'],
+                           hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                            inputlist=(None, 'Input FT1 file', str),
                            scratch=(None, 'Path to scratch area', str))
 
@@ -279,6 +278,7 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
             outfiles = [selectfile, binnedfile_gzip]
             job_configs[key] = dict(ft1file=infile,
                                     comp=args['comp'],
+                                    hpx_order_max=args['hpx_order_max'],
                                     output=binnedfile,
                                     logfile=logfile,
                                     outfiles=outfiles,

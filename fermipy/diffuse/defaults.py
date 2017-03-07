@@ -31,6 +31,16 @@ residual_cr = {
     'dry_run' : (False, 'Print commands but do not run them', bool),
     }
 
+# Options for residual cosmic-ray analysis
+sun_moon = {
+    'binning_yaml' : (None, 'Path to yaml file defining binning.', str),
+    'dataset_yaml' : (None, 'Path to yaml file defining dataset.', str),
+    'irf_ver': ('V6', 'Version of IRFs to use.', str),
+    'sourcekeys' : (None, "Keys for sources to make template for", list),
+    }
+
+
+
 # Options relating to gtapps
 gtopts = {
     'irfs' : ('CALDB', 'Instrument response functions', str),

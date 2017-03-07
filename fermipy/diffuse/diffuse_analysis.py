@@ -66,13 +66,14 @@ def build_analysis_link(linktype, **kwargs):
 
 if __name__ == '__main__':
 
-    JOB_ARCHIVE = JobArchive.build_archive(job_archive_table='job_archive_temp.fits',
-                                           file_archive_table='file_archive_temp.fits',
+    JOB_ARCHIVE = JobArchive.build_archive(job_archive_table='job_archive_temp2.fits',
+                                           file_archive_table='file_archive_temp2.fits',
                                            base_path=os.path.abspath('.')+'/')
 
     PARSER = argparse.ArgumentParser(usage="diffuse_analysis.py [options] analyses",
                                      description="Run a high level analysis")
     PARSER.add_argument('--config', type=str, default=None, help="Yaml configuration file")
+    PARSER.add_argument('--dry_run', action='store_true', help="Dry run only")
     PARSER.add_argument('analyses', nargs='+', type=str, help="Analysis steps to run")
 
     ARGS = PARSER.parse_args()
@@ -83,8 +84,8 @@ if __name__ == '__main__':
         ANALYSIS_CONFIG = CONFIG[ANALYSIS]
         LINK = build_analysis_link(ANALYSIS)
         LINK.update_args(ANALYSIS_CONFIG)
-        LINK.run(sys.stdout, True)
         JOB_ARCHIVE.register_jobs(LINK.get_jobs())
+        LINK.run(sys.stdout, ARGS.dry_run)
  
     JOB_ARCHIVE.file_archive.update_file_status()
     JOB_ARCHIVE.write_table_file()

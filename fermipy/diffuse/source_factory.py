@@ -168,7 +168,7 @@ class SourceFactory(object):
             return catalog.Catalog2FHL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '3FGL':
             return catalog.Catalog3FGL(fitsfile=catalog_file, extdir=catalog_extdir)
-        elif Catalog4FGLP == '4FGLP':
+        elif catalog_type == '4FGLP':
             return catalog.Catalog4FGLP(fitsfile=catalog_file, extdir=catalog_extdir)
         else:
             table = Table.read(catalog_file)
@@ -182,6 +182,7 @@ class SourceFactory(object):
         data = dict(catalogs=cataloglist,
                     src_roiwidth=360.)
         return roi_model.ROIModel(data, skydir=SkyCoord(0.0, 0.0, unit='deg'))
+        
 
     @staticmethod
     def make_roi(sources={}):
@@ -204,6 +205,9 @@ class SourceFactory(object):
         """
         roi_new = SourceFactory.make_roi()
         for source_name in source_names:
-            src_cp = roi.copy_source(source_name)
+            try:
+                src_cp = roi.copy_source(source_name)
+            except Exception:
+                continue
             roi_new.load_source(src_cp, build_index=False)
         return roi_new

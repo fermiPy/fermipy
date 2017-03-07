@@ -29,7 +29,10 @@ def mask_extended(cat_table):
 def select_extended(cat_table):
     """Select only rows representing extended sources from a catalog table
     """
-    return np.array([len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data], bool)
+    try:
+        return np.array([len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data], bool)
+    except KeyError:
+        return cat_table['Extended']
 
 def make_mask(cat_table, cut):
     """Mask a bit mask selecting the rows that pass a selection
@@ -63,6 +66,7 @@ def select_sources(cat_table, cuts):
             full_mask *= select_extended(cat_table)
         else:
             full_mask *= make_mask(cat_table, cut)
+    
     lout = [src_name.strip() for src_name in cat_table['Source_Name'][full_mask]]
     return lout
 
@@ -113,8 +117,9 @@ class CatalogSourceManager(object):
         """ Build a CatalogInfo object """        
         cat = SourceFactory.build_catalog(**catalog_info)
         catalog_info['catalog'] = cat
-        catalog_info['catalog_table'] =\
-            Table.read(catalog_info['catalog_file'])
+        #catalog_info['catalog_table'] = 
+        #    Table.read(catalog_info['catalog_file'])
+        catalog_info['catalog_table'] = cat.table
         catalog_info['roi_model'] =\
             SourceFactory.make_fermipy_roi_model_from_catalogs([cat])
         catalog_info['srcmdl_name'] =\
@@ -213,8 +218,11 @@ class CatalogSourceManager(object):
                     full_cat_info = self.build_catalog_info(source_dict)
                     catalog_ret_dict[key] = full_cat_info
 
-                all_sources = [x.strip() for x in full_cat_info.catalog_table[
-                    'Source_Name'].tolist()]
+                try:
+                    all_sources = [x.strip() for x in full_cat_info.catalog_table[
+                            'Source_Name'].tolist()]
+                except KeyError:
+                    print (full_cat_info.catalog_table.colnames)
                 used_sources = []
                 rules_dict = source_dict['rules_dict']
                 split_dict = {}
@@ -230,7 +238,10 @@ class CatalogSourceManager(object):
 
                 # Now deal with the remainder
                 for source in used_sources:
-                    all_sources.remove(source)
+                    try:
+                        all_sources.remove(source)
+                    except ValueError:
+                        continue
                 rule_val = dict(cuts=[],
                                 merge=source_dict['remainder'].get('merge', False))
                 split_dict['remain'] = self.make_catalog_comp_info(

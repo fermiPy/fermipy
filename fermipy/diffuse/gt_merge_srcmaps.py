@@ -108,7 +108,9 @@ class GtMergeSourceMaps(object):
         comp = like.mergeSources(args.merged, source_names, 'ConstantValue')
         like.logLike.getSourceMap(comp.getName())
 
-        print ("Missed sources: ", missing_sources)
+        print ("Merged %i sources into %s"%(len(srcs_to_merge), comp.getName()))
+        if len(missing_sources) > 0:
+            print ("Missed sources: ", missing_sources)
 
         print ("Writing output source map file %s" % args.outfile)
         like.logLike.saveSourceMaps(args.outfile, False, False)
@@ -155,6 +157,7 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
             for source_key, source_dict in split_dict.items():
 
                 print (split_ver, source_key, source_dict.model_type)
+                full_key = "%s_%s"%(split_ver, source_key)
                 if source_dict.model_type != 'CompositeSource':
                     continue
 
@@ -162,7 +165,7 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
                     zcut = "zmax%i" % comp.zmax
                     key = "%s_%s" % (source_key, comp.make_key('{ebin_name}_{evtype_name}'))
                     name_keys = dict(zcut=zcut,
-                                     sourcekey=source_key,
+                                     sourcekey=full_key,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
                                      coordsys='GAL',
@@ -173,15 +176,17 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
                                             psftype=comp.evtype_name,
                                             coordsys='GAL',
                                             irf_ver=args['irf_ver'])
-
+                    outfile = NAME_FACTORY.srcmaps(**name_keys)
+                    
                     job_configs[key] = dict(srcmaps=NAME_FACTORY.srcmaps(**nested_name_keys),
                                             expcube=NAME_FACTORY.ltcube(**name_keys),
                                             irfs=NAME_FACTORY.irfs(**name_keys),
                                             bexpmap=NAME_FACTORY.bexpcube(**name_keys),
-                                            srcmdl=NAME_FACTORY.nested_srcmdl_xml(**name_keys),
+                                            srcmdl=NAME_FACTORY.srcmdl_xml(**name_keys),
                                             merged=source_key,
-                                            outfile=NAME_FACTORY.srcmaps(**name_keys),
-                                            outxml=NAME_FACTORY.srcmdl_xml(**name_keys))
+                                            outfile=outfile,
+                                            outxml=NAME_FACTORY.nested_srcmdl_xml(**name_keys),
+                                            logfile=outfile.replace('.fits', '.log'))
 
         output_config = {}
         return input_config, job_configs, output_config

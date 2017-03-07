@@ -9,7 +9,9 @@ import math
 import yaml
 
 # Map event type 'key' to evtype bin mask value
-EVT_TYPE_DICT = dict(PSF0=4, PSF1=8, PSF2=16, PSF3=32)
+EVT_TYPE_DICT = dict(PSF0=4, PSF1=8, PSF2=16, PSF3=32,
+                     PSF12=24, PSF012=28,
+                     PSF23=48, PSF123=56, PSF0123=60)
 
 
 class Component(object):

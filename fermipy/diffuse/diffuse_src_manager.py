@@ -468,7 +468,8 @@ def make_diffuse_comp_info_dict(**kwargs):
         versions = diffuse_value['versions']
         for version in versions:
             galprop_dict = gmm.make_diffuse_comp_info_dict(version)
-        diffuse_comp_info_dict.update(galprop_dict)
+            diffuse_comp_info_dict.update(galprop_dict)
+    
     return dict(comp_info_dict=diffuse_comp_info_dict,
                 GalpropMapManager=gmm,
                 DiffuseModelManager=dmm)
@@ -496,9 +497,10 @@ class DiffuseComponentChain(Chain):
         link_vstack_srcmaps = create_sg_vstack_diffuse(linkname="%s.vstack"%linkname)
 
         Chain.__init__(self, linkname,
-                       appname='FIXME',
-                       links=[link_gasmaps, link_srcmaps,
-                              link_vstack_srcmaps],
+                       appname='fermipy-diffuse-chain',
+#                       links=[link_gasmaps, link_srcmaps,
+#                              link_vstack_srcmaps],
+                       links=[link_srcmaps,link_vstack_srcmaps],
                        options=DiffuseComponentChain.default_options.copy(),
                        parser=DiffuseComponentChain._make_parser())
 
