@@ -41,6 +41,15 @@ def main():
  
     parser.add_argument("--ebin",type=str,default=None,
                         help="Energy bin, integer or 'ALL'")
+
+    parser.add_argument("--zscale",type=str, default='log',
+                        help="Scaling for color scale")
+
+    parser.add_argument("--zmin",type=float, default=None,
+                        help="Minimum z-axis value")
+    
+    parser.add_argument("--zmax",type=float, default=None,
+                        help="Maximum z-axis value")
     
     parser.add_argument("-o", "--output",type=argparse.FileType('w'),
                         help="Output file.  Leave blank for interactive.")
@@ -55,7 +64,7 @@ def main():
 
     model_hdu = f[args.extension]
         
-    hpxmap = HpxMap.create_from_hdulist(f,extname=args.extension,ebounds="EBOUNDS")
+    hpxmap = HpxMap.create_from_hdulist(f,hdu=args.extension)
     outdata = []
      
     if args.ebin == "ALL":
@@ -65,18 +74,18 @@ def main():
         for i,data in enumerate(hpxmap.counts):
             ip =  ImagePlotter(data=data,proj=hpxmap.hpx,mapping=mapping)  
             fig = plt.figure(i)
-            im,ax = ip.plot(zscale='log')
+            im,ax = ip.plot(zscale=args.zscale, vmin=args.zmin, vmax=args.zmax)
             outdata.append(fig)
 
     elif args.ebin is None:
         ip =  ImagePlotter(data=hpxmap.counts,proj=hpxmap.hpx)  
-        im,ax = ip.plot(zscale='log')
+        im,ax = ip.plot(zscale=args.zscale, vmin=args.zmin, vmax=args.zmax)
         outdata.append((im,ax))        
     else:
         try:
             ibin = int(args.ebin)
             ip =  ImagePlotter(data=hpxmap.counts[ibin],proj=hpxmap.hpx)  
-            im,ax = ip.plot(zscale='log')
+            im,ax = ip.plot(zscale=args.zscale, vmin=args.zmin, vmax=args.zmax)
             outdata.append((im,ax))        
         except:
             print "--ebin argument must be an integer or 'ALL'"
@@ -84,7 +93,12 @@ def main():
     if args.output is None:
         plt.show()
     else:
-        plt.savefig(args.output.name)
+        if len(outdata) == 1:
+            plt.savefig(args.output.name)
+        else:
+            base,ext = os.path.splitext(args.output.name)
+            for i, fig in enumerate(outdata):
+                fig.savefig("%s_%02i%s"%(base,i,ext))
 
 
 if __name__ == "__main__":
