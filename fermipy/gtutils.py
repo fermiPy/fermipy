@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 import copy
+from functools import wraps
 import numpy as np
 import pyLikelihood as pyLike
 from SrcModel import SourceModel
@@ -17,7 +18,6 @@ import SummedLikelihood
 
 from fermipy import utils
 from fermipy import model_utils
-from fermipy.model_utils import create_pars_dict
 
 evtype_string = {
     4: 'PSF0',
@@ -37,10 +37,10 @@ def bitmask_to_bits(mask):
     return bits
 
 DEFAULT_SCALE_DICT = {'value': 1000.0,
-                      'scale': None, 'min': 0.001, 'max': 1000.0}
-DEFAULT_NORM_DICT = {'value': 1E-12, 'scale': None, 'min': 1E-5, 'max': 1000.0}
+                      'scale': 1.0, 'min': 0.001, 'max': 1000.0}
+DEFAULT_NORM_DICT = {'value': 1E-12, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}
 DEFAULT_INTEGRAL_DICT = {'value': 1E-6,
-                         'scale': None, 'min': 1E-5, 'max': 1000.0}
+                         'scale': 1.0, 'min': 1E-5, 'max': 1000.0}
 DEFAULT_INDEX_DICT = {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0}
 
 FUNCTION_NORM_PARS = {}
@@ -137,7 +137,7 @@ def init_function_pars():
                             value=p.getValue(),
                             min=bounds[0],
                             max=bounds[1],
-                            scale=None,
+                            scale=1.0,
                             free=False)
 
             par_dict.update(copy.deepcopy(FUNCTION_DEFAULT_PARS[fname][pname]))
@@ -172,7 +172,7 @@ def get_function_defaults(function_type):
     return copy.deepcopy(FUNCTION_DEFAULT_PARS[function_type])
 
 
-def create_spectrum_from_dict(spectrum_type, spectral_pars=None, fn=None):
+def create_spectrum_from_dict(spectrum_type, spectral_pars, fn=None):
     """Create a Function object from a parameter dictionary.
 
     Parameters
@@ -185,14 +185,14 @@ def create_spectrum_from_dict(spectrum_type, spectral_pars=None, fn=None):
 
     """
 
-    pars = create_pars_dict(spectrum_type, spectral_pars)
-
     if fn is None:
         fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
 
-    for k, v in pars.items():
+    for k, v in spectral_pars.items():
 
-        v = model_utils.make_parameter_dict(v)
+        v.setdefault('scale', 1.0)
+        v.setdefault('min', v['value'] * 1E-3)
+        v.setdefault('max', v['value'] * 1E3)
 
         par = fn.getParam(str(k))
 
@@ -229,6 +229,26 @@ def gtlike_spectrum_to_dict(spectrum):
             ff = pyLike.FileFunction_cast(spectrum)
             d['file'] = ff.filename()
     return d
+
+
+def gtlike_spectrum_to_vectors(spectrum):
+    """ Convert a pyLikelihood object to a python dictionary which can
+        be easily saved to a file."""
+
+    o = {'param_names' : np.zeros(10, dtype='S32'),
+         'param_values' : np.empty(10, dtype=float) * np.nan,
+         'param_errors' : np.empty(10, dtype=float) * np.nan,
+         }
+    
+    parameters = pyLike.ParameterVector()
+    spectrum.getParams(parameters)
+    for i, p in enumerate(parameters):
+        o['param_names'][i] = p.getName()
+        o['param_values'][i] = p.getTrueValue()
+        perr = abs(p.error() * p.getScale()) if p.isFree() else np.nan
+        o['param_errors'][i] = perr
+
+    return o
 
 
 def get_function_pars_dict(fn):
@@ -305,6 +325,44 @@ def get_params(like):
     return params
 
 
+def get_priors(like):
+    """Extract priors from a likelihood object."""
+
+    npar = len(like.params())
+
+    vals = np.ones(npar)
+    errs = np.ones(npar)
+    has_prior = np.array([False] * npar)
+
+    for i, p in enumerate(like.params()):
+
+        prior = like[i].log_prior()
+
+        if prior is None:
+            continue
+
+        par_names = pyLike.StringVector()
+        prior.getParamNames(par_names)
+
+        if not 'Mean' in par_names:
+            raise Exception('Failed to find Mean in prior parameters.')
+
+        if not 'Sigma' in par_names:
+            raise Exception('Failed to find Sigma in prior parameters.')
+
+        for t in par_names:
+
+            if t == 'Mean':
+                vals[i] = prior.parameter(t).getValue()
+
+            if t == 'Sigma':
+                errs[i] = prior.parameter(t).getValue()
+
+        has_prior[i] = True
+
+    return vals, errs, has_prior
+
+
 def get_source_pars(src):
     """Extract the parameters associated with a pyLikelihood Source object.
 
@@ -335,6 +393,57 @@ def get_source_pars(src):
             spars[i]['is_norm'] = False
 
     return spars, ppars
+
+
+def savefreestate(func):
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        free_params = self.get_free_param_vector()
+        o = func(self, *args, **kwargs)
+        self.set_free_param_vector(free_params)
+        return o
+    return wrapper
+
+
+def savestate(func):
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        saved_state = LikelihoodState(self.like)
+        o = func(self, *args, **kwargs)
+        saved_state.restore()
+        return o
+    return wrapper
+
+
+class FreeParameterState(object):
+
+    def __init__(self, gta):
+        self._gta = gta
+        self._free = gta.get_free_param_vector()
+
+    def restore(self):
+        self._gta.set_free_param_vector(self._free)
+
+
+class SourceMapState(object):
+
+    def __init__(self, like, names):
+
+        self._srcmaps = {}
+        self._like = like
+
+        for name in names:
+            self._srcmaps[name] = []
+            for c in self._like.components:
+                self._srcmaps[name] += [c.logLike.sourceMap(str(name)).model()]
+
+    def restore(self):
+        for name in self._srcmaps.keys():
+            for i, c in enumerate(self._like.components):
+                c.logLike.setSourceMapImage(str(name),
+                                            self._srcmaps[name][i])
 
 
 class SummedLikelihood(SummedLikelihood.SummedLikelihood):

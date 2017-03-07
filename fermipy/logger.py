@@ -67,7 +67,7 @@ class Logger(object):
         name : str
             Logger name.
         """
-        
+
         #        logging.config.dictConfig({
         #                'version': 1,
         #                'disable_existing_loggers': False})

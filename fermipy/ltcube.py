@@ -41,7 +41,7 @@ def fill_livetime_hist(skydir, tab_sc, tab_gti, zmax, costh_edges):
 
     zmax : float
         Zenith cut.
-        
+
     costh_edges : `~numpy.ndarray`
         Incidence angle bin edges in cos(angle).
 
@@ -54,6 +54,10 @@ def fill_livetime_hist(skydir, tab_sc, tab_gti, zmax, costh_edges):
         Array of histograms of weighted livetime (livetime x livetime
         fraction).
     """
+
+    if len(tab_gti) == 0:
+        shape = (len(costh_edges) - 1, len(skydir))
+        return (np.zeros(shape), np.zeros(shape))
 
     m = (tab_sc['START'] < tab_gti['STOP'][-1])
     m &= (tab_sc['STOP'] > tab_gti['START'][0])
@@ -96,7 +100,7 @@ def fill_livetime_hist(skydir, tab_sc, tab_gti, zmax, costh_edges):
         cos_zn = utils.dot_prod(t, zn_xyz)
         m = m0 & (cos_zn > cos_zmax) & (cos_sep > 0.0)
         bins = np.digitize(cos_sep[m], bins=costh_edges) - 1
-        bins = np.clip(bins,0,nbin-1)        
+        bins = np.clip(bins, 0, nbin - 1)
         lt[:, i] = np.bincount(bins, weights=sc_live[m], minlength=nbin)
         lt_wt[:, i] = np.bincount(bins, weights=sc_live[m] * sc_lfrac[m],
                                   minlength=nbin)
@@ -195,8 +199,10 @@ class LTCube(HpxMap):
     def create_from_fits(ltfile):
 
         hdulist = fits.open(ltfile)
-        data = hdulist['EXPOSURE'].data.field(0)
-        data_wt = hdulist['WEIGHTED_EXPOSURE'].data.field(0)
+        data = hdulist['EXPOSURE'].data.field('COSBINS')
+        data_wt = hdulist['WEIGHTED_EXPOSURE'].data.field('COSBINS')
+        data = data.astype(float)
+        data_wt = data_wt.astype(float)
         tstart = hdulist[0].header['TSTART']
         tstop = hdulist[0].header['TSTOP']
         zmin = hdulist['EXPOSURE'].header['ZENMIN']
@@ -204,6 +210,8 @@ class LTCube(HpxMap):
 
         cth_min = np.array(hdulist['CTHETABOUNDS'].data.field('CTHETA_MIN'))
         cth_max = np.array(hdulist['CTHETABOUNDS'].data.field('CTHETA_MAX'))
+        cth_min = cth_min.astype(float)
+        cth_max = cth_max.astype(float)
         cth_edges = np.concatenate((cth_max[:1], cth_min))[::-1]
         hpx = HPX.create_from_header(hdulist['EXPOSURE'].header, cth_edges)
         #header = dict(hdulist['EXPOSURE'].header)

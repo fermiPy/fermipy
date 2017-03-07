@@ -1,6 +1,6 @@
 FROM centos:6
 MAINTAINER Matthew Wood <mdwood@slac.stanford.edu>
-RUN yum install -y git libgomp libXext libXft libXpm libSM libXrender libicu xorg-x11-server-Xvfb libtiff giflib libpng
+RUN yum install -y git libgomp libXext libXft libXpm libSM libXrender libicu xorg-x11-server-Xvfb libtiff giflib libpng gcc
 ARG SLAC_EXTERNALS_URL="http://www.slac.stanford.edu/exp/glast/ground/software/nfsLinks/u35/externals/redhat6-x86_64-64bit-gcc44"
 ARG SLAC_ST_URL="http://www.slac.stanford.edu/exp/glast/ground/software/nfsLinks/u35/ReleaseManagerBuild/redhat6-x86_64-64bit-gcc44/Optimized/ScienceTools"
 RUN mkdir -p /home/externals \

@@ -7,13 +7,9 @@
 ``SpectrumType``	str	Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).
 ``Spatial_Filename``	str	Path to spatial template associated to this source.
 ``Spectrum_Filename``	str	Path to file associated to the spectral model of this source.
-``params``	dict	Dictionary of spectral parameters.
 ``correlation``	dict	Dictionary of correlation coefficients.
 ``model_counts``	`~numpy.ndarray`	Vector of predicted counts for this source in each analysis energy bin.
 ``sed``	dict	Output of SED analysis.  See :ref:`sed` for more information.
-``extension``	dict	Output of extension analysis.  See :ref:`extension` for more information.
-``localize``	dict	Output of localization analysis.  See :ref:`localization` for more information.
-``lightcurve``	dict	Output of lightcurve analysis.  See :ref:`lightcurve` for more information.
 ``ra``	float	Right ascension of the source in deg.
 ``dec``	float	Declination of the source in deg.
 ``glon``	float	Galactic Longitude of the source in deg.
@@ -31,11 +27,16 @@
 ``pos_r68``	float	68% uncertainty (deg) on the source position.
 ``pos_r95``	float	95% uncertainty (deg) on the source position.
 ``pos_r99``	float	99% uncertainty (deg) on the source position.
+``param_names``	`~numpy.ndarray`	Names of spectral parameters.
+``param_values``	`~numpy.ndarray`	Spectral parameter values.
+``param_errors``	`~numpy.ndarray`	Spectral parameters errors.
 ``ts``	float	Source test statistic.
 ``loglike``	float	Log-likelihood of the model evaluated at the best-fit normalization of the source.
-``dloglike_scan``	`~numpy.ndarray`	Delta Log-likelihood values for likelihood scan of source normalization.
-``eflux_scan``	`~numpy.ndarray`	Energy flux values for likelihood scan of source normalization.
-``flux_scan``	`~numpy.ndarray`	Flux values for likelihood scan of source normalization.
+``loglike_scan``	`~numpy.ndarray`	Log-likelihood values for scan of source normalization.
+``dloglike_scan``	`~numpy.ndarray`	Delta Log-likelihood values for scan of source normalization.
+``eflux_scan``	`~numpy.ndarray`	Energy flux values for scan of source normalization.
+``flux_scan``	`~numpy.ndarray`	Flux values for scan of source normalization.
+``norm_scan``	`~numpy.ndarray`	Normalization parameters values for scan of source normalization.
 ``npred``	float	Number of predicted counts from this source integrated over the analysis energy range.
 ``pivot_energy``	float	Decorrelation energy in MeV.
 ``flux``	float	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range

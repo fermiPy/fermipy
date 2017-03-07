@@ -1,8 +1,13 @@
+``param_names``	`~numpy.ndarray`	Names of spectral parameters.
+``param_values``	`~numpy.ndarray`	Spectral parameter values.
+``param_errors``	`~numpy.ndarray`	Spectral parameters errors.
 ``ts``	float	Source test statistic.
 ``loglike``	float	Log-likelihood of the model evaluated at the best-fit normalization of the source.
-``dloglike_scan``	`~numpy.ndarray`	Delta Log-likelihood values for likelihood scan of source normalization.
-``eflux_scan``	`~numpy.ndarray`	Energy flux values for likelihood scan of source normalization.
-``flux_scan``	`~numpy.ndarray`	Flux values for likelihood scan of source normalization.
+``loglike_scan``	`~numpy.ndarray`	Log-likelihood values for scan of source normalization.
+``dloglike_scan``	`~numpy.ndarray`	Delta Log-likelihood values for scan of source normalization.
+``eflux_scan``	`~numpy.ndarray`	Energy flux values for scan of source normalization.
+``flux_scan``	`~numpy.ndarray`	Flux values for scan of source normalization.
+``norm_scan``	`~numpy.ndarray`	Normalization parameters values for scan of source normalization.
 ``npred``	float	Number of predicted counts from this source integrated over the analysis energy range.
 ``pivot_energy``	float	Decorrelation energy in MeV.
 ``flux``	float	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range

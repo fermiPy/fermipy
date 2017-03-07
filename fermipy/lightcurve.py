@@ -6,6 +6,7 @@ import copy
 import shutil
 import logging
 import yaml
+import json
 from collections import OrderedDict
 
 import numpy as np
@@ -18,6 +19,7 @@ import fermipy.gtanalysis
 from fermipy import defaults
 from fermipy import fits_utils
 from fermipy.config import ConfigSchema
+from fermipy.gtutils import FreeParameterState
 
 import pyLikelihood as pyLike
 from astropy.io import fits
@@ -41,25 +43,7 @@ class LightCurve(object):
         name: str
             source name
 
-        binsz : float
-            Set the lightcurve bin size in seconds, default is 1 day.
-
-        nbins : int
-            Set the number of lightcurve bins.  The total time range
-            will be evenly split into this number of time bins.
-
-        time_bins : list
-            Set the lightcurve bin edge sequence in MET.  When defined
-            this option takes precedence over binsz and nbins.
-
-        free_radius : float
-            Free normalizations of background sources within this
-            angular distance in degrees from the source of interest.
-
-        free_sources : list
-            List of sources to be freed.  These sources will be added
-            to the list of sources satisfying the free_radius
-            selection
+        {options}
 
         Returns
         ---------
@@ -74,12 +58,10 @@ class LightCurve(object):
         schema = ConfigSchema(self.defaults['lightcurve'],
                               optimizer=self.defaults['optimizer'])
         schema.add_option('prefix', '')
-        schema.add_option('write_fits', True)
-        schema.add_option('write_npy', True)
         config = utils.create_dict(self.config['lightcurve'],
                                    optimizer=self.config['optimizer'])
         config = schema.create_config(config, **kwargs)
-        
+
         self.logger.info('Computing Lightcurve for %s' % name)
 
         o = self._make_lc(name, **config)
@@ -114,36 +96,20 @@ class LightCurve(object):
 
         # add in columns for model parameters
         for k, v in lc.items():
-
             if k in cols:
                 continue
-
             if isinstance(v, np.ndarray):
-                cols[k] = Column(name=k, data=v, dtype='f8')
-
-        # for fields in lc:
-        #    if (str(fields[:3]) == 'par'):
-        #        cols.append(Column(name=fields, dtype='f8', data=lc[str(fields)], unit=''))
+                cols[k] = Column(name=k, data=v, dtype=v.dtype)
 
         tab = Table(cols.values())
-        tab.write(filename, format='fits', overwrite=True)
+        hdu_lc = fits.table_to_hdu(tab)
+        hdu_lc.name = 'LIGHTCURVE'
+        hdus = [fits.PrimaryHDU(), hdu_lc]
+        keywords = {'SRCNAME': lc['name'],
+                    'CONFIG': json.dumps(lc['config'])}
+        fits_utils.write_hdus(hdus, filename, keywords=keywords)
 
-        hdulist = fits.open(filename)
-        hdulist[1].name = 'LIGHTCURVE'
-        hdulist = fits.HDUList([hdulist[0], hdulist[1]])
-        fits_utils.write_fits(hdulist, filename, {'SRCNAME': lc['name']})
-
-    def _make_lc(self, name, **kwargs):
-
-        # make array of time values in MET
-        if kwargs['time_bins']:
-            times = kwargs['time_bins']
-        elif kwargs['nbins']:
-            times = np.linspace(self.tmin, self.tmax,
-                                kwargs['nbins'] + 1)
-        else:
-            times = np.arange(self.tmin, self.tmax,
-                              kwargs['binsz'])
+    def _create_lc_dict(self, name, times):
 
         # Output Dictionary
         o = {}
@@ -152,8 +118,7 @@ class LightCurve(object):
         o['tmax'] = times[1:]
         o['tmin_mjd'] = utils.met_to_mjd(o['tmin'])
         o['tmax_mjd'] = utils.met_to_mjd(o['tmax'])
-        o['config'] = kwargs
-
+        
         for k, v in defaults.source_flux_output.items():
 
             if not k in self.roi[name]:
@@ -161,17 +126,39 @@ class LightCurve(object):
 
             v = self.roi[name][k]
 
-            if isinstance(v, np.ndarray):
-                o[k] = np.zeros(times[:-1].shape + v.shape)
+            if isinstance(v, np.ndarray) and v.dtype.kind in ['S', 'U']:
+                o[k] = np.zeros(o['tmin'].shape + v.shape, dtype=v.dtype)
+            elif isinstance(v, np.ndarray):
+                o[k] = np.nan * np.ones(o['tmin'].shape + v.shape)
             elif isinstance(v, np.float):
-                o[k] = np.zeros(times[:-1].shape)
+                o[k] = np.nan * np.ones(o['tmin'].shape)
 
+        return o
+        
+    def _make_lc(self, name, **kwargs):
+
+        # make array of time values in MET
+        if kwargs['time_bins']:
+            times = np.array(kwargs['time_bins'])
+        elif kwargs['nbins']:
+            times = np.linspace(self.tmin, self.tmax,
+                                kwargs['nbins'] + 1)
+        else:
+            times = np.arange(self.tmin, self.tmax,
+                              kwargs['binsz'])
+
+        o = self._create_lc_dict(name, times)
+        o['config'] = kwargs
+        
         diff_sources = [s.name for s in self.roi.sources if s.diffuse]
-        skydir = self.roi[name].skydir        
-        kwargs['free_sources'] += [s.name for s in
-                                   self.roi.get_sources(skydir=skydir,
-                                                        distance=kwargs['free_radius'],
-                                                        exclude=diff_sources)]
+        skydir = self.roi[name].skydir
+
+        if kwargs.get('free_radius', None) is not None:
+            kwargs['free_sources'] += [s.name for s in
+                                       self.roi.get_sources(skydir=skydir,
+                                                            distance=kwargs[
+                                                                'free_radius'],
+                                                            exclude=diff_sources)]
 
         for i, time in enumerate(zip(times[:-1], times[1:])):
 
@@ -182,28 +169,32 @@ class LightCurve(object):
             config['selection']['tmax'] = time[1]
             config['ltcube']['use_local_ltcube'] = kwargs['use_local_ltcube']
             config['model']['diffuse_dir'] = [self.workdir]
+
+            if config['components'] is None:
+                config['components'] = []
+
             for j, c in enumerate(self.components):
                 if len(config['components']) <= j:
-                    config['components'] += [{}]                    
+                    config['components'] += [{}]
 
-                data_cfg =  {'evfile': c.files['ft1'],
-                             'scfile': c.data_files['scfile'],
-                             'ltcube': None }
-                
+                data_cfg = {'evfile': c.files['ft1'],
+                            'scfile': c.data_files['scfile'],
+                            'ltcube': None}
+
                 config['components'][j] = \
                     utils.merge_dict(config['components'][j],
-                                     {'data' : data_cfg },
+                                     {'data': data_cfg},
                                      add_new_keys=True)
-                    
+
             # create output directories labeled in MET vals
-            outdir = 'lightcurve_%.0f_%.0f' % (time[0],time[1])
+            outdir = 'lightcurve_%.0f_%.0f' % (time[0], time[1])
             config['fileio']['outdir'] = os.path.join(self.workdir, outdir)
             utils.mkdir(config['fileio']['outdir'])
 
             yaml.dump(utils.tolist(config),
                       open(os.path.join(config['fileio']['outdir'],
                                         'config.yaml'), 'w'))
-            
+
             xmlfile = os.path.join(config['fileio']['outdir'], 'base.xml')
 
             # Make a copy of the source maps. TODO: Implement a
@@ -212,9 +203,14 @@ class LightCurve(object):
             #     for c in self.components:
             #        shutil.copy(c._files['srcmap'],config['fileio']['outdir'])
 
-            gta = self.clone(config, loglevel=logging.DEBUG)
-            gta.setup()
-            
+            try:
+                gta = self.clone(config, loglevel=logging.DEBUG)
+                gta.setup()
+            except:
+                self.logger.warning('Analysis failed in time range %i %i',
+                                    time[0], time[1])
+                continue
+
             # Write the current model
             gta.write_xml(xmlfile)
 
@@ -225,16 +221,19 @@ class LightCurve(object):
             gta.write_xml('fit_model_final.xml')
             output = gta.get_src_model(name)
 
-            for k in defaults.source_flux_output.keys():
-                if not k in output:
-                    continue
-                if (fit_results['fit_success'] == 1):
+            if fit_results['fit_success'] == 1:            
+                for k in defaults.source_flux_output.keys():
+                    if not k in output:
+                        continue
+                    if (isinstance(output[k],np.ndarray) and
+                         o[k][i].shape != output[k].shape):
+                        self.logger.warning('Incompatible shape for column %s',k)
+                        continue                        
                     o[k][i] = output[k]
+                        
             self.logger.info('Finished time range %i %i', time[0], time[1])
 
         src = self.roi.get_source_by_name(name)
-        src.update_data({'lightcurve': copy.deepcopy(o)})
-
         return o
 
     def _fit_lc(self, gta, name, **kwargs):
@@ -249,12 +248,21 @@ class LightCurve(object):
         # 4.) if that fails then fix sources out to 1dg away from center of ROI
         # 5.) if that fails set values to 0 in output and print warning message
 
-        free_sources = kwargs.get('free_sources',[])
-        
+        free_sources = kwargs.get('free_sources', [])
+        free_background = kwargs.get('free_background', False)
+        free_params = kwargs.get('free_params', None)
+
+        if name in free_sources:
+            free_sources.remove(name)
+
+        free_state = FreeParameterState(gta)
         gta.free_sources(free=False)
-        gta.free_source(name)
-        
+
         for niter in range(5):
+
+            if free_background:
+                free_state.restore()
+            gta.free_source(name, pars=free_params)
 
             if niter == 0:
                 gta.free_sources_by_name(free_sources)

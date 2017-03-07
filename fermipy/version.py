@@ -31,18 +31,19 @@
 #
 #   include RELEASE-VERSION
 
-__all__ = ("get_git_version")
-
 import os
 import subprocess
 from subprocess import check_output
+
+__all__ = ("get_git_version")
 
 _refname = '$Format: %D$'
 _tree_hash = '$Format: %t$'
 _commit_info = '$Format:%cd by %aN$'
 _commit_hash = '$Format: %h$'
 
-def capture_output(cmd,dirname):
+
+def capture_output(cmd, dirname):
 
     p = subprocess.Popen(cmd,
                          stdout=subprocess.PIPE,
@@ -52,12 +53,17 @@ def capture_output(cmd,dirname):
 
     output = p.stdout.readlines()
 
-    if not output: return None
-    else: return  output[0].strip()
+    if not output:
+        return None
+    else:
+        return output[0].strip()
+
 
 def render_pep440(vcs):
+    """Convert git release tag into a form that is PEP440 compliant."""
 
-    if vcs is None: return None
+    if vcs is None:
+        return None
 
     tags = vcs.split('-')
 
@@ -67,42 +73,51 @@ def render_pep440(vcs):
     else:
         return tags[0] + '+' + '.'.join(tags[1:])
 
+
 def call_git_describe(abbrev=4):
 
     dirname = os.path.abspath(os.path.dirname(__file__))
 
-    has_git_tree = capture_output(['git','rev-parse',
-                                   '--is-inside-work-tree'],dirname)
+    try:
+        has_git_tree = capture_output(['git', 'rev-parse',
+                                       '--is-inside-work-tree'], dirname)
+    except:
+        return None
 
-    if not has_git_tree: return None
+    if not has_git_tree:
+        return None
 
     try:
         line = check_output(['git', 'describe', '--abbrev=%d' % abbrev,
-                             '--dirty'],cwd=dirname)
+                             '--dirty'], cwd=dirname)
 
         return line.strip().decode('utf-8')
 
     except:
         return None
 
+
 def read_release_keywords(keyword):
 
     refnames = keyword.strip()
-    if refnames.startswith("$Format"): return None
+    if refnames.startswith("$Format"):
+        return None
 
     refs = set([r.strip() for r in refnames.strip("()").split(",")])
     TAG = "tag: "
     tags = set([r[len(TAG):] for r in refs if r.startswith(TAG)])
-    if not tags: return None
+    if not tags:
+        return None
     return sorted(tags)[-1]
 
-def read_release_version():
 
+def read_release_version():
+    """Read the release version from ``_version.py``."""
     import re
     dirname = os.path.abspath(os.path.dirname(__file__))
 
     try:
-        f = open(os.path.join(dirname,"_version.py"), "rt")
+        f = open(os.path.join(dirname, "_version.py"), "rt")
         for line in f.readlines():
 
             m = re.match("__version__ = '([^']+)'", line)
@@ -115,12 +130,14 @@ def read_release_version():
 
     return None
 
-def write_release_version(version):
 
+def write_release_version(version):
+    """Write the release version to ``_version.py``."""
     dirname = os.path.abspath(os.path.dirname(__file__))
-    f = open(os.path.join(dirname,"_version.py"), "wt")
+    f = open(os.path.join(dirname, "_version.py"), "wt")
     f.write("__version__ = '%s'\n" % version)
     f.close()
+
 
 def get_git_version(abbrev=4):
 

@@ -5,6 +5,7 @@ import copy
 import logging
 import itertools
 import functools
+import json
 from multiprocessing import Pool
 import numpy as np
 import warnings
@@ -88,11 +89,11 @@ def convert_tscube(infile, outfile):
         for col in hdu.columns:
 
             if hdu.name == 'EBOUNDS':
-                col.name = col.name.replace('DFDE','DNDE')
+                col.name = col.name.replace('DFDE', 'DNDE')
             else:
                 colname = col.name.lower()
                 col.name = colname.replace('dfde', 'dnde')
-                
+
     inhdulist.writeto(outfile, clobber=True)
     return inhdulist
 
@@ -258,59 +259,6 @@ def convert_tscube_old(infile, outfile):
     return hdulist
 
 
-def overlap_slices(large_array_shape, small_array_shape, position):
-    """
-    Modified version of `~astropy.nddata.utils.overlap_slices`.
-
-    Get slices for the overlapping part of a small and a large array.
-
-    Given a certain position of the center of the small array, with
-    respect to the large array, tuples of slices are returned which can be
-    used to extract, add or subtract the small array at the given
-    position. This function takes care of the correct behavior at the
-    boundaries, where the small array is cut of appropriately.
-
-    Parameters
-    ----------
-    large_array_shape : tuple
-        Shape of the large array.
-    small_array_shape : tuple
-        Shape of the small array.
-    position : tuple
-        Position of the small array's center, with respect to the large array.
-        Coordinates should be in the same order as the array shape.
-
-    Returns
-    -------
-    slices_large : tuple of slices
-        Slices in all directions for the large array, such that
-        ``large_array[slices_large]`` extracts the region of the large array
-        that overlaps with the small array.
-    slices_small : slice
-        Slices in all directions for the small array, such that
-        ``small_array[slices_small]`` extracts the region that is inside the
-        large array.
-    """
-    # Get edge coordinates
-    edges_min = [int(pos - small_shape // 2) for (pos, small_shape) in
-                 zip(position, small_array_shape)]
-    edges_max = [int(pos + (small_shape - small_shape // 2)) for
-                 (pos, small_shape) in
-                 zip(position, small_array_shape)]
-
-    # Set up slices
-    slices_large = tuple(slice(max(0, edge_min), min(large_shape, edge_max))
-                         for (edge_min, edge_max, large_shape) in
-                         zip(edges_min, edges_max, large_array_shape))
-    slices_small = tuple(slice(max(0, -edge_min),
-                               min(large_shape - edge_min,
-                                   edge_max - edge_min))
-                         for (edge_min, edge_max, large_shape) in
-                         zip(edges_min, edges_max, large_array_shape))
-
-    return slices_large, slices_small
-
-
 def truncate_array(array1, array2, position):
     """Truncate array1 by finding the overlap with array2 when the
     array1 center is located at the given position in array2."""
@@ -348,14 +296,14 @@ def extract_array(array_large, array_small, position):
 
 
 def extract_large_array(array_large, array_small, position):
-    large_slices, small_slices = overlap_slices(array_large.shape,
-                                                array_small.shape, position)
+    large_slices, small_slices = utils.overlap_slices(array_large.shape,
+                                                      array_small.shape, position)
     return array_large[large_slices]
 
 
 def extract_small_array(array_small, array_large, position):
-    large_slices, small_slices = overlap_slices(array_large.shape,
-                                                array_small.shape, position)
+    large_slices, small_slices = utils.overlap_slices(array_large.shape,
+                                                      array_small.shape, position)
     return array_small[small_slices]
 
 
@@ -716,74 +664,78 @@ class TSMapGenerator(object):
         Parameters
         ----------
         prefix : str
-           Optional string that will be prepended to all output files
-           (FITS and rendered images).
+           Optional string that will be prepended to all output files.
 
-        model : dict
-           Dictionary defining the properties of the test source.
-
-        exclude : list
-            Source or sources that will be removed from the model when
-            computing the TS map.
-
-        loge_bounds : list
-           Restrict the analysis to an energy range (emin,emax) in
-           log10(E/MeV) that is a subset of the analysis energy range.
-           By default the full analysis energy range will be used.  If
-           either emin/emax are None then only an upper/lower bound on
-           the energy range wil be applied.
-
-        max_kernel_radius : float
-           Set the maximum radius of the test source kernel.  Using a
-           smaller value will speed up the TS calculation at the loss of
-           accuracy.  The default value is 3 degrees.
-
-        make_plots : bool
-           Generate plots.
-
-        write_fits : bool
-           Write the output to a FITS file.
-
-        write_npy : bool
-           Write the output dictionary to a numpy file.
+        {options}
 
         Returns
         -------
-        maps : dict
+        tsmap : dict
            A dictionary containing the `~fermipy.skymap.Map` objects
            for TS and source amplitude.
 
         """
 
-        self.logger.info('Generating TS map')
-
         schema = ConfigSchema(self.defaults['tsmap'])
-        schema.add_option('make_plots', False)
-        schema.add_option('write_fits', True)
-        schema.add_option('write_npy', True)
+        schema.add_option('loglevel', logging.INFO)
         schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)
         schema.add_option('map_size', 1.0)
-        schema.add_option('exclude', None, '', list)
         schema.add_option('threshold', 1E-2, '', float)
+        schema.add_option('use_pylike', True, '', bool)
         config = schema.create_config(self.config['tsmap'], **kwargs)
 
         # Defining default properties of test source model
         config['model'].setdefault('Index', 2.0)
         config['model'].setdefault('SpectrumType', 'PowerLaw')
         config['model'].setdefault('SpatialModel', 'PointSource')
-        config['model'].setdefault('Prefactor', 1E-13)
 
-        maps = self._make_tsmap_fast(prefix, **config)
+        self.logger.log(config['loglevel'], 'Generating TS map')
+        
+        o = self._make_tsmap_fast(prefix, **config)
 
         if config['make_plots']:
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_tsmap_plots(maps, self.roi)
+            plotter.make_tsmap_plots(o, self.roi)
 
-        self.logger.info('Finished TS map')
-        return maps
+        self.logger.log(config['loglevel'], 'Finished TS map')
+
+        outfile = utils.format_filename(self.workdir, 'tsmap',
+                                        prefix=[o['name']])
+            
+        if config['write_fits']:
+            o['file'] = os.path.basename(outfile) + '.fits'
+            self._make_tsmap_fits(o, outfile + '.fits')
+
+        if config['write_npy']:
+            np.save(outfile + '.npy', o)
+            
+        return o
+
+    def _make_tsmap_fits(self, data, filename, **kwargs):
+
+        maps =  {'SQRT_TS_MAP': data['sqrt_ts'],
+                 'NPRED_MAP': data['npred'],
+                 'N_MAP': data['amplitude']}
+
+        hdu_images = []
+        for k, v in sorted(maps.items()):
+            if v is None:
+                continue
+            hdu_images += [v.create_image_hdu(k)]
+        
+        tab = fits_utils.dict_to_table(data)
+        hdu_data = fits.table_to_hdu(tab)
+        hdu_data.name = 'TSMAP_DATA'
+
+        hdus = [data['ts'].create_primary_hdu(),
+                hdu_data] + hdu_images
+
+        hdus[0].header['CONFIG'] = json.dumps(data['config'])
+        hdus[1].header['CONFIG'] = json.dumps(data['config'])        
+        fits_utils.write_hdus(hdus, filename)
 
     def _make_tsmap_fast(self, prefix, **kwargs):
         """
@@ -802,6 +754,7 @@ class TSMapGenerator(object):
            test source that will be used in the scan.
 
         """
+        loglevel = kwargs.get('loglevel', self.loglevel)
 
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         src_dict = {} if src_dict is None else src_dict
@@ -810,12 +763,11 @@ class TSMapGenerator(object):
         threshold = kwargs.setdefault('threshold', 1E-2)
         max_kernel_radius = kwargs.get('max_kernel_radius')
         loge_bounds = kwargs.setdefault('loge_bounds', None)
+        use_pylike = kwargs.setdefault('use_pylike', True)
 
-        if loge_bounds is not None:
-            if len(loge_bounds) == 0:
-                loge_bounds = [None, None]
-            elif len(loge_bounds) == 1:
-                loge_bounds += [None]
+        if loge_bounds:
+            if len(loge_bounds) != 2:
+                raise Exception('Wrong size of loge_bounds array.')
             loge_bounds[0] = (loge_bounds[0] if loge_bounds[0] is not None
                               else self.log_energies[0])
             loge_bounds[1] = (loge_bounds[1] if loge_bounds[1] is not None
@@ -862,7 +814,9 @@ class TSMapGenerator(object):
             enumbins += [cm.shape[0]]
 
         self.add_source('tsmap_testsource', src_dict, free=True,
-                        init_source=False)
+                        init_source=False, use_single_psf=True,
+                        use_pylike=use_pylike,
+                        loglevel=logging.DEBUG)
         src = self.roi['tsmap_testsource']
         # self.logger.info(str(src_dict))
         modelname = utils.create_model_name(src)
@@ -872,7 +826,7 @@ class TSMapGenerator(object):
             model_npred += np.sum(mm)
             model += [mm]
 
-        self.delete_source('tsmap_testsource')
+        self.delete_source('tsmap_testsource', loglevel=logging.DEBUG)
 
         for i, mm in enumerate(model):
 
@@ -930,6 +884,7 @@ class TSMapGenerator(object):
             p = [[k // 2, i, j] for k in enumbins]
             positions += [p]
 
+        self.logger.log(loglevel, 'Fitting test source.')
         if multithread:
             pool = Pool()
             results = pool.map(wrap, positions)
@@ -959,24 +914,9 @@ class TSMapGenerator(object):
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
              'amplitude': amp_map,
+             'loglike': -self.like(),
              'config': kwargs
              }
-
-        fits_file = utils.format_filename(self.config['fileio']['workdir'],
-                                          'tsmap.fits',
-                                          prefix=[prefix, modelname])
-
-        if kwargs['write_fits']:
-
-            fits_utils.write_maps(ts_map,
-                                  {'SQRT_TS_MAP': sqrt_ts_map,
-                                   'NPRED_MAP': npred_map,
-                                   'N_MAP': amp_map},
-                                  fits_file)
-            o['file'] = os.path.basename(fits_file)
-
-        if kwargs['write_npy']:
-            np.save(os.path.splitext(fits_file)[0] + '.npy', o)
 
         return o
 

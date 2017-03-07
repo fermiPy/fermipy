@@ -15,6 +15,7 @@ from fermipy import utils
 from fermipy import spectrum
 from fermipy.utils import edge_to_center
 from fermipy.utils import edge_to_width
+from fermipy.utils import sum_bins
 from fermipy.skymap import HpxMap
 from fermipy.hpx_utils import HPX
 from fermipy.ltcube import LTCube
@@ -32,28 +33,22 @@ evtype_string = {
     512: 'EDISP3',
 }
 
-def loglog_quad(x,y,dim):
 
-    ys0 = [slice(None)]*y.ndim
-    ys1 = [slice(None)]*y.ndim
+def loglog_quad(x, y, dim):
 
-    xs0 = [None]*y.ndim
-    xs1 = [None]*y.ndim
-    
-    ys0[dim] = slice(None,-1)
-    ys1[dim] = slice(1,None)
+    ys0 = [slice(None)] * y.ndim
+    ys1 = [slice(None)] * y.ndim
 
-    xs0[dim] = slice(None,-1)
-    xs1[dim] = slice(1,None)
-    log_ratio = np.log(x[xs1]/x[xs0])    
-    return 0.5*(y[ys0]*x[xs0] + y[ys1]*x[xs1])*log_ratio
+    xs0 = [None] * y.ndim
+    xs1 = [None] * y.ndim
 
+    ys0[dim] = slice(None, -1)
+    ys1[dim] = slice(1, None)
 
-def sum_bins(x,dim,npts):
-    if npts <= 1:
-        return x    
-    shape = x.shape[:dim] + (int(x.shape[dim]/npts),npts) + x.shape[dim+1:]
-    return np.sum(x.reshape(shape),axis=dim+1)
+    xs0[dim] = slice(None, -1)
+    xs1[dim] = slice(1, None)
+    log_ratio = np.log(x[xs1] / x[xs0])
+    return 0.5 * (y[ys0] * x[xs0] + y[ys1] * x[xs1]) * log_ratio
 
 
 def bins_per_dec(edges):
@@ -597,10 +592,9 @@ def calc_exp(skydir, ltc, event_class, event_types,
 
     """
 
-    
     if npts is None:
-        npts = int(np.ceil(np.max(cth_bins[1:]-cth_bins[:-1])/0.05))
-    
+        npts = int(np.ceil(np.max(cth_bins[1:] - cth_bins[:-1]) / 0.05))
+
     exp = np.zeros((len(egy), len(cth_bins) - 1))
     cth_bins = utils.split_bin_edges(cth_bins, npts)
     cth = edge_to_center(cth_bins)
@@ -617,8 +611,8 @@ def create_avg_rsp(rsp_fn, skydir, ltc, event_class, event_types, x,
                    egy, cth_bins, npts=None):
 
     if npts is None:
-        npts = int(np.ceil(np.max(cth_bins[1:]-cth_bins[:-1])/0.05))
-    
+        npts = int(np.ceil(np.max(cth_bins[1:] - cth_bins[:-1]) / 0.05))
+
     wrsp = np.zeros((len(x), len(egy), len(cth_bins) - 1))
     exps = np.zeros((len(egy), len(cth_bins) - 1))
 
@@ -712,14 +706,14 @@ def create_wtd_psf(skydir, ltc, event_class, event_types, dtheta,
                    egy_bins, cth_bins, nbin=nbin)
     cnts = calc_counts(skydir, ltc, event_class, event_types,
                        etrue_bins, cth_bins, fn)
-    
+
     wts = drm * cnts[None, :, :]
-    wts_norm = np.sum(wts,axis=1)
-    wts_norm[wts_norm == 0] = 1.0    
+    wts_norm = np.sum(wts, axis=1)
+    wts_norm[wts_norm == 0] = 1.0
     wts = wts / wts_norm[:, None, :]
     wpsf = np.sum(wts[None, :, :, :] * psf[:, None, :, :], axis=2)
-    wts = np.sum(wts[None, :, :, :],axis=2)
-    
+    wts = np.sum(wts[None, :, :, :], axis=2)
+
     if npts > 1:
         shape = (wpsf.shape[0], int(wpsf.shape[1] / npts), npts, wpsf.shape[2])
         wpsf = np.sum((wpsf * wts).reshape(shape), axis=2)
@@ -734,7 +728,7 @@ def calc_drm(skydir, ltc, event_class, event_types,
     """Calculate the detector response matrix."""
     npts = int(np.ceil(128. / bins_per_dec(egy_bins)))
     egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
-    
+
     etrue_bins = 10**np.linspace(1.0, 6.5, nbin * 5.5 + 1)
     egy = 10**utils.edge_to_center(np.log10(egy_bins))
     egy_width = utils.edge_to_width(egy_bins)
@@ -742,7 +736,7 @@ def calc_drm(skydir, ltc, event_class, event_types,
     edisp = create_avg_edisp(skydir, ltc, event_class, event_types,
                              egy, etrue, cth_bins)
     edisp = edisp * egy_width[:, None, None]
-    edisp = sum_bins(edisp,0,npts)
+    edisp = sum_bins(edisp, 0, npts)
     return edisp
 
 
@@ -771,8 +765,8 @@ def calc_counts(skydir, ltc, event_class, event_types,
     exp = calc_exp(skydir, ltc, event_class, event_types,
                    egy_bins, cth_bins)
     dnde = fn.dnde(egy_bins)
-    cnts = loglog_quad(egy_bins, exp * dnde[:, None],0)
-    cnts = sum_bins(cnts,0,npts)
+    cnts = loglog_quad(egy_bins, exp * dnde[:, None], 0)
+    cnts = sum_bins(cnts, 0, npts)
     return cnts
 
 
@@ -798,7 +792,7 @@ def calc_counts_edisp(skydir, ltc, event_class, event_types,
 
     """
     #npts = int(np.ceil(32. / bins_per_dec(egy_bins)))
-    
+
     # Split energy bins
     egy_bins = np.exp(utils.split_bin_edges(np.log(egy_bins), npts))
     etrue_bins = 10**np.linspace(1.0, 6.5, nbin * 5.5 + 1)
@@ -807,8 +801,8 @@ def calc_counts_edisp(skydir, ltc, event_class, event_types,
     cnts_etrue = calc_counts(skydir, ltc, event_class, event_types,
                              etrue_bins, cth_bins, fn)
 
-    cnts = np.sum(cnts_etrue[None,:,:] * drm[:, :, :], axis=1)
-    cnts = sum_bins(cnts,0,npts)
+    cnts = np.sum(cnts_etrue[None, :, :] * drm[:, :, :], axis=1)
+    cnts = sum_bins(cnts, 0, npts)
     return cnts
 
 
@@ -835,8 +829,8 @@ def plot_hpxmap(hpxmap, **kwargs):
     import matplotlib.pyplot as plt
     from matplotlib.colors import PowerNorm, Normalize, LogNorm
 
-    zidx = kwargs.pop('zidx',None)
-    
+    zidx = kwargs.pop('zidx', None)
+
     kwargs_imshow = {'norm': None,
                      'vmin': None, 'vmax': None}
 

@@ -360,7 +360,7 @@ def wcs_to_coords(w, shape):
     return np.vstack((x, y, z))
 
 
-def get_map_skydir(filename,maphdu=0):
+def get_map_skydir(filename, maphdu=0):
     hdulist = fits.open(filename)
     wcs = WCS(hdulist[maphdu].header)
     return wcs_to_skydir(wcs)

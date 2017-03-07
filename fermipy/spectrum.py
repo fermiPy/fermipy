@@ -147,7 +147,7 @@ class SpectralFunction(object):
         """Create a spectral function instance given its flux."""
         params = params.copy()
         params[0] = 1.0
-        params[0] = flux/cls.eval_flux(emin, emax, params, scale=scale)
+        params[0] = flux / cls.eval_flux(emin, emax, params, scale=scale)
         return cls(params, scale)
 
     @classmethod
@@ -155,7 +155,7 @@ class SpectralFunction(object):
         """Create a spectral function instance given its energy flux."""
         params = params.copy()
         params[0] = 1.0
-        params[0] = eflux/cls.eval_eflux(emin, emax, params, scale=scale)
+        params[0] = eflux / cls.eval_eflux(emin, emax, params, scale=scale)
         return cls(params, scale)
 
     @classmethod

@@ -244,8 +244,8 @@ fit quality and look for new sources.
             'SpectrumType' : 'PowerLaw'}
 
    # Both methods return a dictionary with the maps
-   m0 = gta.residmap('fit_model',model=model)
-   m1 = gta.tsmap('fit_model',model=model)
+   m0 = gta.residmap('fit_model', model=model, make_plots=True)
+   m1 = gta.tsmap('fit_model', model=model, make_plots=True)
 
 More documentation on these methods is available in
 the :ref:`tsmap` and :ref:`residmap` pages.
@@ -258,7 +258,7 @@ name of the source:
 
 .. code-block:: python
 
-   gta.sed('mkn421')
+   gta.sed('mkn421', make_plots=True)
 
 More information about :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed`
 method can be found in the :ref:`sed` page.

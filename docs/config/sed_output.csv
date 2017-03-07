@@ -34,11 +34,9 @@
 ``fit_quality``	`~numpy.ndarray`	Fit quality parameter for MINUIT and NEWMINUIT optimizers (3 - Full accurate covariance matrix, 2 - Full matrix, but forced positive-definite (i.e. not accurate), 1 - Diagonal approximation only, not accurate, 0 - Error matrix not calculated at all).
 ``fit_status``	`~numpy.ndarray`	Fit status parameter (0=ok).
 ``index``	`~numpy.ndarray`	Spectral index of the power-law model used to fit this bin.
-``lnlprofile``	dict	Likelihood scan for each energy bin.
 ``norm_scan``	`~numpy.ndarray`	Array of NxM normalization values for the profile likelihood scan in N energy bins and M scan points.  A row-wise multiplication with any of ``ref`` columns can be used to convert this matrix to the respective unit.
 ``dloglike_scan``	`~numpy.ndarray`	Array of NxM delta-loglikelihood values for the profile likelihood scan in N energy bins and M scan points.
 ``loglike_scan``	`~numpy.ndarray`	Array of NxM loglikelihood values for the profile likelihood scan in N energy bins and M scan points.
-``params``	dict	Dictionary of best-fit spectral parameters with 1-sigma uncertainties.
 ``param_covariance``	`~numpy.ndarray`	Covariance matrix for the best-fit spectral parameters of the source.
 ``param_names``	`~numpy.ndarray`	Array of names for the parameters in the global spectral parameterization of this source.
 ``param_values``	`~numpy.ndarray`	Array of parameter values.

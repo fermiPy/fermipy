@@ -37,13 +37,13 @@ PAR_NAMES = {
 
 
 def convert_sed_cols(tab):
-    """Cast SED column names to lowercase."""    
+    """Cast SED column names to lowercase."""
     # Update Column names
     for colname in list(tab.columns.keys()):
 
         newname = colname.lower()
-        newname = newname.replace('dfde','dnde')
-            
+        newname = newname.replace('dfde', 'dnde')
+
         if tab.columns[colname].name == newname:
             continue
 
@@ -197,7 +197,7 @@ class LnLFn(object):
             self._mle = self._interp.x[0]
         else:
             ix0 = max(np.argmin(self._interp.y) - 4, 0)
-            ix1 = min(np.argmin(self._interp.y) + 4, 
+            ix1 = min(np.argmin(self._interp.y) + 4,
                       len(self._interp.x) - 1)
 
             while np.sign(self._interp.derivative(self._interp.x[ix0])) == \
@@ -205,7 +205,7 @@ class LnLFn(object):
                 ix0 += 1
 
             self._mle = scipy.optimize.brentq(self._interp.derivative,
-                                              self._interp.x[ix0], 
+                                              self._interp.x[ix0],
                                               self._interp.x[ix1],
                                               xtol=1e-10 *
                                               np.median(self._interp.x))
@@ -248,8 +248,8 @@ class LnLFn(object):
         # else:
         #    xmax = self.interp.x[m][0]
 
-        # Matt has found that it is faster to use an interpolator 
-        # than an actual root-finder to find the root, 
+        # Matt has found that it is faster to use an interpolator
+        # than an actual root-finder to find the root,
         # probably b/c of python overhead.
         # That would be something like this:
         # rf = lambda x: self._interp(x)+dlnl-lnl_max
@@ -257,13 +257,13 @@ class LnLFn(object):
         #                   xtol=1e-10*np.abs(self._mle))
         if upper:
             x = np.logspace(log_mle, np.log10(self._interp.xmax), 100)
-            retVal = np.interp(dlnl, self.interp(x)-lnl_max, x)
+            retVal = np.interp(dlnl, self.interp(x) - lnl_max, x)
         else:
-            x = np.linspace(self._interp.xmin, self._mle, 100) 
-            retVal = np.interp(dlnl, self.interp(x)[::-1]-lnl_max, x[::-1])
+            x = np.linspace(self._interp.xmin, self._mle, 100)
+            retVal = np.interp(dlnl, self.interp(x)[::-1] - lnl_max, x[::-1])
 
         return retVal
-        
+
     def getLimit(self, alpha, upper=True):
         """ Evaluate the limits corresponding to a C.L. of (1-alpha)%.
 
@@ -273,7 +273,7 @@ class LnLFn(object):
         upper :  upper or lower limits.
         """
         dlnl = onesided_cl_to_dlnl(1.0 - alpha)
-        return self.getDeltaLogLike(dlnl,upper=upper)
+        return self.getDeltaLogLike(dlnl, upper=upper)
 
     def getInterval(self, alpha):
         """ Evaluate the interval corresponding to a C.L. of (1-alpha)%.
@@ -290,7 +290,7 @@ class LnLFn(object):
 
 class ReferenceSpec(object):
     """This class encapsulates data for a reference spectrum.
-    
+
     Parameters
     ----------
     ne : `int`             
@@ -301,17 +301,17 @@ class ReferenceSpec(object):
 
     emin : `~numpy.ndarray`  
         Array of lower bin edges.
-    
+
     emax : `~numpy.ndarray`  
         Array of upper bin edges.
-    
+
     bin_widths : `~numpy.ndarray`  
         Array of energy bin widths.
 
     eref : `~numpy.ndarray`  
         Array of reference energies. Typically these are the geometric
         mean of the energy bins
-    
+
     ref_dnde : `~numpy.ndarray`  
         Array of differential photon flux values.
 
@@ -325,6 +325,7 @@ class ReferenceSpec(object):
         Array of predicted number of photons in each energy bin.
 
     """
+
     def __init__(self, emin, emax, ref_dnde, ref_flux, ref_eflux, ref_npred, eref=None):
         """ C'tor from energy bin edges and refernce fluxes
         """
@@ -403,14 +404,14 @@ class ReferenceSpec(object):
             EBOUNDS table.        
         """
 
-        convert_sed_cols(tab_e)            
+        convert_sed_cols(tab_e)
         try:
             emin = np.array(tab_e['e_min'].to(u.MeV))
             emax = np.array(tab_e['e_max'].to(u.MeV))
         except:
             emin = np.array(tab_e['e_min'])
             emax = np.array(tab_e['e_max'])
-        
+
         ne = len(emin)
         try:
             ref_dnde = np.array(tab_e['ref_dnde'])
@@ -431,11 +432,10 @@ class ReferenceSpec(object):
             ref_npred = np.array(tab_e['ref_npred'])
         except:
             ref_npred = np.ones((ne))
-            
-        refSpec = ReferenceSpec(emin, emax,
-                                ref_dnde,ref_flux,ref_eflux,ref_npred)
-        return refSpec
 
+        refSpec = ReferenceSpec(emin, emax,
+                                ref_dnde, ref_flux, ref_eflux, ref_npred)
+        return refSpec
 
     def build_ebound_table(self):
         """ Build and return an EBOUNDS table with the encapsulated data.
@@ -452,7 +452,7 @@ class ReferenceSpec(object):
                    unit='MeV / (cm2 s)'),
             Column(name="REF_NPRED", dtype=float, data=self._ref_npred,
                    unit='ph')
-            ]
+        ]
         tab = Table(data=cols)
         return tab
 
@@ -467,7 +467,7 @@ class SpecData(ReferenceSpec):
     norm : `~numpy.ndarray`
 
     norm_err : `~numpy.ndarray`
-    
+
     flux : `~numpy.ndarray`
         Array of integral photon flux values.
 
@@ -479,7 +479,7 @@ class SpecData(ReferenceSpec):
 
     dnde_err :`~numpy.ndarray`
         Uncertainties on differential flux values
-        
+
     e2dnde :`~numpy.ndarray`
         Differential flux values scaled by E^2
 
@@ -498,23 +498,23 @@ class SpecData(ReferenceSpec):
         norm : `~numpy.ndarray`        
             Array of best-fit normalizations in units of the reference
             spectrum amplitude.
-                     
+
         norm_err : `~numpy.ndarray`        
             Array of uncertainties in units of the reference
             spectrum amplitude.
 
         """
-        super(SpecData, self).__init__(ref_spec.emin, ref_spec.emax, 
-                                       ref_spec.ref_dnde, ref_spec.ref_flux, 
-                                       ref_spec.ref_eflux, ref_spec.ref_npred, 
-                                       ref_spec.eref)    
+        super(SpecData, self).__init__(ref_spec.emin, ref_spec.emax,
+                                       ref_spec.ref_dnde, ref_spec.ref_flux,
+                                       ref_spec.ref_eflux, ref_spec.ref_npred,
+                                       ref_spec.eref)
 
         self._norm = norm
         self._norm_err = norm_err
         self._dnde = self._norm * self._ref_dnde
         self._dnde_err = self._norm_err * self._ref_dnde
         self._flux = self._norm * self._ref_flux
-        self._eflux = self._norm * self._ref_eflux       
+        self._eflux = self._norm * self._ref_eflux
 
     @property
     def norm(self):
@@ -523,7 +523,7 @@ class SpecData(ReferenceSpec):
     @property
     def norm_err(self):
         return self._norm_err
-        
+
     @property
     def dnde(self):
         return self._dnde
@@ -542,12 +542,12 @@ class SpecData(ReferenceSpec):
 
     @property
     def e2dnde(self):
-        return self._dnde*self.eref**2
+        return self._dnde * self.eref**2
 
     @property
     def e2dnde_err(self):
-        return self._dnde_err*self.evals**2
-    
+        return self._dnde_err * self.evals**2
+
     @staticmethod
     def create_from_table(tab):
         """
@@ -561,12 +561,13 @@ class SpecData(ReferenceSpec):
         col_emin = Column(name="e_min", dtype=float,
                           shape=self.emin.shape, data=self.emin)
         col_emax = Column(name="e_max", dtype=float,
-                          shape=self.emax.shape, data=self.emax)      
+                          shape=self.emax.shape, data=self.emax)
         col_ref = Column(name="e_ref", dtype=float,
-                          shape=self.eref.shape, data=self.emax)      
-        col_list = [col_emin,col_emax,col_ref]
+                         shape=self.eref.shape, data=self.emax)
+        col_list = [col_emin, col_emax, col_ref]
         col_list.append(Column(name="norm", dtype=float, data=self.norm))
-        col_list.append(Column(name="norm_err", dtype=float, data=self.norm_err))        
+        col_list.append(
+            Column(name="norm_err", dtype=float, data=self.norm_err))
         col_list.append(Column(name="dnde", dtype=float,
                                shape=self.dnde.shape, data=self.dnde))
         col_list.append(Column(name="dnde_err", dtype=float,
@@ -610,11 +611,11 @@ class CastroData_Base(object):
 
         # Ensure that input arrays are sorted by the normalization
         # value in each bin
-        idx = norm_vals.argsort(1)+(np.arange(norm_vals.shape[0])[:,None]*
-                                    norm_vals.shape[1])
+        idx = norm_vals.argsort(1) + (np.arange(norm_vals.shape[0])[:, None] *
+                                      norm_vals.shape[1])
         norm_vals = norm_vals.ravel()[idx]
         nll_vals = nll_vals.ravel()[idx]
-        
+
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
         self._loglikes = []
@@ -680,11 +681,11 @@ class CastroData_Base(object):
             nll_val += self._loglikes[i].interp(xv)
 
         return nll_val
-    
+
     def norm_derivative(self, spec, norm):
         """
         """
-        if isinstance(norm,float):
+        if isinstance(norm, float):
             der_val = 0.
         elif len(norm.shape) == 1:
             der_val = np.zeros((1))
@@ -692,9 +693,9 @@ class CastroData_Base(object):
             der_val = np.zeros((norm.shape[1:]))
 
         for i, sv in enumerate(spec):
-            der_val += self._loglikes[i].interp.derivative(norm*sv, der=1) * sv 
+            der_val += self._loglikes[
+                i].interp.derivative(norm * sv, der=1) * sv
         return der_val
-   
 
     def derivative(self, x, der=1):
         """Return the derivate of the log-like summed over the energy
@@ -748,7 +749,7 @@ class CastroData_Base(object):
 
         return ts_vals
 
-    def chi2_vals(self,x):
+    def chi2_vals(self, x):
         """Compute the difference in the log-likelihood between the
         MLE in each energy bin and the normalization predicted by a
         global best-fit model.  This array can be summed to get a
@@ -765,18 +766,17 @@ class CastroData_Base(object):
         chi2_vals : `~numpy.ndarray`
             An array of chi2 values for each energy bin.        
         """
-        
+
         chi2_vals = np.ndarray((self._nx))
         for i in range(self._nx):
 
             mle = self._loglikes[i].mle()
             nll0 = self._loglikes[i].interp(mle)
             nll1 = self._loglikes[i].interp(x[i])
-            chi2_vals[i] = 2.0*np.abs(nll0-nll1)
+            chi2_vals[i] = 2.0 * np.abs(nll0 - nll1)
 
         return chi2_vals
-            
-    
+
     def getLimits(self, alpha, upper=True):
         """ Evaluate the limits corresponding to a C.L. of (1-alpha)%.
 
@@ -809,7 +809,7 @@ class CastroData_Base(object):
         -------
         limit_vals_hi : `~numpy.ndarray`
             An array of lower limit values.
-        
+
         limit_vals_lo : `~numpy.ndarray`
             An array of upper limit values.
         """
@@ -817,7 +817,7 @@ class CastroData_Base(object):
         limit_vals_hi = np.ndarray((self._nx))
 
         for i in range(self._nx):
-            lo_lim, hi_lim = self._loglikes[i].getInterval(alpha)            
+            lo_lim, hi_lim = self._loglikes[i].getInterval(alpha)
             limit_vals_lo[i] = lo_lim
             limit_vals_hi[i] = hi_lim
 
@@ -837,7 +837,7 @@ class CastroData_Base(object):
         returns the best-fit normalization value
         """
         from scipy.optimize import brentq
-        fDeriv = lambda x : self.norm_derivative(specVals,x)
+        fDeriv = lambda x: self.norm_derivative(specVals, x)
         try:
             result = brentq(fDeriv, xlims[0], xlims[1])
         except:
@@ -884,15 +884,15 @@ class CastroData_Base(object):
         freePars : `~numpy.ndarray`        
             Boolean array indicating which parameters should be free in
             the fit.
-           
+
         Returns
         -------
         params : `~numpy.ndarray`
             Best-fit parameters.
-           
+
         spec_vals : `~numpy.ndarray`
             The values of the best-fit spectral model in each energy bin.
-           
+
         ts_spec : float
             The TS of the best-fit spectrum
 
@@ -905,17 +905,17 @@ class CastroData_Base(object):
         pval_spec : float
             p-value of chi-squared for the best-fit spectrum.
         """
-        if not isinstance(specFunc,SEDFunctor):
-            specFunc = self.create_functor(specFunc,initPars,
+        if not isinstance(specFunc, SEDFunctor):
+            specFunc = self.create_functor(specFunc, initPars,
                                            scale=specFunc.scale)
-        
+
         if freePars is None:
-            freePars = np.empty(len(initPars),dtype=bool)
+            freePars = np.empty(len(initPars), dtype=bool)
             freePars.fill(True)
 
         initPars = np.array(initPars)
         freePars = np.array(freePars)
-            
+
         def fToMin(x):
 
             xp = np.array(specFunc.params)
@@ -929,26 +929,26 @@ class CastroData_Base(object):
 
         spec_vals = specFunc(out_pars)
         spec_npred = np.zeros(len(spec_vals))
-        
-        if isinstance(specFunc,spectrum.SEDFluxFunctor): 
-            spec_npred = spec_vals*self.refSpec.ref_npred/self.refSpec.ref_flux
-        elif isinstance(specFunc,spectrum.SEDEFluxFunctor):
-            spec_npred = spec_vals*self.refSpec.ref_npred/self.refSpec.ref_eflux
-            
+
+        if isinstance(specFunc, spectrum.SEDFluxFunctor):
+            spec_npred = spec_vals * self.refSpec.ref_npred / self.refSpec.ref_flux
+        elif isinstance(specFunc, spectrum.SEDEFluxFunctor):
+            spec_npred = spec_vals * self.refSpec.ref_npred / self.refSpec.ref_eflux
+
         ts_spec = self.TS_spectrum(spec_vals)
         chi2_vals = self.chi2_vals(spec_vals)
         chi2_spec = np.sum(chi2_vals)
-        pval_spec = stats.chisqprob(chi2_spec,len(spec_vals))
+        pval_spec = stats.chisqprob(chi2_spec, len(spec_vals))
         return dict(params=out_pars, spec_vals=spec_vals,
                     spec_npred=spec_npred,
                     ts_spec=ts_spec, chi2_spec=chi2_spec,
-                    chi2_vals=chi2_vals, pval_spec=pval_spec )
+                    chi2_vals=chi2_vals, pval_spec=pval_spec)
 
     def TS_spectrum(self, spec_vals):
         """Calculate and the TS for a given set of spectral values.
         """
         return 2. * (self._nll_null - self.__call__(spec_vals))
-    
+
     def build_scandata_table(self):
         """
         """
@@ -961,7 +961,7 @@ class CastroData_Base(object):
         tab = Table(data=[col_norm, col_normv, col_dll])
         tab.add_row({"norm": 1.,
                      "norm_scan": self._norm_vals,
-                     "dloglike_scan": -1*self._nll_vals})
+                     "dloglike_scan": -1 * self._nll_vals})
         return tab
 
     @staticmethod
@@ -997,11 +997,11 @@ class CastroData_Base(object):
         for i in range(n_bins):
             log_min = np.log10(ylims[0])
             log_max = np.log10(ylims[1])
-            norm_vals[i, 1:] = np.logspace(log_min, log_max, n_vals-1)
+            norm_vals[i, 1:] = np.logspace(log_min, log_max, n_vals - 1)
             check = 0
             for c, w in zip(components, weights):
-                check += w*c[i].interp(norm_vals[i, -1])
-                nll_vals[i] += w*c[i].interp(norm_vals[i])
+                check += w * c[i].interp(norm_vals[i, -1])
+                nll_vals[i] += w * c[i].interp(norm_vals[i])
                 pass
             # reset the zeros
             nll_obj = LnLFn(norm_vals[i], nll_vals[i])
@@ -1043,7 +1043,7 @@ class CastroData(CastroData_Base):
             * npred: Number of predicted photons (Not implemented)
             * dnde : Differential flux of the test source ( ph cm^-2 s^-1
               MeV^-1 )
-     
+
         """
         super(CastroData, self).__init__(norm_vals, nll_vals, norm_type)
         self._refSpec = refSpec
@@ -1080,7 +1080,7 @@ class CastroData(CastroData_Base):
         flux = norm * deltae
         eflux = norm * deltae * ectr
 
-        ones = np.ones(flux.shape)        
+        ones = np.ones(flux.shape)
         ref_spec = ReferenceSpec(emin, emax, ones, ones, ones, ones)
 
         spec_data = SpecData(ref_spec, norm, flux, eflux, norm_err)
@@ -1194,7 +1194,7 @@ class CastroData(CastroData_Base):
 
         tab_s = convert_sed_cols(tab_s)
         tab_e = convert_sed_cols(tab_e)
-        
+
         return CastroData.create_from_tables(norm_type, tab_s, tab_e)
 
     @staticmethod
@@ -1222,17 +1222,17 @@ class CastroData(CastroData_Base):
         """
         tab_s = Table.read(fitsfile, hdu=1)
         tab_s = convert_sed_cols(tab_s)
-        
+
         if norm_type in ['flux', 'eflux', 'dnde']:
             ref_colname = 'ref_%s' % norm_type
-            norm_vals = np.array(tab_s['norm_scan'] * 
+            norm_vals = np.array(tab_s['norm_scan'] *
                                  tab_s[ref_colname][:, np.newaxis])
         elif norm_type == "norm":
             norm_vals = np.array(tab_s['norm_scan'])
         else:
             raise Exception('Unrecognized normalization type: %s' % norm_type)
 
-        nll_vals = -np.array(tab_s['dloglike_scan'])        
+        nll_vals = -np.array(tab_s['dloglike_scan'])
         ref_spec = ReferenceSpec.create_from_table(tab_s)
         spec_data = SpecData(ref_spec, tab_s['norm'], tab_s['norm_err'])
         return CastroData(norm_vals, nll_vals, spec_data, norm_type)
@@ -1259,8 +1259,8 @@ class CastroData(CastroData_Base):
             return None
         norm_vals, nll_vals = CastroData_Base.stack_nll(
             shape, components, ylims, weights)
-        return CastroData(norm_vals, nll_vals, 
-                          components[0].refSpec, 
+        return CastroData(norm_vals, nll_vals,
+                          components[0].refSpec,
                           components[0].norm_type)
 
     def _buildLnLFn(self, normv, nllv):
@@ -1309,12 +1309,12 @@ class CastroData(CastroData_Base):
         """
         if spec_types is None:
             spec_types = ["PowerLaw", "LogParabola", "PLExpCutoff"]
-        
+
         retDict = {}
         for specType in spec_types:
             spec_func = self.create_functor(specType)
             fit_out = self.fit_spectrum(spec_func, spec_func.params)
-            
+
             specDict = {"Function": spec_func,
                         "Result": fit_out['params'],
                         "Spectrum": fit_out['spec_vals'],
@@ -1339,7 +1339,7 @@ class CastroData(CastroData_Base):
         initPars : `~numpy.ndarray`        
             Arrays of parameter values with which the spectral
             function will be initialized.
-        
+
         scale : float
             The 'pivot energy' or energy scale to use for the spectrum
 
@@ -1365,7 +1365,7 @@ class CastroData(CastroData_Base):
                 initPars = np.array([5e-13, -2.0, 0.0])
             elif specType == 'PLExpCutoff':
                 initPars = np.array([5e-13, -1.0, 1E4])
-        
+
         fn.params = initPars
         return fn
 
@@ -1504,7 +1504,7 @@ class TSCube(object):
         tab_e = convert_sed_cols(tab_e)
         tab_s = convert_sed_cols(tab_s)
         tab_f = convert_sed_cols(tab_f)
-        
+
         emin = np.array(tab_e['e_min'])
         emax = np.array(tab_e['e_max'])
         try:
@@ -1517,7 +1517,6 @@ class TSCube(object):
                 emax /= 1000.
         except:
             pass
-
 
         nebins = len(tab_e)
         npred = tab_e['ref_npred']
@@ -1725,4 +1724,3 @@ if __name__ == "__main__":
     castro_sed = CastroData.create_from_fits("castro.fits", irow=0)
     test_dict_sed = castro_sed.test_spectra()
     print(test_dict_sed)
- 

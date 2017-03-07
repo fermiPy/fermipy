@@ -49,18 +49,18 @@ overriden by supplying one or more *kwargs*:
    
    # Localize the source and update its properties in the model
    # with the localized position
-   >>> o = gta.extension('sourceA',update=True)
+   >>> o = gta.extension('sourceA', update=True)
 
-The localization method will profile over any background parameters
-that were free when the method was executed.  One can fix
-all background parameters with the *fix_background* parameter:
+The localization method will not profile over any background
+parameters that were free when the method was executed.  One can free
+background parameters with the ``free_background`` parameter:
 
 .. code-block:: python
    
    # Free a nearby source that may be be partially degenerate with the
    # source of interest
    gta.free_norm('sourceB')
-   gta.localize('sourceA')
+   gta.localize('sourceA', free_background=True)
 
 The contents of the output dictionary are described in the following table:
 

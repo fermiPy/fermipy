@@ -26,7 +26,7 @@ fi
 
 # Set default ST version
 if [ -z $FERMI_RELEASE_TAG ]; then
-    export FERMI_RELEASE_TAG=11-05-00
+    export FERMI_RELEASE_TAG=11-05-01
 fi
 
 # Save PATH

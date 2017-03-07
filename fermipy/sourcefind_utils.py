@@ -7,8 +7,12 @@ from astropy.coordinates import SkyCoord
 from fermipy import utils
 
 
-def fit_error_ellipse(tsmap, xy=None, dpix=3):
-    """Fit a positional uncertainty ellipse from a TS map.
+def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
+    """Fit a positional uncertainty ellipse from a TS map.  The fit
+    will be performed over pixels in the vicinity of the peak pixel
+    with D < dpix OR z > zmin where D is the distance from the peak
+    pixel in pixel coordinates and z is the difference in amplitude
+    from the peak pixel.
 
     Parameters
     ----------
@@ -16,7 +20,9 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3):
 
     xy : tuple
 
-    dpix : int
+    dpix : float
+
+    zmin : float
     """
 
     if xy is None:
@@ -25,7 +31,8 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3):
     else:
         ix, iy = xy
 
-    pbfit = utils.fit_parabola(tsmap.counts.T, ix, iy, dpix=dpix)
+    pbfit = utils.fit_parabola(tsmap.counts.T, ix, iy, dpix=dpix,
+                               zmin=zmin)
 
     wcs = tsmap.wcs
     cdelt0 = tsmap.wcs.wcs.cdelt[0]
@@ -33,25 +40,52 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3):
     npix0 = tsmap.counts.T.shape[0]
     npix1 = tsmap.counts.T.shape[1]
 
-    skydir = SkyCoord.from_pixel(pbfit['x0'], pbfit['y0'], wcs)
 
-    sigmax = 2.0**0.5 * pbfit['sigmax'] * np.abs(cdelt0)
-    sigmay = 2.0**0.5 * pbfit['sigmay'] * np.abs(cdelt1)
+
+    o = {}
+    o['fit_success'] = pbfit['fit_success']
+    o['fit_inbounds'] = True
+
+    if pbfit['fit_success']:
+        sigmax = 2.0**0.5 * pbfit['sigmax'] * np.abs(cdelt0)
+        sigmay = 2.0**0.5 * pbfit['sigmay'] * np.abs(cdelt1)
+        theta = pbfit['theta']
+        sigmax = min(sigmax, np.abs(2.0 * npix0 * cdelt0))
+        sigmay = min(sigmay, np.abs(2.0 * npix1 * cdelt1))
+        o['xpix'] = pbfit['x0']
+        o['ypix'] = pbfit['y0']
+        o['zoffset'] = pbfit['z0']
+    else:
+        sigmax = np.nan
+        sigmay = np.nan
+        theta = np.nan
+        o['xpix'] = float(ix)
+        o['ypix'] = float(iy)
+        o['zoffset'] = tsmap.counts.T[ix,iy]
+        
+    if (o['xpix'] <= 0 or o['xpix'] >= npix0 - 1 or
+        o['ypix'] <= 0 or o['ypix'] >= npix1 - 1):
+        o['fit_inbounds'] = False
+        o['xpix'] = float(ix)
+        o['ypix'] = float(iy)
+
+    o['peak_offset'] = np.sqrt((float(ix) - o['xpix'])**2 +
+                               (float(iy) - o['ypix'])**2)
+        
+    skydir = SkyCoord.from_pixel(o['xpix'], o['ypix'], wcs)
     sigma = (sigmax * sigmay)**0.5
     r68 = 2.30**0.5 * sigma
     r95 = 5.99**0.5 * sigma
     r99 = 9.21**0.5 * sigma
 
-    o = {}
-
     if sigmax < sigmay:
         o['sigma_semimajor'] = sigmay
         o['sigma_semiminor'] = sigmax
-        o['theta'] = np.fmod(2 * np.pi + np.pi / 2. + pbfit['theta'], np.pi)
+        o['theta'] = np.fmod(2 * np.pi + np.pi / 2. + theta, np.pi)
     else:
         o['sigma_semimajor'] = sigmax
         o['sigma_semiminor'] = sigmay
-        o['theta'] = np.fmod(2 * np.pi + pbfit['theta'], np.pi)
+        o['theta'] = np.fmod(2 * np.pi + theta, np.pi)
 
     o['sigmax'] = sigmax
     o['sigmay'] = sigmay
@@ -62,20 +96,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3):
     o['ra'] = skydir.icrs.ra.deg
     o['dec'] = skydir.icrs.dec.deg
     o['glon'] = skydir.galactic.l.deg
-    o['glat'] = skydir.galactic.b.deg
-    o['offset'] = pbfit['z0']
-
-    pix = skydir.to_pixel(wcs)
-    o['xpix'] = float(pix[0])
-    o['ypix'] = float(pix[1])
-
-    if o['xpix'] < 0 or o['xpix'] > npix0 - 1:
-        o['fit_success'] = False
-    elif o['ypix'] < 0 or o['ypix'] > npix1 - 1:
-        o['fit_success'] = False
-    else:
-        o['fit_success'] = pbfit['fit_success']
-
+    o['glat'] = skydir.galactic.b.deg    
     a = o['sigma_semimajor']
     b = o['sigma_semiminor']
 
@@ -116,7 +137,7 @@ def find_peaks(input_map, threshold, min_separation=0.5):
     region_size_pix = int(min_separation / cdelt)
     region_size_pix = max(3, region_size_pix)
 
-    deltaxy = utils.make_pixel_offset(region_size_pix * 2 + 3)
+    deltaxy = utils.make_pixel_distance(region_size_pix * 2 + 3)
     deltaxy *= max(input_map.wcs.wcs.cdelt)
     region = deltaxy < min_separation
 

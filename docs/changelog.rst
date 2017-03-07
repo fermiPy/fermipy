@@ -3,7 +3,30 @@
 Changelog
 =========
 
-This page is a changelog for releases of Fermipy.
+This page is a changelog for releases of Fermipy.  You can also browse
+releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
+
+0.13.0 (01/16/2017)
+-------------------
+* Rewrite LTCube class to add support for fast LT cube generation.
+  The ``gtlike.use_local_ltcube`` option can be used to enable the
+  python-based LT cube calculation in lieu of ``gtltcube``.
+* Bug fixes and improvements to lightcurve method (see `#102
+  <https://github.com/fermiPy/fermipy/pull/102>`_).  Python-based LT
+  cube generation is now enabled by default resulting in much faster
+  execution time when generating light curves over long time spans.
+* Add ``fit_position`` option to
+  `~fermipy.gtanalysis.GTAnalysis.extension` that can be used to
+  enable a joint fit of extension and position.
+* New scheme for auto-generating parameter docstrings.
+* Add new `~fermipy.gtanalysis.GTAnalysis.set_source_morphology`
+  method to update the spatial model of a source at runtime.
+* Major refactoring of `~fermipy.gtanalysis.GTAnalysis.extension` and
+  `~fermipy.gtanalysis.GTAnalysis.localize` (see `#106
+  <https://github.com/fermiPy/fermipy/pull/106>`_ and `#110
+  <https://github.com/fermiPy/fermipy/pull/110>`_).
+* Pulled in many new modules and scripts for diffuse all-sky analysis
+  (see `#105 <https://github.com/fermiPy/fermipy/pull/105>`_).
 
 0.12.0 (11/20/2016)
 -------------------

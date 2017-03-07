@@ -14,7 +14,7 @@ def cmd_exists(cmd):
                            stderr=subprocess.PIPE) == 0
 
 
-def clone_configs(basedir, base_configs, opt_configs, scripts):
+def clone_configs(basedir, base_configs, opt_configs, scripts, args=''):
     """
     """
     config = {}
@@ -28,7 +28,7 @@ def clone_configs(basedir, base_configs, opt_configs, scripts):
     for script_in in scripts:
         bash_script = """
 cat $0
-{scriptexe} --config={config}
+{scriptexe} --config={config} {args}
 """
 
         if os.path.isfile(script_in):
@@ -56,7 +56,8 @@ cat $0
             with open(os.path.join(runscript), 'wt') as f:
                 f.write(bash_script[2].format(source=name,
                                               scriptexe=bash_script[1],
-                                              config=cfgfile))
+                                              config=cfgfile,
+                                              args=args))
 
         if not config:
             continue
@@ -72,26 +73,30 @@ def main():
     parser = argparse.ArgumentParser(usage=usage, description=description)
 
     parser.add_argument('--basedir', default=None, required=True)
-    parser.add_argument('--source_list', default=None, required=True,
+    parser.add_argument('--source_list', default=None, required=True, action='append',
                         help='YAML file containing a list of sources to be '
                              'analyzed.')
     parser.add_argument('--script', action='append', required=True,
                         help='The python script.')
+    parser.add_argument('--args', default='',
+                        help='Extra script arguments.')
+    parser.add_argument('--num_config', default=None, type=int,
+                        help='Number of analyis directories to create.')
     parser.add_argument('configs', nargs='*', default=None,
                         help='One or more configuration files that will be merged '
                              'to construct the analysis configuration.')
 
     args = parser.parse_args()
 
-    # src_dict = {}
-    # src_list = yaml.load(open(args.source_list))
-
-    # for src,sdict in src_list.items():
-    #    src_dict[src] = sdict
-
-    src_dict = yaml.load(open(args.source_list))
-
-    clone_configs(args.basedir, args.configs, src_dict, args.script)
+    src_dict = {}
+    for x in args.source_list:
+        src_dict.update(yaml.load(open(x)))
+        
+    if args.num_config:
+        src_dict = { k : src_dict[k] for k in
+                     list(src_dict.keys())[:args.num_config] }
+    
+    clone_configs(args.basedir, args.configs, src_dict, args.script, args.args)
 
 
 if __name__ == "__main__":

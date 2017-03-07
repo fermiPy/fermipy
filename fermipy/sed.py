@@ -10,21 +10,23 @@ from __future__ import absolute_import, division, print_function
 import copy
 import logging
 import os
+import json
 
 import numpy as np
 
-import pyLikelihood as pyLike
-
-import astropy.io.fits as pyfits
+from astropy.io import fits
 from astropy.table import Table, Column
 
 import fermipy.config
-import fermipy.utils as utils
-import fermipy.gtutils as gtutils
-import fermipy.roi_model as roi_model
+from fermipy import utils
+from fermipy import gtutils
+from fermipy import fits_utils
+from fermipy import roi_model
 from fermipy.config import ConfigSchema
+from fermipy import model_utils
 
 from LikelihoodState import LikelihoodState
+import pyLikelihood as pyLike
 
 
 class SEDGenerator(object):
@@ -54,39 +56,7 @@ class SEDGenerator(object):
             sequence must align with the bin edges of the underyling
             analysis instance.
 
-        bin_index : float
-            Spectral index that will be use when fitting the energy
-            distribution within an energy bin.
-
-        use_local_index : bool
-            Use a power-law approximation to the shape of the global
-            spectrum in each bin.  If this is false then a constant
-            index set to `bin_index` will be used.
-
-        fix_background : bool
-            Fix background components when fitting the flux
-            normalization in each energy bin.  If fix_background=False
-            then all background parameters that are currently free in
-            the fit will be profiled.  By default fix_background=True.
-
-        ul_confidence : float
-            Set the confidence level that will be used for the
-            calculation of flux upper limits in each energy bin.
-
-        cov_scale : float
-            Scaling factor that will be applied when setting the
-            gaussian prior on the normalization of free background
-            sources.  If this parameter is None then no gaussian prior
-            will be applied.
-
-        make_plots : bool
-            Generate plots.
-
-        write_fits : bool
-            Write the output to a FITS file.
-
-        write_npy : bool
-            Write the output dictionary to a numpy file.
+        {options}
 
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
@@ -104,9 +74,7 @@ class SEDGenerator(object):
         schema = ConfigSchema(self.defaults['sed'],
                               optimizer=self.defaults['optimizer'])
         schema.add_option('prefix', '')
-        schema.add_option('make_plots', False)
-        schema.add_option('write_fits', True)
-        schema.add_option('write_npy', True)
+        schema.add_option('outfile', None, '', str)
         schema.add_option('loge_bins', None, '', list)
         config = utils.create_dict(self.config['sed'],
                                    optimizer=self.config['optimizer'])
@@ -115,23 +83,28 @@ class SEDGenerator(object):
         self.logger.info('Computing SED for %s' % name)
 
         o = self._make_sed(name, **config)
-        filename = \
-            utils.format_filename(self.workdir, 'sed',
-                                  prefix=[config['prefix'],
-                                          name.lower().replace(' ', '_')])
+
+        self.logger.info('Finished SED')
+
+        outfile = config.get('outfile', None)
+        if outfile is None:
+            outfile = utils.format_filename(self.workdir, 'sed',
+                                            prefix=[config['prefix'],
+                                                    name.lower().replace(' ', '_')])
+        else:
+            outfile = os.path.join(self.workdir,
+                                   os.path.splitext(outfile)[0])
 
         o['file'] = None
         if config['write_fits']:
-            o['file'] = os.path.basename(filename) + '.fits'
-            self._make_sed_fits(o, filename + '.fits', **config)
+            o['file'] = os.path.basename(outfile) + '.fits'
+            self._make_sed_fits(o, outfile + '.fits', **config)
 
         if config['write_npy']:
-            np.save(filename + '.npy', o)
+            np.save(outfile + '.npy', o)
 
         if config['make_plots']:
             self._plotter.make_sed_plots(o, **config)
-
-        self.logger.info('Finished SED')
 
         return o
 
@@ -139,8 +112,10 @@ class SEDGenerator(object):
 
         # Write a FITS file
         cols = [Column(name='e_min', dtype='f8', data=sed['e_min'], unit='MeV'),
-                Column(name='e_ref', dtype='f8', data=sed['e_ref'], unit='MeV'),
-                Column(name='e_max', dtype='f8', data=sed['e_max'], unit='MeV'),
+                Column(name='e_ref', dtype='f8',
+                       data=sed['e_ref'], unit='MeV'),
+                Column(name='e_max', dtype='f8',
+                       data=sed['e_max'], unit='MeV'),
                 Column(name='ref_dnde_e_min', dtype='f8',
                        data=sed['ref_dnde_e_min'], unit='ph / (MeV cm2 s)'),
                 Column(name='ref_dnde_e_max', dtype='f8',
@@ -167,66 +142,65 @@ class SEDGenerator(object):
 
         tab = Table(cols)
         tab.meta['UL_CONF'] = 0.95
-        tab.write(filename, format='fits', overwrite=True)
+        hdu_sed = fits.table_to_hdu(tab)
+        hdu_sed.name = 'SED'
 
-        columns = pyfits.ColDefs([])
+        columns = fits.ColDefs([])
 
-        columns.add_col(pyfits.Column(name=str('energy'), format='E',
-                                      array=sed['model_flux']['energies'],
-                                      unit='MeV'))
-        columns.add_col(pyfits.Column(name=str('dnde'), format='E',
-                                      array=sed['model_flux']['dnde'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('dnde_lo'), format='E',
-                                      array=sed['model_flux']['dnde_lo'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('dnde_hi'), format='E',
-                                      array=sed['model_flux']['dnde_hi'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('dnde_err'), format='E',
-                                      array=sed['model_flux']['dnde_err'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('dnde_ferr'), format='E',
-                                      array=sed['model_flux']['dnde_ferr']))
+        columns.add_col(fits.Column(name=str('energy'), format='E',
+                                    array=sed['model_flux']['energies'],
+                                    unit='MeV'))
+        columns.add_col(fits.Column(name=str('dnde'), format='E',
+                                    array=sed['model_flux']['dnde'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('dnde_lo'), format='E',
+                                    array=sed['model_flux']['dnde_lo'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('dnde_hi'), format='E',
+                                    array=sed['model_flux']['dnde_hi'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('dnde_err'), format='E',
+                                    array=sed['model_flux']['dnde_err'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('dnde_ferr'), format='E',
+                                    array=sed['model_flux']['dnde_ferr']))
 
-        hdu_f = pyfits.BinTableHDU.from_columns(columns, name='MODEL_FLUX')
+        hdu_f = fits.BinTableHDU.from_columns(columns, name='MODEL_FLUX')
 
-        columns = pyfits.ColDefs([])
+        columns = fits.ColDefs([])
 
         npar = len(sed['param_names'])
-        columns.add_col(pyfits.Column(name=str('name'),
-                                      format='A32',
-                                      array=sed['param_names']))
-        columns.add_col(pyfits.Column(name=str('value'), format='E',
-                                      array=sed['param_values']))
-        columns.add_col(pyfits.Column(name=str('error'), format='E',
-                                      array=sed['param_errors']))
-        columns.add_col(pyfits.Column(name=str('covariance'),
-                                      format='%iE' % npar,
-                                      dim=str('(%i)' % npar),
-                                      array=sed['param_covariance']))
-        columns.add_col(pyfits.Column(name=str('correlation'),
-                                      format='%iE' % npar,
-                                      dim=str('(%i)' % npar),
-                                      array=sed['param_correlation']))
+        columns.add_col(fits.Column(name=str('name'),
+                                    format='A32',
+                                    array=sed['param_names']))
+        columns.add_col(fits.Column(name=str('value'), format='E',
+                                    array=sed['param_values']))
+        columns.add_col(fits.Column(name=str('error'), format='E',
+                                    array=sed['param_errors']))
+        columns.add_col(fits.Column(name=str('covariance'),
+                                    format='%iE' % npar,
+                                    dim=str('(%i)' % npar),
+                                    array=sed['param_covariance']))
+        columns.add_col(fits.Column(name=str('correlation'),
+                                    format='%iE' % npar,
+                                    dim=str('(%i)' % npar),
+                                    array=sed['param_correlation']))
 
-        hdu_p = pyfits.BinTableHDU.from_columns(columns, name='PARAMS')
+        hdu_p = fits.BinTableHDU.from_columns(columns, name='PARAMS')
 
-        hdulist = pyfits.open(filename)
-        hdulist[1].name = 'SED'
-        hdulist = pyfits.HDUList([hdulist[0], hdulist[1], hdu_f, hdu_p])
+        hdus = [fits.PrimaryHDU(), hdu_sed, hdu_f, hdu_p]
+        hdus[0].header['CONFIG'] = json.dumps(sed['config'])
+        hdus[1].header['CONFIG'] = json.dumps(sed['config'])
 
-        for h in hdulist:
-            h.header['SRCNAME'] = sed['name']
-            h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
-
-        hdulist.writeto(filename, clobber=True)
+        fits_utils.write_hdus(hdus, filename,
+                              keywords={'SRCNAME': sed['name']})
 
     def _make_sed(self, name, **config):
 
         bin_index = config['bin_index']
         use_local_index = config['use_local_index']
-        fix_background = config['fix_background']
+        free_background = config['free_background']
+        free_radius = config['free_radius']
         ul_confidence = config['ul_confidence']
         cov_scale = config['cov_scale']
         loge_bins = config['loge_bins']
@@ -275,7 +249,6 @@ class SEDGenerator(object):
              'fit_status': np.zeros(nbins),
              'correlation': {},
              'model_flux': {},
-             'params': {},
              'config': config
              }
 
@@ -297,15 +270,13 @@ class SEDGenerator(object):
                               min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
         spectral_pars = gtutils.get_function_pars_dict(source.spectrum())
-        o['params'] = roi_model.get_params_dict(spectral_pars)
         o['SpectrumType'] = self.roi[name]['SpectrumType']
+        o.update(model_utils.pars_dict_to_vectors(o['SpectrumType'],
+                                                  spectral_pars))
 
         param_names = gtutils.get_function_par_names(o['SpectrumType'])
         npar = len(param_names)
         o['param_covariance'] = np.empty((npar, npar), dtype=float) * np.nan
-        o['param_names'] = np.array(param_names)
-        o['param_values'] = np.empty(npar, dtype=float) * np.nan
-        o['param_errors'] = np.empty(npar, dtype=float) * np.nan
 
         pmask0 = np.empty(len(fit_output['par_names']), dtype=bool)
         pmask0.fill(False)
@@ -313,8 +284,6 @@ class SEDGenerator(object):
         pmask1.fill(False)
         for i, pname in enumerate(param_names):
 
-            o['param_values'][i] = o['params'][pname][0]
-            o['param_errors'][i] = o['params'][pname][1]
             for j, pname2 in enumerate(fit_output['par_names']):
                 if name != fit_output['src_names'][j]:
                     continue
@@ -334,13 +303,26 @@ class SEDGenerator(object):
 
         self._restore_free_params()
 
+        self.logger.info('Fitting SED')
+
         # Setup background parameters for SED
         self.free_sources(False, pars='shape')
         self.free_norm(name)
 
-        if fix_background:
+        if not free_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
-        elif cov_scale is not None:
+
+        if free_radius is not None:
+            diff_sources = [s.name for s in self.roi.sources if s.diffuse]
+            skydir = self.roi[name].skydir
+            free_srcs = [s.name for s in
+                         self.roi.get_sources(skydir=skydir,
+                                              distance=free_radius,
+                                              exclude=diff_sources)]
+            self.free_sources_by_name(free_srcs, pars='norm',
+                                      loglevel=logging.DEBUG)
+
+        if cov_scale is not None:
             self._latch_free_params()
             self.zero_source(name)
             self.fit(loglevel=logging.DEBUG, update=False)
@@ -372,15 +354,22 @@ class SEDGenerator(object):
                 gf_bin_flux += [min_flux]
 
         old_spectrum = source.spectrum()
-        self.like.setSpectrum(str(name), str('PowerLaw'))
-        self.free_parameter(name, 'Index', False)
-        self.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
-                           true_value=False,
-                           bounds=[1E-10, 1E10],
-                           update_source=False)
-        self.free_parameter(name, 'Prefactor', True)
-        self.set_parameter(name, 'Scale', 1E3, scale=1.0,
-                           bounds=[1, 1E6], update_source=False)
+        old_pars = copy.deepcopy(self.roi[name].spectral_pars)
+        old_type = self.roi[name]['SpectrumType']
+
+        spectrum_pars = {
+            'Prefactor':
+                {'value': 1.0, 'scale': 1E-13, 'min': 1E-10,
+                    'max': 1E10, 'free': True},
+            'Index':
+                {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0, 'free': False},
+            'Scale':
+                {'value': 1E3, 'scale': 1.0, 'min': 1., 'max': 1E6, 'free': False},
+        }
+
+        self.set_source_spectrum(str(name), 'PowerLaw',
+                                 spectrum_pars=spectrum_pars,
+                                 update_source=False)
 
         src_norm_idx = -1
         free_params = self.get_params(True)
@@ -508,15 +497,15 @@ class SEDGenerator(object):
             o['%s_ul' % t] = o['norm_ul'] * o['ref_%s' % t]
 
         self.set_energy_range(loge_bounds[0], loge_bounds[1])
-        self.like.setSpectrum(str(name), old_spectrum)
+        self.set_source_spectrum(str(name), old_type,
+                                 spectrum_pars=old_pars,
+                                 update_source=False)
+
         saved_state.restore()
         self._sync_params(name)
 
         if cov_scale is not None:
             self.remove_priors()
-
-        src = self.roi.get_source_by_name(name)
-        src.update_data({'sed': copy.deepcopy(o)})
 
         return o
 

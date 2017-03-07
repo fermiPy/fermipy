@@ -246,7 +246,7 @@ def merge_hpx_counts_cubes(filelist):
     for hdu in hdulist:
         if date_end:
             hdu.header['DATE-END'] = date_end
-            
+
     out_prim.update_header()
     sys.stdout.write("!\n")
 
@@ -258,13 +258,13 @@ def stack_energy_planes_hpx(filelist, **kwargs):
     """
     from fermipy.skymap import HpxMap
     from fermipy.hpx_utils import HPX
-    maplist = [ HpxMap.create_from_fits(fname, **kwargs) for fname in filelist ] 
-    energies = np.log10(np.hstack([ amap.hpx.evals for amap in maplist ])).squeeze()
-    
-    counts = np.hstack([ amap.counts.flat for amap in maplist ])
-    counts = counts.reshape((len(energies), int(len(counts)/len(energies)) ))
+    maplist = [HpxMap.create_from_fits(fname, **kwargs) for fname in filelist]
+    energies = np.log10(
+        np.hstack([amap.hpx.evals for amap in maplist])).squeeze()
+
+    counts = np.hstack([amap.counts.flat for amap in maplist])
+    counts = counts.reshape((len(energies), int(len(counts) / len(energies))))
 
     template_map = maplist[0]
-    hpx = HPX.create_from_header(template_map.hpx.make_header(),energies)
+    hpx = HPX.create_from_header(template_map.hpx.make_header(), energies)
     return HpxMap(counts, hpx)
-

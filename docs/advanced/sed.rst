@@ -12,11 +12,11 @@ the ``bin_index`` parameter or allowed to vary over the energy range
 according to the local slope of the global spectral model (with the
 ``use_local_index`` parameter).
 
-The ``fix_background`` and ``cov_scale`` parameters can be used to
+The ``free_background`` and ``cov_scale`` parameters can be used to
 control how nuisance parameters are dealt with in the fit.  By default
 this method will fix the parameters of background components ROI when
 fitting the source normalization in each energy bin
-(``fix_background`` = True).  Setting ``fix_background`` to False will
+(``free_background`` = False).  Setting ``free_background`` to True will
 profile the normalizations of all background components that were free
 when the method was executed.  In order to minimize overfitting,
 background normalization parameters are constrained with priors taken
@@ -41,10 +41,10 @@ default configuration of the method:
 
    # Override the energy binning and the assumed power-law index
    # within the bin   
-   sed = gta.sed('sourceA',loge_bins=[2.0,2.5,3.0,3.5,4.0,4.5,5.0], bin_index=2.3)
+   sed = gta.sed('sourceA', loge_bins=[2.0,2.5,3.0,3.5,4.0,4.5,5.0], bin_index=2.3)
 
    # Profile background normalization parameters with prior scale of 5.0
-   sed = gta.sed('sourceA',fix_background=False,cov_scale=5.0)
+   sed = gta.sed('sourceA', free_background=True, cov_scale=5.0)
    
 By default the method will use the energy bins of the underlying
 analysis.  The ``loge_bins`` keyword argument can be used to override
