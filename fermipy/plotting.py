@@ -323,7 +323,7 @@ class ROIPlotter(fermipy.config.Configurable):
             self._wcsproj = self._proj.make_wcs(naxis=2,proj='AIR',energies=None,oversample=2)
             self._wcs = self._wcsproj.wcs
             self._mapping = hpx_utils.HpxToWcsMapping(self._proj,self._wcsproj)
-            self._data = dataT.T
+            self._data = data_map.counts.T
         else:
             raise Exception(
                 "Can't make ROIPlotter of unknown projection type %s" % type(data_map))
@@ -889,6 +889,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         loge_bounds = [None] + gta.config['plotting']['loge_bounds']
 
+        # EAC FIXME, remove for HEALPIX testing for now
         for x in loge_bounds:
             self.make_roi_plots(gta, mcube_map, prefix, loge_bounds=x,
                                 format=format)
@@ -1146,10 +1147,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
             model_data = mcube_map.counts.T
             diffuse_data = mcube_diffuse.counts.T
         elif p.projtype == "HPX":
-            dummy, model_dataT = p.cmap.convert_to_cached_wcs(
-                mcube_map.counts, sum_ebins=False)
-            dummy, diffuse_dataT = p.cmap.convert_to_cached_wcs(
-                mcube_diffuse.counts, sum_ebins=False)
+            if p.cmap._hpx2wcs is None:
+                dummy, model_dataT = p.cmap.make_wcs_from_hpx(sum_ebins=False)
+                dummy, diffuse_dataT = p.cmap.make_wcs_from_hpx(sum_ebins=False)
+            else:
+                dummy, model_dataT = p.cmap.convert_to_cached_wcs(
+                    mcube_map.counts, sum_ebins=False)
+                dummy, diffuse_dataT = p.cmap.convert_to_cached_wcs(
+                    mcube_diffuse.counts, sum_ebins=False)
             model_data = model_dataT.T
             diffuse_data = diffuse_dataT.T
 

@@ -45,10 +45,10 @@ HPX_FITS_CONVENTIONS = {'FGST_CCUBE':HPX_Conv('FGST_CCUBE'),
                         'FGST_SRCMAP':HPX_Conv('FGST_SRCMAP', extname=None, quantity_type='differential'),
                         'FGST_TEMPLATE':HPX_Conv('FGST_TEMPLATE', colstring='ENERGY', energy_hdu='ENERGIES'),
                         'FGST_SRCMAP_SPARSE':HPX_Conv('FGST_SRCMAP_SPARSE', colstring=None, extname=None, quantity_type='differential'),
-                        'GALPROP':HPX_Conv('GALPROP', colstring='BIN{idx}', extname='SKYMAP2', 
+                        'GALPROP':HPX_Conv('GALPROP', colstring='Bin', extname='SKYMAP2', 
                                            energy_hdu='ENERGIES', quantity_type='differential',
                                            coordsys='COORDTYPE'),
-                        'GALPROP2':HPX_Conv('GALPROP', colstring='BIN{idx}', extname='SKYMAP2', 
+                        'GALPROP2':HPX_Conv('GALPROP', colstring='Bin', extname='SKYMAP2', 
                                             energy_hdu='ENERGIES', quantity_type='differential')}
 
 
@@ -398,7 +398,7 @@ class HPX(object):
             return 'FGST_TEMPLATE'
         elif colname == 'COSBINS':
             return 'FGST_LTCUBE'
-        elif colname == 'BIN0':
+        elif colname == 'Bin0':
             return 'GALPROP'
         elif colname == 'CHANNEL1':
             if extname == 'SKYMAP':
@@ -439,7 +439,10 @@ class HPX(object):
         else:
             nside = -1
 
-        coordsys = header[conv.coordsys]
+        try:
+            coordsys = header[conv.coordsys]
+        except KeyError:
+            coordsys = header['COORDSYS']
  
         try:
             region = header["HPX_REG"]

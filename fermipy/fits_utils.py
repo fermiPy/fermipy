@@ -126,7 +126,7 @@ def read_projection_from_fits(fitsfile, extname=None):
             proj = WCS(f[extname].header)
             return proj, f, f[extname]
         elif extname in ['SKYMAP', 'SKYMAP2']:
-            proj = HPX.create_from_header(f[extname].header, ebins, conv)
+            proj = HPX.create_from_header(f[extname].header, ebins)
             return proj, f, f[extname]
         elif f[extname].header['XTENSION'] == 'BINTABLE':
             try:

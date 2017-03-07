@@ -1903,9 +1903,14 @@ class ROIModel(fermipy.config.Configurable):
                 search_dirs += [row['extdir'],
                                 os.path.join(row['extdir'], 'Templates')]
 
-                src_dict['Spatial_Filename'] = utils.resolve_file_path(
-                    row['Spatial_Filename'],
-                    search_dirs=search_dirs)
+                
+                try:
+                    src_dict['Spatial_Filename'] = utils.resolve_file_path(
+                        row['Spatial_Filename'],
+                        search_dirs=search_dirs)
+                except: 
+                    print ("Skipping ", row['Spatial_Filename'], search_dirs)
+                    continue
 
             else:
                 src_dict['SourceType'] = 'PointSource'
