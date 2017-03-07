@@ -51,7 +51,6 @@ HPX_FITS_CONVENTIONS = {'FGST_CCUBE':HPX_Conv('FGST_CCUBE'),
                         'GALPROP2':HPX_Conv('GALPROP', colstring='Bin', extname='SKYMAP2', 
                                             energy_hdu='ENERGIES', quantity_type='differential')}
 
-
 def coords_to_vec(lon, lat):
     """ Converts longitute and latitude coordinates to a unit 3-vector
 
@@ -422,6 +421,8 @@ class HPX(object):
         if conv.convname != 'GALPROP':
             if header["PIXTYPE"] != "HEALPIX":
                 raise Exception("PIXTYPE != HEALPIX")
+        if header["PIXTYPE"] != "HEALPIX":
+            raise Exception("PIXTYPE != HEALPIX")
         if header["ORDERING"] == "RING":
             nest = False
         elif header["ORDERING"] == "NESTED":

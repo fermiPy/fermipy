@@ -203,11 +203,11 @@ def get_params_dict(pars_dict):
 
     params = {}
     for k, p in pars_dict.items():
-        val = p['value'] * p['scale']
+        val = float(p['value'])*float(p['scale'])
         err = np.nan
         if 'error' in p:
-            err = p['error'] * np.abs(p['scale'])
-        params[k] = np.array([val, err])
+            err = float(p['error'])*np.abs(float(p['scale']))
+        params[k]=np.array([val,err])
 
     return params
 
@@ -232,13 +232,14 @@ class Model(object):
 
         if data is not None:
             self._data.update(data)
-
+            
         if not self.spectral_pars:
             pdict = get_function_defaults(self['SpectrumType'])
             self._data['spectral_pars'] = pdict
             for k, v in self.spectral_pars.items():
                 self._data['spectral_pars'][k] = make_parameter_dict(v)
 
+        
         self._names = [name]
         catalog = self._data['catalog']
 
@@ -1004,10 +1005,20 @@ class Source(Model):
             for node in source_library.findall('source'):
                 nested_sources += [Source.create_from_xml(node, extdir=extdir)]
         else:
-            spat = utils.load_xml_elements(root, 'spatialModel')
-            spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
-            spatial_pars = cast_pars_dict(spatial_pars)
-            spatial_type = spat['type']
+            try:
+                spat = utils.load_xml_elements(root, 'spatialModel')
+                spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
+                spatial_pars = gtutils.cast_pars_dict(spatial_pars)
+                spatial_type = spat['type']
+            except:
+                spat = {}
+                spatial_pars = {}
+                spatial_type = 'CompositeSource'
+                nested_sources = utils.load_xml_elements(root, 'source_library')
+                try:
+                    nested_sources = gtutils.cast_pars_dict(nested_sources)
+                except AttributeError:
+                    nested_sources = []
 
         xml_dict = copy.deepcopy(root.attrib)
         src_dict = {'catalog': xml_dict}
@@ -1084,8 +1095,7 @@ class Source(Model):
 
         if not self.extended:
             source_element = utils.create_xml_element(root, 'source',
-                                                      dict(name=self[
-                                                          'Source_Name'],
+                                                      dict(name=self['Source_Name'],
                                                           type='PointSource'))
 
             spat_el = ElementTree.SubElement(source_element, 'spatialModel')
@@ -1093,9 +1103,8 @@ class Source(Model):
 
         elif self['SpatialType'] == 'SpatialMap':
             source_element = utils.create_xml_element(root, 'source',
-                                                      dict(name=self[
-                                                          'Source_Name'],
-                                                          type='DiffuseSource'))
+                                                      dict(name=self['Source_Name'],
+                                                           type='DiffuseSource'))
 
             filename = utils.path_to_xmlpath(self['Spatial_Filename'])
             spat_el = utils.create_xml_element(source_element, 'spatialModel',
@@ -1183,7 +1192,7 @@ class ROIModel(fermipy.config.Configurable):
     represented by instances of `~fermipy.roi_model.Model` and can be
     accessed by name using the bracket operator.
 
-        * Create an ROI with all 3FGL sources and print a summary of its contents:
+    * Create an ROI with all 3FGL sources and print a summary of its contents:
 
         >>> skydir = astropy.coordinates.SkyCoord(0.0,0.0,unit='deg')
         >>> roi = ROIModel({'catalogs' : ['3FGL'],'src_roiwidth' : 10.0},skydir=skydir)

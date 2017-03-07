@@ -41,8 +41,12 @@ def read_energy_bounds(hdu):
     """
     nebins = len(hdu.data)
     ebin_edges = np.ndarray((nebins + 1))
-    ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
-    ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
+    try:
+        ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
+        ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
+    except KeyError:
+        ebin_edges[0:-1] = np.log10(hdu.data.field("energy_MIN"))
+        ebin_edges[-1] = np.log10(hdu.data.field("energy_MAX")[-1])
     return ebin_edges
 
 

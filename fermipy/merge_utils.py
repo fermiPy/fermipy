@@ -253,7 +253,6 @@ def merge_hpx_counts_cubes(filelist):
     return fits.HDUList(hdulist)
 
 
-
 def stack_energy_planes_hpx(filelist, **kwargs):
     """
     """
