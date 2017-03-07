@@ -8,6 +8,26 @@ import fermipy
 from fermipy.hpx_utils import HPX
 
 
+def find_and_read_ebins(hdulist):
+    """  Reads and returns the energy bin edges.
+
+    This works for both the CASE where the energies are in the ENERGIES HDU
+    and the case where they are in the EBOUND HDU
+    """
+    from fermipy import utils
+    ebins = None    
+    if 'ENERGIES' in hdulist:        
+        hdu = hdulist['ENERGIES']
+        ectr = hdu.data.field(hdu.columns[0].name)
+        ebins = np.exp(utils.center_to_edge(np.log(ectr)))
+    elif 'EBOUNDS' in hdulist:
+        hdu = hdulist['EBOUNDS']
+        emin = hdu.data.field('E_MIN')/1E3
+        emax = hdu.data.field('E_MAX')/1E3
+        ebins = np.append(emin,emax[-1])
+    return ebins
+
+
 def read_energy_bounds(hdu):
     """ Reads and returns the energy bin edges from a FITs HDU
     """
@@ -38,7 +58,17 @@ def read_spectral_data(hdu):
     return ebins, fluxes, npreds
 
 
-def write_maps(primary_map, maps, outfile):
+def make_energies_hdu(energy_vals, extname="ENERGIES"):
+    """ Builds and returns a FITs HDU with the energy values
+
+    extname   : The HDU extension name           
+    """
+    cols = [fits.Column("Energy", "D", unit='MeV', array=energy_vals)]
+    hdu = fits.BinTableHDU.from_columns(cols, name=extname)
+    return hdu
+
+
+def write_maps(primary_map, maps, outfile, **kwargs):
 
     if primary_map is None:
         hdu_images = [fits.PrimaryHDU()]
@@ -46,7 +76,11 @@ def write_maps(primary_map, maps, outfile):
         hdu_images = [primary_map.create_primary_hdu()]
         
     for k, v in sorted(maps.items()):
-        hdu_images += [v.create_image_hdu(k)]
+        hdu_images += [v.create_image_hdu(k, **kwargs)]
+
+    energy_hdu = kwargs.get('energy_hdu', None)
+    if energy_hdu:
+        hdu_images += [energy_hdu]
 
     hdulist = fits.HDUList(hdu_images)
     for h in hdulist:
