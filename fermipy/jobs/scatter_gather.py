@@ -485,7 +485,7 @@ class ScatterGather(Link):
         if self._gather_link is None:
             return JobStatus.no_job
         job_details = self.dispatch_job(
-            self._gather_link, key=self.linkname + '.gather')
+            self._gather_link, key='gather@' + self._gather_link.linkname)
         return job_details.status
 
     def dispatch_job(self, link, key):
@@ -502,7 +502,10 @@ class ScatterGather(Link):
 
         Returns `JobDetails` object
         """
-        job_details = link.jobs[key]
+        try:
+            job_details = link.jobs[key]
+        except KeyError:
+            print (key, link.jobs)
         job_config = job_details.job_config
         link.update_args(job_config)
         logfile = job_config['logfile']
@@ -554,7 +557,7 @@ class ScatterGather(Link):
     def print_failed(self, stream=sys.stderr):
         """Print list of the failed jobs """
         for job_key, job_details in sorted(self._job_configs.items()):
-            if job_details.status == JobStatus.failed:
+            if job_details['status'] == JobStatus.failed:
                 stream.write("Failed job %s : log = %s\n" %
                              (job_key, job_details.logfile))
 
@@ -671,6 +674,7 @@ class ScatterGather(Link):
             return gather_status
 
         if self.args['dry_run']:
+            gather_status = self.gather_results()
             return JobStatus.no_job
 
         if failed:

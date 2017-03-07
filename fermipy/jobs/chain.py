@@ -319,7 +319,8 @@ class Link(object):
 
         Return two lists: (found, missing)
         """
-        return check_files(self.files.chain_input_files, self._file_stage,
+        all_input_files = self.files.chain_input_files + self.sub_files.chain_input_files
+        return check_files(all_input_files, self._file_stage,
                            return_found, return_missing)
 
     def check_output_files(self,
@@ -329,7 +330,8 @@ class Link(object):
 
         Return two lists: (found, missing)
         """
-        return check_files(self.files.chain_output_files, self._file_stage,
+        all_output_files = self.files.chain_output_files + self.sub_files.chain_output_files
+        return check_files(all_output_files, self._file_stage,
                            return_found, return_missing)
 
     def missing_input_files(self):
@@ -838,6 +840,7 @@ class Chain(Link):
                 self.stage_input_files(input_file_mapping, dry_run)
 
         for link in self._links.values():
+            print ("Running link ", link.linkname)
             link.run_link(stream=stream, dry_run=dry_run, stage_files=False)
 
         if self._file_stage is not None and stage_files:
