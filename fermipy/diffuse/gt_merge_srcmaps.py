@@ -203,7 +203,7 @@ def create_sg_merge_srcmaps(**kwargs):
     link.linkname = kwargs.pop('linkname', link.linkname)
     appname = kwargs.pop('appname', 'fermipy-merge-srcmaps-sg')
 
-    lsf_args = {'W': 1500,
+    lsf_args = {'W': 6000,
                 'R': 'rhel60'}
 
     usage = "%s [options]"%(appname)
