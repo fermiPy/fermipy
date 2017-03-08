@@ -273,10 +273,7 @@ class Catalog4FGLP(Catalog):
         strip_columns(table)
 
         table['Source_Name'] = table['NickName']
-        try:
-            table['beta'] = table['Beta']
-        except KeyError:
-            pass
+        table['beta'] = table['Beta']
 
         m = table['Extended'] == True
 
