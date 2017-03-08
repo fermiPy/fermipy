@@ -45,12 +45,8 @@ def read_energy_bounds(hdu):
     """
     nebins = len(hdu.data)
     ebin_edges = np.ndarray((nebins + 1))
-    try:
-        ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
-        ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
-    except KeyError:
-        ebin_edges[0:-1] = np.log10(hdu.data.field("energy_MIN"))
-        ebin_edges[-1] = np.log10(hdu.data.field("energy_MAX")[-1])
+    ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
+    ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
     return ebin_edges
 
 
@@ -130,7 +126,7 @@ def read_projection_from_fits(fitsfile, extname=None):
     nhdu = len(f)
     # Try and get the energy bounds
     try:
-        ebins = find_and_read_ebins(f)
+        ebins = read_energy_bounds(f['EBOUNDS'])
     except:
         ebins = None
 
@@ -143,9 +139,6 @@ def read_projection_from_fits(fitsfile, extname=None):
     else:
         if f[extname].header['XTENSION'] == 'IMAGE':
             proj = WCS(f[extname].header)
-            return proj, f, f[extname]
-        elif extname in ['SKYMAP', 'SKYMAP2']:
-            proj = HPX.create_from_header(f[extname].header, ebins)
             return proj, f, f[extname]
         elif f[extname].header['XTENSION'] == 'BINTABLE':
             try:
@@ -163,9 +156,6 @@ def read_projection_from_fits(fitsfile, extname=None):
             proj = WCS(f[i].header)
             return proj, f, f[i]
         elif f[i].header['XTENSION'] == 'BINTABLE':
-            if f[i].name in ['SKYMAP', 'SKYMAP2']:
-                proj = HPX.create_from_header(f[i].header, ebins)
-                return proj, f, f[i]
             try:
                 if f[i].header['PIXTYPE'] == 'HEALPIX':
                     proj = HPX.create_from_header(f[i].header, ebins)

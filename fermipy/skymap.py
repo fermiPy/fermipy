@@ -423,18 +423,6 @@ class HpxMap(Map_Base):
     @staticmethod
     def create_from_fits(fitsfile, **kwargs):
         hdulist = fits.open(fitsfile)
-        extname = kwargs.get('hdu', 'SKYMAP')
-        themap, thefile = read_map_from_fits(fitsfile, extname)
-        return themap
-
-    def create_image_hdu(self, name=None, **kwargs):
-        kwargs['extname'] = name
-        return self.hpx.make_hdu(self.counts, **kwargs)
-
-
-    @staticmethod
-    def create_from_fits(fitsfile, **kwargs):
-        hdulist = fits.open(fitsfile)
         return HpxMap.create_from_hdulist(hdulist, **kwargs)
 
     def create_image_hdu(self, name=None, **kwargs):
