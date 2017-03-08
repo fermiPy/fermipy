@@ -1,15 +1,7 @@
 .. _fermipy_jobs:
 
 fermipy.jobs subpackage
-===============
-
-fermipy.jobs module
--------------------
-
-.. automodule:: fermipy.jobs
-    :members:
-    :undoc-members:
-    :show-inheritance:
+=======================
 
 fermipy.jobs.chain module
 -------------------------
