@@ -535,6 +535,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             rm['components'][i]['npred'] = 0
 
         for name in self.like.sourceNames():
+            
+            # EAC
+            self.update_source(name)
 
             # EAC, this is one of the only things we need from setup()
             # self.update_source(name)
@@ -981,7 +984,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def _create_likelihood(self, srcmdl=None):
         """Instantiate the likelihood object for each component and
         create a SummedLikelihood."""
-
         self._like = SummedLikelihood()
         for c in self.components:
             c._create_binned_analysis(srcmdl)
@@ -993,6 +995,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def _init_roi_model(self):
 
+        # EAC, move from setup
+        self._ccube_file = os.path.join(self.workdir,
+                                        'ccube.fits')
         rm = self._roi_data
 
         rm['counts'] = np.zeros(self.enumbins)
@@ -2147,7 +2152,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                             loge_bounds[1],
                                             summed=True)
             npred = np.sum(cs)
-            val = 1. / npred
+            val = 1. / max(npred, 1.)
             npred = 1.0
             par.setValue(0.0)
             self.like.syncSrcParams(str(name))
@@ -3529,6 +3534,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         name = self.get_source_name(name)
         source = self.like[name].src
+
         spectrum = source.spectrum()
         normPar = self.like.normPar(name)
 
@@ -3605,6 +3611,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 dnde10000_index = -get_spectral_index(self.like[name],
                                                       10000.)
 
+  
             src_dict['dnde_index'] = dnde_index
             src_dict['dnde100_index'] = dnde100_index
             src_dict['dnde1000_index'] = dnde1000_index
@@ -3642,6 +3649,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             pass
         # self.logger.error('Failed to update source parameters.',
         #  exc_info=True)
+
         lnlp = self.profile_norm(name, savestate=True,
                                  reoptimize=reoptimize, npts=npts,
                                  optimizer=optimizer)
@@ -3706,7 +3714,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         # if ex.message == 'Covariance matrix has not been
         # computed.':
 
-        # Extract bowtie
+       # Extract bowtie
         if fd and len(src_dict['covar']) and src_dict['covar'].ndim >= 1:
             loge = np.linspace(self.log_energies[0],
                                self.log_energies[-1], 50)
@@ -3762,16 +3770,22 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._name = self.config['name']
 
         search_dirs = [workdir]
-
+        file_suffix = self.config['file_suffix']
         self._files = {}
-        self._files['ft1'] = 'ft1%s.fits'
-        self._files['ft1_filtered'] = 'ft1_filtered%s.fits'
-        self._files['ccube'] = 'ccube%s.fits'
-        self._files['ccubemc'] = 'ccubemc%s.fits'
-        self._files['srcmap'] = 'srcmap%s.fits'
-        self._files['bexpmap'] = 'bexpmap%s.fits'
-        self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
-        self._files['srcmdl'] = 'srcmdl%s.xml'
+        self._files['ft1'] = 'ft1%s.fits'% file_suffix
+        self._files['ft1_filtered'] = 'ft1_filtered%s.fits'% file_suffix
+        self._files['ccube'] = 'ccube%s.fits'% file_suffix
+        self._files['ccubemc'] = 'ccubemc%s.fits'% file_suffix
+        self._files['srcmap'] = self.config['gtlike'].get('srcmap')
+        if self._files['srcmap'] is None:
+            self._files['srcmap'] = 'srcmap%s.fits'% file_suffix        
+        self._files['bexpmap'] = self.config['gtlike'].get('bexpmap')
+        if self._files['bexpmap'] is None:
+            self._files['bexpmap'] = 'bexpmap%s.fits'% file_suffix
+        self._files['bexpmap_roi'] = self.config['gtlike'].get('bexpmap_roi')
+        if self._files['bexpmap_roi'] is None:
+             self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'% file_suffix
+        self._files['srcmdl'] = 'srcmdl%s.xml'% file_suffix
 
         self._data_files = {}
         self._data_files['evfile'] = self.config['data']['evfile']
@@ -3798,16 +3812,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._src_expscale = {}
         if self.config['gtlike']['expscale'] is not None:
             for src in self.roi:
-                self._src_expscale[src.name] = self.config[
-                    'gtlike']['expscale']
+                self._src_expscale[src.name] = self.config['gtlike']['expscale']
 
         if self.config['gtlike']['src_expscale']:
             for k, v in self.config['gtlike']['src_expscale'].items():
                 self._src_expscale[k] = v
 
         for k, v in self._files.items():
-            self._files[k] = os.path.join(workdir,
-                                          v % self.config['file_suffix'])
+            if v is None:
+                continue
+            self._files[k] = os.path.join(workdir, v)
 
         for k in ['srcmap', 'bexpmap', 'bexpmap_roi']:
 
@@ -4668,7 +4682,45 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if not os.path.isfile(self.files['srcmap']) or overwrite:
             run_gtapp('gtsrcmaps', self.logger, kw, loglevel=loglevel)
         else:
-            self.logger.log(loglevel, 'Skipping gtsrcmaps.')
+            self.logger.log(loglevel,'Skipping gtsrcmaps.')
+        
+
+    def _select_data(self, overwrite=False):
+
+        # Run gtselect and gtmktime
+        kw_gtselect = dict(infile=self.config['data']['evfile'],
+                           outfile=self.files['ft1'],
+                           ra=self.roi.skydir.ra.deg,
+                           dec=self.roi.skydir.dec.deg,
+                           rad=self.config['selection']['radius'],
+                           convtype=self.config['selection']['convtype'],
+                           phasemin=self.config['selection']['phasemin'],
+                           phasemax=self.config['selection']['phasemax'],
+                           evtype=self.config['selection']['evtype'],
+                           evclass=self.config['selection']['evclass'],
+                           tmin=self.config['selection']['tmin'],
+                           tmax=self.config['selection']['tmax'],
+                           emin=self.config['selection']['emin'],
+                           emax=self.config['selection']['emax'],
+                           zmax=self.config['selection']['zmax'],
+                           chatter=self.config['logging']['chatter'])
+
+        kw_gtmktime = dict(evfile=self.files['ft1'],
+                           outfile=self.files['ft1_filtered'],
+                           scfile=self.config['data']['scfile'],
+                           roicut=self.config['selection']['roicut'],
+                           filter=self.config['selection']['filter'])
+
+        if not os.path.isfile(self.files['ft1']) or overwrite:
+            run_gtapp('gtselect', self.logger, kw_gtselect)
+            if self.config['selection']['roicut'] == 'yes' or \
+                    self.config['selection']['filter'] is not None:
+                run_gtapp('gtmktime', self.logger, kw_gtmktime)
+                os.system('mv %s %s' % (self.files['ft1_filtered'],
+                                        self.files['ft1']))
+        else:
+            self.logger.debug('Skipping gtselect')
+
 
     def _create_binned_analysis(self, xmlfile=None, **kwargs):
 
