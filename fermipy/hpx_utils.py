@@ -40,16 +40,17 @@ class HPX_Conv(object):
 
 
 # Various conventions for storing HEALPix maps in FITS files
-HPX_FITS_CONVENTIONS = {'FGST_CCUBE': HPX_Conv('FGST_CCUBE'),
-                        'FGST_LTCUBE': HPX_Conv('FGST_LTCUBE', colstring='COSBINS', extname='EXPOSURE', energy_hdu='CTHETABOUNDS'),
-                        'FGST_BEXPCUBE': HPX_Conv('FGST_BEXPCUBE', colstring='ENERGY', extname='HPXEXPOSURES', energy_hdu='ENERGIES'),
-                        'FGST_SRCMAP': HPX_Conv('FGST_SRCMAP', extname=None, quantity_type='differential'),
-                        'FGST_TEMPLATE': HPX_Conv('FGST_TEMPLATE', colstring='ENERGY', energy_hdu='ENERGIES'),
-                        'FGST_SRCMAP_SPARSE': HPX_Conv('FGST_SRCMAP_SPARSE', colstring=None, extname=None, quantity_type='differential'),
-                        'GALPROP': HPX_Conv('GALPROP', colstring='BIN{idx}', extname='SKYMAP2',
-                                            energy_hdu='ENERGIES', quantity_type='differential',
-                                            coordsys='COORDTYPE')}
-
+HPX_FITS_CONVENTIONS = {'FGST_CCUBE':HPX_Conv('FGST_CCUBE'),
+                        'FGST_LTCUBE':HPX_Conv('FGST_LTCUBE', colstring='COSBINS', extname='EXPOSURE', energy_hdu='CTHETABOUNDS'),
+                        'FGST_BEXPCUBE':HPX_Conv('FGST_BEXPCUBE', colstring='ENERGY', extname='HPXEXPOSURES', energy_hdu='ENERGIES'),
+                        'FGST_SRCMAP':HPX_Conv('FGST_SRCMAP', extname=None, quantity_type='differential'),
+                        'FGST_TEMPLATE':HPX_Conv('FGST_TEMPLATE', colstring='ENERGY', energy_hdu='ENERGIES'),
+                        'FGST_SRCMAP_SPARSE':HPX_Conv('FGST_SRCMAP_SPARSE', colstring=None, extname=None, quantity_type='differential'),
+                        'GALPROP':HPX_Conv('GALPROP', colstring='Bin', extname='SKYMAP2', 
+                                           energy_hdu='ENERGIES', quantity_type='differential',
+                                           coordsys='COORDTYPE'),
+                        'GALPROP2':HPX_Conv('GALPROP', colstring='Bin', extname='SKYMAP2', 
+                                            energy_hdu='ENERGIES', quantity_type='differential')}
 
 def coords_to_vec(lon, lat):
     """ Converts longitute and latitude coordinates to a unit 3-vector
@@ -381,7 +382,10 @@ class HPX(object):
         if extname == 'HPXEXPOSURES':
             return 'FGST_BEXPCUBE'
         elif extname == 'SKYMAP2':
-            return 'GALPROP'
+            if 'COORDTYPE' in header.keys():
+                return 'GALPROP'
+            else:
+                return 'GALPROP2'
 
         # Check the name of the first column
         colname = header['TTYPE1']
@@ -394,7 +398,7 @@ class HPX(object):
             return 'FGST_TEMPLATE'
         elif colname == 'COSBINS':
             return 'FGST_LTCUBE'
-        elif colname == 'BIN0':
+        elif colname == 'Bin0':
             return 'GALPROP'
         elif colname == 'CHANNEL1':
             if extname == 'SKYMAP':
@@ -414,6 +418,9 @@ class HPX(object):
         convname = HPX.identify_HPX_convention(header)
         conv = HPX_FITS_CONVENTIONS[convname]
 
+        if conv.convname != 'GALPROP':
+            if header["PIXTYPE"] != "HEALPIX":
+                raise Exception("PIXTYPE != HEALPIX")
         if header["PIXTYPE"] != "HEALPIX":
             raise Exception("PIXTYPE != HEALPIX")
         if header["ORDERING"] == "RING":
@@ -433,8 +440,11 @@ class HPX(object):
         else:
             nside = -1
 
-        coordsys = header[conv.coordsys]
-
+        try:
+            coordsys = header[conv.coordsys]
+        except KeyError:
+            coordsys = header['COORDSYS']
+ 
         try:
             region = header["HPX_REG"]
         except KeyError:
@@ -723,7 +733,7 @@ class HPX(object):
         """ Get the sky coordinates of all the pixels in this pixelization """
         if self._ipix is None:
             theta, phi = hp.pix2ang(
-                self._nside, range(self._npix), self._nest)
+                self._nside, xrange(self._npix), self._nest)
         else:
             theta, phi = hp.pix2ang(self._nside, self._ipix, self._nest)
 
