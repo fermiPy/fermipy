@@ -1020,7 +1020,6 @@ class Source(Model):
         spectral_type = spec['type']
         spectral_pars = cast_pars_dict(spectral_pars)
         spat = {}
-        spatial_pars = {}
         nested_sources = []
 
         if src_type == 'CompositeSource':
@@ -1029,20 +1028,10 @@ class Source(Model):
             for node in source_library.findall('source'):
                 nested_sources += [Source.create_from_xml(node, extdir=extdir)]
         else:
-            try:
-                spat = utils.load_xml_elements(root, 'spatialModel')
-                spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
-                spatial_pars = gtutils.cast_pars_dict(spatial_pars)
-                spatial_type = spat['type']
-            except:
-                spat = {}
-                spatial_pars = {}
-                spatial_type = 'CompositeSource'
-                nested_sources = utils.load_xml_elements(root, 'source_library')
-                try:
-                    nested_sources = gtutils.cast_pars_dict(nested_sources)
-                except AttributeError:
-                    nested_sources = []
+            spat = utils.load_xml_elements(root, 'spatialModel')
+            spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
+            spatial_pars = cast_pars_dict(spatial_pars)
+            spatial_type = spat['type']
 
         xml_dict = copy.deepcopy(root.attrib)
         src_dict = {'catalog': xml_dict}
@@ -1060,6 +1049,9 @@ class Source(Model):
                 src_dict['Spatial_Filename'] = \
                     os.path.join(extdir, 'Templates',
                                  src_dict['Spatial_Filename'])
+            skydir = wcs_utils.get_map_skydir(os.path.expandvars(src_dict['Spatial_Filename']))
+            src_dict['RAJ2000'] = skydir.ra.deg
+            src_dict['DEJ2000'] = skydir.dec.deg
 
         if 'file' in spec:
             src_dict['Spectrum_Filename'] = utils.xmlpath_to_path(spec['file'])
@@ -1083,10 +1075,8 @@ class Source(Model):
                 src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
                 src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
             else:
-                skydir = wcs_utils.get_map_skydir(os.path.expandvars(
-                    src_dict['Spatial_Filename']))
-                src_dict['RAJ2000'] = skydir.ra.deg
-                src_dict['DEJ2000'] = skydir.dec.deg
+                print ("No RA", xml_dict, spatial_pars, src_type)
+                pass
 
             radec = np.array([src_dict['RAJ2000'], src_dict['DEJ2000']])
 
