@@ -3612,10 +3612,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                                       10000.)
 
   
-            src_dict['dfde_index'][0] = dfde_index
-            src_dict['dfde100_index'][0] = dfde100_index
-            src_dict['dfde1000_index'][0] = dfde1000_index
-            src_dict['dfde10000_index'][0] = dfde10000_index
+            src_dict['dnde_index'] = dnde_index
+            src_dict['dnde100_index'] = dnde100_index
+            src_dict['dnde1000_index'] = dnde1000_index
+            src_dict['dnde10000_index'] = dnde10000_index
 
         except Exception:
             self.logger.error('Failed to update source parameters.',
@@ -3776,9 +3776,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._files['ft1_filtered'] = 'ft1_filtered%s.fits'% file_suffix
         self._files['ccube'] = 'ccube%s.fits'% file_suffix
         self._files['ccubemc'] = 'ccubemc%s.fits'% file_suffix
-        self._files['srcmap'] = self.config['gtlike'].get('srcmap','srcmap%s.fits'% file_suffix)
-        self._files['bexpmap'] = self.config['gtlike'].get('bexpmap', 'bexpmap%s.fits'% file_suffix)
-        self._files['bexpmap_roi'] = self.config['gtlike'].get('bexpmap_roi', 'bexpmap_roi%s.fits'% file_suffix)
+        self._files['srcmap'] = self.config['gtlike'].get('srcmap')
+        if self._files['srcmap'] is None:
+            self._files['srcmap'] = 'srcmap%s.fits'% file_suffix        
+        self._files['bexpmap'] = self.config['gtlike'].get('bexpmap')
+        if self._files['bexpmap'] is None:
+            self._files['bexpmap'] = 'bexpmap%s.fits'% file_suffix
+        self._files['bexpmap_roi'] = self.config['gtlike'].get('bexpmap_roi')
+        if self._files['bexpmap_roi'] is None:
+             self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'% file_suffix
         self._files['srcmdl'] = 'srcmdl%s.xml'% file_suffix
 
         self._data_files = {}
@@ -3806,16 +3812,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._src_expscale = {}
         if self.config['gtlike']['expscale'] is not None:
             for src in self.roi:
-                self._src_expscale[src.name] = self.config[
-                    'gtlike']['expscale']
+                self._src_expscale[src.name] = self.config['gtlike']['expscale']
 
         if self.config['gtlike']['src_expscale']:
             for k, v in self.config['gtlike']['src_expscale'].items():
                 self._src_expscale[k] = v
 
         for k, v in self._files.items():
-            self._files[k] = os.path.join(workdir,
-                                          v % self.config['file_suffix'])
+            if v is None:
+                continue
+            self._files[k] = os.path.join(workdir, v)
 
         for k in ['srcmap', 'bexpmap', 'bexpmap_roi']:
 

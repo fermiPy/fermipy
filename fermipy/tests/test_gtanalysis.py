@@ -207,6 +207,10 @@ def test_gtanalysis_find_sources(create_draco_analysis):
     assert(sep0 < newsrc0['pos_r99'])
     assert(sep1 < newsrc1['pos_r99'])
 
+    print (src0['flux'], newsrc0['flux'], newsrc0['flux_err'])
+    print (src1['flux'], newsrc1['flux'], newsrc1['flux_err'])
+    print (newsrc0, newsrc1)
+
     flux_diff0 = (np.abs(src0['flux'] - newsrc0['flux']) /
                   newsrc0['flux_err'])
     flux_diff1 = (np.abs(src1['flux'] - newsrc1['flux']) /
@@ -319,11 +323,12 @@ def test_gtanalysis_lightcurve(create_pg1553_analysis):
     ts = np.array([1463.06618532,
                    1123.16013115])
 
-    assert_allclose(o['flux'], flux, rtol=1E-4)
-    assert_allclose(o['flux_err'], flux_err, rtol=1E-4)
-    assert_allclose(o['ts'], ts, rtol=1E-4)
+    assert_allclose(o['flux'], flux, rtol=1E-3)
+    assert_allclose(o['flux_err'], flux_err, rtol=1E-3)
+    assert_allclose(o['ts'], ts, rtol=1E-3)
 
     tab = Table.read(os.path.join(gta.workdir, o['file']))
-    assert_allclose(tab['flux'], flux, rtol=1E-4)
-    assert_allclose(tab['flux_err'], flux_err, rtol=1E-4)
-    assert_allclose(tab['ts'], ts, rtol=1E-4)
+    assert_allclose(tab['flux'], flux, rtol=1E-3)
+    assert_allclose(tab['flux_err'], flux_err, rtol=1E-3)
+    assert_allclose(tab['ts'], ts, rtol=1E-3)
+
