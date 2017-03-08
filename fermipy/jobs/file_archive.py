@@ -603,7 +603,7 @@ class FileArchive(object):
 
     def _fill_cache(self):
         """Fill the cache from the `astropy.table.Table`"""
-        for irow in xrange(len(self._table)):
+        for irow in range(len(self._table)):
             file_handle = self._make_file_handle(irow)
             self._cache[file_handle.path] = file_handle
 

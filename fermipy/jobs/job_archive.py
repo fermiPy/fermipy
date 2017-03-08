@@ -399,7 +399,7 @@ class JobArchive(object):
 
     def _fill_cache(self):
         """Fill the cache from the `astropy.table.Table`"""
-        for irow in xrange(len(self._table)):
+        for irow in range(len(self._table)):
             job_details = self.make_job_details(irow)
             self._cache[job_details.fullkey] = job_details
 

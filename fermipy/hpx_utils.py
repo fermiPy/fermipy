@@ -723,7 +723,7 @@ class HPX(object):
         """ Get the sky coordinates of all the pixels in this pixelization """
         if self._ipix is None:
             theta, phi = hp.pix2ang(
-                self._nside, xrange(self._npix), self._nest)
+                self._nside, range(self._npix), self._nest)
         else:
             theta, phi = hp.pix2ang(self._nside, self._ipix, self._nest)
 

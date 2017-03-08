@@ -337,7 +337,7 @@ def count_sources_in_cluster(n_src,cdict,rev_dict):
     belongs to.
     """
     ret_val = np.zeros((n_src),int)
-    for i in xrange(n_src):
+    for i in range(n_src):
         try:
             key = rev_dict[i]
         except KeyError:
