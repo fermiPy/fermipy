@@ -420,6 +420,10 @@ class HpxMap(Map_Base):
         hpxMap = HpxMap.create_from_hdu(hdulist[extname], ebins)
         return hpxMap
 
+    def create_image_hdu(self, name=None, **kwargs):
+        kwargs['extname'] = name
+        return self.hpx.make_hdu(self.counts, **kwargs)
+
     @staticmethod
     def create_from_fits(fitsfile, **kwargs):
         hdulist = fits.open(fitsfile)
