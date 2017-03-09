@@ -518,7 +518,7 @@ class FileHandle(object):
         return self.status
 
     def append_to_table(self, table):
-        """Add this instance as a row on a `astropy.Table` """
+        """Add this instance as a row on a `astropy.table.Table` """
         table.add_row(dict(path=self.path,
                            key=self.key,
                            creator=self.creator,
@@ -527,7 +527,7 @@ class FileHandle(object):
                            flags=self.flags))
 
     def update_table_row(self, table, row_idx):
-        """Update the values in an `astropy.Table` for this instances"""
+        """Update the values in an `astropy.table.Table` for this instances"""
         table[row_idx]['path'] = self.path
         table[row_idx]['key'] = self.key
         table[row_idx]['creator'] = self.creator
@@ -587,7 +587,7 @@ class FileArchive(object):
 
     @property
     def base_path(self):
-        """Return the base file path for all files in this `FileArchive """
+        """Return the base file path for all files in this `FileArchive` """
         return self._base_path
 
     def _get_fullpath(self, filepath):
