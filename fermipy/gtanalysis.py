@@ -3848,6 +3848,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             emin = np.power(10., logemin)
             emax = np.power(10., logemax)
 
+        self.config['selection']['logemin'] = logemin
+        self.config['selection']['logemax'] = logemax
+        self.config['selection']['emin'] = emin
+        self.config['selection']['emax'] = emax
+
         if self.config['binning']['enumbins'] is not None:
             self._enumbins = int(self.config['binning']['enumbins'])
         else:
