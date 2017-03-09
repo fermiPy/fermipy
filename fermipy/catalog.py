@@ -224,8 +224,10 @@ class Catalog3FGL(Catalog):
         table = Table.read(fitsfile, 'LAT_Point_Source_Catalog')
         table_extsrc = Table.read(fitsfile, 'ExtendedSources')
         table_extsrc.meta.clear()
-        table.remove_column('Flux_History')
-        table.remove_column('Unc_Flux_History')
+        if 'Flux_History' in table.columns:
+            table.remove_column('Flux_History')
+        if 'Unc_Flux_History' in table.columns:
+            table.remove_column('Unc_Flux_History')
         strip_columns(table)
         strip_columns(table_extsrc)
 
@@ -250,6 +252,10 @@ class Catalog3FGL(Catalog):
                    'Sqrt_TS3000_10000', 'Sqrt_TS10000_100000']
 
         for k in ts_keys:
+
+            if not k in self.table.columns:
+                continue
+
             m = np.isfinite(self.table[k])
             self._table['TS_value'][m] += self.table[k][m] ** 2
             self._table['TS'][m] += self.table[k][m] ** 2
