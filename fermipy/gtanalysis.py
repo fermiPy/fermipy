@@ -194,7 +194,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         'tsmap': defaults.tsmap,
         'residmap': defaults.residmap,
         'lightcurve': defaults.lightcurve,
-        'sourcefind': defaults.sourcefind,
+        'find_sources': defaults.sourcefind,
     }
 
     defaults = {'logging': defaults.logging,
