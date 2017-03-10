@@ -19,6 +19,8 @@ ENERGY_FLUX_UNIT = ':math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`'
 
 # Options that are common to several sections
 common = {
+    'model': (None, 'Dictionary defining the spatial/spectral properties of the test source. '
+              'If model is None the test source will be a PointSource with an Index 2 power-law spectrum.', dict),
     'free_background': (False, 'Leave background parameters free when performing the fit. If True then any '
                         'parameters that are currently free in the model will be fit simultaneously '
                         'with the source of interest.', bool),
@@ -245,7 +247,7 @@ roiopt_output = {
 
 # Residual Maps
 residmap = {
-    'model': (None, 'Dictionary defining the properties of the test source.', dict),
+    'model': common['model'],
     'exclude': (None, 'List of sources that will be removed from the model when '
                 'computing the residual map.', list),
     'loge_bounds': common['loge_bounds'],
@@ -256,10 +258,10 @@ residmap = {
 
 # TS Map
 tsmap = {
-    'model': (None, 'Dictionary defining the properties of the test source.', dict),
+    'model': common['model'],
     'exclude': (None, 'List of sources that will be removed from the model when '
                 'computing the TS map.', list),
-    'multithread': (False, 'Split the TS map calculation across multiple cores.', bool),
+    'multithread': (False, 'Split the calculation across all available cores.', bool),
     'max_kernel_radius': (3.0, 'Set the maximum radius of the test source kernel.  Using a '
                           'smaller value will speed up the TS calculation at the loss of '
                           'accuracy.', float),
@@ -271,7 +273,7 @@ tsmap = {
 
 # TS Cube
 tscube = {
-    'model': (None, 'Dictionary defining the properties of the test source.  By default the test source will be a PointSource with an Index 2 power-law specturm.', dict),
+    'model': common['model'],
     'do_sed': (True, 'Compute the energy bin-by-bin fits', bool),
     'nnorm': (10, 'Number of points in the likelihood v. normalization scan', int),
     'norm_sigma': (5.0, 'Number of sigma to use for the scan range ', float),
@@ -289,13 +291,26 @@ tscube = {
 
 # Options for Source Finder
 sourcefind = {
-    'model': (None, 'Set the source model dictionary.  By default the test source will be a PointSource with an Index 2 power-law specturm.', dict),
-    'min_separation': (1.0, 'Set the minimum separation in deg for sources added in each iteration.', float),
-    'sqrt_ts_threshold': (5.0, 'Set the threshold on sqrt(TS).', float),
-    'max_iter': (3, 'Set the number of search iterations.', int),
-    'sources_per_iter': (3, '', int),
-    'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.', str),
-    'free_params': (None, '', list)
+    'model': common['model'],
+    'min_separation': (1.0,
+                       'Minimum separation in degrees between sources detected in each '
+                       'iteration. The source finder will look for the maximum peak '
+                       'in the TS map within a circular region of this radius.', float),
+    'sqrt_ts_threshold': (5.0, 'Source threshold in sqrt(TS).  Only peaks with sqrt(TS) '
+                          'exceeding this threshold will be used as seeds for new '
+                          'sources.', float),
+    'max_iter': (5, 'Maximum number of source finding iterations.  The source '
+                 'finder will continue adding sources until no additional '
+                 'peaks are found or the number of iterations exceeds this '
+                 'number.', int),
+    'sources_per_iter': (4, 'Maximum number of sources that will be added in each '
+                         'iteration.  If the number of detected peaks in a given '
+                         'iteration is larger than this number, only the N peaks with '
+                         'the largest TS will be used as seeds for the current '
+                         'iteration.', int),
+    'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.  Valid options are tsmap or tscube.', str),
+    'free_params': (None, '', list),
+    'multithread': (False, 'Split the calculation across all available cores.', bool),
 }
 
 # Options for lightcurve analysis
@@ -311,7 +326,7 @@ lightcurve = {
     'free_sources': (None, 'List of sources to be freed.  These sources will be added to the list of sources '
                      'satisfying the free_radius selection.', list),
     'free_params': (None, 'Set the parameters of the source of interest that will be re-fit in each time bin. '
-                    'If this list is empty then all parameters will be freed.', list),    
+                    'If this list is empty then all parameters will be freed.', list),
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
@@ -554,7 +569,7 @@ plotting = {
     'format': ('png', '', str),
     'cmap': ('magma', 'Set the colormap for 2D plots.', str),
     'cmap_resid': ('RdBu_r', 'Set the colormap for 2D residual plots.', str),
-    'figsize': ([8.0,6.0], 'Set the default figure size.', list),
+    'figsize': ([8.0, 6.0], 'Set the default figure size.', list),
     'label_ts_threshold':
         (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),
 }

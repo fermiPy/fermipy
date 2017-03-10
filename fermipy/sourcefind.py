@@ -28,51 +28,22 @@ class SourceFind(object):
     `~fermipy.gtanalysis.GTAnalysis`."""
 
     def find_sources(self, prefix='', **kwargs):
-        """An iterative source-finding algorithm.
+        """An iterative source-finding algorithm that uses likelihood
+        ratio (TS) maps of the region of interest to find new sources.
+        After each iteration a new TS map is generated incorporating
+        sources found in the previous iteration.  The method stops
+        when the number of iterations exceeds ``max_iter`` or no
+        sources exceeding ``sqrt_ts_threshold`` are found.
 
         Parameters
         ----------
-
-        model : dict
-           Dictionary defining the properties of the test source.
-           This is the model that will be used for generating TS maps.
-
-        sqrt_ts_threshold : float
-           Source threshold in sqrt(TS).  Only peaks with sqrt(TS)
-           exceeding this threshold will be used as seeds for new
-           sources.
-
-        min_separation : float
-           Minimum separation in degrees of sources detected in each
-           iteration. The source finder will look for the maximum peak
-           in the TS map within a circular region of this radius.
-
-        max_iter : int
-           Maximum number of source finding iterations.  The source
-           finder will continue adding sources until no additional
-           peaks are found or the number of iterations exceeds this
-           number.
-
-        sources_per_iter : int
-           Maximum number of sources that will be added in each
-           iteration.  If the number of detected peaks in a given
-           iteration is larger than this number, only the N peaks with
-           the largest TS will be used as seeds for the current
-           iteration.
-
-        tsmap_fitter : str
-           Set the method used internally for generating TS maps.
-           Valid options:
-
-           * tsmap
-           * tscube
+        {options}
 
         tsmap : dict
            Keyword arguments dictionary for tsmap method.
 
         tscube : dict
            Keyword arguments dictionary for tscube method.
-
 
         Returns
         -------
@@ -173,6 +144,7 @@ class SourceFind(object):
         src_dict_template = kwargs.pop('model')
 
         threshold = kwargs.get('sqrt_ts_threshold')
+        multithread = kwargs.get('multithread', False)
         min_separation = kwargs.get('min_separation')
         sources_per_iter = kwargs.get('sources_per_iter')
         search_skydir = kwargs.get('search_skydir', None)
@@ -185,13 +157,16 @@ class SourceFind(object):
         if tsmap_fitter == 'tsmap':
             kw = kwargs.get('tsmap', {})
             kw['model'] = src_dict_template
-            m = self.tsmap('%s_sourcefind_%02i' % (prefix, iiter),
+            kw['multithread'] = multithread
+            m = self.tsmap(utils.join_strings([prefix,
+                                               'sourcefind_%02i' % iiter]),
                            **kw)
 
         elif tsmap_fitter == 'tscube':
             kw = kwargs.get('tscube', {})
             kw['model'] = src_dict_template
-            m = self.tscube('%s_sourcefind_%02i' % (prefix, iiter),
+            m = self.tscube(utils.join_strings([prefix,
+                                                'sourcefind_%02i' % iiter]),
                             **kw)
         else:
             raise Exception(

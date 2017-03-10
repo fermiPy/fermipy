@@ -194,6 +194,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         'tsmap': defaults.tsmap,
         'residmap': defaults.residmap,
         'lightcurve': defaults.lightcurve,
+        'find_sources': defaults.sourcefind,
     }
 
     defaults = {'logging': defaults.logging,
@@ -512,8 +513,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """Make a clone of this analysis instance."""
         gta = GTAnalysis(config, **kwargs)
         gta._roi = copy.deepcopy(self.roi)
-        for c in self.components:
-            gta.components[0]._roi = copy.deepcopy(c.roi)
+        for i, c in enumerate(self.components):
+            gta.components[i]._roi = copy.deepcopy(c.roi)
 
         return gta
 
