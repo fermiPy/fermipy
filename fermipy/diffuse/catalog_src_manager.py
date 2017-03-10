@@ -5,16 +5,20 @@ Classes and utilities that manage catalog sources
 from __future__ import absolute_import, division, print_function
 
 import os
+import sys
+import argparse
 
 import yaml
 import numpy as np
 
 from astropy.table import Table
-from fermipy import catalog
+
+from fermipy.jobs.chain import Link, Chain
 
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.source_factory import SourceFactory
 from fermipy.diffuse.model_component import CatalogInfo, CompositeSourceInfo, CatalogSourcesInfo
+from fermipy.diffuse import defaults as diffuse_defaults
 
 
 def mask_extended(cat_table):
@@ -25,7 +29,10 @@ def mask_extended(cat_table):
 def select_extended(cat_table):
     """Select only rows representing extended sources from a catalog table
     """
-    return np.array([len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data ], bool)
+    try:
+        return np.array([len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data], bool)
+    except KeyError:
+        return cat_table['Extended']
 
 def make_mask(cat_table, cut):
     """Mask a bit mask selecting the rows that pass a selection
@@ -59,6 +66,7 @@ def select_sources(cat_table, cuts):
             full_mask *= select_extended(cat_table)
         else:
             full_mask *= make_mask(cat_table, cut)
+    
     lout = [src_name.strip() for src_name in cat_table['Source_Name'][full_mask]]
     return lout
 
@@ -70,7 +78,7 @@ class CatalogSourceManager(object):
 
     One of the dictionaries is keyed by catalog name, and contains information
     about complete catalogs
-    catalog_comp_info_dicts[catalog_name] : `dmpipe.dmp_model_component.CatalogInfo'
+    catalog_comp_info_dicts[catalog_name] : `model_component.CatalogInfo`
 
     The other dictionary is keyed by [{catalog_name}_{split_ver}][{split_key}]
     Where:
@@ -78,14 +86,15 @@ class CatalogSourceManager(object):
     {split_ver} is somthing like 'v00' and specifes how to divide sources in the catalog
     {split_key} refers to a specific sub-selection of sources
 
-    split_comp_info_dicts[splitkey] : `dmpipe.dmp_model_component.ModelComponentInfo'
+    split_comp_info_dicts[splitkey] : `model_component.ModelComponentInfo`
     """
 
     def __init__(self, **kwargs):
         """ C'tor
 
         Keyword arguments
-        -------------------
+        -----------------
+
         basedir : str
             Top level directory for finding files
         """
@@ -105,11 +114,12 @@ class CatalogSourceManager(object):
         return yaml_dict
 
     def build_catalog_info(self, catalog_info):
-        """ Build a CatalogInfo object """
+        """ Build a CatalogInfo object """        
         cat = SourceFactory.build_catalog(**catalog_info)
         catalog_info['catalog'] = cat
-        catalog_info['catalog_table'] =\
-            Table.read(catalog_info['catalog_file'])
+        #catalog_info['catalog_table'] = 
+        #    Table.read(catalog_info['catalog_file'])
+        catalog_info['catalog_table'] = cat.table
         catalog_info['roi_model'] =\
             SourceFactory.make_fermipy_roi_model_from_catalogs([cat])
         catalog_info['srcmdl_name'] =\
@@ -144,8 +154,9 @@ class CatalogSourceManager(object):
         """ Make the information about a single merged component
 
         Parameters
-        -------------------
-        full_cat_info : `dmpipe.dmp_model_component.CatalogInfo'
+        ----------
+
+        full_cat_info : `_model_component.CatalogInfo`
             Information about the full catalog
         split_key : str
             Key identifying the version of the spliting used
@@ -156,7 +167,7 @@ class CatalogSourceManager(object):
         sources : list
             List of the names of the sources in this component
 
-        Returns `CompositeSourceInfo' or `CatalogSourcesInfo'
+        Returns `CompositeSourceInfo` or `CatalogSourcesInfo`
         """
         merge = rule_val.get('merge', True)
         sourcekey = "%s_%s_%s" % (
@@ -180,16 +191,18 @@ class CatalogSourceManager(object):
         """ Make the information about the catalog components
 
         Parameters
-        -------------------
+        ----------
+
         catalog_sources : dict
             Dictionary with catalog source defintions
 
         Returns
-        -------------------
+        -------
+
         catalog_ret_dict : dict
-            Dictionary mapping catalog_name to `dmpipe.dmp_model_component.CatalogInfo'
+            Dictionary mapping catalog_name to `model_component.CatalogInfo`
         split_ret_dict : dict
-            Dictionary mapping sourcekey to `dmpipe.dmp_model_component.ModelComponentInfo'
+            Dictionary mapping sourcekey to `model_component.ModelComponentInfo`
         """
         catalog_ret_dict = {}
         split_ret_dict = {}
@@ -205,8 +218,11 @@ class CatalogSourceManager(object):
                     full_cat_info = self.build_catalog_info(source_dict)
                     catalog_ret_dict[key] = full_cat_info
 
-                all_sources = [x.strip() for x in full_cat_info.catalog_table[
-                    'Source_Name'].tolist()]
+                try:
+                    all_sources = [x.strip() for x in full_cat_info.catalog_table[
+                            'Source_Name'].tolist()]
+                except KeyError:
+                    print (full_cat_info.catalog_table.colnames)
                 used_sources = []
                 rules_dict = source_dict['rules_dict']
                 split_dict = {}
@@ -222,7 +238,10 @@ class CatalogSourceManager(object):
 
                 # Now deal with the remainder
                 for source in used_sources:
-                    all_sources.remove(source)
+                    try:
+                        all_sources.remove(source)
+                    except ValueError:
+                        continue
                 rule_val = dict(cuts=[],
                                 merge=source_dict['remainder'].get('merge', False))
                 split_dict['remain'] = self.make_catalog_comp_info(
@@ -248,3 +267,61 @@ def make_catalog_comp_dict(**kwargs):
                 CatalogSourceManager=csm)
 
 
+class CatalogComponentChain(Chain):
+    """Small class to build srcmaps for diffuse components
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+                           make_xml=(False, "Make XML files for diffuse components", bool),
+                           dry_run=diffuse_defaults.diffuse['dry_run'])
+
+    def __init__(self, linkname):
+        """C'tor
+        """
+        from fermipy.diffuse.job_library import create_sg_gtsrcmaps_catalog
+        from fermipy.diffuse.gt_merge_srcmaps import create_sg_merge_srcmaps
+
+        link_srcmaps_catalogs = create_sg_gtsrcmaps_catalog(linkname="%s.catalog"%linkname,
+                                                            appname='fermipy-srcmaps-catalog-sg')
+
+        link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
+                                                         appname='fermipy-merge-srcmaps-sg')
+
+        Chain.__init__(self, linkname,
+                       appname='FIXME',
+                       links=[link_srcmaps_catalogs, link_srcmaps_composite],
+                       options=CatalogComponentChain.default_options.copy(),
+                       parser=CatalogComponentChain._make_parser())
+
+    @staticmethod
+    def _make_parser():
+        """Make an argument parser for this chain """
+        usage = "FIXME [options]"
+        description = "Run diffuse component analysis"
+
+        parser = argparse.ArgumentParser(usage=usage, description=description)
+        return parser
+
+    def run_argparser(self, argv):
+        """Initialize a link with a set of arguments using argparser
+        """
+        args = Link.run_argparser(self, argv)
+        for link in self._links.values():
+            link.run_link(stream=sys.stdout, dry_run=True)
+        return args
+
+def create_chain_catalog_comps(**kwargs):
+    """Create and return a `CatalogComponentChain` object """
+    ret_chain = CatalogComponentChain(linkname=kwargs.pop('linkname', 'diffuse.catalog_comps'))
+    return ret_chain
+
+def main_chain():
+    """Entry point for command line use for single job """
+    the_chain = CatalogComponentChain("diffuse.catalog_comps")
+    args = the_chain.run_argparser(sys.argv[1:])
+    the_chain.run_chain(sys.stdout, args.dry_run)
+    the_chain.finalize(args.dry_run)
+
+if __name__ == '__main__':
+    main_chain()

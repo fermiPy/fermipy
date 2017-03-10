@@ -12,12 +12,14 @@ import argparse
 import BinnedAnalysis as BinnedAnalysis
 import pyLikelihood as pyLike
 
-from fermipy.jobs.chain import Link
+from fermipy.jobs.file_archive import FileFlags
+from fermipy.jobs.chain import add_argument, Link
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.catalog_src_manager import make_catalog_comp_dict
+from fermipy.diffuse import defaults as diffuse_defaults
 
 NAME_FACTORY = NameFactory()
 
@@ -29,49 +31,46 @@ class GtMergeSourceMaps(object):
     """
     NULL_MODEL = 'srcmdls/null.xml'
 
-    def __init__(self):
+    default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
+                           expcube=diffuse_defaults.gtopts['expcube'],
+                           bexpmap=diffuse_defaults.gtopts['bexpmap'],
+                           srcmaps=diffuse_defaults.gtopts['srcmaps'],
+                           srcmdl=diffuse_defaults.gtopts['srcmdl'],
+                           outfile=diffuse_defaults.gtopts['outfile'],
+                           merged=(None, 'Name of merged source', str),
+                           outxml=(None, 'Output source model xml file', str),
+                           gzip=(False, 'Compress output file', bool))
+
+    def __init__(self, **kwargs):
         """C'tor
         """
-        self.parser = GtMergeSourceMaps._make_parser()
-        self.link = GtMergeSourceMaps._make_link()
+        self.parser = GtMergeSourceMaps.make_parser()
+        self.link = GtMergeSourceMaps.make_link(**kwargs)
 
     @staticmethod
-    def _make_parser():
+    def make_parser():
         """Make an argument parser for this class """
         usage = "gt_merge_srcmaps.py [options]"
         description = "Run gtsrcmaps for one or more energy planes for a single source"
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
-        parser.add_argument('--irfs', type=str, default='CALDB',
-                            help='Instrument response functions')
-        parser.add_argument('--expcube', type=str, default=None,
-                            help='Input Livetime cube file')
-        parser.add_argument('--srcmaps', type=str, default=None,
-                            help='Input source maps file')
-        parser.add_argument('--bexpmap', type=str, default=None,
-                            help='Input binned exposure map file')
-        parser.add_argument('--srcmdl', type=str, default=None,
-                            help='Input source model xml file')
-        parser.add_argument('--merged', type=str, default=None,
-                            help='Name of merged source')
-        parser.add_argument('--outfile', type=str, default=None,
-                            help='Output source map file')
-        parser.add_argument('--outxml', type=str, default=None,
-                            help='Output source model xml file')
-        parser.add_argument('--gzip', action='store_true',
-                            help='Compress output file')
+        for key, val in GtMergeSourceMaps.default_options.items():
+            add_argument(parser, key, val)
         return parser
 
     @staticmethod
-    def _make_link():
-        link = Link('merge-srcmaps',
+    def make_link(**kwargs):
+        """Make a `fermipy.jobs.Link object to run `GtMergeSourceMaps` """
+        link = Link(kwargs.pop('linkname', 'merge-srcmaps'),
                     appname='fermipy-merge-srcmaps',
-                    options=dict(irfs=None, expcube=None, srcmaps=None,
-                                 bexpmap=None, srcmdl=None, merged=None,
-                                 outfile=None, outxml=None, gzip=True),
-                    flags=['gzip'],
-                    input_file_args=['expcube', 'cmap', 'bexpmap', 'srcmdl'],
-                    output_file_args=['outfile', 'outxml'])
+                    options=GtMergeSourceMaps.default_options.copy(),
+                    file_args=dict(expcube=FileFlags.input_mask,
+                                   cmap=FileFlags.input_mask,
+                                   bexpmap=FileFlags.input_mask,
+                                   srcmdl=FileFlags.input_mask,
+                                   outfile=FileFlags.output_mask,
+                                   outxml=FileFlags.output_mask),
+                    **kwargs)
         return link
 
     def run(self, argv):
@@ -109,7 +108,9 @@ class GtMergeSourceMaps(object):
         comp = like.mergeSources(args.merged, source_names, 'ConstantValue')
         like.logLike.getSourceMap(comp.getName())
 
-        print ("Missed sources: ", missing_sources)
+        print ("Merged %i sources into %s"%(len(srcs_to_merge), comp.getName()))
+        if len(missing_sources) > 0:
+            print ("Missed sources: ", missing_sources)
 
         print ("Writing output source map file %s" % args.outfile)
         like.logLike.saveSourceMaps(args.outfile, False, False)
@@ -122,50 +123,24 @@ class GtMergeSourceMaps(object):
 
 class ConfigMaker_MergeSrcmaps(ConfigMaker):
     """Small class to generate configurations for this script
-    """
 
-    def __init__(self, link):
+    This adds the following arguments:
+    --comp     : binning component definition yaml file
+    --data     : datset definition yaml file
+    --irf_ver  : IRF verions string (e.g., 'V6')
+    --sources  : Catalog model component definition yaml file'
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'])
+
+    def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
-        self.link = link
-
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser'
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-        --comp     : binning component definition yaml file
-        --data     : datset definition yaml file
-        --irf_ver  : IRF verions string (e.g., 'V6')
-        --sources  : Catalog model component definition yaml file'
-        """
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Yaml file with component definitions')
-        parser.add_argument('--data', type=str, default=None,
-                            help='Yaml file with dataset definitions')
-        parser.add_argument('--irf_ver', type=str, default='V6',
-                            help='Version of IRFs to use')
-        parser.add_argument('--sources', type=str, default=None,
-                            help='File with source merging configuration')
-
-    def make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters:
-        ----------------
-        args : `argparse.Namespace'
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args.__dict__)
-        return self.link.args
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options',
+                                                ConfigMaker_MergeSrcmaps.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -173,15 +148,16 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
         input_config = {}
         job_configs = {}
 
-        components = Component.build_from_yamlfile(args.comp)
-        NAME_FACTORY.update_base_dict(args.data)
-        ret_dict = make_catalog_comp_dict(sources=args.sources, basedir='.')
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
+        ret_dict = make_catalog_comp_dict(sources=args['sources'], basedir='.')
         comp_info_dict = ret_dict['comp_info_dict']
 
         for split_ver, split_dict in comp_info_dict.items():
             for source_key, source_dict in split_dict.items():
 
                 print (split_ver, source_key, source_dict.model_type)
+                full_key = "%s_%s"%(split_ver, source_key)
                 if source_dict.model_type != 'CompositeSource':
                     continue
 
@@ -189,47 +165,57 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
                     zcut = "zmax%i" % comp.zmax
                     key = "%s_%s" % (source_key, comp.make_key('{ebin_name}_{evtype_name}'))
                     name_keys = dict(zcut=zcut,
-                                     sourcekey=source_key,
+                                     sourcekey=full_key,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
                                      coordsys='GAL',
-                                     irf_ver=args.irf_ver)
+                                     irf_ver=args['irf_ver'])
                     nested_name_keys = dict(zcut=zcut,
                                             sourcekey=source_dict.catalog_info.catalog_name,
                                             ebin=comp.ebin_name,
                                             psftype=comp.evtype_name,
                                             coordsys='GAL',
-                                            irf_ver=args.irf_ver)
-
+                                            irf_ver=args['irf_ver'])
+                    outfile = NAME_FACTORY.srcmaps(**name_keys)
+                    
                     job_configs[key] = dict(srcmaps=NAME_FACTORY.srcmaps(**nested_name_keys),
                                             expcube=NAME_FACTORY.ltcube(**name_keys),
                                             irfs=NAME_FACTORY.irfs(**name_keys),
                                             bexpmap=NAME_FACTORY.bexpcube(**name_keys),
-                                            srcmdl=NAME_FACTORY.nested_srcmdl_xml(**name_keys),
+                                            srcmdl=NAME_FACTORY.srcmdl_xml(**name_keys),
                                             merged=source_key,
-                                            outfile=NAME_FACTORY.srcmaps(**name_keys),
-                                            outxml=NAME_FACTORY.srcmdl_xml(**name_keys))
+                                            outfile=outfile,
+                                            outxml=NAME_FACTORY.nested_srcmdl_xml(**name_keys),
+                                            logfile=outfile.replace('.fits', '.log'))
 
         output_config = {}
         return input_config, job_configs, output_config
 
+def create_link_merge_srcmaps(**kwargs):
+    """Build and return a `Link` object that can invoke GtAssembleModel"""
+    gtmerge = GtMergeSourceMaps(**kwargs)
+    return gtmerge.link
 
-def build_scatter_gather():
+def create_sg_merge_srcmaps(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
     gtmerge = GtMergeSourceMaps()
     link = gtmerge.link
+    link.linkname = kwargs.pop('linkname', link.linkname)
+    appname = kwargs.pop('appname', 'fermipy-merge-srcmaps-sg')
 
-    lsf_args = {'W': 1500,
+    lsf_args = {'W': 6000,
                 'R': 'rhel60'}
 
-    usage = "fermipy-merge-srcmaps.py [options] input"
+    usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
     config_maker = ConfigMaker_MergeSrcmaps(link)
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                appname=appname,
+                                **kwargs)
     return lsf_sg
 
 
@@ -241,7 +227,7 @@ def main_single():
 
 def main_batch():
     """Entry point for command line use  for dispatching batch jobs """
-    lsf_sg = build_scatter_gather()
+    lsf_sg = create_sg_merge_srcmaps()
     lsf_sg(sys.argv)
 
 if __name__ == '__main__':

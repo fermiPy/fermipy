@@ -9,15 +9,18 @@ import math
 import yaml
 
 # Map event type 'key' to evtype bin mask value
-EVT_TYPE_DICT = dict(PSF0=4, PSF1=8, PSF2=16, PSF3=32)
+EVT_TYPE_DICT = dict(PSF0=4, PSF1=8, PSF2=16, PSF3=32,
+                     PSF12=24, PSF012=28,
+                     PSF23=48, PSF123=56, PSF0123=60)
 
 
 class Component(object):
-    """ Small helper class to represent the binning used for a single component
+    """Small helper class to represent the binning used for a single component
     of a summed likelihood in diffuse analysis
 
-    Data Members:
-    -------------------
+    Parameters
+    ----------
+
     log_emin : float
         Log base 10 of minimum energy for this component
     log_emax : float
@@ -31,7 +34,7 @@ class Component(object):
     """
 
     def __init__(self, **kwargs):
-        """ C'tor: copies keyword arguments to data members
+        """C'tor: copies keyword arguments to data members
         """
         self.log_emin = kwargs['log_emin']
         self.log_emax = kwargs['log_emax']
@@ -42,11 +45,12 @@ class Component(object):
         self.ebin_name = kwargs['ebin_name']
 
     def __repr__(self):
-        s = "Binning component %s_%s\n"%(self.ebin_name, self.evtype_name)
-        s += "  log_10(E/MeV) : %.2f %.2f %i bins\n"%(self.log_emin, self.log_emax, self.enumbins)
-        s += "  HPX order     : %i\n"%self.hpx_order
-        s += "  Zenith cut    : %.0f"%self.zmax
-        return s
+        retstr = "Binning component %s_%s\n"%(self.ebin_name, self.evtype_name)
+        retstr += "  log_10(E/MeV) : %.2f %.2f %i bins\n"%(self.log_emin,
+                                                           self.log_emax, self.enumbins)
+        retstr += "  HPX order     : %i\n"%self.hpx_order
+        retstr += "  Zenith cut    : %.0f"%self.zmax
+        return retstr
 
     def make_key(self, format_str):
         """ Make a key to identify this compoment

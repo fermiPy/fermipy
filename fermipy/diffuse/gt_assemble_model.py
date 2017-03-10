@@ -1,5 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-""" 
+"""
 Merge source maps to build composite sources
 """
 from __future__ import absolute_import, division, print_function
@@ -7,61 +7,122 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 
-import yaml
 import argparse
+import yaml
 
 from astropy.io import fits
 from fermipy.skymap import HpxMap
 
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
-from fermipy.jobs.chain import Link
+from fermipy.jobs.chain import add_argument, Link
+from fermipy.jobs.file_archive import FileFlags
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
+from fermipy.diffuse import defaults as diffuse_defaults
+from fermipy.diffuse.model_manager import make_library
 
 NAME_FACTORY = NameFactory()
 
 
-class GtAssembleSourceMaps(object):
+class GtInitModel(object):
+    """Small class to preprate files fermipy analysis.
+
+    Specifically this create the srcmap_manifest and fermipy_config_yaml files
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
+                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
+                           args=(None, 'Names of input models', list))
+    
+    def __init__(self, **kwargs):
+        """C'tor
+        """
+        self.parser = GtInitModel.make_parser()
+        self.link = GtInitModel.make_link(**kwargs)
+
+    @staticmethod
+    def make_parser():
+        """Make an argument parser for this class """
+        usage = "fermipy-assemble-model [options]"
+        description = "Initialize model fitting directory"
+
+        parser = argparse.ArgumentParser(usage=usage, description=description)
+        for key, val in GtInitModel.default_options.items():
+            add_argument(parser, key, val)
+        return parser
+
+    @staticmethod
+    def make_link(**kwargs):
+        """Make a `fermipy.jobs.Link` object to run `GtAssembleModel` """
+        link = Link(kwargs.pop('linkname', 'init-model'),
+                    appname='fermipy-init-model',
+                    options=GtInitModel.default_options.copy(),
+                    **kwargs)
+        return link
+
+    def run(self, argv):
+        """Assemble the source map file for one binning component
+        FIXME
+        """
+        args = self.parser.parse_args(argv)
+        components = Component.build_from_yamlfile(args.comp)
+        NAME_FACTORY.update_base_dict(args.data)
+        model_dict = make_library(**args.__dict__)
+        model_manager = model_dict['ModelManager']
+        modelkeys = args.args
+        data = args.data
+        hpx_order = args.hpx_order
+        for modelkey in modelkeys:
+            model_manager.make_srcmap_manifest(modelkey, components, data)
+            fermipy_config = model_manager.make_fermipy_config_yaml(modelkey, components, data, hpxorder=hpx_order)
+            
+
+
+class GtAssembleModel(object):
     """Small class to assemple source map files for fermipy analysis.
 
     This is useful for re-merging after parallelizing source map creation.
     """
+    default_options = dict(input=(None, 'Input yaml file', str),
+                           comp=diffuse_defaults.diffuse['binning_yaml'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'])
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """C'tor
         """
-        self.parser = GtAssembleSourceMaps._make_parser()
-        self.link = GtAssembleSourceMaps._make_link()
+        self.parser = GtAssembleModel.make_parser()
+        self.link = GtAssembleModel.make_link(**kwargs)
 
     @staticmethod
-    def _make_parser():
+    def make_parser():
         """Make an argument parser for this class """
-        usage = "gt_assemble_srcmaps.py [options]"
+        usage = "fermipy-assemble-model [options]"
         description = "Copy source maps from the library to a analysis directory"
 
         parser = argparse.ArgumentParser(usage=usage, description=description)
-        parser.add_argument('-i', '--input', type=str, default=None,
-                            help='Input yaml file')
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Component')
-        parser.add_argument('--hpx_order', type=int, default=7,
-                            help='Maximum healpix order')
+        for key, val in GtAssembleModel.default_options.items():
+            add_argument(parser, key, val)
         return parser
 
     @staticmethod
-    def _make_link():
-        link = Link('assemble-model',
+    def make_link(**kwargs):
+        """Make a `fermipy.jobs.Link` object to run `GtAssembleModel` """
+        link = Link(kwargs.pop('linkname', 'assemble-model'),
                     appname='fermipy-assemble-model',
-                    options=dict(input=None, comp=None, hpx_order=None),
-                    flags=['gzip'],
-                    input_file_args=['input'])
+                    options=GtAssembleModel.default_options.copy(),
+                    file_args=dict(input=FileFlags.input_mask),
+                    **kwargs)
         return link
 
     @staticmethod
-    def _copy_ccube(ccube, outsrcmap, hpx_order):
+    def copy_ccube(ccube, outsrcmap, hpx_order):
+        """Copy a counts cube into outsrcmap file
+        reducing the HEALPix order to hpx_order if needed.
         """
-        """
+        sys.stdout.write ("  Copying counts cube from %s to %s\n" % (ccube, outsrcmap))
         try:
             hdulist_in = fits.open(ccube)
         except IOError:
@@ -82,25 +143,36 @@ class GtAssembleSourceMaps(object):
         return None
 
     @staticmethod
-    def _open_outsrcmap(outsrcmap):
-        """
-        """
+    def open_outsrcmap(outsrcmap):
+        """Open and return the outsrcmap file in append mode """
         outhdulist = fits.open(outsrcmap, 'append')
         return outhdulist
 
     @staticmethod
-    def _append_hdus(hdulist, srcmap_file, source_names, hpx_order):
+    def append_hdus(hdulist, srcmap_file, source_names, hpx_order):
+        """Append HEALPix maps to a list
+
+        Parameters
+        ----------
+
+        hdulist : list
+            The list being appended to
+        srcmap_file : str
+            Path to the file containing the HDUs
+        source_names : list of str
+            Names of the sources to extract from srcmap_file
+        hpx_order : int
+            Maximum order for maps
         """
-        """
-        print ("  Extracting %i sources from %s" % (len(source_names), srcmap_file))
+        sys.stdout.write("  Extracting %i sources from %s" % (len(source_names), srcmap_file))
         try:
             hdulist_in = fits.open(srcmap_file)
         except IOError:
             try:
                 hdulist_in = fits.open('%s.gz' % srcmap_file)
             except IOError:
-                print ("  Missing file %s" % srcmap_file)
-                return
+                 sys.stdout.write("  Missing file %s\n" % srcmap_file)
+                 return
 
         for source_name in source_names:
             sys.stdout.write('.')
@@ -115,88 +187,78 @@ class GtAssembleSourceMaps(object):
                     continue
                 hpxmap_out = hpxmap.ud_grade(hpx_order, preserve_counts=True)
                 hdulist.append(hpxmap_out.create_image_hdu(name=source_name))
-
+        sys.stdout.write("\n")
         hdulist.flush()
         hdulist_in.close()
 
     @staticmethod
-    def _assemble_component(compname, compinfo, hpx_order):
+    def assemble_component(compname, compinfo, hpx_order):
+        """Assemble the source map file for one binning component
+
+        Parameters
+        ----------
+
+        compname : str
+            The key for this component (e.g., E0_PSF3)
+        compinfo : dict
+            Information about this component
+        hpx_order : int
+            Maximum order for maps
+
         """
-        """
-        print ("Working on component %s" % compname)
+        sys.stdout.write ("Working on component %s\n" % compname)
         ccube = compinfo['ccube']
         outsrcmap = compinfo['outsrcmap']
-        outsrcmap += '.fits'
         source_dict = compinfo['source_dict']
 
-        hpx_order = GtAssembleSourceMaps._copy_ccube(ccube, outsrcmap, hpx_order)
-        hdulist = GtAssembleSourceMaps._open_outsrcmap(outsrcmap)
+        hpx_order = GtAssembleModel.copy_ccube(ccube, outsrcmap, hpx_order)
+        hdulist = GtAssembleModel.open_outsrcmap(outsrcmap)
 
         for comp_name in sorted(source_dict.keys()):
             source_info = source_dict[comp_name]
             source_names = source_info['source_names']
             srcmap_file = source_info['srcmap_file']
-            GtAssembleSourceMaps._append_hdus(hdulist, srcmap_file,
-                                              source_names, hpx_order)
-        print ("Done")
+            GtAssembleModel.append_hdus(hdulist, srcmap_file,
+                                        source_names, hpx_order)
+        sys.stdout.write("Done!\n")
 
     def run(self, argv):
-        args = self.parse_args(argv)
+        """Assemble the source map file for one binning component
+        FIXME
+        """
+        args = self.parser.parse_args(argv)
         manifest = yaml.safe_load(open(args.input))
 
         key = args.comp
         value = manifest[key]
-        GtAssembleSourceMaps._assemble_component(key, value, args.hpx_order)
+        GtAssembleModel.assemble_component(key, value, args.hpx_order)
 
 
-class ConfigMaker_AssembleSrcmaps(ConfigMaker):
+class ConfigMaker_AssembleModel(ConfigMaker):
     """Small class to generate configurations for this script
-    """
 
-    def __init__(self, link):
+    Parameters
+    ----------
+
+    --comp      : binning component definition yaml file
+    --data      : datset definition yaml file
+    --hpx_order : Maximum HEALPix order to use
+    --irf_ver   : IRF verions string (e.g., 'V6')
+    args        : Names of models to assemble source maps for
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
+                           args=(None, 'Names of input models', list))
+
+    def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self)
-        self.link = link
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options',
+                                                ConfigMaker_AssembleModel.default_options.copy()))
 
-    def add_arguments(self, parser, action):
-        """Hook to add arguments to the command line argparser 
-
-        Parameters:
-        ----------------
-        parser : `argparse.ArgumentParser' 
-            Object we are filling
-
-        action : str
-            String specifing what we want to do
-
-        This adds the following arguments:
-        --comp     : binning component definition yaml file
-        --data     : datset definition yaml file
-        --hpx_order: Maximum HEALPix order to use
-       --irf_ver   : IRF verions string (e.g., 'V6')
-        models     : Names of models to assemble source maps for
-        """
-        parser.add_argument('--comp', type=str, default=None,
-                            help='Yaml file with component definitions')
-        parser.add_argument('--data', type=str, default=None,
-                            help='Yaml file with dataset definitions')
-        parser.add_argument('--hpx_order', type=int, default=7,
-                            help='Maximum HEALPix order to use')
-        parser.add_argument('--irf_ver', type=str, default="V6",
-                            help='IRF Version')
-        parser.add_argument('models', nargs='+', help='Names of input models')
-
-    def make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters:
-        ----------------
-        args : `argparse.Namespace' 
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args.__dict__)
-        return self.link.args
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -204,19 +266,18 @@ class ConfigMaker_AssembleSrcmaps(ConfigMaker):
         input_config = {}
         job_configs = {}
 
-        components = Component.build_from_yamlfile(args.comp)
-        NAME_FACTORY.update_base_dict(args.data)
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
 
-        for modelkey in args.models:
+        for modelkey in args['args']:
             manifest = os.path.join('analysis', 'model_%s' % modelkey,
                                     'srcmap_manifest_%s.yaml' % modelkey)
             for comp in components:
-                zcut = "zmax%i" % comp.zmax
                 key = comp.make_key('{ebin_name}_{evtype_name}')
                 outfile = NAME_FACTORY.merged_srcmaps(modelkey=modelkey,
                                                       component=key,
                                                       coordsys='GAL',
-                                                      irf_ver=args.irf_ver)
+                                                      irf_ver=args['irf_ver'])
                 logfile = outfile.replace('.fits', '.log')
                 job_configs[key] = dict(input=manifest,
                                         comp=key,
@@ -225,34 +286,48 @@ class ConfigMaker_AssembleSrcmaps(ConfigMaker):
         return input_config, job_configs, output_config
 
 
-def build_scatter_gather():
+def create_link_assemble_model(**kwargs):
+    """Build and return a `Link` object that can invoke GtAssembleModel"""
+    gtassemble = GtAssembleModel(**kwargs)
+    return gtassemble.link
+
+
+def create_sg_assemble_model(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
-    gtassemble = GtAssembleSourceMaps()
+    gtassemble = GtAssembleModel(**kwargs)
     link = gtassemble.link
+    appname = kwargs.pop('appname', 'fermipy-assemble-model-sg')
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
 
-    usage = "fermipy-assemble-model-sg [options]"
+    usage = "%s [options]"%(appname)
     description = "Copy source maps from the library to a analysis directory"
 
-    config_maker = ConfigMaker_AssembleSrcmaps(link)
+    config_maker = ConfigMaker_AssembleModel(link)
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
-                                description=description)
+                                description=description,
+                                appname=appname,
+                                **kwargs)
     return lsf_sg
 
 
+def main_init():
+    """Entry point for command line use for init job """
+    gtsmp = GtInitModel()
+    gtsmp.run(sys.argv[1:])
+
 def main_single():
     """Entry point for command line use for single job """
-    gtsmp = GtAssembleSourceMaps()
+    gtsmp = GtAssembleModel()
     gtsmp.run(sys.argv[1:])
 
 
 def main_batch():
     """Entry point for command line use  for dispatching batch jobs """
-    lsf_sg = build_scatter_gather()
+    lsf_sg = create_sg_assemble_model()
     lsf_sg(sys.argv)
 
 if __name__ == '__main__':

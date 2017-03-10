@@ -52,14 +52,14 @@ class NameFactory(object):
 
     # Galprop inputs
     # Galprop input gasmaps
-    galprop_gasmap_format = 'gasmap/{sourcekey}_{projtype}_{galprop_run}_{maptype}.fits'
+    galprop_gasmap_format = 'gasmap/{sourcekey}_{projtype}_{galprop_run}_{maptype}.fits.gz'
     # Galprop merged gasmaps
     merged_gasmap_format = 'merged_gasmaps/{sourcekey}_{projtype}_{maptype}.fits.gz'
 
     # Other diffuse map templates
     diffuse_template_format = 'templates/template_{sourcekey}.fits'
     # Spectral templates
-    spectral_template_format = 'templates/spectral_{sourcekey}.fits'
+    spectral_template_format = 'templates/spectral_{sourcekey}.txt'
 
     # Source model xml files (input to gtrsrcmaps and gtlike)
     srcmdl_xml_format = 'srcmdls/{sourcekey}.xml'
@@ -81,8 +81,27 @@ class NameFactory(object):
     # Model cubes (output of gtmodel outtype=CCUBE)
     mcube_format = 'model_cubes/mcube_{sourcekey}_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
 
+    # SolarTools output files
+    # gtltcubesun output (for sun)
+    ltcubesun_format = 'sunmoon/ltcube_{data_time}_{zcut}_sun.fits'
+    # gtltcubesun output (for moon)
+    ltcubemoon_format = 'sunmoon/ltcube_{data_time}_{zcut}_moon.fits'
+    # Binned exposure cubes (output of gtexphpsun, for sun)
+    bexpcubesun_format = 'bexp_cubes/bexcube_{dataset}_{component}_{irf_ver}_sun.fits'
+    # Binned exposure cubes (output of gtexphpsun, for moon)
+    bexpcubemoon_format = 'bexp_cubes/bexcube_{dataset}_{component}_{irf_ver}_moon.fits'
+    # Angular spectrum profile
+    angprofile_format = 'templates/profile_{sourcekey}.fits'
+
+    # Binned exposure cubes (output of gtexphpsun, for sun)
+    templatesunmoon_format = 'templates/template_{sourcekey}_{zcut}.fits'
+
+
+    # residual CR output files
+    residual_cr_format = 'residual_cr/residual_cr_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
+
     # Model specific stuff
-    
+
     # galprop rings merging yaml file
     galprop_rings_yaml_format = 'models/galprop_rings_{galkey}.yaml'
     # catalog split yaml file
@@ -97,6 +116,9 @@ class NameFactory(object):
     master_srcmdl_xml_format = 'analysis/model_{modelkey}/srcmdl_{modelkey}_master.xml'
     # Component XML model file
     comp_srcmdl_xml_format = 'analysis/model_{modelkey}/srcmdl_{modelkey}_{component}.xml'
+
+    # Stamp files from scatter gather jobs
+    stamp_format = 'stamps/{linkname}.stamp'
 
     # Full filepath
     fullpath_format = '{basedir}/{localpath}'
@@ -342,6 +364,96 @@ class NameFactory(object):
         else:
             return localpath
 
+    def ltcube_sun(self, **kwargs):
+        """ return the name of a livetime cube file
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        localpath = NameFactory.ltcubesun_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath
+
+    def ltcube_moon(self, **kwargs):
+        """ return the name of a livetime cube file
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        localpath = NameFactory.ltcubemoon_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath
+
+    def bexpcube_sun(self, **kwargs):
+        """ return the name of a binned exposure cube file
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        kwargs_copy['component'] = kwargs.get(
+            'component', self.component(**kwargs))
+        localpath = NameFactory.bexpcubesun_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath
+
+    def bexpcube_moon(self, **kwargs):
+        """ return the name of a binned exposure cube file
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        kwargs_copy['component'] = kwargs.get(
+            'component', self.component(**kwargs))
+        localpath = NameFactory.bexpcubemoon_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath
+    
+    def angprofile(self, **kwargs):
+        """ return the file name for sun or moon angular profiles
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        localpath = NameFactory.angprofile_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath
+
+    def template_sunmoon(self, **kwargs):
+        """ return the file name for sun or moon template files
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        kwargs_copy['component'] = kwargs.get(
+            'component', self.component(**kwargs))
+        localpath = NameFactory.templatesunmoon_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath
+  
+    def residual_cr(self, **kwargs):
+        """Return the name of the residual CR analysis output files"""
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        kwargs_copy['component'] = kwargs.get(
+            'component', self.component(**kwargs))
+        localpath = NameFactory.residual_cr_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath
+
     def galprop_rings_yaml(self, **kwargs):
         """ return the name of a galprop rings merging yaml file
         """
@@ -351,7 +463,7 @@ class NameFactory(object):
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
         else:
-            return localpath       
+            return localpath
 
     def catalog_split_yaml(self, **kwargs):
         """ return the name of a catalog split yaml file
@@ -362,7 +474,7 @@ class NameFactory(object):
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
         else:
-            return localpath       
+            return localpath
 
     def model_yaml(self, **kwargs):
         """ return the name of a model yaml file
@@ -373,7 +485,7 @@ class NameFactory(object):
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
         else:
-            return localpath       
+            return localpath
 
     def merged_srcmaps(self, **kwargs):
         """ return the name of a source map file
@@ -414,8 +526,14 @@ class NameFactory(object):
         else:
             return localpath
 
+    def stamp(self, **kwargs):
+        """Return the path for a stamp file for a scatter gather job"""
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        return NameFactory.stamp_format.format(**kwargs_copy)
+
     def fullpath(self, **kwargs):
-        """ return a full path name for a given file
+        """Return a full path name for a given file
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)

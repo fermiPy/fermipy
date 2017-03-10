@@ -64,6 +64,8 @@ Documentation Contents
    model
    advanced/index
    fermipy
+   fermipy_jobs
+   fermipy_diffuse
    changelog
 
 Indices and tables

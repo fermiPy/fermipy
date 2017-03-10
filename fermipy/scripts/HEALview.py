@@ -17,8 +17,12 @@ import os
 import numpy 
 import astropy.io.fits as pf
 
+from fermipy.utils import init_matplotlib_backend
+init_matplotlib_backend()
+
 from fermipy.hpx_utils import HPX, HpxToWcsMapping
 from fermipy.skymap import HpxMap
+
 from fermipy.plotting import ImagePlotter
 import matplotlib.pyplot as plt
 
@@ -54,6 +58,8 @@ def main():
     parser.add_argument("-o", "--output",type=argparse.FileType('w'),
                         help="Output file.  Leave blank for interactive.")
     
+    
+
     # Parse the command line
     args = parser.parse_args(sys.argv[1:])
 
@@ -89,6 +95,7 @@ def main():
             outdata.append((im,ax))        
         except:
             raise ValueError("--ebin argument must be an integer or 'ALL'")
+
 
     if args.output is None:
         plt.show()

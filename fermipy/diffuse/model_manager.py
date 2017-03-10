@@ -55,10 +55,11 @@ class ModelInfo(object):
         """  Build a yaml file that specfies how to make the srcmap files for a particular model
 
         Parameters
-        -----------------
+        ----------
+
         components : list
             The binning components used in this analysis
-        name_factory : `NameFactory'
+        name_factory : `NameFactory`
             Object that handles naming conventions
 
         Returns a dictionary that contains information about where to find the
@@ -162,7 +163,7 @@ class ModelManager(object):
 
     specifically it maps:
 
-    sourcekey : `dmpipe.dmp_model_component.ModelComponentInfo'
+    sourcekey : `model_component.ModelComponentInfo`
 
     """
 
@@ -211,7 +212,8 @@ class ModelManager(object):
         """ Build up the library of all the components
 
         Parameters
-        -----------------
+        ----------
+
         diffuse_yaml : str
             Name of the yaml file with the library of diffuse component definitions
         catalog_yaml : str
@@ -237,11 +239,12 @@ class ModelManager(object):
         """ Build a dictionary with the information for a particular model.
 
         Parameters
-        -----------------
+        ----------
+
         modelkey : str
             Key used to identify this particular model
 
-        Return `ModelInfo'
+        Return `ModelInfo`
         """
         model = self.read_model_yaml(modelkey)
         sources = model['sources']
@@ -285,7 +288,8 @@ class ModelManager(object):
         """Build a yaml file that specfies how to make the srcmap files for a particular model
 
         Parameters
-        -----------------
+        ----------
+
         modelkey : str
             Key used to identify this particular model
         components : list
@@ -302,13 +306,20 @@ class ModelManager(object):
                                modelkey, 'srcmap_manifest_%s.yaml' % modelkey)
         manifest = model_info.make_srcmap_manifest(
             components, self._name_factory)
+
+        outdir = os.path.dirname(outfile)
+        try:
+            os.makedirs(outdir)
+        except OSError:
+            pass
         utils.write_yaml(manifest, outfile)
 
     def make_fermipy_config_yaml(self, modelkey, components, data, **kwargs):
         """Build a fermipy top-level yaml configuration file
 
         Parameters
-        -----------------
+        ----------
+
         modelkey : str
             Key used to identify this particular model
         components : list
@@ -387,6 +398,10 @@ class ModelManager(object):
                             gtlike=comp_gtlike,
                             model=comp_model)
             fermipy_dict['components'].append(sub_dict)
+
+        outfile = os.path.join(model_dir, 'config.yaml')
+        print ("Writing fermipy config file %s"%outfile)
+        utils.write_yaml(fermipy_dict, outfile)
         return fermipy_dict
 
     @staticmethod

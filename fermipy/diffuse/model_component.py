@@ -10,8 +10,9 @@ import copy
 class CatalogInfo(object):
     """Information about a source catalog
 
-    Data Members:
-    -------------------
+    Parameters
+    ----------
+
     catalog_name : str
         The name given to the merged component, e.g., merged_CO or merged_HI
     catalog_file : str
@@ -20,9 +21,9 @@ class CatalogInfo(object):
         Directory with extended source templates
     catalog_type : str
         Identifies the format of the catalog fits file: e.g., '3FGL' or '4FGLP'
-    catalog : `fermipy.catalog.Catalog'
+    catalog : `fermipy.catalog.Catalog`
         Catalog object
-    roi_model : `fermipy.roi_model.ROIModel'
+    roi_model : `fermipy.roi_model.ROIModel`
         Fermipy object describing all the catalog sources
     srcmdl_name : str
         Name of xml file with the catalog source model
@@ -50,8 +51,9 @@ class CatalogInfo(object):
 class GalpropMergedRingInfo(object):
     """Information about a set of Merged Galprop Rings
 
-    Data Members:
-    -------------------
+    Parameters
+    ----------
+
     source_name : str
         The name given to the merged component, e.g., merged_CO or merged_HI
     ring : int
@@ -89,8 +91,9 @@ class GalpropMergedRingInfo(object):
 class ModelComponentInfo(object):
     """Information about a model component
 
-    Data Members:
-    -------------------
+    Parameters
+    ----------
+
     source_name : str
         The name given to the component, e.g., loop_I or moon
     source_ver : str
@@ -106,7 +109,7 @@ class ModelComponentInfo(object):
     selection_dependent : bool
         Flag for selection dependent sources (i.e., the residual cosmic ray model)
     components : dict
-        Sub-dictionary of `ModelComponentInfo' objects for moving and selection_dependent sources
+        Sub-dictionary of `ModelComponentInfo` objects for moving and selection_dependent sources
     comp_key : str
         Component key for this component of moving and selection_dependent sources
     """
@@ -133,11 +136,12 @@ class ModelComponentInfo(object):
         """Return the information about sub-component specific to a particular data selection
 
         Parameters
-        ----------------
-        comp : `binning.Component' object
+        ----------
+
+        comp : `binning.Component` object
             Specifies the sub-component
 
-        Returns `ModelComponentInfo' object
+        Returns `ModelComponentInfo` object
         """
         if self.components is None:
             raise ValueError(
@@ -155,8 +159,9 @@ class ModelComponentInfo(object):
         """Add sub-component specific information to a particular data selection
 
         Parameters
-        ----------------
-        compinfo : `ModelComponentInfo' object
+        ----------
+
+        compinfo : `ModelComponentInfo` object
             Sub-component being added
         """
         if self.components is None:
@@ -167,11 +172,12 @@ class ModelComponentInfo(object):
         """Clones self and merges clone with sub-component specific information
 
         Parameters
-        ----------------
+        ----------
+
         key : str
             Key specifying which sub-component
 
-        Returns `ModelComponentInfo' object
+        Returns `ModelComponentInfo` object
         """
         new_comp = copy.deepcopy(self)
         #sub_com = self.components[key]
@@ -183,8 +189,9 @@ class ModelComponentInfo(object):
 class MapCubeComponentInfo(ModelComponentInfo):
     """ Information about a model component represented by a MapCubeSource
 
-    Data Members (in addition to `ModelComponentInfo' data members)
-    -------------------
+    Parameters
+    ----------
+
     Spatial_Filename : str
         Name of the template file for the spatial model
     """
@@ -200,8 +207,9 @@ class MapCubeComponentInfo(ModelComponentInfo):
 class IsoComponentInfo(ModelComponentInfo):
     """ Information about a model component represented by a IsoSource
 
-    Data Members (in addition to `ModelComponentInfo' data members)
-    -------------------
+    Parameters
+    ----------
+
     Spectral_Filename : str
         Name of the template file for the spatial model
     """
@@ -215,10 +223,7 @@ class IsoComponentInfo(ModelComponentInfo):
 
 
 class PointSourceInfo(ModelComponentInfo):
-    """ Information about a model component represented by a PointSource
-
-    Data Members (in addition to `ModelComponentInfo' data members)
-    -------------------
+    """ Information about a model component represented by a PointSource\
     """
 
     def __init__(self, **kwargs):
@@ -231,13 +236,14 @@ class PointSourceInfo(ModelComponentInfo):
 class CompositeSourceInfo(ModelComponentInfo):
     """ Information about a model component represented by a CompositeSource
 
-    Data Members (in addition to `ModelComponentInfo' data members)
-    -------------------
+    Parameters
+    ----------
+
     source_names : list
         The names of the nested sources
-    catalog_info : `dmpipe.dmp_model_component.CatalogInfo' or None
+    catalog_info : `model_component.CatalogInfo` or None
         Information about the catalog containing the nested sources
-    roi_model : `fermipy.roi_model.ROIModel'
+    roi_model : `fermipy.roi_model.ROIModel`
         Fermipy object describing the nested sources
     """
 
@@ -254,13 +260,14 @@ class CompositeSourceInfo(ModelComponentInfo):
 class CatalogSourcesInfo(ModelComponentInfo):
     """ Information about a model component consisting of sources from a catalog
 
-    Data Members (in addition to `ModelComponentInfo' data members)
-    -------------------
+    Parameters
+    ----------
+
     source_names : list
         The names of the nested sources
-    catalog_info : `dmpipe.dmp_model_component.CatalogInfo' or None
+    catalog_info : `model_component.CatalogInfo` or None
         Information about the catalog containing the nested sources
-    roi_model : `fermipy.roi_model.ROIModel'
+    roi_model : `fermipy.roi_model.ROIModel`
         Fermipy object describing the nested sources
     """
 
