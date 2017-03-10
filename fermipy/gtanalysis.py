@@ -994,6 +994,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def _init_roi_model(self):
 
+        # EAC, move from setup
+        self._ccube_file = os.path.join(self.workdir,
+                                        'ccube.fits')
         rm = self._roi_data
 
         rm['counts'] = np.zeros(self.enumbins)
@@ -2148,7 +2151,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                             loge_bounds[1],
                                             summed=True)
             npred = np.sum(cs)
-            val = 1. / npred
+            #EAC, protect against npred == 0
+            val = 1. / max(npred, 1.)
             npred = 1.0
             par.setValue(0.0)
             self.like.syncSrcParams(str(name))
@@ -3763,15 +3767,20 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._name = self.config['name']
 
         search_dirs = [workdir]
-
         self._files = {}
         self._files['ft1'] = 'ft1%s.fits'
         self._files['ft1_filtered'] = 'ft1_filtered%s.fits'
         self._files['ccube'] = 'ccube%s.fits'
         self._files['ccubemc'] = 'ccubemc%s.fits'
-        self._files['srcmap'] = 'srcmap%s.fits'
-        self._files['bexpmap'] = 'bexpmap%s.fits'
-        self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
+        self._files['srcmap'] = self.config['gtlike'].get('srcmap')
+        if self._files['srcmap'] is None:
+            self._files['srcmap'] = 'srcmap%s.fits'    
+        self._files['bexpmap'] = self.config['gtlike'].get('bexpmap')
+        if self._files['bexpmap'] is None:
+            self._files['bexpmap'] = 'bexpmap%s.fits'
+        self._files['bexpmap_roi'] = self.config['gtlike'].get('bexpmap_roi')
+        if self._files['bexpmap_roi'] is None:
+             self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
         self._files['srcmdl'] = 'srcmdl%s.xml'
 
         self._data_files = {}
@@ -3799,16 +3808,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._src_expscale = {}
         if self.config['gtlike']['expscale'] is not None:
             for src in self.roi:
-                self._src_expscale[src.name] = self.config[
-                    'gtlike']['expscale']
+                self._src_expscale[src.name] = self.config['gtlike']['expscale']
 
         if self.config['gtlike']['src_expscale']:
             for k, v in self.config['gtlike']['src_expscale'].items():
                 self._src_expscale[k] = v
 
         for k, v in self._files.items():
-            self._files[k] = os.path.join(workdir,
-                                          v % self.config['file_suffix'])
+            try:
+                self._files[k] = os.path.join(workdir,
+                                              v % self.config['file_suffix'])
+            except:
+                self._files[k] = os.path.join(workdir, v)
 
         for k in ['srcmap', 'bexpmap', 'bexpmap_roi']:
 
@@ -4274,16 +4285,22 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         """
         try:
-            p_method = self.like.logLike.countsMap().projection().method()
+            if isinstance(self.like, gtutils.SummedLikelihood):
+                cmap = self.like.components[0].logLike.countsMap()
+                p_method = cmap.projection().method()
+            else:
+                cmap = self.like.logLike.countsMap()
+                p_method = cmap.projection().method()
         except Exception:
             p_method = 0
+            
 
         if p_method == 0:  # WCS
-            z = self.like.logLike.countsMap().data()
+            z = cmap.data()
             z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
             return Map(z, copy.deepcopy(self.wcs))
         elif p_method == 1:  # HPX
-            z = self.like.logLike.countsMap().data()
+            z = cmap.data()
             nhpix = self.hpx.npix
             z = np.array(z).reshape(self.enumbins, nhpix)
             return HpxMap(z, self.hpx)
