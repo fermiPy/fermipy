@@ -370,7 +370,7 @@ class ExtensionFit(object):
         fit_position = kwargs.get('fit_position', False)
         skydir = kwargs.get('skydir', self.roi[name].skydir)
 
-        width = np.logspace(-1.5, 0.5, 11)
+        width = np.logspace(-2.0, 0.5, 16)
         width = np.concatenate(([0.0], width))
 
         loglike = self._scan_extension(name, spatial_model=spatial_model,

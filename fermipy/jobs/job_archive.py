@@ -280,7 +280,7 @@ class JobDetails(object):
         return JobDetails(**kwargs)
 
     def append_to_tables(self, table, table_ids):
-        """Add this instance as a row on a `astropy.Table` """
+        """Add this instance as a row on a `astropy.table.Table` """
         infile_refs = np.zeros((2), int)
         outfile_refs = np.zeros((2), int)
         rmfile_refs = np.zeros((2), int)
@@ -325,7 +325,7 @@ class JobDetails(object):
                            status=self.status))
 
     def update_table_row(self, table, row_idx):
-        """Add this instance as a row on a `astropy.Table` """
+        """Add this instance as a row on a `astropy.table.Table` """
         table[row_idx]['timestamp'] = self.timestamp
         table[row_idx]['status'] = status=self.status
 
@@ -399,7 +399,7 @@ class JobArchive(object):
 
     def _fill_cache(self):
         """Fill the cache from the `astropy.table.Table`"""
-        for irow in xrange(len(self._table)):
+        for irow in range(len(self._table)):
             job_details = self.make_job_details(irow)
             self._cache[job_details.fullkey] = job_details
 

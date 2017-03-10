@@ -194,6 +194,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         'tsmap': defaults.tsmap,
         'residmap': defaults.residmap,
         'lightcurve': defaults.lightcurve,
+        'find_sources': defaults.sourcefind,
     }
 
     defaults = {'logging': defaults.logging,
@@ -512,8 +513,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """Make a clone of this analysis instance."""
         gta = GTAnalysis(config, **kwargs)
         gta._roi = copy.deepcopy(self.roi)
-        for c in self.components:
-            gta.components[0]._roi = copy.deepcopy(c.roi)
+        for i, c in enumerate(self.components):
+            gta.components[i]._roi = copy.deepcopy(c.roi)
 
         return gta
 
@@ -3847,6 +3848,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             logemax = self.config['selection']['logemax']
             emin = np.power(10., logemin)
             emax = np.power(10., logemax)
+
+        self.config['selection']['logemin'] = logemin
+        self.config['selection']['logemax'] = logemax
+        self.config['selection']['emin'] = emin
+        self.config['selection']['emax'] = emax
 
         if self.config['binning']['enumbins'] is not None:
             self._enumbins = int(self.config['binning']['enumbins'])

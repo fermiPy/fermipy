@@ -3,15 +3,6 @@
 fermipy.diffuse subpackage
 ==========================
 
-
-fermipy.diffuse module
-----------------------
-
-.. automodule:: fermipy.diffuse
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 fermipy.diffuse.binning module
 ------------------------------
 
