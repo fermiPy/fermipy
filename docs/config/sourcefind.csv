@@ -1,7 +1,8 @@
 ``free_params``	None	
-``max_iter``	3	Set the number of search iterations.
-``min_separation``	1.0	Set the minimum separation in deg for sources added in each iteration.
-``model``	None	Set the source model dictionary.  By default the test source will be a PointSource with an Index 2 power-law specturm.
-``sources_per_iter``	3	
-``sqrt_ts_threshold``	5.0	Set the threshold on sqrt(TS).
-``tsmap_fitter``	tsmap	Set the method for generating the TS map.
+``max_iter``	5	Maximum number of source finding iterations.  The source finder will continue adding sources until no additional peaks are found or the number of iterations exceeds this number.
+``min_separation``	1.0	Minimum separation in degrees between sources detected in each iteration. The source finder will look for the maximum peak in the TS map within a circular region of this radius.
+``model``	None	Dictionary defining the spatial/spectral properties of the test source. If model is None the test source will be a PointSource with an Index 2 power-law spectrum.
+``multithread``	False	Split the calculation across all available cores.
+``sources_per_iter``	4	Maximum number of sources that will be added in each iteration.  If the number of detected peaks in a given iteration is larger than this number, only the N peaks with the largest TS will be used as seeds for the current iteration.
+``sqrt_ts_threshold``	5.0	Source threshold in sqrt(TS).  Only peaks with sqrt(TS) exceeding this threshold will be used as seeds for new sources.
+``tsmap_fitter``	tsmap	Set the method for generating the TS map.  Valid options are tsmap or tscube.
