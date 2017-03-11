@@ -3767,11 +3767,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._name = self.config['name']
 
         search_dirs = [workdir]
+
         self._files = {}
         self._files['ft1'] = 'ft1%s.fits'
         self._files['ft1_filtered'] = 'ft1_filtered%s.fits'
         self._files['ccube'] = 'ccube%s.fits'
         self._files['ccubemc'] = 'ccubemc%s.fits'
+        # EAC, optionally get the names of srcmap, bexpmap and bexmap_roi from config        
         self._files['srcmap'] = self.config['gtlike'].get('srcmap')
         if self._files['srcmap'] is None:
             self._files['srcmap'] = 'srcmap%s.fits'    
@@ -3808,13 +3810,16 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._src_expscale = {}
         if self.config['gtlike']['expscale'] is not None:
             for src in self.roi:
-                self._src_expscale[src.name] = self.config['gtlike']['expscale']
+                self._src_expscale[src.name] = self.config[
+                    'gtlike']['expscale']
 
         if self.config['gtlike']['src_expscale']:
             for k, v in self.config['gtlike']['src_expscale'].items():
                 self._src_expscale[k] = v
 
         for k, v in self._files.items():
+            #EAC, need try-except here b/c srcmap, bexpmap and bexmap_roi
+            #might already be formatted
             try:
                 self._files[k] = os.path.join(workdir,
                                               v % self.config['file_suffix'])

@@ -1018,10 +1018,7 @@ class Source(Model):
         spec = utils.load_xml_elements(root, 'spectrum')
         spectral_pars = utils.load_xml_elements(root, 'spectrum/parameter')
         spectral_type = spec['type']
-        try:
-            spectral_pars = cast_pars_dict(spectral_pars)
-        except AttributeError:
-            print (src_type, root.attrib)
+        spectral_pars = cast_pars_dict(spectral_pars)
         spat = {}
         spatial_pars = {}
         nested_sources = []
@@ -1033,7 +1030,8 @@ class Source(Model):
                 nested_sources += [Source.create_from_xml(node, extdir=extdir)]
         else:
             spat = utils.load_xml_elements(root, 'spatialModel')
-            spatial_pars = utils.load_xml_elements(root, 'spatialModel/parameter')
+            spatial_pars = utils.load_xml_elements(
+                root, 'spatialModel/parameter')
             spatial_pars = cast_pars_dict(spatial_pars)
             spatial_type = spat['type']
 
@@ -1076,15 +1074,10 @@ class Source(Model):
                 src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
                 src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
             else:
-                try:
-                    skydir = wcs_utils.get_map_skydir(os.path.expandvars(src_dict['Spatial_Filename']))
-                    src_dict['RAJ2000'] = skydir.ra.deg
-                    src_dict['DEJ2000'] = skydir.dec.deg
-                except:
-                    print ("Could not get skydir from %s"%os.path.expandvars(src_dict['Spatial_Filename']))
-                    src_dict['RAJ2000'] = 0.
-                    src_dict['DEJ2000'] = 0.
-                   
+                skydir = wcs_utils.get_map_skydir(os.path.expandvars(
+                    src_dict['Spatial_Filename']))
+                src_dict['RAJ2000'] = skydir.ra.deg
+                src_dict['DEJ2000'] = skydir.dec.deg
 
             radec = np.array([src_dict['RAJ2000'], src_dict['DEJ2000']])
 
@@ -1117,7 +1110,8 @@ class Source(Model):
 
         if not self.extended:
             source_element = utils.create_xml_element(root, 'source',
-                                                      dict(name=self['Source_Name'],
+                                                      dict(name=self[
+                                                          'Source_Name'],
                                                           type='PointSource'))
 
             spat_el = ElementTree.SubElement(source_element, 'spatialModel')
@@ -1125,8 +1119,9 @@ class Source(Model):
 
         elif self['SpatialType'] == 'SpatialMap':
             source_element = utils.create_xml_element(root, 'source',
-                                                      dict(name=self['Source_Name'],
-                                                           type='DiffuseSource'))
+                                                      dict(name=self[
+                                                          'Source_Name'],
+                                                          type='DiffuseSource'))
 
             filename = utils.path_to_xmlpath(self['Spatial_Filename'])
             spat_el = utils.create_xml_element(source_element, 'spatialModel',
@@ -1936,14 +1931,9 @@ class ROIModel(fermipy.config.Configurable):
                 search_dirs += [row['extdir'],
                                 os.path.join(row['extdir'], 'Templates')]
 
-                
-                try:
-                    src_dict['Spatial_Filename'] = utils.resolve_file_path(
-                        row['Spatial_Filename'],
-                        search_dirs=search_dirs)
-                except: 
-                    print ("Skipping ", row['Spatial_Filename'], search_dirs)
-                    continue
+                src_dict['Spatial_Filename'] = utils.resolve_file_path(
+                    row['Spatial_Filename'],
+                    search_dirs=search_dirs)
 
             else:
                 src_dict['SourceType'] = 'PointSource'
