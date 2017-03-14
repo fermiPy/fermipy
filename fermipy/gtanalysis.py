@@ -4943,7 +4943,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
-        rebin = min(int(np.ceil(self.binsz / 0.01)), 8)
         cache = self._srcmap_cache.get(name, None)
         if cache is not None:
             k = cache.create_map([ypix, xpix])
@@ -4953,7 +4952,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                          npix=self.npix, xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
                                          rebin=rebin,
-                                         psf_scale_fn=psf_scale_fn)
+                                         psf_scale_fn=psf_scale_fn,
+                                         sparse=True)
 
         return k
 
