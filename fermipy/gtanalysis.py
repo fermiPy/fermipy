@@ -4951,7 +4951,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                          spatial_width,
                                          npix=self.npix, xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
-                                         rebin=rebin,
                                          psf_scale_fn=psf_scale_fn,
                                          sparse=True)
 
