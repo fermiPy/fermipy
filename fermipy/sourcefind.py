@@ -337,7 +337,8 @@ class SourceFind(object):
 
         fit0 = self._fit_position_tsmap(name, prefix=prefix,
                                         dtheta_max=dtheta_max,
-                                        zmin=-3.0)
+                                        zmin=-3.0,
+                                        use_pylike=False)
 
         self.logger.debug('Completed localization with TS Map.\n'
                           '(ra,dec) = (%10.4f,%10.4f) '
