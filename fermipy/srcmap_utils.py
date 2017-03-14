@@ -155,8 +155,7 @@ class SourceMapCache(object):
         k0 = make_srcmap(psf, spatial_model, spatial_width,
                          npix=npix + pad_pix,
                          xpix=xpix, ypix=ypix,
-                         cdelt=cdelt,
-                         rebin=1)
+                         cdelt=cdelt)
 
         m0 = MapInterpolator(k0, pix_ref, shape_out, 1)
 
@@ -168,8 +167,7 @@ class SourceMapCache(object):
         k1 = make_srcmap(psf, spatial_model, spatial_width,
                          npix=npix1,
                          xpix=xpix1, ypix=ypix1,
-                         cdelt=cdelt / rebin,
-                         rebin=1)
+                         cdelt=cdelt / rebin)
 
         m1 = MapInterpolator(k1, pix_ref, shape_out, rebin)
 
@@ -177,7 +175,7 @@ class SourceMapCache(object):
 
 
 def make_srcmap(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
-                cdelt=0.01, rebin=1, psf_scale_fn=None):
+                cdelt=0.01, psf_scale_fn=None, sparse=False):
     """Compute the source map for a given spatial model.
 
     Parameters
@@ -196,36 +194,27 @@ def make_srcmap(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
     ypix : float
         Source position in pixel coordinates in Y dimension.
 
-    rebin : int    
-        Factor by which the original map will be oversampled in the
-        spatial dimension when computing the model.
-
     psf_scale_fn : callable        
         Function that evaluates the PSF scaling function.
         Argument is energy in MeV.
 
-    """
-    if rebin > 1:
-        npix = npix * rebin
-        xpix = xpix * rebin + (rebin - 1.0) / 2.
-        ypix = ypix * rebin + (rebin - 1.0) / 2.
-        cdelt = cdelt / rebin
+    sparse : bool    
+        Skip pixels in which the source amplitude is small.
 
+    """
     if spatial_model == 'RadialGaussian':
-        k = utils.make_cgauss_kernel(psf, sigma, npix, cdelt,
-                                     xpix, ypix, psf_scale_fn)
+        k = utils.make_radial_kernel(psf, utils.convolve2d_gauss,
+                                     sigma/1.5095921854516636, npix, cdelt,
+                                     xpix, ypix, psf_scale_fn, sparse=sparse)
     elif spatial_model == 'RadialDisk':
-        k = utils.make_cdisk_kernel(psf, sigma, npix, cdelt,
-                                    xpix, ypix, psf_scale_fn)
+        k = utils.make_radial_kernel(psf, utils.convolve2d_disk,
+                                     sigma/0.8246211251235321, npix, cdelt,
+                                     xpix, ypix, psf_scale_fn, sparse=sparse)
     elif spatial_model == 'PointSource':
-        k = utils.make_psf_kernel(psf, npix, cdelt,
-                                  xpix, ypix, psf_scale_fn)
+        k = utils.make_radial_kernel(psf, None, None, npix, cdelt,
+                                     xpix, ypix, psf_scale_fn, sparse=sparse)
     else:
         raise Exception('Unsupported spatial model: %s', spatial_model)
-
-    if rebin > 1:
-        k = utils.sum_bins(k, 1, rebin)
-        k = utils.sum_bins(k, 2, rebin)
 
     k *= psf.exp[:, np.newaxis, np.newaxis] * np.radians(cdelt) ** 2
     return k
