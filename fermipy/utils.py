@@ -1527,60 +1527,62 @@ def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=Non
     sigma : float
       68% containment radius in degrees.
     """
-    
+
     egy = psf.energies
-    ang_dist = make_pixel_distance(npix, xpix, ypix)*cdelt
-    dtheta = np.linspace(0.0,(np.max(ang_dist)*1.05)**0.5,400)**2.0    
-    z = create_kernel_function_lookup(psf, fn, sigma, egy, dtheta, psf_scale_fn)
+    ang_dist = make_pixel_distance(npix, xpix, ypix) * cdelt
+    dtheta = np.linspace(0.0, (np.max(ang_dist) * 1.05)**0.5, 400)**2.0
+    z = create_kernel_function_lookup(psf, fn, sigma, egy,
+                                      dtheta, psf_scale_fn)
     #z = create_radial_spline(psf, fn, sigma, egy, dtheta, psf_scale_fn)
     x2 = val_to_pix(dtheta, np.ravel(ang_dist))
 
-    shape = (len(egy),npix,npix)
+    shape = (len(egy), npix, npix)
     k = np.zeros(shape)
 
-    r99 = psf.containment_angle(energies=psf.energies,fraction=0.99)
-    r34 = psf.containment_angle(energies=psf.energies,fraction=0.34)
+    r99 = psf.containment_angle(energies=psf.energies, fraction=0.99)
+    r34 = psf.containment_angle(energies=psf.energies, fraction=0.34)
 
-    rmin = np.minimum(r34/4.,0.01)
+    rmin = np.minimum(r34 / 4., 0.01)
     rmax = r99
     if sigma is not None:
-        rmin = np.minimum(rmin, 0.5*sigma)
-        rmax = np.maximum(rmax, 3.0*sigma)
+        rmin = np.minimum(rmin, 0.5 * sigma)
+        rmax = np.maximum(rmax, 3.0 * sigma)
 
     for i in range(len(egy)):
-        
+
         rebin = min(int(np.ceil(cdelt / rmin[i])), 8)
         xdist = make_pixel_distance(npix * rebin,
-                                    xpix * rebin + (rebin-1.0) / 2.,
-                                    ypix * rebin + (rebin-1.0) / 2.)
-        xdist *= cdelt/float(rebin)
+                                    xpix * rebin + (rebin - 1.0) / 2.,
+                                    ypix * rebin + (rebin - 1.0) / 2.)
+        xdist *= cdelt / float(rebin)
         m = np.ravel(xdist) < rmax[i]
         x = val_to_pix(dtheta, np.ravel(xdist))
-        
+
         if sparse:
             kk = np.zeros(xdist.size)
-            kk[m] = map_coordinates(z[i],[x[m]],order=2,prefilter=False)
+            kk[m] = map_coordinates(z[i], [x[m]], order=2, prefilter=False)
             kk = kk.reshape(xdist.shape)
         else:
-            kk = map_coordinates(z[i],[x],order=2,prefilter=False).reshape(xdist.shape)
+            kk = map_coordinates(z[i], [x], order=2,
+                                 prefilter=False).reshape(xdist.shape)
 
         if rebin > 1:
             kk = sum_bins(kk, 0, rebin)
             kk = sum_bins(kk, 1, rebin)
-        
-        k[i] = kk/float(rebin)**2
+
+        k[i] = kk / float(rebin)**2
 
     k = k.reshape((len(egy),) + ang_dist.shape)
     if normalize:
         k /= (np.sum(k, axis=0)[np.newaxis, ...] * np.radians(cdelt) ** 2)
-    
+
     return k
 
 
 #@memoize
 def create_kernel_function_lookup(psf, fn, sigma, egy, dtheta, psf_scale_fn):
 
-    z =  np.zeros((len(egy), len(dtheta)))
+    z = np.zeros((len(egy), len(dtheta)))
     for i in range(len(egy)):
 
         if fn is None:
@@ -1596,7 +1598,8 @@ def create_radial_spline(psf, fn, sigma, egy, dtheta, psf_scale_fn):
 
     from scipy.ndimage.interpolation import spline_filter
 
-    z =  create_kernel_function_lookup(psf, fn, sigma, egy, dtheta, psf_scale_fn)
+    z = create_kernel_function_lookup(
+        psf, fn, sigma, egy, dtheta, psf_scale_fn)
     sp = []
     for i in range(z.shape[0]):
         sp += [spline_filter(z[i], order=2)]
