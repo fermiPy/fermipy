@@ -593,7 +593,7 @@ def calc_exp(skydir, ltc, event_class, event_types,
     """
 
     if npts is None:
-        npts = int(np.ceil(np.max(cth_bins[1:] - cth_bins[:-1]) / 0.05))
+        npts = int(np.ceil(np.max(cth_bins[1:] - cth_bins[:-1]) / 0.025))
 
     exp = np.zeros((len(egy), len(cth_bins) - 1))
     cth_bins = utils.split_bin_edges(cth_bins, npts)
