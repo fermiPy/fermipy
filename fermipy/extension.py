@@ -446,8 +446,8 @@ class ExtensionFit(object):
             fit_ext['ra'] = skydir.ra.deg
             fit_ext['dec'] = skydir.dec.deg
             fit_ext['offset'] = skydir.separation(src.skydir).deg
-            fit_ext['loglike_ext'] = fit_pos['loglike']
-            dloglike = fit_pos['loglike'] - loglike
+            fit_ext['loglike_ext'] = -gta.like()
+            dloglike = fit_ext['loglike_ext'] - loglike
 
             self.logger.info('Extension Fit Iteration %i', i)
             self.logger.info('R68 = %8.3f Offset = %8.3f Delta-LogLikelihood = %8.2f',
