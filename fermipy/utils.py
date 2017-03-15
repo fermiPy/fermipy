@@ -1524,47 +1524,58 @@ def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=Non
 
     psf : `~fermipy.irfs.PSFModel`
 
+    fn : callable
+        Function that evaluates the kernel at a radial coordinate r.
+    
     sigma : float
-      68% containment radius in degrees.
+        68% containment radius in degrees.
     """
 
     egy = psf.energies
     ang_dist = make_pixel_distance(npix, xpix, ypix) * cdelt
-    dtheta = np.linspace(0.0, (np.max(ang_dist) * 1.05)**0.5, 400)**2.0
-    z = create_kernel_function_lookup(psf, fn, sigma, egy,
-                                      dtheta, psf_scale_fn)
-    #z = create_radial_spline(psf, fn, sigma, egy, dtheta, psf_scale_fn)
-    x2 = val_to_pix(dtheta, np.ravel(ang_dist))
+    max_ang_dist = np.max(ang_dist) + cdelt
+    #dtheta = np.linspace(0.0, (np.max(ang_dist) * 1.05)**0.5, 200)**2.0
+    # z = create_kernel_function_lookup(psf, fn, sigma, egy,
+    #                                  dtheta, psf_scale_fn)
 
     shape = (len(egy), npix, npix)
     k = np.zeros(shape)
 
-    r99 = psf.containment_angle(energies=psf.energies, fraction=0.99)
+    r99 = psf.containment_angle(energies=psf.energies, fraction=0.997)
     r34 = psf.containment_angle(energies=psf.energies, fraction=0.34)
 
-    rmin = np.minimum(r34 / 4., 0.01)
-    rmax = r99
+    rmin = np.maximum(r34 / 4., 0.01)
+    rmax = np.maximum(r99, 0.1)
     if sigma is not None:
-        rmin = np.minimum(rmin, 0.5 * sigma)
-        rmax = np.maximum(rmax, 3.0 * sigma)
+        rmin = np.maximum(rmin, 0.5 * sigma)
+        rmax = np.maximum(rmax, 2.0 * r34 + 3.0 * sigma)
+    rmax = np.minimum(rmax, max_ang_dist)
 
     for i in range(len(egy)):
 
         rebin = min(int(np.ceil(cdelt / rmin[i])), 8)
+        if sparse:
+            dtheta = np.linspace(0.0, rmax[i]**0.5, 100)**2.0
+        else:
+            dtheta = np.linspace(0.0, max_ang_dist**0.5, 200)**2.0
+
+        z = eval_radial_kernel(psf, fn, sigma, i, dtheta, psf_scale_fn)
         xdist = make_pixel_distance(npix * rebin,
                                     xpix * rebin + (rebin - 1.0) / 2.,
                                     ypix * rebin + (rebin - 1.0) / 2.)
         xdist *= cdelt / float(rebin)
-        m = np.ravel(xdist) < rmax[i]
-        x = val_to_pix(dtheta, np.ravel(xdist))
+        #x = val_to_pix(dtheta, np.ravel(xdist))
 
         if sparse:
+            m = np.ravel(xdist) < rmax[i]
             kk = np.zeros(xdist.size)
-            kk[m] = map_coordinates(z[i], [x[m]], order=2, prefilter=False)
+            #kk[m] = map_coordinates(z, [x[m]], order=2, prefilter=False)
+            kk[m] = np.interp(np.ravel(xdist)[m], dtheta, z)
             kk = kk.reshape(xdist.shape)
         else:
-            kk = map_coordinates(z[i], [x], order=2,
-                                 prefilter=False).reshape(xdist.shape)
+            kk = np.interp(np.ravel(xdist), dtheta, z).reshape(xdist.shape)
+            # kk = map_coordinates(z, [x], order=2,
+            #                     prefilter=False).reshape(xdist.shape)
 
         if rebin > 1:
             kk = sum_bins(kk, 0, rebin)
@@ -1577,6 +1588,15 @@ def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=Non
         k /= (np.sum(k, axis=0)[np.newaxis, ...] * np.radians(cdelt) ** 2)
 
     return k
+
+
+def eval_radial_kernel(psf, fn, sigma, idx, dtheta, psf_scale_fn):
+
+    if fn is None:
+        return psf.eval(idx, dtheta, scale_fn=psf_scale_fn)
+    else:
+        return fn(lambda t: psf.eval(idx, t, scale_fn=psf_scale_fn),
+                  dtheta, sigma)
 
 
 #@memoize
