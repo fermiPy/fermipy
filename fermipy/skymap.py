@@ -367,6 +367,16 @@ class Map(Map_Base):
                                      fill_value=None)
         return fn(np.column_stack(pixcrd))
 
+    def interpolate_at_skydir(self, skydir):
+
+        coordsys = wcs_utils.get_coordsys(self.wcs)
+        if coordsys == 'CEL':
+            skydir = skydir.transform_to('icrs')
+            return self.interpolate(skydir.ra.deg, skydir.dec.deg)
+        else:
+            skydir = skydir.transform_to('galactic')
+            return self.interpolate(skydir.l.deg, skydir.b.deg)
+
 
 class HpxMap(Map_Base):
     """ Representation of a 2D or 3D counts map using HEALPix. """
