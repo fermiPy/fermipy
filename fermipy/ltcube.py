@@ -308,8 +308,8 @@ class LTCube(HpxMap):
         width = edge_to_width(bins)
         ipix = hp.ang2pix(self.hpx.nside, np.pi / 2. - np.radians(dec),
                           np.radians(ra), nest=self.hpx.nest)
-        lt = np.interp(center, self._cth_center,
-                       self.data[:, ipix] / self._cth_width) * width
+        lt = np.histogram(self._cth_center,
+                          weights=self.data[:, ipix], bins=bins)[0]
         lt = np.sum(lt.reshape(-1, npts), axis=1)
         return lt
 
