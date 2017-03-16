@@ -337,7 +337,8 @@ class SourceFind(object):
 
         fit0 = self._fit_position_tsmap(name, prefix=prefix,
                                         dtheta_max=dtheta_max,
-                                        zmin=-3.0)
+                                        zmin=-3.0,
+                                        use_pylike=False)
 
         self.logger.debug('Completed localization with TS Map.\n'
                           '(ra,dec) = (%10.4f,%10.4f) '
@@ -472,25 +473,32 @@ class SourceFind(object):
 
         prefix = kwargs.get('prefix', '')
         dtheta_max = kwargs.get('dtheta_max', 0.5)
-        write_fits = kwargs.get('write_fits', False)
-        write_npy = kwargs.get('write_npy', False)
-        use_pylike = kwargs.get('use_pylike', True)
         zmin = kwargs.get('zmin', -3.0)
 
+        kw = {
+            'map_size': 2.0 * dtheta_max,
+            'write_fits':  kwargs.get('write_fits', False),
+            'write_npy':  kwargs.get('write_npy', False),
+            'use_pylike': kwargs.get('use_pylike', True),
+            'max_kernel_radius': self.config['tsmap']['max_kernel_radius'],
+            'loglevel': logging.DEBUG
+        }
+
         src = self.roi.copy_source(name)
+
+        if src['SpatialModel'] in ['RadialDisk', 'RadialGaussian']:
+            kw['max_kernel_radius'] = max(kw['max_kernel_radius'],
+                                          2.0 * src['SpatialWidth'])
+
         skydir = kwargs.get('skydir', src.skydir)
         tsmap = self.tsmap(utils.join_strings([prefix, name.lower().
                                                replace(' ', '_')]),
                            model=src.data,
                            map_skydir=skydir,
-                           map_size=2.0 * dtheta_max,
                            exclude=[name],
-                           write_fits=write_fits,
-                           write_npy=write_npy,
-                           use_pylike=use_pylike,
-                           make_plots=False,
-                           loglevel=logging.DEBUG)
+                           make_plots=False, **kw)
 
+        # Find peaks with TS > 4
         peaks = find_peaks(tsmap['ts'], 4.0, 0.2)
         peak_best = None
         o = {}

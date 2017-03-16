@@ -2802,8 +2802,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         # FIXME: Figure out why currentLogLike gets out of sync
         #loglike = fitcache.fitcache.currentLogLike()
         #prior_vals, prior_errs, has_prior = gtutils.get_priors(self.like)
-        #loglike -= np.sum(has_prior) * np.log(np.sqrt(2 * np.pi))            
-        loglike = -self.like()        
+        #loglike -= np.sum(has_prior) * np.log(np.sqrt(2 * np.pi))
+        loglike = -self.like()
         o['loglike'] = loglike
 
         return o
@@ -3178,7 +3178,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self._roi_data['loge_bounds'] = self._roi_data.pop('erange')
 
         self._loge_bounds = self._roi_data.setdefault('loge_bounds',
-                                                       self.loge_bounds)
+                                                      self.loge_bounds)
 
         sources = roi_data.pop('sources')
         sources = utils.update_keys(sources, key_map)
@@ -3306,11 +3306,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             tab = self.roi.create_source_table()
             tab['component'] = i
             tab['expscale'] = np.nan
-            
-            for k,v in c.src_expscale.items():
+
+            for k, v in c.src_expscale.items():
                 m = tab['source_name'] == k
                 tab['expscale'][m] = v
-            
+
             tab_srcs += [tab]
 
             tab = self.roi.create_param_table()
@@ -3318,14 +3318,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             tab_params += [tab]
 
         from astropy.table import vstack
-            
+
         hdu_srcs = fits.table_to_hdu(vstack(tab_srcs))
         hdu_srcs.name = 'SOURCES'
         hdu_params = fits.table_to_hdu(vstack(tab_params))
-        hdu_params.name = 'PARAMS'        
+        hdu_params.name = 'PARAMS'
         hdu_roi = fits.table_to_hdu(self.create_roi_table())
         hdu_roi.name = 'ROI'
-        
+
         hdus = [fits.PrimaryHDU(), hdu_data, hdu_roi, hdu_srcs, hdu_params]
         hdus[0].header['CONFIG'] = json.dumps(self.config)
         hdus[1].header['CONFIG'] = json.dumps(self.config)
@@ -3335,11 +3335,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         rd = copy.deepcopy(self._roi_data)
         loge_bounds = rd.pop('loge_bounds').tolist()
-        
+
         tab = fits_utils.dict_to_table(rd)
         tab['component'] = -1
         tab.meta['loge_bounds'] = loge_bounds
-        
+
         row_dict = {}
         for i, c in enumerate(rd['components']):
             c['component'] = i
@@ -3348,16 +3348,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             for k in tab.columns:
 
                 shape = tab.columns[k].shape
-                ndim = tab.columns[k].ndim                
+                ndim = tab.columns[k].ndim
                 if ndim == 1:
                     val = c[k]
                 else:
-                    val = np.ones(shape[1:])*np.nan
+                    val = np.ones(shape[1:]) * np.nan
                     val[:len(c[k])] = c[k]
                 row += [val]
             tab.add_row(row)
         return tab
-        
+
     def make_plots(self, prefix, mcube_map=None, **kwargs):
         """Make diagnostic plots using the current ROI model."""
 
@@ -4195,7 +4195,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if (not save_template and
             src['Spatial_Filename'] is not None and
             os.path.isfile(src['Spatial_Filename']) and
-            os.path.dirname(src['Spatial_Filename']) == self.config['fileio']['workdir']):
+                os.path.dirname(src['Spatial_Filename']) == self.config['fileio']['workdir']):
             os.remove(src['Spatial_Filename'])
 
         self.roi.delete_sources([src])
@@ -4446,6 +4446,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if not use_external_srcmap:
             self._bin_data(overwrite=overwrite, **kwargs)
             self._create_expcube(overwrite=overwrite, **kwargs)
+
+        self._bexp = Map.create_from_fits(self.files['bexpmap'])
 
         # Make spatial maps for extended sources
         for s in self.roi.sources:
@@ -4927,9 +4929,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
+        exp = self._bexp.interpolate_at_skydir(skydir)
         rebin = min(int(np.ceil(self.binsz / 0.01)), 8)
         shape_out = (self.enumbins + 1, self.npix, self.npix)
-        cache = SourceMapCache.create(self._psf, spatial_model,
+        cache = SourceMapCache.create(self._psf, exp, spatial_model,
                                       spatial_width, shape_out,
                                       self.config['binning']['binsz'],
                                       rebin=rebin)
@@ -4943,17 +4946,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
-        rebin = min(int(np.ceil(self.binsz / 0.01)), 8)
+        exp = self._bexp.interpolate_at_skydir(skydir)
+
         cache = self._srcmap_cache.get(name, None)
         if cache is not None:
             k = cache.create_map([ypix, xpix])
         else:
-            k = srcmap_utils.make_srcmap(self._psf, spatial_model,
+            k = srcmap_utils.make_srcmap(self._psf, exp, spatial_model,
                                          spatial_width,
                                          npix=self.npix, xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
-                                         rebin=rebin,
-                                         psf_scale_fn=psf_scale_fn)
+                                         psf_scale_fn=psf_scale_fn,
+                                         sparse=True)
 
         return k
 
