@@ -40,17 +40,18 @@ class HPX_Conv(object):
 
 
 # Various conventions for storing HEALPix maps in FITS files
-HPX_FITS_CONVENTIONS = {'FGST_CCUBE':HPX_Conv('FGST_CCUBE'),
-                        'FGST_LTCUBE':HPX_Conv('FGST_LTCUBE', colstring='COSBINS', extname='EXPOSURE', energy_hdu='CTHETABOUNDS'),
-                        'FGST_BEXPCUBE':HPX_Conv('FGST_BEXPCUBE', colstring='ENERGY', extname='HPXEXPOSURES', energy_hdu='ENERGIES'),
-                        'FGST_SRCMAP':HPX_Conv('FGST_SRCMAP', extname=None, quantity_type='differential'),
-                        'FGST_TEMPLATE':HPX_Conv('FGST_TEMPLATE', colstring='ENERGY', energy_hdu='ENERGIES'),
-                        'FGST_SRCMAP_SPARSE':HPX_Conv('FGST_SRCMAP_SPARSE', colstring=None, extname=None, quantity_type='differential'),
-                        'GALPROP':HPX_Conv('GALPROP', colstring='Bin', extname='SKYMAP2', 
-                                           energy_hdu='ENERGIES', quantity_type='differential',
-                                           coordsys='COORDTYPE'),
-                        'GALPROP2':HPX_Conv('GALPROP', colstring='Bin', extname='SKYMAP2', 
-                                            energy_hdu='ENERGIES', quantity_type='differential')}
+HPX_FITS_CONVENTIONS = {'FGST_CCUBE': HPX_Conv('FGST_CCUBE'),
+                        'FGST_LTCUBE': HPX_Conv('FGST_LTCUBE', colstring='COSBINS', extname='EXPOSURE', energy_hdu='CTHETABOUNDS'),
+                        'FGST_BEXPCUBE': HPX_Conv('FGST_BEXPCUBE', colstring='ENERGY', extname='HPXEXPOSURES', energy_hdu='ENERGIES'),
+                        'FGST_SRCMAP': HPX_Conv('FGST_SRCMAP', extname=None, quantity_type='differential'),
+                        'FGST_TEMPLATE': HPX_Conv('FGST_TEMPLATE', colstring='ENERGY', energy_hdu='ENERGIES'),
+                        'FGST_SRCMAP_SPARSE': HPX_Conv('FGST_SRCMAP_SPARSE', colstring=None, extname=None, quantity_type='differential'),
+                        'GALPROP': HPX_Conv('GALPROP', colstring='Bin', extname='SKYMAP2',
+                                            energy_hdu='ENERGIES', quantity_type='differential',
+                                            coordsys='COORDTYPE'),
+                        'GALPROP2': HPX_Conv('GALPROP', colstring='Bin', extname='SKYMAP2',
+                                             energy_hdu='ENERGIES', quantity_type='differential')}
+
 
 def coords_to_vec(lon, lat):
     """ Converts longitute and latitude coordinates to a unit 3-vector
@@ -206,6 +207,15 @@ def match_hpx_pixel(nside, nest, nside_pix, ipix_ring):
     vecs = hp.pix2vec(nside, ipix_in, nest)
     pix_match = hp.vec2pix(nside_pix, vecs[0], vecs[1], vecs[2]) == ipix_ring
     return ipix_in[pix_match]
+
+
+def parse_hpxregion(region):
+    """Parse the HPXREGION header keyword into a list of tokens."""
+
+    m = re.match(r'\((.*?)\)', region)
+    if m is None:
+        raise Exception('Failed to parse region string.')
+    return re.split(',', m.group(1))
 
 
 class HPX(object):
@@ -444,7 +454,7 @@ class HPX(object):
             coordsys = header[conv.coordsys]
         except KeyError:
             coordsys = header['COORDSYS']
- 
+
         try:
             region = header["HPX_REG"]
         except KeyError:
@@ -589,7 +599,8 @@ class HPX(object):
         nest     : True for 'NESTED', False = 'RING'
         region   : HEALPix region string
         """
-        tokens = re.split('\(|\)|,', region)
+
+        tokens = parse_hpxregion(region)
         if tokens[0] == 'DISK':
             vec = coords_to_vec(float(tokens[1]), float(tokens[2]))
             ilist = hp.query_disc(nside, vec[0], np.radians(float(tokens[3])),
@@ -628,7 +639,8 @@ class HPX(object):
             elif coordsys == "CEL":
                 c = SkyCoord(0., 0., frame=ICRS, unit="deg")
             return c
-        tokens = re.split('\(|\)|,', region)
+
+        tokens = parse_hpxregion(region)
         if tokens[0] in ['DISK', 'DISK_INC']:
             if coordsys == "GAL":
                 c = SkyCoord(float(tokens[1]), float(
@@ -667,7 +679,7 @@ class HPX(object):
         """
         if region is None:
             return 180.
-        tokens = re.split('\(|\)|,', region)
+        tokens = parse_hpxregion(region)
         if tokens[0] in ['DISK', 'DISK_INC']:
             return float(tokens[3])
         elif tokens[0] == 'HPX_PIXEL':
