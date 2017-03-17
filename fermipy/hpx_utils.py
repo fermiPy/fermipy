@@ -210,12 +210,16 @@ def match_hpx_pixel(nside, nest, nside_pix, ipix_ring):
 
 
 def parse_hpxregion(region):
-    """Parse the HPXREGION header keyword into a list of tokens."""
+    """Parse the HPXREGN header keyword into a list of tokens."""
 
-    m = re.match(r'\((.*?)\)', region)
+    m = re.match(r'([A-Za-z\_]*?)\((.*?)\)', region)
     if m is None:
-        raise Exception('Failed to parse region string.')
-    return re.split(',', m.group(1))
+        raise Exception('Failed to parse hpx region string.')        
+
+    if not m.group(1):
+        return re.split(',', m.group(2))
+    else:
+        return [m.group(1)] + re.split(',', m.group(2))
 
 
 class HPX(object):
