@@ -5,6 +5,7 @@ import scipy
 from scipy.ndimage.filters import maximum_filter
 from astropy.coordinates import SkyCoord
 from fermipy import utils
+from fermipy import wcs_utils
 
 
 def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
@@ -23,6 +24,11 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     dpix : float
 
     zmin : float
+
+    Returns
+    -------
+    fit : dict
+        Dictionary with fit results.
     """
 
     if xy is None:
@@ -39,8 +45,6 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     cdelt1 = tsmap.wcs.wcs.cdelt[1]
     npix0 = tsmap.counts.T.shape[0]
     npix1 = tsmap.counts.T.shape[1]
-
-
 
     o = {}
     o['fit_success'] = pbfit['fit_success']
@@ -61,17 +65,17 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
         theta = np.nan
         o['xpix'] = float(ix)
         o['ypix'] = float(iy)
-        o['zoffset'] = tsmap.counts.T[ix,iy]
-        
+        o['zoffset'] = tsmap.counts.T[ix, iy]
+
     if (o['xpix'] <= 0 or o['xpix'] >= npix0 - 1 or
-        o['ypix'] <= 0 or o['ypix'] >= npix1 - 1):
+            o['ypix'] <= 0 or o['ypix'] >= npix1 - 1):
         o['fit_inbounds'] = False
         o['xpix'] = float(ix)
         o['ypix'] = float(iy)
 
     o['peak_offset'] = np.sqrt((float(ix) - o['xpix'])**2 +
                                (float(iy) - o['ypix'])**2)
-        
+
     skydir = SkyCoord.from_pixel(o['xpix'], o['ypix'], wcs)
     sigma = (sigmax * sigmay)**0.5
     r68 = 2.30**0.5 * sigma
@@ -79,31 +83,57 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     r99 = 9.21**0.5 * sigma
 
     if sigmax < sigmay:
-        o['sigma_semimajor'] = sigmay
-        o['sigma_semiminor'] = sigmax
+        o['pos_err_semimajor'] = sigmay
+        o['pos_err_semiminor'] = sigmax
         o['theta'] = np.fmod(2 * np.pi + np.pi / 2. + theta, np.pi)
     else:
-        o['sigma_semimajor'] = sigmax
-        o['sigma_semiminor'] = sigmay
+        o['pos_err_semimajor'] = sigmax
+        o['pos_err_semiminor'] = sigmay
         o['theta'] = np.fmod(2 * np.pi + theta, np.pi)
 
-    o['sigmax'] = sigmax
-    o['sigmay'] = sigmay
-    o['sigma'] = sigma
-    o['r68'] = r68
-    o['r95'] = r95
-    o['r99'] = r99
+    o['pos_angle'] = np.degrees(o['theta'])
+    o['pos_err'] = sigma
+    o['pos_r68'] = r68
+    o['pos_r95'] = r95
+    o['pos_r99'] = r99
     o['ra'] = skydir.icrs.ra.deg
     o['dec'] = skydir.icrs.dec.deg
     o['glon'] = skydir.galactic.l.deg
-    o['glat'] = skydir.galactic.b.deg    
-    a = o['sigma_semimajor']
-    b = o['sigma_semiminor']
+    o['glat'] = skydir.galactic.b.deg
+    a = o['pos_err_semimajor']
+    b = o['pos_err_semiminor']
 
-    o['eccentricity'] = np.sqrt(1 - b**2 / a**2)
-    o['eccentricity2'] = np.sqrt(a**2 / b**2 - 1)
+    o['pos_ecc'] = np.sqrt(1 - b**2 / a**2)
+    o['pos_ecc2'] = np.sqrt(a**2 / b**2 - 1)
+    o['skydir'] = skydir
 
-    return o, skydir
+    if wcs_utils.get_coordsys(tsmap.wcs) == 'GAL':
+        gal_cov = utils.ellipse_to_cov(o['pos_err_semimajor'],
+                                       o['pos_err_semiminor'],
+                                       o['theta'])
+        theta_cel = wcs_utils.get_cel_to_gal_angle(skydir)
+        cel_cov = utils.ellipse_to_cov(o['pos_err_semimajor'],
+                                       o['pos_err_semiminor'],
+                                       o['theta'] + theta_cel)
+
+    else:
+        cel_cov = utils.ellipse_to_cov(o['pos_err_semimajor'],
+                                       o['pos_err_semiminor'],
+                                       o['theta'])
+        theta_gal = 2 * np.pi - wcs_utils.get_cel_to_gal_angle(skydir)
+        gal_cov = utils.ellipse_to_cov(o['pos_err_semimajor'],
+                                       o['pos_err_semiminor'],
+                                       o['theta'] + theta_gal)
+
+    o['pos_gal_cov'] = gal_cov
+    o['pos_cel_cov'] = cel_cov
+    o['pos_gal_corr'] = utils.cov_to_correlation(gal_cov)
+    o['pos_cel_corr'] = utils.cov_to_correlation(cel_cov)
+    o['glon_err'], o['glat_err'] = np.sqrt(
+        gal_cov[0, 0]), np.sqrt(gal_cov[1, 1])
+    o['ra_err'], o['dec_err'] = np.sqrt(cel_cov[0, 0]), np.sqrt(cel_cov[1, 1])
+
+    return o
 
 
 def find_peaks(input_map, threshold, min_separation=0.5):

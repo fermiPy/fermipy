@@ -41,5 +41,5 @@
 ``param_names``	`~numpy.ndarray`	Array of names for the parameters in the global spectral parameterization of this source.
 ``param_values``	`~numpy.ndarray`	Array of parameter values.
 ``param_errors``	`~numpy.ndarray`	Array of parameter errors.
-``model_flux``	dict	Dictionary containing the differential flux uncertainty band of the best-fit global spectral parameterization for the source.
-``config``	dict	Copy of input configuration to this method.
+``model_flux``	`~dict`	Dictionary containing the differential flux uncertainty band of the best-fit global spectral parameterization for the source.
+``config``	`~dict`	Copy of input configuration to this method.

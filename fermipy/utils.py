@@ -19,6 +19,45 @@ from numpy.core import defchararray
 from astropy.extern import six
 
 
+class MutableNamedTuple(OrderedDict):
+    """Light-weight class for representing data structures.  Internal
+    data members can be accessed using both attribute- and
+    dictionary-style syntax.  The constructor accepts an ordered dict
+    defining the names and default values of all data members.  Once
+    an instance is initialized no new data members may be added."""
+
+    def __init__(self, *args, **kwargs):
+        super(MutableNamedTuple, self).__init__(*args, **kwargs)
+        self._initialized = True
+
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name)
+
+    def __setattr__(self, name, value):
+        if hasattr(self, '_initialized'):
+            if not name in self:
+                raise AttributeError(name)
+            super(MutableNamedTuple, self).__setitem__(name, value)
+        else:
+            super(MutableNamedTuple, self).__setattr__(name, value)
+
+    def __setitem__(self, name, value):
+        if hasattr(self, '_initialized'):
+            if not name in self:
+                raise KeyError(name)
+            super(MutableNamedTuple, self).__setitem__(name, value)
+        else:
+            super(MutableNamedTuple, self).__setitem__(name, value)
+
+    def update(self, d):
+        for k, v in d.items():
+            if k in self:
+                self[k] = v
+
+
 def init_matplotlib_backend(backend=None):
     """This function initializes the matplotlib backend.  When no
     DISPLAY is available the backend is automatically set to 'Agg'.
@@ -490,10 +529,47 @@ def create_model_name(src):
 
 
 def cov_to_correlation(cov):
+    """Compute the correlation matrix given the covariance matrix.
+
+    Parameters
+    ----------
+    cov : `~numpy.ndarray`
+        N x N matrix of covariances among N parameters.
+
+    Returns
+    -------
+    corr : `~numpy.ndarray`
+        N x N matrix of correlations among N parameters.
+    """
     err = np.sqrt(np.diag(cov))
+    errinv = np.zeros_like(err)
+    errinv[err > 0] = 1. / err[err > 0]
     corr = np.array(cov)
-    corr *= np.outer(1 / err, 1 / err)
-    return corr
+    return corr * np.outer(errinv, errinv)
+
+
+def ellipse_to_cov(sigma_maj, sigma_min, theta):
+    """Compute the covariance matrix in two variables x and y given
+    the std. deviation along the semi-major and semi-minor axes and
+    the rotation angle of the error ellipse.
+
+    Parameters
+    ----------
+    sigma_maj : float
+        Std. deviation along major axis of error ellipse.
+
+    sigma_min : float
+        Std. deviation along minor axis of error ellipse.
+
+    theta : float
+        Rotation angle in radians from x-axis to ellipse major axis.
+    """
+    cth = np.cos(theta)
+    sth = np.sin(theta)
+    covxx = cth**2 * sigma_maj**2 + sth**2 * sigma_min**2
+    covyy = sth**2 * sigma_maj**2 + cth**2 * sigma_min**2
+    covxy = cth * sth * sigma_maj**2 - cth * sth * sigma_min**2
+    return np.array([[covxx, covxy], [covxy, covyy]])
 
 
 def twosided_cl_to_dlnl(cl):
@@ -1526,7 +1602,7 @@ def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=Non
 
     fn : callable
         Function that evaluates the kernel at a radial coordinate r.
-    
+
     sigma : float
         68% containment radius in degrees.
     """

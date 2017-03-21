@@ -203,15 +203,15 @@ def plot_error_ellipse(fit, xy, cdelt, **kwargs):
     ax = kwargs.pop('ax', plt.gca())
     colname = kwargs.pop('colname', 'r68')
     color = kwargs.pop('color', 'k')
-    sigma = fit['sigma']
-    sigmax = fit['sigma_semimajor']
-    sigmay = fit['sigma_semiminor']
-    theta = fit['theta']
+    sigma = fit['pos_err']
+    sigmax = fit['pos_err_semimajor']
+    sigmay = fit['pos_err_semiminor']
+    theta = fit['pos_angle']
     radius = fit[colname]
     e0 = Ellipse(xy=(float(xy[0]), float(xy[1])),
                  width=2.0 * sigmax / cdelt[0] * radius / sigma,
                  height=2.0 * sigmay / cdelt[1] * radius / sigma,
-                 angle=-np.degrees(theta),
+                 angle=-theta,
                  facecolor='None', **kwargs)
     ax.add_artist(e0)
 
@@ -1402,14 +1402,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
             plt.gca().add_patch(r)
 
         plot_error_ellipse(fit_init, peak_pix, cdelt, edgecolor='lime',
-                           color='lime', colname='r68')
+                           color='lime', colname='pos_r68')
         plot_error_ellipse(fit_init, peak_pix, cdelt, edgecolor='lime',
-                           color='lime', colname='r99', linestyle=':')
+                           color='lime', colname='pos_r99', linestyle=':')
 
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='r68', label='68% Uncertainty')
+                           color='w', colname='pos_r68', label='68% Uncertainty')
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='r99', label='99% Uncertainty',
+                           color='w', colname='pos_r99', label='99% Uncertainty',
                            linestyle='--')
 
         handles, labels = plt.gca().get_legend_handles_labels()
@@ -1457,9 +1457,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
                      label='New Position')
 
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='r68', label='68% Uncertainty')
+                           color='w', colname='pos_r68', label='68% Uncertainty')
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='r99', label='99% Uncertainty',
+                           color='w', colname='pos_r99', label='99% Uncertainty',
                            linestyle='--')
 
         handles, labels = plt.gca().get_legend_handles_labels()

@@ -10,8 +10,9 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, Column
 import fermipy.config
-import fermipy.utils as utils
-import fermipy.wcs_utils as wcs_utils
+from fermipy import utils
+from fermipy import defaults
+from fermipy import wcs_utils
 from fermipy import fits_utils
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
@@ -103,17 +104,12 @@ class SourceFind(object):
 
         for p in peaks:
 
-            o, skydir = fit_error_ellipse(tsmap, (p['ix'], p['iy']), dpix=2)
+            o = fit_error_ellipse(tsmap, (p['ix'], p['iy']), dpix=2)
+            skydir = o['skydir']
             p['fit_loc'] = o
-            p['fit_skydir'] = skydir
+            p['fit_skydir'] = o['skydir']
 
             p.update(o)
-
-            if o['fit_success']:
-                skydir = p['fit_skydir']
-            else:
-                skydir = p['skydir']
-
             name = utils.create_source_name(skydir)
             src_dict = copy.deepcopy(src_dict_template)
             norm_par = get_function_norm_par_name(
@@ -122,14 +118,22 @@ class SourceFind(object):
                              'ra': skydir.icrs.ra.deg,
                              'dec': skydir.icrs.dec.deg})
 
-            src_dict['pos_sigma'] = o['sigma']
-            src_dict['pos_sigma_semimajor'] = o['sigma_semimajor']
-            src_dict['pos_sigma_semiminor'] = o['sigma_semiminor']
-            src_dict['pos_r68'] = o['r68']
-            src_dict['pos_r95'] = o['r95']
-            src_dict['pos_r99'] = o['r99']
-            src_dict['pos_angle'] = np.degrees(o['theta'])
-
+            src_dict['glon_err'] = o['glon_err']
+            src_dict['glat_err'] = o['glat_err']
+            src_dict['ra_err'] = o['ra_err']
+            src_dict['dec_err'] = o['dec_err']
+            src_dict['pos_err'] = o['pos_err']
+            src_dict['pos_err_semimajor'] = o['pos_err_semimajor']
+            src_dict['pos_err_semiminor'] = o['pos_err_semiminor']
+            src_dict['pos_r68'] = o['pos_r68']
+            src_dict['pos_r95'] = o['pos_r95']
+            src_dict['pos_r99'] = o['pos_r99']
+            src_dict['pos_angle'] = o['pos_angle']
+            src_dict['pos_gal_cov'] = o['pos_gal_cov']
+            src_dict['pos_gal_corr'] = o['pos_gal_corr']
+            src_dict['pos_cel_cov'] = o['pos_cel_cov']
+            src_dict['pos_cel_corr'] = o['pos_cel_corr']
+            
             self.logger.info('Found source\n' +
                              'name: %s\n' % name +
                              'ts: %f' % p['amp'] ** 2)
@@ -287,7 +291,7 @@ class SourceFind(object):
                                      **config)
 
         if config['write_npy']:
-            np.save(outfile + '.npy', loc)
+            np.save(outfile + '.npy', dict(loc))
 
         return loc
 
@@ -355,15 +359,16 @@ class SourceFind(object):
         loglike0 = fit_output['loglike']
         self.logger.debug('Baseline Model Likelihood: %f', loglike0)
 
-        o = {'name': name,
-             'config': kwargs,
-             'fit_success': True,
-             'loglike_base': loglike0,
-             'loglike_loc': np.nan,
-             'dloglike_loc': np.nan}
+        o = defaults.make_default_tuple(defaults.localize_output)
+        o.name = name
+        o.config = kwargs
+        o.fit_success = True
+        o.loglike_base = loglike0
+        o.loglike_loc = np.nan
+        o.dloglike_loc = np.nan
 
         if fit0['fit_success']:
-            scan_cdelt = 2.0 * fit0['r95'] / (nstep - 1.0)
+            scan_cdelt = 2.0 * fit0['pos_r95'] / (nstep - 1.0)
         else:
             scan_cdelt = np.abs(skywcs.wcs.cdelt[0])
 
@@ -376,73 +381,83 @@ class SourceFind(object):
                                        scan_cdelt=scan_cdelt,
                                        **kwargs)
 
-        o['loglike_loc'] = fit1['loglike']
-        o['dloglike_loc'] = o['loglike_loc'] - o['loglike_base']
-        o['tsmap'] = fit0.pop('tsmap')
-        o['tsmap_peak'] = fit1.pop('tsmap')
-        o.update(fit1)
+        o.loglike_loc = fit1['loglike']
+        o.dloglike_loc = o.loglike_loc - o.loglike_base
+        o.tsmap = fit0.pop('tsmap')
+        o.tsmap_peak = fit1.pop('tsmap')
+        # o.update(fit1)
 
         # Best fit position and uncertainty from fit to TS map
-        o['fit_init'] = fit0
+        o.fit_init = fit0
 
         # Best fit position and uncertainty from pylike scan
-        o['fit_scan'] = fit1
+        o.fit_scan = fit1
+        o.update(fit1)
 
         cdelt0 = np.abs(skywcs.wcs.cdelt[0])
         cdelt1 = np.abs(skywcs.wcs.cdelt[1])
         pix = fit1['skydir'].to_pixel(skywcs)
-        o['xpix'] = float(pix[0])
-        o['ypix'] = float(pix[1])
-        o['deltax'] = (o['xpix'] - src_pix[0]) * cdelt0
-        o['deltay'] = (o['ypix'] - src_pix[1]) * cdelt1
-        o['offset'] = skydir.separation(fit1['skydir']).deg
-        o['ra_preloc'] = skydir.ra.deg
-        o['dec_preloc'] = skydir.dec.deg
-        o['glon_preloc'] = skydir.galactic.l.deg
-        o['glat_preloc'] = skydir.galactic.b.deg
+        o.pos_offset = skydir.separation(fit1['skydir']).deg
+        o.xpix = float(pix[0])
+        o.ypix = float(pix[1])
+        o.deltax = (o.xpix - src_pix[0]) * cdelt0
+        o.deltay = (o.ypix - src_pix[1]) * cdelt1
 
-        if o['offset'] > dtheta_max:
-            o['fit_success'] = False
+        o.ra_preloc = skydir.ra.deg
+        o.dec_preloc = skydir.dec.deg
+        o.glon_preloc = skydir.galactic.l.deg
+        o.glat_preloc = skydir.galactic.b.deg
 
-        self.logger.info('Localization completed with new coordinates:\n'
-                         '(  ra, dec) = (%10.4f,%10.4f) '
-                         '(glon,glat) = (%10.4f,%10.4f)\n'
-                         'offset = %8.4f r68 = %8.4f r99 = %8.4f',
-                         o['ra'], o['dec'],
-                         o['glon'], o['glat'],
-                         o['offset'], o['r68'], o['r99'])
+        if o.pos_offset > dtheta_max:
+            o.fit_success = False
 
-        if not o['fit_success']:
+        self.logger.info('Localization completed with new position:\n'
+                         '(  ra, dec) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                         '(glon,glat) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                         'offset = %8.4f r68 = %8.4f r95 = %8.4f r99 = %8.4f',
+                         o.ra, o.ra_err, o.dec, o.dec_err,
+                         o.glon, o.glon_err, o.glat, o.glat_err,
+                         o.pos_offset, o.pos_r68, o.pos_r95, o.pos_r99)
+
+        if not o.fit_success:
             self.logger.warning('Fit to localization contour failed.')
-        elif not o['fit_inbounds']:
+        elif not o.fit_inbounds:
             self.logger.warning('Best-fit position outside of search region.')
         else:
             self.logger.info('Localization succeeded.')
 
-        if update and ((not o['fit_success']) or (not o['fit_inbounds'])):
+        if update and ((not o.fit_success) or (not o.fit_inbounds)):
             self.logger.warning(
                 'Localization failed.  Keeping existing position.')
 
-        if update and o['fit_success'] and o['fit_inbounds']:
+        if update and o.fit_success and o.fit_inbounds:
             self.logger.info('Updating source %s '
                              'to localized position.', name)
             src = self.delete_source(name)
             src.set_position(fit1['skydir'])
             self.add_source(name, src, free=True)
             fit_output = self.fit(loglevel=logging.DEBUG)
-            o['loglike_loc'] = fit_output['loglike']
-            o['dloglike_loc'] = o['loglike_loc'] - o['loglike_base']
+            o.loglike_loc = fit_output['loglike']
+            o.dloglike_loc = o.loglike_loc - o.loglike_base
             src = self.roi.get_source_by_name(name)
             self.logger.info('LogLike: %12.3f DeltaLogLike: %12.3f',
-                             o['loglike_loc'], o['dloglike_loc'])
+                             o.loglike_loc, o.dloglike_loc)
 
-            src['pos_sigma'] = o['sigma']
-            src['pos_sigma_semimajor'] = o['sigma_semimajor']
-            src['pos_sigma_semiminor'] = o['sigma_semiminor']
-            src['pos_r68'] = o['r68']
-            src['pos_r95'] = o['r95']
-            src['pos_r99'] = o['r99']
-            src['pos_angle'] = np.degrees(o['theta'])
+            src['glon_err'] = o.glon_err
+            src['glat_err'] = o.glat_err
+            src['ra_err'] = o.glon_err
+            src['dec_err'] = o.glat_err
+            src['pos_err'] = o.pos_err
+            src['pos_err_semimajor'] = o.pos_err_semimajor
+            src['pos_err_semiminor'] = o.pos_err_semiminor
+            src['pos_r68'] = o.pos_r68
+            src['pos_r95'] = o.pos_r95
+            src['pos_r99'] = o.pos_r99
+            src['pos_angle'] = o.pos_angle
+            src['pos_gal_cov'] = o.pos_gal_cov
+            src['pos_gal_corr'] = o.pos_gal_corr
+            src['pos_cel_cov'] = o.pos_cel_cov
+            src['pos_cel_corr'] = o.pos_cel_corr
         else:
             saved_state.restore()
             self._sync_params(name)
@@ -456,8 +471,8 @@ class SourceFind(object):
         nstep = kwargs.setdefault('nstep', 5)
         fit0 = self._fit_position_tsmap(name, **kwargs)
 
-        if np.isfinite(fit0['r68']):
-            scan_cdelt = min(2.0 * fit0['r68'] / (nstep - 1.0),
+        if np.isfinite(fit0['pos_r68']):
+            scan_cdelt = min(2.0 * fit0['pos_r68'] / (nstep - 1.0),
                              self._binsz)
         else:
             scan_cdelt = self._binsz
@@ -505,24 +520,25 @@ class SourceFind(object):
         for p in sorted(peaks, key=lambda t: t['amp'], reverse=True):
             xy = p['ix'], p['iy']
             ts_value = tsmap['ts'].counts[xy[1], xy[0]]
-            posfit, skydir = fit_error_ellipse(tsmap['ts'], xy=xy, dpix=2,
-                                               zmin=max(zmin, -ts_value * 0.5))
-            offset = skydir.separation(self.roi[name].skydir).deg
+            posfit = fit_error_ellipse(tsmap['ts'], xy=xy, dpix=2,
+                                       zmin=max(zmin, -ts_value * 0.5))
+            offset = posfit['skydir'].separation(self.roi[name].skydir).deg
             if posfit['fit_success'] and posfit['fit_inbounds']:
                 peak_best = p
                 break
 
         if peak_best is None:
             ts_value = np.max(tsmap['ts'].counts)
-            posfit, skydir = fit_error_ellipse(tsmap['ts'], dpix=2,
-                                               zmin=max(zmin, -ts_value * 0.5))
+            posfit = fit_error_ellipse(tsmap['ts'], dpix=2,
+                                       zmin=max(zmin, -ts_value * 0.5))
 
         o.update(posfit)
-        pix = skydir.to_pixel(self._skywcs)
+        pix = posfit['skydir'].to_pixel(self._skywcs)
         o['xpix'] = float(pix[0])
         o['ypix'] = float(pix[1])
-        o['skydir'] = skydir.transform_to('icrs')
-        o['offset'] = skydir.separation(self.roi[name].skydir).deg
+        o['skydir'] = posfit['skydir'].transform_to('icrs')
+        o['pos_offset'] = posfit['skydir'].separation(
+            self.roi[name].skydir).deg
         o['loglike'] = 0.5 * posfit['zoffset']
         o['tsmap'] = tsmap['ts']
 
@@ -533,16 +549,17 @@ class SourceFind(object):
         zmin = kwargs.get('zmin', -9.0)
         tsmap, loglike = self._scan_position(name, **kwargs)
         ts_value = np.max(tsmap.counts)
-        posfit, skydir = fit_error_ellipse(tsmap, dpix=2,
-                                           zmin=max(zmin, -ts_value * 0.5))
-        pix = skydir.to_pixel(self._skywcs)
+        posfit = fit_error_ellipse(tsmap, dpix=2,
+                                   zmin=max(zmin, -ts_value * 0.5))
+        pix = posfit['skydir'].to_pixel(self._skywcs)
 
         o = {}
         o.update(posfit)
         o['xpix'] = float(pix[0])
         o['ypix'] = float(pix[1])
-        o['skydir'] = skydir.transform_to('icrs')
-        o['offset'] = skydir.separation(self.roi[name].skydir).deg
+        o['skydir'] = posfit['skydir'].transform_to('icrs')
+        o['pos_offset'] = posfit['skydir'].separation(
+            self.roi[name].skydir).deg
         o['loglike'] = 0.5 * posfit['zoffset'] + loglike
         o['tsmap'] = tsmap
 

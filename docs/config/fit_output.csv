@@ -1,10 +1,10 @@
 ``fit_quality``	int	Fit quality parameter for MINUIT and NEWMINUIT optimizers (3 - Full accurate covariance matrix, 2 - Full matrix, but forced positive-definite (i.e. not accurate), 1 - Diagonal approximation only, not accurate, 0 - Error matrix not calculated at all)
 ``errors``	`~numpy.ndarray`	Vector of parameter errors (unscaled).
-``loglike``	float	Post-fit log-likehood value.
+``loglike``	`~float`	Post-fit log-likehood value.
 ``correlation``	`~numpy.ndarray`	Correlation matrix between free parameters of the fit.
-``config``	dict	Copy of input configuration to this method.
+``config``	`~dict`	Copy of input configuration to this method.
 ``values``	`~numpy.ndarray`	Vector of best-fit parameter values (unscaled).
-``dloglike``	float	Improvement in log-likehood value.
+``dloglike``	`~float`	Improvement in log-likehood value.
 ``fit_status``	int	Optimizer return code (0 = ok).
 ``covariance``	`~numpy.ndarray`	Covariance matrix between free parameters of the fit.
-``edm``	float	Estimated distance to maximum of log-likelihood function.
+``edm``	`~float`	Estimated distance to maximum of log-likelihood function.

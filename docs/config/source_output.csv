@@ -1,77 +1,85 @@
-``name``	str	Name of the source.
-``Source_Name``	str	Name of the source.
-``SpatialModel``	str	Spatial model.
-``SpatialWidth``	float	Spatial size parameter.
-``SpatialType``	str	Spatial type string.  This corresponds to the type attribute of the spatialModel component in the XML model.
-``SourceType``	str	Source type string (PointSource or DiffuseSource).
-``SpectrumType``	str	Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).
-``Spatial_Filename``	str	Path to spatial template associated to this source.
-``Spectrum_Filename``	str	Path to file associated to the spectral model of this source.
-``correlation``	dict	Dictionary of correlation coefficients.
+``name``	`~str`	Name of the source.
+``Source_Name``	`~str`	Name of the source.
+``SpatialModel``	`~str`	Spatial model.
+``SpatialWidth``	`~float`	Spatial size parameter.
+``SpatialType``	`~str`	Spatial type string.  This corresponds to the type attribute of the spatialModel component in the XML model.
+``SourceType``	`~str`	Source type string (PointSource or DiffuseSource).
+``SpectrumType``	`~str`	Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).
+``Spatial_Filename``	`~str`	Path to spatial template associated to this source.
+``Spectrum_Filename``	`~str`	Path to file associated to the spectral model of this source.
+``correlation``	`~dict`	Dictionary of correlation coefficients.
 ``model_counts``	`~numpy.ndarray`	Vector of predicted counts for this source in each analysis energy bin.
-``sed``	dict	Output of SED analysis.  See :ref:`sed` for more information.
-``ra``	float	Right ascension of the source in deg.
-``dec``	float	Declination of the source in deg.
-``glon``	float	Galactic Longitude of the source in deg.
-``glat``	float	Galactic Latitude of the source in deg.
-``offset_ra``	float	Angular offset from ROI center along RA.
-``offset_dec``	float	Angular offset from ROI center along DEC
-``offset_glon``	float	Angular offset from ROI center along GLON.
-``offset_glat``	float	Angular offset from ROI center along GLAT.
-``offset_roi_edge``	float	Distance from the edge of the ROI in deg.  Negative (positive) values indicate locations inside (outside) the ROI.
-``offset``	float	Angular offset from ROI center.
-``pos_sigma``	float	1-sigma uncertainty (deg) on the source position.
-``pos_sigma_semimajor``	float	1-sigma uncertainty (deg) on the source position along major axis.
-``pos_sigma_semiminor``	float	1-sigma uncertainty (deg) on the source position along minor axis.
-``pos_angle``	float	Position angle (deg) of the positional uncertainty ellipse.
-``pos_r68``	float	68% uncertainty (deg) on the source position.
-``pos_r95``	float	95% uncertainty (deg) on the source position.
-``pos_r99``	float	99% uncertainty (deg) on the source position.
+``sed``	`~dict`	Output of SED analysis.  See :ref:`sed` for more information.
+``ra``	`~float`	Right ascension of the source (deg).
+``dec``	`~float`	Declination of the source (deg).
+``glon``	`~float`	Galactic longitude of the source (deg).
+``glat``	`~float`	Galactic latitude of the source (deg).
+``ra_err``	`~float`	Std. deviation of positional uncertainty in right ascension (deg).
+``dec_err``	`~float`	Std. deviation of positional uncertainty in declination (deg).
+``glon_err``	`~float`	Std. deviation of positional uncertainty in galactic longitude (deg).
+``glat_err``	`~float`	Std. deviation of positional uncertainty in galactic latitude (deg).
+``pos_err``	`~float`	1-sigma positional uncertainty (deg).
+``pos_r68``	`~float`	68% positional uncertainty (deg).
+``pos_r95``	`~float`	95% positional uncertainty (deg).
+``pos_r99``	`~float`	99% positional uncertainty (deg).
+``pos_err_semimajor``	`~float`	1-sigma uncertainty (deg) along major axis of uncertainty ellipse.
+``pos_err_semiminor``	`~float`	1-sigma uncertainty (deg) along minor axis of uncertainty ellipse.
+``pos_angle``	`~float`	Position angle of uncertainty ellipse with respect to major axis.
+``pos_gal_cov``	`~numpy.ndarray`	Covariance matrix of positional uncertainties in local projection in galactic coordinates.
+``pos_gal_corr``	`~numpy.ndarray`	Correlation matrix of positional uncertainties in local projection in galactic coordinates.
+``pos_cel_cov``	`~numpy.ndarray`	Covariance matrix of positional uncertainties in local projection in celestial coordinates.
+``pos_cel_corr``	`~numpy.ndarray`	Correlation matrix of positional uncertainties in local projection in celestial coordinates.
+``offset_ra``	`~float`	Right ascension offset from ROI center in local celestial projection (deg).
+``offset_dec``	`~float`	Declination offset from ROI center in local celestial projection (deg).
+``offset_glon``	`~float`	Galactic longitude offset from ROI center in local galactic projection (deg).
+``offset_glat``	`~float`	Galactic latitude offset from ROI center in local galactic projection (deg).
+``offset_roi_edge``	`~float`	Distance from the edge of the ROI (deg).  Negative (positive) values indicate locations inside (outside) the ROI.
+``offset``	`~float`	Angular offset from ROI center (deg).
 ``param_names``	`~numpy.ndarray`	Names of spectral parameters.
 ``param_values``	`~numpy.ndarray`	Spectral parameter values.
 ``param_errors``	`~numpy.ndarray`	Spectral parameters errors.
-``ts``	float	Source test statistic.
-``loglike``	float	Log-likelihood of the model evaluated at the best-fit normalization of the source.
+``ts``	`~float`	Source test statistic.
+``loglike``	`~float`	Log-likelihood of the model evaluated at the best-fit normalization of the source.
 ``loglike_scan``	`~numpy.ndarray`	Log-likelihood values for scan of source normalization.
 ``dloglike_scan``	`~numpy.ndarray`	Delta Log-likelihood values for scan of source normalization.
 ``eflux_scan``	`~numpy.ndarray`	Energy flux values for scan of source normalization.
 ``flux_scan``	`~numpy.ndarray`	Flux values for scan of source normalization.
 ``norm_scan``	`~numpy.ndarray`	Normalization parameters values for scan of source normalization.
-``npred``	float	Number of predicted counts from this source integrated over the analysis energy range.
-``pivot_energy``	float	Decorrelation energy in MeV.
-``flux``	float	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
-``flux100``	float	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
-``flux1000``	float	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
-``flux10000``	float	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
-``flux_err``	float	Photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
-``flux100_err``	float	Photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
-``flux1000_err``	float	Photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
-``flux10000_err``	float	Photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
-``flux_ul95``	float	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
-``flux100_ul95``	float	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
-``flux1000_ul95``	float	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
-``flux10000_ul95``	float	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
-``eflux``	float	Energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
-``eflux100``	float	Energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
-``eflux1000``	float	Energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
-``eflux10000``	float	Energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
-``eflux_err``	float	Energy flux uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
-``eflux100_err``	float	Energy flux uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
-``eflux1000_err``	float	Energy flux uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
-``eflux10000_err``	float	Energy flux uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
-``eflux_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
-``eflux100_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
-``eflux1000_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
-``eflux10000_ul95``	float	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
-``dnde``	float	Differential photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at the pivot energy.
-``dnde100``	float	Differential photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 100 MeV.
-``dnde1000``	float	Differential photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 1 GeV.
-``dnde10000``	float	Differential photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 10 GeV.
-``dnde_err``	float	Differential photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at the pivot energy.
-``dnde100_err``	float	Differential photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 100 MeV.
-``dnde1000_err``	float	Differential photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 1 GeV.
-``dnde10000_err``	float	Differential photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 10 GeV.
-``dnde_index``	float	Logarithmic slope of the differential photon spectrum evaluated at the pivot energy.
-``dnde100_index``	float	Logarithmic slope of the differential photon spectrum evaluated at 100 MeV.
-``dnde1000_index``	float	Logarithmic slope of the differential photon spectrum evaluated evaluated at 1 GeV.
-``dnde10000_index``	float	Logarithmic slope of the differential photon spectrum evaluated at 10 GeV.
+``npred``	`~float`	Number of predicted counts from this source integrated over the analysis energy range.
+``pivot_energy``	`~float`	Decorrelation energy in MeV.
+``flux``	`~float`	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``flux100``	`~float`	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``flux1000``	`~float`	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``flux10000``	`~float`	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``flux_err``	`~float`	Photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``flux100_err``	`~float`	Photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``flux1000_err``	`~float`	Photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``flux10000_err``	`~float`	Photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``flux_ul95``	`~float`	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``flux100_ul95``	`~float`	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``flux1000_ul95``	`~float`	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``flux10000_ul95``	`~float`	95% CL upper limit on the photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``eflux``	`~float`	Energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``eflux100``	`~float`	Energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``eflux1000``	`~float`	Energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``eflux10000``	`~float`	Energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``eflux_err``	`~float`	Energy flux uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``eflux100_err``	`~float`	Energy flux uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``eflux1000_err``	`~float`	Energy flux uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``eflux10000_err``	`~float`	Energy flux uncertainty (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``eflux_ul95``	`~float`	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
+``eflux100_ul95``	`~float`	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.
+``eflux1000_ul95``	`~float`	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 1 GeV to 316 GeV.
+``eflux10000_ul95``	`~float`	95% CL upper limit on the energy flux (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 10 GeV to 316 GeV.
+``dnde``	`~float`	Differential photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at the pivot energy.
+``dnde100``	`~float`	Differential photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 100 MeV.
+``dnde1000``	`~float`	Differential photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 1 GeV.
+``dnde10000``	`~float`	Differential photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 10 GeV.
+``dnde_err``	`~float`	Differential photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at the pivot energy.
+``dnde100_err``	`~float`	Differential photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 100 MeV.
+``dnde1000_err``	`~float`	Differential photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 1 GeV.
+``dnde10000_err``	`~float`	Differential photon flux uncertainty (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`) evaluated at 10 GeV.
+``dnde_index``	`~float`	Logarithmic slope of the differential photon spectrum evaluated at the pivot energy.
+``dnde100_index``	`~float`	Logarithmic slope of the differential photon spectrum evaluated at 100 MeV.
+``dnde1000_index``	`~float`	Logarithmic slope of the differential photon spectrum evaluated evaluated at 1 GeV.
+``dnde10000_index``	`~float`	Logarithmic slope of the differential photon spectrum evaluated at 10 GeV.

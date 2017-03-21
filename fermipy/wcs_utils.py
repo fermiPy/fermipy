@@ -366,6 +366,26 @@ def get_map_skydir(filename, maphdu=0):
     return wcs_to_skydir(wcs)
 
 
+def get_cel_to_gal_angle(skydir):
+    """Calculate the rotation angle in radians between the longitude
+    axes of a local projection in celestial and galactic coordinates.
+
+    Parameters
+    ----------
+    skydir : `~astropy.coordinates.SkyCoord`
+        Direction of projection center.
+    
+    Returns
+    -------
+    angle : float
+        Rotation angle in radians.
+    """
+    wcs0 = create_wcs(skydir, coordsys='CEL')
+    wcs1 = create_wcs(skydir, coordsys='GAL')
+    x, y = SkyCoord.to_pixel(SkyCoord.from_pixel(1.0, 0.0, wcs0), wcs1)
+    return np.arctan2(y, x)
+
+
 def wcs_to_skydir(wcs):
     lon = wcs.wcs.crval[0]
     lat = wcs.wcs.crval[1]
