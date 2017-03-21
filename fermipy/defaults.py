@@ -3,6 +3,10 @@ from __future__ import absolute_import, division, print_function
 import copy
 from collections import OrderedDict
 import numpy as np
+import astropy
+from astropy.coordinates import SkyCoord
+import fermipy.skymap
+from fermipy.utils import MutableNamedTuple
 
 
 def make_default_dict(d):
@@ -12,6 +16,27 @@ def make_default_dict(d):
         o[k] = copy.deepcopy(v[0])
 
     return o
+
+
+def make_default_tuple(d):
+    vals = [(k, copy.deepcopy(v[0])) for k, v in d.items()]
+    return MutableNamedTuple(vals)
+
+
+def make_attrs_class(typename, d):
+
+    import attr
+
+    vals = {}
+    for k, v in d.items():
+        if v[2] == float:
+            vals[k] = attr.ib(
+                default=v[0], validator=attr.validators.instance_of(v[2]))
+        else:
+            vals[k] = attr.ib(default=v[0])
+    C = attr.make_class(typename, vals)
+    return C()
+
 
 DIFF_FLUX_UNIT = ':math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`'
 FLUX_UNIT = ':math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`'
@@ -497,27 +522,6 @@ extension = {
     'write_npy': common['write_npy'],
 }
 
-extension_output = OrderedDict((
-    ('width', (None, 'Vector of width values.', np.ndarray, '`~numpy.ndarray`')),
-    ('dloglike', (None, 'Sequence of delta-log-likelihood values for each point in the profile likelihood scan.',
-                  np.ndarray, '`~numpy.ndarray`')),
-    ('loglike', (None, 'Sequence of likelihood values for each point in the scan over the spatial extension.',
-                 np.ndarray, '`~numpy.ndarray`')),
-    ('loglike_ptsrc', (np.nan,
-                       'Model log-Likelihood value of the best-fit point-source model.', float, 'float')),
-    ('loglike_ext', (np.nan, 'Model log-Likelihood value of the best-fit extended source model.', float, 'float')),
-    ('loglike_base', (np.nan,
-                      'Model log-Likelihood value of the baseline model.', float, 'float')),
-    ('ext', (np.nan, 'Best-fit extension in degrees.', float, 'float')),
-    ('ext_err_hi', (np.nan, 'Upper (1 sigma) error on the best-fit extension in degrees.', float, 'float')),
-    ('ext_err_lo', (np.nan, 'Lower (1 sigma) error on the best-fit extension in degrees.', float, 'float')),
-    ('ext_err', (np.nan, 'Symmetric (1 sigma) error on the best-fit extension in degrees.', float, 'float')),
-    ('ext_ul95', (np.nan, '95% CL upper limit on the spatial extension in degrees.', float, 'float')),
-    ('ts_ext', (np.nan, 'Test statistic for the extension hypothesis.', float, 'float')),
-    ('source_fit', ({}, 'Dictionary with parameters of the best-fit extended source model.', dict, 'dict')),
-    ('config', ({}, 'Copy of the input configuration to this method.', dict, 'dict')),
-))
-
 # Options for localization analysis
 localize = {
     'nstep': (5, 'Number of steps in longitude/latitude that will be taken '
@@ -536,29 +540,133 @@ localize = {
 
 # Output for localization analysis
 localize_output = OrderedDict((
-    ('ra', (np.nan, 'Right ascension of best-fit position in deg.', float, 'float')),
-    ('dec', (np.nan, 'Declination of best-fit position in deg.', float, 'float')),
-    ('glon', (np.nan, 'Galactic Longitude of best-fit position in deg.', float, 'float')),
-    ('glat', (np.nan, 'Galactic Latitude of best-fit position in deg.', float, 'float')),
-    ('offset', (np.nan, 'Angular offset in deg between the old and new (localized) source positions.', float, 'float')),
-    ('sigma', (np.nan, '1-sigma positional uncertainty in deg.', float, 'float')),
-    ('r68', (np.nan, '68% positional uncertainty in deg.', float, 'float')),
-    ('r95', (np.nan, '95% positional uncertainty in deg.', float, 'float')),
-    ('r99', (np.nan, '99% positional uncertainty in deg.', float, 'float')),
-    ('sigmax', (np.nan, '1-sigma uncertainty in deg in longitude.', float, 'float')),
-    ('sigmay', (np.nan, '1-sigma uncertainty in deg in latitude.', float, 'float')),
-    ('sigma_semimajor', (np.nan,
-                         '1-sigma uncertainty in deg along major axis of uncertainty ellipse.', float, 'float')),
-    ('sigma_semiminor', (np.nan,
-                         '1-sigma uncertainty in deg along minor axis of uncertainty ellipse.', float, 'float')),
+
+    ('name', (None, 'Name of source.', str, 'str')),
+    ('file', (None, 'Name of output FITS file.', str, 'str')),
+    ('config', ({}, 'Copy of the input configuration to this method.', dict, 'dict')),
+
+    # Position
+    ('ra', (np.nan, 'Right ascension of best-fit position (deg).', float, 'float')),
+    ('dec', (np.nan, 'Declination of best-fit position (deg).', float, 'float')),
+    ('glon', (np.nan, 'Galactic Longitude of best-fit position (deg).', float, 'float')),
+    ('glat', (np.nan, 'Galactic Latitude of best-fit position (deg).', float, 'float')),
     ('xpix', (np.nan, 'Longitude pixel coordinate of best-fit position.', float, 'float')),
     ('ypix', (np.nan, 'Latitude pixel coordinate of best-fit position.', float, 'float')),
-    ('theta', (np.nan, 'Position angle of uncertainty ellipse.', float, 'float')),
-    ('eccentricity', (np.nan,
-                      'Eccentricity of uncertainty ellipse defined as sqrt(1-b**2/a**2).', float, 'float')),
-    ('eccentricity2', (np.nan,
-                       'Eccentricity of uncertainty ellipse defined as sqrt(a**2/b**2-1).', float, 'float')),
-    ('config', (None, 'Copy of the input parameters to this method.', dict, 'dict')),
+    ('deltax', (np.nan, 'Longitude offset from old position (deg).', float, 'float')),
+    ('deltay', (np.nan, 'Latitude offset from old position (deg).', float, 'float')),
+    ('skydir', (None, '', astropy.coordinates.SkyCoord, '~astropy.coordinates.SkyCoord')),
+    ('ra_preloc', (np.nan, 'Right ascension of pre-localization position (deg).', float, 'float')),
+    ('dec_preloc', (np.nan, 'Declination of pre-localization position (deg).', float, 'float')),
+    ('glon_preloc', (np.nan,
+                     'Galactic Longitude of pre-localization position (deg).', float, 'float')),
+    ('glat_preloc', (np.nan,
+                     'Galactic Latitude of pre-localization position (deg).', float, 'float')),
+
+    # Positional Errors
+    ('ra_err', (np.nan, 'Std. deviation of positional uncertainty in right ascension (deg).', float, 'float')),
+    ('dec_err', (np.nan, 'Std. deviation of positional uncertainty in declination (deg).', float, 'float')),
+    ('glon_err', (np.nan, 'Std. deviation of positional uncertainty in galactic longitude (deg).', float, 'float')),
+    ('glat_err', (np.nan, 'Std. deviation of positional uncertainty in galactic latitude (deg).', float, 'float')),
+    ('pos_offset', (np.nan, 'Angular offset (deg) between the old and new (localized) source positions.', float, 'float')),
+    ('pos_err', (np.nan, '1-sigma positional uncertainty (deg).', float, 'float')),
+    ('pos_r68', (np.nan, '68% positional uncertainty (deg).', float, 'float')),
+    ('pos_r95', (np.nan, '95% positional uncertainty (deg).', float, 'float')),
+    ('pos_r99', (np.nan, '99% positional uncertainty (deg).', float, 'float')),
+    ('pos_err_semimajor', (np.nan,
+                           '1-sigma uncertainty (deg) along major axis of uncertainty ellipse.', float, 'float')),
+    ('pos_err_semiminor', (np.nan,
+                           '1-sigma uncertainty (deg) along minor axis of uncertainty ellipse.', float, 'float')),
+    ('pos_angle', (np.nan, 'Position angle of uncertainty ellipse with respect to major axis.', float, 'float')),
+    ('pos_ecc', (np.nan,
+                 'Eccentricity of uncertainty ellipse defined as sqrt(1-b**2/a**2).', float, 'float')),
+    ('pos_ecc2', (np.nan,
+                  'Eccentricity of uncertainty ellipse defined as sqrt(a**2/b**2-1).', float, 'float')),
+    ('pos_gal_cov', (np.nan * np.ones((2, 2)),
+                     'Covariance matrix of positional uncertainties in local projection in galactic coordinates.',
+                     np.ndarray, '`~numpy.ndarray`')),
+    ('pos_gal_corr', (np.nan * np.ones((2, 2)),
+                      'Correlation matrix of positional uncertainties in local projection in galactic coordinates.',
+                      np.ndarray, '`~numpy.ndarray`')),
+    ('pos_cel_cov', (np.nan * np.ones((2, 2)),
+                     'Covariance matrix of positional uncertainties in local projection in celestial coordinates.',
+                     np.ndarray, '`~numpy.ndarray`')),
+    ('pos_cel_corr', (np.nan * np.ones((2, 2)),
+                      'Correlation matrix of positional uncertainties in local projection in celestial coordinates.',
+                      np.ndarray, '`~numpy.ndarray`')),
+
+    # Maps
+    ('tsmap', (None, '', fermipy.skymap.Map, '')),
+    ('tsmap_peak', (None, '', fermipy.skymap.Map, '')),
+
+    # Miscellaneous
+    ('loglike_base', (np.nan, 'Log-Likelihood of model before localization.', float, 'float')),
+    ('loglike_loc', (np.nan, 'Log-Likelihood of model after localization.', float, 'float')),
+    ('dloglike_loc', (np.nan,
+                      'Difference in log-likelihood before and after localization.', float, 'float')),
+    ('fit_success', (True, '', bool, 'bool')),
+    ('fit_inbounds', (True, '', bool, 'bool')),
+    ('fit_init', (None, '', dict, 'dict')),
+    ('fit_scan', (None, '', dict, 'dict')),
+
+))
+
+# Output for extension analysis
+extension_output = OrderedDict((
+
+    ('name', (None, 'Name of source.', str, 'str')),
+    ('file', (None, 'Name of output FITS file.', str, 'str')),
+    ('config', ({}, 'Copy of the input configuration to this method.', dict, 'dict')),
+
+    # Extension
+    ('width', (None, 'Vector of width (intrinsic 68% containment radius) values (deg).',
+               np.ndarray, '`~numpy.ndarray`')),
+    ('dloglike', (None, 'Sequence of delta-log-likelihood values for each point in the profile likelihood scan.',
+                  np.ndarray, '`~numpy.ndarray`')),
+    ('loglike', (None, 'Sequence of likelihood values for each point in the scan over the spatial extension.',
+                 np.ndarray, '`~numpy.ndarray`')),
+    ('loglike_ptsrc', (np.nan,
+                       'Model log-Likelihood value of the best-fit point-source model.', float, 'float')),
+    ('loglike_ext', (np.nan, 'Model log-Likelihood value of the best-fit extended source model.', float, 'float')),
+    ('loglike_base', (np.nan,
+                      'Model log-Likelihood value of the baseline model.', float, 'float')),
+    ('ext', (np.nan, 'Best-fit extension (68% containment radius) (deg).', float, 'float')),
+    ('ext_err_hi', (np.nan,
+                    'Upper (1 sigma) error on the best-fit extension (deg).', float, 'float')),
+    ('ext_err_lo', (np.nan,
+                    'Lower (1 sigma) error on the best-fit extension (deg).', float, 'float')),
+    ('ext_err', (np.nan, 'Symmetric (1 sigma) error on the best-fit extension (deg).', float, 'float')),
+    ('ext_ul95', (np.nan, '95% CL upper limit on the spatial extension (deg).', float, 'float')),
+    ('ts_ext', (np.nan, 'Test statistic for the extension hypothesis.', float, 'float')),
+
+    # Position
+    ('ra', localize_output['ra']),
+    ('dec', localize_output['dec']),
+    ('glon', localize_output['glon']),
+    ('glat', localize_output['glat']),
+    ('ra_err', localize_output['ra_err']),
+    ('dec_err', localize_output['dec_err']),
+    ('glon_err', localize_output['glon_err']),
+    ('glat_err', localize_output['glat_err']),
+    ('pos_offset', localize_output['pos_offset']),
+    ('pos_err', localize_output['pos_err']),
+    ('pos_r68', localize_output['pos_r68']),
+    ('pos_r95', localize_output['pos_r95']),
+    ('pos_r99', localize_output['pos_r99']),
+    ('pos_err_semimajor', localize_output['pos_err_semimajor']),
+    ('pos_err_semiminor', localize_output['pos_err_semiminor']),
+    ('pos_angle', localize_output['pos_angle']),
+
+    # Maps
+    ('tsmap', (None, '', fermipy.skymap.Map, '')),
+    ('ptsrc_tot_map', (None, '', fermipy.skymap.Map, '')),
+    ('ptsrc_src_map', (None, '', fermipy.skymap.Map, '')),
+    ('ptsrc_bkg_map', (None, '', fermipy.skymap.Map, '')),
+    ('ext_tot_map', (None, '', fermipy.skymap.Map, '')),
+    ('ext_src_map', (None, '', fermipy.skymap.Map, '')),
+    ('ext_bkg_map', (None, '', fermipy.skymap.Map, '')),
+
+    # Miscellaneous
+    ('source_fit', ({}, 'Dictionary with parameters of the best-fit extended source model.', dict, 'dict')),
 ))
 
 # Options for plotting
@@ -596,26 +704,28 @@ source_meta_output = OrderedDict((
 ))
 
 source_pos_output = OrderedDict((
-    ('ra', (np.nan, 'Right ascension of the source in deg.', float, 'float')),
-    ('dec', (np.nan, 'Declination of the source in deg.', float, 'float')),
-    ('glon', (np.nan, 'Galactic Longitude of the source in deg.', float, 'float')),
-    ('glat', (np.nan, 'Galactic Latitude of the source in deg.', float, 'float')),
-    ('offset_ra', (np.nan, 'Angular offset from ROI center along RA.', float, 'float')),
-    ('offset_dec', (np.nan, 'Angular offset from ROI center along DEC', float, 'float')),
-    ('offset_glon', (np.nan, 'Angular offset from ROI center along GLON.', float, 'float')),
-    ('offset_glat', (np.nan, 'Angular offset from ROI center along GLAT.', float, 'float')),
-    ('offset_roi_edge', (np.nan, 'Distance from the edge of the ROI in deg.  Negative (positive) values '
+    ('ra', (np.nan, 'Right ascension of the source (deg).', float, 'float')),
+    ('dec', (np.nan, 'Declination of the source (deg).', float, 'float')),
+    ('glon', (np.nan, 'Galactic Longitude of the source (deg).', float, 'float')),
+    ('glat', (np.nan, 'Galactic Latitude of the source (deg).', float, 'float')),
+    ('ra_err', localize_output['ra_err']),
+    ('dec_err', localize_output['dec_err']),
+    ('glon_err', localize_output['glon_err']),
+    ('glat_err', localize_output['glat_err']),
+    ('pos_err', localize_output['pos_err']),
+    ('pos_r68', localize_output['pos_r68']),
+    ('pos_r95', localize_output['pos_r95']),
+    ('pos_r99', localize_output['pos_r99']),
+    ('pos_err_semimajor', localize_output['pos_err_semimajor']),
+    ('pos_err_semiminor', localize_output['pos_err_semiminor']),
+    ('pos_angle', localize_output['pos_angle']),
+    ('offset_ra', (np.nan, 'Angular offset from ROI center along local projection of RA.', float, 'float')),
+    ('offset_dec', (np.nan, 'Angular offset from ROI center along local projection of DEC', float, 'float')),
+    ('offset_glon', (np.nan, 'Angular offset from ROI center along local projection of GLON.', float, 'float')),
+    ('offset_glat', (np.nan, 'Angular offset from ROI center along local projection of GLAT.', float, 'float')),
+    ('offset_roi_edge', (np.nan, 'Distance from the edge of the ROI (deg).  Negative (positive) values '
                          'indicate locations inside (outside) the ROI.', float, 'float')),
     ('offset', (np.nan, 'Angular offset from ROI center.', float, 'float')),
-    ('pos_sigma', (np.nan, '1-sigma uncertainty (deg) on the source position.', float, 'float')),
-    ('pos_sigma_semimajor', (np.nan,
-                             '1-sigma uncertainty (deg) on the source position along major axis.', float, 'float')),
-    ('pos_sigma_semiminor', (np.nan,
-                             '1-sigma uncertainty (deg) on the source position along minor axis.', float, 'float')),
-    ('pos_angle', (np.nan, 'Position angle (deg) of the positional uncertainty ellipse.', float, 'float')),
-    ('pos_r68', (np.nan, '68% uncertainty (deg) on the source position.', float, 'float')),
-    ('pos_r95', (np.nan, '95% uncertainty (deg) on the source position.', float, 'float')),
-    ('pos_r99', (np.nan, '99% uncertainty (deg) on the source position.', float, 'float')),
 ))
 
 source_flux_output = OrderedDict((
