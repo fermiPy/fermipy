@@ -210,7 +210,7 @@ def match_hpx_pixel(nside, nest, nside_pix, ipix_ring):
 
 
 def parse_hpxregion(region):
-    """Parse the HPXREGN header keyword into a list of tokens."""
+    """Parse the HPX_REG header keyword into a list of tokens."""
 
     m = re.match(r'([A-Za-z\_]*?)\((.*?)\)', region)
     if m is None:
