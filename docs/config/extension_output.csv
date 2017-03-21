@@ -1,14 +1,39 @@
-``width``	`~numpy.ndarray`	Vector of width values.
+``name``	`~str`	Name of source.
+``file``	`~str`	Name of output FITS file.
+``config``	`~dict`	Copy of the input configuration to this method.
+``width``	`~numpy.ndarray`	Vector of width (intrinsic 68% containment radius) values (deg).
 ``dloglike``	`~numpy.ndarray`	Sequence of delta-log-likelihood values for each point in the profile likelihood scan.
 ``loglike``	`~numpy.ndarray`	Sequence of likelihood values for each point in the scan over the spatial extension.
-``loglike_ptsrc``	float	Model log-Likelihood value of the best-fit point-source model.
-``loglike_ext``	float	Model log-Likelihood value of the best-fit extended source model.
-``loglike_base``	float	Model log-Likelihood value of the baseline model.
-``ext``	float	Best-fit extension in degrees.
-``ext_err_hi``	float	Upper (1 sigma) error on the best-fit extension in degrees.
-``ext_err_lo``	float	Lower (1 sigma) error on the best-fit extension in degrees.
-``ext_err``	float	Symmetric (1 sigma) error on the best-fit extension in degrees.
-``ext_ul95``	float	95% CL upper limit on the spatial extension in degrees.
-``ts_ext``	float	Test statistic for the extension hypothesis.
-``source_fit``	dict	Dictionary with parameters of the best-fit extended source model.
-``config``	dict	Copy of the input configuration to this method.
+``loglike_ptsrc``	`~float`	Model log-Likelihood value of the best-fit point-source model.
+``loglike_ext``	`~float`	Model log-Likelihood value of the best-fit extended source model.
+``loglike_base``	`~float`	Model log-Likelihood value of the baseline model.
+``ext``	`~float`	Best-fit extension (68% containment radius) (deg).
+``ext_err_hi``	`~float`	Upper (1-sigma) error on the best-fit extension (deg).
+``ext_err_lo``	`~float`	Lower (1-sigma) error on the best-fit extension (deg).
+``ext_err``	`~float`	Symmetric (1-sigma) error on the best-fit extension (deg).
+``ext_ul95``	`~float`	95% CL upper limit on the spatial extension (deg).
+``ts_ext``	`~float`	Test statistic for the extension hypothesis.
+``ra``	`~float`	Right ascension of best-fit position (deg).
+``dec``	`~float`	Declination of best-fit position (deg).
+``glon``	`~float`	Galactic Longitude of best-fit position (deg).
+``glat``	`~float`	Galactic Latitude of best-fit position (deg).
+``ra_err``	`~float`	Std. deviation of positional uncertainty in right ascension (deg).
+``dec_err``	`~float`	Std. deviation of positional uncertainty in declination (deg).
+``glon_err``	`~float`	Std. deviation of positional uncertainty in galactic longitude (deg).
+``glat_err``	`~float`	Std. deviation of positional uncertainty in galactic latitude (deg).
+``pos_offset``	`~float`	Angular offset (deg) between the old and new (localized) source positions.
+``pos_err``	`~float`	1-sigma positional uncertainty (deg).
+``pos_r68``	`~float`	68% positional uncertainty (deg).
+``pos_r95``	`~float`	95% positional uncertainty (deg).
+``pos_r99``	`~float`	99% positional uncertainty (deg).
+``pos_err_semimajor``	`~float`	1-sigma uncertainty (deg) along major axis of uncertainty ellipse.
+``pos_err_semiminor``	`~float`	1-sigma uncertainty (deg) along minor axis of uncertainty ellipse.
+``pos_angle``	`~float`	Position angle of uncertainty ellipse with respect to major axis.
+``tsmap``	`~fermipy.skymap.Map`	
+``ptsrc_tot_map``	`~fermipy.skymap.Map`	
+``ptsrc_src_map``	`~fermipy.skymap.Map`	
+``ptsrc_bkg_map``	`~fermipy.skymap.Map`	
+``ext_tot_map``	`~fermipy.skymap.Map`	
+``ext_src_map``	`~fermipy.skymap.Map`	
+``ext_bkg_map``	`~fermipy.skymap.Map`	
+``source_fit``	`~dict`	Dictionary with parameters of the best-fit extended source model.
