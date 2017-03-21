@@ -450,14 +450,14 @@ class Model(object):
                                                     self.spectral_pars)
             row_dict.update(pars)
 
-        r68_semimajor = self['pos_sigma_semimajor'] * \
-            self['pos_r68'] / self['pos_sigma']
-        r68_semiminor = self['pos_sigma_semiminor'] * \
-            self['pos_r68'] / self['pos_sigma']
-        r95_semimajor = self['pos_sigma_semimajor'] * \
-            self['pos_r95'] / self['pos_sigma']
-        r95_semiminor = self['pos_sigma_semiminor'] * \
-            self['pos_r95'] / self['pos_sigma']
+        r68_semimajor = self['pos_err_semimajor'] * \
+            self['pos_r68'] / self['pos_err']
+        r68_semiminor = self['pos_err_semiminor'] * \
+            self['pos_r68'] / self['pos_err']
+        r95_semimajor = self['pos_err_semimajor'] * \
+            self['pos_r95'] / self['pos_err']
+        r95_semiminor = self['pos_err_semiminor'] * \
+            self['pos_r95'] / self['pos_err']
 
         row_dict['Conf_68_PosAng'] = self['pos_angle']
         row_dict['Conf_68_SemiMajor'] = r68_semimajor
