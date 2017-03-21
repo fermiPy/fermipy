@@ -33,6 +33,7 @@ setup(
         'fermipy-run-tempo = fermipy.scripts.run_tempo:main',
         'fermipy-healview = fermipy.scripts.HEALview:main',
         'fermipy-select = fermipy.scripts.select_data:main',
+        'fermipy-preprocess = fermipy.scripts.preprocess_data:main',
         'fermipy-validate = fermipy.scripts.validate:main',
         'fermipy-coadd = fermipy.scripts.coadd:main',
         'fermipy-vstack = fermipy.scripts.vstack_images:main',
