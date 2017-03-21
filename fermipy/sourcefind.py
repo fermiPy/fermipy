@@ -105,6 +105,7 @@ class SourceFind(object):
         for p in peaks:
 
             o = fit_error_ellipse(tsmap, (p['ix'], p['iy']), dpix=2)
+            skydir = o['skydir']
             p['fit_loc'] = o
             p['fit_skydir'] = o['skydir']
 
@@ -128,7 +129,11 @@ class SourceFind(object):
             src_dict['pos_r95'] = o['pos_r95']
             src_dict['pos_r99'] = o['pos_r99']
             src_dict['pos_angle'] = o['pos_angle']
-
+            src_dict['pos_gal_cov'] = o['pos_gal_cov']
+            src_dict['pos_gal_corr'] = o['pos_gal_corr']
+            src_dict['pos_cel_cov'] = o['pos_cel_cov']
+            src_dict['pos_cel_corr'] = o['pos_cel_corr']
+            
             self.logger.info('Found source\n' +
                              'name: %s\n' % name +
                              'ts: %f' % p['amp'] ** 2)
@@ -449,6 +454,10 @@ class SourceFind(object):
             src['pos_r95'] = o.pos_r95
             src['pos_r99'] = o.pos_r99
             src['pos_angle'] = o.pos_angle
+            src['pos_gal_cov'] = o.pos_gal_cov
+            src['pos_gal_corr'] = o.pos_gal_corr
+            src['pos_cel_cov'] = o.pos_cel_cov
+            src['pos_cel_corr'] = o.pos_cel_corr
         else:
             saved_state.restore()
             self._sync_params(name)

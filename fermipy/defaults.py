@@ -719,13 +719,17 @@ source_pos_output = OrderedDict((
     ('pos_err_semimajor', localize_output['pos_err_semimajor']),
     ('pos_err_semiminor', localize_output['pos_err_semiminor']),
     ('pos_angle', localize_output['pos_angle']),
+    ('pos_gal_cov', localize_output['pos_gal_cov']),
+    ('pos_gal_corr', localize_output['pos_gal_corr']),
+    ('pos_cel_cov', localize_output['pos_cel_cov']),
+    ('pos_cel_corr', localize_output['pos_cel_corr']),    
     ('offset_ra', (np.nan, 'Angular offset from ROI center along local projection of RA.', float, 'float')),
     ('offset_dec', (np.nan, 'Angular offset from ROI center along local projection of DEC', float, 'float')),
     ('offset_glon', (np.nan, 'Angular offset from ROI center along local projection of GLON.', float, 'float')),
     ('offset_glat', (np.nan, 'Angular offset from ROI center along local projection of GLAT.', float, 'float')),
     ('offset_roi_edge', (np.nan, 'Distance from the edge of the ROI (deg).  Negative (positive) values '
                          'indicate locations inside (outside) the ROI.', float, 'float')),
-    ('offset', (np.nan, 'Angular offset from ROI center.', float, 'float')),
+    ('offset', (np.nan, 'Angular offset from ROI center (deg).', float, 'float')),
 ))
 
 source_flux_output = OrderedDict((
