@@ -475,7 +475,7 @@ class ExtensionFit(object):
             self.logger.info('Extension Fit Iteration %i', i)
             self.logger.info('R68 = %8.3f Offset = %8.3f '
                              'Delta-LogLikelihood = %8.2f',
-                             fit_ext['ext'], fit_ext['offset'], dloglike)
+                             fit_ext['ext'], fit_ext['pos_offset'], dloglike)
 
             if i > 0 and dloglike < 0.1:
                 break
