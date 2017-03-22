@@ -185,7 +185,8 @@ class ExtensionFit(object):
         else:
             ext_fit = self._fit_extension(name,
                                           spatial_model=spatial_model,
-                                          optimizer=kwargs['optimizer'])
+                                          optimizer=kwargs['optimizer'],
+                                          psf_scale_fn=psf_scale_fn)
 
         o.update(ext_fit)
 
@@ -201,7 +202,8 @@ class ExtensionFit(object):
         o.loglike = self._scan_extension(name,
                                          spatial_model=spatial_model,
                                          width=width,
-                                         optimizer=kwargs['optimizer'])
+                                         optimizer=kwargs['optimizer'],
+                                         psf_scale_fn=psf_scale_fn)
 
         self.set_source_morphology(name, spatial_model=spatial_model,
                                    spatial_pars={'ra': o['ra'], 'dec': o['dec'],
@@ -298,8 +300,8 @@ class ExtensionFit(object):
         hdus = [ext['tsmap'].create_primary_hdu(),
                 hdu_data] + hdu_images
 
-        hdus[0].header['CONFIG'] = json.dumps(ext['config'])
-        hdus[1].header['CONFIG'] = json.dumps(ext['config'])
+        hdus[0].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
+        hdus[1].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
         fits_utils.write_hdus(hdus, filename,
                               keywords={'SRCNAME': ext['name']})
 
@@ -326,6 +328,7 @@ class ExtensionFit(object):
         width = kwargs.get('width')
         spatial_model = kwargs.get('spatial_model')
         skydir = kwargs.pop('skydir', self.roi[name].skydir)
+        psf_scale_fn = kwargs.pop('psf_scale_fn', None)
 
         src = self.roi.copy_source(name)
         spatial_pars = {'ra': skydir.ra.deg, 'dec': skydir.dec.deg}
@@ -337,7 +340,8 @@ class ExtensionFit(object):
             self.set_source_morphology(name,
                                        spatial_model=spatial_model,
                                        spatial_pars=spatial_pars,
-                                       use_pylike=False)
+                                       use_pylike=False,
+                                       psf_scale_fn=psf_scale_fn)
             fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)
             loglike += [fit_output['loglike']]
 
@@ -380,13 +384,15 @@ class ExtensionFit(object):
         optimizer = kwargs.get('optimizer', {})
         fit_position = kwargs.get('fit_position', False)
         skydir = kwargs.get('skydir', self.roi[name].skydir)
+        psf_scale_fn = kwargs.get('psf_scale_fn', None)
 
         width = np.logspace(-2.0, 0.5, 16)
         width = np.concatenate(([0.0], width))
 
         loglike = self._scan_extension(name, spatial_model=spatial_model,
                                        width=width, optimizer=optimizer,
-                                       skydir=skydir)
+                                       skydir=skydir,
+                                       psf_scale_fn=psf_scale_fn)
 
         ul_data = utils.get_parameter_limits(width, loglike)
 
@@ -409,7 +415,8 @@ class ExtensionFit(object):
 
         loglike2 = self._scan_extension(name, spatial_model=spatial_model,
                                         width=width2, optimizer=optimizer,
-                                        skydir=skydir)
+                                        skydir=skydir,
+                                        psf_scale_fn=psf_scale_fn)
         ul_data = utils.get_parameter_limits(width2, loglike2)
 
         o = {}
