@@ -230,8 +230,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                 if kstep < 0:
                     kstep = kmax
                 else:
-                    #pass
-                    continue
+                    pass
 
                 for k in range(kmin, kmax, kstep):
                     full_key = "%s_%s_%02i" % (diffuse_comp_info_key, key, k)

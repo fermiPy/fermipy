@@ -212,10 +212,10 @@ def get_true_params_dict(pars_dict):
 
     params = {}
     for k, p in pars_dict.items():
-        val = p['value'] * p['scale']
+        val = float(p['value'])*float(p['scale'])
         err = np.nan
         if 'error' in p:
-            err = p['error'] * np.abs(p['scale'])
+            err = float(p['error'])*np.abs(float(p['scale']))
         params[k] = {'value': val, 'error': err}
 
     return params

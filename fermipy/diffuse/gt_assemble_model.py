@@ -134,7 +134,9 @@ class GtAssembleModel(object):
             hpxmap = HpxMap.create_from_hdulist(hdulist_in)
             hpxmap_out = hpxmap.ud_grade(hpx_order, preserve_counts=True)
             hpxlist_out = hdulist_in
-            hpxlist_out['SKYMAP'] = hpxmap_out.create_image_hdu()
+            #hpxlist_out['SKYMAP'] = hpxmap_out.create_image_hdu()
+            hpxlist_out[1] = hpxmap_out.create_image_hdu()
+            hpxlist_out[1].name = 'SKYMAP'
             hpxlist_out.writeto(outsrcmap)
             return hpx_order
         else:
@@ -248,6 +250,8 @@ class ConfigMaker_AssembleModel(ConfigMaker):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
                            data=diffuse_defaults.diffuse['dataset_yaml'],
+                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
                            args=(None, 'Names of input models', list))
@@ -263,7 +267,14 @@ class ConfigMaker_AssembleModel(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
+        input_config = dict(comp=args['comp'],
+                            data=args['data'],
+                            sources=args['sources'],
+                            diffuse=args['diffuse'],
+                            hpx_order=args['hpx_order'],
+                            args=args['args'],
+                            logfile=os.path.join('analysis', 'init.log'))
+                                      
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
@@ -294,8 +305,14 @@ def create_link_assemble_model(**kwargs):
 
 def create_sg_assemble_model(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
+
+    gtinitmodel = GtInitModel()
+    init_link = gtinitmodel.link
+
     gtassemble = GtAssembleModel(**kwargs)
     link = gtassemble.link
+
+
     appname = kwargs.pop('appname', 'fermipy-assemble-model-sg')
 
     lsf_args = {'W': 1500,
@@ -310,6 +327,7 @@ def create_sg_assemble_model(**kwargs):
                                 usage=usage,
                                 description=description,
                                 appname=appname,
+                                initialize=init_link,
                                 **kwargs)
     return lsf_sg
 
