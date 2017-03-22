@@ -994,9 +994,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def _init_roi_model(self):
 
-        # EAC, move from setup
-        self._ccube_file = os.path.join(self.workdir,
-                                        'ccube.fits')
         rm = self._roi_data
 
         rm['counts'] = np.zeros(self.enumbins)
@@ -3769,22 +3766,31 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         search_dirs = [workdir]
 
         self._files = {}
+
+        # Set default file names
         self._files['ft1'] = 'ft1%s.fits'
         self._files['ft1_filtered'] = 'ft1_filtered%s.fits'
         self._files['ccube'] = 'ccube%s.fits'
         self._files['ccubemc'] = 'ccubemc%s.fits'
-        # EAC, optionally get the names of srcmap, bexpmap and bexmap_roi from config        
-        self._files['srcmap'] = self.config['gtlike'].get('srcmap')
-        if self._files['srcmap'] is None:
-            self._files['srcmap'] = 'srcmap%s.fits'    
-        self._files['bexpmap'] = self.config['gtlike'].get('bexpmap')
-        if self._files['bexpmap'] is None:
-            self._files['bexpmap'] = 'bexpmap%s.fits'
-        self._files['bexpmap_roi'] = self.config['gtlike'].get('bexpmap_roi')
-        if self._files['bexpmap_roi'] is None:
-             self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
+        self._files['srcmap'] = 'srcmap%s.fits'
+        self._files['bexpmap'] = 'bexpmap%s.fits'
+        self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
         self._files['srcmdl'] = 'srcmdl%s.xml'
+        self._files['ltcube'] = 'ltcube%s.fits'
+        self._files = {
+            k : os.path.join(workdir, v % self.config['file_suffix'])
+            for k, v in self._files.items() }
 
+        # Override files defined in gtlike
+        for k in ['srcmap', 'bexpmap', 'bexpmap_roi']:
+
+            if self.config['gtlike'].get(k, None) is None:
+                continue
+
+            self._files[k] = resolve_file_path(self.config['gtlike'][k],
+                                               search_dirs=search_dirs,
+                                               expand=True)
+            
         self._data_files = {}
         self._data_files['evfile'] = self.config['data']['evfile']
         self._data_files['scfile'] = self.config['data']['scfile']
@@ -3809,47 +3815,23 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Fill dictionary of exposure corrections
         self._src_expscale = {}
         if self.config['gtlike']['expscale'] is not None:
-            for src in self.roi:
-                self._src_expscale[src.name] = self.config[
-                    'gtlike']['expscale']
+            self._src_expscale = {
+                src.name : self.config['gtlike']['expscale']
+                for src in self.roi }
 
         if self.config['gtlike']['src_expscale']:
             for k, v in self.config['gtlike']['src_expscale'].items():
                 self._src_expscale[k] = v
 
-        for k, v in self._files.items():
-            #EAC, need try-except here b/c srcmap, bexpmap and bexmap_roi
-            #might already be formatted
-            try:
-                self._files[k] = os.path.join(workdir,
-                                              v % self.config['file_suffix'])
-            except:
-                self._files[k] = os.path.join(workdir, v)
-
-        for k in ['srcmap', 'bexpmap', 'bexpmap_roi']:
-
-            if self.config['gtlike'].get(k, None) is None:
-                continue
-
-            self._files[k] = resolve_file_path(self.config['gtlike'][k],
-                                               search_dirs=search_dirs,
-                                               expand=True)
-
-#        if self.config['gtlike'].get('srcmdl', None) is not None:
-#            self._files['srcmdl'] = self.config['gtlike']['srcmdl']
-
+        # Setup external LT cube
         self._ext_ltcube = resolve_file_path(self.config['data']['ltcube'],
                                              search_dirs=search_dirs,
                                              expand=True)
 
-        if self._ext_ltcube is None or \
-                self.config['ltcube']['use_local_ltcube']:
-            self.files['ltcube'] = os.path.join(workdir,
-                                                'ltcube%s.fits' %
-                                                self.config['file_suffix'])
-        else:
+        if self._ext_ltcube is not None:
             self.files['ltcube'] = self._ext_ltcube
 
+        # Setup weights map
         self._files['wmap'] = resolve_file_path(self.config['gtlike']['wmap'],
                                                 search_dirs=search_dirs,
                                                 expand=True)
