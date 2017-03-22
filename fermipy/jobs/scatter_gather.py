@@ -446,8 +446,22 @@ class ScatterGather(Link):
         """
         if self._initialize_link is None:
             return JobStatus.no_job
+        key = self._initialize_link.jobs.keys()[0]
         job_details = self.dispatch_job(
-            self._initialize_link, key=self.linkname + '.init')
+            self._initialize_link, key=key)
+
+        running = True            
+        while running:
+            if self.args['dry_run']:
+                print ("Dry run break")
+                break
+            running, failed = self._check_link_completion(self._initialize_link)
+            if failed:
+                return JobStatus.failed
+            print ("Sleeping %.0f seconds between status checks" %
+                   self.args['job_check_sleep'])
+            time.sleep(self.args['job_check_sleep'])
+
         return job_details.status
 
     def submit_jobs(self, link, job_dict=None):

@@ -2225,7 +2225,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                             loge_bounds[1],
                                             summed=True)
             npred = np.sum(cs)
-            val = 1. / npred
+            #EAC, protect against npred == 0
+            val = 1. / max(npred, 1.)
             npred = 1.0
             par.setValue(0.0)
             self.like.syncSrcParams(str(name))
@@ -3842,6 +3843,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         search_dirs = [workdir]
 
         self._files = {}
+
+        # Set default file names
         self._files['ft1'] = 'ft1%s.fits'
         self._files['ft1_filtered'] = 'ft1_filtered%s.fits'
         self._files['ccube'] = 'ccube%s.fits'
@@ -3850,7 +3853,21 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._files['bexpmap'] = 'bexpmap%s.fits'
         self._files['bexpmap_roi'] = 'bexpmap_roi%s.fits'
         self._files['srcmdl'] = 'srcmdl%s.xml'
+        self._files['ltcube'] = 'ltcube%s.fits'
+        self._files = {
+            k : os.path.join(workdir, v % self.config['file_suffix'])
+            for k, v in self._files.items() }
 
+        # Override files defined in gtlike
+        for k in ['srcmap', 'bexpmap', 'bexpmap_roi']:
+
+            if self.config['gtlike'].get(k, None) is None:
+                continue
+
+            self._files[k] = resolve_file_path(self.config['gtlike'][k],
+                                               search_dirs=search_dirs,
+                                               expand=True)
+            
         self._data_files = {}
         self._data_files['evfile'] = self.config['data']['evfile']
         self._data_files['scfile'] = self.config['data']['scfile']
@@ -3875,42 +3892,23 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Fill dictionary of exposure corrections
         self._src_expscale = {}
         if self.config['gtlike']['expscale'] is not None:
-            for src in self.roi:
-                self._src_expscale[src.name] = self.config[
-                    'gtlike']['expscale']
+            self._src_expscale = {
+                src.name : self.config['gtlike']['expscale']
+                for src in self.roi }
 
         if self.config['gtlike']['src_expscale']:
             for k, v in self.config['gtlike']['src_expscale'].items():
                 self._src_expscale[k] = v
 
-        for k, v in self._files.items():
-            self._files[k] = os.path.join(workdir,
-                                          v % self.config['file_suffix'])
-
-        for k in ['srcmap', 'bexpmap', 'bexpmap_roi']:
-
-            if self.config['gtlike'].get(k, None) is None:
-                continue
-
-            self._files[k] = resolve_file_path(self.config['gtlike'][k],
-                                               search_dirs=search_dirs,
-                                               expand=True)
-
-#        if self.config['gtlike'].get('srcmdl', None) is not None:
-#            self._files['srcmdl'] = self.config['gtlike']['srcmdl']
-
+        # Setup external LT cube
         self._ext_ltcube = resolve_file_path(self.config['data']['ltcube'],
                                              search_dirs=search_dirs,
                                              expand=True)
 
-        if self._ext_ltcube is None or \
-                self.config['ltcube']['use_local_ltcube']:
-            self.files['ltcube'] = os.path.join(workdir,
-                                                'ltcube%s.fits' %
-                                                self.config['file_suffix'])
-        else:
+        if self._ext_ltcube is not None:
             self.files['ltcube'] = self._ext_ltcube
 
+        # Setup weights map
         self._files['wmap'] = resolve_file_path(self.config['gtlike']['wmap'],
                                                 search_dirs=search_dirs,
                                                 expand=True)
@@ -4351,16 +4349,22 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         """
         try:
-            p_method = self.like.logLike.countsMap().projection().method()
+            if isinstance(self.like, gtutils.SummedLikelihood):
+                cmap = self.like.components[0].logLike.countsMap()
+                p_method = cmap.projection().method()
+            else:
+                cmap = self.like.logLike.countsMap()
+                p_method = cmap.projection().method()
         except Exception:
             p_method = 0
+            
 
         if p_method == 0:  # WCS
-            z = self.like.logLike.countsMap().data()
+            z = cmap.data()
             z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
             return Map(z, copy.deepcopy(self.wcs))
         elif p_method == 1:  # HPX
-            z = self.like.logLike.countsMap().data()
+            z = cmap.data()
             nhpix = self.hpx.npix
             z = np.array(z).reshape(self.enumbins, nhpix)
             return HpxMap(z, self.hpx)
