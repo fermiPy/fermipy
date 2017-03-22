@@ -233,6 +233,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self._projtype = self.config['binning']['projtype']
         self._tmin = self.config['selection']['tmin']
         self._tmax = self.config['selection']['tmax']
+        self._lck_params = {}
 
         # Set random seed
         np.random.seed(self.config['mc']['seed'])
@@ -1618,10 +1619,72 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.like[idx].setBounds(*bounds)
         self._sync_params(name)
 
+    def lock_parameter(self, name, par, lock=True):
+        """Set parameter to locked/unlocked state.  A locked parameter
+        will be ignored when running methods that free/fix sources or
+        parameters.
+
+        Parameters
+        ----------
+        name : str
+            Source name.
+
+        par : str
+            Parameter name.
+
+        lock : bool       
+            Set parameter to locked (True) or unlocked (False) state.
+        """
+        name = self.roi.get_source_by_name(name).name
+        lck_params = self._lck_params.setdefault(name, [])
+
+        if lock:
+            self.free_parameter(name, par, False)
+            if not par in lck_params:
+                lck_params += [par]
+        else:
+            if par in lck_params:
+                lck_params.remove(par)
+
     def free_parameter(self, name, par, free=True):
+        """Free/Fix a parameter of a source by name.
+
+        Parameters
+        ----------
+        name : str
+            Source name.
+
+        par : str
+            Parameter name.
+        """
+        name = self.get_source_name(name)
+        if par in self._lck_params.get(name, []):
+            return
         idx = self.like.par_index(name, par)
         self.like[idx].setFree(free)
         self._sync_params(name)
+
+    def lock_source(self, name, lock=True):
+        """Set all parameters of a source to a locked/unlocked state.
+        Locked parameters will be ignored when running methods that
+        free/fix sources or parameters.
+
+        Parameters
+        ----------
+        name : str
+            Source name.
+
+        lock : bool        
+            Set source parameters to locked (True) or unlocked (False)
+            state.
+        """
+        name = self.get_source_name(name)
+        if lock:
+            par_names = self.get_source_params(name)
+            self.free_source(name, False, pars=par_names)
+            self._lck_params[name] = par_names
+        else:
+            self._lck_params[name] = []
 
     def free_source(self, name, free=True, pars=None, **kwargs):
         """Free/Fix parameters of a source.
@@ -1665,6 +1728,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             pass
         else:
             raise Exception('Invalid parameter list.')
+
+        # Remove locked parameters
+        lck_params = self._lck_params.get(name, [])
+        pars = [p for p in pars if p not in lck_params]
+
+        print('lck_params', lck_params)
+        print('pars', pars)
 
         # Deduce here the names of all parameters from the spectral type
         src_par_names = pyLike.StringVector()
@@ -1859,6 +1929,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if self._saved_state is None:
             return
         self._saved_state.restore()
+
+    def get_source_params(self, name):
+        name = self.get_source_name(name)
+        spectrum = self.like[name].src.spectrum()
+        parNames = pyLike.StringVector()
+        spectrum.getParamNames(parNames)
+        return [str(p) for p in parNames]
 
     def get_free_source_params(self, name):
         name = self.get_source_name(name)
