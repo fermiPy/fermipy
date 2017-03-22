@@ -1733,9 +1733,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         lck_params = self._lck_params.get(name, [])
         pars = [p for p in pars if p not in lck_params]
 
-        print('lck_params', lck_params)
-        print('pars', pars)
-
         # Deduce here the names of all parameters from the spectral type
         src_par_names = pyLike.StringVector()
         self.like[name].src.spectrum().getParamNames(src_par_names)
