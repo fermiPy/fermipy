@@ -503,8 +503,9 @@ def cov_to_correlation(cov):
         N x N matrix of correlations among N parameters.
     """
     err = np.sqrt(np.diag(cov))
-    errinv = np.zeros_like(err)
-    errinv[err > 0] = 1. / err[err > 0]
+    errinv = np.ones_like(err) * np.nan
+    m = np.isfinite(err) & (err != 0)
+    errinv[m] = 1. / err[m]
     corr = np.array(cov)
     return corr * np.outer(errinv, errinv)
 
@@ -1571,7 +1572,7 @@ def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=Non
     if klims is None:
         egy = psf.energies
     else:
-        egy = psf.energies[klims[0]:klims[1]+1]
+        egy = psf.energies[klims[0]:klims[1] + 1]
     ang_dist = make_pixel_distance(npix, xpix, ypix) * cdelt
     max_ang_dist = np.max(ang_dist) + cdelt
     #dtheta = np.linspace(0.0, (np.max(ang_dist) * 1.05)**0.5, 200)**2.0
