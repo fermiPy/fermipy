@@ -505,6 +505,7 @@ extension = {
                     'between `width_min` and `width_max`.', int),
     'free_background': common['free_background'],
     'free_radius': common['free_radius'],
+    'fit_ebin': (False, 'Perform a fit for the angular extension in each analysis energy bin.', bool),
     'update': (False, 'Update this source with the best-fit model for spatial '
                'extension if TS_ext > ``tsext_threshold``.', bool),
     'save_model_map': (False, 'Save model counts cubes for the best-fit model of extension.', bool),
