@@ -19,45 +19,6 @@ from numpy.core import defchararray
 from astropy.extern import six
 
 
-class MutableNamedTuple(OrderedDict):
-    """Light-weight class for representing data structures.  Internal
-    data members can be accessed using both attribute- and
-    dictionary-style syntax.  The constructor accepts an ordered dict
-    defining the names and default values of all data members.  Once
-    an instance is initialized no new data members may be added."""
-
-    def __init__(self, *args, **kwargs):
-        super(MutableNamedTuple, self).__init__(*args, **kwargs)
-        self._initialized = True
-
-    def __getattr__(self, name):
-        try:
-            return self[name]
-        except KeyError:
-            raise AttributeError(name)
-
-    def __setattr__(self, name, value):
-        if hasattr(self, '_initialized'):
-            if not name in self:
-                raise AttributeError(name)
-            super(MutableNamedTuple, self).__setitem__(name, value)
-        else:
-            super(MutableNamedTuple, self).__setattr__(name, value)
-
-    def __setitem__(self, name, value):
-        if hasattr(self, '_initialized'):
-            if not name in self:
-                raise KeyError(name)
-            super(MutableNamedTuple, self).__setitem__(name, value)
-        else:
-            super(MutableNamedTuple, self).__setitem__(name, value)
-
-    def update(self, d):
-        for k, v in d.items():
-            if k in self:
-                self[k] = v
-
-
 def init_matplotlib_backend(backend=None):
     """This function initializes the matplotlib backend.  When no
     DISPLAY is available the backend is automatically set to 'Agg'.
@@ -1592,7 +1553,7 @@ def memoize(obj):
 
 
 def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
-                       normalize=False, sparse=False):
+                       normalize=False, klims=None, sparse=False):
     """Make a kernel for a general radially symmetric 2D function.
 
     Parameters
@@ -1607,7 +1568,10 @@ def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=Non
         68% containment radius in degrees.
     """
 
-    egy = psf.energies
+    if klims is None:
+        egy = psf.energies
+    else:
+        egy = psf.energies[klims[0]:klims[1]+1]
     ang_dist = make_pixel_distance(npix, xpix, ypix) * cdelt
     max_ang_dist = np.max(ang_dist) + cdelt
     #dtheta = np.linspace(0.0, (np.max(ang_dist) * 1.05)**0.5, 200)**2.0
@@ -1617,8 +1581,8 @@ def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=Non
     shape = (len(egy), npix, npix)
     k = np.zeros(shape)
 
-    r99 = psf.containment_angle(energies=psf.energies, fraction=0.997)
-    r34 = psf.containment_angle(energies=psf.energies, fraction=0.34)
+    r99 = psf.containment_angle(energies=egy, fraction=0.997)
+    r34 = psf.containment_angle(energies=egy, fraction=0.34)
 
     rmin = np.maximum(r34 / 4., 0.01)
     rmax = np.maximum(r99, 0.1)
