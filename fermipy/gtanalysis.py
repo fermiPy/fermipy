@@ -2222,7 +2222,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                             loge_bounds[1],
                                             summed=True)
             npred = np.sum(cs)
-            #EAC, protect against npred == 0
+            # EAC, protect against npred == 0
             val = 1. / max(npred, 1.)
             npred = 1.0
             par.setValue(0.0)
@@ -3852,8 +3852,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._files['srcmdl'] = 'srcmdl%s.xml'
         self._files['ltcube'] = 'ltcube%s.fits'
         self._files = {
-            k : os.path.join(workdir, v % self.config['file_suffix'])
-            for k, v in self._files.items() }
+            k: os.path.join(workdir, v % self.config['file_suffix'])
+            for k, v in self._files.items()}
 
         # Override files defined in gtlike
         for k in ['srcmap', 'bexpmap', 'bexpmap_roi']:
@@ -3864,7 +3864,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self._files[k] = resolve_file_path(self.config['gtlike'][k],
                                                search_dirs=search_dirs,
                                                expand=True)
-            
+
         self._data_files = {}
         self._data_files['evfile'] = self.config['data']['evfile']
         self._data_files['scfile'] = self.config['data']['scfile']
@@ -3890,8 +3890,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._src_expscale = {}
         if self.config['gtlike']['expscale'] is not None:
             self._src_expscale = {
-                src.name : self.config['gtlike']['expscale']
-                for src in self.roi }
+                src.name: self.config['gtlike']['expscale']
+                for src in self.roi}
 
         if self.config['gtlike']['src_expscale']:
             for k, v in self.config['gtlike']['src_expscale'].items():
@@ -4354,7 +4354,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 p_method = cmap.projection().method()
         except Exception:
             p_method = 0
-            
 
         if p_method == 0:  # WCS
             z = cmap.data()
@@ -5025,7 +5024,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         spatial_width = src['SpatialWidth']
         xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
         exp = self._bexp.interpolate_at_skydir(skydir)
-
         cache = self._srcmap_cache.get(name, None)
         if cache is not None:
             k = cache.create_map([ypix, xpix])
@@ -5047,8 +5045,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         k *= scale
 
         # Force the source map to be cached
+        # FIXME: No longer necessary to force cacheing in ST after 11-05-02
         self.like.logLike.sourceMap(str(name)).model()
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
+        self.like.logLike.sourceMap(str(name)).model()
 
         normPar = self.like.normPar(name)
         if not normPar.isFree():
