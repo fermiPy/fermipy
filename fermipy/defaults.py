@@ -639,8 +639,9 @@ extension_output = OrderedDict((
     ('ts_ext', (np.nan, 'Test statistic for the extension hypothesis.', float)),
 
     # Extension vs. Energy
-    ('ebin_emin', (None, '', np.ndarray)),
-    ('ebin_emax', (None, '', np.ndarray)),    
+    ('ebin_e_min', (None, '', np.ndarray)),
+    ('ebin_e_ctr', (None, '', np.ndarray)),
+    ('ebin_e_max', (None, '', np.ndarray)),    
     ('ebin_ext', (None, 'Best-fit extension as measured in each energy bin (intrinsic 68% containment radius) (deg).',
                   np.ndarray)),
     ('ebin_ext_err', (None,
