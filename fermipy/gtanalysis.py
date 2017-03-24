@@ -661,6 +661,20 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         """
         name = self.roi.get_source_by_name(name).name
+        src = self.roi[name]
+
+        spectrum_pars = {} if spectrum_pars is None else spectrum_pars
+        if (self.roi[name]['SpectrumType'] == 'PowerLaw' and
+                spectrum_type == 'LogParabola'):
+            spectrum_pars.setdefault('beta', {'value': 0.0, 'scale': 1.0,
+                                              'min' : 0.0, 'max' : 1.0})
+            spectrum_pars.setdefault('alpha', src.spectral_pars['Index'])
+            spectrum_pars.setdefault('Eb', src.spectral_pars['Scale'])
+            spectrum_pars.setdefault('norm', src.spectral_pars['Prefactor'])
+            spectrum_pars['alpha']['value'] *= -1.0
+            if spectrum_pars['alpha']['scale'] == -1.0:
+                spectrum_pars['alpha']['value'] *= -1.0
+                spectrum_pars['alpha']['scale'] *= -1.0
 
         if spectrum_type == 'FileFunction':
             self._create_filefunction(name, spectrum_pars)
@@ -1600,7 +1614,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self._sync_params(name)
 
     def set_parameter_bounds(self, name, par, bounds):
-        """Set the bounds of a parameter.
+        """Set the bounds on the scaled value of a parameter.
 
         Parameters
         ----------
@@ -2503,8 +2517,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         optimizer = kwargs.get('optimizer',
                                self.config['optimizer']['optimizer'])
 
-        self.logger.debug("Creating optimizer: %s", optimizer)
-
         if optimizer.upper() == 'MINUIT':
             optObject = pyLike.Minuit(self.like.logLike)
         elif optimizer.upper() == 'NEWMINUIT':
@@ -2525,12 +2537,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         quality = 0
         niter = 0
         while niter < retries:
-            self.logger.debug("Fit iteration: %i" % niter)
             niter += 1
             quality, status, edm, loglike = self._fit_optimizer(**kwargs)
 
             if quality >= min_fit_quality and status == 0:
                 break
+
+            self.logger.debug("Retry fit iter: %i quality: %i edm: %8.4f loglike: %12.3f",
+                              niter, quality, edm, loglike)
 
         num_free = self.like.nFreeParams()
         o = {'values': np.ones(num_free) * np.nan,
