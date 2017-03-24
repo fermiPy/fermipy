@@ -436,10 +436,8 @@ class ExtensionFit(object):
         src = self.roi.copy_source(name)
         spatial_pars = {'ra': skydir.ra.deg, 'dec': skydir.dec.deg}
 
-        import time
         loglike = np.ones((self.enumbins, len(width)))
         for i, w in enumerate(width):
-            t0 = time.time()
 
             spatial_pars['SpatialWidth'] = max(w, 0.00316)
             self.set_source_morphology(name,
@@ -457,8 +455,6 @@ class ExtensionFit(object):
                 else:
                     loglike[j, i] = -self.like()
             self.set_energy_range(self.log_energies[0], self.log_energies[-1])
-            t1 = time.time()
-            print(i, w, t1 - t0)
 
         state.restore()
         return loglike
