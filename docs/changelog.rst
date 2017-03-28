@@ -6,6 +6,37 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+0.14.0 (03/28/2017)
+-------------------
+* Refactoring and improvements in
+  `~fermipy.gtanalysis.GTAnalysis.localize` and
+  `~fermipy.gtanalysis.GTAnalysis.extension` (see `#124
+  <https://github.com/fermiPy/fermipy/pull/124>`_).  Cleanup of
+  columns in `~fermipy.gtanalysis.GTAnalysis.localize`.  Add new
+  columns for 1-sigma errors projected in CEL and GAL coordinates as
+  well as associated covariance and correlation matrices.  Add
+  positional errors when running
+  `~fermipy.gtanalysis.GTAnalysis.extension` with
+  ``fit_position=True``.
+* Add ``free_radius`` option to
+  `~fermipy.gtanalysis.GTAnalysis.localize`,
+  `~fermipy.gtanalysis.GTAnalysis.extension`, and
+  `~fermipy.gtanalysis.GTAnalysis.sed`.  This can be used to free
+  background sources within a certain distance of the analyzed source.
+* Relocalize point-source hypothesis when testing extension of
+  extended sources.
+* Improve speed and accuracy of source map calculation (see `#123
+  <https://github.com/fermiPy/fermipy/pull/123>`_).  Exposures are now
+  extracted directly from the exposure map.
+* Write analysis configuration to ``CONFIG`` header keyword of all
+  FITS output files.
+* Add ``jobs`` and ``diffuse`` submodules (see `#120
+  <https://github.com/fermiPy/fermipy/pull/120>`_ and `#122
+  <https://github.com/fermiPy/fermipy/pull/120>`_).  These contain
+  functionality for peforming all-sky diffuse analysis and setting up
+  automated analysis pipelines.  More detailed documentation on these
+  features to be provided in a future release.
+  
 0.13.0 (01/16/2017)
 -------------------
 * Rewrite LTCube class to add support for fast LT cube generation.
