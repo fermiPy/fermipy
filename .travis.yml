@@ -59,13 +59,13 @@ matrix:
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
 
-        # Python 2, SLAC ST 11-05-01, all other dependencies
+        # Python 2, SLAC ST 11-05-02, all other dependencies
         - os: linux
           sudo: required
-          env: NAME=py2_slac-st-11-05-01
+          env: NAME=py2_slac-st-11-05-02
                PYTHON_VERSION=2.7
                ST_INSTALL=''
-               DOCKER_INSTALL='bash dockerinstall.sh docker/centos6-11-05-01-python'
+               DOCKER_INSTALL='bash dockerinstall.sh docker/centos6-11-05-02-python'
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                CONDA_DEPS='scipy matplotlib pytest pyyaml'
                FERMI_DIR='/home'
