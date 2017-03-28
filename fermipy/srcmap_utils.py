@@ -177,7 +177,7 @@ class SourceMapCache(object):
 def make_srcmap_old(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
                     cdelt=0.01, rebin=1, psf_scale_fn=None):
     """Compute the source map for a given spatial model.
-    
+
     Parameters
     ----------
     psf : `~fermipy.irfs.PSFModel`
@@ -223,7 +223,7 @@ def make_srcmap_old(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
 
 
 def make_srcmap(psf, exp, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
-                cdelt=0.01, psf_scale_fn=None, sparse=False):
+                cdelt=0.01, psf_scale_fn=None, klims=None, sparse=False):
     """Compute the source map for a given spatial model.
 
     Parameters
@@ -249,6 +249,9 @@ def make_srcmap(psf, exp, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
         Function that evaluates the PSF scaling function.
         Argument is energy in MeV.
 
+    klims : tuple
+        Indices of lower and upper range of energy.
+
     sparse : bool    
         Skip pixels in which the source amplitude is small.
 
@@ -256,16 +259,22 @@ def make_srcmap(psf, exp, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
     if spatial_model == 'RadialGaussian':
         k = utils.make_radial_kernel(psf, utils.convolve2d_gauss,
                                      sigma / 1.5095921854516636, npix, cdelt,
-                                     xpix, ypix, psf_scale_fn, sparse=sparse)
+                                     xpix, ypix, psf_scale_fn, klims=klims,
+                                     sparse=sparse)
     elif spatial_model == 'RadialDisk':
         k = utils.make_radial_kernel(psf, utils.convolve2d_disk,
                                      sigma / 0.8246211251235321, npix, cdelt,
-                                     xpix, ypix, psf_scale_fn, sparse=sparse)
+                                     xpix, ypix, psf_scale_fn, klims=klims,
+                                     sparse=sparse)
     elif spatial_model == 'PointSource':
         k = utils.make_radial_kernel(psf, None, None, npix, cdelt,
-                                     xpix, ypix, psf_scale_fn, sparse=sparse)
+                                     xpix, ypix, psf_scale_fn, klims=klims,
+                                     sparse=sparse)
     else:
         raise Exception('Unsupported spatial model: %s', spatial_model)
+
+    if klims is not None:
+        exp = exp[klims[0]:klims[1] + 1, ...]
 
     k *= exp[:, np.newaxis, np.newaxis] * np.radians(cdelt) ** 2
     return k

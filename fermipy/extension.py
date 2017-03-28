@@ -152,6 +152,19 @@ class ExtensionFit(object):
         o.loglike = np.zeros(len(width) + 1)
         o.loglike_base = loglike0
         o.config = kwargs
+        o.ebin_ext = np.ones(self.enumbins) * np.nan
+        o.ebin_ext_err = np.ones(self.enumbins) * np.nan
+        o.ebin_ext_err_lo = np.ones(self.enumbins) * np.nan
+        o.ebin_ext_err_hi = np.ones(self.enumbins) * np.nan
+        o.ebin_ext_ul95 = np.ones(self.enumbins) * np.nan
+        o.ebin_ts_ext = np.ones(self.enumbins) * np.nan
+        o.ebin_loglike = np.ones((self.enumbins, len(width))) * np.nan
+        o.ebin_dloglike = np.ones((self.enumbins, len(width))) * np.nan
+        o.ebin_loglike_ptsrc = np.ones(self.enumbins) * np.nan
+        o.ebin_loglike_ext = np.ones(self.enumbins) * np.nan
+        o.ebin_e_min = self.energies[:-1]
+        o.ebin_e_max = self.energies[1:]
+        o.ebin_e_ctr = np.sqrt(o.ebin_e_min * o.ebin_e_max)
 
         self.set_source_morphology(name, spatial_model='PointSource',
                                    use_pylike=False,
@@ -185,7 +198,8 @@ class ExtensionFit(object):
         else:
             ext_fit = self._fit_extension(name,
                                           spatial_model=spatial_model,
-                                          optimizer=kwargs['optimizer'])
+                                          optimizer=kwargs['optimizer'],
+                                          psf_scale_fn=psf_scale_fn)
 
         o.update(ext_fit)
 
@@ -201,7 +215,8 @@ class ExtensionFit(object):
         o.loglike = self._scan_extension(name,
                                          spatial_model=spatial_model,
                                          width=width,
-                                         optimizer=kwargs['optimizer'])
+                                         optimizer=kwargs['optimizer'],
+                                         psf_scale_fn=psf_scale_fn)
 
         self.set_source_morphology(name, spatial_model=spatial_model,
                                    spatial_pars={'ra': o['ra'], 'dec': o['dec'],
@@ -218,6 +233,9 @@ class ExtensionFit(object):
                                           optimizer=kwargs['optimizer'])
         o.loglike_ext = fit_output['loglike']
         o.ts_ext = 2 * (o['loglike_ext'] - o['loglike_ptsrc'])
+
+        if kwargs['fit_ebin']:
+            self._fit_extension_ebin(name, o, **kwargs)
 
         self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
                          % (o['ext'], o['ext_err_hi'], o['ext_err_lo']))
@@ -238,13 +256,16 @@ class ExtensionFit(object):
             o.ext_src_map = self.model_counts_map(name)
             o.ext_bkg_map = self.model_counts_map(exclude=[name])
 
-        tsmap = self.tsmap(model=src.data,
+        tsmap_model = {'SpatialModel': 'RadialDisk',
+                       'SpatialWidth': 0.1 * 0.8246211251235321}
+        tsmap_model.update(src.spectral_pars)
+        tsmap = self.tsmap(model=tsmap_model,
                            map_skydir=SkyCoord(o['ra'], o['dec'], unit='deg'),
                            map_size=max(1.0, 4.0 * o['ext']),
                            exclude=[name],
                            write_fits=False,
                            write_npy=False,
-                           use_pylike=True,
+                           use_pylike=False,
                            make_plots=False,
                            loglevel=logging.DEBUG)
 
@@ -298,10 +319,59 @@ class ExtensionFit(object):
         hdus = [ext['tsmap'].create_primary_hdu(),
                 hdu_data] + hdu_images
 
-        hdus[0].header['CONFIG'] = json.dumps(ext['config'])
-        hdus[1].header['CONFIG'] = json.dumps(ext['config'])
+        hdus[0].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
+        hdus[1].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
         fits_utils.write_hdus(hdus, filename,
                               keywords={'SRCNAME': ext['name']})
+
+    def _fit_extension_ebin(self, name, o, **kwargs):
+
+        optimizer = kwargs.get('optimizer', {})
+        spatial_model = kwargs.get('spatial_model')
+        psf_scale_fn = kwargs.pop('psf_scale_fn', None)
+        reoptimize = kwargs.pop('reoptimize', True)
+
+        src = self.roi.copy_source(name)
+        self.set_source_morphology(name, spatial_model='PointSource',
+                                   use_pylike=False,
+                                   psf_scale_fn=psf_scale_fn)
+
+        for i, (logemin, logemax) in enumerate(zip(self.log_energies[:-1],
+                                                   self.log_energies[1:])):
+
+            self.set_energy_range(logemin, logemax)
+            o.ebin_loglike_ptsrc[i] = -self.like()
+
+        self.set_energy_range(self.log_energies[0], self.log_energies[-1])
+        self.set_source_morphology(name, spatial_model=src['SpatialModel'],
+                                   spatial_pars=src.spatial_pars,
+                                   psf_scale_fn=psf_scale_fn,
+                                   use_pylike=False)
+
+        o.ebin_loglike = self._scan_extension_fast_ebin(name,
+                                                        spatial_model=spatial_model,
+                                                        width=o.width,
+                                                        optimizer=kwargs[
+                                                            'optimizer'],
+                                                        psf_scale_fn=psf_scale_fn,
+                                                        reoptimize=False)
+
+        for i, (logemin, logemax) in enumerate(zip(self.log_energies[:-1],
+                                                   self.log_energies[1:])):
+            ul_data = utils.get_parameter_limits(o.width, o.ebin_loglike[i])
+            o.ebin_ext[i] = max(ul_data['x0'], 10**-2.5)
+            o.ebin_ext_err[i] = ul_data['err']
+            o.ebin_ext_err_lo[i] = ul_data['err_lo']
+            o.ebin_ext_err_hi[i] = ul_data['err_hi']
+            o.ebin_ext_ul95[i] = ul_data['ul']
+            o.ebin_loglike_ext[i] = ul_data['lnlmax']
+            o.ebin_ts_ext[i] = 2.0 * \
+                (o.ebin_loglike_ext[i] - o.ebin_loglike_ptsrc[i])
+
+        o.ebin_dloglike = o.ebin_loglike - o.ebin_loglike_ptsrc[:, None]
+        self.set_source_morphology(name, spatial_model=src['SpatialModel'],
+                                   spatial_pars=src.spatial_pars,
+                                   use_pylike=False)
 
     def _scan_extension(self, name, **kwargs):
 
@@ -326,6 +396,8 @@ class ExtensionFit(object):
         width = kwargs.get('width')
         spatial_model = kwargs.get('spatial_model')
         skydir = kwargs.pop('skydir', self.roi[name].skydir)
+        psf_scale_fn = kwargs.pop('psf_scale_fn', None)
+        reoptimize = kwargs.pop('reoptimize', True)
 
         src = self.roi.copy_source(name)
         spatial_pars = {'ra': skydir.ra.deg, 'dec': skydir.dec.deg}
@@ -337,13 +409,55 @@ class ExtensionFit(object):
             self.set_source_morphology(name,
                                        spatial_model=spatial_model,
                                        spatial_pars=spatial_pars,
-                                       use_pylike=False)
-            fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)
-            loglike += [fit_output['loglike']]
+                                       use_pylike=False,
+                                       psf_scale_fn=psf_scale_fn)
+            if reoptimize:
+                fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)
+                loglike += [fit_output['loglike']]
+            else:
+                loglike += [-self.like()]
 
         state.restore()
 
         return np.array(loglike)
+
+    def _scan_extension_fast_ebin(self, name, **kwargs):
+
+        state = SourceMapState(self.like, [name])
+
+        self.free_norm(name)
+        optimizer = kwargs.get('optimizer', {})
+        width = kwargs.get('width')
+        spatial_model = kwargs.get('spatial_model')
+        skydir = kwargs.pop('skydir', self.roi[name].skydir)
+        psf_scale_fn = kwargs.pop('psf_scale_fn', None)
+        reoptimize = kwargs.pop('reoptimize', True)
+
+        src = self.roi.copy_source(name)
+        spatial_pars = {'ra': skydir.ra.deg, 'dec': skydir.dec.deg}
+
+        loglike = np.ones((self.enumbins, len(width)))
+        for i, w in enumerate(width):
+
+            spatial_pars['SpatialWidth'] = max(w, 0.00316)
+            self.set_source_morphology(name,
+                                       spatial_model=spatial_model,
+                                       spatial_pars=spatial_pars,
+                                       use_pylike=False,
+                                       psf_scale_fn=psf_scale_fn)
+
+            for j, (logemin, logemax) in enumerate(zip(self.log_energies[:-1],
+                                                       self.log_energies[1:])):
+                self.set_energy_range(logemin, logemax)
+                if reoptimize:
+                    fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)
+                    loglike[j, i] = fit_output['loglike']
+                else:
+                    loglike[j, i] = -self.like()
+            self.set_energy_range(self.log_energies[0], self.log_energies[-1])
+
+        state.restore()
+        return loglike
 
     def _scan_extension_pylike(self, name, **kwargs):
 
@@ -380,13 +494,17 @@ class ExtensionFit(object):
         optimizer = kwargs.get('optimizer', {})
         fit_position = kwargs.get('fit_position', False)
         skydir = kwargs.get('skydir', self.roi[name].skydir)
+        psf_scale_fn = kwargs.get('psf_scale_fn', None)
+        reoptimize = kwargs.get('reoptimize', True)
 
         width = np.logspace(-2.0, 0.5, 16)
         width = np.concatenate(([0.0], width))
 
         loglike = self._scan_extension(name, spatial_model=spatial_model,
                                        width=width, optimizer=optimizer,
-                                       skydir=skydir)
+                                       skydir=skydir,
+                                       psf_scale_fn=psf_scale_fn,
+                                       reoptimize=reoptimize)
 
         ul_data = utils.get_parameter_limits(width, loglike)
 
@@ -409,7 +527,9 @@ class ExtensionFit(object):
 
         loglike2 = self._scan_extension(name, spatial_model=spatial_model,
                                         width=width2, optimizer=optimizer,
-                                        skydir=skydir)
+                                        skydir=skydir,
+                                        psf_scale_fn=psf_scale_fn,
+                                        reoptimize=reoptimize)
         ul_data = utils.get_parameter_limits(width2, loglike2)
 
         o = {}
@@ -468,7 +588,7 @@ class ExtensionFit(object):
             self.logger.info('Extension Fit Iteration %i', i)
             self.logger.info('R68 = %8.3f Offset = %8.3f '
                              'Delta-LogLikelihood = %8.2f',
-                             fit_ext['ext'], fit_ext['offset'], dloglike)
+                             fit_ext['ext'], fit_ext['pos_offset'], dloglike)
 
             if i > 0 and dloglike < 0.1:
                 break

@@ -6,7 +6,7 @@ import numpy as np
 import astropy
 from astropy.coordinates import SkyCoord
 import fermipy.skymap
-from fermipy.utils import MutableNamedTuple
+from fermipy.data_struct import MutableNamedTuple
 
 
 def make_default_dict(d):
@@ -505,6 +505,7 @@ extension = {
                     'between `width_min` and `width_max`.', int),
     'free_background': common['free_background'],
     'free_radius': common['free_radius'],
+    'fit_ebin': (False, 'Perform a fit for the angular extension in each analysis energy bin.', bool),
     'update': (False, 'Update this source with the best-fit model for spatial '
                'extension if TS_ext > ``tsext_threshold``.', bool),
     'save_model_map': (False, 'Save model counts cubes for the best-fit model of extension.', bool),
@@ -620,15 +621,15 @@ extension_output = OrderedDict((
     # Extension
     ('width', (None, 'Vector of width (intrinsic 68% containment radius) values (deg).',
                np.ndarray)),
-    ('dloglike', (None, 'Sequence of delta-log-likelihood values for each point in the profile likelihood scan.',
+    ('dloglike', (None, 'Delta-log-likelihood values for each point in the profile likelihood scan.',
                   np.ndarray)),
-    ('loglike', (None, 'Sequence of likelihood values for each point in the scan over the spatial extension.',
+    ('loglike', (None, 'Log-likelihood values for each point in the scan over the spatial extension.',
                  np.ndarray)),
     ('loglike_ptsrc', (np.nan,
-                       'Model log-Likelihood value of the best-fit point-source model.', float)),
-    ('loglike_ext', (np.nan, 'Model log-Likelihood value of the best-fit extended source model.', float)),
+                       'Log-Likelihood value of the best-fit point-source model.', float)),
+    ('loglike_ext', (np.nan, 'Log-Likelihood value of the best-fit extended source model.', float)),
     ('loglike_base', (np.nan,
-                      'Model log-Likelihood value of the baseline model.', float)),
+                      'Log-Likelihood value of the baseline model.', float)),
     ('ext', (np.nan, 'Best-fit extension (68% containment radius) (deg).', float)),
     ('ext_err_hi', (np.nan,
                     'Upper (1-sigma) error on the best-fit extension (deg).', float)),
@@ -638,6 +639,37 @@ extension_output = OrderedDict((
     ('ext_ul95', (np.nan, '95% CL upper limit on the spatial extension (deg).', float)),
     ('ts_ext', (np.nan, 'Test statistic for the extension hypothesis.', float)),
 
+    # Extension vs. Energy
+    ('ebin_e_min', (None, '', np.ndarray)),
+    ('ebin_e_ctr', (None, '', np.ndarray)),
+    ('ebin_e_max', (None, '', np.ndarray)),    
+    ('ebin_ext', (None, 'Best-fit extension as measured in each energy bin (intrinsic 68% containment radius) (deg).',
+                  np.ndarray)),
+    ('ebin_ext_err', (None,
+                      'Symmetric (1-sigma) error on best-fit extension in each energy bin (deg).',
+                      np.ndarray)),
+    ('ebin_ext_err_hi', (None,
+                      'Upper (1-sigma) error on best-fit extension in each energy bin (deg).',
+                      np.ndarray)),
+    ('ebin_ext_err_lo', (None,
+                      'Lower (1-sigma) error on best-fit extension in each energy bin (deg).',
+                      np.ndarray)),
+    ('ebin_ext_ul95', (None,
+                      '95% CL upper limit on best-fit extension in each energy bin (deg).',
+                      np.ndarray)),
+    ('ebin_ts_ext', (None,
+                      'Test statistic for extension hypothesis in each energy bin.',
+                      np.ndarray)),
+    ('ebin_dloglike', (None, 'Delta-log-likelihood values for scan over the spatial extension in each energy bin.',
+                       np.ndarray)),
+    ('ebin_loglike', (None, 'Log-likelihood values for scan over the spatial extension in each energy bin.',
+                      np.ndarray)),
+    ('ebin_loglike_ptsrc', (None,
+                            'Log-Likelihood value of the best-fit point-source model in each energy bin.',
+                            np.ndarray)),
+    ('ebin_loglike_ext', (None, 'Log-Likelihood value of the best-fit extended source model in each energy bin.',
+                          np.ndarray)),
+    
     # Position
     ('ra', localize_output['ra']),
     ('dec', localize_output['dec']),

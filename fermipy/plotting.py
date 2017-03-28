@@ -155,6 +155,19 @@ def load_bluered_cmap():
     return plt.cm.bluered
 
 
+def annotate_name(data, xy=(0.05, 0.93), **kwargs):
+
+    if not 'name' in data:
+        return
+
+    ax = kwargs.pop('ax', plt.gca())
+    ax.annotate(data['name'],
+                xy=xy,
+                xycoords='axes fraction', fontsize=12,
+                xytext=(-5, 5), textcoords='offset points',
+                ha='left', va='center')
+
+
 def annotate(**kwargs):
     ax = kwargs.pop('ax', plt.gca())
     loge_bounds = kwargs.pop('loge_bounds', None)
@@ -607,16 +620,8 @@ class ROIPlotter(fermipy.config.Configurable):
     def draw_circle(self, radius, **kwargs):
 
         # coordsys = wcs_utils.get_coordsys(self.proj)
-        # if coordsys == 'GAL':
-        #    c = Circle((skydir.galactic.l.deg,skydir.galactic.b.deg),
-        #               radius,facecolor='none',edgecolor='w',linestyle='--',
-        #               transform=self._ax.get_transform('galactic'))
-        # elif coordsys == 'CEL':
-        #    c = Circle((skydir.fk5.l.deg,skydir.fk5.b.deg),
-        #               radius,facecolor='none',edgecolor='w',linestyle='--',
-        #               transform=self._ax.get_transform('fk5'))
-
         skydir = kwargs.get('skydir', None)
+        path_effects = kwargs.get('path_effects', None)
 
         if skydir is None:
             pix = self.cmap.pix_center
@@ -627,6 +632,10 @@ class ROIPlotter(fermipy.config.Configurable):
                   linewidth=0.5, label='__nolabel__')
         kw = merge_dict(kw, kwargs)
         c = Circle(pix, radius / max(self.cmap.pix_size), **kw)
+
+        if path_effects is not None:
+            plt.setp(c, path_effects=path_effects)
+
         self._ax.add_patch(c)
 
     def zoom(self, zoom):
@@ -811,19 +820,6 @@ class SEDPlotter(object):
                             alpha=0.5, color=color, zorder=-1)
 
     @staticmethod
-    def annotate(sed, xy=(0.05, 0.93), **kwargs):
-
-        if not 'name' in sed:
-            return
-
-        ax = kwargs.pop('ax', plt.gca())
-        ax.annotate(sed['name'],
-                    xy=xy,
-                    xycoords='axes fraction', fontsize=12,
-                    xytext=(-5, 5), textcoords='offset points',
-                    ha='left', va='center')
-
-    @staticmethod
     def plot_sed(sed, showlnl=False, **kwargs):
         """Render a plot of a spectral energy distribution.
 
@@ -849,7 +845,7 @@ class SEDPlotter(object):
         ax = kwargs.pop('ax', plt.gca())
         cmap = kwargs.get('cmap', 'BuGn')
 
-        SEDPlotter.annotate(sed, ax=ax)
+        annotate_name(sed, ax=ax)
         SEDPlotter.plot_flux_points(sed, **kwargs)
 
         if np.any(sed['ts'] > 9.):
@@ -1482,6 +1478,73 @@ class AnalysisPlotter(fermipy.config.Configurable):
         if 'tsmap' in ext:
             self._plot_extension_tsmap(ext, roi=roi, **kwargs)
 
+        if 'ebin_ts_ext' in ext:
+            self._plot_extension_ebin(ext, roi=roi, **kwargs)
+
+    def _plot_extension_ebin(self, ext, roi=None, **kwargs):
+
+        fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
+        prefix = kwargs.get('prefix', '')
+        name = ext.get('name', '')
+        name = name.lower().replace(' ', '_')
+
+        m = ext['ebin_ts_ext'] > 4.0
+
+        fig = plt.figure(figsize=figsize)
+
+        ectr = ext['ebin_e_ctr']
+        delo = ext['ebin_e_ctr'] - ext['ebin_e_min']
+        dehi = ext['ebin_e_max'] - ext['ebin_e_ctr']
+        xerr0 = np.vstack((delo[m], dehi[m]))
+        xerr1 = np.vstack((delo[~m], dehi[~m]))
+
+        ax = plt.gca()
+
+        ax.errorbar(ectr[m], ext['ebin_ext'][m], xerr=xerr0,
+                    yerr=(ext['ebin_ext_err_lo'][m],
+                          ext['ebin_ext_err_hi'][m]),
+                    color='k', linestyle='None', marker='o')
+        ax.errorbar(ectr[~m], ext['ebin_ext_ul95'][~m], xerr=xerr1,
+                    yerr=0.2 * ext['ebin_ext_ul95'][~m], uplims=True,
+                    color='k', linestyle='None', marker='o')
+        ax.set_xlabel('Energy [log$_{10}$(E/MeV)]')
+        ax.set_ylabel('Extension [deg]')
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+
+        annotate_name(ext)
+
+        ymin = min(10**-1.5, 0.8 * ext['ext_ul95'])
+        ymax = max(10**-0.5, 1.2 * ext['ext_ul95'])
+        if np.any(np.isfinite(ext['ebin_ext_ul95'])):
+            ymin = min(ymin, 0.8 * np.nanmin(ext['ebin_ext_ul95']))
+            ymax = max(ymax, 1.2 * np.nanmax(ext['ebin_ext_ul95']))
+
+        if ext['ts_ext'] > 4.0:
+            plt.axhline(ext['ext'], color='k')
+            ext_lo = ext['ext'] - ext['ext_err_lo']
+            ext_hi = ext['ext'] + ext['ext_err_hi']
+            ax.fill_between([ext['ebin_e_min'][0], ext['ebin_e_max'][-1]],
+                            [ext_lo, ext_lo], [ext_hi, ext_hi],
+                            alpha=0.5, color='k', zorder=-1)
+
+            ymin = min(ymin, 0.8 * (ext['ext'] - ext['ext_err_lo']))
+            ymax = max(ymax, 1.2 * (ext['ext'] + ext['ext_err_hi']))
+
+        else:
+            plt.axhline(ext['ext_ul95'], color='k', linestyle='--')
+
+        ax.set_ylim(ymin, ymax)
+        ax.set_xlim(ext['ebin_e_min'][0], ext['ebin_e_max'][-1])
+
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
+                                        'extension_ebin', prefix=[prefix, name],
+                                        extension=fmt)
+
+        plt.savefig(outfile)
+        plt.close(fig)
+        
     def _plot_extension_tsmap(self, ext, roi=None, **kwargs):
 
         fmt = kwargs.get('format', self.config['format'])
@@ -1499,11 +1562,21 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p.plot(cmap=cmap, interpolation='bicubic', levels=sigma_levels,
                transform='sqrt')
         c = SkyCoord(ext['ra'], ext['dec'], unit='deg')
-        p.draw_circle(ext['ext'], skydir=c, edgecolor='lime', linestyle='-',
-                      linewidth=1.0, label='R$_{68}$')
 
-        p.draw_circle(ext['ext_ul95'], skydir=c, edgecolor='lime', linestyle='--',
-                      linewidth=1.0, label='R$_{68}$ 95% UL')
+        path_effect = PathEffects.withStroke(linewidth=2.0,
+                                             foreground="black")
+
+        if ext['ts_ext'] > 9.0:
+            p.draw_circle(ext['ext'], skydir=c, edgecolor='lime', linestyle='-',
+                          linewidth=1.0, label='R$_{68}$', path_effects=[path_effect])
+            p.draw_circle(ext['ext'] + ext['ext_err'], skydir=c, edgecolor='lime', linestyle='--',
+                          linewidth=1.0, label='R$_{68}$ $\pm 1 \sigma$', path_effects=[path_effect])
+            p.draw_circle(ext['ext'] - ext['ext_err'], skydir=c, edgecolor='lime', linestyle='--',
+                          linewidth=1.0, path_effects=[path_effect])
+        else:
+            p.draw_circle(ext['ext_ul95'], skydir=c, edgecolor='lime', linestyle='--',
+                          linewidth=1.0, label='R$_{68}$ 95% UL',
+                          path_effects=[path_effect])
         leg = plt.gca().legend(frameon=False, loc='upper left')
 
         for text in leg.get_texts():
