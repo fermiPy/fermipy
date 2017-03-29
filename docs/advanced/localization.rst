@@ -5,18 +5,20 @@ Source Localization
 
 The :py:meth:`~fermipy.gtanalysis.GTAnalysis.localize` method can be
 used to spatially localize a source.  Localization is performed by
-scanning the 2D likelihood surface in a local patch around the nominal
-source position.  The current implementation of the localization
-analysis proceeds in two steps:
+scanning the likelihood surface in source position in a local patch
+around the nominal source position.  The fit to the source position
+proceeds in two iterations:
 
-* **TS Map Scan**: Obtain a rough estimate of the source position by
-  generating a fast TS Map of the region using the
-  `~fermipy.gtanalysis.GTAnalysis.tsmap` method.  In this step all background
-  parameters are fixed to their nominal values.
+* **TS Map Scan**: Obtain a first estimate of the source position by
+  generating a likelihood map of the region using the
+  `~fermipy.gtanalysis.GTAnalysis.tsmap` method.  In this step all
+  background parameters are fixed to their nominal values.  The size
+  of the search region used for this step is set with the
+  ``dtheta_max`` parameter.
 
 * **Likelihood Scan**: Refine the position of the source by performing a
   scan of the likelihood surface in a box centered on the best-fit
-  position found with the TS Map method.  The size of the search
+  position found in the first iteration.  The size of the search
   region is set to encompass the 99% positional uncertainty contour.
   This method uses a full likelihood fit at each point in the
   likelihood scan and will re-fit all free parameters of the model.
