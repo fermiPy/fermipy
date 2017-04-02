@@ -4,27 +4,27 @@ SED Analysis
 ============
 
 The :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` method computes a
-spectral energy distribution (SED) by fitting for the flux
-normalization of a source in a sequence of energy bins.  The
-normalization in each bin is fit independently using a power-law
-spectrum with a fixed index.  The value of this index can be set with
-the ``bin_index`` parameter or allowed to vary over the energy range
-according to the local slope of the global spectral model (with the
-``use_local_index`` parameter).
+spectral energy distribution (SED) by performing independent fits for
+the flux normalization of a source in bins of energy.  The
+normalization in each bin is fit using a power-law spectral
+parameterization with a fixed index.  The value of this index can be
+set with the ``bin_index`` parameter or allowed to vary over the
+energy range according to the local slope of the global spectral model
+(with the ``use_local_index`` parameter).
 
-The ``free_background`` and ``cov_scale`` parameters can be used to
+The ``free_background``, ``free_radius``, and ``cov_scale`` parameters
 control how nuisance parameters are dealt with in the fit.  By default
-this method will fix the parameters of background components ROI when
+the method will fix the parameters of background components ROI when
 fitting the source normalization in each energy bin
-(``free_background`` = False).  Setting ``free_background`` to True will
+(``free_background=False``).  Setting ``free_background=True`` will
 profile the normalizations of all background components that were free
 when the method was executed.  In order to minimize overfitting,
 background normalization parameters are constrained with priors taken
 from the global fit.  The strength of the priors is controlled with
 the ``cov_scale`` parameter.  A larger (smaller) value of
 ``cov_scale`` applies a weaker (stronger) constraint on the background
-amplitude.  Setting ``cov_scale`` to None can be used to perform the
-fit without priors.
+amplitude.  Setting ``cov_scale=None`` performs an unconstrained fit
+without priors.
 
 Examples
 --------

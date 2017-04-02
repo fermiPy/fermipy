@@ -23,6 +23,13 @@ proceeds in two iterations:
   This method uses a full likelihood fit at each point in the
   likelihood scan and will re-fit all free parameters of the model.
 
+If a peak is found in the search region and the positional fit
+succeeds, the method will update the position of the source in the
+model to the new best-fit position.  
+  
+Examples
+--------
+  
 The localization method is executed by passing the name of a source as
 its argument.  The method returns a python dictionary with the
 best-fit source position and localization errors and also saves the same
