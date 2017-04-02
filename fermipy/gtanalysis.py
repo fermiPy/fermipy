@@ -667,7 +667,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if (self.roi[name]['SpectrumType'] == 'PowerLaw' and
                 spectrum_type == 'LogParabola'):
             spectrum_pars.setdefault('beta', {'value': 0.0, 'scale': 1.0,
-                                              'min' : 0.0, 'max' : 1.0})
+                                              'min': 0.0, 'max': 1.0})
             spectrum_pars.setdefault('alpha', src.spectral_pars['Index'])
             spectrum_pars.setdefault('Eb', src.spectral_pars['Scale'])
             spectrum_pars.setdefault('norm', src.spectral_pars['Prefactor'])
@@ -4209,7 +4209,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             pylike_src.setDir(src.skydir.ra.deg, src.skydir.dec.deg, False,
                               False)
         elif src['SpatialType'] == 'SpatialMap':
-            sm = pyLike.SpatialMap(str(src['Spatial_Filename']))
+            filepath = str(utils.path_to_xmlpath(src['Spatial_Filename']))
+            sm = pyLike.SpatialMap(filepath)
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
@@ -4228,7 +4229,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                               False)
 
         elif src['SpatialType'] == 'MapCubeFunction':
-            mcf = pyLike.MapCubeFunction2(str(src['Spatial_Filename']))
+            filepath = str(utils.path_to_xmlpath(src['Spatial_Filename']))
+            mcf = pyLike.MapCubeFunction2(filepath)
             pylike_src = pyLike.DiffuseSource(mcf,
                                               self.like.logLike.observation(),
                                               False)

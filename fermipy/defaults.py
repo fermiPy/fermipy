@@ -712,6 +712,7 @@ plotting = {
     'figsize': ([8.0, 6.0], 'Set the default figure size.', list),
     'label_ts_threshold':
         (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),
+    'interactive' : (False, 'Enable interactive mode.  If True then plots will be drawn after each plotting command.', bool),
 }
 
 # Source dictionary
