@@ -923,7 +923,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fermipy.config.Configurable.__init__(self, config, **kwargs)
 
         matplotlib.rcParams['font.size'] = 12
-        matplotlib.interactive(False)
+        matplotlib.interactive(self.config['interactive'])
 
         self._catalogs = []
         for c in self.config['catalogs']:
