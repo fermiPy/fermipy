@@ -1350,7 +1350,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def delete_sources(self, cuts=None, distance=None,
                        skydir=None, minmax_ts=None, minmax_npred=None,
-                       exclude=None, square=False):
+                       exclude=None, square=False, assoc=None):
         """Delete sources in the ROI model satisfying the given
         selection criteria.
 
@@ -1385,6 +1385,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             selection on the maximum projected distance from the ROI
             center.
 
+        assoc : bool
+            If True, delete sources which are both taken from a catalog
+            and marked as associated. Similarly, delete the unassociated if False.
+            If this parameter is None, no selection will be applied.
+
         Returns
         -------
         srcs : list
@@ -1395,7 +1400,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         srcs = self.roi.get_sources(skydir=skydir, distance=distance, cuts=cuts,
                                     minmax_ts=minmax_ts, minmax_npred=minmax_npred,
                                     exclude=exclude, square=square,
-                                    coordsys=self.config['binning']['coordsys'])
+                                    coordsys=self.config['binning']['coordsys'], assoc=assoc)
 
         for s in srcs:
             self.delete_source(s.name, build_fixed_wts=False)
