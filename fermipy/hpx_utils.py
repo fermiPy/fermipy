@@ -244,13 +244,17 @@ class HPX(object):
 
     def __init__(self, nside, nest, coordsys, order=-1, region=None,
                  ebins=None, conv=HPX_Conv('FGST_CCUBE')):
-        """ C'tor
+        """C'tor
 
         Parameters
         ----------
-        nside     : HEALPix nside parameter, the total number of pixels is 12*nside*nside
+        nside     : int 
+            HEALPix nside parameter, the total number of pixels is
+            12*nside*nside.  
+
         nest      : bool, True -> 'NESTED', False -> 'RING' indexing scheme
         coordsys  : Coordinate system, 'CEL' | 'GAL'
+
         """
         if nside >= 0:
             if order >= 0:
