@@ -214,7 +214,7 @@ def parse_hpxregion(region):
 
     m = re.match(r'([A-Za-z\_]*?)\((.*?)\)', region)
     if m is None:
-        raise Exception('Failed to parse hpx region string.')        
+        raise Exception('Failed to parse hpx region string.')
 
     if not m.group(1):
         return re.split(',', m.group(2))
@@ -222,12 +222,32 @@ def parse_hpxregion(region):
         return [m.group(1)] + re.split(',', m.group(2))
 
 
+def is_power2(n):
+    """Check if an integer is a power of 2."""
+    return bool(n and not n & (n - 1))
+
+
+def upix_to_pix(upix):
+    """Get the nside from a unique pixel number."""
+    nside = np.power(2, np.floor(np.log2(upix / 4)) / 2).astype(int)
+    pix = upix - 4 * np.power(nside, 2)
+    return pix, nside
+
+
+def pix_to_upix(pix, nside):
+    """Compute the unique pixel number from the pixel number and nside."""
+    return pix + 4 * np.power(nside, 2)
+
+
 class HPX(object):
     """ Encapsulation of basic healpix map parameters """
 
-    def __init__(self, nside, nest, coordsys, order=-1, region=None, ebins=None, conv=HPX_Conv('FGST_CCUBE')):
+    def __init__(self, nside, nest, coordsys, order=-1, region=None,
+                 ebins=None, conv=HPX_Conv('FGST_CCUBE')):
         """ C'tor
 
+        Parameters
+        ----------
         nside     : HEALPix nside parameter, the total number of pixels is 12*nside*nside
         nest      : bool, True -> 'NESTED', False -> 'RING' indexing scheme
         coordsys  : Coordinate system, 'CEL' | 'GAL'
@@ -235,15 +255,16 @@ class HPX(object):
         if nside >= 0:
             if order >= 0:
                 raise Exception('Specify either nside or oder, not both.')
+
+            self._nside = nside
+            if is_power2(nside):
+                self._order = int(np.log2(self._nside))
             else:
-                self._nside = nside
                 self._order = -1
         else:
-            if order >= 0:
-                self._nside = 2**order
-                self._order = order
-            else:
-                raise Exception('Specify either nside or oder, not both.')
+            self._nside = 2**order
+            self._order = order
+
         self._nest = nest
         self._coordsys = coordsys
         self._region = region
@@ -270,25 +291,24 @@ class HPX(object):
                 self._rmap[ipixel] = i
 
     def __getitem__(self, sliced):
-        """ This implements the global-to-local lookup
+        """This implements the global-to-local lookup.  For all-sky maps it
+        just returns the input array.  For partial-sky maps in returns
+        the local indices corresponding to the indices in the input
+        array, and -1 for those pixels that are outside the selected
+        region.
 
-        sliced:   An array of HEALPix pixel indices
+        Parameters
+        ----------
+        sliced: `~numpy.ndarray`
+            An array of HEALPix pixel indices
 
-        For all-sky maps it just returns the input array.
-        For partial-sky maps in returns the local indices corresponding to the
-        indices in the input array, and -1 for those pixels that are outside the 
-        selected region.
         """
-
         if self._rmap is not None:
-            retval = np.zeros((sliced.size), 'i')
-            for i, v in enumerate(sliced.flat):
-                if v in self._rmap:
-                    retval[i] = self._rmap[v]
-                else:
-                    retval[i] = -1
-            retval = retval.reshape(sliced.shape)
-            return retval
+            retval = np.empty((sliced.size), 'i')
+            retval.fill(-1)
+            m = np.in1d(sliced.flat, self._ipix)
+            retval[m] = np.searchsorted(self._ipix, sliced.flat[m])
+            return retval.reshape(sliced.shape)
         return sliced
 
     @property
@@ -336,7 +356,7 @@ class HPX(object):
     def ud_graded_hpx(self, order):
         """
         """
-        if self._order < 0:
+        if self.order < 0:
             raise RuntimeError(
                 "Upgrade and degrade only implemented for standard maps")
         return HPX(-1, self.nest, self.coordsys, order, self.region, self.ebins, self.conv)
@@ -344,18 +364,12 @@ class HPX(object):
     def make_swapped_hpx(self):
         """
         """
-        if self.order > 0:
-            return HPX(-1, not self.nest, self.coordsys, self.order, self.region, self.ebins, self.conv)
-        else:
-            return HPX(self.nside, not self.nest, self.coordsys, -1, self.region, self.ebins, self.conv)
+        return HPX(self.nside, not self.nest, self.coordsys, -1, self.region, self.ebins, self.conv)
 
     def copy_and_drop_energy(self):
         """
         """
-        if self.order > 0:
-            return HPX(-1, not self.nest, self.coordsys, self.order, self.region, None, self.conv)
-        else:
-            return HPX(self.nside, not self.nest, self.coordsys, -1, self.region, None, self.conv)
+        return HPX(self.nside, not self.nest, self.coordsys, -1, self.region, None, self.conv)
 
     @staticmethod
     def create_hpx(nside, nest, coordsys='CEL', order=-1, region=None,
@@ -376,8 +390,11 @@ class HPX(object):
         order    : int
            nside = 2**order
 
-        region   : Allows for partial-sky mappings
-        ebins    : Energy bin edges
+        region   : str
+            Allows for partial-sky mappings
+
+        ebins    : `~numpy.ndarray`
+            Energy bin edges
         """
         return HPX(nside, nest, coordsys, order, region, ebins, conv)
 
