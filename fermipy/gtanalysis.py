@@ -1350,7 +1350,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
     def delete_sources(self, cuts=None, distance=None,
                        skydir=None, minmax_ts=None, minmax_npred=None,
-                       exclude=None, square=False, assoc=None):
+                       exclude=None, square=False, names=None):
         """Delete sources in the ROI model satisfying the given
         selection criteria.
 
@@ -1369,13 +1369,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             respect to the ROI center.
 
         minmax_ts : list
-            Free sources that have TS in the range [min,max].  If
+            Select sources that have TS in the range [min,max].  If
             either min or max are None then only a lower (upper) bound
             will be applied.  If this parameter is none no selection
             will be applied.
 
         minmax_npred : list
-            Free sources that have npred in the range [min,max].  If
+            Select sources that have npred in the range [min,max].  If
             either min or max are None then only a lower (upper) bound
             will be applied.  If this parameter is none no selection
             will be applied.
@@ -1385,10 +1385,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             selection on the maximum projected distance from the ROI
             center.
 
-        assoc : bool
-            If True, delete sources which are both taken from a catalog
-            and marked as associated. Similarly, delete the unassociated if False.
-            If this parameter is None, no selection will be applied.
+        names : list            
+            Select sources matching a name in this list.
 
         Returns
         -------
@@ -1400,7 +1398,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         srcs = self.roi.get_sources(skydir=skydir, distance=distance, cuts=cuts,
                                     minmax_ts=minmax_ts, minmax_npred=minmax_npred,
                                     exclude=exclude, square=square,
-                                    coordsys=self.config['binning']['coordsys'], assoc=assoc)
+                                    coordsys=self.config['binning']['coordsys'],
+                                    names=names)
 
         for s in srcs:
             self.delete_source(s.name, build_fixed_wts=False)

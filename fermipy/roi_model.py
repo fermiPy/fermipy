@@ -1763,7 +1763,7 @@ class ROIModel(fermipy.config.Configurable):
     def get_sources(self, skydir=None, distance=None, cuts=None,
                     minmax_ts=None, minmax_npred=None,
                     exclude=None, square=False, coordsys='CEL',
-                    assoc=None):
+                    names=None):
         """Retrieve list of source objects satisfying the following
         selections:
 
@@ -1774,7 +1774,7 @@ class ROIModel(fermipy.config.Configurable):
 
         * TS and Npred in range specified by ``minmax_ts`` and ``minmax_npred``.
 
-        * Associated and from a catalog by ``assoc``.
+        * Name matching a value in ``names``
 
         Sources can be excluded from the selection by adding their
         name to the ``exclude`` list.
@@ -1799,6 +1799,8 @@ class ROIModel(fermipy.config.Configurable):
         o = []
         for s in srcs + self.diffuse_sources:
 
+            if names and s.name not in names:
+                continue            
             if s.name in exclude:
                 continue
             if not s.check_cuts(cuts):
@@ -1810,18 +1812,6 @@ class ROIModel(fermipy.config.Configurable):
                 continue
             if not utils.apply_minmax_selection(npred, minmax_npred):
                 continue
-
-            if assoc is not None:
-                try:
-                    itsassoc = False if s.assoc['ASSOC1'] == '' else True
-                    if itsassoc and not assoc:
-                        continue
-                    if not itsassoc and assoc:
-                        continue
-                except KeyError: #implies not in catalog
-                    continue
-
-
             o.append(s)
 
         return o
