@@ -536,7 +536,7 @@ class HPX(object):
         if self.conv.convname == 'FGST_SRCMAP_SPARSE':
             nonzero = data.nonzero()
             nfilled = len(nonzero[0])
-            print ('Nfilled ', nfilled)
+            print('Nfilled ', nfilled)
             if len(shape) == 1:
                 nonzero = nonzero[0]
                 cols.append(fits.Column("KEY", "%iJ" %

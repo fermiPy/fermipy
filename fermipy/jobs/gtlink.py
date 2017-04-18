@@ -108,14 +108,14 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
     pfiles_orig = os.environ['PFILES']
     if pfiles:
         if dry_run:
-            print ("mkdir %s" % pfiles)
+            print("mkdir %s" % pfiles)
         else:
             try:
                 os.makedirs(pfiles)
             except OSError:
                 pass
         pfiles = "%s:%s" % (pfiles, pfiles_orig)
-        print ("Setting PFILES=%s" % pfiles)
+        print("Setting PFILES=%s" % pfiles)
 
         os.environ['PFILES'] = pfiles
 

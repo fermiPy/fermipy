@@ -374,7 +374,7 @@ class FileStageManager(object):
             scratch_dirs[scratch_dirname] = True
         for scratch_dirname in scratch_dirs.keys():
             if dry_run:
-                print ("mkdir -f %s" % (scratch_dirname))
+                print("mkdir -f %s" % (scratch_dirname))
             else:
                 try:
                     os.makedirs(scratch_dirname)
@@ -388,7 +388,7 @@ class FileStageManager(object):
             if not os.path.exists(key):
                 continue
             if dry_run:
-                print ("cp %s %s" % (key, value))
+                print("cp %s %s" % (key, value))
             else:
                 os.system("cp %s %s" % (key, value))
         return file_mapping
@@ -398,7 +398,7 @@ class FileStageManager(object):
         """Copy output files from scratch area """
         for key, value in file_mapping.items():
             if dry_run:
-                print ("cp %s %s" % (value, key))
+                print("cp %s %s" % (value, key))
             else:
                 try:
                     outdir = os.path.dirname(key)
@@ -486,7 +486,7 @@ class FileHandle(object):
         try:
             return FileHandle(**kwargs)
         except KeyError:
-            print (kwargs)
+            print(kwargs)
 
     def check_status(self, basepath=None):
         """Check on the status of this particular file"""
@@ -656,7 +656,7 @@ class FileArchive(object):
             # Make sure the file really exists
             fullpath = self._get_fullpath(filepath)
             if not os.path.exists(fullpath):
-                print ("register_file called on called on mising file %s" % fullpath)
+                print("register_file called on called on mising file %s" % fullpath)
                 status = FileStatus.missing
                 timestamp = 0
             else:
@@ -756,7 +756,7 @@ class FileArchive(object):
         try:
             path_array = self._table[id_list - 1]['path']
         except IndexError:
-            print ("IndexError ", len(self._table), id_list)
+            print("IndexError ", len(self._table), id_list)
             path_array = []
         return [path for path in path_array]
 
@@ -776,7 +776,7 @@ class FileArchive(object):
         """Update the status of all the files in the archive"""
         nfiles = len(self.cache.keys())
         status_vect = np.zeros((6), int)
-        print ("Updating status of %i files: "%nfiles)
+        print("Updating status of %i files: "%nfiles)
         for i, key in enumerate(self.cache.keys()):
             if i % 200 == 0:
                 sys.stdout.write('.')

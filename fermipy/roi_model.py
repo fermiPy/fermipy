@@ -699,10 +699,10 @@ class Source(Model):
     object can be accessed with the bracket operator:
 
     # Return the TS of this source
-    >>> print src['ts']
+    >>> src['ts']
 
     # Get a skycoord representation of the source position
-    >>> print src.skydir
+    >>> src.skydir
     """
 
     def __init__(self, name, data, radec=None):

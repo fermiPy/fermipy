@@ -163,7 +163,7 @@ class SourceFactory(object):
         catalog_extdir : str
             Path to directory with extended source templates
         """
-        print (catalog_file, catalog_extdir)
+        print(catalog_file, catalog_extdir)
         if catalog_type == '2FHL':
             return catalog.Catalog2FHL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '3FGL':

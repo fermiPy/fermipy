@@ -348,7 +348,7 @@ class ScatterGather(Link):
             elif self.args['dry_run']:
                 break
             else:
-                print ("Sleeping %.0f seconds between status checks" %
+                print("Sleeping %.0f seconds between status checks" %
                        self.args['job_check_sleep'])
                 time.sleep(self.args['job_check_sleep'])
 
@@ -453,13 +453,13 @@ class ScatterGather(Link):
         running = True            
         while running:
             if self.args['dry_run']:
-                print ("Dry run break")
+                print("Dry run break")
                 break
             running, failed = self._check_link_completion(self._initialize_link)
             if failed:
                 return JobStatus.failed
-            print ("Sleeping %.0f seconds between status checks" %
-                   self.args['job_check_sleep'])
+            print("Sleeping %.0f seconds between status checks" %
+                  self.args['job_check_sleep'])
             time.sleep(self.args['job_check_sleep'])
 
         return job_details.status
@@ -519,7 +519,7 @@ class ScatterGather(Link):
         try:
             job_details = link.jobs[key]
         except KeyError:
-            print (key, link.jobs)
+            print(key, link.jobs)
         job_config = job_details.job_config
         link.update_args(job_config)
         logfile = job_config['logfile']

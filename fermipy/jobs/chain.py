@@ -627,14 +627,14 @@ class Link(object):
 
     def stage_input_files(self, file_mapping, dry_run=True):
         """Stage the input files to the scratch area and adjust the arguments accordingly"""
-        print ("Staging input ", file_mapping)
+        print("Staging input ", file_mapping)
         if self._file_stage is None:
             return
         self._file_stage.copy_to_scratch(file_mapping, dry_run)
 
     def stage_output_files(self, file_mapping, dry_run=True):
         """Stage the input files to the scratch area and adjust the arguments accordingly"""
-        print ("Staging output ", file_mapping)
+        print("Staging output ", file_mapping)
         if self._file_stage is None:
             return
         self._file_stage.copy_from_scratch(file_mapping, dry_run)
@@ -643,12 +643,12 @@ class Link(object):
         """Remove / compress files as requested """
         for rmfile in self.files.temp_files:
             if dry_run:
-                print ("remove %s" % rmfile)
+                print("remove %s" % rmfile)
             else:
                 os.remove(rmfile)
         for gzfile in self.files.gzip_files:
             if dry_run:
-                print ("gzip %s" % gzfile)
+                print("gzip %s" % gzfile)
             else:
                 os.system('gzip -9 %s' % gzfile)
 
@@ -840,7 +840,7 @@ class Chain(Link):
                 self.stage_input_files(input_file_mapping, dry_run)
 
         for link in self._links.values():
-            print ("Running link ", link.linkname)
+            print("Running link ", link.linkname)
             link.run_link(stream=stream, dry_run=dry_run, stage_files=False)
 
         if self._file_stage is not None and stage_files:

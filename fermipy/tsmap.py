@@ -979,9 +979,9 @@ class TSMapGenerator(object):
 
             data.flat[i] = ts
 
-            #            print i, ra, dec, ts
-            #            print self.like()
-            # print self.components[0].like.model['tsmap_testsource']
+            #            print(i, ra, dec, ts)
+            #            print(self.like())
+            # print(self.components[0].like.model['tsmap_testsource'])
 
             self.delete_source('tsmap_testsource')
 
