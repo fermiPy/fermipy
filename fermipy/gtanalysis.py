@@ -475,8 +475,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def files(self):
         return self._files
 
-    @staticmethod
-    def create(infile, config=None):
+    @classmethod
+    def create(cls, infile, config=None):
         """Create a new instance of GTAnalysis from an analysis output file
         generated with `~fermipy.GTAnalysis.write_roi`.  By default
         the new instance will inherit the configuration of the saved
@@ -505,7 +505,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         else:
             validate = True
 
-        gta = GTAnalysis(config, validate=validate)
+        gta = cls(config, validate=validate)
         gta.setup(init_sources=False)
         gta.load_roi(infile)
         return gta

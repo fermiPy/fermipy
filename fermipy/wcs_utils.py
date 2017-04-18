@@ -56,13 +56,13 @@ class WCSProj(object):
     def npix(self):
         return self._npix
 
-    @staticmethod
-    def create(skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
+    @classmethod
+    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
         npix = np.array(npix, ndmin=1)
         crpix = npix / 2. + 0.5
         wcs = create_wcs(skydir, coordsys, projection,
                          cdelt, crpix)
-        return WCSProj(wcs, npix)
+        return cls(wcs, npix)
 
     def distance_to_edge(self, skydir):
         """Return the angular distance from the given direction and

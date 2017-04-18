@@ -375,8 +375,8 @@ class HPX(object):
         """
         return HPX(self.nside, not self.nest, self.coordsys, -1, self.region, None, self.conv)
 
-    @staticmethod
-    def create_hpx(nside, nest, coordsys='CEL', order=-1, region=None,
+    @classmethod
+    def create_hpx(cls, nside, nest, coordsys='CEL', order=-1, region=None,
                    ebins=None, conv=HPX_Conv('FGST_CCUBE')):
         """Create a HPX object.
 
@@ -400,7 +400,7 @@ class HPX(object):
         ebins    : `~numpy.ndarray`
             Energy bin edges
         """
-        return HPX(nside, nest, coordsys, order, region, ebins, conv)
+        return cls(nside, nest, coordsys, order, region, ebins, conv)
 
     @staticmethod
     def identify_HPX_convention(header):
@@ -443,8 +443,8 @@ class HPX(object):
         else:
             raise ValueError("Could not identify HEALPix convention")
 
-    @staticmethod
-    def create_from_header(header, ebins=None):
+    @classmethod
+    def create_from_header(cls, header, ebins=None):
         """ Creates an HPX object from a FITS header.
 
         header : The FITS header
@@ -488,7 +488,7 @@ class HPX(object):
             except KeyError:
                 region = None
 
-        return HPX(nside, nest, coordsys, order, region, ebins=ebins, conv=conv)
+        return cls(nside, nest, coordsys, order, region, ebins=ebins, conv=conv)
 
     def make_header(self):
         """ Builds and returns FITS header for this HEALPix map """
@@ -878,8 +878,8 @@ class HpxToWcsMapping(object):
         hdulist = fits.HDUList([prim_hdu, mult_dhu])
         hdulist.writeto(fitsfile, clobber=clobber)
 
-    @staticmethod
-    def create_from_fitsfile(self, fitsfile):
+    @classmethod
+    def create_from_fitsfile(cls, fitsfile):
         """ Read a fits file and use it to make a mapping
         """
         from fermipy.skymap import Map
@@ -890,7 +890,7 @@ class HpxToWcsMapping(object):
         mapping_data = dict(ipixs=index_map.counts,
                             mult_val=mult_map.counts,
                             npix=mult_map.counts.shape)
-        return HpxToWcsMapping(hpx, index_map.wcs, mapping_data)
+        return cls(hpx, index_map.wcs, mapping_data)
 
     def fill_wcs_map_from_hpx_data(self, hpx_data, wcs_data, normalize=True):
         """Fills the wcs map from the hpx data using the pre-calculated

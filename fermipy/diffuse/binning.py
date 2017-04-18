@@ -74,8 +74,8 @@ class Component(object):
         """ Event type bit mask for this component """
         return EVT_TYPE_DICT[self.evtype_name]
 
-    @staticmethod
-    def build_from_energy_dict(ebin_name, input_dict):
+    @classmethod
+    def build_from_energy_dict(cls, ebin_name, input_dict):
         """ Build a list of components from a dictionary for a single energy range
         """
         psf_types = input_dict.pop('psf_types')
@@ -85,23 +85,24 @@ class Component(object):
             fulldict.update(val_dict)
             fulldict['evtype_name'] = psf_type
             fulldict['ebin_name'] = ebin_name
-            output_list += [Component(**fulldict)]
+            component = cls(**fulldict)
+            output_list += [component]
         return output_list
 
-    @staticmethod
-    def build_from_yamlstr(yamlstr):
+    @classmethod
+    def build_from_yamlstr(cls, yamlstr):
         """ Build a list of components from a yaml string
         """
         top_dict = yaml.safe_load(yamlstr)
         output_list = []
         for e_key, e_dict in sorted(top_dict.items()):
             e_dict = top_dict[e_key]
-            output_list += Component.build_from_energy_dict(e_key, e_dict)
+            output_list += cls.build_from_energy_dict(e_key, e_dict)
         return output_list
 
-    @staticmethod
-    def build_from_yamlfile(yamlfile):
+    @classmethod
+    def build_from_yamlfile(cls, yamlfile):
         """ Build a list of components from a yaml file
         """
-        return Component.build_from_yamlstr(open(yamlfile))
+        return cls.build_from_yamlstr(open(yamlfile))
 
