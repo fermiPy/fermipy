@@ -1761,7 +1761,8 @@ class ROIModel(fermipy.config.Configurable):
 
     def get_sources(self, skydir=None, distance=None, cuts=None,
                     minmax_ts=None, minmax_npred=None,
-                    exclude=None, square=False, coordsys='CEL'):
+                    exclude=None, square=False, coordsys='CEL',
+                    names=None):
         """Retrieve list of source objects satisfying the following
         selections:
 
@@ -1771,6 +1772,8 @@ class ROIModel(fermipy.config.Configurable):
         * Cuts on source properties defined in ``cuts`` list.
 
         * TS and Npred in range specified by ``minmax_ts`` and ``minmax_npred``.
+
+        * Name matching a value in ``names``
 
         Sources can be excluded from the selection by adding their
         name to the ``exclude`` list.
@@ -1795,6 +1798,8 @@ class ROIModel(fermipy.config.Configurable):
         o = []
         for s in srcs + self.diffuse_sources:
 
+            if names and s.name not in names:
+                continue            
             if s.name in exclude:
                 continue
             if not s.check_cuts(cuts):
@@ -1806,7 +1811,6 @@ class ROIModel(fermipy.config.Configurable):
                 continue
             if not utils.apply_minmax_selection(npred, minmax_npred):
                 continue
-
             o.append(s)
 
         return o
