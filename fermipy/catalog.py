@@ -137,8 +137,8 @@ class Catalog(object):
     def glonlat(self):
         return self._glonlat
 
-    @staticmethod
-    def create(name):
+    @classmethod
+    def create(cls, name):
 
         extname = os.path.splitext(name)[1]
         if extname == '.fits' or extname == '.fit':
@@ -163,7 +163,8 @@ class Catalog(object):
             if 'NickName' in tab.columns:
                 return Catalog4FGLP(fitsfile)
             else:
-                return Catalog(Table.read(fitsfile))
+                table = Table.read(fitsfile)
+                return cls(table)
 
         elif name == '3FGL':
             return Catalog3FGL()

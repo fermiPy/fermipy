@@ -345,8 +345,8 @@ class PowerLaw(SpectralFunction):
     def _eval_dnde(x, params, scale=1.0, extra_params=None):
         return params[0] * (x / scale) ** params[1]
 
-    @classmethod
-    def eval_flux(cls, emin, emax, params, scale=1.0, extra_params=None):
+    @staticmethod
+    def eval_flux(emin, emax, params, scale=1.0, extra_params=None):
 
         phi0 = np.array(params[0], ndmin=1)
         index = np.array(params[1], ndmin=1)
@@ -374,10 +374,9 @@ class PowerLaw(SpectralFunction):
         params[1] += 1.0
         return cls.eval_flux(emin, emax, params, scale) * scale
 
-    @staticmethod
-    def eval_norm(scale, index, emin, emax, flux):
-        return flux / PowerLaw.eval_flux(emin, emax, [1.0, index],
-                                         scale=scale)
+    @classmethod
+    def eval_norm(cls, scale, index, emin, emax, flux):
+        return flux / cls.eval_flux(emin, emax, [1.0, index], scale=scale)
 
 
 class LogParabola(SpectralFunction):

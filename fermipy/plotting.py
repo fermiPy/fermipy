@@ -416,8 +416,8 @@ class ROIPlotter(fermipy.config.Configurable):
     def proj(self):
         return self._proj
 
-    @staticmethod
-    def create_from_fits(fitsfile, roi, **kwargs):
+    @classmethod
+    def create_from_fits(cls, fitsfile, roi, **kwargs):
 
         hdulist = fits.open(fitsfile)
         try:
@@ -439,7 +439,7 @@ class ROIPlotter(fermipy.config.Configurable):
         else:
             raise Exception("Unknown projection type %s" % projtype)
 
-        return ROIPlotter(themap, roi=roi, **kwargs)
+        return cls(themap, roi=roi, **kwargs)
 
     def plot_projection(self, iaxis, **kwargs):
 

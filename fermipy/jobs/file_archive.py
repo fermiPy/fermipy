@@ -462,20 +462,20 @@ class FileHandle(object):
             val.append_to_table(table)
         return table
 
-    @staticmethod
-    def make_dict(table):
+    @classmethod
+    def make_dict(cls, table):
         """Build and return a dict of `FileHandle` from an `astropy.table.Table`
 
         The dictionary is keyed by FileHandle.key, which is a unique integer for each file
         """
         ret_dict = {}
         for row in table:
-            file_handle = FileHandle.create_from_row(row)
+            file_handle = cls.create_from_row(row)
         ret_dict[file_handle.key] = file_handle
         return ret_dict
 
-    @staticmethod
-    def create_from_row(table_row):
+    @classmethod
+    def create_from_row(cls, table_row):
         """Build and return a `FileHandle` from an `astropy.table.row.Row` """
         kwargs = {}
         for key in table_row.colnames:
@@ -484,7 +484,7 @@ class FileHandle(object):
             else:
                 kwargs[key] = table_row[key]
         try:
-            return FileHandle(**kwargs)
+            return cls(**kwargs)
         except KeyError:
             print (kwargs)
 
@@ -796,17 +796,17 @@ class FileArchive(object):
         sys.stdout.write("  superseded:   %i\n"%status_vect[4])
         sys.stdout.write("  temp_removed: %i\n"%status_vect[5])
 
-    @staticmethod
-    def get_archive():
+    @classmethod
+    def get_archive(cls):
         """Return the singleton `FileArchive` instance """
-        return FileArchive._archive
+        return cls._archive
 
-    @staticmethod
-    def build_archive(**kwargs):
+    @classmethod
+    def build_archive(cls, **kwargs):
         """Return the singleton `FileArchive` instance, building it if needed"""
-        if FileArchive._archive is None:
-            FileArchive._archive = FileArchive(**kwargs)
-        return FileArchive._archive
+        if cls._archive is None:
+            cls._archive = cls(**kwargs)
+        return cls._archive
 
 
 def main_browse():

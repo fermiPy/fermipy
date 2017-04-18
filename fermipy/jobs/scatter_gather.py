@@ -220,25 +220,24 @@ class ScatterGather(Link):
         """Return the value of the no_batch flag"""
         return self._no_batch
 
-    @staticmethod
-    def _make_init_logfile_name(input_config):
+    @classmethod
+    def _make_init_logfile_name(cls, input_config):
         """ Hook to inster the name of a logfile into the input config """
-        logfile = input_config.get(
-            'logfile', ScatterGather.default_init_logfile)
+        logfile = input_config.get('logfile', cls.default_init_logfile)
         input_config['logfile'] = logfile
 
-    @staticmethod
-    def _make_scatter_logfile_name(key, job_config):
+    @classmethod
+    def _make_scatter_logfile_name(cls, key, job_config):
         """ Hook to inster the name of a logfile into the input config """
         logfile = job_config.get('logfile', "%s_%s.log" %
-                                 (ScatterGather.default_prefix_logfile, key))
+                                 (cls.default_prefix_logfile, key))
         job_config['logfile'] = logfile
 
-    @staticmethod
-    def _make_gather_logfile_name(output_config):
+    @classmethod
+    def _make_gather_logfile_name(cls, output_config):
         """ Hook to construct the name of a logfile the gatherer """
         logfile = output_config.get(
-            'logfile', ScatterGather.default_gather_logfile)
+            'logfile', cls.default_gather_logfile)
         output_config['logfile'] = logfile
 
     def check_job(self, job_details):

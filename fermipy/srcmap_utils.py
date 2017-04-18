@@ -141,8 +141,8 @@ class SourceMapCache(object):
         k0[~np.isfinite(k0)] = 0
         return k0
 
-    @staticmethod
-    def create(psf, exp, spatial_model, spatial_width, shape_out, cdelt,
+    @classmethod
+    def create(cls, psf, exp, spatial_model, spatial_width, shape_out, cdelt,
                rebin=4):
 
         npix = shape_out[1]
@@ -171,7 +171,7 @@ class SourceMapCache(object):
 
         m1 = MapInterpolator(k1, pix_ref, shape_out, rebin)
 
-        return SourceMapCache(m0, m1)
+        return cls(m0, m1)
 
 
 def make_srcmap_old(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,

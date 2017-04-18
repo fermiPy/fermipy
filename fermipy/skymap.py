@@ -173,12 +173,12 @@ class Map(Map_Base):
         """Return the ROI center in pixel coordinates."""
         return self._pix_center
 
-    @staticmethod
-    def create_from_hdu(hdu, wcs):
-        return Map(hdu.data.T, wcs)
+    @classmethod
+    def create_from_hdu(cls, hdu, wcs):
+        return cls(hdu.data.T, wcs)
 
-    @staticmethod
-    def create_from_fits(fitsfile, **kwargs):
+    @classmethod
+    def create_from_fits(cls, fitsfile, **kwargs):
         hdu = kwargs.get('hdu', 0)
 
         hdulist = fits.open(fitsfile)
@@ -198,14 +198,14 @@ class Map(Map_Base):
             emax = np.array(tab['E_MAX']) / 1E3
             ebins = np.append(emin, emax[-1])
 
-        return Map(data, wcs, ebins)
+        return cls(data, wcs, ebins)
 
-    @staticmethod
-    def create(skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
+    @classmethod
+    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
         crpix = np.array([n / 2. + 0.5 for n in npix])
         wcs = wcs_utils.create_wcs(skydir, coordsys, projection,
                                    cdelt, crpix)
-        return Map(np.zeros(npix).T, wcs)
+        return cls(np.zeros(npix).T, wcs)
 
     def create_image_hdu(self, name=None, **kwargs):
         return fits.ImageHDU(self.counts, header=self.wcs.to_header(),
@@ -392,8 +392,8 @@ class HpxMap(Map_Base):
     def hpx(self):
         return self._hpx
 
-    @staticmethod
-    def create_from_hdu(hdu, ebins):
+    @classmethod
+    def create_from_hdu(cls, hdu, ebins):
         """ Creates and returns an HpxMap object from a FITS HDU.
 
         hdu    : The FITS
@@ -416,10 +416,11 @@ class HpxMap(Map_Base):
             data = np.ndarray((nebin, hpx.npix))
             for i, cname in enumerate(cnames):
                 data[i, 0:] = hdu.data.field(cname)
-        return HpxMap(data, hpx)
 
-    @staticmethod
-    def create_from_hdulist(hdulist, **kwargs):
+        return cls(data, hpx)
+
+    @classmethod
+    def create_from_hdulist(cls, hdulist, **kwargs):
         """ Creates and returns an HpxMap object from a FITS HDUList
 
         extname : The name of the HDU with the map data
@@ -427,17 +428,16 @@ class HpxMap(Map_Base):
         """
         extname = kwargs.get('hdu', 'SKYMAP')
         ebins = fits_utils.find_and_read_ebins(hdulist)
-        hpxMap = HpxMap.create_from_hdu(hdulist[extname], ebins)
-        return hpxMap
+        return cls.create_from_hdu(hdulist[extname], ebins)
 
     def create_image_hdu(self, name=None, **kwargs):
         kwargs['extname'] = name
         return self.hpx.make_hdu(self.counts, **kwargs)
 
-    @staticmethod
-    def create_from_fits(fitsfile, **kwargs):
+    @classmethod
+    def create_from_fits(cls, fitsfile, **kwargs):
         hdulist = fits.open(fitsfile)
-        return HpxMap.create_from_hdulist(hdulist, **kwargs)
+        return cls.create_from_hdulist(hdulist, **kwargs)
 
     def create_image_hdu(self, name=None, **kwargs):
         kwargs['extname'] = name

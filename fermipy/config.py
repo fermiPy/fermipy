@@ -265,8 +265,8 @@ class Configurable(object):
 
 class ConfigManager(object):
 
-    @staticmethod
-    def create(configfile):
+    @classmethod
+    def create(cls, configfile):
         """Create a configuration dictionary from a yaml config file.
         This function will first populate the dictionary with defaults
         taken from pre-defined configuration files.  The configuration
@@ -282,7 +282,7 @@ class ConfigManager(object):
             config['fileio']['outdir'] = os.path.abspath(
                 os.path.dirname(configfile))
 
-        user_config = ConfigManager.load(configfile)
+        user_config = cls.load(configfile)
         config = utils.merge_dict(config, user_config, True)
 
         config['fileio']['outdir'] = os.path.abspath(

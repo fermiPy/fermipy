@@ -24,15 +24,15 @@ class SpectralLibrary(object):
         """Get an item from the dictionary """
         return self.spectral_dict.get(key, {})
 
-    @staticmethod
-    def create_from_yamlstr(yamlstr):
+    @classmethod
+    def create_from_yamlstr(cls, yamlstr):
         """Create the dictionary for a yaml file
         """
         spectral_dict = yaml.load(yamlstr)
-        return SpectralLibrary(spectral_dict)
+        return cls(spectral_dict)
 
-    @staticmethod
-    def create_from_yaml(yamlfile):
+    @classmethod
+    def create_from_yaml(cls, yamlfile):
         """Create the dictionary for a yaml file
         """
-        return SpectralLibrary.create_from_yamlstr(open(yamlfile))
+        return cls.create_from_yamlstr(open(yamlfile))
