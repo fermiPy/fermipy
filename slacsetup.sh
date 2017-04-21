@@ -74,4 +74,11 @@ function slacsetup
     fi
 
     export FERMI_DIFFUSE_DIR=$GLAST_EXT/diffuseModels/v5r0
+
+    # Setup HEASoft
+    ASTROTOOLS=/afs/slac/g/glast/applications/astroTools
+    export PATH=${PATH}:${ASTROTOOLS}/bin
+    export LHEASOFT=${ASTROTOOLS}/headas/i686-pc-linux-gnu-libc2.2.4
+    export HEADAS=${LHEASOFT}
+    source ${HEADAS}/headas-init.sh
 }

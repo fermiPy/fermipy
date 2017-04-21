@@ -13,7 +13,7 @@ if [[ -z $CONDA_DEPS ]]; then
 fi
 
 if [[ -z $CONDA2 ]]; then
-    CONDA2='conda install -y wcsaxes healpy subprocess32'
+    CONDA2='conda install -y healpy subprocess32 fermipy'
 fi
 
 # Check if conda exists if not then install it
@@ -52,4 +52,3 @@ if [[ -n $INSTALL_CMD ]]; then
     $INSTALL_CMD
 fi
 
-#pip install fermipy
