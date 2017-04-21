@@ -160,12 +160,12 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
             fullkey = "%s_%s" % (sourcekey, comp_dict.comp_key)
         srcdict = make_sources(fullkey, comp_dict)
         if comp_dict.model_type == 'IsoSource':
-            print ("Writing xml for %s to %s: %s %s" % (fullkey,
+            print("Writing xml for %s to %s: %s %s" % (fullkey,
                                                         comp_dict.srcmdl_name,
                                                         comp_dict.model_type,
                                                         comp_dict.Spectral_Filename))
         elif comp_dict.model_type == 'MapCubeSource':
-            print ("Writing xml for %s to %s: %s %s" % (fullkey,
+            print("Writing xml for %s to %s: %s %s" % (fullkey,
                                                         comp_dict.srcmdl_name,
                                                         comp_dict.model_type,
                                                         comp_dict.Spatial_Filename))

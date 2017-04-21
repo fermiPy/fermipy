@@ -4809,9 +4809,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._like = BinnedAnalysis(binnedData=self._obs,
                                     **utils.unicode_to_str(kw))
 
-#        print self.like.logLike.use_single_fixed_map()
+#        print(self.like.logLike.use_single_fixed_map())
 #        self.like.logLike.set_use_single_fixed_map(False)
-#        print self.like.logLike.use_single_fixed_map()
+#        print(self.like.logLike.use_single_fixed_map())
 
         if self.config['gtlike']['edisp']:
             self.logger.debug('Enabling energy dispersion')

@@ -197,7 +197,7 @@ class ResidualCRAnalysis(object):
             mean_bright_pixel = bright_pixels_intensity.mean()
             aeff_corrections[i] = 1. / mean_bright_pixel
 
-        print ("Aeff correction: ", aeff_corrections)
+        print("Aeff correction: ", aeff_corrections)
         return aeff_corrections
 
     @staticmethod

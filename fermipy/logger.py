@@ -56,7 +56,7 @@ class Logger(object):
 #        logger = logging.getLogger()
 #        for h in logger.handlers:
 #            if 'file_handler' in h.name:
-#                print h.name
+#                print(h.name)
 
     @staticmethod
     def get(name, logfile, loglevel=logging.DEBUG):

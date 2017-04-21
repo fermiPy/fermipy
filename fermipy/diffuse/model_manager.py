@@ -121,7 +121,7 @@ class ModelInfo(object):
         master_roi = SourceFactory.make_roi(master_roi_source_info)
         master_xml_mdl = name_factory.master_srcmdl_xml(
             modelkey=self.model_name)
-        print ("Writing master ROI model to %s" % master_xml_mdl)
+        print("Writing master ROI model to %s" % master_xml_mdl)
         master_roi.write_xml(master_xml_mdl)
         ret_dict['master'] = master_roi
 
@@ -149,7 +149,7 @@ class ModelInfo(object):
             comp_roi = SourceFactory.make_roi(comp_roi_source_info)
             comp_xml_mdl = name_factory.comp_srcmdl_xml(modelkey=self.model_name,
                                                         component=compkey)
-            print ("Writing component ROI model to %s" % comp_xml_mdl)
+            print("Writing component ROI model to %s" % comp_xml_mdl)
             comp_roi.write_xml(comp_xml_mdl)
             ret_dict[compkey] = comp_roi
 
@@ -400,7 +400,7 @@ class ModelManager(object):
             fermipy_dict['components'].append(sub_dict)
 
         outfile = os.path.join(model_dir, 'config.yaml')
-        print ("Writing fermipy config file %s"%outfile)
+        print("Writing fermipy config file %s"%outfile)
         utils.write_yaml(fermipy_dict, outfile)
         return fermipy_dict
 

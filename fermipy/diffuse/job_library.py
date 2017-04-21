@@ -177,12 +177,12 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
         """Make all the xml file for individual components
         """
         for val in catalog_info_dict.values():
-            print ("%s : %06i" % (val.srcmdl_name, len(val.roi_model.sources)))
+            print("%s : %06i" % (val.srcmdl_name, len(val.roi_model.sources)))
             val.roi_model.write_xml(val.srcmdl_name)
 
         for val in comp_info_dict.values():
             for val2 in val.values():
-                print ("%s : %06i" % (val2.srcmdl_name, len(val2.roi_model.sources)))
+                print("%s : %06i" % (val2.srcmdl_name, len(val2.roi_model.sources)))
                 val2.roi_model.write_xml(val2.srcmdl_name)
 
     def build_job_configs(self, args):

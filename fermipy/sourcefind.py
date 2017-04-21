@@ -680,7 +680,7 @@ class SourceFind(object):
                                     method='SLSQP',
                                     tol=1e-6)
 
-        print ('fit 2')
+        print('fit 2')
 
         o = scipy.optimize.minimize(fit_fn, o.x,
                                     bounds=[(0.0, 39.0),

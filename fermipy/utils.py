@@ -705,7 +705,7 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     try:
         spline = UnivariateSpline(xval, loglike, k=2, s=tol)
     except:
-        print ("Failed to create spline: ", xval, loglike)
+        print("Failed to create spline: ", xval, loglike)
         return {'x0': np.nan, 'ul': np.nan, 'll': np.nan,
                 'err_lo': np.nan, 'err_hi': np.nan, 'err': np.nan,
                 'lnlmax': np.nan}

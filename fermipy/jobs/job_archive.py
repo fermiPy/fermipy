@@ -515,7 +515,7 @@ class JobArchive(object):
         """Update the status of all the jobs in the archive"""
         njobs = len(self.cache.keys())
         status_vect = np.zeros((5), int)
-        print ("Updating status of %i jobs: "%njobs)
+        print("Updating status of %i jobs: "%njobs)
         for i, key in enumerate(self.cache.keys()):
             if i % 200 == 0:
                 sys.stdout.write('.')

@@ -171,10 +171,10 @@ workdir=$(mktemp -d -p /scratch/$USER);\n
 
     lstfile = "%s_%s_%s_z%g_r%g_ft1.lst" % (
         args.evclass, min(tstarts), max(tstops), args.zmax, args.rock)
-    print "Writing ft1 file list: %s\n" % lstfile
+    print("Writing ft1 file list: %s\n" % lstfile)
     np.savetxt(lstfile, sorted(lst), fmt="%s")
 
-    print "Done."
+    print("Done.")
 
 if __name__ == "__main__":
     main()
