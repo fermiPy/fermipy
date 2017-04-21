@@ -13,7 +13,7 @@ if [[ -z $CONDA_DEPS ]]; then
 fi
 
 if [[ -z $CONDA2 ]]; then
-    CONDA2='conda install -y healpy subprocess32 fermipy'
+    CONDA2='conda install -y healpy subprocess32 fermipy jupyter'
 fi
 
 # Check if conda exists if not then install it
