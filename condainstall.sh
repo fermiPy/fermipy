@@ -31,7 +31,7 @@ fi
 if [ ! -d "$CONDA_PATH/bin" ]; then
     echo "Creating a new conda installation under $CONDA_PATH"
     curl -o miniconda.sh -L http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD
-    bash miniconda.sh -b -p -f $CONDA_PATH
+    bash miniconda.sh -b -p $CONDA_PATH
     rm miniconda.sh
 else
     echo "Using existing conda installation under $CONDA_PATH"
