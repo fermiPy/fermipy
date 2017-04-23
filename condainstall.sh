@@ -27,12 +27,16 @@ if [ -n "$1" ]; then
 elif [[ -z $CONDA_PATH ]]; then
     CONDA_PATH=$HOME/miniconda
 fi
-    
+
 if [ ! -d "$CONDA_PATH/bin" ]; then
     echo "Creating a new conda installation under $CONDA_PATH"
     curl -o miniconda.sh -L http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD
     bash miniconda.sh -b -p $CONDA_PATH
+    rc=$?
     rm miniconda.sh
+    if [[ $rc != 0 ]]; then
+        exit $rc
+    fi
 else
     echo "Using existing conda installation under $CONDA_PATH"
 fi
