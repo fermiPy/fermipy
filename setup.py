@@ -35,6 +35,7 @@ setup(
         'fermipy-select = fermipy.scripts.select_data:main',
         'fermipy-preprocess = fermipy.scripts.preprocess_data:main',
         'fermipy-validate = fermipy.scripts.validate:main',
+        'fermipy-quick-analysis = fermipy.scripts.quickanalysis:main',
         'fermipy-coadd = fermipy.scripts.coadd:main',
         'fermipy-vstack = fermipy.scripts.vstack_images:main',
         'fermipy-gtexcube2-sg = fermipy.diffuse.job_library:invoke_sg_gtexpcube2',
