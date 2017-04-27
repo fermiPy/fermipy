@@ -729,7 +729,7 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
 
     lnlmax = float(spline(x0))
 
-    fn = lambda t: spline(t) - lnlmax
+    def fn(t): return spline(t) - lnlmax
     fn_val = fn(xval)
     if np.any(fn_val[imax:] < -deltalnl):
         xhi = xval[imax:][fn_val[imax:] < -deltalnl][0]
@@ -1040,7 +1040,8 @@ def fits_recarray_to_dict(table):
 def unicode_to_str(args):
     o = {}
     for k, v in args.items():
-        if isinstance(v, unicode):
+
+        if isstr(v):
             o[k] = str(v)
         else:
             o[k] = v
@@ -1256,7 +1257,7 @@ def tolist(x):
         return dict(x)
     elif isinstance(x, np.bool_):
         return bool(x)
-    elif isinstance(x, basestring) or isinstance(x, np.str):
+    elif isstr(x) or isinstance(x, np.str):
         x = str(x)  # convert unicode & numpy strings
         try:
             return int(x)
@@ -1445,7 +1446,8 @@ def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=None, ypix=None):
     """
 
     sigma /= cdelt
-    fn = lambda t, s: 1. / (2 * np.pi * s ** 2) * np.exp(
+
+    def fn(t, s): return 1. / (2 * np.pi * s ** 2) * np.exp(
         -t ** 2 / (s ** 2 * 2.0))
     dxy = make_pixel_distance(npix, xpix, ypix)
     k = fn(dxy, sigma)
@@ -1465,7 +1467,8 @@ def make_disk_kernel(radius, npix=501, cdelt=0.01, xpix=None, ypix=None):
     """
 
     radius /= cdelt
-    fn = lambda t, s: 0.5 * (np.sign(s - t) + 1.0)
+
+    def fn(t, s): return 0.5 * (np.sign(s - t) + 1.0)
 
     dxy = make_pixel_distance(npix, xpix, ypix)
     k = fn(dxy, radius)
@@ -1497,7 +1500,7 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
 
     k = np.zeros((len(egy), npix, npix))
     for i in range(len(egy)):
-        fn = lambda t: psf.eval(i, t, scale_fn=psf_scale_fn)
+        def fn(t): return psf.eval(i, t, scale_fn=psf_scale_fn)
         psfc = convolve2d_disk(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
 
@@ -1530,7 +1533,7 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
 
     k = np.zeros((len(egy), npix, npix))
     for i in range(len(egy)):
-        fn = lambda t: psf.eval(i, t, scale_fn=psf_scale_fn)
+        def fn(t): return psf.eval(i, t, scale_fn=psf_scale_fn)
         psfc = convolve2d_gauss(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
 
