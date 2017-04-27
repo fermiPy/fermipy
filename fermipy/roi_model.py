@@ -19,6 +19,7 @@ from fermipy import wcs_utils
 from fermipy import catalog
 from fermipy import defaults
 from fermipy import model_utils
+from fermipy import fits_utils
 from fermipy.logger import Logger, log_level
 from fermipy.model_utils import make_parameter_dict
 from fermipy.model_utils import cast_pars_dict

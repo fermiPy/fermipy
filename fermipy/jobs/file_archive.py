@@ -811,6 +811,9 @@ class FileArchive(object):
 
 def main_browse():
     """Entry point for command line use for browsing a FileArchive """
+
+    import argparse
+    
     parser = argparse.ArgumentParser(usage="file_archive.py [options]",
                                      description="Browse a job archive")
 

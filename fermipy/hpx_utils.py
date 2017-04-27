@@ -555,7 +555,7 @@ class HPX(object):
         else:
             if len(shape) == 1:
                 cols.append(fits.Column(self.conv.colname(
-                    indx=i + self.conv.firstcol), "E", array=data.astype(float)))
+                    indx=self.conv.firstcol), "E", array=data.astype(float)))
             elif len(shape) == 2:
                 for i in range(shape[0]):
                     cols.append(fits.Column(self.conv.colname(
@@ -875,7 +875,7 @@ class HpxToWcsMapping(object):
             prim_hdu.header[key] = hpx_header[key]
             mult_hdu.header[key] = hpx_header[key]
 
-        hdulist = fits.HDUList([prim_hdu, mult_dhu])
+        hdulist = fits.HDUList([prim_hdu, mult_hdu])
         hdulist.writeto(fitsfile, clobber=clobber)
 
     @classmethod

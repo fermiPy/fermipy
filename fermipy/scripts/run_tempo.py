@@ -64,6 +64,9 @@ def phase_ft1(ft1file, outfile, logFile, ft2file, ephemfile, dry_run=False):
 
 
 def phase_merit(meritFile, outfile, logFile, ft2file, ephemfile, dry_run=False):
+
+    import ROOT
+    
     nevent_chunk = 30000  # number of events to process per chunk
     mergeChain = ROOT.TChain('MeritTuple')
 

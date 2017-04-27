@@ -9,6 +9,7 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
+from astropy.coordinates import Galactic, ICRS
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.hpx_utils as hpx_utils
@@ -669,7 +670,7 @@ class HpxMap(Map_Base):
             new_data = hp.pixelfunc.ud_grade(self.counts,
                                              nside_out=new_hpx.nside,
                                              order_in=new_hpx.ordering,
-                                             order_out=ew_hpx.ordering,
+                                             order_out=new_hpx.ordering,
                                              power=power)
         else:
             new_data = np.vstack([hp.pixelfunc.ud_grade(self.counts[i],
