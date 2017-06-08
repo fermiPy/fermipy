@@ -27,6 +27,7 @@ def create_link_gtexpcube2(**kwargs):
     gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtexpcube2'),
                     appname='gtexpcube2',
                     options=dict(irfs=diffuse_defaults.gtopts['irfs'],
+                                 evtype=diffuse_defaults.gtopts['evtype'],
                                  hpx_order=diffuse_defaults.gtopts['hpx_order'],
                                  infile=(None, "Input livetime cube file", str),
                                  cmap=diffuse_defaults.gtopts['cmap'],
@@ -129,20 +130,28 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
         for comp in components:
             zcut = "zmax%i" % comp.zmax
             key = comp.make_key('{ebin_name}_{evtype_name}')
-            name_keys = dict(zcut=zcut,
-                             ebin=comp.ebin_name,
-                             psftype=comp.evtype_name,
-                             coordsys=args['coordsys'],
-                             irf_ver=args['irf_ver'],
-                             fullpath=True)
-            outfile = NAME_FACTORY.bexpcube(**name_keys)
-            job_configs[key] = dict(cmap=NAME_FACTORY.ccube(**name_keys),
-                                    infile=NAME_FACTORY.ltcube(**name_keys),
-                                    outfile=outfile,
-                                    irfs=NAME_FACTORY.irfs(**name_keys),
-                                    hpx_order=min(comp.hpx_order, args['hpx_order_max']),
-                                    evtype=comp.evtype,
-                                    logfile=outfile.replace('.fits', '.log'))
+
+            for mktimekey in comp.mktimefilters:
+                for evtclass in comp.evtclasses:
+                    fullkey = "%s_%s_%s_%s"%(comp.ebin_name, mktimekey, evtclass, comp.evtype_name)
+                    fullzkey = "%s_%s"%(zcut, mktimekey)
+                    name_keys = dict(zcut=zcut,
+                                     ebin=comp.ebin_name,
+                                     psftype=comp.evtype_name,
+                                     coordsys=args['coordsys'],
+                                     irf_ver=args['irf_ver'],
+                                     fullpath=True)
+
+                    outfile = NAME_FACTORY.bexpcube(**name_keys).replace(key, fullkey)
+                    cmap = NAME_FACTORY.ccube(**name_keys).replace(key, fullkey)
+                    infile = NAME_FACTORY.ltcube(**name_keys).replace(zcut, fullzkey)
+                    job_configs[fullkey] = dict(cmap=cmap,
+                                                infile=infile,
+                                                outfile=outfile,
+                                                irfs=NAME_FACTORY.irfs(**name_keys),
+                                                hpx_order=min(comp.hpx_order, args['hpx_order_max']),
+                                                evtype=comp.evtype,
+                                                logfile=outfile.replace('.fits', '.log'))
 
         output_config = {}
         return input_config, job_configs, output_config

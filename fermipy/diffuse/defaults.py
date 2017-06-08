@@ -44,6 +44,7 @@ sun_moon = {
 # Options relating to gtapps
 gtopts = {
     'irfs' : ('CALDB', 'Instrument response functions', str),
+    'evtype' : (None, 'Event type selections', int),
     'expcube' : (None, 'Input Livetime cube file', str),
     'cmap' : (None, 'Input counts cube file', str),
     'srcmaps' : (None, 'Input source maps file', str),

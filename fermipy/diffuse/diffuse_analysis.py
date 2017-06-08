@@ -20,6 +20,7 @@ from fermipy.diffuse.gt_assemble_model import create_link_assemble_model, create
 from fermipy.diffuse.gt_coadd_split import create_chain_coadd_split
 from fermipy.diffuse.gt_merge_srcmaps import create_link_merge_srcmaps, create_sg_merge_srcmaps
 from fermipy.diffuse.gt_split_and_bin import create_chain_split_and_bin, create_sg_split_and_bin
+from fermipy.diffuse.gt_split_and_mktime import create_chain_split_and_mktime, create_sg_split_and_mktime
 from fermipy.diffuse.gt_srcmap_partial import create_link_srcmap_partial, create_sg_srcmap_partial
 from fermipy.diffuse.residual_cr import create_link_residual_cr, create_chain_residual_cr,\
     create_sg_residual_cr
@@ -42,6 +43,8 @@ BUILDER_DICT = {'create_link_gtexpcube2':create_link_gtexpcube2,
                 'create_sg_merge_srcmaps':create_sg_merge_srcmaps,
                 'create_chain_split_and_bin':create_chain_split_and_bin,
                 'create_sg_split_and_bin':create_sg_split_and_bin,
+                'create_chain_split_and_mktime':create_chain_split_and_mktime,
+                'create_sg_split_and_mktime':create_sg_split_and_mktime,
                 'create_link_srcmap_partial':create_link_srcmap_partial,
                 'create_sg_srcmap_partial':create_sg_srcmap_partial,
                 'create_link_residual_cr':create_link_residual_cr,

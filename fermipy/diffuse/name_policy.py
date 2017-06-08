@@ -69,7 +69,8 @@ class NameFactory(object):
     # The input ft1 file list
     ft1file_format = '{dataset}_{zcut}.lst'
     # The input ft2 file list
-    ft2file_format = 'ft2_{data_time}.lst'
+    ft2file_format = 'ft2_files/ft2_{data_time}.lst'
+
     # Livetime cubes (output of gtltcube)
     ltcube_format = 'lt_cubes/ltcube_{data_time}_{zcut}.fits'
     # Counts cubes (output of gtbin)

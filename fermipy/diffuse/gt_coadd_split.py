@@ -12,6 +12,7 @@ import argparse
 import yaml
 
 from fermipy.jobs.chain import Chain, Link
+from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse import defaults as diffuse_defaults
@@ -32,7 +33,8 @@ class CoaddSplit(Chain):
                        options=dict(comp=diffuse_defaults.diffuse['binning_yaml'],
                                     data=diffuse_defaults.diffuse['dataset_yaml'],
                                     coordsys=diffuse_defaults.diffuse['coordsys'],
-                                    nfiles=(96, 'Number of input files', int),
+                                    do_ltsum=(False, 'Sum livetime cube files', bool),
+                                    nfiles=(96, 'Number of input files', int),                                    
                                     dry_run=(False, 'Print commands but do not run them', bool)),
                        appname='fermipy-coadd-split',
                        argmapper=self._map_arguments,
@@ -40,12 +42,12 @@ class CoaddSplit(Chain):
         if comp_dict is not None:
             self.update_links(comp_dict)
 
-    def update_links(self, comp_dict):
+    def update_links(self, comp_dict, do_ltsum=False):
         """Build the links in this chain from the binning specification
         """
         self.comp_dict = comp_dict
         links_to_add = []
-        links_to_add += self._make_coadd_links()
+        links_to_add += self._make_coadd_links(do_ltsum)
         for link in links_to_add:
             self.add_link(link)
 
@@ -58,25 +60,42 @@ class CoaddSplit(Chain):
         parser = argparse.ArgumentParser(usage=usage, description=description)
         return parser
 
-    def _make_coadd_links(self):
+    def _make_coadd_links(self, do_ltsum):
         """Make the links to run fermipy-coadd for each energy bin X psf type
         """
         links = []
         for key_e, comp_e in sorted(self.comp_dict.items()):
-            for psf_type in sorted(comp_e['psf_types'].keys()):
-                key = "%s_%s" % (key_e, psf_type)
-                binkey = 'binfile_%s' % key
-                argkey = 'args_%s' % key
-                self.files.file_args[argkey] = FileFlags.gz_mask
-                link = Link('coadd_%s' % key,
-                            appname='fermipy-coadd',
-                            options=dict(args=([], "List of input files", list),
-                                         output=(None, "Output file", str)),
-                            mapping={'args': argkey,
-                                     'output': binkey},
-                            file_args=dict(args=FileFlags.input_mask,
-                                           output=FileFlags.output_mask))
-                links.append(link)
+            
+            for mktimekey in comp_e['mktimefilters']:
+
+                if do_ltsum:
+                    ltsum_listfile = 'ltsumlist_%s_%s' % (key_e, mktimekey)
+                    ltsum_outfile = 'ltsum_%s_%s' % (key_e, mktimekey)
+                    link_ltsum = Gtlink('ltsum_%s_%s' % (key_e, mktimekey),
+                                        appname='gtltsum',
+                                        mapping={'infile1':ltsum_listfile,
+                                                 'outfile':ltsum_outfile},
+                                        options=dict(infile1=(None, "Livetime cube 1 or list of files", str),
+                                                     infile2=("none", "Livetime cube 2", str),
+                                                     outfile=(None, "Output file", str)),
+                                        file_args=dict(infile1=FileFlags.input_mask,
+                                                       outfile=FileFlags.output_mask)) 
+                    links.append(link_ltsum)
+                for evtclass in comp_e['evtclasses']:
+                    for psf_type in sorted(comp_e['psf_types'].keys()):
+                        key = "%s_%s_%s_%s" % (key_e, mktimekey, evtclass, psf_type)
+                        binkey = 'binfile_%s' % key
+                        argkey = 'args_%s' % key
+                        self.files.file_args[argkey] = FileFlags.gz_mask
+                        link = Link('coadd_%s' % key,
+                                    appname='fermipy-coadd',
+                                    options=dict(args=([], "List of input files", list),
+                                                 output=(None, "Output file", str)),
+                                    mapping={'args': argkey,
+                                             'output': binkey},
+                                    file_args=dict(args=FileFlags.input_mask,
+                                                   output=FileFlags.output_mask))                        
+                        links.append(link)
         return links
 
     @staticmethod
@@ -93,6 +112,23 @@ class CoaddSplit(Chain):
             filelist += ' %s' % filepath
         return filelist
 
+    @staticmethod
+    def _make_ltcube_file_list(ltsumfile, num_files):
+        """Make the list of input files for a particular energy bin X psf type """
+        outdir_base = os.path.dirname(ltsumfile)
+        outbasename = os.path.basename(ltsumfile)
+        lt_list_file = ltsumfile.replace('fits', 'lst')
+        outfile = open(lt_list_file, 'w!')
+        filelist = ""
+        for i in range(num_files):
+            split_key = "%06i" % i
+            output_dir = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes', split_key)
+            filepath = os.path.join(output_dir, outbasename.replace('.fits', '_%s.fits' % split_key))
+            outfile.write(filepath)
+            outfile.write("\n")
+        outfile.close()
+        return '@'+lt_list_file
+
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
@@ -106,16 +142,27 @@ class CoaddSplit(Chain):
         num_files = input_dict.get('nfiles', 96)
         output_dict = input_dict.copy()
         for key_e, comp_e in sorted(self.comp_dict.items()):
-            for psf_type in sorted(comp_e['psf_types'].keys()):
-                key = "%s_%s" % (key_e, psf_type)
-                suffix = "zmax%i_%s" % (comp_e['zmax'], key)
-                ccube_name =\
-                    os.path.basename(NAME_FACTORY.ccube(component=suffix,
-                                                        coordsys=coordsys))
-                binnedfile = os.path.join(outdir_base, ccube_name)
-                output_dict['binfile_%s' % key] = os.path.join(outdir_base, ccube_name)
-                output_dict['args_%s' % key] = CoaddSplit._make_input_file_list(
-                    binnedfile, num_files)
+            for mktimekey in comp_e['mktimefilters']:
+                if self.args['do_ltsum']:
+                    zkey = "zmax%i_%s" % (comp_e['zmax'], mktimekey)
+                    ltsumname = os.path.join(NAME_FACTORY.base_dict['basedir'], NAME_FACTORY.ltcube(zcut=zkey))
+                    output_dict['ltsum_%s_%s' % (key_e, mktimekey)] = ltsumname
+                    output_dict['ltsumlist_%s_%s' % (key_e, mktimekey)] = CoaddSplit._make_ltcube_file_list(
+                        ltsumname, num_files)
+                for evtclass in comp_e['evtclasses']:
+
+                    for psf_type in sorted(comp_e['psf_types'].keys()):
+                        key = "%s_%s_%s_%s" % (key_e, mktimekey, evtclass, psf_type)
+                        suffix = "zmax%i_%s" % (comp_e['zmax'], key)
+                        #suffix = "mk_zmax%i_%s" % (comp_e['zmax'], key)
+                        ccube_name =\
+                            os.path.basename(NAME_FACTORY.ccube(component=suffix,
+                                                                coordsys=coordsys))
+                        binnedfile = os.path.join(outdir_base, ccube_name)
+                        output_dict['binfile_%s' % key] = os.path.join(outdir_base, ccube_name)
+                        output_dict['args_%s' % key] = CoaddSplit._make_input_file_list(
+                            binnedfile, num_files)
+
         return output_dict
 
     def run_argparser(self, argv):
@@ -124,7 +171,7 @@ class CoaddSplit(Chain):
         if self._parser is None:
             raise ValueError('CoaddSplit was not given a parser on initialization')
         args = self._parser.parse_args(argv)
-        self.update_links(yaml.safe_load(open(args.comp)))
+        self.update_links(yaml.safe_load(open(args.comp)), args.do_ltsum)
         self.update_args(args.__dict__)
         return args
 

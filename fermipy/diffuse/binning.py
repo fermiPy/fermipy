@@ -29,6 +29,8 @@ class Component(object):
         Number of energy bins for this component
     zmax : float
         Maximum zenith angle cube for this component in degrees
+    mktimefilters : list
+        Filters for gtmktime.  
     hpx_order : int
         HEALPix order to use for this component
     """
@@ -40,6 +42,8 @@ class Component(object):
         self.log_emax = kwargs['log_emax']
         self.enumbins = kwargs['enumbins']
         self.zmax = kwargs['zmax']
+        self.mktimefilters = kwargs.get('mktimefilters', [])
+        self.evtclasses = kwargs.get('evtclasses', [])
         self.hpx_order = kwargs['hpx_order']
         self.evtype_name = kwargs['evtype_name']
         self.ebin_name = kwargs['ebin_name']
@@ -49,7 +53,9 @@ class Component(object):
         retstr += "  log_10(E/MeV) : %.2f %.2f %i bins\n"%(self.log_emin,
                                                            self.log_emax, self.enumbins)
         retstr += "  HPX order     : %i\n"%self.hpx_order
-        retstr += "  Zenith cut    : %.0f"%self.zmax
+        retstr += "  Zenith cut    : %.0f\n"%self.zmax
+        retstr += "  Mktime filters: %s\n"%str(self.mktimefilters)
+        retstr += "  Evt classes   : %s"%str(self.evtclasses)
         return retstr
 
     def make_key(self, format_str):
