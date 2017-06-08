@@ -12,6 +12,7 @@ import os
 import sys
 import time
 import tempfile
+from shutil import copyfile
 
 from collections import OrderedDict
 
@@ -388,9 +389,11 @@ class FileStageManager(object):
             if not os.path.exists(key):
                 continue
             if dry_run:
-                print ("cp %s %s" % (key, value))
+                print ("copy %s %s" % (key, value))
             else:
-                os.system("cp %s %s" % (key, value))
+                print ("copy %s %s" % (key, value))
+                copyfile(key, value)
+                
         return file_mapping
 
     @staticmethod
@@ -398,14 +401,15 @@ class FileStageManager(object):
         """Copy output files from scratch area """
         for key, value in file_mapping.items():
             if dry_run:
-                print ("cp %s %s" % (value, key))
+                print ("copy %s %s" % (value, key))
             else:
                 try:
                     outdir = os.path.dirname(key)
                     os.makedirs(outdir)
                 except OSError:
                     pass
-                os.system("cp %s %s" % (value, key))
+                print ("copy %s %s" % (value, key))
+                copyfile(value, key)
         return file_mapping
 
 
@@ -445,6 +449,9 @@ class FileHandle(object):
         self.status = kwargs.get('status', FileStatus.no_file)
         self.flags = kwargs.get('flags', FileFlags.no_flags)
         self.path = kwargs['path']
+        if self.path[0] == '@':
+            print ('Removing @ from %s'%self.path)
+            self.path = self.path[1:]
 
     @staticmethod
     def make_table(file_dict):
@@ -494,6 +501,7 @@ class FileHandle(object):
             fullpath = self.path
         else:
             fullpath = os.path.join(basepath, self.path)
+            
         exists = os.path.exists(fullpath)
         if not exists:
             if self.flags & FileFlags.gz_mask != 0:

@@ -115,7 +115,7 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
             except OSError:
                 pass
         pfiles = "%s:%s" % (pfiles, pfiles_orig)
-        print ("Setting PFILES=%s" % pfiles)
+        #print ("Setting PFILES=%s" % pfiles)
 
         os.environ['PFILES'] = pfiles
 

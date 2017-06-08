@@ -38,11 +38,25 @@ def get_matches(table, colname, value):
 # class JobStatus(Enum):
 class JobStatus(object):
     """Enumeration of job status types"""
-    no_job = 0
-    pending = 1
-    running = 2
-    done = 3
-    failed = 4
+    no_job = -1           # Job does not exist
+    unknown = 0           # JobDetails exist, but status hasn't been set
+    not_ready = 1         # Inputs are not ready
+    ready = 2             # Inputs are ready
+    pending = 3           # Job is pending (in the batch queue)
+    running = 4           # Job is running
+    done = 5              # Job is successfully completed
+    failed = 6            # Job failed
+    partial_failed = 7    # Some sub-jobs have failed
+
+
+JOB_STATUS_STRINGS = ["Unknown",
+                      "Not Ready",
+                      "Ready", 
+                      "Pending",
+                      "Running",
+                      "Done",
+                      "Failed",
+                      "Partially Failed"]
 
 
 class JobDetails(object):
@@ -112,7 +126,7 @@ class JobDetails(object):
         self.outfile_ids = kwargs.get('outfile_ids', None)
         self.rmfile_ids = kwargs.get('rmfile_ids', None)
         self.intfile_ids = kwargs.get('intfile_ids', None)
-        self.status = kwargs.get('status', JobStatus.pending)
+        self.status = kwargs.get('status', JobStatus.unknown)
 
     @staticmethod
     def make_fullkey(jobkey, jobname):
@@ -460,7 +474,7 @@ class JobArchive(object):
         job_config = kwargs.get('job_config', None)
         if job_config is None:
             job_config = link.args
-        status = kwargs.get('status', JobStatus.no_job)
+        status = kwargs.get('status', JobStatus.unknown)
         job_details = JobDetails(jobname=link.linkname,
                                  jobkey=key,
                                  appname=link.appname,
@@ -513,25 +527,29 @@ class JobArchive(object):
     def update_job_status(self, checker_func):
         """Update the status of all the jobs in the archive"""
         njobs = len(self.cache.keys())
-        status_vect = np.zeros((5), int)
+        status_vect = np.zeros((8), int)
         print ("Updating status of %i jobs: "%njobs)
         for i, key in enumerate(self.cache.keys()):
             if i % 200 == 0:
                 sys.stdout.write('.')
                 sys.stdout.flush()
             job_details = self.cache[key]
-            job_details.check_status_logfile(checker_func)
-            job_details.update_table_row(self._table, job_details.dbkey - 1)
+            if job_details.status >= JobStatus.pending:
+                job_details.check_status_logfile(checker_func)
+                job_details.update_table_row(self._table, job_details.dbkey - 1)
             status_vect[job_details.status] += 1
             
         sys.stdout.write("!\n")
         sys.stdout.flush()
         sys.stdout.write("Summary:\n")
-        sys.stdout.write("  no_job:   %i\n"%status_vect[0])
-        sys.stdout.write("  pending:  %i\n"%status_vect[1])
-        sys.stdout.write("  running:  %i\n"%status_vect[2])
-        sys.stdout.write("  done:     %i\n"%status_vect[3])
-        sys.stdout.write("  failed:   %i\n"%status_vect[4])
+        sys.stdout.write("  Unknown:   %i\n"%status_vect[JobStatus.unknown])
+        sys.stdout.write("  Not Ready: %i\n"%status_vect[JobStatus.not_ready])
+        sys.stdout.write("  Ready:     %i\n"%status_vect[JobStatus.ready])
+        sys.stdout.write("  Pending:   %i\n"%status_vect[JobStatus.pending])
+        sys.stdout.write("  Running:   %i\n"%status_vect[JobStatus.running])
+        sys.stdout.write("  Done:      %i\n"%status_vect[JobStatus.done])
+        sys.stdout.write("  Failed:    %i\n"%status_vect[JobStatus.failed])
+        sys.stdout.write("  Partial:   %i\n"%status_vect[JobStatus.partial_failed])
 
     @staticmethod
     def get_archive():

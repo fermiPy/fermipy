@@ -16,7 +16,7 @@ import copy
 from collections import OrderedDict
 
 from fermipy.jobs.file_archive import FileDict, FileStageManager
-from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails
+from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails, JOB_STATUS_STRINGS
 
 
 def extract_arguments(args, defaults, mapping):
@@ -79,6 +79,8 @@ def check_files(filelist,
         if fname is None:
             none_count += 1
             continue
+        if fname[0] == '@':
+            fname = fname[1:]
         if os.path.exists(fname):
             found.append(fname)
             continue
@@ -279,11 +281,15 @@ class Link(object):
         if scratch_dir is not None:
             self._file_stage = FileStageManager(scratch_dir, '.')
 
-    def get_failed_jobs(self):
+    def get_failed_jobs(self, fail_running=False):
         """Return a dictionary with the subset of jobs that are marked as failed"""
         failed_jobs = {}
         for job_key, job_details in self.jobs.items():
             if job_details.status == JobStatus.failed:
+                failed_jobs[job_key] = job_details
+            elif job_details.status == JobStatus.partial_failed:
+                failed_jobs[job_key] = job_details
+            elif fail_running and job_details.status == JobStatus.running:
                 failed_jobs[job_key] = job_details
         return failed_jobs
 
@@ -365,6 +371,18 @@ class Link(object):
         """
         command_template = self.command_template()
         format_dict = self.args.copy()
+        
+        for key, value in format_dict.items():
+            # protect whitespace
+            if isinstance(value, list) and key == 'args':
+                outstr = ""
+                for lval in list:
+                    outstr += ' '
+                    outstr += lval
+                format_dict[key] = '"%s"'%outstr
+            elif isinstance(value, str) and value.find(' ') >= 0 and key != 'args':
+                format_dict[key] = '"%s"'%value
+
         command = command_template.format(**format_dict)
         return command
 
@@ -413,7 +431,8 @@ class Link(object):
             if dry_run:
                 pass
             else:
-                return False
+                pass
+                #return False
         return True
 
     def set_file_stage(self, file_stage):
@@ -458,6 +477,9 @@ class Link(object):
         if self._file_stage is not None and stage_files:
             self.stage_output_files(output_file_mapping, dry_run)
         self.finalize(dry_run)
+        if dry_run:
+            return
+        self.write_status_to_log(stream, JobStatus.done)
 
     def run_command(self, stream=sys.stdout, dry_run=False):
         """Runs the command for this link.  This method can be overridden by
@@ -478,6 +500,27 @@ class Link(object):
         else:
             os.system(command)
 
+    def register_self(self, logfile, key="__top__", status=JobStatus.unknown):
+        """Runs this link, captures output to logfile, 
+        and records the job in self.jobs"""
+        if self.jobs.has_key(key):
+            job_details = self.jobs[key]
+        else:
+            job_details = self.register_job(key, self.args, logfile, status)
+
+        self.register_job(key, self.args, logfile, status)
+
+
+    def write_status_to_log(self, stream=sys.stdout, status=JobStatus.unknown):
+        """
+        """
+        stream.write("Timestamp: %i\n"%get_timestamp())
+        if status == JobStatus.no_job:
+            stream.write("No Job\n")
+        else:
+            stream.write("%s\n"%JOB_STATUS_STRINGS[status])
+
+
     def run(self, stream=sys.stdout, dry_run=False):
         """Runs this link.
 
@@ -494,6 +537,7 @@ class Link(object):
             Print command but do not run it
         """
         self.run_link(stream, dry_run)
+        
 
     def command_template(self):
         """Build and return a string that can be used as a template invoking
@@ -506,6 +550,7 @@ class Link(object):
         arg_string = ""
         flag_string = ""
         # Loop over the key, value pairs in self.args
+
         for key, val in self.args.items():
             # Check if the value is set in self._options
             # If so, get the value from there
@@ -515,7 +560,7 @@ class Link(object):
                 opt_val = val
             opt_type = self._options[key][2]
             if key == 'args':
-                # 'args' is special, pull it out and move it to the back
+                # 'args' is special, pull it out and move it to the back                
                 arg_string += ' {%s}' % key
             elif opt_type is bool:
                 if opt_val:
@@ -627,14 +672,14 @@ class Link(object):
 
     def stage_input_files(self, file_mapping, dry_run=True):
         """Stage the input files to the scratch area and adjust the arguments accordingly"""
-        print ("Staging input ", file_mapping)
+        #print ("Staging input ", file_mapping)
         if self._file_stage is None:
             return
         self._file_stage.copy_to_scratch(file_mapping, dry_run)
 
     def stage_output_files(self, file_mapping, dry_run=True):
         """Stage the input files to the scratch area and adjust the arguments accordingly"""
-        print ("Staging output ", file_mapping)
+        #print ("Staging output ", file_mapping)
         if self._file_stage is None:
             return
         self._file_stage.copy_from_scratch(file_mapping, dry_run)
@@ -648,7 +693,8 @@ class Link(object):
                 os.remove(rmfile)
         for gzfile in self.files.gzip_files:
             if dry_run:
-                print ("gzip %s" % gzfile)
+                #print ("gzip %s" % gzfile)
+                pass
             else:
                 os.system('gzip -9 %s' % gzfile)
 
