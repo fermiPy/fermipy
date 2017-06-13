@@ -43,6 +43,8 @@ setup(
         'fermipy-srcmaps-catalog-sg = fermipy.diffuse.job_library:invoke_sg_gtsrcmaps_catalog',
         'fermipy-split-and-bin = fermipy.diffuse.gt_split_and_bin:main_single',
         'fermipy-split-and-bin-sg = fermipy.diffuse.gt_split_and_bin:main_batch',
+        'fermipy-split-and-mktime = fermipy.diffuse.gt_split_and_mktime:main_single',
+        'fermipy-split-and-mktime-sg = fermipy.diffuse.gt_split_and_mktime:main_batch',
         'fermipy-coadd-split = fermipy.diffuse.gt_coadd_split:main',
         'fermipy-srcmaps-diffuse = fermipy.diffuse.gt_srcmap_partial:main_single',
         'fermipy-srcmaps-diffuse-sg = fermipy.diffuse.gt_srcmap_partial:main_batch',
