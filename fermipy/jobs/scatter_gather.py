@@ -25,7 +25,7 @@ from fermipy.jobs.chain import add_argument, extract_arguments, Link
 
 
 ACTIONS = ['run', 'resubmit', 'init',
-           'scatter', 'gather', 'check_status', 'config']
+           'scatter', 'gather', 'check_status', 'config', 'skip']
 
 
 def remove_file(filepath, dry_run=False):
@@ -616,6 +616,9 @@ class ScatterGather(Link):
             sys.stderr.write(
                 "Unrecognized action %s, options are %s\n" % (args.action, ACTIONS))
 
+        if args.action == 'skip':
+            return JobStatus.no_job
+            
         if args.action in ['run', 'resubmit', 'init',
                            'scatter', 'gather', 'check_status', 'config']:
             self.build_configs(args.__dict__)
@@ -721,7 +724,7 @@ class ScatterGather(Link):
         else:
             return JobStatus.done
 
-    def run(self, stream=sys.stdout, dry_run=False):
+    def run(self, stream=sys.stdout, dry_run=False, stage_files=True):
         argv = self.make_argv()
         if dry_run:
             argv.append('--dry_run')

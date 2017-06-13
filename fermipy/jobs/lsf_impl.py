@@ -23,12 +23,14 @@ def get_lsf_status():
                     'NJOB': 0,
                     'UNKNWN': 0}
 
-    subproc = subprocess.Popen(['bjobs'],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    subproc.stderr.close()
-
-    output = subproc.stdout.readlines()
+    try:
+        subproc = subprocess.Popen(['bjobs'],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        subproc.stderr.close()
+        output = subproc.stdout.readlines()
+    except OSError:
+        return status_count
 
     for line in output[1:]:
         line = line.strip().split()

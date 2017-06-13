@@ -495,6 +495,8 @@ class DiffuseComponentChain(Chain):
         link_srcmaps = create_sg_srcmap_partial(linkname="%s.srcmaps"%linkname)
 
         link_vstack_srcmaps = create_sg_vstack_diffuse(linkname="%s.vstack"%linkname)
+        parser = argparse.ArgumentParser(usage='fermipy-diffuse-chain',
+                                         description="Run diffuse component analysis setup")
 
         Chain.__init__(self, linkname,
                        appname='fermipy-diffuse-chain',
@@ -502,16 +504,7 @@ class DiffuseComponentChain(Chain):
 #                              link_vstack_srcmaps],
                        links=[link_srcmaps,link_vstack_srcmaps],
                        options=DiffuseComponentChain.default_options.copy(),
-                       parser=DiffuseComponentChain._make_parser())
-
-    @staticmethod
-    def _make_parser():
-        """Make an argument parser for this chain """
-        usage = "FIXME [options]"
-        description = "Run diffuse component analysis"
-
-        parser = argparse.ArgumentParser(usage=usage, description=description)
-        return parser
+                       parser=parser)
 
     def run_argparser(self, argv):
         """Initialize a link with a set of arguments using argparser

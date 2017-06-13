@@ -53,6 +53,7 @@ setup(
         'fermipy-assemble-model-sg = fermipy.diffuse.gt_assemble_model:main_batch',
         'fermipy-residual-cr = fermipy.diffuse.residual_cr:main_single',
         'fermipy-residual-cr-sg = fermipy.diffuse.residual_cr:main_batch',
+        'fermipy-catalog-chain = fermipy.diffuse.catalog_src_manager:main_chain',
         'fermipy-diffuse-chain = fermipy.diffuse.diffuse_src_manager:main_chain',
         'fermipy-gtexphpsun-sg = fermipy.diffuse.solar:invoke_sg_Gtexphpsun',
         'fermipy-gtsuntemp-sg = fermipy.diffuse.solar:invoke_sg_Gtsuntemp',
