@@ -288,20 +288,13 @@ class CatalogComponentChain(Chain):
         link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
                                                          appname='fermipy-merge-srcmaps-sg')
 
+        parser = argparse.ArgumentParser(usage='fermipy-catalog-chain',
+                                         description="Run catalog component analysis setup")
         Chain.__init__(self, linkname,
-                       appname='FIXME',
+                       appname='fermipy-catalog-chain',
                        links=[link_srcmaps_catalogs, link_srcmaps_composite],
                        options=CatalogComponentChain.default_options.copy(),
-                       parser=CatalogComponentChain._make_parser())
-
-    @staticmethod
-    def _make_parser():
-        """Make an argument parser for this chain """
-        usage = "FIXME [options]"
-        description = "Run diffuse component analysis"
-
-        parser = argparse.ArgumentParser(usage=usage, description=description)
-        return parser
+                       parser=parser)
 
     def run_argparser(self, argv):
         """Initialize a link with a set of arguments using argparser

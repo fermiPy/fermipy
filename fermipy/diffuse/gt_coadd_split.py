@@ -28,6 +28,8 @@ class CoaddSplit(Chain):
         """C'tor
         """
         self.comp_dict = comp_dict
+        parser = argparse.ArgumentParser(usage="fermipy-coadd-split [options]",
+                                         description="Merge a set of counts cube files")
         Chain.__init__(self, linkname,
                        links=[],
                        options=dict(comp=diffuse_defaults.diffuse['binning_yaml'],
@@ -38,7 +40,7 @@ class CoaddSplit(Chain):
                                     dry_run=(False, 'Print commands but do not run them', bool)),
                        appname='fermipy-coadd-split',
                        argmapper=self._map_arguments,
-                       parser=CoaddSplit._make_parser())
+                       parser=parser)
         if comp_dict is not None:
             self.update_links(comp_dict)
 
@@ -50,15 +52,6 @@ class CoaddSplit(Chain):
         links_to_add += self._make_coadd_links(do_ltsum)
         for link in links_to_add:
             self.add_link(link)
-
-    @staticmethod
-    def _make_parser():
-        """Make an argument parser for this chain """
-        usage = "fermipy-coadd-split [options]"
-        description = "Merge a set of counts cube files"
-
-        parser = argparse.ArgumentParser(usage=usage, description=description)
-        return parser
 
     def _make_coadd_links(self, do_ltsum):
         """Make the links to run fermipy-coadd for each energy bin X psf type

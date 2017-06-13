@@ -53,33 +53,22 @@ class GtSrcmapPartial(object):
     def __init__(self, **kwargs):
         """C'tor
         """
-        self.parser = GtSrcmapPartial._make_parser()
-        self.link = GtSrcmapPartial._make_link(**kwargs)
+        parser = argparse.ArgumentParser(usage="fermipy-srcmaps-diffuse [options]",
+                                         description="Run gtsrcmaps for one or more energy planes for a single source")
+        
+        Link.__init__(self, kwargs.pop('linkname', 'srcmaps-diffuse'),
+                      parser=parser,
+                      appname='fermipy-srcmaps-diffuse',
+                      options=GtSrcmapPartial.default_options.copy(),
+                      file_args=dict(expcube=FileFlags.input_mask,
+                                     cmap=FileFlags.input_mask,
+                                     bexpmap=FileFlags.input_mask,
+                                     srcmdl=FileFlags.input_mask,
+                                     outfile=FileFlags.output_mask))
+  
 
-    @staticmethod
-    def _make_parser():
-        """Make an argument parser for this class """
-        usage = "fermipy-srcmaps-diffuse [options]"
-        description = "Run gtsrcmaps for one or more energy planes for a single source"
-
-        parser = argparse.ArgumentParser(usage=usage, description=description)
-        for key, val in GtSrcmapPartial.default_options.items():
-            add_argument(parser, key, val)
-        return parser
-
-    @staticmethod
-    def _make_link(**kwargs):
-        link = Link(kwargs.pop('linkname', 'srcmaps-diffuse'),
-                    appname='fermipy-srcmaps-diffuse',
-                    options=GtSrcmapPartial.default_options.copy(),
-                    file_args=dict(expcube=FileFlags.input_mask,
-                                   cmap=FileFlags.input_mask,
-                                   bexpmap=FileFlags.input_mask,
-                                   srcmdl=FileFlags.input_mask,
-                                   outfile=FileFlags.output_mask))
-        return link
-
-    def run(self, argv):
+ 
+    def run_analysis(self, argv):
         """Run this analysis"""
         args = self.parser.parse_args(argv)
         obs = BinnedAnalysis.BinnedObs(irfs=args.irfs,
@@ -250,7 +239,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
 def create_link_srcmap_partial(**kwargs):
     """Build and return a `Link` object that can invoke GtAssembleModel"""
     gtsrcmap_partial = GtSrcmapPartial(**kwargs)
-    return gtsrcmap_partial.link
+    return gtsrcmap_partial
 
 def create_sg_srcmap_partial(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
@@ -278,7 +267,7 @@ def create_sg_srcmap_partial(**kwargs):
 def main_single():
     """Entry point for command line use for single job """
     gtsmp = GtSrcmapPartial()
-    gtsmp.run(sys.argv[1:])
+    gtsmp.run_analysis(sys.argv[1:])
 
 
 def main_batch():

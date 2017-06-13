@@ -206,11 +206,12 @@ class Link(object):
         self.appname = kwargs.pop('appname', linkname)
         self.mapping = kwargs.pop('mapping', {})
         self._parser = kwargs.pop('parser', None)
-        self._file_stage = kwargs.pop('file_stage', None)
         self._options = {}
         self._options.update(kwargs.pop('options', {}))
         if self._parser is not None:
             self.fill_argparser(self._parser)
+        self._file_stage = kwargs.get('file_stage', None)
+        self._job_archive = kwargs.get('job_archive', None)
         self.args = {}
         self.args.update(convert_option_dict_to_dict(self._options))
         self.files = FileDict(**kwargs)
@@ -505,12 +506,17 @@ class Link(object):
         and records the job in self.jobs"""
         if self.jobs.has_key(key):
             job_details = self.jobs[key]
+            job_details.status = status
         else:
             job_details = self.register_job(key, self.args, logfile, status)
 
-        self.register_job(key, self.args, logfile, status)
-
-
+    def archive_self(self, logfile, key="__top__", status=JobStatus.unknown):
+        """Write this link to the job archive"""
+        self.register_self(logfile, key, status)
+        if self._job_archive is None:
+            return
+        self._job_archive.register_jobs(self.get_jobs())
+            
     def write_status_to_log(self, stream=sys.stdout, status=JobStatus.unknown):
         """
         """
@@ -521,7 +527,7 @@ class Link(object):
             stream.write("%s\n"%JOB_STATUS_STRINGS[status])
 
 
-    def run(self, stream=sys.stdout, dry_run=False):
+    def run(self, stream=sys.stdout, dry_run=False, stage_files=True):
         """Runs this link.
 
         This version is intended to be overwritten by sub-classes so
@@ -536,7 +542,7 @@ class Link(object):
         dry_run : bool
             Print command but do not run it
         """
-        self.run_link(stream, dry_run)
+        self.run_link(stream, dry_run, stage_files)
         
 
     def command_template(self):
@@ -858,6 +864,12 @@ class Chain(Link):
         """Append link to this `Chain` """
         self._links[link.linkname] = link
 
+
+    def set_links_job_archive(self):
+        """Pass job_archive along to links"""
+        for link in self._links.values():
+            link._job_archive = self._job_archive
+        
     def run_chain(self, stream=sys.stdout, dry_run=False, stage_files=True):
         """Run all the links in the chain
 
@@ -875,7 +887,8 @@ class Chain(Link):
         #ok = self.pre_run_checks(stream, dry_run)
         # if not ok:
         #    return
-
+        self.set_links_job_archive()
+        
         if self._file_stage is not None:
             input_file_mapping, output_file_mapping = self.map_scratch_files(
                 self.sub_files)
@@ -887,13 +900,25 @@ class Chain(Link):
 
         for link in self._links.values():
             print ("Running link ", link.linkname)
-            link.run_link(stream=stream, dry_run=dry_run, stage_files=False)
-
+            logfile = "log_%s_top.log"%link.linkname
+            link.archive_self(logfile, status=JobStatus.unknown)
+            if dry_run:
+                outstr = sys.stdout
+            else:
+                outstr = open(logfile, 'append')
+            link.run(stream=outstr, dry_run=dry_run, stage_files=False)
+            if not dry_run:
+                outstr.close()
+            
         if self._file_stage is not None and stage_files:
             self.stage_output_files(output_file_mapping, dry_run)
 
-    def run(self, stream=sys.stdout, dry_run=False):
-        self.run_chain(stream, dry_run)
+        if self._job_archive:
+            self._job_archive.file_archive.update_file_status()
+            self._job_archive.write_table_file()
+
+    def run(self, stream=sys.stdout, dry_run=False, stage_files=True):
+        self.run_chain(stream, dry_run, stage_files)
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application

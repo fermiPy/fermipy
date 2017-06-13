@@ -72,6 +72,9 @@ class SplitAndMktime(Chain):
         """C'tor
         """
         self.comp_dict = comp_dict
+        parser = argparse.ArgumentParser(usage="fermipy-split-and-bin [options]",
+                                         description="Run gtselect and gtbin together")
+
         Chain.__init__(self, linkname,
                        appname='fermipy-split-and-mktime',
                        links=[],
@@ -86,7 +89,7 @@ class SplitAndMktime(Chain):
                                     scratch=(None, 'Scratch area', str),
                                     dry_run=(False, 'Print commands but do not run them', bool)),
                        argmapper=self._map_arguments,
-                       parser=SplitAndMktime._make_parser())
+                       parser=parser)
         if comp_dict is not None:
             self.update_links(comp_dict)
 
@@ -99,15 +102,6 @@ class SplitAndMktime(Chain):
         links_to_add += self._make_PSF_select_and_bin_links()
         for link in links_to_add:
             self.add_link(link)
-
-    @staticmethod
-    def _make_parser():
-        """Make an argument parser for this chain """
-        usage = "fermipy-split-and-bin [options]"
-        description = "Run gtselect and gtbin together"
-
-        parser = argparse.ArgumentParser(usage=usage, description=description)
-        return parser
 
     def _make_energy_select_links(self):
         """Make the links to run gtselect for each energy bin """

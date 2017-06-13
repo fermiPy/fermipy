@@ -50,32 +50,20 @@ class ResidualCRAnalysis(object):
     def __init__(self, **kwargs):
         """C'tor
         """
-        self.parser = ResidualCRAnalysis._make_parser()
-        self.link = ResidualCRAnalysis._make_link(**kwargs)
+        parser = argparse.ArgumentParser(usage='fermipy-residual-cr',
+                                         description="Compute the residual cosmic-ray contamination.")
 
-    @staticmethod
-    def _make_parser():
-        """Make an argument parser for this class """
-        usage = "usage: %(prog)s [options] "
-        description = "Compute the residual cosmic-ray contamination."
+        Link.__init__(self, kwargs.pop('linkname', 'residual_cr'),
+                      appname='fermipy-residual-cr',
+                      parser=parser,
+                      options=ResidualCRAnalysis.default_options.copy(),
+                      file_args=dict(ccube_dirty=FileFlags.input_mask,
+                                     bexpcube_dirty=FileFlags.input_mask,
+                                     ccube_clean=FileFlags.input_mask,
+                                     bexpcube_clean=FileFlags.input_mask,
+                                     outfile=FileFlags.output_mask),
+                      **kwargs)
 
-        parser = argparse.ArgumentParser(usage=usage, description=description)
-        for key, val in ResidualCRAnalysis.default_options.items():
-            add_argument(parser, key, val)
-        return parser
-
-    @staticmethod
-    def _make_link(**kwargs):
-        link = Link(kwargs.pop('linkname', 'residual_cr'),
-                    appname='fermipy-residual-cr',
-                    options=ResidualCRAnalysis.default_options.copy(),
-                    file_args=dict(ccube_dirty=FileFlags.input_mask,
-                                   bexpcube_dirty=FileFlags.input_mask,
-                                   ccube_clean=FileFlags.input_mask,
-                                   bexpcube_clean=FileFlags.input_mask,
-                                   outfile=FileFlags.output_mask),
-                    **kwargs)
-        return link
 
     @staticmethod
     def _match_cubes(ccube_clean, ccube_dirty,
@@ -497,6 +485,9 @@ class ResidualCRChain(Chain):
 
         options = diffuse_defaults.residual_cr.copy()
         options['dry_run'] = (False, 'Print commands but do not run', bool)
+
+        parser = argparse.ArgumentParser(usage='fermipy-residual-cr-chain',
+                                         description="Run residual cosmic-ray analysis chain")
         Chain.__init__(self, linkname,
                        appname='FIXME',
                        links=[link_sb_clean, link_sb_dirty,
@@ -504,16 +495,7 @@ class ResidualCRChain(Chain):
                               link_cr_analysis],
                        options=options,
                        argmapper=self._map_arguments,
-                       parser=ResidualCRChain._make_parser())
-
-    @staticmethod
-    def _make_parser():
-        """Make an argument parser for this chain """
-        usage = "FIXME [options]"
-        description = "Run residual cosmic-ray analysis"
-
-        parser = argparse.ArgumentParser(usage=usage, description=description)
-        return parser
+                       parser=parser)
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
