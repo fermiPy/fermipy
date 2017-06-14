@@ -134,7 +134,7 @@ with the ``SpatialMap`` type.
         SpatialModel: 'RadialGaussian', SpatialWidth: 1.0 }
        - { name: 'MapSource', glon : 120.0, glat : 0.0, 
         SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
-        SpatialModel: 'SpatialTemplate', file : 'template.fits' }
+        SpatialModel: 'SpatialTemplate', Spatial_Filename : 'template.fits' }
         
 
 
