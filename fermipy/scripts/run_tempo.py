@@ -64,6 +64,9 @@ def phase_ft1(ft1file, outfile, logFile, ft2file, ephemfile, dry_run=False):
 
 
 def phase_merit(meritFile, outfile, logFile, ft2file, ephemfile, dry_run=False):
+
+    import ROOT
+    
     nevent_chunk = 30000  # number of events to process per chunk
     mergeChain = ROOT.TChain('MeritTuple')
 
@@ -165,18 +168,18 @@ def main():
 
     for infile, outfile in zip(input_files,output_files):
 
-        staged_infile = os.path.join(tmpdir,os.path.basename(x))
-        logFile = os.path.splitext(x)[0] + '_tempo2.log'
+        staged_infile = os.path.join(tmpdir,os.path.basename(infile))
+        logFile = os.path.splitext(infile)[0] + '_tempo2.log'
 
         print('cp %s %s' % (infile, staged_infile))
         os.system('cp %s %s' % (infile, staged_infile))
 
-        if not re.search('\.root?', x) is None:
+        if not re.search('\.root?', infile) is None:
             phase_merit(staged_infile, outfile, logFile, ft2_file, par_file, args.dry_run)
-        elif not re.search('\.fits?', x) is None:
+        elif not re.search('\.fits?', infile) is None:
             phase_ft1(staged_infile, outfile, logFile, ft2_file, par_file, args.dry_run)
         else:
-            print('Unrecognized file extension: ', x)
+            print('Unrecognized file extension: ', infile)
 
     os.chdir(cwd)
     shutil.rmtree(tmpdir)

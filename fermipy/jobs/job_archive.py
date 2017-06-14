@@ -369,7 +369,7 @@ class JobArchive(object):
 
     def __getitem__(self, fullkey):
         """ Return the `JobDetails` matching fullkey"""
-        return self._cache[key]
+        return self._cache[fullkey]
 
     @property
     def table_file(self):
@@ -504,7 +504,7 @@ class JobArchive(object):
         if self._table_ids is None:
             raise RuntimeError("No ID table to write")
         if job_table_file is not None:
-            self._table_file = table_file
+            self._table_file = job_table_file
         if self._table_file is None:
             raise RuntimeError("No output file specified for table")           
         write_tables_to_fits(self._table_file, [self._table, self._table_ids], clobber=True,

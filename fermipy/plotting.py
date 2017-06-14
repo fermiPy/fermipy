@@ -383,7 +383,6 @@ class ROIPlotter(fermipy.config.Configurable):
             self._wcs = self._wcsproj.wcs
             self._mapping = hpx_utils.HpxToWcsMapping(
                 self._proj, self._wcsproj)
-            self._data = dataT.T
         else:
             raise Exception(
                 "Can't make ROIPlotter of unknown projection type %s" % type(data_map))
@@ -1245,66 +1244,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                      prefix, esuffix, fmt)))
 
         plt.close(fig)
-
-    def make_components_plots(self, gta, mcube_maps, prefix, loge_bounds=None, **kwargs):
-
-        figx = plt.figure('xproj')
-        figy = plt.figure('yproj')
-
-        colors = ['k', 'b', 'g', 'r']
-        data_style = {'marker': 's', 'linestyle': 'None'}
-
-        roi_kwargs = copy.deepcopy(self.config)
-        roi_kwargs['loge_bounds'] = loge_bounds
-
-        if loge_bounds is None:
-            loge_bounds = (gta.log_energies[0], gta.log_energies[-1])
-        esuffix = '_%.3f_%.3f' % (loge_bounds[0], loge_bounds[1])
-
-        for i, c in enumerate(gta.components):
-            fig = plt.figure()
-            p = ROIPlotter(mcube_maps[i + 1], roi=gta.roi, **roi_kwargs)
-
-            mcube_data = p.data
-
-            p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
-            plt.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                     '%s_model_map%s_%02i.%s' % (
-                                         prefix, esuffix, i, fmt)))
-            plt.close(fig)
-
-            plt.figure(figx.number)
-            p = ROIPlotter(c.counts_map(), roi=gta.roi, **roi_kwargs)
-            p.plot_projection(0, color=colors[i % 4], label='Component %i' % i,
-                              **data_style)
-
-            p.plot_projection(0, data=mcube_data,
-                              color=colors[i % 4], noerror=True,
-                              label='__nolegend__')
-
-            plt.figure(figy.number)
-            p.plot_projection(1, color=colors[i % 4], label='Component %i' % i,
-                              **data_style)
-
-            p.plot_projection(1, data=mcube_data,
-                              color=colors[i % 4], noerror=True,
-                              label='__nolegend__')
-
-        plt.figure(figx.number)
-        ROIPlotter.setup_projection_axis(0)
-        annotate(loge_bounds=loge_bounds)
-        figx.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                  '%s_counts_map_comp_xproj%s.%s' % (
-                                      prefix, esuffix, fmt)))
-
-        plt.figure(figy.number)
-        ROIPlotter.setup_projection_axis(1)
-        annotate(loge_bounds=loge_bounds)
-        figy.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                  '%s_counts_map_comp_yproj%s.%s' % (
-                                      prefix, esuffix, fmt)))
-        plt.close(figx)
-        plt.close(figy)
 
     def make_sed_plots(self, sed, **kwargs):
 

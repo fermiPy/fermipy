@@ -10,7 +10,7 @@ from fermipy.utils import mkdir
 __all__ = [
     'check_log',
     'get_lsf_status',
-    'dispatch_jobs',
+    'dispatch_job',
 ]
 
 
