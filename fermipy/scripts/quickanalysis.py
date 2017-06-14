@@ -26,7 +26,7 @@ def run_analysis(config):
     gta.localize(srcname)
     gta.sed(srcname)
 
-    gta.write_roi('roi')
+    gta.write_roi('roi',make_plots=True)
     gta.tsmap(make_plots=True)
     gta.residmap(make_plots=True)
 
