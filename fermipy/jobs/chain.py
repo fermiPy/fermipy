@@ -425,7 +425,7 @@ class Link(object):
                 raise OSError("Input files are missing: %s" % input_missing)
 
         output_found, output_missing = self.check_output_files()
-        if len(output_missing) == 0:
+        if len(output_missing) == 0 and len(output_found) > 0:
             stream.write("All output files for %s already exist: %i %i %i\n" %
                          (self.linkname, len(output_found),
                           len(output_missing), len(self.files.output_files)))
@@ -481,6 +481,7 @@ class Link(object):
         if dry_run:
             return
         self.write_status_to_log(stream, JobStatus.done)
+        self.set_status_self(status=JobStatus.done)
 
     def run_command(self, stream=sys.stdout, dry_run=False):
         """Runs the command for this link.  This method can be overridden by
@@ -516,10 +517,19 @@ class Link(object):
         if self._job_archive is None:
             return
         self._job_archive.register_jobs(self.get_jobs())
-            
+
+    def set_status_self(self, key="__top__", status=JobStatus.unknown):
+        """ Set the status of this job """
+        fullkey = JobDetails.make_fullkey(key, self.linkname)
+        if self.jobs.has_key(fullkey):
+            self.jobs[fullkey].status = status            
+            if self._job_archive:
+                self._job_archive.register_job(self.jobs[fullkey])
+        else:
+            raise KeyError("No key %s"%fullkey)
+
     def write_status_to_log(self, stream=sys.stdout, status=JobStatus.unknown):
-        """
-        """
+        """ Write the status of this job to a log stream """
         stream.write("Timestamp: %i\n"%get_timestamp())
         if status == JobStatus.no_job:
             stream.write("No Job\n")
@@ -743,12 +753,16 @@ class Chain(Link):
             Function that maps input options (in self._options) to the
             format that is passed to the links in the chains.
         """
-        Link.__init__(self, linkname, **kwargs)
+        options = kwargs.pop('options', {})
+        options['link'] = (None, 'Name of link to run', str)
+        options['list'] = (False, 'List links', bool)
+        Link.__init__(self, linkname, options=options, **kwargs)
         self._argmapper = kwargs.get('argmapper', None)
         self.update_options(self.args.copy())
         self._links = OrderedDict()
         for link in links:
             self._links[link.linkname] = link
+        self.set_links_job_archive()
 
     @property
     def links(self):
@@ -887,6 +901,12 @@ class Chain(Link):
         #ok = self.pre_run_checks(stream, dry_run)
         # if not ok:
         #    return
+        if self.args['list']:
+            sys.stdout.write("Links: \n")
+            for linkname in self._links.keys():
+                sys.stdout.write(" %s\n"%linkname)
+            return
+
         self.set_links_job_archive()
         
         if self._file_stage is not None:
@@ -898,7 +918,10 @@ class Chain(Link):
                     output_file_mapping, dry_run)
                 self.stage_input_files(input_file_mapping, dry_run)
 
-        for link in self._links.values():
+        link_to_run = self.args['link']
+        for linkname, link in self._links.items():
+            if link_to_run != 'None' and linkname != link_to_run:
+                continue
             print ("Running link ", link.linkname)
             logfile = "log_%s_top.log"%link.linkname
             link.archive_self(logfile, status=JobStatus.unknown)

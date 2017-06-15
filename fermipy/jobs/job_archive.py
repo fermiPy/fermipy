@@ -341,7 +341,7 @@ class JobDetails(object):
     def update_table_row(self, table, row_idx):
         """Add this instance as a row on a `astropy.table.Table` """
         table[row_idx]['timestamp'] = self.timestamp
-        table[row_idx]['status'] = status=self.status
+        table[row_idx]['status'] = self.status
 
     def check_status_logfile(self, checker_func):
         """Check on the status of this particular job using the logfile"""
@@ -445,15 +445,16 @@ class JobArchive(object):
         """Register a job in this `JobArchive` """
         # check to see if the job already exists
         try:
-            job_details = self.get_details(job_details.jobname,
-                                           job_details.jobkey)
-            raise KeyError("Job %s:%s already exists in archive" % (job_details.jobname,
-                                                                    job_details.jobkey))
-        except KeyError:
-            pass
-        job_details.dbkey = len(self._table) + 1
-        job_details.get_file_ids(self._file_archive, creator=job_details.dbkey)
-        job_details.append_to_tables(self._table, self._table_ids)
+            job_details_old = self.get_details(job_details.jobname,
+                                               job_details.jobkey)
+            if job_details_old.status < JobStatus.pending:
+                job_details_old.status = job_details.status
+                job_details_old.update_table_row(self._table, job_details_old.dbkey - 1)
+            job_details = job_details_old
+        except KeyError:            
+            job_details.dbkey = len(self._table) + 1
+            job_details.get_file_ids(self._file_archive, creator=job_details.dbkey)
+            job_details.append_to_tables(self._table, self._table_ids)
         self._table_id_array = self._table_ids['file_id'].data
         self._cache[job_details.fullkey] = job_details
         return job_details
@@ -461,7 +462,7 @@ class JobArchive(object):
     def register_jobs(self, job_dict):
         """Register a bunch of jobs in this archive"""
         njobs = len(job_dict)
-        sys.stdout.write("Registering %i total jobs: \n" % njobs)
+        sys.stdout.write("Registering %i total jobs: " % njobs)
         for i, job_details in enumerate(job_dict.values()):
             if i % 10 == 0:
                 sys.stdout.write('.')
@@ -528,13 +529,14 @@ class JobArchive(object):
         """Update the status of all the jobs in the archive"""
         njobs = len(self.cache.keys())
         status_vect = np.zeros((8), int)
-        print ("Updating status of %i jobs: "%njobs)
+        sys.stdout.write("Updating status of %i jobs: "%njobs)
+        sys.stdout.flush()
         for i, key in enumerate(self.cache.keys()):
             if i % 200 == 0:
                 sys.stdout.write('.')
                 sys.stdout.flush()
             job_details = self.cache[key]
-            if job_details.status >= JobStatus.pending:
+            if job_details.status in [JobStatus.pending, JobStatus.running]:
                 job_details.check_status_logfile(checker_func)
                 job_details.update_table_row(self._table, job_details.dbkey - 1)
             status_vect[job_details.status] += 1
@@ -577,12 +579,15 @@ def main_browse():
                         type=str, default=os.path.abspath('.'), help="File archive base path")
     
     args = parser.parse_args(sys.argv[1:])    
-    JobArchive.build_archive(**args.__dict__)
+    ja = JobArchive.build_archive(**args.__dict__)
+    
+    ja.table.pprint()
 
 
 if __name__ == '__main__':
     main_browse()
-    ja = JobArchive.get_archive()
 
-    from fermipy.jobs.lsf_impl import check_log
-    ja.update_job_status(check_log)
+    
+
+    
+    

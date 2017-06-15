@@ -118,9 +118,9 @@ class ScatterGather(Link):
     """ Abstract base class to dispatch several jobs in parallel and
     collect and merge the results.
     """
-    default_init_logfile = 'init.log'
+    default_init_logfile = 'init'
     default_prefix_logfile = 'scatter'
-    default_gather_logfile = 'gather.log'
+    default_gather_logfile = 'gather'
 
     default_options = dict(action=('run', 'Action to perform', str),
                            dry_run=(
@@ -225,24 +225,24 @@ class ScatterGather(Link):
         return self._no_batch
 
     @staticmethod
-    def _make_init_logfile_name(input_config):
+    def _make_init_logfile_name(jobname, input_config):
         """ Hook to inster the name of a logfile into the input config """
         logfile = input_config.get(
-            'logfile', ScatterGather.default_init_logfile)
+            'logfile', "%s_%s.log"%(ScatterGather.default_init_logfile, jobname))
         input_config['logfile'] = logfile
 
     @staticmethod
-    def _make_scatter_logfile_name(key, job_config):
+    def _make_scatter_logfile_name(key, jobname, job_config):
         """ Hook to inster the name of a logfile into the input config """
-        logfile = job_config.get('logfile', "%s_%s.log" %
-                                 (ScatterGather.default_prefix_logfile, key))
+        logfile = job_config.get('logfile', "%s_%s_%s.log" %
+                                 (ScatterGather.default_prefix_logfile, jobname, key))
         job_config['logfile'] = logfile
 
     @staticmethod
-    def _make_gather_logfile_name(output_config):
+    def _make_gather_logfile_name(jobname, output_config):
         """ Hook to construct the name of a logfile the gatherer """
         logfile = output_config.get(
-            'logfile', ScatterGather.default_gather_logfile)
+            'logfile', "%s_%s.log"%(ScatterGather.default_gather_logfile, jobname))
         output_config['logfile'] = logfile
 
     def check_job(self, job_details):
@@ -368,10 +368,18 @@ class ScatterGather(Link):
 
             if self._job_archive is not None:
                 self._job_archive.write_table_file()
-
+ 
         if failed:
             self.print_update()
             self.print_failed()
+            self.set_status_self(status=JobStatus.partial_failed)
+        elif running:
+            self.set_status_self(status=JobStatus.running)
+        else:
+            self.set_status_self(status=JobStatus.done)
+
+        if self._job_archive is not None:
+            self._job_archive.write_table_file()
 
         return running, failed
 
@@ -414,11 +422,11 @@ class ScatterGather(Link):
         failed = False
         running = False
         for job_key, job_details in link.jobs.items():
-            if job_details.status == JobStatus.failed:
-                failed = True
-                continue
-            elif job_details.status == JobStatus.done:
-                continue
+            #if job_details.status == JobStatus.failed:
+            #    failed = True
+            #    continue
+            #elif job_details.status == JobStatus.done:
+            #    continue
             job_details.status = self.check_job(job_details)
             if job_details.status == JobStatus.failed:
                 failed = True
@@ -430,6 +438,7 @@ class ScatterGather(Link):
             elif job_details.status == JobStatus.running:
                 running = True
             link.jobs[job_key] = job_details
+            link.set_status_self(job_details.jobkey, job_details.status)
 
         return running, failed
 
@@ -672,7 +681,7 @@ class ScatterGather(Link):
         
         if self._initialize_link is not None:
             full_init_config = self._input_config.copy()
-            ScatterGather._make_init_logfile_name(full_init_config)
+            ScatterGather._make_init_logfile_name(self.linkname, full_init_config)
             logfile = full_init_config.get('logfile')
             self._initialize_link.register_job(key='init',
                                                job_config=full_init_config,
@@ -681,7 +690,7 @@ class ScatterGather(Link):
 
         for jobkey, job_config in sorted(self._job_configs.items()):
             full_job_config = self._merge_config(job_config)
-            ScatterGather._make_scatter_logfile_name(jobkey, full_job_config)
+            ScatterGather._make_scatter_logfile_name(jobkey, self.linkname, full_job_config)
             logfile = full_job_config.get('logfile')
             self._scatter_link.register_job(key=jobkey,
                                             job_config=full_job_config,
@@ -690,7 +699,7 @@ class ScatterGather(Link):
 
         if self._gather_link is not None:
             full_gather_config = self._output_config.copy()
-            ScatterGather._make_gather_logfile_name(full_gather_config)
+            ScatterGather._make_gather_logfile_name(self.linkname, full_gather_config)
             logfile = full_gather_config.get('logfile')
             self._gather_link.register_job(key='gather',
                                            job_config=full_gather_config,
@@ -765,7 +774,6 @@ class ScatterGather(Link):
         """
         if self._parser is None:
             raise ValueError('Link was not given a parser on initialization')
-        print ("run_argparser ", argv)
         args = self._parser.parse_args(argv)
         self.update_args(args.__dict__)
 

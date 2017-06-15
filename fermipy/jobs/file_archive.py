@@ -784,7 +784,8 @@ class FileArchive(object):
         """Update the status of all the files in the archive"""
         nfiles = len(self.cache.keys())
         status_vect = np.zeros((6), int)
-        print ("Updating status of %i files: "%nfiles)
+        sys.stdout.write("Updating status of %i files: "%nfiles)
+        sys.stdout.flush()    
         for i, key in enumerate(self.cache.keys()):
             if i % 200 == 0:
                 sys.stdout.write('.')
