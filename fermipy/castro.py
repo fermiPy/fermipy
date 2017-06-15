@@ -682,6 +682,11 @@ class CastroData_Base(object):
 
         return nll_val
 
+    def _buildLnLFn(self, normv, nllv):
+        """
+        """
+        return LnLFn(normv, nllv, self._norm_type)
+
     def norm_derivative(self, spec, norm):
         """
         """
@@ -1263,10 +1268,6 @@ class CastroData(CastroData_Base):
                           components[0].refSpec,
                           components[0].norm_type)
 
-    def _buildLnLFn(self, normv, nllv):
-        """
-        """
-        return LnLFn(normv, nllv, self._norm_type)
 
     def spectrum_loglike(self, specType, params, scale=1E3):
         """ return the log-likelihood for a particular spectrum
