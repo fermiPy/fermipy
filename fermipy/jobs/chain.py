@@ -279,7 +279,7 @@ class Link(object):
         self.args = extract_arguments(override_args, self.args, self.mapping)
         self._latch_file_info()
         scratch_dir = self.args.get('scratch', None)
-        if scratch_dir is not None:
+        if scratch_dir is not None and scratch_dir != 'None':
             self._file_stage = FileStageManager(scratch_dir, '.')
 
     def get_failed_jobs(self, fail_running=False):
@@ -293,6 +293,41 @@ class Link(object):
             elif fail_running and job_details.status == JobStatus.running:
                 failed_jobs[job_key] = job_details
         return failed_jobs
+
+
+    def check_job_status(self, key='__top__', fail_running=False):
+        """Check the status of a particular job"""
+        fullkey = JobDetails.make_fullkey(key, self.linkname)
+        return self.jobs[fullkey].status
+
+    def check_jobs_status(self, fail_running=False):
+        """Check the status of all the jobs run from this link """
+        n_failed = 0
+        n_passed = 0
+        n_total = 0
+        for job_key, job_details in self.jobs.items():
+            n_total +=1
+            if job_details.status == JobStatus.failed:
+                n_failed += 1
+            elif job_details.status == JobStatus.partial_failed:
+                n_failed += 1
+            elif fail_running and job_details.status == JobStatus.running:
+                n_failed += 1
+            elif job_details.status == JobStatus.done:
+                n_passed +=1
+
+        if n_failed > 0:
+            if n_passed > 0:
+                return JobStatus.partial_failed
+            else:
+                return JobStatus.failed
+        elif n_passed == n_total:
+            return JobStatus.done
+        elif n_passed > 0:
+            return JobStatus.running
+
+        return JobStatus.pending
+       
 
     def get_jobs(self, recursive=True):
         """Return a dictionary with all the jobs
@@ -500,6 +535,7 @@ class Link(object):
             stream.write("%s\n" % command)
             stream.flush()
         else:
+            print(command)
             os.system(command)
 
     def register_self(self, logfile, key="__top__", status=JobStatus.unknown):
@@ -522,7 +558,7 @@ class Link(object):
         """ Set the status of this job """
         fullkey = JobDetails.make_fullkey(key, self.linkname)
         if self.jobs.has_key(fullkey):
-            self.jobs[fullkey].status = status            
+            self.jobs[fullkey].status = status          
             if self._job_archive:
                 self._job_archive.register_job(self.jobs[fullkey])
         else:
@@ -884,7 +920,44 @@ class Chain(Link):
         for link in self._links.values():
             link._job_archive = self._job_archive
         
-    def run_chain(self, stream=sys.stdout, dry_run=False, stage_files=True):
+    def check_links_status(self, fail_running=False):
+        """Check the status of all the links"""
+        n_failed = 0
+        n_passed = 0
+        n_total = 0        
+        for linkname, link in self._links.items():
+            link_status = link.check_job_status(fail_running=fail_running)
+            print ("Link status", linkname, link_status)
+            n_total +=1
+            if link_status == JobStatus.failed:
+                n_failed += 1
+            elif link_status == JobStatus.partial_failed:
+                n_failed += 1
+            elif fail_running and link_status == JobStatus.running:
+                n_failed += 1
+            elif link_status == JobStatus.done:
+                n_passed +=1
+
+        print (n_failed, n_passed, n_total)
+        if n_failed > 0:
+            if n_passed > 0:
+                return JobStatus.partial_failed
+            else:
+                return JobStatus.failed
+        elif n_passed == n_total:
+            return JobStatus.done
+        elif n_passed > 0:
+            return JobStatus.running
+
+ 
+        return JobStatus.pending
+       
+
+    def run_chain(self,
+                  stream=sys.stdout,
+                  dry_run=False,
+                  stage_files=True,
+                  sub_logs=False):
         """Run all the links in the chain
 
         Parameters
@@ -897,14 +970,17 @@ class Chain(Link):
 
         stage_files : bool
             Stage files to and from the scratch area
+
+        sub_logs : bool
+            Write seperate log files for each link
         """
         #ok = self.pre_run_checks(stream, dry_run)
         # if not ok:
         #    return
         if self.args['list']:
-            sys.stdout.write("Links: \n")
+            stream.write("Links: \n")
             for linkname in self._links.keys():
-                sys.stdout.write(" %s\n"%linkname)
+                stream.write(" %s\n"%linkname)
             return
 
         self.set_links_job_archive()
@@ -919,22 +995,38 @@ class Chain(Link):
                 self.stage_input_files(input_file_mapping, dry_run)
 
         link_to_run = self.args['link']
+
         for linkname, link in self._links.items():
-            if link_to_run != 'None' and linkname != link_to_run:
+            if (link_to_run == 'None') or (link_to_run is None) or (linkname == link_to_run):
+                pass
+            else:
                 continue
             print ("Running link ", link.linkname)
             logfile = "log_%s_top.log"%link.linkname
             link.archive_self(logfile, status=JobStatus.unknown)
+            close_file = False
             if dry_run:
                 outstr = sys.stdout
-            else:
+            elif sub_logs:
                 outstr = open(logfile, 'append')
+                close_file = True
+            else:
+                outstr = stream
             link.run(stream=outstr, dry_run=dry_run, stage_files=False)
-            if not dry_run:
+            link_status = link.check_jobs_status()
+            link.set_status_self(status=link_status)
+                        
+            outstr.write("Link status: %i %s\n"%(link_status, link.linkname))
+            print(self.jobs)
+            if close_file:
                 outstr.close()
             
         if self._file_stage is not None and stage_files:
             self.stage_output_files(output_file_mapping, dry_run)
+
+        chain_status = self.check_links_status()
+        print ("Chain status %i"%(chain_status))
+        self.set_status_self(status=chain_status)
 
         if self._job_archive:
             self._job_archive.file_archive.update_file_status()
@@ -958,7 +1050,7 @@ class Chain(Link):
         remapped = self.map_arguments(override_args)
 
         scratch_dir = self.args.get('scratch', None)
-        if scratch_dir is not None:
+        if scratch_dir is not None and scratch_dir != 'None':
             self._file_stage = FileStageManager(scratch_dir, '.')
         for link in self._links.values():
             link.update_args(remapped)

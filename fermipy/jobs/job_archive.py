@@ -47,6 +47,7 @@ class JobStatus(object):
     done = 5              # Job is successfully completed
     failed = 6            # Job failed
     partial_failed = 7    # Some sub-jobs have failed
+    removed = 8           # Job marked as removed
 
 
 JOB_STATUS_STRINGS = ["Unknown",
@@ -340,8 +341,12 @@ class JobDetails(object):
 
     def update_table_row(self, table, row_idx):
         """Add this instance as a row on a `astropy.table.Table` """
-        table[row_idx]['timestamp'] = self.timestamp
-        table[row_idx]['status'] = self.status
+        try:
+            table[row_idx]['timestamp'] = self.timestamp
+            table[row_idx]['status'] = self.status
+        except IndexError:
+            print("Index error", len(table), row_idx)
+
 
     def check_status_logfile(self, checker_func):
         """Check on the status of this particular job using the logfile"""
@@ -447,7 +452,7 @@ class JobArchive(object):
         try:
             job_details_old = self.get_details(job_details.jobname,
                                                job_details.jobkey)
-            if job_details_old.status < JobStatus.pending:
+            if job_details_old.status <= JobStatus.running:
                 job_details_old.status = job_details.status
                 job_details_old.update_table_row(self._table, job_details_old.dbkey - 1)
             job_details = job_details_old
@@ -497,6 +502,16 @@ class JobArchive(object):
         other.update_table_row(self._table, other.dbkey - 1)
         return other
 
+    def remove_jobs(self, mask):
+        """Mark all jobs that match a mask as 'removed' """
+        jobnames = self.table[mask]['jobname']
+        jobkey =  self.table[mask]['jobkey']
+        self.table[mask]['status'] =  JobStatus.removed
+        for jobname, jobkey in zip(jobnames,jobkey):
+            fullkey = JobDetails.make_fullkey(jobkey, jobname)
+            self._cache.pop(fullkey).status = JobStatus.removed            
+        self.write_table_file()
+
     @staticmethod
     def build_temp_job_archive():
         """Build and return a `JobArchive` using defualt locations of
@@ -537,8 +552,9 @@ class JobArchive(object):
                 sys.stdout.flush()
             job_details = self.cache[key]
             if job_details.status in [JobStatus.pending, JobStatus.running]:
-                job_details.check_status_logfile(checker_func)
-                job_details.update_table_row(self._table, job_details.dbkey - 1)
+                if checker_func:
+                    job_details.check_status_logfile(checker_func)
+            job_details.update_table_row(self._table, job_details.dbkey - 1)
             status_vect[job_details.status] += 1
             
         sys.stdout.write("!\n")

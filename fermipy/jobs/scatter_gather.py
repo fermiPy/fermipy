@@ -363,6 +363,7 @@ class ScatterGather(Link):
             elif self.args['check_status_once'] or check_once:
                 self.print_update()
                 break
+
             if self.args['print_update']:
                 self.print_update()
 
@@ -427,6 +428,8 @@ class ScatterGather(Link):
             #    continue
             #elif job_details.status == JobStatus.done:
             #    continue
+            if job_key == '__top__':
+                continue
             job_details.status = self.check_job(job_details)
             if job_details.status == JobStatus.failed:
                 failed = True
@@ -632,30 +635,36 @@ class ScatterGather(Link):
                            'scatter', 'gather', 'check_status', 'config']:
             self.build_configs(args.__dict__)
 
-        if args.action in ['init', 'scatter', 'gather', 'check_status']:
+        if args.action in ['init', 'scatter', 'gather', 'check_status', 'config']:
             # This is called explicitly in run and resubmit
             self.build_job_dict()
+        
+        self.run_action(args.action, args.dry_run)
 
-        if args.action == 'run':
+
+    def run_action(self, action, dry_run):
+        """
+        """
+        if action == 'run':
             return self.run_jobs()
-        elif args.action == 'resubmit':
+        elif action == 'resubmit':
             return self.resubmit()
-        elif args.action == 'init':
+        elif action == 'init':
             return self.initialize()
-        elif args.action == 'scatter':
+        elif action == 'scatter':
             return self.submit_jobs(self.scatter_link)
-        elif args.action == 'gather':
+        elif action == 'gather':
             return self.gather_results()
-        elif args.action == 'check_status':
+        elif action == 'check_status':
             running, failed = self.check_status()
             if failed:
                 return JobStatus.failed
             elif running:
                 return JobStatus.running
-            elif self.args['dry_run']:
+            elif dry_run:
                 return JobStatus.no_job
             return JobStatus.done
-        elif args.action == 'config':
+        elif action == 'config':
             return JobStatus.done
 
     def build_job_dict(self):
@@ -734,6 +743,14 @@ class ScatterGather(Link):
             return JobStatus.done
 
     def run(self, stream=sys.stdout, dry_run=False, stage_files=True):
+        """ """
+        argv = self.make_argv()
+        if dry_run:
+            argv.append('--dry_run')
+        self.invoke(argv)
+
+    def run_link(self, stream=sys.stdout, dry_run=False, stage_files=True):
+        """ """
         argv = self.make_argv()
         if dry_run:
             argv.append('--dry_run')

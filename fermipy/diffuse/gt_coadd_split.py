@@ -23,26 +23,35 @@ NAME_FACTORY = NameFactory()
 class CoaddSplit(Chain):
     """Small class to merge counts cubes for a series of binning components
     """
+    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                           data=diffuse_defaults.diffuse['dataset_yaml'],
+                           coordsys=diffuse_defaults.diffuse['coordsys'],
+                           do_ltsum=(False, 'Sum livetime cube files', bool),
+                           nfiles=(96, 'Number of input files', int),                                    
+                           dry_run=(False, 'Print commands but do not run them', bool))
 
-    def __init__(self, linkname, comp_dict=None):
+    def __init__(self, linkname, **kwargs):
         """C'tor
         """
-        self.comp_dict = comp_dict
+        comp_file = kwargs.get('comp', None)
+        if comp_file:
+            self.comp_dict = yaml.safe_load(open(comp_file))
+        else:
+            self.comp_dict = None
+        job_archive = kwargs.get('job_archive', None)
         parser = argparse.ArgumentParser(usage="fermipy-coadd-split [options]",
                                          description="Merge a set of counts cube files")
         Chain.__init__(self, linkname,
                        links=[],
-                       options=dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                                    data=diffuse_defaults.diffuse['dataset_yaml'],
-                                    coordsys=diffuse_defaults.diffuse['coordsys'],
-                                    do_ltsum=(False, 'Sum livetime cube files', bool),
-                                    nfiles=(96, 'Number of input files', int),                                    
-                                    dry_run=(False, 'Print commands but do not run them', bool)),
+                       options=CoaddSplit.default_options.copy(),
                        appname='fermipy-coadd-split',
                        argmapper=self._map_arguments,
-                       parser=parser)
-        if comp_dict is not None:
-            self.update_links(comp_dict)
+                       parser=parser,
+                       **kwargs)
+
+        if self.comp_dict is not None:
+            self.update_links(self.comp_dict)
+        self.set_links_job_archive()
 
     def update_links(self, comp_dict, do_ltsum=False):
         """Build the links in this chain from the binning specification
@@ -126,33 +135,41 @@ class CoaddSplit(Chain):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
         datafile = input_dict.get('data')
-        if datafile is None:
+        if datafile is None or datafile == 'None':
             return None
-        NAME_FACTORY.update_base_dict(input_dict['data'])
+        NAME_FACTORY.update_base_dict(datafile)
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
         coordsys = input_dict.get('coordsys', 'GAL')
 
         num_files = input_dict.get('nfiles', 96)
         output_dict = input_dict.copy()
+        if self.comp_dict is None:
+            return output_dict
+
         for key_e, comp_e in sorted(self.comp_dict.items()):
             for mktimekey in comp_e['mktimefilters']:
-                if self.args['do_ltsum']:
-                    zkey = "zmax%i_%s" % (comp_e['zmax'], mktimekey)
-                    ltsumname = os.path.join(NAME_FACTORY.base_dict['basedir'], NAME_FACTORY.ltcube(zcut=zkey))
+                zcut = "zmax%i" % comp_e['zmax']
+                kwargs_mktime = dict(zcut=zcut,
+                                     ebin=key_e,
+                                     psftype='ALL',
+                                     coordsys=coordsys,
+                                     mktime=mktimekey)
+                if self.args['do_ltsum']:                    
+                    ltsumname = os.path.join(NAME_FACTORY.base_dict['basedir'], 
+                                             NAME_FACTORY.ltcube(**kwargs_mktime))
                     output_dict['ltsum_%s_%s' % (key_e, mktimekey)] = ltsumname
                     output_dict['ltsumlist_%s_%s' % (key_e, mktimekey)] = CoaddSplit._make_ltcube_file_list(
                         ltsumname, num_files)
                 for evtclass in comp_e['evtclasses']:
-
                     for psf_type in sorted(comp_e['psf_types'].keys()):
+                        kwargs_bin = kwargs_mktime.copy()
+                        kwargs_bin['psftype'] = psf_type
+                        kwargs_bin['evclass'] = evtclass
                         key = "%s_%s_%s_%s" % (key_e, mktimekey, evtclass, psf_type)
-                        suffix = "zmax%i_%s" % (comp_e['zmax'], key)
-                        #suffix = "mk_zmax%i_%s" % (comp_e['zmax'], key)
                         ccube_name =\
-                            os.path.basename(NAME_FACTORY.ccube(component=suffix,
-                                                                coordsys=coordsys))
+                            os.path.basename(NAME_FACTORY.ccube(**kwargs_bin))
                         binnedfile = os.path.join(outdir_base, ccube_name)
-                        output_dict['binfile_%s' % key] = os.path.join(outdir_base, ccube_name)
+                        output_dict['binfile_%s' % key] = binnedfile
                         output_dict['args_%s' % key] = CoaddSplit._make_input_file_list(
                             binnedfile, num_files)
 

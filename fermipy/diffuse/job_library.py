@@ -125,26 +125,29 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
+        datafile = args['data']
+        if datafile is None or datafile == 'None':
+            return input_config, job_configs, {}
         NAME_FACTORY.update_base_dict(args['data'])
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax
-            key = comp.make_key('{ebin_name}_{evtype_name}')
 
             for mktimekey in comp.mktimefilters:
-                for evtclass in comp.evtclasses:
-                    fullkey = "%s_%s_%s_%s"%(comp.ebin_name, mktimekey, evtclass, comp.evtype_name)
-                    fullzkey = "%s_%s"%(zcut, mktimekey)
+                for evtclass in comp.evtclasses:                    
+                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclass, zcut, mktimekey))
                     name_keys = dict(zcut=zcut,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
                                      coordsys=args['coordsys'],
                                      irf_ver=args['irf_ver'],
+                                     mktime=mktimekey,
+                                     evclass=evtclass,
                                      fullpath=True)
 
-                    outfile = NAME_FACTORY.bexpcube(**name_keys).replace(key, fullkey)
-                    cmap = NAME_FACTORY.ccube(**name_keys).replace(key, fullkey)
-                    infile = NAME_FACTORY.ltcube(**name_keys).replace(zcut, fullzkey)
+                    outfile = NAME_FACTORY.bexpcube(**name_keys)
+                    cmap = NAME_FACTORY.ccube(**name_keys)
+                    infile = NAME_FACTORY.ltcube(**name_keys)
                     job_configs[fullkey] = dict(cmap=cmap,
                                                 infile=infile,
                                                 outfile=outfile,

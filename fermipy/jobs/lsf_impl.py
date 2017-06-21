@@ -67,10 +67,8 @@ def check_log(logfile, exited='Exited with exit code',
     Returns str, one of 'Pending', 'Running', 'Done', 'Failed'
     """
     if not os.path.exists(logfile):
-        print ("No file", logfile)
         return JobStatus.pending
     if exited in open(logfile).read():
-        print("Found exit", logfile)
         return JobStatus.failed
     elif successful in open(logfile).read():
         return JobStatus.done

@@ -63,6 +63,11 @@ def create_inputlist(arglist):
     return lines
 
 
+def make_full_path(basedir, outkey, origname):
+    """Make a full file path"""
+    return os.path.join(basedir, outkey, os.path.basename(origname).replace('.fits','_%s.fits'%outkey))
+
+
 class SplitAndBin(Chain):
     """Small class to split and bin data according to some user-provided specification
     """
@@ -81,7 +86,8 @@ class SplitAndBin(Chain):
                                     hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                                     ft1file=(None, 'Input FT1 file', str),
                                     evclass=(128, 'Event class bit mask', int),
-                                    output=(None, 'Base name for output files', str),
+                                    outdir=('counts_cubes_cr', 'Base name for output files', str),
+                                    outkey=(None, 'Key for this particular output file', str),
                                     pfiles=(None, 'Directory for .par files', str),
                                     scratch=(None, 'Scratch area', str),
                                     dry_run=(False, 'Print commands but do not run them', bool)),
@@ -89,6 +95,8 @@ class SplitAndBin(Chain):
                        parser=parser)
         if comp_dict is not None:
             self.update_links(comp_dict)
+
+    
 
     def update_links(self, comp_dict):
         """Build the links in this chain from the binning specification
@@ -178,21 +186,30 @@ class SplitAndBin(Chain):
         the indiviudal links """
         if self.comp_dict is None:
             return None
-        outbase = input_dict.get('output')
-        if outbase is None:
+
+        NAME_FACTORY.update_base_dict(input_dict['data'])
+
+        coordsys = input_dict.get('coordsys')
+        outdir = input_dict.get('outdir')
+        outkey = input_dict.get('outkey')
+        if outdir is None or outkey is None:
             return None
-        binnedfile = "%s" % (outbase)
-        selectfile = binnedfile.replace('ccube', 'select')
 
         output_dict = input_dict.copy()
         for key_e, comp_e in sorted(self.comp_dict.items()):
-            suffix = "zmax%i_%s" % (comp_e['zmax'], key_e)
-            output_dict['selectfile_%s' % key_e] = selectfile.replace('_comp_', suffix)
+            zcut = "zmax%i"%comp_e['zmax']
+            kwargs_select = dict(zcut=zcut,
+                                 ebin=key_e,
+                                 psftype='ALL',
+                                 coordsys=coordsys)
+            
+            selectfile = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select))
+            output_dict['selectfile_%s' % key_e] = selectfile
             for psf_type in sorted(comp_e['psf_types'].keys()):
                 key = "%s_%s" % (key_e, psf_type)
-                suffix = "zmax%i_%s" % (comp_e['zmax'], key)
-                output_dict['selectfile_%s' % key] = selectfile.replace('_comp_', suffix)
-                output_dict['binfile_%s' % key] = binnedfile.replace('_comp_', suffix)
+                kwargs_bin = kwargs_select.copy()
+                output_dict['selectfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
+                output_dict['binfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
         return output_dict
 
     def run_argparser(self, argv):
@@ -250,6 +267,7 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
 
         NAME_FACTORY.update_base_dict(args['data'])
 
+        coordsys = input_dict.get('coordsys')
         inputfiles = create_inputlist(args['inputlist'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
 
@@ -268,19 +286,19 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
             binnedfile_gzip = binnedfile + '.gz'
             selectfile = binnedfile.replace('ccube', 'select')
             logfile = os.path.join(output_dir, 'scatter_%s.log' % key)
-            outfiles = [selectfile, binnedfile_gzip]
             job_configs[key] = dict(ft1file=infile,
                                     comp=args['comp'],
                                     hpx_order_max=args['hpx_order_max'],
-                                    output=binnedfile,
+                                    outdir=output_dir_base,
+                                    outkey=key,             
                                     logfile=logfile,
-                                    outfiles=outfiles,
                                     pfiles=output_dir)
 
         output_config = dict(comp=args['comp'],
                              data=args['data'],
                              coordsys=args['coordsys'],
                              nfiles=nfiles,
+                             link=None,
                              logfile=os.path.join(outdir_base, 'gather.log'),
                              dry_run=args['dry_run'])
 

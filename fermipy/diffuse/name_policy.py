@@ -72,25 +72,30 @@ class NameFactory(object):
     ft2file_format = 'ft2_files/ft2_{data_time}.lst'
 
     # Livetime cubes (output of gtltcube)
-    ltcube_format = 'lt_cubes/ltcube_{data_time}_{zcut}.fits'
+    ltcube_format = 'lt_cubes/ltcube_{data_time}_{mktime}_{zcut}.fits'
+    # Selected events (output of gtselect)
+    select_format = 'counts_cubes/select_{dataset}_{component}.fits'
+    # MKtime select events (output of gtmktime)
+    mktime_format = 'counts_cubes/mktime_{dataset}_{mktime}_{component}.fits'
+    
     # Counts cubes (output of gtbin)
-    ccube_format = 'counts_cubes/ccube_{dataset}_{component}_{coordsys}.fits'
+    ccube_format = 'counts_cubes/ccube_{dataset}_{mktime}_{component}_{coordsys}.fits'
     # Binned exposure cubes (output of gtexpcube2)
-    bexpcube_format = 'bexp_cubes/bexcube_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
+    bexpcube_format = 'bexp_cubes/bexcube_{dataset}_{mktime}_{component}_{coordsys}_{irf_ver}.fits'
     # Sources maps (output of gtsrcmaps)
-    srcmaps_format = 'srcmaps/srcmaps_{sourcekey}_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
+    srcmaps_format = 'srcmaps/srcmaps_{sourcekey}_{dataset}_{mktime}_{component}_{coordsys}_{irf_ver}.fits'
     # Model cubes (output of gtmodel outtype=CCUBE)
-    mcube_format = 'model_cubes/mcube_{sourcekey}_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
+    mcube_format = 'model_cubes/mcube_{sourcekey}_{dataset}_{mktime}_{component}_{coordsys}_{irf_ver}.fits'
 
     # SolarTools output files
     # gtltcubesun output (for sun)
-    ltcubesun_format = 'sunmoon/ltcube_{data_time}_{zcut}_sun.fits'
+    ltcubesun_format = 'sunmoon/ltcube_{data_time}_{mktime}_{zcut}_sun.fits'
     # gtltcubesun output (for moon)
-    ltcubemoon_format = 'sunmoon/ltcube_{data_time}_{zcut}_moon.fits'
+    ltcubemoon_format = 'sunmoon/ltcube_{data_time}_{mktime}_{zcut}_moon.fits'
     # Binned exposure cubes (output of gtexphpsun, for sun)
-    bexpcubesun_format = 'bexp_cubes/bexcube_{dataset}_{component}_{irf_ver}_sun.fits'
+    bexpcubesun_format = 'bexp_cubes/bexcube_{dataset}_{mktime}_{component}_{irf_ver}_sun.fits'
     # Binned exposure cubes (output of gtexphpsun, for moon)
-    bexpcubemoon_format = 'bexp_cubes/bexcube_{dataset}_{component}_{irf_ver}_moon.fits'
+    bexpcubemoon_format = 'bexp_cubes/bexcube_{dataset}_{mktime}_{component}_{irf_ver}_moon.fits'
     # Angular spectrum profile
     angprofile_format = 'templates/profile_{sourcekey}.fits'
 
@@ -99,7 +104,7 @@ class NameFactory(object):
 
 
     # residual CR output files
-    residual_cr_format = 'residual_cr/residual_cr_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
+    residual_cr_format = 'residual_cr/residual_cr_{dataset}_{mktime}_{component}_{coordsys}_{irf_ver}.fits'
 
     # Model specific stuff
 
@@ -112,7 +117,7 @@ class NameFactory(object):
 
     # Merged source map file for one binning component
     merged_srcmaps_format =\
-        'analysis/model_{modelkey}/srcmaps_{dataset}_{component}_{coordsys}_{irf_ver}.fits'
+        'analysis/model_{modelkey}/srcmaps_{dataset}_{mktime}_{component}_{coordsys}_{irf_ver}.fits'
     # Master XML model file
     master_srcmdl_xml_format = 'analysis/model_{modelkey}/srcmdl_{modelkey}_master.xml'
     # Component XML model file
@@ -304,6 +309,34 @@ class NameFactory(object):
         kwargs_copy.update(**kwargs)
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         localpath = NameFactory.ltcube_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath
+
+    def select(self, **kwargs):
+        """ return the name of a selected events ft1file
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        kwargs_copy['component'] = kwargs.get(
+            'component', self.component(**kwargs))
+        localpath = NameFactory.select_format.format(**kwargs_copy)
+        if kwargs.get('fullpath', False):
+            return self.fullpath(localpath=localpath)
+        else:
+            return localpath
+
+    def mktime(self, **kwargs):
+        """ return the name of a selected events ft1file
+        """
+        kwargs_copy = self.base_dict.copy()
+        kwargs_copy.update(**kwargs)
+        kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        kwargs_copy['component'] = kwargs.get(
+            'component', self.component(**kwargs))
+        localpath = NameFactory.mktime_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
         else:

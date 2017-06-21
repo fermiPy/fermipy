@@ -64,34 +64,53 @@ def create_inputlist(arglist):
     return lines
 
 
+def make_full_path(basedir, outkey, origname):
+    """Make a full file path"""
+    return os.path.join(basedir, outkey, os.path.basename(origname).replace('.fits','_%s.fits'%outkey))
+
+
+
 class SplitAndMktime(Chain):
     """Small class to split, apply mktime and bin data according to some user-provided specification
     """
+    default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
+                           data=diffuse_defaults.residual_cr['dataset_yaml'],
+                           coordsys=diffuse_defaults.residual_cr['coordsys'],
+                           hpx_order_max=diffuse_defaults.residual_cr['hpx_order_binning'],
+                           ft1file=diffuse_defaults.residual_cr['ft1file'],
+                           scfile=diffuse_defaults.residual_cr['ft2file'],
+                           evclass=(128, 'Event class bit mask', int),
+                           outdir=('counts_cubes', 'Output directory', str),
+                           outkey=(None, 'Key for this particular output file', str),
+                           pfiles=(None, 'Directory for .par files', str),
+                           do_ltsum=(False, 'Sum livetime cube files', bool),                           
+                           scratch=(None, 'Scratch area', str),
+                           dry_run=(False, 'Print commands but do not run them', bool))
 
-    def __init__(self, linkname, comp_dict=None):
+    def __init__(self, linkname, **kwargs):
         """C'tor
         """
-        self.comp_dict = comp_dict
-        parser = argparse.ArgumentParser(usage="fermipy-split-and-bin [options]",
-                                         description="Run gtselect and gtbin together")
+        comp_file = kwargs.get('comp', None)
+        if comp_file:
+            self.comp_dict = yaml.safe_load(open(comp_file))
+        else:
+            self.comp_dict = None
+        job_archive = kwargs.get('job_archive', None)
+        parser = argparse.ArgumentParser(usage="fermipy-split-and-mktime [options]",
+                                         description="Run gtselect, gtmktime and gtbin together")
 
         Chain.__init__(self, linkname,
                        appname='fermipy-split-and-mktime',
                        links=[],
-                       options=dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                                    coordsys=diffuse_defaults.diffuse['coordsys'],
-                                    hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
-                                    ft1file=(None, 'Input FT1 file', str),
-                                    scfile=(None, 'Input FT2 file', str),
-                                    evclass=(128, 'Event class bit mask', int),
-                                    output=(None, 'Base name for output files', str),
-                                    pfiles=(None, 'Directory for .par files', str),
-                                    scratch=(None, 'Scratch area', str),
-                                    dry_run=(False, 'Print commands but do not run them', bool)),
+                       options=SplitAndMktime.default_options.copy(),
                        argmapper=self._map_arguments,
-                       parser=parser)
-        if comp_dict is not None:
-            self.update_links(comp_dict)
+                       parser=parser,
+                       **kwargs)
+
+        if self.comp_dict is not None:
+            self.update_links(self.comp_dict)
+        self.set_links_job_archive()
+
 
     def update_links(self, comp_dict):
         """Build the links in this chain from the binning specification
@@ -182,7 +201,6 @@ class SplitAndMktime(Chain):
                 ltcube_filekey = 'ltcube_%s_%s' % (key_e, mktimekey)
 
                 for evtclass in comp_e['evtclasses']:
-
                     evtclassint = EVCLASS_MASK_DICTIONARY[evtclass]
                     for psf_type, psf_dict in sorted(comp_e['psf_types'].items()):
                         key = "%s_%s_%s_%s" % (key_e, mktimekey, evtclass, psf_type)
@@ -231,32 +249,41 @@ class SplitAndMktime(Chain):
         the indiviudal links """
         if self.comp_dict is None:
             return None
-        outbase = input_dict.get('output')
-        if outbase is None:
-            return None
-        binnedfile = "%s" % (outbase)
-        selectfile = binnedfile.replace('ccube', 'select')
-        mktimefile = binnedfile.replace('ccube', 'mktime')
-        ltcubefile = binnedfile.replace('ccube', 'ltcube')
 
+        NAME_FACTORY.update_base_dict(input_dict['data'])
+
+        coordsys = input_dict.get('coordsys')
+        outdir = input_dict.get('outdir')
+        outkey = input_dict.get('outkey')
+        if outdir is None or outkey is None:
+            return None
+        
         output_dict = input_dict.copy()
         output_dict['filter'] = input_dict.get('mktimefilter')
 
         for key_e, comp_e in sorted(self.comp_dict.items()):
-            suffix = "zmax%i_%s" % (comp_e['zmax'], key_e)
-            output_dict['selectfile_%s' % key_e] = selectfile.replace('_comp_', suffix)
-            
+            zcut = "zmax%i"%comp_e['zmax']
+            kwargs_select = dict(zcut=zcut,
+                                 ebin=key_e,
+                                 psftype='ALL',
+                                 coordsys=coordsys)
+            selectfile = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select) )
+            output_dict['selectfile_%s' % key_e] = selectfile
             for mktimekey in comp_e['mktimefilters']:
-                suffix_2 = "%s_%s"%(suffix, mktimekey)
-                output_dict['mktime_%s_%s' % (key_e, mktimekey)] = mktimefile.replace('_comp_', suffix_2)
-                output_dict['ltcube_%s_%s' % (key_e, mktimekey)] = ltcubefile.replace('_comp_', suffix_2)
+                kwargs_mktime = kwargs_select.copy()
+                kwargs_mktime['mktime'] = mktimekey
+                output_dict['mktime_%s_%s' % (key_e, mktimekey)] = make_full_path(outdir, outkey, NAME_FACTORY.mktime(**kwargs_mktime))
+                output_dict['ltcube_%s_%s' % (key_e, mktimekey)] = make_full_path(outdir, outkey, NAME_FACTORY.ltcube(**kwargs_mktime))
 
                 for evtclass in comp_e['evtclasses']:
                     for psf_type, psf_dict in sorted(comp_e['psf_types'].items()):
-                        key = "%s_%s_%s_%s" % (key_e, mktimekey, evtclass, psf_type)
-                        suffix_3 = "zmax%i_%s" % (comp_e['zmax'], key)
-                        output_dict['selectfile_%s' % key] = selectfile.replace('_comp_', suffix_3)
-                        output_dict['binfile_%s' % key] = binnedfile.replace('_comp_', suffix_3)
+                        key = "%s_%s_%s_%s"%(key_e, mktimekey, evtclass, psf_type)
+                        kwargs_bin = kwargs_mktime.copy()
+                        kwargs_bin['psftype'] = psf_type
+                        kwargs_bin['coordsys'] = coordsys
+                        kwargs_bin['evclass'] = evtclass
+                        output_dict['selectfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
+                        output_dict['binfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
                         output_dict['hpxorder_%s' % key] = min(input_dict['hpx_order_max'], psf_dict['hpx_order'])
 
         return output_dict
@@ -267,7 +294,6 @@ class SplitAndMktime(Chain):
         if self._parser is None:
             raise ValueError('SplitAndMktime was not given a parser on initialization')
         args = self._parser.parse_args(argv)
-
         self.update_links(yaml.safe_load(open(args.comp)))
         self.update_args(args.__dict__)
         return args
@@ -276,14 +302,17 @@ class SplitAndMktime(Chain):
 class ConfigMaker_SplitAndMktime(ConfigMaker):
     """Small class to generate configurations for SplitAndMktime
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
+                           data=diffuse_defaults.residual_cr['dataset_yaml'],
                            coordsys=diffuse_defaults.diffuse['coordsys'],
-                           scfile=(None, 'Input FT2 file', str),
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
-                           do_ltsum=(False, 'Sum livetime cube files', bool),
-                           inputlist=(None, 'Input FT1 file', str),
-                           scratch=(None, 'Path to scratch area', str))
+                           ft1file=diffuse_defaults.residual_cr['ft1file'],
+                           ft2file=diffuse_defaults.residual_cr['ft2file'],
+                           evclass=(128, 'Event class bit mask', int),
+                           pfiles=(None, 'Directory for .par files', str),
+                           do_ltsum=(False, 'Sum livetime cube files', bool),                           
+                           scratch=(None, 'Path to scratch area', str),
+                           dry_run=(False, 'Print commands but do not run them', bool))
 
     def __init__(self, chain, gather, **kwargs):
         """C'tor
@@ -316,9 +345,12 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
         input_config = {}
         job_configs = {}
 
+        datafile = args['data']
+        if datafile is None or datafile == 'None':
+            return input_config, job_configs, {}
         NAME_FACTORY.update_base_dict(args['data'])
 
-        inputfiles = create_inputlist(args['inputlist'])
+        inputfiles = create_inputlist(args['ft1file'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
 
         nfiles = len(inputfiles)
@@ -330,29 +362,24 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
                 os.mkdir(output_dir)
             except OSError:
                 pass
-            ccube_name =\
-                os.path.basename(NAME_FACTORY.ccube(component='_comp_',
-                                                    coordsys='%s' % args['coordsys']))
-            binnedfile = os.path.join(output_dir, ccube_name).replace('.fits', '_%s.fits' % key)
-            binnedfile_gzip = binnedfile + '.gz'
-            scfile = args['scfile'].replace('.fits', '_%s.fits' % key_scfile)
-            selectfile = binnedfile.replace('ccube', 'select')
+            scfile = args['ft2file'].replace('.lst', '_%s.fits' % key_scfile)
             logfile = os.path.join(output_dir, 'scatter_mk_%s.log' % key)
-            outfiles = [selectfile, binnedfile_gzip]
 
             job_configs[key] = dict(ft1file=infile,
                                     scfile=scfile,
                                     comp=args['comp'],
                                     hpx_order_max=args['hpx_order_max'],
-                                    output=binnedfile,
+                                    outdir=outdir_base,
+                                    outkey=key,
                                     logfile=logfile,
-                                    outfiles=outfiles,
                                     pfiles=output_dir)
 
         output_config = dict(comp=args['comp'],
                              data=args['data'],
                              coordsys=args['coordsys'],
                              nfiles=nfiles,
+                             do_ltsum=True,
+                             link=None,
                              logfile=os.path.join(outdir_base, 'gather.log'),
                              dry_run=args['dry_run'])
 
@@ -361,14 +388,14 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
 def create_chain_split_and_mktime(**kwargs):
     """Make a `fermipy.jobs.SplitAndMktime` """
     chain = SplitAndMktime(linkname=kwargs.pop('linkname', 'SplitAndMktime'),
-                           comp_dict=kwargs.get('comp_dict', None))
+                           comp=kwargs.get('comp', None))
     return chain
 
 def create_sg_split_and_mktime(**kwargs):
     """Build and return a `fermipy.jobs.ScatterGather` object that can invoke this script"""
     linkname = kwargs.pop('linkname', 'split-and-mktime')
-    chain = SplitAndMktime('%s.split'%linkname)
-    gather = CoaddSplit('%s.coadd'%linkname)
+    chain = SplitAndMktime(linkname, **kwargs)
+    gather = CoaddSplit('%s.coadd'%linkname, **kwargs)
     appname = kwargs.pop('appname', 'fermipy-split-and-mktime-sg')
 
     lsf_args = {'W': 1500,
