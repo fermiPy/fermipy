@@ -31,7 +31,7 @@ NAME_FACTORY = NameFactory()
 HPX_ORDER_TO_KSTEP = {5: -1, 6: -1, 7: -1, 8: 2, 9: 1}
 
 
-class GtSrcmapPartial(object):
+class GtSrcmapPartial(Link):
     """Small class to create srcmaps for only once source in a model,
     and optionally for only some of the energy layers.
 
@@ -114,8 +114,8 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
     --diffuse  : Diffuse model component definition yaml file'
     --make_xml : Write xml files for the individual components
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
                            diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
                            make_xml=(False, 'Write xml files needed to make source maps', bool))
@@ -180,7 +180,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
 
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
-
+        
         ret_dict = make_diffuse_comp_info_dict(components=components,
                                                diffuse=args['diffuse'],
                                                basedir='.')
@@ -201,6 +201,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                                  sourcekey=sub_comp_info.sourcekey,
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
+                                 mktime='none',
                                  coordsys='GAL',
                                  irf_ver=args['irf_ver'])
 
@@ -243,8 +244,8 @@ def create_link_srcmap_partial(**kwargs):
 
 def create_sg_srcmap_partial(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
-    gtsmp = GtSrcmapPartial()
-    link = gtsmp.link
+    gtsmp = GtSrcmapPartial(**kwargs)
+    link = gtsmp
     link.linkname = kwargs.pop('linkname', link.linkname)
     appname = kwargs.pop('appname', 'fermipy-srcmaps-diffuse-sg')
 
@@ -259,6 +260,7 @@ def create_sg_srcmap_partial(**kwargs):
                                 lsf_args=lsf_args,
                                 usage=usage,
                                 description=description,
+                                linkname=link.linkname,
                                 appname=appname,
                                 **kwargs)
     return lsf_sg

@@ -72,7 +72,7 @@ class SplitAndBin(Chain):
     """Small class to split and bin data according to some user-provided specification
     """
 
-    def __init__(self, linkname, comp_dict=None):
+    def __init__(self, linkname, comp_dict=None, **kwargs):
         """C'tor
         """
         self.comp_dict = comp_dict
@@ -81,7 +81,8 @@ class SplitAndBin(Chain):
         Chain.__init__(self, linkname,
                        appname='fermipy-split-and-bin',
                        links=[],
-                       options=dict(comp=diffuse_defaults.diffuse['binning_yaml'],
+                       options=dict(data=diffuse_defaults.diffuse['data'],
+                                    comp=diffuse_defaults.diffuse['comp'],
                                     coordsys=diffuse_defaults.diffuse['coordsys'],
                                     hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                                     ft1file=(None, 'Input FT1 file', str),
@@ -201,8 +202,8 @@ class SplitAndBin(Chain):
             kwargs_select = dict(zcut=zcut,
                                  ebin=key_e,
                                  psftype='ALL',
-                                 coordsys=coordsys)
-            
+                                 coordsys=coordsys,
+                                 mktime='none')            
             selectfile = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select))
             output_dict['selectfile_%s' % key_e] = selectfile
             for psf_type in sorted(comp_e['psf_types'].keys()):
@@ -227,11 +228,11 @@ class SplitAndBin(Chain):
 class ConfigMaker_SplitAndBin(ConfigMaker):
     """Small class to generate configurations for SplitAndBin
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            coordsys=diffuse_defaults.diffuse['coordsys'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
-                           inputlist=(None, 'Input FT1 file', str),
+                           ft1file=(None, 'Input FT1 file', str),
                            scratch=(None, 'Path to scratch area', str))
 
     def __init__(self, chain, gather, **kwargs):
@@ -267,8 +268,8 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
 
         NAME_FACTORY.update_base_dict(args['data'])
 
-        coordsys = input_dict.get('coordsys')
-        inputfiles = create_inputlist(args['inputlist'])
+        coordsys = args['coordsys']
+        inputfiles = create_inputlist(args['ft1file'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
 
         nfiles = len(inputfiles)
@@ -279,17 +280,11 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
                 os.mkdir(output_dir)
             except OSError:
                 pass
-            ccube_name =\
-                os.path.basename(NAME_FACTORY.ccube(component='_comp_',
-                                                    coordsys='%s' % args['coordsys']))
-            binnedfile = os.path.join(output_dir, ccube_name).replace('.fits', '_%s.fits' % key)
-            binnedfile_gzip = binnedfile + '.gz'
-            selectfile = binnedfile.replace('ccube', 'select')
             logfile = os.path.join(output_dir, 'scatter_%s.log' % key)
             job_configs[key] = dict(ft1file=infile,
                                     comp=args['comp'],
                                     hpx_order_max=args['hpx_order_max'],
-                                    outdir=output_dir_base,
+                                    outdir=outdir_base,
                                     outkey=key,             
                                     logfile=logfile,
                                     pfiles=output_dir)
@@ -313,9 +308,10 @@ def create_chain_split_and_bin(**kwargs):
 def create_sg_split_and_bin(**kwargs):
     """Build and return a `fermipy.jobs.ScatterGather` object that can invoke this script"""
     linkname = kwargs.pop('linkname', 'split-and-bin')
-    chain = SplitAndBin('%s.split'%linkname)
-    gather = CoaddSplit('%s.coadd'%linkname)
     appname = kwargs.pop('appname', 'fermipy-split-and-bin-sg')
+
+    chain = SplitAndBin('%s.split'%linkname, **kwargs)
+    gather = CoaddSplit('%s.coadd'%linkname, **kwargs)
 
     lsf_args = {'W': 1500,
                 'R': 'rhel60'}
@@ -323,7 +319,7 @@ def create_sg_split_and_bin(**kwargs):
     usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
-    config_maker = ConfigMaker_SplitAndBin(chain, gather)
+    config_maker = ConfigMaker_SplitAndBin(chain, gather, **kwargs)
     lsf_sg = build_sg_from_link(chain, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,

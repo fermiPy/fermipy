@@ -23,8 +23,8 @@ NAME_FACTORY = NameFactory()
 class CoaddSplit(Chain):
     """Small class to merge counts cubes for a series of binning components
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            coordsys=diffuse_defaults.diffuse['coordsys'],
                            do_ltsum=(False, 'Sum livetime cube files', bool),
                            nfiles=(96, 'Number of input files', int),                                    
@@ -68,7 +68,17 @@ class CoaddSplit(Chain):
         links = []
         for key_e, comp_e in sorted(self.comp_dict.items()):
             
-            for mktimekey in comp_e['mktimefilters']:
+            if comp_e.has_key('mktimefilters'):
+                mktimelist = comp_e['mktimefilters']
+            else:
+                mktimelist = ['none']
+
+            if comp_e.has_key('evtclasses'):
+                evtclasslist = comp_e['evtclasses']
+            else:
+                evtclasslist = ['default']
+
+            for mktimekey in mktimelist:
 
                 if do_ltsum:
                     ltsum_listfile = 'ltsumlist_%s_%s' % (key_e, mktimekey)
@@ -83,7 +93,7 @@ class CoaddSplit(Chain):
                                         file_args=dict(infile1=FileFlags.input_mask,
                                                        outfile=FileFlags.output_mask)) 
                     links.append(link_ltsum)
-                for evtclass in comp_e['evtclasses']:
+                for evtclass in evtclasslist:
                     for psf_type in sorted(comp_e['psf_types'].keys()):
                         key = "%s_%s_%s_%s" % (key_e, mktimekey, evtclass, psf_type)
                         binkey = 'binfile_%s' % key
@@ -147,7 +157,21 @@ class CoaddSplit(Chain):
             return output_dict
 
         for key_e, comp_e in sorted(self.comp_dict.items()):
-            for mktimekey in comp_e['mktimefilters']:
+            
+            if comp_e.has_key('mktimefilters'):
+                mktimelist = comp_e['mktimefilters']
+            else:
+                mktimelist = ['none']
+
+            if comp_e.has_key('evtclasses'):
+                evtclasslist_keys = comp_e['evtclasses']
+                evtclasslist_vals = comp_e['evtclasses']
+
+            else:
+                evtclasslist_keys = ['default']
+                evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
+
+            for mktimekey in mktimelist:
                 zcut = "zmax%i" % comp_e['zmax']
                 kwargs_mktime = dict(zcut=zcut,
                                      ebin=key_e,
@@ -160,12 +184,12 @@ class CoaddSplit(Chain):
                     output_dict['ltsum_%s_%s' % (key_e, mktimekey)] = ltsumname
                     output_dict['ltsumlist_%s_%s' % (key_e, mktimekey)] = CoaddSplit._make_ltcube_file_list(
                         ltsumname, num_files)
-                for evtclass in comp_e['evtclasses']:
+                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):
                     for psf_type in sorted(comp_e['psf_types'].keys()):
                         kwargs_bin = kwargs_mktime.copy()
                         kwargs_bin['psftype'] = psf_type
-                        kwargs_bin['evclass'] = evtclass
-                        key = "%s_%s_%s_%s" % (key_e, mktimekey, evtclass, psf_type)
+                        kwargs_bin['evclass'] = evtclassval
+                        key = "%s_%s_%s_%s" % (key_e, mktimekey, evtclasskey, psf_type)
                         ccube_name =\
                             os.path.basename(NAME_FACTORY.ccube(**kwargs_bin))
                         binnedfile = os.path.join(outdir_base, ccube_name)

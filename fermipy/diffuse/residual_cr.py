@@ -399,8 +399,8 @@ class ConfigMaker_ResidualCR(ConfigMaker):
         NAME_FACTORY_CLEAN.update_base_dict(args['dataset_yaml'])
         NAME_FACTORY_DIRTY.update_base_dict(args['dataset_yaml'])
 
-        NAME_FACTORY_CLEAN.base_dict['evtclass'] = args['clean']
-        NAME_FACTORY_DIRTY.base_dict['evtclass'] = args['dirty']
+        NAME_FACTORY_CLEAN.base_dict['evclass'] = args['clean']
+        NAME_FACTORY_DIRTY.base_dict['evclass'] = args['dirty']
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax

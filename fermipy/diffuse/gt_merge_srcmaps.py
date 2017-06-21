@@ -130,8 +130,8 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
     --irf_ver  : IRF verions string (e.g., 'V6')
     --sources  : Catalog model component definition yaml file'
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
                            sources=diffuse_defaults.diffuse['catalog_comp_yaml'])
 

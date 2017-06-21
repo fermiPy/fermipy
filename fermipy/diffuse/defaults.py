@@ -6,8 +6,9 @@ from __future__ import absolute_import, division, print_function
 
 # Options for diffuse analysis
 diffuse = {
-    'binning_yaml': (None, 'Path to yaml file defining binning.', str),
-    'dataset_yaml': (None, 'Path to yaml file defining dataset.', str),
+    'comp': (None, 'Path to yaml file defining binning.', str),
+    'data': (None, 'Path to yaml file defining dataset.', str),
+    'ft1file' : ('P8_P302_8years_source_zmax105.lst', 'Path to list of input FT1 files', str),
     'diffuse_comp_yaml': (None, 'Path to yaml file defining diffuse components.', str),
     'catalog_comp_yaml': (None, 'Path to yaml file defining catalog components.', str),
     'hpx_order_ccube': (9, 'Maximum HEALPIX order for binning counts data.', int),

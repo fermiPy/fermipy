@@ -58,6 +58,7 @@ setup(
         'fermipy-residual-cr-chain = fermipy.diffuse.residual_cr:main_chain',
         'fermipy-catalog-chain = fermipy.diffuse.catalog_src_manager:main_chain',
         'fermipy-diffuse-chain = fermipy.diffuse.diffuse_src_manager:main_chain',
+        'fermipy-diffuse-analysis = fermipy.diffuse.diffuse_analysis:main_chain',
         'fermipy-gtexphpsun-sg = fermipy.diffuse.solar:invoke_sg_Gtexphpsun',
         'fermipy-gtsuntemp-sg = fermipy.diffuse.solar:invoke_sg_Gtsuntemp',
         'fermipy-sunmoon = fermipy.diffuse.solar:main',

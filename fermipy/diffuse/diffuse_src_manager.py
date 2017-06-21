@@ -437,8 +437,9 @@ def make_ring_dicts(**kwargs):
     """
     diffuse_yamlfile = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
     gmm = kwargs.get('GalpropMapManager', GalpropMapManager(**kwargs))
-    diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(
-        diffuse_yamlfile)
+    if diffuse_yamlfile is None or diffuse_yamlfile == 'None':
+        return gmm
+    diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(diffuse_yamlfile)
     for diffuse_value in diffuse_comps.values():
         if diffuse_value['model_type'] != 'galprop_rings':
             continue
@@ -458,8 +459,11 @@ def make_diffuse_comp_info_dict(**kwargs):
         components = Component.build_from_yamlfile(comp_yamlfile)
     gmm = kwargs.get('GalpropMapManager', GalpropMapManager(**kwargs))
     dmm = kwargs.get('DiffuseModelManager', DiffuseModelManager(**kwargs))
-    diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(
-        diffuse_yamlfile)
+    if diffuse_yamlfile is None or diffuse_yamlfile == 'None':
+        diffuse_comps = {}
+    else:
+        diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(
+            diffuse_yamlfile)
     diffuse_comp_info_dict = dmm.make_diffuse_comp_info_dict(
         diffuse_comps, components)
     for diffuse_value in diffuse_comps.values():
@@ -478,13 +482,13 @@ def make_diffuse_comp_info_dict(**kwargs):
 class DiffuseComponentChain(Chain):
     """Small class to build srcmaps for diffuse components
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
                            make_xml=(False, "Make XML files for diffuse components", bool),
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 
-    def __init__(self, linkname):
+    def __init__(self, linkname, **kwargs):
         """C'tor
         """
         from fermipy.diffuse.job_library import create_sg_sum_ring_gasmaps, create_sg_vstack_diffuse
@@ -500,23 +504,16 @@ class DiffuseComponentChain(Chain):
 
         Chain.__init__(self, linkname,
                        appname='fermipy-diffuse-chain',
-#                       links=[link_gasmaps, link_srcmaps,
-#                              link_vstack_srcmaps],
-                       links=[link_srcmaps,link_vstack_srcmaps],
+                       links=[link_gasmaps, link_srcmaps,link_vstack_srcmaps],
                        options=DiffuseComponentChain.default_options.copy(),
-                       parser=parser)
+                       parser=parser,
+                       **kwargs)
 
-    def run_argparser(self, argv):
-        """Initialize a link with a set of arguments using argparser
-        """
-        args = Link.run_argparser(self, argv)
-        for link in self._links.values():
-            link.run_link(stream=sys.stdout, dry_run=True)
-        return args
 
 def create_chain_diffuse_comps(**kwargs):
     """Create and return a `DiffuseComponentChain` object """
-    chain = DiffuseComponentChain(linkname=kwargs.get('linkname', 'diffuse.diffuse_comps'))
+    chain = DiffuseComponentChain(linkname=kwargs.pop('linkname', 'Diffuse.diffuse_comps'),
+                                  **kwargs)
     return chain
 
 def main_chain():

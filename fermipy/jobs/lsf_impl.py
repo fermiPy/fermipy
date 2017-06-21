@@ -227,7 +227,9 @@ def build_sg_from_link(link, config_maker, **kwargs):
     """
     kwargs['config_maker'] = config_maker
     kwargs['scatter'] = link
-    kwargs['linkname'] = link.linkname
+    linkname = kwargs.get('linkname', None)
+    if linkname is None:
+        kwargs['linkname'] = link.linkname
     job_archive = kwargs.get('job_archive', None)
     if job_archive is None:
         kwargs['job_archive'] = JobArchive.build_temp_job_archive()

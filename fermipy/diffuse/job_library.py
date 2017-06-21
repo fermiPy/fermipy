@@ -106,8 +106,8 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
     --coordsys : Coordinate system ['GAL' | 'CEL']
     --hpx_order: HEALPix order parameter
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_expcube'],
                            coordsys=diffuse_defaults.diffuse['coordsys'])
@@ -170,8 +170,8 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
     --sources  : Yaml file with input source model definitions
     --make_xml : Write xml files for the individual components
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
                            sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
                            make_xml=(False, 'Write xml files needed to make source maps', bool),)
@@ -290,8 +290,8 @@ class ConfigMaker_Vstack(ConfigMaker):
     --irf_ver  : IRF verions string (e.g., 'V6')
     --diffuse  : Diffuse model component definition yaml file'
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
                            diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],)
 
@@ -330,6 +330,7 @@ class ConfigMaker_Vstack(ConfigMaker):
                                  sourcekey=sub_comp_info.sourcekey,
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
+                                 mktime='none',
                                  coordsys='GAL',
                                  irf_ver=args['irf_ver'],
                                  fullpath=True)
@@ -358,8 +359,8 @@ class ConfigMaker_healview(ConfigMaker):
     --irf_ver  : IRF verions string (e.g., 'V6')
     --diffuse  : Diffuse model component definition yaml file'
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
                            diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'])
 
