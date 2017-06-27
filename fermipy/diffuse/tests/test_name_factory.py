@@ -11,6 +11,7 @@ def test_name_factory():
                  data_time='8years',
                  zcut='zmax105',
                  psftype='PSF3',
+                 mktime='none',
                  ebin='E3',
                  coordsys='GAL',
                  irf_ver='V6',
