@@ -32,8 +32,8 @@ class GtInitModel(Link):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
-                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+                           diffuse=diffuse_defaults.diffuse['diffuse'],
+                           sources=diffuse_defaults.diffuse['sources'],
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
                            args=(None, 'Names of input models', list))
     
@@ -219,8 +219,8 @@ class ConfigMaker_AssembleModel(ConfigMaker):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
-                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
+                           sources=diffuse_defaults.diffuse['sources'],
+                           diffuse=diffuse_defaults.diffuse['diffuse'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
                            args=(None, 'Names of input models', list))

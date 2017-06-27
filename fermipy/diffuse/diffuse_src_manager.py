@@ -435,7 +435,7 @@ class DiffuseModelManager(object):
 def make_ring_dicts(**kwargs):
     """Build and return the information about the Galprop rings
     """
-    diffuse_yamlfile = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
+    diffuse_yamlfile = kwargs.get('diffuse', 'config/diffuse_components.yaml')
     gmm = kwargs.get('GalpropMapManager', GalpropMapManager(**kwargs))
     if diffuse_yamlfile is None or diffuse_yamlfile == 'None':
         return gmm
@@ -484,7 +484,7 @@ class DiffuseComponentChain(Chain):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
+                           diffuse=diffuse_defaults.diffuse['diffuse'],
                            make_xml=(False, "Make XML files for diffuse components", bool),
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 
@@ -506,8 +506,26 @@ class DiffuseComponentChain(Chain):
                        appname='fermipy-diffuse-chain',
                        links=[link_gasmaps, link_srcmaps,link_vstack_srcmaps],
                        options=DiffuseComponentChain.default_options.copy(),
+                       argmapper=self._map_arguments,
                        parser=parser,
                        **kwargs)
+
+    def _map_arguments(self, input_dict):
+        """Map from the top-level arguments to the arguments provided to
+        the indiviudal links """
+        output_dict = input_dict.copy()
+        output_dict.pop('link', None)
+        return output_dict
+
+
+    def run_argparser(self, argv):
+        """Initialize a link with a set of arguments using argparser
+        """
+        args = Link.run_argparser(self, argv)
+        for link in self._links.values():
+            link.run_link(stream=sys.stdout, dry_run=True)
+        return args
+
 
 
 def create_chain_diffuse_comps(**kwargs):

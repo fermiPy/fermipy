@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+import copy
 
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Link
@@ -132,17 +133,27 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax
+            
+            mktimelist = copy.copy(comp.mktimefilters)
+            if len(mktimelist) == 0:
+                mktimelist.append('none')
+            evtclasslist_keys = copy.copy(comp.evtclasses)
+            if len(evtclasslist_keys) == 0:
+                evtclasslist_keys.append('default')
+                evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
+            else:
+                evtclasslist_vals = copy.copy(evtclasslist_keys)
 
-            for mktimekey in comp.mktimefilters:
-                for evtclass in comp.evtclasses:                    
-                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclass, zcut, mktimekey))
+            for mktimekey in mktimelist:
+                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):       
+                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclassval, zcut, mktimekey))
                     name_keys = dict(zcut=zcut,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
                                      coordsys=args['coordsys'],
                                      irf_ver=args['irf_ver'],
                                      mktime=mktimekey,
-                                     evclass=evtclass,
+                                     evclass=evtclassval,
                                      fullpath=True)
 
                     outfile = NAME_FACTORY.bexpcube(**name_keys)
@@ -173,7 +184,7 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+                           sources=diffuse_defaults.diffuse['sources'],
                            make_xml=(False, 'Write xml files needed to make source maps', bool),)
 
     def __init__(self, link, **kwargs):
@@ -223,6 +234,7 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
                                  psftype=comp.evtype_name,
                                  coordsys='GAL',
                                  irf_ver=args['irf_ver'],
+                                 mktime='none',
                                  fullpath=True)
                 outfile = NAME_FACTORY.srcmaps(**name_keys)
                 logfile = outfile.replace('.fits', '.log')
@@ -247,7 +259,7 @@ class ConfigMaker_SumRings(ConfigMaker):
     --diffuse  : Diffuse model component definition yaml file
     --outdir   : Output directory
     """
-    default_options = dict(diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
+    default_options = dict(diffuse=diffuse_defaults.diffuse['diffuse'],
                            outdir=(None, 'Output directory', str),)
 
     def __init__(self, link, **kwargs):
@@ -264,7 +276,7 @@ class ConfigMaker_SumRings(ConfigMaker):
         job_configs = {}
 
         gmm = make_ring_dicts(diffuse=args['diffuse'], basedir='.')
-
+        
         for galkey in gmm.galkeys():
             ring_dict = gmm.ring_dict(galkey)
             for ring_key, ring_info in ring_dict.items():
@@ -293,7 +305,7 @@ class ConfigMaker_Vstack(ConfigMaker):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],)
+                           diffuse=diffuse_defaults.diffuse['diffuse'],)
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -362,7 +374,7 @@ class ConfigMaker_healview(ConfigMaker):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'])
+                           diffuse=diffuse_defaults.diffuse['diffuse'])
 
     def __init__(self, link, **kwargs):
         """C'tor

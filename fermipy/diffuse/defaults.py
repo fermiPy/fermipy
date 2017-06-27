@@ -9,13 +9,14 @@ diffuse = {
     'comp': (None, 'Path to yaml file defining binning.', str),
     'data': (None, 'Path to yaml file defining dataset.', str),
     'ft1file' : ('P8_P302_8years_source_zmax105.lst', 'Path to list of input FT1 files', str),
-    'diffuse_comp_yaml': (None, 'Path to yaml file defining diffuse components.', str),
-    'catalog_comp_yaml': (None, 'Path to yaml file defining catalog components.', str),
+    'diffuse': (None, 'Path to yaml file defining diffuse components.', str),
+    'sources': (None, 'Path to yaml file defining catalog components.', str),
     'hpx_order_ccube': (9, 'Maximum HEALPIX order for binning counts data.', int),
     'hpx_order_expcube': (6, 'Maximum HEALPIX order for exposure cubes.', int),
     'hpx_order_fitting': (7, 'Maximum HEALPIX order for model fitting.', int),
     'coordsys': ('GAL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
     'irf_ver': ('V6', 'Version of IRFs to use.', str),
+    'make_xml' : (True, 'Make XML files.', bool),
     'dry_run' : (False, 'Print commands but do not run them', bool),
     }
 

@@ -468,8 +468,7 @@ class ScatterGather(Link):
         if self._initialize_link is None:
             return JobStatus.no_job
         key = self._initialize_link.jobs.keys()[0]
-        job_details = self.dispatch_job(
-            self._initialize_link, key=key)
+        job_details = self.dispatch_job(self._initialize_link, key=key)
 
         running = True            
         while running:
@@ -520,8 +519,7 @@ class ScatterGather(Link):
         """
         if self._gather_link is None:
             return JobStatus.no_job
-        job_details = self.dispatch_job(
-            self._gather_link, key='gather@' + self._gather_link.linkname)
+        job_details = self.dispatch_job(self._gather_link, key='gather')
         return job_details.status
 
     def dispatch_job(self, link, key):

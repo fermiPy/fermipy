@@ -70,7 +70,7 @@ class GtSrcmapPartial(Link):
  
     def run_analysis(self, argv):
         """Run this analysis"""
-        args = self.parser.parse_args(argv)
+        args = self._parser.parse_args(argv)
         obs = BinnedAnalysis.BinnedObs(irfs=args.irfs,
                                        expCube=args.expcube,
                                        srcMaps=args.cmap,
@@ -117,8 +117,8 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
-                           make_xml=(False, 'Write xml files needed to make source maps', bool))
+                           diffuse=diffuse_defaults.diffuse['diffuse'],
+                           make_xml=(True, 'Write xml files needed to make source maps', bool))
 
     def __init__(self, link, **kwargs):
         """C'tor

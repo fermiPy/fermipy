@@ -275,7 +275,7 @@ class CatalogComponentChain(Chain):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+                           sources=diffuse_defaults.diffuse['sources'],
                            make_xml=(False, "Make XML files for diffuse components", bool),
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 

@@ -209,6 +209,7 @@ class SplitAndBin(Chain):
             for psf_type in sorted(comp_e['psf_types'].keys()):
                 key = "%s_%s" % (key_e, psf_type)
                 kwargs_bin = kwargs_select.copy()
+                kwargs_bin['psftype'] = psf_type
                 output_dict['selectfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
                 output_dict['binfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
         return output_dict
@@ -301,7 +302,7 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
 
 def create_chain_split_and_bin(**kwargs):
     """Make a `fermipy.jobs.SplitAndBin` """
-    chain = SplitAndBin(linkname=kwargs.pop('linkname', 'SplitAndBin'),
+    chain = SplitAndBin(linkname=kwargs.pop('linkname', 'split-and-bin'),
                         comp_dict=kwargs.get('comp_dict', None))
     return chain
 
@@ -332,7 +333,7 @@ def create_sg_split_and_bin(**kwargs):
 
 def main_single():
     """Entry point for command line use for single job """
-    chain = SplitAndBin('SplitAndBin')
+    chain = SplitAndBin('split-and-bin')
     args = chain.run_argparser(sys.argv[1:])
     chain.run_chain(sys.stdout, args.dry_run)
     chain.finalize(args.dry_run)

@@ -297,8 +297,10 @@ class Link(object):
 
     def check_job_status(self, key='__top__', fail_running=False):
         """Check the status of a particular job"""
-        fullkey = JobDetails.make_fullkey(key, self.linkname)
-        return self.jobs[fullkey].status
+        if self.jobs.has_key(key):
+            return self.jobs[key].status
+        else:
+            return JobStatus.no_job
 
     def check_jobs_status(self, fail_running=False):
         """Check the status of all the jobs run from this link """
@@ -556,13 +558,13 @@ class Link(object):
 
     def set_status_self(self, key="__top__", status=JobStatus.unknown):
         """ Set the status of this job """
-        fullkey = JobDetails.make_fullkey(key, self.linkname)
-        if self.jobs.has_key(fullkey):
-            self.jobs[fullkey].status = status          
+        
+        if self.jobs.has_key(key):
+            self.jobs[key].status = status          
             if self._job_archive:
-                self._job_archive.register_job(self.jobs[fullkey])
+                self._job_archive.register_job(self.jobs[key])
         else:
-            raise KeyError("No key %s"%fullkey)
+            self.register_self('dummy.log', key, status)
 
     def write_status_to_log(self, stream=sys.stdout, status=JobStatus.unknown):
         """ Write the status of this job to a log stream """
@@ -700,7 +702,7 @@ class Link(object):
         Returns `JobDetails`
         """
         job_details = self.create_job_details(key, job_config, logfile, status)
-        self.jobs[job_details.fullkey] = job_details
+        self.jobs[key] = job_details
         return job_details
 
     def map_scratch_files(self, file_dict):
@@ -977,6 +979,8 @@ class Chain(Link):
         #ok = self.pre_run_checks(stream, dry_run)
         # if not ok:
         #    return
+        print ('Chain.run_chain ', self.args)
+
         if self.args['list']:
             stream.write("Links: \n")
             for linkname in self._links.keys():
@@ -1001,7 +1005,7 @@ class Chain(Link):
                 pass
             else:
                 continue
-            print ("Running link ", link.linkname)
+            print ("Running link ", link.linkname, type(link), dry_run)
             logfile = "log_%s_top.log"%link.linkname
             link.archive_self(logfile, status=JobStatus.unknown)
             close_file = False
@@ -1033,6 +1037,8 @@ class Chain(Link):
             self._job_archive.write_table_file()
 
     def run(self, stream=sys.stdout, dry_run=False, stage_files=True):
+        """Run the chain"""
+        print ('Chain.run', type(self), dry_run)
         self.run_chain(stream, dry_run, stage_files)
 
     def update_args(self, override_args):

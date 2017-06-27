@@ -79,7 +79,6 @@ class CoaddSplit(Chain):
                 evtclasslist = ['default']
 
             for mktimekey in mktimelist:
-
                 if do_ltsum:
                     ltsum_listfile = 'ltsumlist_%s_%s' % (key_e, mktimekey)
                     ltsum_outfile = 'ltsum_%s_%s' % (key_e, mktimekey)
@@ -166,7 +165,6 @@ class CoaddSplit(Chain):
             if comp_e.has_key('evtclasses'):
                 evtclasslist_keys = comp_e['evtclasses']
                 evtclasslist_vals = comp_e['evtclasses']
-
             else:
                 evtclasslist_keys = ['default']
                 evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
