@@ -502,7 +502,6 @@ class JobArchive(object):
         other.update_table_row(self._table, other.dbkey - 1)
         return other
 
-<<<<<<< HEAD
     def remove_jobs(self, mask):
         """Mark all jobs that match a mask as 'removed' """
         jobnames = self.table[mask]['jobname']
