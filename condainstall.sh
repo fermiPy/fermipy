@@ -5,7 +5,13 @@ if [[ -z $PYTHON_VERSION ]]; then
 fi
 
 if [[ -z $CONDA_DOWNLOAD ]]; then
-    CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
+    if [[ `uname` == "Darwin" ]]; then
+	echo "Detected Mac OS X..."
+	CONDA_DOWNLOAD=Miniconda3-latest-MacOSX-x86_64.sh
+    else
+	echo "Detected Linux..."
+	CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+    fi
 fi
 
 if [[ -z $CONDA_DEPS ]]; then
@@ -13,29 +19,31 @@ if [[ -z $CONDA_DEPS ]]; then
 fi
 
 if [[ -z $CONDA2 ]]; then
-    CONDA2='conda install -y wcsaxes healpy subprocess32'
+    CONDA2='conda install -y healpy subprocess32 fermipy jupyter'
 fi
 
-# Check if conda exists if not then install it
-if ! type "conda" &> /dev/null; then
-
-    if [ -n "$1" ]; then
-	CONDA_PATH=$1
-    elif [[ -z $CONDA_PATH ]]; then
-	CONDA_PATH=$HOME/miniconda
-    fi
-    
-    if [ ! -d "$CONDA_PATH" ]; then
-	echo "Creating a new conda installation under $CONDA_PATH"
-	curl -o miniconda.sh -L http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD
-	bash miniconda.sh -b -p $CONDA_PATH
-    fi
-
-    export PATH="$CONDA_PATH/bin:$PATH"
+if [ -n "$1" ]; then
+    CONDA_PATH=$1
+elif [[ -z $CONDA_PATH ]]; then
+    CONDA_PATH=$HOME/miniconda
 fi
+
+if [ ! -d "$CONDA_PATH/bin" ]; then
+    echo "Creating a new conda installation under $CONDA_PATH"
+    curl -o miniconda.sh -L http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD
+    bash miniconda.sh -b -p $CONDA_PATH
+    rc=$?
+    rm miniconda.sh
+    if [[ $rc != 0 ]]; then
+        exit $rc
+    fi
+else
+    echo "Using existing conda installation under $CONDA_PATH"
+fi
+
+export PATH="$CONDA_PATH/bin:$PATH"
 
 conda update -q conda -y
-#conda config --set channel_priority false
 conda config --append channels conda-forge
 conda info -a
 conda install -y python=$PYTHON_VERSION pip numpy astropy pytest $CONDA_DEPS
@@ -52,4 +60,3 @@ if [[ -n $INSTALL_CMD ]]; then
     $INSTALL_CMD
 fi
 
-#pip install fermipy

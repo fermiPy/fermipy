@@ -263,18 +263,18 @@ class JobDetails(object):
         """Fill a `list` from the nonzero members of an `array`"""
         return [v for v in the_array.nonzero()[0]]
 
-    @staticmethod
-    def make_dict(table, table_ids):
+    @classmethod
+    def make_dict(cls, table, table_ids):
         """Build a dictionary map int to `JobDetails` from an `astropy.table.Table`"""
         ret_dict = {}
         table_id_array = table_ids['file_id'].data
         for row in table:
-            job_details = JobDetails.create_from_row(row, table_id_array)
+            job_details = cls.create_from_row(row, table_id_array)
         ret_dict[job_details.dbkey] = job_details
         return ret_dict
 
-    @staticmethod
-    def create_from_row(table_row, table_id_array):
+    @classmethod
+    def create_from_row(cls, table_row, table_id_array):
         """Create a `JobDetails` from an `astropy.table.row.Row` """
         kwargs = {}
         for key in table_row.colnames:
@@ -292,7 +292,7 @@ class JobDetails(object):
         kwargs['outfile_ids'] = np.arange(outfile_refs[0], outfile_refs[1])
         kwargs['rmfile_ids'] = np.arange(rmfile_refs[0], rmfile_refs[1])
         kwargs['intfile_ids'] = np.arange(intfile_refs[0], intfile_refs[1])
-        return JobDetails(**kwargs)
+        return cls(**kwargs)
 
     def append_to_tables(self, table, table_ids):
         """Add this instance as a row on a `astropy.table.Table` """
@@ -388,7 +388,7 @@ class JobArchive(object):
 
     def __getitem__(self, fullkey):
         """ Return the `JobDetails` matching fullkey"""
-        return self._cache[key]
+        return self._cache[fullkey]
 
     @property
     def table_file(self):
@@ -502,6 +502,7 @@ class JobArchive(object):
         other.update_table_row(self._table, other.dbkey - 1)
         return other
 
+<<<<<<< HEAD
     def remove_jobs(self, mask):
         """Mark all jobs that match a mask as 'removed' """
         jobnames = self.table[mask]['jobname']
@@ -512,8 +513,8 @@ class JobArchive(object):
             self._cache.pop(fullkey).status = JobStatus.removed            
         self.write_table_file()
 
-    @staticmethod
-    def build_temp_job_archive():
+    @classmethod
+    def build_temp_job_archive(cls):
         """Build and return a `JobArchive` using defualt locations of
         persistent files. """
         try:
@@ -521,10 +522,11 @@ class JobArchive(object):
             os.unlink('file_archive_temp.fits')
         except OSError:
             pass
-        JobArchive._archive = JobArchive(job_archive_table='job_archive_temp.fits',
-                                         file_archive_table='file_archive_temp.fits',
-                                         base_path=os.path.abspath('.') + '/')
-        return JobArchive._archive
+
+        cls._archive = cls(job_archive_table='job_archive_temp.fits',
+                           file_archive_table='file_archive_temp.fits',
+                           base_path=os.path.abspath('.') + '/')
+        return cls._archive
 
     def write_table_file(self, job_table_file=None, file_table_file=None):
         """Write the table to self._table_file"""
@@ -533,7 +535,7 @@ class JobArchive(object):
         if self._table_ids is None:
             raise RuntimeError("No ID table to write")
         if job_table_file is not None:
-            self._table_file = table_file
+            self._table_file = job_table_file
         if self._table_file is None:
             raise RuntimeError("No output file specified for table")           
         write_tables_to_fits(self._table_file, [self._table, self._table_ids], clobber=True,
@@ -569,17 +571,17 @@ class JobArchive(object):
         sys.stdout.write("  Failed:    %i\n"%status_vect[JobStatus.failed])
         sys.stdout.write("  Partial:   %i\n"%status_vect[JobStatus.partial_failed])
 
-    @staticmethod
-    def get_archive():
+    @classmethod
+    def get_archive(cls):
         """Return the singleton `JobArchive` instance """
-        return JobArchive._archive
+        return cls._archive
 
-    @staticmethod
-    def build_archive(**kwargs):
+    @classmethod
+    def build_archive(cls, **kwargs):
         """Return the singleton `JobArchive` instance, building it if needed """
-        if JobArchive._archive is None:
-            JobArchive._archive = JobArchive(**kwargs)
-        return JobArchive._archive
+        if cls._archive is None:
+            cls._archive = cls(**kwargs)
+        return cls._archive
 
 
 def main_browse():

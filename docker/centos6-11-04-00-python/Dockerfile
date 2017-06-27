@@ -22,5 +22,5 @@ ENV GLAST_EXT=/home/externals
 ENV MATPLOTLIBRC=/home/matplotlib
 RUN echo "source $INST_DIR/bin/redhat6-x86_64-64bit-gcc44-Optimized/_setup.sh" >> /root/.bashrc && \
     mkdir /home/matplotlib && echo "backend      : Agg" >> /home/matplotlib/matplotlibrc
-CMD ["usleep 10 && /opt/conda/bin/jupyter notebook --notebook-dir=/workdir --ip='*' --port=8888 --no-browser"]
+CMD ["usleep 10 && /opt/conda/bin/jupyter notebook --notebook-dir=/workdir --ip='*' --port=8888 --no-browser --allow-root"]
 ENTRYPOINT ["/bin/bash","--login","-c"]

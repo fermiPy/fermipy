@@ -742,7 +742,7 @@ class Link(object):
         """Remove / compress files as requested """
         for rmfile in self.files.temp_files:
             if dry_run:
-                print ("remove %s" % rmfile)
+                print("remove %s" % rmfile)
             else:
                 os.remove(rmfile)
         for gzfile in self.files.gzip_files:

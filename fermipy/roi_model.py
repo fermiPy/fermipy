@@ -19,6 +19,7 @@ from fermipy import wcs_utils
 from fermipy import catalog
 from fermipy import defaults
 from fermipy import model_utils
+from fermipy import fits_utils
 from fermipy.logger import Logger, log_level
 from fermipy.model_utils import make_parameter_dict
 from fermipy.model_utils import cast_pars_dict
@@ -450,14 +451,14 @@ class Model(object):
                                                     self.spectral_pars)
             row_dict.update(pars)
 
-        r68_semimajor = self['pos_sigma_semimajor'] * \
-            self['pos_r68'] / self['pos_sigma']
-        r68_semiminor = self['pos_sigma_semiminor'] * \
-            self['pos_r68'] / self['pos_sigma']
-        r95_semimajor = self['pos_sigma_semimajor'] * \
-            self['pos_r95'] / self['pos_sigma']
-        r95_semiminor = self['pos_sigma_semiminor'] * \
-            self['pos_r95'] / self['pos_sigma']
+        r68_semimajor = self['pos_err_semimajor'] * \
+            self['pos_r68'] / self['pos_err']
+        r68_semiminor = self['pos_err_semiminor'] * \
+            self['pos_r68'] / self['pos_err']
+        r95_semimajor = self['pos_err_semimajor'] * \
+            self['pos_r95'] / self['pos_err']
+        r95_semiminor = self['pos_err_semiminor'] * \
+            self['pos_r95'] / self['pos_err']
 
         row_dict['Conf_68_PosAng'] = self['pos_angle']
         row_dict['Conf_68_SemiMajor'] = r68_semimajor
@@ -699,10 +700,10 @@ class Source(Model):
     object can be accessed with the bracket operator:
 
     # Return the TS of this source
-    >>> print src['ts']
+    >>> src['ts']
 
     # Get a skycoord representation of the source position
-    >>> print src.skydir
+    >>> src.skydir
     """
 
     def __init__(self, name, data, radec=None):
@@ -917,8 +918,8 @@ class Source(Model):
     def data(self):
         return self._data
 
-    @staticmethod
-    def create_from_dict(src_dict, roi_skydir=None, rescale=False):
+    @classmethod
+    def create_from_dict(cls, src_dict, roi_skydir=None, rescale=False):
         """Create a source object from a python dictionary.
 
         Parameters
@@ -981,10 +982,10 @@ class Source(Model):
 
         radec = np.array([skydir.ra.deg, skydir.dec.deg])
 
-        return Source(name, src_dict, radec=radec)
+        return cls(name, src_dict, radec=radec)
 
-    @staticmethod
-    def create_from_xmlfile(xmlfile, extdir=None):
+    @classmethod
+    def create_from_xmlfile(cls, xmlfile, extdir=None):
         """Create a Source object from an XML file.
 
         Parameters
@@ -999,7 +1000,7 @@ class Source(Model):
         srcs = root.findall('source')
         if len(srcs) == 0:
             raise Exception('No sources found.')
-        return Source.create_from_xml(srcs[0], extdir=extdir)
+        return cls.create_from_xml(srcs[0], extdir=extdir)
 
     @staticmethod
     def create_from_xml(root, extdir=None):
@@ -1635,30 +1636,29 @@ class ROIModel(fermipy.config.Configurable):
         self._diffuse_srcs = [s for s in self._diffuse_srcs if s not in srcs]
         self._build_src_index()
 
-    @staticmethod
-    def create_from_roi_data(datafile):
+    @classmethod
+    def create_from_roi_data(cls, datafile):
         """Create an ROI model."""
         data = np.load(datafile).flat[0]
 
-        roi = ROIModel()
+        roi = cls()
         roi.load_sources(data['sources'].values())
 
         return roi
 
-    @staticmethod
-    def create(selection, config, **kwargs):
+    @classmethod
+    def create(cls, selection, config, **kwargs):
         """Create an ROIModel instance."""
 
         if selection['target'] is not None:
-            return ROIModel.create_from_source(selection['target'],
-                                               config, **kwargs)
+            return cls.create_from_source(selection['target'],
+                                          config, **kwargs)
         else:
             target_skydir = wcs_utils.get_target_skydir(selection)
-            return ROIModel.create_from_position(target_skydir,
-                                                 config, **kwargs)
+            return cls.create_from_position(target_skydir, config, **kwargs)
 
-    @staticmethod
-    def create_from_position(skydir, config, **kwargs):
+    @classmethod
+    def create_from_position(cls, skydir, config, **kwargs):
         """Create an ROIModel instance centered on a sky direction.
 
         Parameters
@@ -1672,27 +1672,27 @@ class ROIModel(fermipy.config.Configurable):
         """
 
         coordsys = kwargs.pop('coordsys', 'CEL')
-        roi = ROIModel(config, skydir=skydir, coordsys=coordsys, **kwargs)
+        roi = cls(config, skydir=skydir, coordsys=coordsys, **kwargs)
         return roi
 
-    @staticmethod
-    def create_from_source(name, config, **kwargs):
+    @classmethod
+    def create_from_source(cls, name, config, **kwargs):
         """Create an ROI centered on the given source."""
 
         coordsys = kwargs.pop('coordsys', 'CEL')
 
-        roi = ROIModel(config, src_radius=None, src_roiwidth=None,
-                       srcname=name, **kwargs)
+        roi = cls(config, src_radius=None, src_roiwidth=None,
+                  srcname=name, **kwargs)
         src = roi.get_source_by_name(name)
 
-        return ROIModel.create_from_position(src.skydir, config,
-                                             coordsys=coordsys, **kwargs)
+        return cls.create_from_position(src.skydir, config,
+                                        coordsys=coordsys, **kwargs)
 
-    @staticmethod
-    def create_roi_from_ft1(ft1file, config):
+    @classmethod
+    def create_roi_from_ft1(cls, ft1file, config):
         """Create an ROI model by extracting the sources coordinates
         form an FT1 file."""
-        pass
+        raise NotImplementedError
 
     def has_source(self, name):
 
@@ -1762,7 +1762,8 @@ class ROIModel(fermipy.config.Configurable):
 
     def get_sources(self, skydir=None, distance=None, cuts=None,
                     minmax_ts=None, minmax_npred=None,
-                    exclude=None, square=False, coordsys='CEL'):
+                    exclude=None, square=False, coordsys='CEL',
+                    names=None):
         """Retrieve list of source objects satisfying the following
         selections:
 
@@ -1772,6 +1773,8 @@ class ROIModel(fermipy.config.Configurable):
         * Cuts on source properties defined in ``cuts`` list.
 
         * TS and Npred in range specified by ``minmax_ts`` and ``minmax_npred``.
+
+        * Name matching a value in ``names``
 
         Sources can be excluded from the selection by adding their
         name to the ``exclude`` list.
@@ -1796,6 +1799,8 @@ class ROIModel(fermipy.config.Configurable):
         o = []
         for s in srcs + self.diffuse_sources:
 
+            if names and s.name not in names:
+                continue            
             if s.name in exclude:
                 continue
             if not s.check_cuts(cuts):
@@ -1807,7 +1812,6 @@ class ROIModel(fermipy.config.Configurable):
                 continue
             if not utils.apply_minmax_selection(npred, minmax_npred):
                 continue
-
             o.append(s)
 
         return o

@@ -88,7 +88,7 @@ class GtMergeSourceMaps(object):
 
         like.logLike.set_use_single_fixed_map(False)
 
-        print ("Reading xml model from %s" % args.srcmdl)
+        print("Reading xml model from %s" % args.srcmdl)
         source_factory = pyLike.SourceFactory(obs.observation)
         source_factory.readXml(args.srcmdl, BinnedAnalysis._funcFactory, False, True, True)
         strv = pyLike.StringVector()
@@ -108,16 +108,16 @@ class GtMergeSourceMaps(object):
         comp = like.mergeSources(args.merged, source_names, 'ConstantValue')
         like.logLike.getSourceMap(comp.getName())
 
-        print ("Merged %i sources into %s"%(len(srcs_to_merge), comp.getName()))
+        print("Merged %i sources into %s"%(len(srcs_to_merge), comp.getName()))
         if len(missing_sources) > 0:
-            print ("Missed sources: ", missing_sources)
+            print("Missed sources: ", missing_sources)
 
-        print ("Writing output source map file %s" % args.outfile)
+        print("Writing output source map file %s" % args.outfile)
         like.logLike.saveSourceMaps(args.outfile, False, False)
         if args.gzip:
             os.system("gzip -9 %s" % args.outfile)
 
-        print ("Writing output xml file %s" % args.outxml)
+        print("Writing output xml file %s" % args.outxml)
         like.writeXml(args.outxml)
 
 
@@ -156,7 +156,7 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
         for split_ver, split_dict in comp_info_dict.items():
             for source_key, source_dict in split_dict.items():
 
-                print (split_ver, source_key, source_dict.model_type)
+                print(split_ver, source_key, source_dict.model_type)
                 full_key = "%s_%s"%(split_ver, source_key)
                 if source_dict.model_type != 'CompositeSource':
                     continue

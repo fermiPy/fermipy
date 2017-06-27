@@ -222,7 +222,7 @@ class CatalogSourceManager(object):
                     all_sources = [x.strip() for x in full_cat_info.catalog_table[
                             'Source_Name'].tolist()]
                 except KeyError:
-                    print (full_cat_info.catalog_table.colnames)
+                    print(full_cat_info.catalog_table.colnames)
                 used_sources = []
                 rules_dict = source_dict['rules_dict']
                 split_dict = {}

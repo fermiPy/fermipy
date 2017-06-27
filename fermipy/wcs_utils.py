@@ -6,7 +6,7 @@ from astropy.wcs import WCS
 from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-import fermipy.utils as utils
+from astropy.extern import six
 
 
 class WCSProj(object):
@@ -56,13 +56,13 @@ class WCSProj(object):
     def npix(self):
         return self._npix
 
-    @staticmethod
-    def create(skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
+    @classmethod
+    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
         npix = np.array(npix, ndmin=1)
         crpix = npix / 2. + 0.5
         wcs = create_wcs(skydir, coordsys, projection,
                          cdelt, crpix)
-        return WCSProj(wcs, npix)
+        return cls(wcs, npix)
 
     def distance_to_edge(self, skydir):
         """Return the angular distance from the given direction and
@@ -280,7 +280,7 @@ def get_target_skydir(config, ref_skydir=None):
 
     radec = config.get('radec', None)
 
-    if utils.isstr(radec):
+    if isinstance(radec, six.string_types):
         return SkyCoord(radec, unit=u.deg)
     elif isinstance(radec, list):
         return SkyCoord(radec[0], radec[1], unit=u.deg)
@@ -364,6 +364,26 @@ def get_map_skydir(filename, maphdu=0):
     hdulist = fits.open(filename)
     wcs = WCS(hdulist[maphdu].header)
     return wcs_to_skydir(wcs)
+
+
+def get_cel_to_gal_angle(skydir):
+    """Calculate the rotation angle in radians between the longitude
+    axes of a local projection in celestial and galactic coordinates.
+
+    Parameters
+    ----------
+    skydir : `~astropy.coordinates.SkyCoord`
+        Direction of projection center.
+    
+    Returns
+    -------
+    angle : float
+        Rotation angle in radians.
+    """
+    wcs0 = create_wcs(skydir, coordsys='CEL')
+    wcs1 = create_wcs(skydir, coordsys='GAL')
+    x, y = SkyCoord.to_pixel(SkyCoord.from_pixel(1.0, 0.0, wcs0), wcs1)
+    return np.arctan2(y, x)
 
 
 def wcs_to_skydir(wcs):

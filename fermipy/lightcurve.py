@@ -118,7 +118,7 @@ class LightCurve(object):
         o['tmax'] = times[1:]
         o['tmin_mjd'] = utils.met_to_mjd(o['tmin'])
         o['tmax_mjd'] = utils.met_to_mjd(o['tmax'])
-        
+
         for k, v in defaults.source_flux_output.items():
 
             if not k in self.roi[name]:
@@ -134,7 +134,7 @@ class LightCurve(object):
                 o[k] = np.nan * np.ones(o['tmin'].shape)
 
         return o
-        
+
     def _make_lc(self, name, **kwargs):
 
         # make array of time values in MET
@@ -149,7 +149,7 @@ class LightCurve(object):
 
         o = self._create_lc_dict(name, times)
         o['config'] = kwargs
-        
+
         diff_sources = [s.name for s in self.roi.sources if s.diffuse]
         skydir = self.roi[name].skydir
 
@@ -221,16 +221,17 @@ class LightCurve(object):
             gta.write_xml('fit_model_final.xml')
             output = gta.get_src_model(name)
 
-            if fit_results['fit_success'] == 1:            
+            if fit_results['fit_success'] == 1:
                 for k in defaults.source_flux_output.keys():
                     if not k in output:
                         continue
-                    if (isinstance(output[k],np.ndarray) and
-                         o[k][i].shape != output[k].shape):
-                        self.logger.warning('Incompatible shape for column %s',k)
-                        continue                        
+                    if (isinstance(output[k], np.ndarray) and
+                            o[k][i].shape != output[k].shape):
+                        self.logger.warning(
+                            'Incompatible shape for column %s', k)
+                        continue
                     o[k][i] = output[k]
-                        
+
             self.logger.info('Finished time range %i %i', time[0], time[1])
 
         src = self.roi.get_source_by_name(name)

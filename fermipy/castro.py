@@ -395,8 +395,8 @@ class ReferenceSpec(object):
         """
         return self._ref_npred
 
-    @staticmethod
-    def create_from_table(tab_e):
+    @classmethod
+    def create_from_table(cls, tab_e):
         """
         Parameters
         ----------
@@ -433,9 +433,7 @@ class ReferenceSpec(object):
         except:
             ref_npred = np.ones((ne))
 
-        refSpec = ReferenceSpec(emin, emax,
-                                ref_dnde, ref_flux, ref_eflux, ref_npred)
-        return refSpec
+        return cls(emin, emax, ref_dnde, ref_flux, ref_eflux, ref_npred)
 
     def build_ebound_table(self):
         """ Build and return an EBOUNDS table with the encapsulated data.
@@ -548,12 +546,12 @@ class SpecData(ReferenceSpec):
     def e2dnde_err(self):
         return self._dnde_err * self.evals**2
 
-    @staticmethod
-    def create_from_table(tab):
+    @classmethod
+    def create_from_table(cls, tab):
         """
         """
         rs = ReferenceSpec.create_from_table(tab)
-        return SpecData(rs, tab['norm'], tab['norm_err'])
+        return cls(rs, tab['norm'], tab['norm_err'])
 
     def build_spec_table(self):
         """
@@ -1064,8 +1062,8 @@ class CastroData(CastroData_Base):
         """ Return a `~fermipy.castro.ReferenceSpec` with the spectral data """
         return self._refSpec
 
-    @staticmethod
-    def create_from_flux_points(txtfile):
+    @classmethod
+    def create_from_flux_points(cls, txtfile):
         """Create a Castro data object from a text file containing a
         sequence of differential flux points."""
 
@@ -1109,10 +1107,10 @@ class CastroData(CastroData_Base):
 
         norm_vals *= flux[:, np.newaxis] / norm[:, np.newaxis]
 
-        return CastroData(norm_vals, nll_vals, spec_data, 'flux')
+        return cls(norm_vals, nll_vals, spec_data, 'flux')
 
-    @staticmethod
-    def create_from_tables(norm_type='eflux',
+    @classmethod
+    def create_from_tables(cls, norm_type='eflux',
                            tab_s="SCANDATA",
                            tab_e="EBOUNDS"):
         """Create a CastroData object from two tables
@@ -1150,10 +1148,10 @@ class CastroData(CastroData_Base):
         nll_vals = -np.array(tab_s['dloglike_scan'])
 
         rs = ReferenceSpec.create_from_table(tab_e)
-        return CastroData(norm_vals, nll_vals, rs, norm_type)
+        return cls(norm_vals, nll_vals, rs, norm_type)
 
-    @staticmethod
-    def create_from_fits(fitsfile, norm_type='eflux',
+    @classmethod
+    def create_from_fits(cls, fitsfile, norm_type='eflux',
                          hdu_scan="SCANDATA",
                          hdu_energies="EBOUNDS",
                          irow=None):
@@ -1200,10 +1198,10 @@ class CastroData(CastroData_Base):
         tab_s = convert_sed_cols(tab_s)
         tab_e = convert_sed_cols(tab_e)
 
-        return CastroData.create_from_tables(norm_type, tab_s, tab_e)
+        return cls.create_from_tables(norm_type, tab_s, tab_e)
 
-    @staticmethod
-    def create_from_sedfile(fitsfile, norm_type='eflux'):
+    @classmethod
+    def create_from_sedfile(cls, fitsfile, norm_type='eflux'):
         """Create a CastroData object from an SED fits file
 
         Parameters
@@ -1240,10 +1238,10 @@ class CastroData(CastroData_Base):
         nll_vals = -np.array(tab_s['dloglike_scan'])
         ref_spec = ReferenceSpec.create_from_table(tab_s)
         spec_data = SpecData(ref_spec, tab_s['norm'], tab_s['norm_err'])
-        return CastroData(norm_vals, nll_vals, spec_data, norm_type)
+        return cls(norm_vals, nll_vals, spec_data, norm_type)
 
-    @staticmethod
-    def create_from_stack(shape, components, ylims, weights=None):
+    @classmethod
+    def create_from_stack(cls, shape, components, ylims, weights=None):
         """  Combine the log-likelihoods from a number of components.
 
         Parameters
@@ -1264,9 +1262,9 @@ class CastroData(CastroData_Base):
             return None
         norm_vals, nll_vals = CastroData_Base.stack_nll(
             shape, components, ylims, weights)
-        return CastroData(norm_vals, nll_vals,
-                          components[0].refSpec,
-                          components[0].norm_type)
+        return cls(norm_vals, nll_vals,
+                   components[0].refSpec,
+                   components[0].norm_type)
 
 
     def spectrum_loglike(self, specType, params, scale=1E3):
@@ -1484,8 +1482,8 @@ class TSCube(object):
         """ return the number of sample points in each energy bin """
         return self._nN
 
-    @staticmethod
-    def create_from_fits(fitsfile, norm_type='flux'):
+    @classmethod
+    def create_from_fits(cls, fitsfile, norm_type='flux'):
         """Build a TSCube object from a fits file created by gttscube
         Parameters
         ----------
@@ -1547,9 +1545,9 @@ class TSCube(object):
         ref_colname = 'ref_%s' % norm_type
         norm_vals *= tab_e[ref_colname][np.newaxis, :, np.newaxis]
 
-        return TSCube(tsmap, nmap, tscube, ncube,
-                      norm_vals, nll_vals, refSpec,
-                      norm_type)
+        return cls(tsmap, nmap, tscube, ncube,
+                   norm_vals, nll_vals, refSpec,
+                   norm_type)
 
     def castroData_from_ipix(self, ipix, colwise=False):
         """ Build a CastroData object for a particular pixel """

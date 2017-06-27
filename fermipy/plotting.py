@@ -155,6 +155,19 @@ def load_bluered_cmap():
     return plt.cm.bluered
 
 
+def annotate_name(data, xy=(0.05, 0.93), **kwargs):
+
+    if not 'name' in data:
+        return
+
+    ax = kwargs.pop('ax', plt.gca())
+    ax.annotate(data['name'],
+                xy=xy,
+                xycoords='axes fraction', fontsize=12,
+                xytext=(-5, 5), textcoords='offset points',
+                ha='left', va='center')
+
+
 def annotate(**kwargs):
     ax = kwargs.pop('ax', plt.gca())
     loge_bounds = kwargs.pop('loge_bounds', None)
@@ -203,15 +216,15 @@ def plot_error_ellipse(fit, xy, cdelt, **kwargs):
     ax = kwargs.pop('ax', plt.gca())
     colname = kwargs.pop('colname', 'r68')
     color = kwargs.pop('color', 'k')
-    sigma = fit['sigma']
-    sigmax = fit['sigma_semimajor']
-    sigmay = fit['sigma_semiminor']
-    theta = fit['theta']
+    sigma = fit['pos_err']
+    sigmax = fit['pos_err_semimajor']
+    sigmay = fit['pos_err_semiminor']
+    theta = fit['pos_angle']
     radius = fit[colname]
     e0 = Ellipse(xy=(float(xy[0]), float(xy[1])),
                  width=2.0 * sigmax / cdelt[0] * radius / sigma,
                  height=2.0 * sigmay / cdelt[1] * radius / sigma,
-                 angle=-np.degrees(theta),
+                 angle=-theta,
                  facecolor='None', **kwargs)
     ax.add_artist(e0)
 
@@ -370,7 +383,6 @@ class ROIPlotter(fermipy.config.Configurable):
             self._wcs = self._wcsproj.wcs
             self._mapping = hpx_utils.HpxToWcsMapping(
                 self._proj, self._wcsproj)
-            self._data = dataT.T
         else:
             raise Exception(
                 "Can't make ROIPlotter of unknown projection type %s" % type(data_map))
@@ -403,8 +415,8 @@ class ROIPlotter(fermipy.config.Configurable):
     def proj(self):
         return self._proj
 
-    @staticmethod
-    def create_from_fits(fitsfile, roi, **kwargs):
+    @classmethod
+    def create_from_fits(cls, fitsfile, roi, **kwargs):
 
         hdulist = fits.open(fitsfile)
         try:
@@ -426,7 +438,7 @@ class ROIPlotter(fermipy.config.Configurable):
         else:
             raise Exception("Unknown projection type %s" % projtype)
 
-        return ROIPlotter(themap, roi=roi, **kwargs)
+        return cls(themap, roi=roi, **kwargs)
 
     def plot_projection(self, iaxis, **kwargs):
 
@@ -607,16 +619,8 @@ class ROIPlotter(fermipy.config.Configurable):
     def draw_circle(self, radius, **kwargs):
 
         # coordsys = wcs_utils.get_coordsys(self.proj)
-        # if coordsys == 'GAL':
-        #    c = Circle((skydir.galactic.l.deg,skydir.galactic.b.deg),
-        #               radius,facecolor='none',edgecolor='w',linestyle='--',
-        #               transform=self._ax.get_transform('galactic'))
-        # elif coordsys == 'CEL':
-        #    c = Circle((skydir.fk5.l.deg,skydir.fk5.b.deg),
-        #               radius,facecolor='none',edgecolor='w',linestyle='--',
-        #               transform=self._ax.get_transform('fk5'))
-
         skydir = kwargs.get('skydir', None)
+        path_effects = kwargs.get('path_effects', None)
 
         if skydir is None:
             pix = self.cmap.pix_center
@@ -627,6 +631,10 @@ class ROIPlotter(fermipy.config.Configurable):
                   linewidth=0.5, label='__nolabel__')
         kw = merge_dict(kw, kwargs)
         c = Circle(pix, radius / max(self.cmap.pix_size), **kw)
+
+        if path_effects is not None:
+            plt.setp(c, path_effects=path_effects)
+
         self._ax.add_patch(c)
 
     def zoom(self, zoom):
@@ -811,19 +819,6 @@ class SEDPlotter(object):
                             alpha=0.5, color=color, zorder=-1)
 
     @staticmethod
-    def annotate(sed, xy=(0.05, 0.93), **kwargs):
-
-        if not 'name' in sed:
-            return
-
-        ax = kwargs.pop('ax', plt.gca())
-        ax.annotate(sed['name'],
-                    xy=xy,
-                    xycoords='axes fraction', fontsize=12,
-                    xytext=(-5, 5), textcoords='offset points',
-                    ha='left', va='center')
-
-    @staticmethod
     def plot_sed(sed, showlnl=False, **kwargs):
         """Render a plot of a spectral energy distribution.
 
@@ -849,7 +844,7 @@ class SEDPlotter(object):
         ax = kwargs.pop('ax', plt.gca())
         cmap = kwargs.get('cmap', 'BuGn')
 
-        SEDPlotter.annotate(sed, ax=ax)
+        annotate_name(sed, ax=ax)
         SEDPlotter.plot_flux_points(sed, **kwargs)
 
         if np.any(sed['ts'] > 9.):
@@ -927,7 +922,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fermipy.config.Configurable.__init__(self, config, **kwargs)
 
         matplotlib.rcParams['font.size'] = 12
-        matplotlib.interactive(False)
+        matplotlib.interactive(self.config['interactive'])
 
         self._catalogs = []
         for c in self.config['catalogs']:
@@ -1250,66 +1245,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         plt.close(fig)
 
-    def make_components_plots(self, gta, mcube_maps, prefix, loge_bounds=None, **kwargs):
-
-        figx = plt.figure('xproj')
-        figy = plt.figure('yproj')
-
-        colors = ['k', 'b', 'g', 'r']
-        data_style = {'marker': 's', 'linestyle': 'None'}
-
-        roi_kwargs = copy.deepcopy(self.config)
-        roi_kwargs['loge_bounds'] = loge_bounds
-
-        if loge_bounds is None:
-            loge_bounds = (gta.log_energies[0], gta.log_energies[-1])
-        esuffix = '_%.3f_%.3f' % (loge_bounds[0], loge_bounds[1])
-
-        for i, c in enumerate(gta.components):
-            fig = plt.figure()
-            p = ROIPlotter(mcube_maps[i + 1], roi=gta.roi, **roi_kwargs)
-
-            mcube_data = p.data
-
-            p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
-            plt.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                     '%s_model_map%s_%02i.%s' % (
-                                         prefix, esuffix, i, fmt)))
-            plt.close(fig)
-
-            plt.figure(figx.number)
-            p = ROIPlotter(c.counts_map(), roi=gta.roi, **roi_kwargs)
-            p.plot_projection(0, color=colors[i % 4], label='Component %i' % i,
-                              **data_style)
-
-            p.plot_projection(0, data=mcube_data,
-                              color=colors[i % 4], noerror=True,
-                              label='__nolegend__')
-
-            plt.figure(figy.number)
-            p.plot_projection(1, color=colors[i % 4], label='Component %i' % i,
-                              **data_style)
-
-            p.plot_projection(1, data=mcube_data,
-                              color=colors[i % 4], noerror=True,
-                              label='__nolegend__')
-
-        plt.figure(figx.number)
-        ROIPlotter.setup_projection_axis(0)
-        annotate(loge_bounds=loge_bounds)
-        figx.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                  '%s_counts_map_comp_xproj%s.%s' % (
-                                      prefix, esuffix, fmt)))
-
-        plt.figure(figy.number)
-        ROIPlotter.setup_projection_axis(1)
-        annotate(loge_bounds=loge_bounds)
-        figy.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                  '%s_counts_map_comp_yproj%s.%s' % (
-                                      prefix, esuffix, fmt)))
-        plt.close(figx)
-        plt.close(figy)
-
     def make_sed_plots(self, sed, **kwargs):
 
         prefix = kwargs.get('prefix', '')
@@ -1402,14 +1337,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
             plt.gca().add_patch(r)
 
         plot_error_ellipse(fit_init, peak_pix, cdelt, edgecolor='lime',
-                           color='lime', colname='r68')
+                           color='lime', colname='pos_r68')
         plot_error_ellipse(fit_init, peak_pix, cdelt, edgecolor='lime',
-                           color='lime', colname='r99', linestyle=':')
+                           color='lime', colname='pos_r99', linestyle=':')
 
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='r68', label='68% Uncertainty')
+                           color='w', colname='pos_r68', label='68% Uncertainty')
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='r99', label='99% Uncertainty',
+                           color='w', colname='pos_r99', label='99% Uncertainty',
                            linestyle='--')
 
         handles, labels = plt.gca().get_legend_handles_labels()
@@ -1457,9 +1392,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
                      label='New Position')
 
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='r68', label='68% Uncertainty')
+                           color='w', colname='pos_r68', label='68% Uncertainty')
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='r99', label='99% Uncertainty',
+                           color='w', colname='pos_r99', label='99% Uncertainty',
                            linestyle='--')
 
         handles, labels = plt.gca().get_legend_handles_labels()
@@ -1482,6 +1417,73 @@ class AnalysisPlotter(fermipy.config.Configurable):
         if 'tsmap' in ext:
             self._plot_extension_tsmap(ext, roi=roi, **kwargs)
 
+        if 'ebin_ts_ext' in ext:
+            self._plot_extension_ebin(ext, roi=roi, **kwargs)
+
+    def _plot_extension_ebin(self, ext, roi=None, **kwargs):
+
+        fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
+        prefix = kwargs.get('prefix', '')
+        name = ext.get('name', '')
+        name = name.lower().replace(' ', '_')
+
+        m = ext['ebin_ts_ext'] > 4.0
+
+        fig = plt.figure(figsize=figsize)
+
+        ectr = ext['ebin_e_ctr']
+        delo = ext['ebin_e_ctr'] - ext['ebin_e_min']
+        dehi = ext['ebin_e_max'] - ext['ebin_e_ctr']
+        xerr0 = np.vstack((delo[m], dehi[m]))
+        xerr1 = np.vstack((delo[~m], dehi[~m]))
+
+        ax = plt.gca()
+
+        ax.errorbar(ectr[m], ext['ebin_ext'][m], xerr=xerr0,
+                    yerr=(ext['ebin_ext_err_lo'][m],
+                          ext['ebin_ext_err_hi'][m]),
+                    color='k', linestyle='None', marker='o')
+        ax.errorbar(ectr[~m], ext['ebin_ext_ul95'][~m], xerr=xerr1,
+                    yerr=0.2 * ext['ebin_ext_ul95'][~m], uplims=True,
+                    color='k', linestyle='None', marker='o')
+        ax.set_xlabel('Energy [log$_{10}$(E/MeV)]')
+        ax.set_ylabel('Extension [deg]')
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+
+        annotate_name(ext)
+
+        ymin = min(10**-1.5, 0.8 * ext['ext_ul95'])
+        ymax = max(10**-0.5, 1.2 * ext['ext_ul95'])
+        if np.any(np.isfinite(ext['ebin_ext_ul95'])):
+            ymin = min(ymin, 0.8 * np.nanmin(ext['ebin_ext_ul95']))
+            ymax = max(ymax, 1.2 * np.nanmax(ext['ebin_ext_ul95']))
+
+        if ext['ts_ext'] > 4.0:
+            plt.axhline(ext['ext'], color='k')
+            ext_lo = ext['ext'] - ext['ext_err_lo']
+            ext_hi = ext['ext'] + ext['ext_err_hi']
+            ax.fill_between([ext['ebin_e_min'][0], ext['ebin_e_max'][-1]],
+                            [ext_lo, ext_lo], [ext_hi, ext_hi],
+                            alpha=0.5, color='k', zorder=-1)
+
+            ymin = min(ymin, 0.8 * (ext['ext'] - ext['ext_err_lo']))
+            ymax = max(ymax, 1.2 * (ext['ext'] + ext['ext_err_hi']))
+
+        else:
+            plt.axhline(ext['ext_ul95'], color='k', linestyle='--')
+
+        ax.set_ylim(ymin, ymax)
+        ax.set_xlim(ext['ebin_e_min'][0], ext['ebin_e_max'][-1])
+
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
+                                        'extension_ebin', prefix=[prefix, name],
+                                        extension=fmt)
+
+        plt.savefig(outfile)
+        plt.close(fig)
+        
     def _plot_extension_tsmap(self, ext, roi=None, **kwargs):
 
         fmt = kwargs.get('format', self.config['format'])
@@ -1499,11 +1501,21 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p.plot(cmap=cmap, interpolation='bicubic', levels=sigma_levels,
                transform='sqrt')
         c = SkyCoord(ext['ra'], ext['dec'], unit='deg')
-        p.draw_circle(ext['ext'], skydir=c, edgecolor='lime', linestyle='-',
-                      linewidth=1.0, label='R$_{68}$')
 
-        p.draw_circle(ext['ext_ul95'], skydir=c, edgecolor='lime', linestyle='--',
-                      linewidth=1.0, label='R$_{68}$ 95% UL')
+        path_effect = PathEffects.withStroke(linewidth=2.0,
+                                             foreground="black")
+
+        if ext['ts_ext'] > 9.0:
+            p.draw_circle(ext['ext'], skydir=c, edgecolor='lime', linestyle='-',
+                          linewidth=1.0, label='R$_{68}$', path_effects=[path_effect])
+            p.draw_circle(ext['ext'] + ext['ext_err'], skydir=c, edgecolor='lime', linestyle='--',
+                          linewidth=1.0, label='R$_{68}$ $\pm 1 \sigma$', path_effects=[path_effect])
+            p.draw_circle(ext['ext'] - ext['ext_err'], skydir=c, edgecolor='lime', linestyle='--',
+                          linewidth=1.0, path_effects=[path_effect])
+        else:
+            p.draw_circle(ext['ext_ul95'], skydir=c, edgecolor='lime', linestyle='--',
+                          linewidth=1.0, label='R$_{68}$ 95% UL',
+                          path_effects=[path_effect])
         leg = plt.gca().legend(frameon=False, loc='upper left')
 
         for text in leg.get_texts():

@@ -4,7 +4,7 @@ Configuration
 =============
 
 This page describes the configuration management scheme used within
-the Fermipy package and the documents the configuration parameters
+the Fermipy package and documents the configuration parameters
 that can be set in the configuration file.
 
 
@@ -12,21 +12,21 @@ that can be set in the configuration file.
 Class Configuration
 ##################################
 
-Classes in the Fermipy package follow a common convention for
-configuring the runtime behavior of a class instance.  Internally
-every class instance has a dictionary that defines its configuration
-state.  Elements of the configuration dictionary can be scalars (str,
-int, float) or dictionaries defining nested groups of parameters.
+Classes in the Fermipy package own a configuration state dictionary
+that is initialized when the class instance is created.  Elements of
+the configuration dictionary can be scalars (str, int, float) or
+dictionaries containing groups of parameters.  The settings in this
+dictionary are used to control the runtime behavior of the class.
 
-The class configuration dictionary is initialized at the time of
-object creation by passing a dictionary or a path to YAML
-configuration file to the class constructor.  Keyword arguments can be
-passed to the constructor to override configuration
-parameters in the input dictionary.  For instance in the following
-example the *config* dictionary defines values for the parameters
-*emin* and *emax*.  By passing a dictionary for the *selection*
-keyword argument, the value of emax in the keyword argument (10000)
-overrides the value of this parameter in the input dictionary.
+When creating a class instance, the configuration is initialized by
+passing either a configuration dictionary or configuration file path
+to the class constructor.  Keyword arguments can be passed to the
+constructor to override configuration parameters in the input
+dictionary.  In the following example the *config* dictionary defines
+values for the parameters *emin* and *emax*.  By passing a dictionary
+for the *selection* keyword argument, the value of *emax* in the
+keyword argument (10000) overrides the value of *emax* in the input
+dictionary.
 
 .. code-block:: python
    
@@ -49,10 +49,10 @@ rather than a dictionary:
 Configuration File
 ##################################
 
-Fermipy uses YAML files to read and write its configuration in a
-persistent format.  The configuration file has a hierarchical
-organization that groups parameters into dictionaries that are keyed
-to a section name (*data*, *binnig*, etc.).  
+Fermipy uses `YAML <http://yaml.org/>`_ files to read and write its
+configuration in a persistent format.  The configuration file has a
+hierarchical structure that groups parameters into dictionaries that
+are keyed to a section name (*data*, *binning*, etc.).
 
 .. code-block:: yaml
    :caption: Sample Configuration
@@ -89,11 +89,22 @@ to a section name (*data*, *binnig*, etc.).
      isodiff  : 'iso_P8R2_SOURCE_V6_v06.txt'
      catalogs : ['3FGL']
                           
-The configuration file mirrors the layout of the configuration
-dictionary.  Most of the configuration parameters are optional and if
-not set explicitly in the configuration file will be set to a default
-value.  The parameters that can be set in each section are described
-below.
+The configuration file has the same structure as the configuration
+dictionary such that one can read/write configurations using the
+load/dump methods of the yaml module:
+
+.. code-block:: python
+
+   import yaml
+   # Load a configuration
+   config = yaml.load(open('config.yaml'))
+   # Update a parameter and write a new configuration
+   config['selection']['emin'] = 1000.
+   yaml.dump(config, open('new_config.yaml','w'))
+   
+Most of the configuration parameters are optional and if not set
+explicitly in the configuration file will be set to a default value.
+The parameters that can be set in each section are described below.
 
 .. _config_binning:
 
@@ -126,25 +137,24 @@ components
 ----------
 
 The *components* section can be used to define analysis configurations
-for a sequence of independent subselections of the data.  Each
-subselection will have its own binned likelihood instance that will be
-combined in a global likelihood function for the whole ROI
-(implemented with the SummedLikelihood class in pyLikelihood).  This
-section is optional and when this section is empty (the default)
-fermiPy will construct a single likelihood with the parameters of the
-root analysis configuration.
+for independent subselections of the data.  Each subselection will
+have its own binned likelihood instance that is combined in a global
+likelihood function for the ROI (implemented with the SummedLikelihood
+class in pyLikelihood).  The *components* section is optional and when
+set to null (the default) only a single likelihood component will be
+created with the parameters of the root analysis configuration.
 
 The component section is defined as a list of dictionaries where each
 element sets analysis parameters for a different subcomponent of the
-analysis.  Dictionary elements have the same hierarchy of parameters
-as the root analysis configuration.  Parameters not defined in a given
-element will default to the values set in the root analysis
-configuration.
+analysis.  The component configurations follow the same structure and
+accept the same parameters as the root analysis configuration.
+Parameters not defined in a given element will default to the values
+set in the root analysis configuration.
 
 The following example illustrates how to define a Front/Back analysis
-with the a list of dictionaries.  Files associated to each component
-will be given a suffix according to their order in the list
-(e.g. file_00.fits, file_01.fits, etc.).
+with two components.  Files associated to each component will be given
+a suffix according to their order in the list (e.g. file_00.fits,
+file_01.fits, etc.).
 
 .. code-block:: yaml
 

@@ -154,7 +154,7 @@ class GtAssembleModel(Link):
                 try:
                     hpxmap = HpxMap.create_from_hdulist(hdulist_in, hdu=source_name)
                 except IndexError:
-                    print ("  Index error on source %s in file %s" % (source_name, srcmap_file))
+                    print("  Index error on source %s in file %s" % (source_name, srcmap_file))
                     continue
                 hpxmap_out = hpxmap.ud_grade(hpx_order, preserve_counts=True)
                 hdulist.append(hpxmap_out.create_image_hdu(name=source_name))

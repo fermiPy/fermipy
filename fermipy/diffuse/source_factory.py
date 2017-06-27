@@ -163,7 +163,7 @@ class SourceFactory(object):
         catalog_extdir : str
             Path to directory with extended source templates
         """
-        print (catalog_file, catalog_extdir)
+        print(catalog_file, catalog_extdir)
         if catalog_type == '2FHL':
             return catalog.Catalog2FHL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '3FGL':
@@ -184,12 +184,12 @@ class SourceFactory(object):
         return roi_model.ROIModel(data, skydir=SkyCoord(0.0, 0.0, unit='deg'))
         
 
-    @staticmethod
-    def make_roi(sources={}):
+    @classmethod
+    def make_roi(cls, sources={}):
         """Build and return a `fermipy.roi_model.ROIModel` object from
         a dict with information about the sources
         """
-        src_fact = SourceFactory()
+        src_fact = cls()
         src_fact.add_sources(sources)
         ret_model = roi_model.ROIModel(
             {}, skydir=SkyCoord(0.0, 0.0, unit='deg'))
@@ -198,12 +198,12 @@ class SourceFactory(object):
                                   build_index=False, merge_sources=False)
         return ret_model
 
-    @staticmethod
-    def copy_selected_sources(roi, source_names):
+    @classmethod
+    def copy_selected_sources(cls, roi, source_names):
         """Build and return a `fermipy.roi_model.ROIModel` object
         by copying selected sources from another such object
         """
-        roi_new = SourceFactory.make_roi()
+        roi_new = cls.make_roi()
         for source_name in source_names:
             try:
                 src_cp = roi.copy_source(source_name)

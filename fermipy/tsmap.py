@@ -562,8 +562,7 @@ def _ts_value(position, counts, bkg, model, C_0_map):
                                               root_fn=_f_cash_root)
 
     if niter > MAX_NITER:
-        if logger is not None:
-            logger.warning('Exceeded maximum number of function evaluations!')
+        print('Exceeded maximum number of function evaluations!')
         return np.nan, amplitude, niter
 
     with np.errstate(invalid='ignore', divide='ignore'):
@@ -631,8 +630,7 @@ def _ts_value_newton(position, counts, bkg, model, C_0_map):
                                              model_sum)
 
     if niter > MAX_NITER:
-        if logger is not None:
-            logger.warning('Exceeded maximum number of function evaluations!')
+        print('Exceeded maximum number of function evaluations!')
         return np.nan, amplitude, niter
 
     with np.errstate(invalid='ignore', divide='ignore'):
@@ -979,9 +977,9 @@ class TSMapGenerator(object):
 
             data.flat[i] = ts
 
-            #            print i, ra, dec, ts
-            #            print self.like()
-            # print self.components[0].like.model['tsmap_testsource']
+            #            print(i, ra, dec, ts)
+            #            print(self.like())
+            # print(self.components[0].like.model['tsmap_testsource'])
 
             self.delete_source('tsmap_testsource')
 

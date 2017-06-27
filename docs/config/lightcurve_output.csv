@@ -10,4 +10,4 @@
 ``TS``	`~np.ndarray`	Test Statistic
 ``retCode``	`~np.ndarray`	Did the likelihood fit converge? 0 if yes, anything else means no
 ``npred``	`~np.ndarray`	Number of Predicted photons in time bin from source
-``config``	dict	Copy of the input configuration to this method.
+``config``	`~dict`	Copy of the input configuration to this method.

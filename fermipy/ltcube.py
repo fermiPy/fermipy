@@ -179,8 +179,8 @@ class LTCube(HpxMap):
         """
         return self._cth_center
 
-    @staticmethod
-    def create(ltfile):
+    @classmethod
+    def create(cls, ltfile):
         """Create a livetime cube from a single file or list of
         files."""
 
@@ -189,14 +189,14 @@ class LTCube(HpxMap):
         elif not isinstance(ltfile, list):
             files = glob.glob(ltfile)
 
-        ltc = LTCube.create_from_fits(files[0])
+        ltc = cls.create_from_fits(files[0])
         for f in files[1:]:
             ltc.load_ltfile(f)
 
         return ltc
 
-    @staticmethod
-    def create_from_fits(ltfile):
+    @classmethod
+    def create_from_fits(cls, ltfile):
 
         hdulist = fits.open(ltfile)
         data = hdulist['EXPOSURE'].data.field('COSBINS')
@@ -216,31 +216,31 @@ class LTCube(HpxMap):
         hpx = HPX.create_from_header(hdulist['EXPOSURE'].header, cth_edges)
         #header = dict(hdulist['EXPOSURE'].header)
         tab_gti = Table.read(ltfile, 'GTI')
-        return LTCube(data[:, ::-1].T, hpx, cth_edges,
-                      tstart=tstart, tstop=tstop,
-                      zmin=zmin, zmax=zmax, tab_gti=tab_gti,
-                      data_wt=data_wt[:, ::-1].T)
+        return cls(data[:, ::-1].T, hpx, cth_edges,
+                   tstart=tstart, tstop=tstop,
+                   zmin=zmin, zmax=zmax, tab_gti=tab_gti,
+                   data_wt=data_wt[:, ::-1].T)
 
-    @staticmethod
-    def create_empty(tstart, tstop, fill=0.0, nside=64):
+    @classmethod
+    def create_empty(cls, tstart, tstop, fill=0.0, nside=64):
         """Create an empty livetime cube."""
         cth_edges = np.linspace(0, 1.0, 41)
         domega = utils.edge_to_width(cth_edges) * 2.0 * np.pi
         hpx = HPX(nside, True, 'CEL', ebins=cth_edges)
         data = np.ones((len(cth_edges) - 1, hpx.npix)) * fill
-        return LTCube(data, hpx, cth_edges, tstart=tstart, tstop=tstop)
+        return cls(data, hpx, cth_edges, tstart=tstart, tstop=tstop)
 
-    @staticmethod
-    def create_from_obs_time(obs_time, nside=64):
+    @classmethod
+    def create_from_obs_time(cls, obs_time, nside=64):
 
         tstart = 239557417.0
         tstop = tstart + obs_time
-        ltc = LTCube.create_empty(tstart, tstop, obs_time, nside)
+        ltc = cls.create_empty(tstart, tstop, obs_time, nside)
         ltc._counts *= ltc.domega[:, np.newaxis] / (4. * np.pi)
         return ltc
 
-    @staticmethod
-    def create_from_gti(skydir, tab_sc, tab_gti, zmax, **kwargs):
+    @classmethod
+    def create_from_gti(cls, skydir, tab_sc, tab_gti, zmax, **kwargs):
 
         radius = kwargs.get('radius', 180.0)
         cth_edges = kwargs.get('cth_edges', None)
@@ -263,8 +263,7 @@ class LTCube(HpxMap):
 
         hpx2 = HPX(2**6, True, 'CEL', ebins=cth_edges)
 
-        ltc = LTCube(np.zeros((len(cth_edges) - 1, hpx2.npix)),
-                     hpx2, cth_edges)
+        ltc = cls(np.zeros((len(cth_edges) - 1, hpx2.npix)), hpx2, cth_edges)
         ltc_skydir = ltc.hpx.get_sky_dirs()
         m = skydir.separation(ltc_skydir).deg < radius
 
@@ -308,8 +307,8 @@ class LTCube(HpxMap):
         width = edge_to_width(bins)
         ipix = hp.ang2pix(self.hpx.nside, np.pi / 2. - np.radians(dec),
                           np.radians(ra), nest=self.hpx.nest)
-        lt = np.interp(center, self._cth_center,
-                       self.data[:, ipix] / self._cth_width) * width
+        lt = np.histogram(self._cth_center,
+                          weights=self.data[:, ipix], bins=bins)[0]
         lt = np.sum(lt.reshape(-1, npts), axis=1)
         return lt
 

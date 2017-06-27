@@ -178,8 +178,8 @@ class ExposureMap(HpxMap):
     def __init__(self, data, hpx):
         HpxMap.__init__(self, data, hpx)
 
-    @staticmethod
-    def create(ltc, event_class, event_types, ebins):
+    @classmethod
+    def create(cls, ltc, event_class, event_types, ebins):
         """Create an exposure map from a livetime cube.  This method will
         generate an exposure map with the same geometry as the
         livetime cube (nside, etc.).
@@ -209,7 +209,7 @@ class ExposureMap(HpxMap):
 
         hpx = HPX(ltc.hpx.nside, ltc.hpx.nest,
                   ltc.hpx.coordsys, ebins=ebins)
-        return ExposureMap(exp, hpx)
+        return cls(exp, hpx)
 
 
 class PSFModel(object):
@@ -419,8 +419,8 @@ class PSFModel(object):
     def exp(self):
         return self._exp
 
-    @staticmethod
-    def create(skydir, ltc, event_class, event_types, energies, cth_bins=None,
+    @classmethod
+    def create(cls, skydir, ltc, event_class, event_types, energies, cth_bins=None,
                ndtheta=500, use_edisp=False, fn=None, nbin=64):
         """Create a PSFModel object.  This class can be used to evaluate the
         exposure-weighted PSF for a source with a given observing
@@ -475,8 +475,8 @@ class PSFModel(object):
         exp = calc_exp(skydir, ltc, event_class, event_types,
                        energies, cth_bins)
 
-        return PSFModel(dtheta, energies, cth_bins, np.squeeze(exp), np.squeeze(psf),
-                        np.squeeze(wts))
+        return cls(dtheta, energies, cth_bins, np.squeeze(exp), np.squeeze(psf),
+                   np.squeeze(wts))
 
 
 def create_irf(event_class, event_type):
@@ -593,7 +593,7 @@ def calc_exp(skydir, ltc, event_class, event_types,
     """
 
     if npts is None:
-        npts = int(np.ceil(np.max(cth_bins[1:] - cth_bins[:-1]) / 0.05))
+        npts = int(np.ceil(np.max(cth_bins[1:] - cth_bins[:-1]) / 0.025))
 
     exp = np.zeros((len(egy), len(cth_bins) - 1))
     cth_bins = utils.split_bin_edges(cth_bins, npts)

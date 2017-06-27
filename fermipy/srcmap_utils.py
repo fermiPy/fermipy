@@ -141,8 +141,8 @@ class SourceMapCache(object):
         k0[~np.isfinite(k0)] = 0
         return k0
 
-    @staticmethod
-    def create(psf, spatial_model, spatial_width, shape_out, cdelt,
+    @classmethod
+    def create(cls, psf, exp, spatial_model, spatial_width, shape_out, cdelt,
                rebin=4):
 
         npix = shape_out[1]
@@ -152,11 +152,10 @@ class SourceMapCache(object):
         ypix = (npix + pad_pix - 1.0) / 2.
         pix_ref = np.array([ypix, xpix])
 
-        k0 = make_srcmap(psf, spatial_model, spatial_width,
+        k0 = make_srcmap(psf, exp, spatial_model, spatial_width,
                          npix=npix + pad_pix,
                          xpix=xpix, ypix=ypix,
-                         cdelt=cdelt,
-                         rebin=1)
+                         cdelt=cdelt)
 
         m0 = MapInterpolator(k0, pix_ref, shape_out, 1)
 
@@ -165,45 +164,37 @@ class SourceMapCache(object):
         ypix1 = (npix1 - 1.0) / 2.
         pix_ref = np.array([ypix1, xpix1])
 
-        k1 = make_srcmap(psf, spatial_model, spatial_width,
+        k1 = make_srcmap(psf, exp, spatial_model, spatial_width,
                          npix=npix1,
                          xpix=xpix1, ypix=ypix1,
-                         cdelt=cdelt / rebin,
-                         rebin=1)
+                         cdelt=cdelt / rebin)
 
         m1 = MapInterpolator(k1, pix_ref, shape_out, rebin)
 
-        return SourceMapCache(m0, m1)
+        return cls(m0, m1)
 
 
-def make_srcmap(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
-                cdelt=0.01, rebin=1, psf_scale_fn=None):
+def make_srcmap_old(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
+                    cdelt=0.01, rebin=1, psf_scale_fn=None):
     """Compute the source map for a given spatial model.
 
     Parameters
     ----------
     psf : `~fermipy.irfs.PSFModel`
-
     spatial_model : str
         Spatial model.
-
     sigma : float
         Spatial size parameter for extended models.
-
     xpix : float
         Source position in pixel coordinates in X dimension.
-
     ypix : float
         Source position in pixel coordinates in Y dimension.
-
     rebin : int    
         Factor by which the original map will be oversampled in the
         spatial dimension when computing the model.
-
     psf_scale_fn : callable        
         Function that evaluates the PSF scaling function.
         Argument is energy in MeV.
-
     """
     if rebin > 1:
         npix = npix * rebin
@@ -228,6 +219,64 @@ def make_srcmap(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
         k = utils.sum_bins(k, 2, rebin)
 
     k *= psf.exp[:, np.newaxis, np.newaxis] * np.radians(cdelt) ** 2
+    return k
+
+
+def make_srcmap(psf, exp, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
+                cdelt=0.01, psf_scale_fn=None, klims=None, sparse=False):
+    """Compute the source map for a given spatial model.
+
+    Parameters
+    ----------
+    psf : `~fermipy.irfs.PSFModel`
+
+    exp : `~numpy.ndarray`
+        Array of exposures.
+
+    spatial_model : str
+        Spatial model.
+
+    sigma : float
+        Spatial size parameter for extended models.
+
+    xpix : float
+        Source position in pixel coordinates in X dimension.
+
+    ypix : float
+        Source position in pixel coordinates in Y dimension.
+
+    psf_scale_fn : callable        
+        Function that evaluates the PSF scaling function.
+        Argument is energy in MeV.
+
+    klims : tuple
+        Indices of lower and upper range of energy.
+
+    sparse : bool    
+        Skip pixels in which the source amplitude is small.
+
+    """
+    if spatial_model == 'RadialGaussian':
+        k = utils.make_radial_kernel(psf, utils.convolve2d_gauss,
+                                     sigma / 1.5095921854516636, npix, cdelt,
+                                     xpix, ypix, psf_scale_fn, klims=klims,
+                                     sparse=sparse)
+    elif spatial_model == 'RadialDisk':
+        k = utils.make_radial_kernel(psf, utils.convolve2d_disk,
+                                     sigma / 0.8246211251235321, npix, cdelt,
+                                     xpix, ypix, psf_scale_fn, klims=klims,
+                                     sparse=sparse)
+    elif spatial_model == 'PointSource':
+        k = utils.make_radial_kernel(psf, None, None, npix, cdelt,
+                                     xpix, ypix, psf_scale_fn, klims=klims,
+                                     sparse=sparse)
+    else:
+        raise Exception('Unsupported spatial model: %s', spatial_model)
+
+    if klims is not None:
+        exp = exp[klims[0]:klims[1] + 1, ...]
+
+    k *= exp[:, np.newaxis, np.newaxis] * np.radians(cdelt) ** 2
     return k
 
 

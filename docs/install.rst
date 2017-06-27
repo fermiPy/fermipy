@@ -20,7 +20,7 @@ For Unix/Linux users we currently recommend following the
 :ref:`condainstall` instructions.  For OSX users we recommend
 following the :ref:`pipinstall` instructions.  The
 :ref:`dockerinstall` instructions can be used to install the STs on
-both OSX and Linux machines that are new enough to support Docker.
+OSX and Linux machines that are new enough to support Docker.
 
 .. _stinstall:
 
@@ -214,53 +214,43 @@ The installation is fully contained in a docker image that is roughly
 Docker Hub page <https://hub.docker.com/r/fermipy/fermipy/tags/>`_.
 Images are tagged with the release version of the STs that was used to
 build the image (e.g. 11-05-00).  The *latest* tag points to the image
-corresponding to the most recent ST release.
+for the most recent ST release.
 
 To install the *latest* image first download the image file:
 
 .. code-block:: bash
 
    $ docker pull fermipy/fermipy
-   $ docker tag fermipy/fermipy fermipy
    
-This will create an image called *fermipy*.  Now change to the
-directory where you plan to do your analysis and run the following
-command to launch a docker container instance:
+Now switch to the directory where you plan to run your analysis and execute
+the following command to launch a docker container instance:
 
 .. code-block:: bash
    
-   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermipy
+   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermipy/fermipy
 
 This will start an ipython notebook server that will be attached to
-port 8888.  Once the server is running you can start a notebook
-session by navigating to the URL `http://localhost:8888/
-<http://localhost:8888/>`_.  The `-v $PWD:/workdir` argument mounts
-the current directory to the working area of the container.
-Additional directories may be mounted by adding more volume arguments
-``-v`` with host and container paths separated by a colon.
+port 8888.  Once you start the server it will print a URL that you can
+use to connect to it with the web browser on your host machine.  The
+`-v $PWD:/workdir` argument mounts the current directory to the
+working area of the container.  Additional directories may be mounted
+by adding more volume arguments ``-v`` with host and container paths
+separated by a colon.
 
 The same docker image may be used to launch python, ipython, or a bash
 shell by passing the command as an argument to ``docker run``:
 
 .. code-block:: bash
    
-   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy ipython
-   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy python
-   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy /bin/bash
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy/fermipy ipython
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy/fermipy python
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy/fermipy /bin/bash
 
 By default interactive graphics will not be enabled.  The following
-code can be inserted at the top of your analysis script to fall-back to a
-non-interactive backend:
-
-.. code-block:: python
-
-   from fermipy.utils import init_matplotlib_backend 
-   init_matplotlib_backend()
-
-The following commands can be used to enable X11 forwarding for
-interactive graphics on an OSX machine.  This requires you to have
-installed XQuartz 2.7.10 or later.  First enable remote connections by
-default and start the X server:
+commands can be used to enable X11 forwarding for interactive graphics
+on an OSX machine.  This requires you to have installed XQuartz 2.7.10
+or later.  First enable remote connections by default and start the X
+server:
 
 .. code-block:: bash
                 
@@ -334,6 +324,16 @@ the installation has succeeded by importing
    Please check out: http://continuum.io/thanks and https://binstar.org
    >>> from fermipy.gtanalysis import GTAnalysis
 
+Alternatively you can install with conda as follows:
+
+.. code-block:: bash
+
+   # Note that this first command may take a long time (> 10 m)
+   $ conda create -n fermipy --clone=root
+   $ conda config --append channels conda-forge
+   $ source activate fermipy
+   (fermipy) $ conda install fermipy
+   
 .. _upgrade:
    
 Upgrading

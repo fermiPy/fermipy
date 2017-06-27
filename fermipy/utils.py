@@ -4,11 +4,13 @@ import os
 import re
 import copy
 import tempfile
+import functools
 from collections import OrderedDict
 import xml.etree.cElementTree as et
 import yaml
 import numpy as np
 import scipy.optimize
+from scipy.ndimage import map_coordinates
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
 from scipy.ndimage.measurements import label
@@ -488,10 +490,48 @@ def create_model_name(src):
 
 
 def cov_to_correlation(cov):
+    """Compute the correlation matrix given the covariance matrix.
+
+    Parameters
+    ----------
+    cov : `~numpy.ndarray`
+        N x N matrix of covariances among N parameters.
+
+    Returns
+    -------
+    corr : `~numpy.ndarray`
+        N x N matrix of correlations among N parameters.
+    """
     err = np.sqrt(np.diag(cov))
+    errinv = np.ones_like(err) * np.nan
+    m = np.isfinite(err) & (err != 0)
+    errinv[m] = 1. / err[m]
     corr = np.array(cov)
-    corr *= np.outer(1 / err, 1 / err)
-    return corr
+    return corr * np.outer(errinv, errinv)
+
+
+def ellipse_to_cov(sigma_maj, sigma_min, theta):
+    """Compute the covariance matrix in two variables x and y given
+    the std. deviation along the semi-major and semi-minor axes and
+    the rotation angle of the error ellipse.
+
+    Parameters
+    ----------
+    sigma_maj : float
+        Std. deviation along major axis of error ellipse.
+
+    sigma_min : float
+        Std. deviation along minor axis of error ellipse.
+
+    theta : float
+        Rotation angle in radians from x-axis to ellipse major axis.
+    """
+    cth = np.cos(theta)
+    sth = np.sin(theta)
+    covxx = cth**2 * sigma_maj**2 + sth**2 * sigma_min**2
+    covyy = sth**2 * sigma_maj**2 + cth**2 * sigma_min**2
+    covxy = cth * sth * sigma_maj**2 - cth * sth * sigma_min**2
+    return np.array([[covxx, covxy], [covxy, covyy]])
 
 
 def twosided_cl_to_dlnl(cl):
@@ -665,7 +705,7 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     try:
         spline = UnivariateSpline(xval, loglike, k=2, s=tol)
     except:
-        print ("Failed to create spline: ", xval, loglike)
+        print("Failed to create spline: ", xval, loglike)
         return {'x0': np.nan, 'ul': np.nan, 'll': np.nan,
                 'err_lo': np.nan, 'err_hi': np.nan, 'err': np.nan,
                 'lnlmax': np.nan}
@@ -689,7 +729,7 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
 
     lnlmax = float(spline(x0))
 
-    fn = lambda t: spline(t) - lnlmax
+    def fn(t): return spline(t) - lnlmax
     fn_val = fn(xval)
     if np.any(fn_val[imax:] < -deltalnl):
         xhi = xval[imax:][fn_val[imax:] < -deltalnl][0]
@@ -1000,7 +1040,8 @@ def fits_recarray_to_dict(table):
 def unicode_to_str(args):
     o = {}
     for k, v in args.items():
-        if isinstance(v, unicode):
+
+        if isstr(v):
             o[k] = str(v)
         else:
             o[k] = v
@@ -1216,7 +1257,7 @@ def tolist(x):
         return dict(x)
     elif isinstance(x, np.bool_):
         return bool(x)
-    elif isinstance(x, basestring) or isinstance(x, np.str):
+    elif isstr(x) or isinstance(x, np.str):
         x = str(x)  # convert unicode & numpy strings
         try:
             return int(x)
@@ -1405,7 +1446,8 @@ def make_gaussian_kernel(sigma, npix=501, cdelt=0.01, xpix=None, ypix=None):
     """
 
     sigma /= cdelt
-    fn = lambda t, s: 1. / (2 * np.pi * s ** 2) * np.exp(
+
+    def fn(t, s): return 1. / (2 * np.pi * s ** 2) * np.exp(
         -t ** 2 / (s ** 2 * 2.0))
     dxy = make_pixel_distance(npix, xpix, ypix)
     k = fn(dxy, sigma)
@@ -1425,7 +1467,8 @@ def make_disk_kernel(radius, npix=501, cdelt=0.01, xpix=None, ypix=None):
     """
 
     radius /= cdelt
-    fn = lambda t, s: 0.5 * (np.sign(s - t) + 1.0)
+
+    def fn(t, s): return 0.5 * (np.sign(s - t) + 1.0)
 
     dxy = make_pixel_distance(npix, xpix, ypix)
     k = fn(dxy, radius)
@@ -1457,7 +1500,7 @@ def make_cdisk_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
 
     k = np.zeros((len(egy), npix, npix))
     for i in range(len(egy)):
-        fn = lambda t: psf.eval(i, t, scale_fn=psf_scale_fn)
+        def fn(t): return psf.eval(i, t, scale_fn=psf_scale_fn)
         psfc = convolve2d_disk(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
 
@@ -1490,7 +1533,7 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
 
     k = np.zeros((len(egy), npix, npix))
     for i in range(len(egy)):
-        fn = lambda t: psf.eval(i, t, scale_fn=psf_scale_fn)
+        def fn(t): return psf.eval(i, t, scale_fn=psf_scale_fn)
         psfc = convolve2d_gauss(fn, dtheta, sigma)
         k[i] = np.interp(np.ravel(x), dtheta, psfc).reshape(x.shape)
 
@@ -1498,6 +1541,133 @@ def make_cgauss_kernel(psf, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
         k /= (np.sum(k, axis=0)[np.newaxis, ...] * np.radians(cdelt) ** 2)
 
     return k
+
+
+def memoize(obj):
+    obj.cache = {}
+
+    @functools.wraps(obj)
+    def memoizer(*args, **kwargs):
+        key = str(args) + str(kwargs)
+        if key not in obj.cache:
+            obj.cache = {}
+            obj.cache[key] = obj(*args, **kwargs)
+        return obj.cache[key]
+    return memoizer
+
+
+def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=None,
+                       normalize=False, klims=None, sparse=False):
+    """Make a kernel for a general radially symmetric 2D function.
+
+    Parameters
+    ----------
+
+    psf : `~fermipy.irfs.PSFModel`
+
+    fn : callable
+        Function that evaluates the kernel at a radial coordinate r.
+
+    sigma : float
+        68% containment radius in degrees.
+    """
+
+    if klims is None:
+        egy = psf.energies
+    else:
+        egy = psf.energies[klims[0]:klims[1] + 1]
+    ang_dist = make_pixel_distance(npix, xpix, ypix) * cdelt
+    max_ang_dist = np.max(ang_dist) + cdelt
+    #dtheta = np.linspace(0.0, (np.max(ang_dist) * 1.05)**0.5, 200)**2.0
+    # z = create_kernel_function_lookup(psf, fn, sigma, egy,
+    #                                  dtheta, psf_scale_fn)
+
+    shape = (len(egy), npix, npix)
+    k = np.zeros(shape)
+
+    r99 = psf.containment_angle(energies=egy, fraction=0.997)
+    r34 = psf.containment_angle(energies=egy, fraction=0.34)
+
+    rmin = np.maximum(r34 / 4., 0.01)
+    rmax = np.maximum(r99, 0.1)
+    if sigma is not None:
+        rmin = np.maximum(rmin, 0.5 * sigma)
+        rmax = np.maximum(rmax, 2.0 * r34 + 3.0 * sigma)
+    rmax = np.minimum(rmax, max_ang_dist)
+
+    for i in range(len(egy)):
+
+        rebin = min(int(np.ceil(cdelt / rmin[i])), 8)
+        if sparse:
+            dtheta = np.linspace(0.0, rmax[i]**0.5, 100)**2.0
+        else:
+            dtheta = np.linspace(0.0, max_ang_dist**0.5, 200)**2.0
+
+        z = eval_radial_kernel(psf, fn, sigma, i, dtheta, psf_scale_fn)
+        xdist = make_pixel_distance(npix * rebin,
+                                    xpix * rebin + (rebin - 1.0) / 2.,
+                                    ypix * rebin + (rebin - 1.0) / 2.)
+        xdist *= cdelt / float(rebin)
+        #x = val_to_pix(dtheta, np.ravel(xdist))
+
+        if sparse:
+            m = np.ravel(xdist) < rmax[i]
+            kk = np.zeros(xdist.size)
+            #kk[m] = map_coordinates(z, [x[m]], order=2, prefilter=False)
+            kk[m] = np.interp(np.ravel(xdist)[m], dtheta, z)
+            kk = kk.reshape(xdist.shape)
+        else:
+            kk = np.interp(np.ravel(xdist), dtheta, z).reshape(xdist.shape)
+            # kk = map_coordinates(z, [x], order=2,
+            #                     prefilter=False).reshape(xdist.shape)
+
+        if rebin > 1:
+            kk = sum_bins(kk, 0, rebin)
+            kk = sum_bins(kk, 1, rebin)
+
+        k[i] = kk / float(rebin)**2
+
+    k = k.reshape((len(egy),) + ang_dist.shape)
+    if normalize:
+        k /= (np.sum(k, axis=0)[np.newaxis, ...] * np.radians(cdelt) ** 2)
+
+    return k
+
+
+def eval_radial_kernel(psf, fn, sigma, idx, dtheta, psf_scale_fn):
+
+    if fn is None:
+        return psf.eval(idx, dtheta, scale_fn=psf_scale_fn)
+    else:
+        return fn(lambda t: psf.eval(idx, t, scale_fn=psf_scale_fn),
+                  dtheta, sigma)
+
+
+#@memoize
+def create_kernel_function_lookup(psf, fn, sigma, egy, dtheta, psf_scale_fn):
+
+    z = np.zeros((len(egy), len(dtheta)))
+    for i in range(len(egy)):
+
+        if fn is None:
+            z[i] = psf.eval(i, dtheta, scale_fn=psf_scale_fn)
+        else:
+            z[i] = fn(lambda t: psf.eval(i, t, scale_fn=psf_scale_fn),
+                      dtheta, sigma)
+
+    return z
+
+
+def create_radial_spline(psf, fn, sigma, egy, dtheta, psf_scale_fn):
+
+    from scipy.ndimage.interpolation import spline_filter
+
+    z = create_kernel_function_lookup(
+        psf, fn, sigma, egy, dtheta, psf_scale_fn)
+    sp = []
+    for i in range(z.shape[0]):
+        sp += [spline_filter(z[i], order=2)]
+    return sp
 
 
 def make_psf_kernel(psf, npix, cdelt, xpix, ypix, psf_scale_fn=None, normalize=False):

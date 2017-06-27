@@ -26,7 +26,7 @@ fi
 
 # Set default ST version
 if [ -z $FERMI_RELEASE_TAG ]; then
-    export FERMI_RELEASE_TAG=11-05-01
+    export FERMI_RELEASE_TAG=11-05-02
 fi
 
 # Save PATH
@@ -74,4 +74,11 @@ function slacsetup
     fi
 
     export FERMI_DIFFUSE_DIR=$GLAST_EXT/diffuseModels/v5r0
+
+    # Setup HEASoft
+    ASTROTOOLS=/afs/slac/g/glast/applications/astroTools
+    export PATH=${PATH}:${ASTROTOOLS}/bin
+    export LHEASOFT=${ASTROTOOLS}/headas/i686-pc-linux-gnu-libc2.2.4
+    export HEADAS=${LHEASOFT}
+    source ${HEADAS}/headas-init.sh
 }
