@@ -260,7 +260,10 @@ def make_catalog_comp_dict(**kwargs):
     """
     source_yamlfile = kwargs.pop('sources', 'config/catalog_components.yaml')
     csm = kwargs.pop('CatalogSourceManager', CatalogSourceManager(**kwargs))
-    yamldict = yaml.safe_load(open(source_yamlfile))
+    if source_yamlfile is None or source_yamlfile == 'None':
+        yamldict = {}
+    else:
+        yamldict = yaml.safe_load(open(source_yamlfile))
     catalog_info_dict, comp_info_dict = csm.make_catalog_comp_info_dict(yamldict)
     return dict(catalog_info_dict=catalog_info_dict,
                 comp_info_dict=comp_info_dict,
@@ -270,9 +273,9 @@ def make_catalog_comp_dict(**kwargs):
 class CatalogComponentChain(Chain):
     """Small class to build srcmaps for diffuse components
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
-                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
+                           sources=diffuse_defaults.diffuse['sources'],
                            make_xml=(False, "Make XML files for diffuse components", bool),
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 
@@ -288,20 +291,13 @@ class CatalogComponentChain(Chain):
         link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
                                                          appname='fermipy-merge-srcmaps-sg')
 
+        parser = argparse.ArgumentParser(usage='fermipy-catalog-chain',
+                                         description="Run catalog component analysis setup")
         Chain.__init__(self, linkname,
-                       appname='FIXME',
+                       appname='fermipy-catalog-chain',
                        links=[link_srcmaps_catalogs, link_srcmaps_composite],
                        options=CatalogComponentChain.default_options.copy(),
-                       parser=CatalogComponentChain._make_parser())
-
-    @staticmethod
-    def _make_parser():
-        """Make an argument parser for this chain """
-        usage = "FIXME [options]"
-        description = "Run diffuse component analysis"
-
-        parser = argparse.ArgumentParser(usage=usage, description=description)
-        return parser
+                       parser=parser)
 
     def run_argparser(self, argv):
         """Initialize a link with a set of arguments using argparser

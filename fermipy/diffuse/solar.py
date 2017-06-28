@@ -237,20 +237,13 @@ class SunMoonChain(Chain):
                                                       'comp':'binning_yaml'})
         options = diffuse_defaults.sun_moon.copy()
         options['dry_run'] = (False, 'Print commands but do not run', bool)
+        parser = argparse.ArgumentParser(usage='fermipy-solar-chain',
+                                         description="Build sun and moon templates")
         Chain.__init__(self, linkname,
                        appname='FIXME',
                        links=[link_gtexphpsun, link_gtsuntemp],
                        options=options,
-                       parser=SunMoonChain._make_parser())
-
-    @staticmethod
-    def _make_parser():
-        """Make an argument parser for this chain """
-        usage = "FIXME [options]"
-        description = "Build sun and moon templates"
-
-        parser = argparse.ArgumentParser(usage=usage, description=description)
-        return parser
+                       parser=parser)
  
     def run_argparser(self, argv):
         """Initialize a link with a set of arguments using argparser

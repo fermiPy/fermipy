@@ -13,15 +13,19 @@ from __future__ import absolute_import, division, print_function
 import sys
 import os
 import time
+import copy
 import argparse
 
+import numpy as np
 #from enum import Enum
 
-from fermipy.jobs.job_archive import JobStatus
+from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails
 from fermipy.jobs.chain import add_argument, extract_arguments, Link
 
+
+
 ACTIONS = ['run', 'resubmit', 'init',
-           'scatter', 'gather', 'check_status', 'config']
+           'scatter', 'gather', 'check_status', 'config', 'skip']
 
 
 def remove_file(filepath, dry_run=False):
@@ -114,9 +118,9 @@ class ScatterGather(Link):
     """ Abstract base class to dispatch several jobs in parallel and
     collect and merge the results.
     """
-    default_init_logfile = 'init.log'
+    default_init_logfile = 'init'
     default_prefix_logfile = 'scatter'
-    default_gather_logfile = 'gather.log'
+    default_gather_logfile = 'gather'
 
     default_options = dict(action=('run', 'Action to perform', str),
                            dry_run=(
@@ -219,6 +223,7 @@ class ScatterGather(Link):
     def no_batch(self):
         """Return the value of the no_batch flag"""
         return self._no_batch
+
 
     @classmethod
     def _make_init_logfile_name(cls, input_config):
@@ -328,7 +333,7 @@ class ScatterGather(Link):
             self.sub_files.update(self._gather_link.files.file_dict)
             self.sub_files.update(self._gather_link.sub_files.file_dict)
 
-    def check_status(self):
+    def check_status(self, check_once=False, fail_pending=False):
         """Check on the status of all the jobs in job dict.
 
         Returns
@@ -351,26 +356,35 @@ class ScatterGather(Link):
                        self.args['job_check_sleep'])
                 time.sleep(self.args['job_check_sleep'])
 
-            running, failed = self._check_completion()
+            running, failed = self._check_completion(fail_pending)
             if self.args['force_gather']:
                 sys.stdout.write('Forcing results gathering\n')
                 running = False
-            elif self.args['check_status_once']:
+            elif self.args['check_status_once'] or check_once:
                 self.print_update()
                 break
+
             if self.args['print_update']:
                 self.print_update()
 
             if self._job_archive is not None:
                 self._job_archive.write_table_file()
-
+ 
         if failed:
             self.print_update()
             self.print_failed()
+            self.set_status_self(status=JobStatus.partial_failed)
+        elif running:
+            self.set_status_self(status=JobStatus.running)
+        else:
+            self.set_status_self(status=JobStatus.done)
+
+        if self._job_archive is not None:
+            self._job_archive.write_table_file()
 
         return running, failed
 
-    def _check_completion(self):
+    def _check_completion(self, fail_pending=False):
         """Internal function to check the completion of all the dispatched jobs
 
         Returns
@@ -384,17 +398,17 @@ class ScatterGather(Link):
         """
         if self._initialize_link is not None:
             running, failed = self._check_link_completion(
-                self._initialize_link)
+                self._initialize_link, fail_pending)
             if running or failed:
                 return running, failed
-        running, failed = self._check_link_completion(self._scatter_link)
+        running, failed = self._check_link_completion(self._scatter_link, fail_pending)
         if running or failed:
             return running, failed
         if self._gather_link is not None:
-            running, failed = self._check_link_completion(self._gather_link)
+            running, failed = self._check_link_completion(self._gather_link, fail_pending)
         return running, failed
 
-    def _check_link_completion(self, link):
+    def _check_link_completion(self, link, fail_pending=False):
         """Internal function to check the completion of all the dispatched jobs
 
         Returns
@@ -409,17 +423,25 @@ class ScatterGather(Link):
         failed = False
         running = False
         for job_key, job_details in link.jobs.items():
-            if job_details.status == JobStatus.failed:
-                failed = True
-                continue
-            elif job_details.status == JobStatus.done:
+            #if job_details.status == JobStatus.failed:
+            #    failed = True
+            #    continue
+            #elif job_details.status == JobStatus.done:
+            #    continue
+            if job_key == '__top__':
                 continue
             job_details.status = self.check_job(job_details)
             if job_details.status == JobStatus.failed:
                 failed = True
-            elif job_details.status in [JobStatus.pending, JobStatus.running]:
+            elif job_details.status == JobStatus.pending:
+                if fail_pending:
+                    failed = True
+                else:
+                    running = True
+            elif job_details.status == JobStatus.running:
                 running = True
             link.jobs[job_key] = job_details
+            link.set_status_self(job_details.jobkey, job_details.status)
 
         return running, failed
 
@@ -446,8 +468,7 @@ class ScatterGather(Link):
         if self._initialize_link is None:
             return JobStatus.no_job
         key = self._initialize_link.jobs.keys()[0]
-        job_details = self.dispatch_job(
-            self._initialize_link, key=key)
+        job_details = self.dispatch_job(self._initialize_link, key=key)
 
         running = True            
         while running:
@@ -473,6 +494,7 @@ class ScatterGather(Link):
         failed = False
         if job_dict is None:
             job_dict = link.jobs
+
         for job_key, job_details in sorted(job_dict.items()):
             job_config = job_details.job_config
             # clean failed jobs
@@ -480,7 +502,7 @@ class ScatterGather(Link):
                 clean_job(job_details.logfile, job_details.outfiles,
                           self.args['dry_run'])
             job_config['logfile'] = job_details.logfile
-            new_job_details = self.dispatch_job(self._scatter_link, job_key)
+            new_job_details = self.dispatch_job(link, job_key)
             if new_job_details.status == JobStatus.failed:
                 failed = True
                 clean_job(new_job_details.logfile,
@@ -497,8 +519,7 @@ class ScatterGather(Link):
         """
         if self._gather_link is None:
             return JobStatus.no_job
-        job_details = self.dispatch_job(
-            self._gather_link, key='gather@' + self._gather_link.linkname)
+        job_details = self.dispatch_job(self._gather_link, key='gather')
         return job_details.status
 
     def dispatch_job(self, link, key):
@@ -541,10 +562,9 @@ class ScatterGather(Link):
     def print_update(self, stream=sys.stdout):
         """Print an update about the current number of jobs running """
         n_total = len(self._job_configs)
-        n_running = 0
-        n_done = 0
-        n_failed = 0
-        n_pending = 0
+        
+        job_stats = np.zeros(8, int)
+
         job_det_list = []
         if self._initialize_link is not None:
             job_det_list += self._initialize_link.jobs.values()
@@ -553,24 +573,26 @@ class ScatterGather(Link):
             job_det_list += self._gather_link.jobs.values()
 
         for job_dets in job_det_list:
-            if job_dets.status == JobStatus.running:
-                n_running += 1
-            elif job_dets.status == JobStatus.done:
-                n_done += 1
-            elif job_dets.status == JobStatus.failed:
-                n_failed += 1
-            elif job_dets.status == JobStatus.pending:
-                n_pending += 1
+            if job_dets.status == JobStatus.no_job:
+                continue
+            job_stats[job_dets.status] += 1
+ 
 
-        stream.write("Status :\n  Total  : %i\n  Pending: %i\n" %
-                     (n_total, n_pending))
-        stream.write("Running: %i\n  Done   : %i\n  Failed : %i\n" %
-                     (n_running, n_done, n_failed))
+        stream.write("Status :\n  Total  : %i\n  Unknown: %i\n" %
+                     (job_stats.sum(), job_stats[JobStatus.unknown]))
+        stream.write("  Not Ready: %i\n  Ready: %i\n" %
+                     (job_stats[JobStatus.not_ready], job_stats[JobStatus.ready]))
+        stream.write("  Pending: %i\n  Running: %i\n" %
+                     (job_stats[JobStatus.pending], job_stats[JobStatus.running]))
+        stream.write("  Done: %i\n  Failed: %i\n" % 
+                     (job_stats[JobStatus.done], job_stats[JobStatus.failed]))
+        
+        
 
     def print_failed(self, stream=sys.stderr):
         """Print list of the failed jobs """
-        for job_key, job_details in sorted(self._job_configs.items()):
-            if job_details['status'] == JobStatus.failed:
+        for job_key, job_details in sorted(self.jobs.items()):
+            if job_details.status == JobStatus.failed:
                 stream.write("Failed job %s : log = %s\n" %
                              (job_key, job_details.logfile))
 
@@ -604,46 +626,69 @@ class ScatterGather(Link):
             sys.stderr.write(
                 "Unrecognized action %s, options are %s\n" % (args.action, ACTIONS))
 
+        if args.action == 'skip':
+            return JobStatus.no_job
+            
         if args.action in ['run', 'resubmit', 'init',
                            'scatter', 'gather', 'check_status', 'config']:
             self.build_configs(args.__dict__)
 
-        if args.action in ['init', 'scatter', 'gather', 'check_status']:
+        if args.action in ['init', 'scatter', 'gather', 'check_status', 'config']:
             # This is called explicitly in run and resubmit
             self.build_job_dict()
+        
+        self.run_action(args.action, args.dry_run)
 
-        if args.action == 'run':
+
+    def run_action(self, action, dry_run):
+        """
+        """
+        if action == 'run':
             return self.run_jobs()
-        elif args.action == 'resubmit':
+        elif action == 'resubmit':
             return self.resubmit()
-        elif args.action == 'init':
+        elif action == 'init':
             return self.initialize()
-        elif args.action == 'scatter':
+        elif action == 'scatter':
             return self.submit_jobs(self.scatter_link)
-        elif args.action == 'gather':
+        elif action == 'gather':
             return self.gather_results()
-        elif args.action == 'check_status':
+        elif action == 'check_status':
             running, failed = self.check_status()
             if failed:
                 return JobStatus.failed
             elif running:
                 return JobStatus.running
-            elif self.args['dry_run']:
+            elif dry_run:
                 return JobStatus.no_job
             return JobStatus.done
-        elif args.action == 'config':
+        elif action == 'config':
             return JobStatus.done
 
     def build_job_dict(self):
         """Build a dictionary of `JobDetails` objects for the internal `Link`"""
         if self.args['dry_run']:
-            status = JobStatus.no_job
+            status = JobStatus.unknown
         else:
-            status = JobStatus.pending
+            status = JobStatus.not_ready
 
+        if self.jobs.has_key('__top__'):
+            pass
+        else:
+            job_details = JobDetails(jobname=self.linkname,
+                                     jobkey='__top__',
+                                     appname=self.appname,
+                                     logfile="%s_top.log"%self.linkname,
+                                     job_config=self.args,
+                                     timestamp=get_timestamp(),
+                                     file_dict=copy.deepcopy(self.files),
+                                     sub_file_dict=copy.deepcopy(self.sub_files),
+                                     status=status)
+            self.jobs[job_details.fullkey] = job_details
+        
         if self._initialize_link is not None:
             full_init_config = self._input_config.copy()
-            ScatterGather._make_init_logfile_name(full_init_config)
+            ScatterGather._make_init_logfile_name(self.linkname, full_init_config)
             logfile = full_init_config.get('logfile')
             self._initialize_link.register_job(key='init',
                                                job_config=full_init_config,
@@ -652,7 +697,7 @@ class ScatterGather(Link):
 
         for jobkey, job_config in sorted(self._job_configs.items()):
             full_job_config = self._merge_config(job_config)
-            ScatterGather._make_scatter_logfile_name(jobkey, full_job_config)
+            ScatterGather._make_scatter_logfile_name(jobkey, self.linkname, full_job_config)
             logfile = full_job_config.get('logfile')
             self._scatter_link.register_job(key=jobkey,
                                             job_config=full_job_config,
@@ -661,7 +706,7 @@ class ScatterGather(Link):
 
         if self._gather_link is not None:
             full_gather_config = self._output_config.copy()
-            ScatterGather._make_gather_logfile_name(full_gather_config)
+            ScatterGather._make_gather_logfile_name(self.linkname, full_gather_config)
             logfile = full_gather_config.get('logfile')
             self._gather_link.register_job(key='gather',
                                            job_config=full_gather_config,
@@ -674,7 +719,7 @@ class ScatterGather(Link):
         init_status = self.initialize()
         if init_status == JobStatus.failed:
             return JobStatus.failed
-
+        
         self.build_job_dict()
 
         scatter_status = self.submit_jobs(self.scatter_link)
@@ -688,14 +733,22 @@ class ScatterGather(Link):
 
         if self.args['dry_run']:
             gather_status = self.gather_results()
-            return JobStatus.no_job
+            return JobStatus.unknown
 
         if failed:
             return JobStatus.failed
         else:
             return JobStatus.done
 
-    def run(self, stream=sys.stdout, dry_run=False):
+    def run(self, stream=sys.stdout, dry_run=False, stage_files=True):
+        """ """
+        argv = self.make_argv()
+        if dry_run:
+            argv.append('--dry_run')
+        self.invoke(argv)
+
+    def run_link(self, stream=sys.stdout, dry_run=False, stage_files=True):
+        """ """
         argv = self.make_argv()
         if dry_run:
             argv.append('--dry_run')
@@ -705,20 +758,20 @@ class ScatterGather(Link):
         """Function to resubmit failed jobs and collect results
         """
         self.build_job_dict()
-        running, failed = self.check_status()
+        running, failed = self.check_status(True, True)
         if failed is False:
             return JobStatus.done
 
         if self._initialize_link is not None:
-            failed_jobs = self._initialize_link.get_failed_jobs()
+            failed_jobs = self._initialize_link.get_failed_jobs(True)
             if len(failed_jobs) != 0:
                 init_status = self.initialize()
                 if init_status == JobStatus.failed:
                     return JobStatus.failed
 
-        failed_jobs = self._scatter_link.get_failed_jobs()
+        failed_jobs = self._scatter_link.get_failed_jobs(True)
         if len(failed_jobs) != 0:
-            scatter_status = self.submit_jobs(failed_jobs)
+            scatter_status = self.submit_jobs(self._scatter_link, failed_jobs)
             if scatter_status == JobStatus.failed:
                 return JobStatus.failed
 
@@ -728,7 +781,7 @@ class ScatterGather(Link):
             return gather_status
 
         if self.args['dry_run']:
-            return JobStatus.no_job
+            return JobStatus.unknown
         return JobStatus.done
 
     def run_argparser(self, argv):

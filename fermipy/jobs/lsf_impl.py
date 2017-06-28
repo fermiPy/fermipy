@@ -23,12 +23,14 @@ def get_lsf_status():
                     'NJOB': 0,
                     'UNKNWN': 0}
 
-    subproc = subprocess.Popen(['bjobs'],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
-    subproc.stderr.close()
-
-    output = subproc.stdout.readlines()
+    try:
+        subproc = subprocess.Popen(['bjobs'],
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        subproc.stderr.close()
+        output = subproc.stdout.readlines()
+    except OSError:
+        return status_count
 
     for line in output[1:]:
         line = line.strip().split()
@@ -66,7 +68,6 @@ def check_log(logfile, exited='Exited with exit code',
     """
     if not os.path.exists(logfile):
         return JobStatus.pending
-
     if exited in open(logfile).read():
         return JobStatus.failed
     elif successful in open(logfile).read():
@@ -172,17 +173,18 @@ class LsfScatterGather(ScatterGather):
 
     def submit_jobs(self, link, job_dict=None):
         """Submit all the jobs in job_dict """
-        if self._scatter_link is None:
+        if link is None:
             return JobStatus.no_job
         if job_dict is None:
-            job_dict = link.jobs
-        job_keys = sorted(job_dict.keys())
+            job_keys = link.jobs.keys()
+        else: 
+            job_keys = sorted(job_dict.keys())
 
         # copy & reverse the keys b/c we will be popping item off the back of
         # the list
         unsubmitted_jobs = job_keys
         unsubmitted_jobs.reverse()
-
+ 
         failed = False
         while len(unsubmitted_jobs) > 0:
             status = get_lsf_status()
@@ -196,23 +198,26 @@ class LsfScatterGather(ScatterGather):
             for i in range(njob_to_submit):
                 job_key = unsubmitted_jobs.pop()
 
-                job_details = job_dict[job_key]
+                #job_details = job_dict[job_key]
+                job_details = link.jobs[job_key]
                 job_config = job_details.job_config
                 if job_details.status == JobStatus.failed:
-                    clean_job(job_details.logfile,
-                              job_details.outfiles, self.args['dry_run'])
+                    clean_job(job_details.logfile, {}, self.args['dry_run'])
+                    #clean_job(job_details.logfile,
+                    #          job_details.outfiles, self.args['dry_run'])
+                    
                 job_config['logfile'] = job_details.logfile
-                new_job_details = self.dispatch_job(
-                    self._scatter_link, job_key)
+                new_job_details = self.dispatch_job(link, job_key)
                 if new_job_details.status == JobStatus.failed:
                     failed = True
                     clean_job(new_job_details.logfile,
                               new_job_details.outfiles, self.args['dry_run'])
-                job_dict[job_key] = new_job_details
+                link.jobs[job_key] = new_job_details
 
-            print('Sleeping %.0f seconds between submission cycles' %
-                  self.args['time_per_cycle'])
-            time.sleep(self.args['time_per_cycle'])
+            if len(unsubmitted_jobs) > 0:
+                print('Sleeping %.0f seconds between submission cycles' %
+                      self.args['time_per_cycle'])
+                time.sleep(self.args['time_per_cycle'])
 
         return failed
 
@@ -222,6 +227,9 @@ def build_sg_from_link(link, config_maker, **kwargs):
     """
     kwargs['config_maker'] = config_maker
     kwargs['scatter'] = link
+    linkname = kwargs.get('linkname', None)
+    if linkname is None:
+        kwargs['linkname'] = link.linkname
     job_archive = kwargs.get('job_archive', None)
     if job_archive is None:
         kwargs['job_archive'] = JobArchive.build_temp_job_archive()

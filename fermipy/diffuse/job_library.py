@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+import copy
 
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Link
@@ -27,6 +28,7 @@ def create_link_gtexpcube2(**kwargs):
     gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtexpcube2'),
                     appname='gtexpcube2',
                     options=dict(irfs=diffuse_defaults.gtopts['irfs'],
+                                 evtype=diffuse_defaults.gtopts['evtype'],
                                  hpx_order=diffuse_defaults.gtopts['hpx_order'],
                                  infile=(None, "Input livetime cube file", str),
                                  cmap=diffuse_defaults.gtopts['cmap'],
@@ -105,8 +107,8 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
     --coordsys : Coordinate system ['GAL' | 'CEL']
     --hpx_order: HEALPix order parameter
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_expcube'],
                            coordsys=diffuse_defaults.diffuse['coordsys'])
@@ -124,25 +126,46 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
+        datafile = args['data']
+        if datafile is None or datafile == 'None':
+            return input_config, job_configs, {}
         NAME_FACTORY.update_base_dict(args['data'])
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax
-            key = comp.make_key('{ebin_name}_{evtype_name}')
-            name_keys = dict(zcut=zcut,
-                             ebin=comp.ebin_name,
-                             psftype=comp.evtype_name,
-                             coordsys=args['coordsys'],
-                             irf_ver=args['irf_ver'],
-                             fullpath=True)
-            outfile = NAME_FACTORY.bexpcube(**name_keys)
-            job_configs[key] = dict(cmap=NAME_FACTORY.ccube(**name_keys),
-                                    infile=NAME_FACTORY.ltcube(**name_keys),
-                                    outfile=outfile,
-                                    irfs=NAME_FACTORY.irfs(**name_keys),
-                                    hpx_order=min(comp.hpx_order, args['hpx_order_max']),
-                                    evtype=comp.evtype,
-                                    logfile=outfile.replace('.fits', '.log'))
+            
+            mktimelist = copy.copy(comp.mktimefilters)
+            if len(mktimelist) == 0:
+                mktimelist.append('none')
+            evtclasslist_keys = copy.copy(comp.evtclasses)
+            if len(evtclasslist_keys) == 0:
+                evtclasslist_keys.append('default')
+                evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
+            else:
+                evtclasslist_vals = copy.copy(evtclasslist_keys)
+
+            for mktimekey in mktimelist:
+                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):       
+                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclassval, zcut, mktimekey))
+                    name_keys = dict(zcut=zcut,
+                                     ebin=comp.ebin_name,
+                                     psftype=comp.evtype_name,
+                                     coordsys=args['coordsys'],
+                                     irf_ver=args['irf_ver'],
+                                     mktime=mktimekey,
+                                     evclass=evtclassval,
+                                     fullpath=True)
+
+                    outfile = NAME_FACTORY.bexpcube(**name_keys)
+                    cmap = NAME_FACTORY.ccube(**name_keys)
+                    infile = NAME_FACTORY.ltcube(**name_keys)
+                    job_configs[fullkey] = dict(cmap=cmap,
+                                                infile=infile,
+                                                outfile=outfile,
+                                                irfs=NAME_FACTORY.irfs(**name_keys),
+                                                hpx_order=min(comp.hpx_order, args['hpx_order_max']),
+                                                evtype=comp.evtype,
+                                                logfile=outfile.replace('.fits', '.log'))
 
         output_config = {}
         return input_config, job_configs, output_config
@@ -158,10 +181,10 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
     --sources  : Yaml file with input source model definitions
     --make_xml : Write xml files for the individual components
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'],
+                           sources=diffuse_defaults.diffuse['sources'],
                            make_xml=(False, 'Write xml files needed to make source maps', bool),)
 
     def __init__(self, link, **kwargs):
@@ -211,6 +234,7 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
                                  psftype=comp.evtype_name,
                                  coordsys='GAL',
                                  irf_ver=args['irf_ver'],
+                                 mktime='none',
                                  fullpath=True)
                 outfile = NAME_FACTORY.srcmaps(**name_keys)
                 logfile = outfile.replace('.fits', '.log')
@@ -235,7 +259,7 @@ class ConfigMaker_SumRings(ConfigMaker):
     --diffuse  : Diffuse model component definition yaml file
     --outdir   : Output directory
     """
-    default_options = dict(diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],
+    default_options = dict(diffuse=diffuse_defaults.diffuse['diffuse'],
                            outdir=(None, 'Output directory', str),)
 
     def __init__(self, link, **kwargs):
@@ -252,7 +276,7 @@ class ConfigMaker_SumRings(ConfigMaker):
         job_configs = {}
 
         gmm = make_ring_dicts(diffuse=args['diffuse'], basedir='.')
-
+        
         for galkey in gmm.galkeys():
             ring_dict = gmm.ring_dict(galkey)
             for ring_key, ring_info in ring_dict.items():
@@ -278,10 +302,10 @@ class ConfigMaker_Vstack(ConfigMaker):
     --irf_ver  : IRF verions string (e.g., 'V6')
     --diffuse  : Diffuse model component definition yaml file'
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'],)
+                           diffuse=diffuse_defaults.diffuse['diffuse'],)
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -318,6 +342,7 @@ class ConfigMaker_Vstack(ConfigMaker):
                                  sourcekey=sub_comp_info.sourcekey,
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
+                                 mktime='none',
                                  coordsys='GAL',
                                  irf_ver=args['irf_ver'],
                                  fullpath=True)
@@ -346,10 +371,10 @@ class ConfigMaker_healview(ConfigMaker):
     --irf_ver  : IRF verions string (e.g., 'V6')
     --diffuse  : Diffuse model component definition yaml file'
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           diffuse=diffuse_defaults.diffuse['diffuse_comp_yaml'])
+                           diffuse=diffuse_defaults.diffuse['diffuse'])
 
     def __init__(self, link, **kwargs):
         """C'tor

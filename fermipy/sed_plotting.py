@@ -12,14 +12,14 @@ import numpy as np
 
 NORM_LABEL = {
     'NORM': r'Flux Normalization [a.u.]',
-    'FLUX': r'$F_{\rm min}^{\rm max} [ph $cm^{-2} s^{-1}$]',
-    'EFLUX': r'$E F_{\rm min}^{\rm max}$ [MeV $cm^{-2} s^{-1}]$',
-    'NPRED': r'$n_{\rm pred}$ [ph]',
-    'DFDE': r'dN/dE [ph $cm^{-2} s^{-1} MeV^{-1}$]',
-    'EDFDE': r'E dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
-    'E2DFDE': r'%E^2% dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
-    'SIGVJ': r'$J\langle \sigma v \rangle$ [$GeV^{2} cm^{-2} s^{-1}$]',
-    'SIGV': r'$\langle \sigma v \rangle$ [$cm^{3} s^{-1}$]',
+    'flux': r'$F_{\rm min}^{\rm max} [ph $cm^{-2} s^{-1}$]',
+    'eflux': r'$E F_{\rm min}^{\rm max}$ [MeV $cm^{-2} s^{-1}]$',
+    'npred': r'$n_{\rm pred}$ [ph]',
+    'dfde': r'dN/dE [ph $cm^{-2} s^{-1} MeV^{-1}$]',
+    'edfde': r'E dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
+    'e2dede': r'%E^2% dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
+    'sigvj': r'$J\langle \sigma v \rangle$ [$GeV^{2} cm^{-2} s^{-1}$]',
+    'sigv': r'$\langle \sigma v \rangle$ [$cm^{3} s^{-1}$]',
 }
 
 

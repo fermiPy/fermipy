@@ -115,8 +115,7 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
             except OSError:
                 pass
         pfiles = "%s:%s" % (pfiles, pfiles_orig)
-        print("Setting PFILES=%s" % pfiles)
-
+        #print("Setting PFILES=%s" % pfiles)
         os.environ['PFILES'] = pfiles
 
     stream.write("%s\n" % gtapp.command())
@@ -155,7 +154,7 @@ class Gtlink(Link):
         try:
             self.__app = build_gtapp(self.appname, **self.args)
         except:
-            raise ValueError("Failed to build link %s" % self.linkname)
+            raise ValueError("Failed to build link %s %s %s" % self.linkname, self.appname, self.args)
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application

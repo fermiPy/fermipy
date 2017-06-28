@@ -18,6 +18,7 @@ def update_null_primary(hdu_in, hdu=None):
         hdu = fits.PrimaryHDU(header=hdu_in.header)
     else:
         hdu = hdu_in
+        hdu.header.remove('FILENAME')
     return hdu
 
 
@@ -30,7 +31,7 @@ def update_primary(hdu_in, hdu=None):
     if hdu is None:
         hdu = fits.PrimaryHDU(data=hdu_in.data, header=hdu_in.header)
     else:
-        hdu.data += hdu_in.data
+        hdu.data += hdu_in.data        
     return hdu
 
 
@@ -169,8 +170,9 @@ def merge_wcs_counts_cubes(filelist):
         fin = fits.open(filename)
         sys.stdout.write('.')
         sys.stdout.flush()
-        out_prim = update_primary(fin[0], out_prim)
-        out_ebounds = update_ebounds(fin["EBOUNDS"], out_ebounds)
+        if i == 0:
+            out_prim = update_primary(fin[0], out_prim)
+            out_ebounds = update_ebounds(fin["EBOUNDS"], out_ebounds)
         (gti_data, exposure, tstop) = extract_gti_data(fin["GTI"])
         datalist_gti.append(gti_data)
         exposure_sum += exposure
@@ -211,12 +213,14 @@ def merge_hpx_counts_cubes(filelist):
         fin = fits.open(filename)
         sys.stdout.write('.')
         sys.stdout.flush()
-        out_prim = update_null_primary(fin[0], out_prim)
+        if i == 0:
+            out_prim = update_null_primary(fin[0], out_prim)
         out_skymap = update_hpx_skymap_allsky(fin[1], out_skymap)
-        try:
-            out_ebounds = update_ebounds(fin["EBOUNDS"], out_ebounds)
-        except KeyError:
-            out_ebounds = update_energies(fin["ENERGIES"], out_ebounds)
+        if i == 0:
+            try:
+                out_ebounds = update_ebounds(fin["EBOUNDS"], out_ebounds)
+            except KeyError:
+                out_ebounds = update_energies(fin["ENERGIES"], out_ebounds)
         try:
             (gti_data, exposure, tstop) = extract_gti_data(fin["GTI"])
             datalist_gti.append(gti_data)

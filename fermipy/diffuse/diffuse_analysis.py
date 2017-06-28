@@ -11,81 +11,116 @@ import argparse
 import yaml
 
 from fermipy.jobs.job_archive import JobArchive
+from fermipy.jobs.chain import Link, Chain
+from fermipy.jobs.lsf_impl import check_log
 
-from fermipy.diffuse.job_library import create_link_gtexpcube2, create_link_gtscrmaps,\
-    create_link_fermipy_coadd, create_link_fermipy_vstack,\
-    create_sg_gtexpcube2, create_sg_gtsrcmaps_catalog,\
-    create_sg_sum_ring_gasmaps, create_sg_vstack_diffuse
-from fermipy.diffuse.gt_assemble_model import create_link_assemble_model, create_sg_assemble_model
-from fermipy.diffuse.gt_coadd_split import create_chain_coadd_split
-from fermipy.diffuse.gt_merge_srcmaps import create_link_merge_srcmaps, create_sg_merge_srcmaps
-from fermipy.diffuse.gt_split_and_bin import create_chain_split_and_bin, create_sg_split_and_bin
-from fermipy.diffuse.gt_srcmap_partial import create_link_srcmap_partial, create_sg_srcmap_partial
-from fermipy.diffuse.residual_cr import create_link_residual_cr, create_chain_residual_cr,\
-    create_sg_residual_cr
-from fermipy.diffuse.diffuse_src_manager import create_chain_diffuse_comps
-from fermipy.diffuse.catalog_src_manager import create_chain_catalog_comps
+from fermipy.diffuse import defaults as diffuse_defaults
 
+from fermipy.diffuse.name_policy import NameFactory
+from fermipy.diffuse.job_library import create_sg_gtexpcube2,\
+    create_sg_sum_ring_gasmaps, create_sg_vstack_diffuse, create_sg_gtsrcmaps_catalog
+from fermipy.diffuse.gt_srcmap_partial import create_sg_srcmap_partial
+from fermipy.diffuse.gt_assemble_model import create_sg_assemble_model
+from fermipy.diffuse.gt_split_and_bin import create_sg_split_and_bin
+from fermipy.diffuse.gt_merge_srcmaps import create_sg_merge_srcmaps
 
-BUILDER_DICT = {'create_link_gtexpcube2':create_link_gtexpcube2,
-                'create_link_gtscrmaps':create_link_gtscrmaps,
-                'create_link_fermipy_coadd':create_link_fermipy_coadd,
-                'create_link_fermipy_vstack':create_link_fermipy_vstack,
-                'create_sg_gtexpcube2':create_sg_gtexpcube2,
-                'create_sg_gtsrcmaps_catalog':create_sg_gtsrcmaps_catalog,
-                'create_sg_sum_ring_gasmaps':create_sg_sum_ring_gasmaps,
-                'create_sg_vstack_diffuse':create_sg_vstack_diffuse,
-                'create_link_assemble_model':create_link_assemble_model,
-                'create_sg_assemble_model':create_sg_assemble_model,
-                'create_chain_coadd_split':create_chain_coadd_split,
-                'create_link_merge_srcmaps':create_link_merge_srcmaps,
-                'create_sg_merge_srcmaps':create_sg_merge_srcmaps,
-                'create_chain_split_and_bin':create_chain_split_and_bin,
-                'create_sg_split_and_bin':create_sg_split_and_bin,
-                'create_link_srcmap_partial':create_link_srcmap_partial,
-                'create_sg_srcmap_partial':create_sg_srcmap_partial,
-                'create_link_residual_cr':create_link_residual_cr,
-                'create_chain_residual_cr':create_chain_residual_cr,
-                'create_sg_residual_cr':create_sg_residual_cr,
-                'create_chain_diffuse_comps':create_chain_diffuse_comps,
-                'create_chain_catalog_comps':create_chain_catalog_comps}
+NAME_FACTORY = NameFactory()
 
 
-def build_analysis_link(linktype, **kwargs):
-    """Build and return a `fermipy.jobs.Link` object to run a
-    part of the analysis"""
+class DiffuseAnalysisChain(Chain):
+    """Small class to define diffuse analysis chain"""
+    default_options = diffuse_defaults.diffuse.copy()
 
-    builder_name = 'create_%s'%linktype
-    try:
-        builder_func = BUILDER_DICT[builder_name]
-    except KeyError:
-        raise KeyError("Could not build an analysis link using a creator function %s"%builder_name)
-    return builder_func(**kwargs)
+    def __init__(self, linkname, **kwargs):
+        """C'tor
+        """
+        link_split_and_bin = create_sg_split_and_bin(linkname="%s.split"%linkname,
+                                                     mapping={'hpx_order_max':'hpx_order_ccube',
+                                                              'action': 'action_split'})
+        link_expcube = create_sg_gtexpcube2(linkname="%s.expcube"%linkname,
+                                            mapping={'hpx_order_max':'hpx_order_expcube',
+                                                     'action': 'action_expcube'})
+        link_gasmaps = create_sg_sum_ring_gasmaps(linkname="%s.gasmaps"%linkname,
+                                                  mapping={'action':'action_gasmaps'})
+        link_srcmaps_diffuse = create_sg_srcmap_partial(linkname="%s.srcmaps_diffuse"%linkname,
+                                                        mapping={'action':'action_srcmaps_diffuse'})
+        link_vstack_srcmaps = create_sg_vstack_diffuse(linkname="%s.vstack"%linkname,
+                                                       mapping={'action':'action_vstack'})
+        link_srcmaps_catalogs = create_sg_gtsrcmaps_catalog(linkname="%s.catalog_diffuse"%linkname,
+                                                            mapping={'action':'action_srcmaps_catalog'})
+        link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
+                                                         mapping={'action':'action_composite'})
+        link_assemble_model = create_sg_assemble_model(linkname="%s.assemble"%linkname,
+                                                       mapping={'hpx_order':'hpx_order_fitting',
+                                                                'action': 'action_assemble'})
+
+        parser = argparse.ArgumentParser(usage='fermipy-diffuse-analysis',
+                                         description="Run diffuse analysis setup")
+        
+        Chain.__init__(self, linkname,
+                       appname='fermipy-diffuse-analysis',
+                       links=[link_split_and_bin, link_expcube,
+                              link_gasmaps, link_srcmaps_diffuse, link_vstack_srcmaps,
+                              link_srcmaps_catalogs, link_srcmaps_composite,
+                              link_assemble_model],
+                       options=DiffuseAnalysisChain.default_options.copy(),
+                       argmapper=self._map_arguments,
+                       parser=parser,
+                       **kwargs)
+    
+    def _map_arguments(self, input_dict):
+        """Map from the top-level arguments to the arguments provided to
+        the indiviudal links """
+        output_dict = input_dict.copy()
+      
+        if input_dict.get('dry_run', False):
+            action = 'run'
+        else:
+            action = 'run'
+       
+        output_dict['action_split'] = action
+        output_dict['action_expcube'] = action
+        output_dict['action_gasmaps'] = action
+        output_dict['action_srcmaps_diffuse'] = action
+        output_dict['action_vstack'] = action
+        output_dict['action_srcmaps_catalog'] = action
+        output_dict['action_composite'] = action
+        output_dict['action_assemble'] = action
+
+        output_dict.pop('link', None)
+        return output_dict
 
 
+
+def create_chain_diffuse_analysis(**kwargs):
+    """Build and return a `DiffuseAnalysisChain` object """
+    ret_chain = DiffuseAnalysisChain(linkname=kwargs.pop('linkname', 'Diffuse'),
+                                     **kwargs)
+    return ret_chain
+
+def main_chain():
+    """Energy point for running the entire Cosmic-ray analysis """
+    job_archive = JobArchive.build_archive(job_archive_table='job_archive_diffuse.fits',
+                                           file_archive_table='file_archive_diffuse.fits',
+                                           base_path=os.path.abspath('.') + '/')
+                                           
+    the_chain = DiffuseAnalysisChain('Diffuse', job_archive=job_archive)
+    args = the_chain.run_argparser(sys.argv[1:])
+    logfile = "log_%s_top.log" % the_chain.linkname
+    the_chain.archive_self(logfile)
+    if args.dry_run:
+        outstr = sys.stdout
+    else:
+        outstr = open(logfile, 'append')
+
+    the_chain.run_chain(sys.stdout, args.dry_run, sub_logs=True)
+    if not args.dry_run:
+        outstr.close()
+    the_chain.finalize(args.dry_run)
+    job_archive.update_job_status(check_log)
+    job_archive.write_table_file()
 
 if __name__ == '__main__':
+    main_chain()
 
-    JOB_ARCHIVE = JobArchive.build_archive(job_archive_table='job_archive_temp2.fits',
-                                           file_archive_table='file_archive_temp2.fits',
-                                           base_path=os.path.abspath('.')+'/')
 
-    PARSER = argparse.ArgumentParser(usage="diffuse_analysis.py [options] analyses",
-                                     description="Run a high level analysis")
-    PARSER.add_argument('--config', type=str, default=None, help="Yaml configuration file")
-    PARSER.add_argument('--dry_run', action='store_true', help="Dry run only")
-    PARSER.add_argument('analyses', nargs='+', type=str, help="Analysis steps to run")
-
-    ARGS = PARSER.parse_args()
-
-    CONFIG = yaml.load(open(ARGS.config))
-
-    for ANALYSIS in ARGS.analyses:
-        ANALYSIS_CONFIG = CONFIG[ANALYSIS]
-        LINK = build_analysis_link(ANALYSIS)
-        LINK.update_args(ANALYSIS_CONFIG)
-        JOB_ARCHIVE.register_jobs(LINK.get_jobs())
-        LINK.run(sys.stdout, ARGS.dry_run)
- 
-    JOB_ARCHIVE.file_archive.update_file_status()
-    JOB_ARCHIVE.write_table_file()

@@ -130,10 +130,10 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
     --irf_ver  : IRF verions string (e.g., 'V6')
     --sources  : Catalog model component definition yaml file'
     """
-    default_options = dict(comp=diffuse_defaults.diffuse['binning_yaml'],
-                           data=diffuse_defaults.diffuse['dataset_yaml'],
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           sources=diffuse_defaults.diffuse['catalog_comp_yaml'])
+                           sources=diffuse_defaults.diffuse['sources'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -169,12 +169,14 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
                                      coordsys='GAL',
+                                     mktime='none',
                                      irf_ver=args['irf_ver'])
                     nested_name_keys = dict(zcut=zcut,
                                             sourcekey=source_dict.catalog_info.catalog_name,
                                             ebin=comp.ebin_name,
                                             psftype=comp.evtype_name,
                                             coordsys='GAL',
+                                            mktime='none',
                                             irf_ver=args['irf_ver'])
                     outfile = NAME_FACTORY.srcmaps(**name_keys)
                     

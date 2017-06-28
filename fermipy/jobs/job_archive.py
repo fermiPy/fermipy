@@ -38,11 +38,26 @@ def get_matches(table, colname, value):
 # class JobStatus(Enum):
 class JobStatus(object):
     """Enumeration of job status types"""
-    no_job = 0
-    pending = 1
-    running = 2
-    done = 3
-    failed = 4
+    no_job = -1           # Job does not exist
+    unknown = 0           # JobDetails exist, but status hasn't been set
+    not_ready = 1         # Inputs are not ready
+    ready = 2             # Inputs are ready
+    pending = 3           # Job is pending (in the batch queue)
+    running = 4           # Job is running
+    done = 5              # Job is successfully completed
+    failed = 6            # Job failed
+    partial_failed = 7    # Some sub-jobs have failed
+    removed = 8           # Job marked as removed
+
+
+JOB_STATUS_STRINGS = ["Unknown",
+                      "Not Ready",
+                      "Ready", 
+                      "Pending",
+                      "Running",
+                      "Done",
+                      "Failed",
+                      "Partially Failed"]
 
 
 class JobDetails(object):
@@ -112,7 +127,7 @@ class JobDetails(object):
         self.outfile_ids = kwargs.get('outfile_ids', None)
         self.rmfile_ids = kwargs.get('rmfile_ids', None)
         self.intfile_ids = kwargs.get('intfile_ids', None)
-        self.status = kwargs.get('status', JobStatus.pending)
+        self.status = kwargs.get('status', JobStatus.unknown)
 
     @staticmethod
     def make_fullkey(jobkey, jobname):
@@ -326,8 +341,12 @@ class JobDetails(object):
 
     def update_table_row(self, table, row_idx):
         """Add this instance as a row on a `astropy.table.Table` """
-        table[row_idx]['timestamp'] = self.timestamp
-        table[row_idx]['status'] = status=self.status
+        try:
+            table[row_idx]['timestamp'] = self.timestamp
+            table[row_idx]['status'] = self.status
+        except IndexError:
+            print("Index error", len(table), row_idx)
+
 
     def check_status_logfile(self, checker_func):
         """Check on the status of this particular job using the logfile"""
@@ -431,15 +450,16 @@ class JobArchive(object):
         """Register a job in this `JobArchive` """
         # check to see if the job already exists
         try:
-            job_details = self.get_details(job_details.jobname,
-                                           job_details.jobkey)
-            raise KeyError("Job %s:%s already exists in archive" % (job_details.jobname,
-                                                                    job_details.jobkey))
-        except KeyError:
-            pass
-        job_details.dbkey = len(self._table) + 1
-        job_details.get_file_ids(self._file_archive, creator=job_details.dbkey)
-        job_details.append_to_tables(self._table, self._table_ids)
+            job_details_old = self.get_details(job_details.jobname,
+                                               job_details.jobkey)
+            if job_details_old.status <= JobStatus.running:
+                job_details_old.status = job_details.status
+                job_details_old.update_table_row(self._table, job_details_old.dbkey - 1)
+            job_details = job_details_old
+        except KeyError:            
+            job_details.dbkey = len(self._table) + 1
+            job_details.get_file_ids(self._file_archive, creator=job_details.dbkey)
+            job_details.append_to_tables(self._table, self._table_ids)
         self._table_id_array = self._table_ids['file_id'].data
         self._cache[job_details.fullkey] = job_details
         return job_details
@@ -447,7 +467,7 @@ class JobArchive(object):
     def register_jobs(self, job_dict):
         """Register a bunch of jobs in this archive"""
         njobs = len(job_dict)
-        sys.stdout.write("Registering %i total jobs: \n" % njobs)
+        sys.stdout.write("Registering %i total jobs: " % njobs)
         for i, job_details in enumerate(job_dict.values()):
             if i % 10 == 0:
                 sys.stdout.write('.')
@@ -460,7 +480,7 @@ class JobArchive(object):
         job_config = kwargs.get('job_config', None)
         if job_config is None:
             job_config = link.args
-        status = kwargs.get('status', JobStatus.no_job)
+        status = kwargs.get('status', JobStatus.unknown)
         job_details = JobDetails(jobname=link.linkname,
                                  jobkey=key,
                                  appname=link.appname,
@@ -481,6 +501,16 @@ class JobArchive(object):
         other.status = job_details.status
         other.update_table_row(self._table, other.dbkey - 1)
         return other
+
+    def remove_jobs(self, mask):
+        """Mark all jobs that match a mask as 'removed' """
+        jobnames = self.table[mask]['jobname']
+        jobkey =  self.table[mask]['jobkey']
+        self.table[mask]['status'] =  JobStatus.removed
+        for jobname, jobkey in zip(jobnames,jobkey):
+            fullkey = JobDetails.make_fullkey(jobkey, jobname)
+            self._cache.pop(fullkey).status = JobStatus.removed            
+        self.write_table_file()
 
     @classmethod
     def build_temp_job_archive(cls):
@@ -514,25 +544,31 @@ class JobArchive(object):
     def update_job_status(self, checker_func):
         """Update the status of all the jobs in the archive"""
         njobs = len(self.cache.keys())
-        status_vect = np.zeros((5), int)
-        print("Updating status of %i jobs: "%njobs)
+        status_vect = np.zeros((8), int)
+        sys.stdout.write("Updating status of %i jobs: "%njobs)
+        sys.stdout.flush()
         for i, key in enumerate(self.cache.keys()):
             if i % 200 == 0:
                 sys.stdout.write('.')
                 sys.stdout.flush()
             job_details = self.cache[key]
-            job_details.check_status_logfile(checker_func)
+            if job_details.status in [JobStatus.pending, JobStatus.running]:
+                if checker_func:
+                    job_details.check_status_logfile(checker_func)
             job_details.update_table_row(self._table, job_details.dbkey - 1)
             status_vect[job_details.status] += 1
             
         sys.stdout.write("!\n")
         sys.stdout.flush()
         sys.stdout.write("Summary:\n")
-        sys.stdout.write("  no_job:   %i\n"%status_vect[0])
-        sys.stdout.write("  pending:  %i\n"%status_vect[1])
-        sys.stdout.write("  running:  %i\n"%status_vect[2])
-        sys.stdout.write("  done:     %i\n"%status_vect[3])
-        sys.stdout.write("  failed:   %i\n"%status_vect[4])
+        sys.stdout.write("  Unknown:   %i\n"%status_vect[JobStatus.unknown])
+        sys.stdout.write("  Not Ready: %i\n"%status_vect[JobStatus.not_ready])
+        sys.stdout.write("  Ready:     %i\n"%status_vect[JobStatus.ready])
+        sys.stdout.write("  Pending:   %i\n"%status_vect[JobStatus.pending])
+        sys.stdout.write("  Running:   %i\n"%status_vect[JobStatus.running])
+        sys.stdout.write("  Done:      %i\n"%status_vect[JobStatus.done])
+        sys.stdout.write("  Failed:    %i\n"%status_vect[JobStatus.failed])
+        sys.stdout.write("  Partial:   %i\n"%status_vect[JobStatus.partial_failed])
 
     @classmethod
     def get_archive(cls):
@@ -553,19 +589,22 @@ def main_browse():
                                      description="Browse a job archive")
 
     parser.add_argument('--jobs', action='store', dest='job_archive_table',
-                        type=str, default='job_archive_temp.fits', help="Job archive file")
+                        type=str, default='job_archive_temp2.fits', help="Job archive file")
     parser.add_argument('--files', action='store', dest='file_archive_table',
-                        type=str, default='file_archive_temp.fits', help="File archive file")
+                        type=str, default='file_archive_temp2.fits', help="File archive file")
     parser.add_argument('--base', action='store', dest='base_path',
                         type=str, default=os.path.abspath('.'), help="File archive base path")
     
     args = parser.parse_args(sys.argv[1:])    
-    JobArchive.build_archive(**args.__dict__)
+    ja = JobArchive.build_archive(**args.__dict__)
+    
+    ja.table.pprint()
 
 
 if __name__ == '__main__':
     main_browse()
-    ja = JobArchive.get_archive()
 
-    from fermipy.jobs.lsf_impl import check_log
-    ja.update_job_status(check_log)
+    
+
+    
+    
