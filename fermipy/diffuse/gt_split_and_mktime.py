@@ -24,7 +24,11 @@ from fermipy.diffuse.timefilter import  MktimeFilterDict
 
 
 NAME_FACTORY = NameFactory()
-MKTIME_DICT = MktimeFilterDict.build_from_yamlfile('config/mktime_filters.yaml')
+try: 
+    MKTIME_DICT = MktimeFilterDict.build_from_yamlfile('config/mktime_filters.yaml')
+except:
+    MKTIME_DICT = MktimeFilterDict(aliases=dict(quality='lat_config==1&&data_qual>0'),
+                                   selections=dict(standard='{quality}'))
 
 def readlines(arg):
     """Read lines from a file into a list.
