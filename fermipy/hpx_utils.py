@@ -782,8 +782,11 @@ class HPX(object):
     def get_sky_dirs(self):
 
         lonlat = self.get_sky_coords()
-        return SkyCoord(ra=lonlat.T[0], dec=lonlat.T[1], unit='deg')
-
+        if self.coordsys == 'CEL':        
+            return SkyCoord(ra=lonlat.T[0], dec=lonlat.T[1], unit='deg', frame='icrs')
+        else:
+            return SkyCoord(l=lonlat.T[0], b=lonlat.T[1], unit='deg', frame='galactic')
+        
     def get_pixel_indices(self, lats, lons):
         """ "Return the indices in the flat array corresponding to a set of coordinates """
         theta = np.radians(90. - lats)
@@ -820,7 +823,7 @@ class HpxToWcsMapping(object):
             self._mult_val = mapping_data['mult_val']
             self._npix = mapping_data['npix']
         self._lmap = self._hpx[self._ipixs]
-        self._valid = self._lmap > 0
+        self._valid = self._lmap >= 0
 
     @property
     def hpx(self):

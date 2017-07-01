@@ -4,6 +4,7 @@ import glob
 import re
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import UnivariateSpline
 import healpy as hp
 from astropy.io import fits
 
@@ -69,9 +70,22 @@ def poisson_log_like(c, m):
     return c * np.log(m) - m
 
 
-def poisson_ts(sig, bkg):
-    return 2 * (poisson_log_like(sig + bkg, sig + bkg) -
-                poisson_log_like(sig + bkg, bkg))
+def poisson_ts(sig, bkg, bkg_fit=None):
+
+    if bkg_fit is None:
+        return 2 * (poisson_log_like(sig + bkg, sig + bkg) -
+                    poisson_log_like(sig + bkg, bkg))
+    else:
+        return 2 * (poisson_log_like(sig + bkg, sig + bkg_fit) -
+                    poisson_log_like(sig + bkg, bkg_fit))
+
+
+def poisson_ts_fast(sig, bkg, bkg_fit=None):
+
+    if bkg_fit is None:
+        return 2 * ((sig + bkg) * np.log((sig + bkg) / bkg) - sig)
+    else:
+        return 2 * ((sig + bkg) * np.log((sig + bkg_fit) / bkg_fit) - sig)
 
 
 def compute_ext_flux(egy, flux):
@@ -121,14 +135,15 @@ def compute_ps_counts(ebins, exp, psf, bkg, fn, egy_dim=0):
     sig_flux = fn.flux(ebins[:-1], ebins[1:])
 
     # Background and signal counts
-    bkgc = bkg[:, np.newaxis] * domega * exp[:, np.newaxis] * \
-        ewidth[:, np.newaxis] * (np.pi / 180.)**2
-    sigc = sig_pdf * sig_flux[:, np.newaxis] * exp[:, np.newaxis]
+    bkgc = bkg[..., np.newaxis] * domega * exp[..., np.newaxis] * \
+        ewidth[..., np.newaxis] * (np.pi / 180.)**2
+    sigc = sig_pdf * sig_flux[..., np.newaxis] * exp[..., np.newaxis]
 
     return sigc, bkgc
 
 
-def compute_norm(sig, bkg, ts_thresh, min_counts, sum_axes=None):
+def compute_norm(sig, bkg, ts_thresh, min_counts, sum_axes=None, bkg_fit=None,
+                 rebin_axes=None):
     """Solve for the normalization of the signal distribution at which the
     detection test statistic (twice delta-loglikelihood ratio) is >=
     ``ts_thresh`` AND the number of signal counts >= ``min_counts``.
@@ -155,21 +170,82 @@ def compute_norm(sig, bkg, ts_thresh, min_counts, sum_axes=None):
         By default the summation will be performed over all
         dimensions.
 
+    bkg_fit : `~numpy.ndarray`
+        Array of background amplitudes in counts for the fitting
+        model.  If None then the fit model will be equal to the data
+        model.
+
     """
 
-    sig_scale = 10**np.linspace(0.0, 5.0, 101)
     if sum_axes is None:
         sum_axes = np.arange(sig.ndim)
 
     sig = np.expand_dims(sig, -1)
     bkg = np.expand_dims(bkg, -1)
     sig_sum = np.apply_over_axes(np.sum, sig, sum_axes)
-    sig_scale = sig_scale * min_counts / sig_sum
-    ts = np.apply_over_axes(np.sum, poisson_ts(sig * sig_scale, bkg), sum_axes)
-    vals = np.ones(ts.shape[:-1])
+    bkg_sum = np.apply_over_axes(np.sum, bkg, sum_axes)
+    bkg_fit_sum = None
 
+    if bkg_fit is not None:
+        bkg_fit = np.expand_dims(bkg_fit, -1)
+        bkg_fit_sum = np.apply_over_axes(np.sum, bkg_fit, sum_axes)
+
+    sig_rebin = sig
+    bkg_rebin = bkg
+    bkg_fit_rebin = bkg_fit
+
+    if rebin_axes:
+        sig_rebin = sig.copy()
+        bkg_rebin = bkg.copy()
+        if bkg_fit is not None:
+            bkg_fit_rebin = bkg_fit.copy()
+
+        for dim, rebin in zip(sum_axes, rebin_axes):
+            sig_rebin = sum_bins(sig_rebin, dim, rebin)
+            bkg_rebin = sum_bins(bkg_rebin, dim, rebin)
+            if bkg_fit is not None:
+                bkg_fit_rebin = sum_bins(bkg_fit_rebin, dim, rebin)
+
+    # Find approx solution using coarse binning and summed arrays
+    sig_scale = 10**np.linspace(0.0, 10.0, 51) * (min_counts / sig_sum)
+    vals_approx = _solve_norm(sig_rebin, bkg_rebin, ts_thresh, min_counts,
+                              sig_scale, sum_axes, bkg_fit_rebin)
+
+    # Refine solution using an interval (0.1,10) around approx
+    # solution
+    sig_scale = (10**np.linspace(0.0, 1.0, 21) *
+                 np.fmax(0.333 * vals_approx[..., None],
+                         min_counts / sig_sum))
+
+    vals = _solve_norm(sig, bkg, ts_thresh, min_counts, sig_scale,
+                       sum_axes, bkg_fit)
+
+    #sig_scale = 10**np.linspace(0.0, 10.0, 101)*(min_counts / sig_sum)
+    # vals = _solve_norm(sig, bkg, ts_thresh, min_counts, sig_scale2,
+    #                   sum_axes, bkg_fit)
+
+    return vals
+
+
+def _solve_norm(sig, bkg, ts_thresh, min_counts, sig_scale, sum_axes,
+                bkg_fit=None):
+
+    ts = np.apply_over_axes(np.sum, poisson_ts_fast(sig * sig_scale,
+                                                    bkg, bkg_fit),
+                            sum_axes)
+
+    vals = np.ones(ts.shape[:-1])
     for idx, v in np.ndenumerate(ts[..., 0]):
-        vals[idx] = np.interp(ts_thresh, ts[idx], sig_scale[idx])
+
+        if ts[idx][0] >= ts_thresh:
+            vals[idx] = sig_scale[idx][0]
+            continue
+
+        m = slice(np.argmin(ts[idx]), None)
+        vals[idx] = np.interp(ts_thresh, ts[idx][m], sig_scale[idx][m])
+        #fn = UnivariateSpline(ts[idx][m], sig_scale[idx][m], k=2, s=0)
+        #vals[idx] = fn(ts_thresh)
+
     return vals
 
 

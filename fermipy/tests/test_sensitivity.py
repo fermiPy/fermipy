@@ -13,6 +13,7 @@ from fermipy.skymap import Map
 
 try:
     from fermipy.scripts import flux_sensitivity
+    from fermipy.sensitivity import SensitivityCalc
 except ImportError:
     pass
     
@@ -33,8 +34,8 @@ def test_calc_diff_flux_sensitivity():
     gdiff = Map.create_from_fits(galdiff_path)
     iso = np.loadtxt(os.path.expandvars('$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt'),
                      unpack=True)
-    scalc = flux_sensitivity.SensitivityCalc(gdiff, iso, ltc, ebins,
-                                             'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
+    scalc = SensitivityCalc(gdiff, iso, ltc, ebins,
+                            'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
 
     fn = spectrum.PowerLaw([1E-13, -2.0], scale=1E3)
     o = scalc.diff_flux_threshold(c, fn, 25.0, 3.0)
@@ -47,7 +48,7 @@ def test_calc_diff_flux_sensitivity():
                               2.05372045e-07,   2.14355673e-07,   2.29584275e-07,
                               2.53220397e-07,   2.80878974e-07,   3.19989251e-07,
                               3.74686765e-07,   4.49321103e-07,   5.48865583e-07]),
-                    rtol=1E-3)
+                    rtol=3E-3)
 
     assert_allclose(o['flux'],
                     np.array([8.22850449e-09,   5.33257909e-09,   3.46076145e-09,
@@ -58,7 +59,7 @@ def test_calc_diff_flux_sensitivity():
                               2.37979404e-11,   1.86265760e-11,   1.49602959e-11,
                               1.23736187e-11,   1.02924147e-11,   8.79292634e-12,
                               7.72087281e-12,   6.94312304e-12,   6.36010146e-12]),
-                    rtol=1E-3)
+                    rtol=3E-3)
 
 
 @requires_file(galdiff_path)
@@ -71,17 +72,17 @@ def test_calc_int_flux_sensitivity():
     gdiff = Map.create_from_fits(galdiff_path)
     iso = np.loadtxt(os.path.expandvars('$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt'),
                      unpack=True)
-    scalc = flux_sensitivity.SensitivityCalc(gdiff, iso, ltc, ebins,
-                                             'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
+    scalc = SensitivityCalc(gdiff, iso, ltc, ebins,
+                            'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
 
     fn = spectrum.PowerLaw([1E-13, -2.0], scale=1E3)
     o = scalc.int_flux_threshold(c, fn, 25.0, 3.0)
 
-    assert_allclose(o['eflux'], 1.0719847971553671e-06, rtol=1E-3)
-    assert_allclose(o['flux'], 1.550305083355546e-09, rtol=1E-3)
-    assert_allclose(o['npred'], 511.16725330021416, rtol=1E-3)
-    assert_allclose(o['dnde'], 1.5518569402958423e-14, rtol=1E-3)
-    assert_allclose(o['e2dnde'], 1.5518569402958427e-07, rtol=1E-3)
+    assert_allclose(o['eflux'], 1.0719847971553671e-06, rtol=3E-3)
+    assert_allclose(o['flux'], 1.550305083355546e-09, rtol=3E-3)
+    assert_allclose(o['npred'], 511.16725330021416, rtol=3E-3)
+    assert_allclose(o['dnde'], 1.5518569402958423e-14, rtol=3E-3)
+    assert_allclose(o['e2dnde'], 1.5518569402958427e-07, rtol=3E-3)
 
     assert_allclose(o['bins']['flux'],
                     np.array([3.88128407e-10,   2.91055245e-10,   2.18260643e-10,
@@ -119,4 +120,4 @@ def test_flux_sensitivity_script(tmpdir):
                               2.37979404e-11,   1.86265760e-11,   1.49602959e-11,
                               1.23736187e-11,   1.02924147e-11,   8.79292634e-12,
                               7.72087281e-12,   6.94312304e-12,   6.36010146e-12]),
-                    rtol=1E-3)
+                    rtol=3E-3)
