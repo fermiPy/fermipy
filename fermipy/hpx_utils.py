@@ -422,6 +422,11 @@ class HPX(object):
             else:
                 return 'GALPROP2'
 
+        # Check for the INDXSCHM keyword
+        indxschm = header.get('INDXSCHM', None)
+        if indxschm == 'SPARSE':
+            return 'FGST_SRCMAP_SPARSE'
+
         # Check the name of the first column
         colname = header['TTYPE1']
         if colname == 'PIX':
@@ -536,19 +541,15 @@ class HPX(object):
         if self.conv.convname == 'FGST_SRCMAP_SPARSE':
             nonzero = data.nonzero()
             nfilled = len(nonzero[0])
-            print('Nfilled ', nfilled)
             if len(shape) == 1:
-                nonzero = nonzero[0]
-                cols.append(fits.Column("KEY", "%iJ" %
-                                        nfilled, array=nonzero.reshape(1, nfilled)))
-                cols.append(fits.Column("VALUE", "%iE" % nfilled, array=data[
-                            nonzero].astype(float).reshape(1, nfilled)))
+                cols.append(fits.Column("PIX", "J", array=nonzero[0].astype(int)))
+                cols.append(fits.Column("VALUE", "E", array=data.flat[nonzero].astype(float).reshape(nfilled)))
             elif len(shape) == 2:
-                nonzero = self._npix * nonzero[0] + nonzero[1]
-                cols.append(fits.Column("KEY", "%iJ" %
-                                        nfilled, array=nonzero.reshape(1, nfilled)))
-                cols.append(fits.Column("VALUE", "%iE" % nfilled, array=data.flat[
-                            nonzero].astype(float).reshape(1, nfilled)))
+                keys = self._npix * nonzero[0] + nonzero[1]
+                cols.append(fits.Column("PIX", "J", array=nonzero[0].reshape(nfilled)))
+                cols.append(fits.Column("CHAN", "I", array=nonzero[1].reshape(nfilled)))
+                cols.append(fits.Column("VALUE", "E",
+                                        array=data.flat[keys].astype(float).reshape(nfilled)))
             else:
                 raise Exception("HPX.write_fits only handles 1D and 2D maps")
 
