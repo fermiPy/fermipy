@@ -404,7 +404,9 @@ class HpxMap(Map_Base):
         colnames = hdu.columns.names
         cnames = []
         if hpx.conv.convname == 'FGST_SRCMAP_SPARSE':
-            keys = hdu.data.field('KEY')
+            pixs = hdu.data.field('PIX')
+            chans = hdu.data.field('CHANNEL')
+            keys = chans*hpx.npix + pixs
             vals = hdu.data.field('VALUE')
             nebin = len(ebins)
             data = np.zeros((nebin, hpx.npix))
