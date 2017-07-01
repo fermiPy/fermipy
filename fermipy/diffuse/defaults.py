@@ -11,6 +11,7 @@ diffuse = {
     'ft1file' : ('P8_P302_8years_source_zmax105.lst', 'Path to list of input FT1 files', str),
     'diffuse': (None, 'Path to yaml file defining diffuse components.', str),
     'sources': (None, 'Path to yaml file defining catalog components.', str),
+    'models': (None, 'Path to yaml file defining models components.', str),
     'hpx_order_ccube': (9, 'Maximum HEALPIX order for binning counts data.', int),
     'hpx_order_expcube': (6, 'Maximum HEALPIX order for exposure cubes.', int),
     'hpx_order_fitting': (7, 'Maximum HEALPIX order for model fitting.', int),

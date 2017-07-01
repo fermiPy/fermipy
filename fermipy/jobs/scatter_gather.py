@@ -226,23 +226,24 @@ class ScatterGather(Link):
 
 
     @classmethod
-    def _make_init_logfile_name(cls, input_config):
+    def _make_init_logfile_name(cls, linkname, input_config):
         """ Hook to inster the name of a logfile into the input config """
-        logfile = input_config.get('logfile', cls.default_init_logfile)
+        logfile = input_config.get('logfile', "%s_%s.log" % 
+                                   (cls.default_init_logfile, linkname))
         input_config['logfile'] = logfile
 
     @classmethod
-    def _make_scatter_logfile_name(cls, key, job_config):
+    def _make_scatter_logfile_name(cls, key, linkname, job_config):
         """ Hook to inster the name of a logfile into the input config """
-        logfile = job_config.get('logfile', "%s_%s.log" %
-                                 (cls.default_prefix_logfile, key))
+        logfile = job_config.get('logfile', "%s_%s_%s.log" %
+                                 (cls.default_prefix_logfile, linkname, key))
         job_config['logfile'] = logfile
 
     @classmethod
-    def _make_gather_logfile_name(cls, output_config):
+    def _make_gather_logfile_name(cls, linkname, output_config):
         """ Hook to construct the name of a logfile the gatherer """
-        logfile = output_config.get(
-            'logfile', cls.default_gather_logfile)
+        logfile = output_config.get('logfile', "%s_%s.log" %
+                                    (cls.default_gather_logfile, linkname))
         output_config['logfile'] = logfile
 
     def check_job(self, job_details):

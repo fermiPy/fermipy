@@ -50,6 +50,9 @@ class DiffuseAnalysisChain(Chain):
                                                             mapping={'action':'action_srcmaps_catalog'})
         link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
                                                          mapping={'action':'action_composite'})
+        link_init_model = create_link_init_model(linkname="%s.init_model"%linkname,
+                                                 mapping={'hpx_order':'hpx_order_fitting',
+                                                          'action': 'action_init'})
         link_assemble_model = create_sg_assemble_model(linkname="%s.assemble"%linkname,
                                                        mapping={'hpx_order':'hpx_order_fitting',
                                                                 'action': 'action_assemble'})
@@ -62,7 +65,7 @@ class DiffuseAnalysisChain(Chain):
                        links=[link_split_and_bin, link_expcube,
                               link_gasmaps, link_srcmaps_diffuse, link_vstack_srcmaps,
                               link_srcmaps_catalogs, link_srcmaps_composite,
-                              link_assemble_model],
+                              link_init_model, link_assemble_model],
                        options=DiffuseAnalysisChain.default_options.copy(),
                        argmapper=self._map_arguments,
                        parser=parser,
@@ -85,6 +88,7 @@ class DiffuseAnalysisChain(Chain):
         output_dict['action_vstack'] = action
         output_dict['action_srcmaps_catalog'] = action
         output_dict['action_composite'] = action
+        output_dict['action_init'] = action
         output_dict['action_assemble'] = action
 
         output_dict.pop('link', None)

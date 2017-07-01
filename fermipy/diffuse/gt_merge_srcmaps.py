@@ -152,12 +152,12 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
         NAME_FACTORY.update_base_dict(args['data'])
         ret_dict = make_catalog_comp_dict(sources=args['sources'], basedir='.')
         comp_info_dict = ret_dict['comp_info_dict']
+        print (comp_info_dict)
 
         for split_ver, split_dict in comp_info_dict.items():
             for source_key, source_dict in split_dict.items():
-
-                print(split_ver, source_key, source_dict.model_type)
                 full_key = "%s_%s"%(split_ver, source_key)
+                merged_name = "%s_%s"%(source_dict.catalog_info.catalog_name, source_key)
                 if source_dict.model_type != 'CompositeSource':
                     continue
 
@@ -185,7 +185,7 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
                                             irfs=NAME_FACTORY.irfs(**name_keys),
                                             bexpmap=NAME_FACTORY.bexpcube(**name_keys),
                                             srcmdl=NAME_FACTORY.srcmdl_xml(**name_keys),
-                                            merged=source_key,
+                                            merged=merged_name,
                                             outfile=outfile,
                                             outxml=NAME_FACTORY.nested_srcmdl_xml(**name_keys),
                                             logfile=outfile.replace('.fits', '.log'))

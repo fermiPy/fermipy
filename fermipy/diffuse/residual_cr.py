@@ -59,8 +59,8 @@ class ResidualCRAnalysis(Link):
 
         Link.__init__(self, kwargs.pop('linkname', 'residual_cr'),
                       appname='fermipy-residual-cr',
-                      parser=parser,
                       options=ResidualCRAnalysis.default_options.copy(),
+                      parser=parser,
                       file_args=dict(ccube_dirty=FileFlags.input_mask,
                                      bexpcube_dirty=FileFlags.input_mask,
                                      ccube_clean=FileFlags.input_mask,

@@ -13,6 +13,8 @@ import yaml
 from astropy.io import fits
 from fermipy.skymap import HpxMap
 
+from fermipy.utils import load_yaml
+
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
 from fermipy.jobs.chain import add_argument, Link
@@ -34,32 +36,32 @@ class GtInitModel(Link):
                            data=diffuse_defaults.diffuse['data'],
                            diffuse=diffuse_defaults.diffuse['diffuse'],
                            sources=diffuse_defaults.diffuse['sources'],
-                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
-                           args=(None, 'Names of input models', list))
+                           models=diffuse_defaults.diffuse['models'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],)
     
     def __init__(self, **kwargs):
         """C'tor
         """
-        self.parser = argparse.ArgumentParser(usage = "fermipy-assemble-model [options]",
-                                              description = "Initialize model fitting directory")
+        parser = argparse.ArgumentParser(usage = "fermipy-init-model [options]",
+                                         description = "Initialize model fitting directory")
         Link.__init__(self, kwargs.pop('linkname', 'init-model'),
                       appname='fermipy-init-model',
+                      parser=parser,
                       options=GtInitModel.default_options.copy(),
                       **kwargs)
 
     def run_analysis(self, argv):
-        """Assemble the source map file for one binning component
-        FIXME
+        """ Build the manifest for all the models
         """
-        args = self.parser.parse_args(argv)
+        args = self._parser.parse_args(argv)
         components = Component.build_from_yamlfile(args.comp)
         NAME_FACTORY.update_base_dict(args.data)
         model_dict = make_library(**args.__dict__)
         model_manager = model_dict['ModelManager']
-        modelkeys = args.args
+        models = load_yaml(args.models)
         data = args.data
         hpx_order = args.hpx_order
-        for modelkey in modelkeys:
+        for modelkey, modelpath in models.items():
             model_manager.make_srcmap_manifest(modelkey, components, data)
             fermipy_config = model_manager.make_fermipy_config_yaml(modelkey, components, data, hpxorder=hpx_order)
             
@@ -77,10 +79,11 @@ class GtAssembleModel(Link):
     def __init__(self, **kwargs):
         """C'tor
         """
-        self.parser = argparse.ArgumentParser(usage="fermipy-assemble-model [options]", 
-                                              description="Copy source maps from the library to a analysis directory")
+        parser = argparse.ArgumentParser(usage="fermipy-assemble-model [options]", 
+                                         description="Copy source maps from the library to a analysis directory")
         Link.__init__(self, kwargs.pop('linkname', 'assemble-model'),
                       appname='fermipy-assemble-model',
+                      parser=parser,
                       options=GtAssembleModel.default_options.copy(),
                       file_args=dict(input=FileFlags.input_mask),
                       **kwargs)
@@ -156,6 +159,9 @@ class GtAssembleModel(Link):
                 except IndexError:
                     print("  Index error on source %s in file %s" % (source_name, srcmap_file))
                     continue
+                except KeyError:
+                    print("  Key error on source %s in file %s" % (source_name, srcmap_file))
+                    continue
                 hpxmap_out = hpxmap.ud_grade(hpx_order, preserve_counts=True)
                 hdulist.append(hpxmap_out.create_image_hdu(name=source_name))
         sys.stdout.write("\n")
@@ -197,7 +203,7 @@ class GtAssembleModel(Link):
         """Assemble the source map file for one binning component
         FIXME
         """
-        args = self.parser.parse_args(argv)
+        args = self._parser.parse_args(argv)
         manifest = yaml.safe_load(open(args.input))
 
         key = args.comp
@@ -221,9 +227,9 @@ class ConfigMaker_AssembleModel(ConfigMaker):
                            data=diffuse_defaults.diffuse['data'],
                            sources=diffuse_defaults.diffuse['sources'],
                            diffuse=diffuse_defaults.diffuse['diffuse'],
+                           models=diffuse_defaults.diffuse['models'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
-                           args=(None, 'Names of input models', list))
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],)
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -236,25 +242,15 @@ class ConfigMaker_AssembleModel(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = dict(comp=args['comp'],
-                            data=args['data'],
-                            sources=args['sources'],
-                            diffuse=args['diffuse'],
-                            hpx_order=args['hpx_order'],
-                            args=args['args'],
-                            logfile=os.path.join('analysis', 'init.log'))
-                                      
+        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
 
+        models = load_yaml(args['models'])
         
-        model_list = args['args']
-        if model_list is None:
-            model_list = []
-
-        for modelkey in model_list:
+        for modelkey, modelpath in models.items():
             manifest = os.path.join('analysis', 'model_%s' % modelkey,
                                     'srcmap_manifest_%s.yaml' % modelkey)
             for comp in components:
@@ -271,18 +267,20 @@ class ConfigMaker_AssembleModel(ConfigMaker):
         output_config = {}
         return input_config, job_configs, output_config
 
+def create_link_init_model(**kwargs):
+    """Build and return a `Link` object that can invoke GtInitModel"""
+    gtinit = GtInitModel(**kwargs)
+    return gtinit
+
 
 def create_link_assemble_model(**kwargs):
     """Build and return a `Link` object that can invoke GtAssembleModel"""
     gtassemble = GtAssembleModel(**kwargs)
-    return gtassemble.link
+    return gtassemble
 
 
 def create_sg_assemble_model(**kwargs):
     """Build and return a ScatterGather object that can invoke this script"""
-
-    gtinitmodel = GtInitModel()
-    init_link = gtinitmodel
 
     gtassemble = GtAssembleModel(**kwargs)
     link = gtassemble
@@ -302,7 +300,6 @@ def create_sg_assemble_model(**kwargs):
                                 usage=usage,
                                 description=description,
                                 appname=appname,
-                                initialize=init_link,
                                 **kwargs)
     return lsf_sg
 
@@ -310,12 +307,12 @@ def create_sg_assemble_model(**kwargs):
 def main_init():
     """Entry point for command line use for init job """
     gtsmp = GtInitModel()
-    gtsmp.run(sys.argv[1:])
+    gtsmp.run_analysis(sys.argv[1:])
 
 def main_single():
     """Entry point for command line use for single job """
     gtsmp = GtAssembleModel()
-    gtsmp.run(sys.argv[1:])
+    gtsmp.run_analysis(sys.argv[1:])
 
 
 def main_batch():

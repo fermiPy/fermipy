@@ -73,6 +73,7 @@ class ModelInfo(object):
             name_keys = dict(modelkey=self.model_name,
                              zcut=zcut,
                              ebin=comp.ebin_name,
+                             mktime='none',
                              psftype=comp.evtype_name)
             outsrcmap = name_factory.merged_srcmaps(**name_keys)
             ccube = name_factory.ccube(**name_keys)
@@ -93,8 +94,7 @@ class ModelInfo(object):
                     #sourcekey = comp_name
                     sources = [comp_info.source_name]
                 src_dict[comp_name] = dict(sourcekey=comp_name,
-                                           srcmap_file=name_factory.srcmaps(
-                                               **name_keys),
+                                           srcmap_file=name_factory.srcmaps(**name_keys),
                                            source_names=sources)
             comp_dict = dict(outsrcmap=outsrcmap,
                              ccube=ccube,
@@ -377,6 +377,7 @@ class ModelManager(object):
             name_keys = dict(zcut=zcut,
                              modelkey=modelkey,
                              component=compkey,
+                             mktime='none',
                              fullpath=True)
             comp_data = dict(ltcube=self._name_factory.ltcube(**name_keys))
             comp_selection = dict(logemin=comp.log_emin,
