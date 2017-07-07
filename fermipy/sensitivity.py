@@ -56,7 +56,7 @@ class SensitivityCalc(object):
         self._ectr = np.exp(utils.edge_to_center(np.log(self._ebins)))
         self._event_class = event_class
         if event_types is None:
-            self._event_types = [['FRONT'],['BACK']]
+            self._event_types = [['FRONT'], ['BACK']]
         else:
             self._event_types = event_types
 
@@ -224,12 +224,12 @@ class SensitivityCalc(object):
         norms = irfs.compute_norm(sig, bkg, ts_thresh,
                                   min_counts, sum_axes=[1, 2, 3], bkg_fit=bkg_fit,
                                   rebin_axes=[4, 10, 1])
+
         npred = np.squeeze(np.apply_over_axes(np.sum, norms * sig, [1, 2, 3]))
         npred = np.array(npred, ndmin=1)
-        norms = np.array(np.squeeze(norms), ndmin=1)
-        flux = norms * fn.flux(ebins[0], ebins[-1])
-        eflux = norms * fn.eflux(ebins[0], ebins[-1])
-        dnde = norms * fn.dnde(ectr)
+        flux = np.squeeze(norms) * fn.flux(ebins[0], ebins[-1])
+        eflux = np.squeeze(norms) * fn.eflux(ebins[0], ebins[-1])
+        dnde = np.squeeze(norms) * fn.dnde(ectr)
         e2dnde = ectr**2 * dnde
 
         o = dict(e_min=self.ebins[0], e_max=self.ebins[-1], e_ref=ectr,
@@ -237,12 +237,14 @@ class SensitivityCalc(object):
                  dnde=dnde, e2dnde=e2dnde)
 
         sig, bkg, bkg_fit = self.compute_counts(skydir, fn)
-        npred = np.squeeze(np.apply_over_axes(np.sum, norms * sig, [2, 3]))
-        flux = np.squeeze(norms[:, None] *
+
+        npred = np.squeeze(np.apply_over_axes(np.sum, norms * sig,
+                                              [2, 3]))
+        flux = np.squeeze(np.squeeze(norms,axis=(1,2,3))[:, None] *
                           fn.flux(self.ebins[:-1], self.ebins[1:]))
-        eflux = np.squeeze(norms[:, None] *
+        eflux = np.squeeze(np.squeeze(norms,axis=(1,2,3))[:, None] *
                            fn.eflux(self.ebins[:-1], self.ebins[1:]))
-        dnde = np.squeeze(norms[:, None] * fn.dnde(self.ectr))
+        dnde = np.squeeze(np.squeeze(norms,axis=(1,2,3))[:, None] * fn.dnde(self.ectr))
         e2dnde = ectr**2 * dnde
 
         o['bins'] = dict(npred=npred,
