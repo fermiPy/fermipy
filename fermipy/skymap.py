@@ -202,11 +202,17 @@ class Map(Map_Base):
         return cls(data, wcs, ebins)
 
     @classmethod
-    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
+    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT', ebins=None):
         crpix = np.array([n / 2. + 0.5 for n in npix])
         wcs = wcs_utils.create_wcs(skydir, coordsys, projection,
                                    cdelt, crpix)
-        return cls(np.zeros(npix).T, wcs)
+
+        if ebins is not None:
+            data = np.zeros(list(npix) + [len(ebins) - 1]).T
+        else:
+            data = np.zeros(npix).T
+
+        return cls(data, wcs, ebins=ebins)
 
     def create_image_hdu(self, name=None, **kwargs):
         return fits.ImageHDU(self.counts, header=self.wcs.to_header(),
