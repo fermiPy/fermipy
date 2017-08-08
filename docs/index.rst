@@ -48,7 +48,14 @@ Getting Help
 If you have questions about using Fermipy please open a `GitHub Issue
 <https://github.com/fermiPy/fermipy/issues>`_ or email the `Fermipy
 developers <mailto:fermipy.developers@gmail.com>`_.
-     
+
+Acknowledging Fermipy
+---------------------
+
+To acknowledge Fermipy in a publication please cite `Wood et al. 2017
+<http://adsabs.harvard.edu/abs/2017arXiv170709551W>`_.
+
+
 Documentation Contents
 ----------------------
 
