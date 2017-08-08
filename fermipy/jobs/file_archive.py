@@ -486,10 +486,7 @@ class FileHandle(object):
         """Build and return a `FileHandle` from an `astropy.table.row.Row` """
         kwargs = {}
         for key in table_row.colnames:
-            if table_row[key].dtype.kind in ['S', 'U']:
-                kwargs[key] = table_row[key].astype(str)
-            else:
-                kwargs[key] = table_row[key]
+            kwargs[key] = table_row[key]
         try:
             return cls(**kwargs)
         except KeyError:
