@@ -24,6 +24,7 @@ from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.spectrum import PowerLaw
 from fermipy.config import ConfigSchema
+from fermipy.timing import Timer
 from LikelihoodState import LikelihoodState
 
 MAX_NITER = 100
@@ -673,6 +674,7 @@ class TSMapGenerator(object):
            for TS and source amplitude.
 
         """
+        timer = Timer.create(start=True)
 
         schema = ConfigSchema(self.defaults['tsmap'])
         schema.add_option('loglevel', logging.INFO)
@@ -709,7 +711,8 @@ class TSMapGenerator(object):
 
         if config['write_npy']:
             np.save(outfile + '.npy', o)
-            
+
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return o
 
     def _make_tsmap_fits(self, data, filename, **kwargs):

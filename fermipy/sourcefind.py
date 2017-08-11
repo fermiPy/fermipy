@@ -19,6 +19,7 @@ from fermipy.sourcefind_utils import find_peaks
 from fermipy.skymap import Map
 from fermipy.config import ConfigSchema
 from fermipy.gtutils import FreeParameterState, SourceMapState
+from fermipy.timing import Timer
 from fermipy.model_utils import get_function_norm_par_name
 from LikelihoodState import LikelihoodState
 import pyLikelihood as pyLike
@@ -56,7 +57,7 @@ class SourceFind(object):
            List of source objects.
 
         """
-
+        timer = Timer.create(start=True)
         self.logger.info('Starting.')
 
         schema = ConfigSchema(self.defaults['sourcefind'],
@@ -91,6 +92,7 @@ class SourceFind(object):
                 break
 
         self.logger.info('Done.')
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
 
         return o
 
@@ -258,6 +260,7 @@ class SourceFind(object):
             analysis.
 
         """
+        timer = Timer.create(start=True)
         name = self.roi.get_source_by_name(name).name
 
         schema = ConfigSchema(self.defaults['localize'],
@@ -293,6 +296,7 @@ class SourceFind(object):
         if config['write_npy']:
             np.save(outfile + '.npy', dict(loc))
 
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return loc
 
     def _make_localize_fits(self, loc, filename, **kwargs):
