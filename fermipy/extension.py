@@ -14,6 +14,7 @@ from fermipy import utils
 from fermipy import defaults
 from fermipy.config import ConfigSchema
 from fermipy.gtutils import SourceMapState, FreeParameterState
+from fermipy.timing import Timer
 from fermipy import fits_utils
 from LikelihoodState import LikelihoodState
 
@@ -54,7 +55,7 @@ class ExtensionFit(object):
             dictionary is also saved to the dictionary of this source under
             'extension'.
         """
-
+        timer = Timer.create(start=True)
         name = self.roi.get_source_by_name(name).name
 
         schema = ConfigSchema(self.defaults['extension'],
@@ -92,6 +93,7 @@ class ExtensionFit(object):
         if config['write_npy']:
             np.save(outfile + '.npy', dict(ext))
 
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return ext
 
     def _extension(self, name, **kwargs):
@@ -129,7 +131,7 @@ class ExtensionFit(object):
                                       loglevel=logging.DEBUG)
 
         # Fit baseline model
-        self.free_norm(name, loglevel=logging.DEBUG)
+        self.free_source(name, loglevel=logging.DEBUG)
         fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
         src = self.roi.copy_source(name)
 
@@ -277,6 +279,7 @@ class ExtensionFit(object):
             # FIXME: Issue with source map cache with source is
             # initialized as fixed.
             self.add_source(name, src, free=True)
+            self.free_source(name)
             self.fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
 
             src = self.roi.get_source_by_name(name)
