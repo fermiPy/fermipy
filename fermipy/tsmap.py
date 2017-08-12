@@ -712,7 +712,8 @@ class TSMapGenerator(object):
         if config['write_npy']:
             np.save(outfile + '.npy', o)
 
-        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
+        self.logger.log(config['loglevel'],
+                        'Execution time: %.2f s', timer.elapsed_time)
         return o
 
     def _make_tsmap_fits(self, data, filename, **kwargs):
