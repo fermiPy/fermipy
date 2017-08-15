@@ -3427,14 +3427,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def create_roi_table(self):
 
         rd = copy.deepcopy(self._roi_data)
-        ebounds = (10**rd.pop('loge_bounds')).tolist()
-
         tab = fits_utils.dict_to_table(rd)
         tab['component'] = -1
-        tab.meta['EBOUNDS'] = (ebounds, 'Analysis energy bounds')
         row_dict = {}
         for i, c in enumerate(rd['components']):
             c['component'] = i
+            c['loge_bounds'] = rd['loge_bounds']
 
             row = []
             for k in tab.columns:
