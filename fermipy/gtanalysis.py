@@ -4117,6 +4117,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.like.logLike.loadSourceMap(str(name), True, False)
             srcmap_utils.delete_source_map(self.files['srcmap'], name)
             self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
+            self._scale_srcmap(self._src_expscale, check_header=False,
+                               names=[name])            
             self.like.logLike.buildFixedModelWts()
         else:
             self.write_xml('tmp')
@@ -4130,6 +4132,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         try:
             self.like.logLike.loadSourceMaps(names, True, True)
+            # loadSourceMaps doesn't overwrite the header so we need
+            # to ignore EXPSCALE by setting check_header=False
+            self._scale_srcmap(self._src_expscale, check_header=False,
+                               names=names)
         except:
             for name in names:
                 self.reload_source(name)
@@ -4835,11 +4841,29 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Apply exposure corrections
         self._scale_srcmap(self._src_expscale)
 
-    def _scale_srcmap(self, scale_map):
+    def _scale_srcmap(self, scale_map, check_header=True, names=None):
+        """Apply exposure corrections to the source map file.
+
+        Parameters
+        ----------
+        scale_map : dict
+            Dictionary of exposure corrections.
+
+        check_header : bool
+            Check EXPSCALE header keyword to see if an exposure
+            correction has already been applied to this source.
+
+        names : list, optional
+            Names of sources to which the exposure correction will be
+            applied.  If None then all sources will be corrected.
+        """
+        
         srcmap = fits.open(self.files['srcmap'])
 
         for hdu in srcmap[1:]:
             if hdu.name not in scale_map:
+                continue
+            if names is not None and hdu.name not in names:
                 continue
 
             scale = scale_map[hdu.name]
@@ -4847,15 +4871,17 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 self.logger.warning(
                     "The expscale parameter was zero, setting it to 1e-8")
                 scale = 1e-8
-            if 'EXPSCALE' in hdu.header:
+            if 'EXPSCALE' in hdu.header and check_header:
                 old_scale = hdu.header['EXPSCALE']
             else:
                 old_scale = 1.0
             hdu.data *= scale / old_scale
-            hdu.header['EXPSCALE'] = scale
+            hdu.header['EXPSCALE'] = (scale,
+                                      'Exposure correction applied to this map')
 
         srcmap.writeto(self.files['srcmap'], clobber=True)
 
+        # Force reloading the map from disk
         for name in scale_map.keys():
             self.like.logLike.eraseSourceMap(str(name))
         self.like.logLike.buildFixedModelWts()
