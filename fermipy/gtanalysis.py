@@ -1398,7 +1398,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         srcs = self.roi.get_sources(skydir=skydir, distance=distance, cuts=cuts,
                                     minmax_ts=minmax_ts, minmax_npred=minmax_npred,
                                     exclude=exclude, square=square,
-                                    coordsys=self.config['binning']['coordsys'],
+                                    coordsys=self.config[
+                                        'binning']['coordsys'],
                                     names=names)
 
         for s in srcs:
@@ -2536,7 +2537,25 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         retries = kwargs.get('retries', 3)
         covar = kwargs.get('covar', True)
 
-        #saved_state = LikelihoodState(self.like)
+        num_free = self.like.nFreeParams()
+        o = {'values': np.ones(num_free) * np.nan,
+             'errors': np.ones(num_free) * np.nan,
+             'covariance': np.ones((num_free, num_free)) * np.nan,
+             'correlation': np.ones((num_free, num_free)) * np.nan,
+             'indices': np.zeros(num_free, dtype=int),
+             'is_norm': np.empty(num_free, dtype=bool),
+             'src_names': num_free * [None],
+             'par_names': num_free * [None],
+             'fit_quality': 3,
+             'fit_status': 0,
+             'fit_success': True,
+             'edm': 0,
+             'niter': 0,
+             'loglike': np.nan}
+
+        if num_free == 0:
+            o['loglike'] = -self.like()
+            return o
 
         quality = 0
         niter = 0
@@ -2550,20 +2569,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self.logger.debug("Retry fit iter: %i quality: %i edm: %8.4f loglike: %12.3f",
                               niter, quality, edm, loglike)
 
-        num_free = self.like.nFreeParams()
-        o = {'values': np.ones(num_free) * np.nan,
-             'errors': np.ones(num_free) * np.nan,
-             'indices': np.zeros(num_free, dtype=int),
-             'is_norm': np.empty(num_free, dtype=bool),
-             'src_names': num_free * [None],
-             'par_names': num_free * [None]}
-
         o['fit_quality'] = quality
         o['fit_status'] = status
         o['edm'] = edm
         o['niter'] = niter
         o['loglike'] = loglike
-        o['fit_success'] = True
 
         if quality < min_fit_quality or o['fit_status']:
             o['fit_success'] = False
@@ -4115,7 +4125,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             srcmap_utils.delete_source_map(self.files['srcmap'], name)
             self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
             self._scale_srcmap(self._src_expscale, check_header=False,
-                               names=[name])            
+                               names=[name])
             self.like.logLike.buildFixedModelWts()
         else:
             self.write_xml('tmp')
@@ -4854,7 +4864,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             Names of sources to which the exposure correction will be
             applied.  If None then all sources will be corrected.
         """
-        
+
         srcmap = fits.open(self.files['srcmap'])
 
         for hdu in srcmap[1:]:

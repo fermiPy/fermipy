@@ -135,7 +135,7 @@ class SourceFind(object):
             src_dict['pos_gal_corr'] = o['pos_gal_corr']
             src_dict['pos_cel_cov'] = o['pos_cel_cov']
             src_dict['pos_cel_corr'] = o['pos_cel_corr']
-            
+
             self.logger.info('Found source\n' +
                              'name: %s\n' % name +
                              'ts: %f' % p['amp'] ** 2)
@@ -322,8 +322,11 @@ class SourceFind(object):
         use_cache = kwargs.get('use_cache', False)
         free_background = kwargs.get('free_background', False)
         free_radius = kwargs.get('free_radius', None)
+        fix_shape = kwargs.get('fix_shape', False)
 
         saved_state = LikelihoodState(self.like)
+        loglike_init = -self.like()
+        self.logger.debug('Initial Model Log-Likelihood: %f', loglike_init)
 
         if not free_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
@@ -355,19 +358,23 @@ class SourceFind(object):
                           fit0['glon'], fit0['glat'])
 
         # Fit baseline (point-source) model
-        self.free_norm(name)
+        self.free_source(name, loglevel=logging.DEBUG)
+        if fix_shape:
+            self.free_source(name, free=False, pars='shape',
+                             loglevel=logging.DEBUG)
         fit_output = self._fit(loglevel=logging.DEBUG, **
                                kwargs.get('optimizer', {}))
 
         # Save likelihood value for baseline fit
-        loglike0 = fit_output['loglike']
-        self.logger.debug('Baseline Model Likelihood: %f', loglike0)
+        loglike_base = fit_output['loglike']
+        self.logger.debug('Baseline Model Log-Likelihood: %f', loglike_base)
 
         o = defaults.make_default_tuple(defaults.localize_output)
         o.name = name
         o.config = kwargs
         o.fit_success = True
-        o.loglike_base = loglike0
+        o.loglike_init = loglike_init
+        o.loglike_base = loglike_base
         o.loglike_loc = np.nan
         o.dloglike_loc = np.nan
 
@@ -415,14 +422,6 @@ class SourceFind(object):
         if o.pos_offset > dtheta_max:
             o.fit_success = False
 
-        self.logger.info('Localization completed with new position:\n'
-                         '(  ra, dec) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
-                         '(glon,glat) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
-                         'offset = %8.4f r68 = %8.4f r95 = %8.4f r99 = %8.4f',
-                         o.ra, o.ra_err, o.dec, o.dec_err,
-                         o.glon, o.glon_err, o.glat, o.glat_err,
-                         o.pos_offset, o.pos_r68, o.pos_r95, o.pos_r99)
-
         if not o.fit_success:
             self.logger.warning('Fit to localization contour failed.')
         elif not o.fit_inbounds:
@@ -440,12 +439,15 @@ class SourceFind(object):
             src = self.delete_source(name)
             src.set_position(fit1['skydir'])
             self.add_source(name, src, free=True)
+            self.free_source(name, loglevel=logging.DEBUG)
+            if fix_shape:
+                self.free_source(name, free=False, pars='shape',
+                                 loglevel=logging.DEBUG)
+
             fit_output = self.fit(loglevel=logging.DEBUG)
             o.loglike_loc = fit_output['loglike']
             o.dloglike_loc = o.loglike_loc - o.loglike_base
             src = self.roi.get_source_by_name(name)
-            self.logger.info('LogLike: %12.3f DeltaLogLike: %12.3f',
-                             o.loglike_loc, o.dloglike_loc)
 
             src['glon_err'] = o.glon_err
             src['glat_err'] = o.glat_err
@@ -466,6 +468,16 @@ class SourceFind(object):
             saved_state.restore()
             self._sync_params(name)
             self._update_roi()
+
+        self.logger.info('Localization completed with new position:\n'
+                         '(  ra, dec) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                         '(glon,glat) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                         'offset = %8.4f r68 = %8.4f r95 = %8.4f r99 = %8.4f',
+                         o.ra, o.ra_err, o.dec, o.dec_err,
+                         o.glon, o.glon_err, o.glat, o.glat_err,
+                         o.pos_offset, o.pos_r68, o.pos_r95, o.pos_r99)
+        self.logger.info('LogLike: %12.3f DeltaLogLike: %12.3f',
+                         o.loglike_loc, o.loglike_loc - o.loglike_init)
 
         return o
 

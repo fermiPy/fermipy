@@ -49,6 +49,8 @@ common = {
     'free_background': (False, 'Leave background parameters free when performing the fit. If True then any '
                         'parameters that are currently free in the model will be fit simultaneously '
                         'with the source of interest.', bool),
+    'fix_shape': (False, 'Fix spectral shape parameters of the source of interest. If True then only '
+                  'the normalization parameter will be fit.', bool),
     'free_radius': (None, 'Free normalizations of background sources within this angular distance in degrees '
                     'from the source of interest.  If None then no sources will be freed.', float),
     'make_plots': (False, 'Generate diagnostic plots.', bool),
@@ -504,6 +506,7 @@ extension = {
                     'Scan points will be spaced evenly on a logarithmic scale '
                     'between `width_min` and `width_max`.', int),
     'free_background': common['free_background'],
+    'fix_shape': common['fix_shape'],
     'free_radius': common['free_radius'],
     'fit_ebin': (False, 'Perform a fit for the angular extension in each analysis energy bin.', bool),
     'update': (False, 'Update this source with the best-fit model for spatial '
@@ -532,6 +535,7 @@ localize = {
               'sampling points will be nstep**2.', int),
     'dtheta_max': (0.5, 'Half-width of the search region in degrees used for the first pass of the localization search.', float),
     'free_background': common['free_background'],
+    'fix_shape': common['fix_shape'],
     'free_radius': common['free_radius'],
     'update': (True, 'Update the source model with the best-fit position.', bool),
     'make_plots': common['make_plots'],
@@ -600,7 +604,8 @@ localize_output = OrderedDict((
     ('tsmap_peak', (None, '', fermipy.skymap.Map)),
 
     # Miscellaneous
-    ('loglike_base', (np.nan, 'Log-Likelihood of model before localization.', float)),
+    ('loglike_init', (np.nan, 'Log-Likelihood of model before localization.', float)),
+    ('loglike_base', (np.nan, 'Log-Likelihood of model after initial spectral fit.', float)),
     ('loglike_loc', (np.nan, 'Log-Likelihood of model after localization.', float)),
     ('dloglike_loc', (np.nan,
                       'Difference in log-likelihood before and after localization.', float)),
@@ -627,9 +632,9 @@ extension_output = OrderedDict((
                  np.ndarray)),
     ('loglike_ptsrc', (np.nan,
                        'Log-Likelihood value of the best-fit point-source model.', float)),
-    ('loglike_ext', (np.nan, 'Log-Likelihood value of the best-fit extended source model.', float)),
-    ('loglike_base', (np.nan,
-                      'Log-Likelihood value of the baseline model.', float)),
+    ('loglike_ext', (np.nan, 'Log-Likelihood of the best-fit extended source model.', float)),
+    ('loglike_init', (np.nan, 'Log-Likelihood of model before extension fit.', float)),
+    ('loglike_base', (np.nan, 'Log-Likelihood of model after initial spectral fit.', float)),
     ('ext', (np.nan, 'Best-fit extension (68% containment radius) (deg).', float)),
     ('ext_err_hi', (np.nan,
                     'Upper (1-sigma) error on the best-fit extension (deg).', float)),

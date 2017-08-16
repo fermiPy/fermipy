@@ -30,13 +30,13 @@ class ExtensionFit(object):
         one-dimensional scan of the spatial extension parameter over
         the range specified with the width parameters.  The 1-D
         profile likelihood is then used to compute the best-fit value,
-        upper limit, and TS for extension.  The background parameters
-        that will be simultaneously profiled when performing the
-        spatial scan can be controlled with the ``free_background``
-        and ``free_radius`` options.  By default the position of the
-        source will be fixed to its current position.  A simultaneous
-        fit to position and extension can be performed by setting
-        ``fit_position`` to True.
+        upper limit, and TS for extension.  The nuisance parameters
+        that will be simultaneously fit when performing the spatial
+        scan can be controlled with the ``fix_shape``,
+        ``free_background``, and ``free_radius`` options.  By default
+        the position of the source will be fixed to its current
+        position.  A simultaneous fit to position and extension can be
+        performed by setting ``fit_position`` to True.
 
         Parameters
         ----------
@@ -105,6 +105,7 @@ class ExtensionFit(object):
         width = kwargs['width']
         free_background = kwargs['free_background']
         free_radius = kwargs.get('free_radius', None)
+        fix_shape = kwargs.get('fix_shape', False)
         update = kwargs['update']
         sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
 
@@ -116,6 +117,8 @@ class ExtensionFit(object):
             psf_scale_fn = None
 
         saved_state = LikelihoodState(self.like)
+        loglike_init = -self.like()
+        self.logger.debug('Initial Model Log-Likelihood: %f', loglike_init)
 
         if not free_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
@@ -132,12 +135,16 @@ class ExtensionFit(object):
 
         # Fit baseline model
         self.free_source(name, loglevel=logging.DEBUG)
+        if fix_shape:
+            self.free_source(name, free=False, pars='shape',
+                             loglevel=logging.DEBUG)
+
         fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
         src = self.roi.copy_source(name)
 
         # Save likelihood value for baseline fit
-        loglike0 = fit_output['loglike']
-        self.logger.debug('Baseline Likelihood: %f', loglike0)
+        loglike_base = fit_output['loglike']
+        self.logger.debug('Baseline Model Log-Likelihood: %f', loglike_base)
 
         if not width:
             width = np.logspace(np.log10(width_min), np.log10(width_max),
@@ -152,7 +159,8 @@ class ExtensionFit(object):
         o.width = width
         o.dloglike = np.zeros(len(width) + 1)
         o.loglike = np.zeros(len(width) + 1)
-        o.loglike_base = loglike0
+        o.loglike_base = loglike_base
+        o.loglike_init = loglike_init
         o.config = kwargs
         o.ebin_ext = np.ones(self.enumbins) * np.nan
         o.ebin_ext_err = np.ones(self.enumbins) * np.nan
@@ -176,14 +184,13 @@ class ExtensionFit(object):
         self.logger.debug('Fitting point-source model.')
         fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
 
-        if src['SpatialModel'] != 'PointSource' and kwargs['fit_position']:
-            loc = self.localize(name, update=False,
-                                dtheta_max=max(0.5, src['SpatialWidth']))
+        if src['SpatialModel'] == 'PointSource' and kwargs['fit_position']:
+            loc = self.localize(name, update=False)
             o.loglike_ptsrc = loc['loglike_loc']
         else:
             o.loglike_ptsrc = fit_output['loglike']
 
-        self.logger.debug('Point Source Likelihood: %f', o['loglike_ptsrc'])
+        self.logger.debug('Point-Source Model Likelihood: %f', o.loglike_ptsrc)
 
         if kwargs['save_model_map']:
             o.ptsrc_tot_map = self.model_counts_map()
@@ -231,6 +238,7 @@ class ExtensionFit(object):
 
         fit_output = self._fit(loglevel=logging.DEBUG, update=False,
                                **kwargs['optimizer'])
+
         o.source_fit = self.get_src_model(name, reoptimize=True,
                                           optimizer=kwargs['optimizer'])
         o.loglike_ext = fit_output['loglike']
@@ -238,20 +246,6 @@ class ExtensionFit(object):
 
         if kwargs['fit_ebin']:
             self._fit_extension_ebin(name, o, **kwargs)
-
-        self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
-                         % (o['ext'], o['ext_err_hi'], o['ext_err_lo']))
-        self.logger.info('TS_ext:        %.3f' % o['ts_ext'])
-        self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
-
-        if kwargs['fit_position']:
-            self.logger.info('Position:\n'
-                             '(  ra, dec) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
-                             '(glon,glat) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
-                             'offset = %8.4f r68 = %8.4f r95 = %8.4f r99 = %8.4f',
-                             o.ra, o.ra_err, o.dec, o.dec_err,
-                             o.glon, o.glon_err, o.glat, o.glat_err,
-                             o.pos_offset, o.pos_r68, o.pos_r95, o.pos_r99)
 
         if kwargs['save_model_map']:
             o.ext_tot_map = self.model_counts_map()
@@ -280,8 +274,12 @@ class ExtensionFit(object):
             # initialized as fixed.
             self.add_source(name, src, free=True, loglevel=logging.DEBUG)
             self.free_source(name, loglevel=logging.DEBUG)
-            self.fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
-
+            if fix_shape:
+                self.free_source(name, free=False, pars='shape',
+                                 loglevel=logging.DEBUG)
+            fit_output = self.fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
+            o.loglike_ext = fit_output['loglike']
+            
             src = self.roi.get_source_by_name(name)
             if kwargs['fit_position']:
                 for k in ['ra_err', 'dec_err', 'glon_err', 'glat_err',
@@ -292,12 +290,28 @@ class ExtensionFit(object):
         else:
             self.set_source_morphology(name, spatial_model=src['SpatialModel'],
                                        spatial_pars=src.spatial_pars,
-                                       update_source=True)
+                                       update_source=False)
             # Restore ROI to previous state
             saved_state.restore()
             self._sync_params(name)
             self._update_roi()
 
+        self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
+                         % (o['ext'], o['ext_err_hi'], o['ext_err_lo']))
+        self.logger.info('TS_ext:        %.3f' % o['ts_ext'])
+        self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
+        self.logger.info('LogLike: %12.3f DeltaLogLike: %12.3f',
+                         o.loglike_ext, o.loglike_ext - o.loglike_init)
+
+        if kwargs['fit_position']:
+            self.logger.info('Position:\n'
+                             '(  ra, dec) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                             '(glon,glat) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                             'offset = %8.4f r68 = %8.4f r95 = %8.4f r99 = %8.4f',
+                             o.ra, o.ra_err, o.dec, o.dec_err,
+                             o.glon, o.glon_err, o.glat, o.glat_err,
+                             o.pos_offset, o.pos_r68, o.pos_r95, o.pos_r99)
+            
         return o
 
     def _make_extension_fits(self, ext, filename, **kwargs):
