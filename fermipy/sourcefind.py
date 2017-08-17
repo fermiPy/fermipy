@@ -497,7 +497,7 @@ class SourceFind(object):
                                        skydir=fit0['skydir'],
                                        scan_cdelt=scan_cdelt,
                                        **kwargs)
-        return fit1
+        return fit1, fit0
 
     def _fit_position_tsmap(self, name, **kwargs):
         """Localize a source from its TS map."""
