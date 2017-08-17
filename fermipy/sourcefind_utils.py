@@ -37,8 +37,9 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     else:
         ix, iy = xy
 
-    pbfit = utils.fit_parabola(tsmap.counts.T, ix, iy, dpix=dpix,
-                               zmin=zmin)
+    pbfit0 = utils.fit_parabola(tsmap.counts.T, ix, iy, dpix=1.5)
+    pbfit1 = utils.fit_parabola(tsmap.counts.T, ix, iy, dpix=dpix,
+                                zmin=zmin)
 
     wcs = tsmap.wcs
     cdelt0 = tsmap.wcs.wcs.cdelt[0]
@@ -47,25 +48,39 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     npix1 = tsmap.counts.T.shape[1]
 
     o = {}
-    o['fit_success'] = pbfit['fit_success']
+    o['fit_success'] = pbfit0['fit_success']
     o['fit_inbounds'] = True
 
-    if pbfit['fit_success']:
-        sigmax = 2.0**0.5 * pbfit['sigmax'] * np.abs(cdelt0)
-        sigmay = 2.0**0.5 * pbfit['sigmay'] * np.abs(cdelt1)
-        theta = pbfit['theta']
-        sigmax = min(sigmax, np.abs(2.0 * npix0 * cdelt0))
-        sigmay = min(sigmay, np.abs(2.0 * npix1 * cdelt1))
-        o['xpix'] = pbfit['x0']
-        o['ypix'] = pbfit['y0']
-        o['zoffset'] = pbfit['z0']
+    if pbfit0['fit_success']:
+        o['xpix'] = pbfit0['x0']
+        o['ypix'] = pbfit0['y0']
+        o['zoffset'] = pbfit0['z0']
     else:
-        sigmax = np.nan
-        sigmay = np.nan
-        theta = np.nan
         o['xpix'] = float(ix)
         o['ypix'] = float(iy)
         o['zoffset'] = tsmap.counts.T[ix, iy]
+
+    if pbfit1['fit_success']:
+        sigmax = 2.0**0.5 * pbfit1['sigmax'] * np.abs(cdelt0)
+        sigmay = 2.0**0.5 * pbfit1['sigmay'] * np.abs(cdelt1)
+        theta = pbfit1['theta']
+        sigmax = min(sigmax, np.abs(2.0 * npix0 * cdelt0))
+        sigmay = min(sigmay, np.abs(2.0 * npix1 * cdelt1))
+    elif pbfit0['fit_success']:
+        sigmax = 2.0**0.5 * pbfit0['sigmax'] * np.abs(cdelt0)
+        sigmay = 2.0**0.5 * pbfit0['sigmay'] * np.abs(cdelt1)
+        theta = pbfit0['theta']
+        sigmax = min(sigmax, np.abs(2.0 * npix0 * cdelt0))
+        sigmay = min(sigmay, np.abs(2.0 * npix1 * cdelt1))
+    else:
+        pix_area = np.abs(cdelt0) * np.abs(cdelt1)
+        sx = slice(ix - dpix, ix + dpix)
+        sy = slice(iy - dpix, iy + dpix)
+        data_slice = tsmap.data.T[sx, sy]
+        area = np.sum(data_slice > (np.max(data_slice) - 1.0)) * pix_area
+        sigmax = (area / np.pi)**0.5
+        sigmay = (area / np.pi)**0.5
+        theta = 0.0
 
     if (o['xpix'] <= 0 or o['xpix'] >= npix0 - 1 or
             o['ypix'] <= 0 or o['ypix'] >= npix1 - 1):
