@@ -828,6 +828,36 @@ def parabola(xy, amplitude, x0, y0, sx, sy, theta):
     return vals
 
 
+def get_bounded_slice(idx, dpix, shape):
+
+    dpix = int(dpix)
+    idx_lo = idx - dpix
+    idx_hi = idx + dpix + 1
+
+    if idx_lo < 0:
+        idx_lo = max(idx_lo, 0)
+        idx_hi = idx_lo + (2 * dpix + 1)
+    elif idx_hi > shape:
+        idx_hi = min(idx_hi, shape)
+        idx_lo = idx_hi - (2 * dpix + 1)
+
+    return slice(idx_lo, idx_hi)
+
+
+def get_region_mask(z, delta, xy=None):
+    """Get mask of connected region within delta of max(z)."""
+
+    if xy is None:
+        ix, iy = np.unravel_index(np.argmax(z), z.shape)
+    else:
+        ix, iy = xy
+
+    mz = (z > z[ix, iy] - delta)
+    labels = label(mz)[0]
+    mz &= labels == labels[ix, iy]
+    return mz
+
+
 def fit_parabola(z, ix, iy, dpix=3, zmin=None):
     """Fit a parabola to a 2D numpy array.  This function will fit a
     parabola with the functional form described in
@@ -857,21 +887,19 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
                        indexing='ij')
 
     m = (offset <= dpix)
-    #m = (np.abs(x-ix) <= dpix) & (np.abs(y-iy) <= dpix)
+    if np.sum(m) < 9:
+        m = (offset <= dpix + 0.5)
+
     if zmin is not None:
-        mz = (z - np.max(z[m]) > zmin)
-        labels = label(mz)[0]
-        mz &= labels == labels[ix, iy]
-        m |= mz
+        m |= get_region_mask(z, np.abs(zmin), (ix, iy))
 
-    mx = np.abs(x[:, iy] - ix) <= dpix
-    my = np.abs(y[ix, :] - iy) <= dpix
+    sx = get_bounded_slice(ix, dpix, z.shape[0])
+    sy = get_bounded_slice(iy, dpix, z.shape[1])
 
-    coeffx = poly_to_parabola(np.polyfit(x[:, iy][mx],
-                                         z[:, iy][mx], 2))
-    coeffy = poly_to_parabola(np.polyfit(y[ix, :][my],
-                                         z[ix, :][my], 2))
-    p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
+    coeffx = poly_to_parabola(np.polyfit(x[sx, iy], z[sx, iy], 2))
+    coeffy = poly_to_parabola(np.polyfit(y[ix, sy], z[ix, sy], 2))
+    #p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
+    p0 = [coeffx[2], float(ix), float(iy), coeffx[1], coeffy[1], 0.0]
 
     o = {'fit_success': True, 'p0': p0}
 
@@ -879,9 +907,14 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
         return np.ravel(parabola(*args))
 
     try:
+        bounds = (-np.inf * np.ones(6), np.inf * np.ones(6))
+        bounds[0][1] = -0.5
+        bounds[0][2] = -0.5
+        bounds[1][1] = z.shape[0] - 0.5
+        bounds[1][2] = z.shape[1] - 0.5
         popt, pcov = scipy.optimize.curve_fit(curve_fit_fn,
                                               (np.ravel(x[m]), np.ravel(y[m])),
-                                              np.ravel(z[m]), p0)
+                                              np.ravel(z[m]), p0, bounds=bounds)
     except Exception:
         popt = copy.deepcopy(p0)
         o['fit_success'] = False

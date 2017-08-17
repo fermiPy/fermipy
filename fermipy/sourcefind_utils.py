@@ -6,6 +6,7 @@ from scipy.ndimage.filters import maximum_filter
 from astropy.coordinates import SkyCoord
 from fermipy import utils
 from fermipy import wcs_utils
+from fermipy.utils import get_region_mask
 
 
 def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
@@ -74,10 +75,8 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
         sigmay = min(sigmay, np.abs(2.0 * npix1 * cdelt1))
     else:
         pix_area = np.abs(cdelt0) * np.abs(cdelt1)
-        sx = slice(ix - dpix, ix + dpix)
-        sy = slice(iy - dpix, iy + dpix)
-        data_slice = tsmap.data.T[sx, sy]
-        area = np.sum(data_slice > (np.max(data_slice) - 1.0)) * pix_area
+        mask = get_region_mask(tsmap.data, 1.0, (ix,iy) )
+        area = np.sum(mask) * pix_area
         sigmax = (area / np.pi)**0.5
         sigmay = (area / np.pi)**0.5
         theta = 0.0
