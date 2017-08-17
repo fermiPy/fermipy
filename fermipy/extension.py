@@ -525,14 +525,34 @@ class ExtensionFit(object):
         psf_scale_fn = kwargs.get('psf_scale_fn', None)
         reoptimize = kwargs.get('reoptimize', True)
 
-        width = np.logspace(-2.0, 0.5, 16)
-        width = np.concatenate(([0.0], width))
+        src = self.roi.copy_source(name)
 
-        loglike = self._scan_extension(name, spatial_model=spatial_model,
-                                       width=width, optimizer=optimizer,
-                                       skydir=skydir,
-                                       psf_scale_fn=psf_scale_fn,
-                                       reoptimize=reoptimize)
+        # If the source is extended split the likelihood scan into two
+        # parts -- this ensures better fit stability
+        if src['SpatialModel'] in ['RadialGaussian', 'RadialDisk']:
+            width_lo = np.logspace(-2.0, np.log10(src['SpatialWidth']), 11)
+            width_hi = np.logspace(np.log10(src['SpatialWidth']), 0.5, 11)
+            loglike_lo = self._scan_extension(name, spatial_model=spatial_model,
+                                              width=width_lo[
+                                                  ::-1], optimizer=optimizer,
+                                              skydir=skydir,
+                                              psf_scale_fn=psf_scale_fn,
+                                              reoptimize=reoptimize)[::-1]
+            loglike_hi = self._scan_extension(name, spatial_model=spatial_model,
+                                              width=width_hi, optimizer=optimizer,
+                                              skydir=skydir,
+                                              psf_scale_fn=psf_scale_fn,
+                                              reoptimize=reoptimize)
+            width = np.concatenate((width_lo, width_hi[1:]))
+            loglike = np.concatenate((loglike_lo, loglike_hi[1:]))
+        else:
+            width = np.logspace(-2.0, 0.5, 21)
+            width = np.concatenate(([0.0], width))
+            loglike = self._scan_extension(name, spatial_model=spatial_model,
+                                           width=width, optimizer=optimizer,
+                                           skydir=skydir,
+                                           psf_scale_fn=psf_scale_fn,
+                                           reoptimize=reoptimize)
 
         ul_data = utils.get_parameter_limits(width, loglike)
 
@@ -542,8 +562,9 @@ class ExtensionFit(object):
             ul_data['err_lo'] = ul_data['x0']
             ul_data['err_hi'] = ul_data['x0']
 
+        imax = np.argmax(loglike)
         err = max(10**-2.0, ul_data['err'])
-        lolim = max(ul_data['x0'] - 2.0 * err, 0)
+        lolim = max(min(ul_data['x0'], width[imax]) - 2.0 * err, 0)
 
         if np.isfinite(ul_data['ul']):
             hilim = 1.5 * ul_data['ul']
@@ -558,14 +579,15 @@ class ExtensionFit(object):
                                         skydir=skydir,
                                         psf_scale_fn=psf_scale_fn,
                                         reoptimize=reoptimize)
-        ul_data = utils.get_parameter_limits(width2, loglike2)
+        ul_data2 = utils.get_parameter_limits(width2, loglike2)
+
         return MutableNamedTuple(
-            ext=max(ul_data['x0'], 10**-2.5),
-            ext_ul95=ul_data['ul'],
-            ext_err_lo=ul_data['err_lo'],
-            ext_err_hi=ul_data['err_hi'],
-            ext_err=ul_data['err'],
-            loglike_ext=ul_data['lnlmax'],
+            ext=max(ul_data2['x0'], 10**-2.5),
+            ext_ul95=ul_data2['ul'],
+            ext_err_lo=ul_data2['err_lo'],
+            ext_err_hi=ul_data2['err_hi'],
+            ext_err=ul_data2['err'],
+            loglike_ext=ul_data2['lnlmax'],
             ra=skydir.ra.deg,
             dec=skydir.dec.deg,
             glon=skydir.galactic.l.deg,
@@ -626,7 +648,8 @@ class ExtensionFit(object):
                                                      'DEC': o['dec']},
                                        use_pylike=False)
 
-            self.logger.debug('Elapsed Time: %.2f %.2f',t0.elapsed_time,t1.elapsed_time)
+            self.logger.debug('Elapsed Time: %.2f %.2f',
+                              t0.elapsed_time, t1.elapsed_time)
 
             fit_output = self._fit(
                 loglevel=logging.DEBUG, **kwargs['optimizer'])
