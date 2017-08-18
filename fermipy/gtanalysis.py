@@ -3478,7 +3478,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         plotter.run(self, mcube_map, prefix=prefix, **kwargs)
 
     def curvature(self, name, **kwargs):
-        """Test whether a source shows spectral curvature.
+        """Test whether a source shows spectral curvature by comparing
+        the likelihood ratio of PowerLaw and LogParabola spectral
+        models.
 
         Parameters
         ----------
@@ -3525,7 +3527,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         pars1 = {
             'norm': copy.deepcopy(prefactor),
             'alpha': copy.deepcopy(index),
-            'Eb': self._get_param(name, 'Scale'),
+            'Eb': copy.deepcopy(scale),
         }
         pars1['alpha']['scale'] *= -1
         pars1['alpha']['min'] = -5.0
@@ -3545,8 +3547,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         pars2 = {
             'Prefactor': copy.deepcopy(prefactor),
             'Index1': copy.deepcopy(index),
-            'Cutoff': {'value': 1000.0, 'scale': 1E3, 'min': 10.0, 'max': 1E4, 'free': True},
-            'Index2': {'value': 1.0, 'scale': 1.0, 'min': 1.0, 'max': 1.0, 'free': False},
+            'Cutoff': {'value': 1000.0, 'scale': 1E3,
+                       'min': 10.0, 'max': 1E4, 'free': True},
+            'Index2': {'value': 1.0, 'scale': 1.0,
+                       'min': 1.0, 'max': 1.0, 'free': False},
             'Scale': copy.deepcopy(scale)
         }
 
@@ -3564,11 +3568,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         saved_state.restore()
 
         ts_curv = 2.0 * (fit_lp['loglike'] - fit_pl['loglike'])
-        return MutableNamedTuple(ts_curv=ts_curv,
-                                 loglike_pl=fit_pl['loglike'],
-                                 loglike_lp=fit_lp['loglike'],
-                                 loglike_ple=fit_ple['loglike'],
-                                 )
+        o = MutableNamedTuple(ts_curv=ts_curv,
+                              loglike_pl=fit_pl['loglike'],
+                              loglike_lp=fit_lp['loglike'],
+                              loglike_ple=fit_ple['loglike'])
+
+        self.logger.info('LogLike_PL: %12.3f LogLike_LP: %12.3f',
+                         o.loglike_pl, o.loglike_lp)
+        self.logger.info('TS_curv:        %.3f', o.ts_curv)
+        return o
 
     def bowtie(self, name, fd=None, loge=None):
         """Generate a spectral uncertainty band (bowtie) for the given
