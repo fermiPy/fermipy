@@ -40,6 +40,7 @@ from fermipy.logger import Logger, log_level
 from fermipy.config import ConfigSchema
 from fermipy.docstring_utils import DocstringMeta
 from fermipy.fitcache import FitCache
+from fermipy.data_struct import MutableNamedTuple
 # pylikelihood
 import GtApp
 import FluxDensity
@@ -668,13 +669,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 spectrum_type == 'LogParabola'):
             spectrum_pars.setdefault('beta', {'value': 0.0, 'scale': 1.0,
                                               'min': 0.0, 'max': 1.0})
-            spectrum_pars.setdefault('alpha', src.spectral_pars['Index'])
             spectrum_pars.setdefault('Eb', src.spectral_pars['Scale'])
             spectrum_pars.setdefault('norm', src.spectral_pars['Prefactor'])
-            spectrum_pars['alpha']['value'] *= -1.0
-            if spectrum_pars['alpha']['scale'] == -1.0:
+            if 'alpha' not in spectrum_pars:
+                spectrum_pars['alpha'] = src.spectral_pars['Index']
                 spectrum_pars['alpha']['value'] *= -1.0
-                spectrum_pars['alpha']['scale'] *= -1.0
+                if spectrum_pars['alpha']['scale'] == -1.0:
+                    spectrum_pars['alpha']['value'] *= -1.0
+                    spectrum_pars['alpha']['scale'] *= -1.0
 
         if spectrum_type == 'FileFunction':
             self._create_filefunction(name, spectrum_pars)
@@ -1884,6 +1886,17 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         name = self.get_source_name(name)
         return self.like.normPar(name).getValue()
 
+    def _get_param(self, name, par_name):
+
+        idx = self.like.par_index(name, par_name)
+        par = self.like.model[idx]
+        bounds = par.getBounds()
+        return {'value': par.getValue(),
+                'error': par.error(),
+                'scale': par.getScale(),
+                'free': par.isFree(),
+                'min': bounds[0], 'max': bounds[1]}
+
     def get_params(self, freeonly=False):
 
         params = {}
@@ -1897,22 +1910,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             for parName in par_names:
                 idx = self.like.par_index(srcName, parName)
                 par = self.like.model[idx]
-                bounds = par.getBounds()
-
-                is_norm = parName == self.like.normPar(srcName).getName()
 
                 if freeonly and not par.isFree():
                     continue
 
+                is_norm = parName == self.like.normPar(srcName).getName()
                 params[idx] = {'src_name': srcName,
                                'par_name': parName,
-                               'value': par.getValue(),
-                               'error': par.error(),
-                               'scale': par.getScale(),
-                               'idx': idx,
-                               'free': par.isFree(),
                                'is_norm': is_norm,
-                               'bounds': bounds}
+                               'idx': idx}
+                params[idx].update(self._get_param(srcName, parName))
 
         return [params[k] for k in sorted(params.keys())]
 
@@ -3162,7 +3169,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
                 o += '%4i %-20.19s' % (p['idx'], p['par_name'])
                 o += '%10.3g%10.3g' % (p['value'], p['error'])
-                o += '%10.3g%10.3g%10.3g' % (p['bounds'][0], p['bounds'][1],
+                o += '%10.3g%10.3g%10.3g' % (p['min'], p['max'],
                                              p['scale'])
 
                 if p['free']:
@@ -3469,6 +3476,99 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                            fileio=self.config['fileio'],
                                            logging=self.config['logging'])
         plotter.run(self, mcube_map, prefix=prefix, **kwargs)
+
+    def curvature(self, name, **kwargs):
+        """Test whether a source shows spectral curvature.
+
+        Parameters
+        ----------
+        name : str
+            Source name.
+
+        """
+
+        name = self.roi.get_source_by_name(name).name
+
+        saved_state = LikelihoodState(self.like)
+        source = self.components[0].like.logLike.getSource(str(name))
+
+        old_spectrum = source.spectrum()
+        old_pars = copy.deepcopy(self.roi[name].spectral_pars)
+        old_type = self.roi[name]['SpectrumType']
+
+        if old_type != 'PowerLaw':
+
+            dnde = self.like[name].spectrum()(pyLike.dArg(1000.))
+            value, scale = utils.scale_parameter(dnde)
+            pars0 = {
+                'Prefactor':
+                    {'value': value, 'scale': scale,
+                        'min': 1E-5, 'max': 1000., 'free': True},
+                'Index':
+                    {'value': 2.0, 'scale': -1.0, 'min': 0.0,
+                        'max': 5.0, 'free': False},
+                'Scale':
+                    {'value': 1E3, 'scale': 1.0, 'min': 1.,
+                        'max': 1E6, 'free': False},
+            }
+            self.set_source_spectrum(str(name), 'PowerLaw',
+                                     spectrum_pars=pars0,
+                                     update_source=False)
+
+        self.free_source(name, loglevel=logging.DEBUG)
+        fit_pl = self._fit(loglevel=logging.DEBUG)
+
+        prefactor = self._get_param(name, 'Prefactor')
+        index = self._get_param(name, 'Index')
+        scale = self._get_param(name, 'Scale')
+
+        pars1 = {
+            'norm': copy.deepcopy(prefactor),
+            'alpha': copy.deepcopy(index),
+            'Eb': self._get_param(name, 'Scale'),
+        }
+        pars1['alpha']['scale'] *= -1
+        pars1['alpha']['min'] = -5.0
+        pars1['alpha']['max'] = 5.0
+
+        self.set_source_spectrum(str(name), 'LogParabola',
+                                 spectrum_pars=pars1,
+                                 update_source=False)
+
+        self.free_source(name, loglevel=logging.DEBUG)
+        fit_lp = self._fit(loglevel=logging.DEBUG)
+
+        self.set_source_spectrum(str(name), old_type,
+                                 spectrum_pars=old_pars,
+                                 update_source=False)
+
+        pars2 = {
+            'Prefactor': copy.deepcopy(prefactor),
+            'Index1': copy.deepcopy(index),
+            'Cutoff': {'value': 1000.0, 'scale': 1E3, 'min': 10.0, 'max': 1E4, 'free': True},
+            'Index2': {'value': 1.0, 'scale': 1.0, 'min': 1.0, 'max': 1.0, 'free': False},
+            'Scale': copy.deepcopy(scale)
+        }
+
+        self.set_source_spectrum(str(name), 'PLSuperExpCutoff',
+                                 spectrum_pars=pars2,
+                                 update_source=False)
+
+        self.free_source(name, loglevel=logging.DEBUG)
+        fit_ple = self._fit(loglevel=logging.DEBUG)
+
+        # Revert to initial spectral model
+        self.set_source_spectrum(str(name), old_type,
+                                 spectrum_pars=old_pars,
+                                 update_source=False)
+        saved_state.restore()
+
+        ts_curv = 2.0 * (fit_lp['loglike'] - fit_pl['loglike'])
+        return MutableNamedTuple(ts_curv=ts_curv,
+                                 loglike_pl=fit_pl['loglike'],
+                                 loglike_lp=fit_lp['loglike'],
+                                 loglike_ple=fit_ple['loglike'],
+                                 )
 
     def bowtie(self, name, fd=None, loge=None):
         """Generate a spectral uncertainty band (bowtie) for the given
