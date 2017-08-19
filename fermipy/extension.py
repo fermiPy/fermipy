@@ -144,7 +144,6 @@ class ExtensionFit(object):
         src = self.roi.copy_source(name)
 
         # Save likelihood value for baseline fit
-        saved_state_base = LikelihoodState(self.like)
         loglike_base = fit_output['loglike']
         self.logger.debug('Baseline Model Log-Likelihood: %f', loglike_base)
 
@@ -177,35 +176,6 @@ class ExtensionFit(object):
         o.ebin_e_min = self.energies[:-1]
         o.ebin_e_max = self.energies[1:]
         o.ebin_e_ctr = np.sqrt(o.ebin_e_min * o.ebin_e_max)
-
-        # Test point-source hypothesis
-        self.set_source_morphology(name, spatial_model='PointSource',
-                                   use_pylike=False,
-                                   psf_scale_fn=psf_scale_fn)
-
-        # Fit a point-source
-        self.logger.debug('Fitting point-source model.')
-        fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
-
-        if src['SpatialModel'] == 'PointSource' and kwargs['fit_position']:
-            loc = self.localize(name, update=False)
-            o.loglike_ptsrc = loc['loglike_loc']
-        else:
-            o.loglike_ptsrc = fit_output['loglike']
-
-        self.logger.debug('Point-Source Model Likelihood: %f', o.loglike_ptsrc)
-
-        if kwargs['save_model_map']:
-            o.ptsrc_tot_map = self.model_counts_map()
-            o.ptsrc_src_map = self.model_counts_map(name)
-            o.ptsrc_bkg_map = self.model_counts_map(exclude=[name])
-
-        saved_state_base.restore()
-        self.set_source_morphology(name, spatial_model=src['SpatialModel'],
-                                   use_pylike=False,
-                                   spatial_pars=src.spatial_pars,
-                                   update_source=False,
-                                   psf_scale_fn=psf_scale_fn)
 
         self.logger.debug('Width scan vector:\n %s', width)
 
@@ -243,16 +213,12 @@ class ExtensionFit(object):
                                    use_pylike=False,
                                    psf_scale_fn=psf_scale_fn)
 
-        #self.logger.debug('Likelihood: %s',o['loglike'])
-        o.dloglike = o.loglike - o.loglike_ptsrc
-
         fit_output = self._fit(loglevel=logging.DEBUG, update=False,
                                **kwargs['optimizer'])
 
         o.source_fit = self.get_src_model(name, reoptimize=True,
                                           optimizer=kwargs['optimizer'])
         o.loglike_ext = fit_output['loglike']
-        o.ts_ext = 2 * (o['loglike_ext'] - o['loglike_ptsrc'])
 
         if kwargs['fit_ebin']:
             self._fit_extension_ebin(name, o, **kwargs)
@@ -276,6 +242,30 @@ class ExtensionFit(object):
                            loglevel=logging.DEBUG)
 
         o.tsmap = tsmap['ts']
+
+        # Test point-source hypothesis
+        self.set_source_morphology(name, spatial_model='PointSource',
+                                   use_pylike=False,
+                                   psf_scale_fn=psf_scale_fn)
+
+        # Fit a point-source
+        self.logger.debug('Fitting point-source model.')
+        fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
+
+        if src['SpatialModel'] == 'PointSource' and kwargs['fit_position']:
+            loc = self.localize(name, update=False)
+            o.loglike_ptsrc = loc['loglike_loc']
+        else:
+            o.loglike_ptsrc = fit_output['loglike']
+
+        o.dloglike = o.loglike - o.loglike_ptsrc
+        o.ts_ext = 2 * (o.loglike_ext - o.loglike_ptsrc)
+        self.logger.debug('Point-Source Model Likelihood: %f', o.loglike_ptsrc)
+
+        if kwargs['save_model_map']:
+            o.ptsrc_tot_map = self.model_counts_map()
+            o.ptsrc_src_map = self.model_counts_map(name)
+            o.ptsrc_bkg_map = self.model_counts_map(exclude=[name])
 
         if update and (sqrt_ts_threshold is None or
                        np.sqrt(o['ts_ext']) > sqrt_ts_threshold):
