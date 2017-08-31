@@ -198,11 +198,15 @@ class Catalog2FHL(Catalog):
         table_extsrc.meta.clear()
         strip_columns(table)
         strip_columns(table_extsrc)
+        if 'Spatial_Function' not in table_extsrc.colnames:
+            table_extsrc.add_column(Column(name='Spatial_Function', dtype='S20',
+                                           length=len(table_extsrc)))
+            table_extsrc['Spatial_Function'] = 'SpatialMap'
 
         table = join_tables(table, table_extsrc, 'Source_Name', 'Source_Name',
                             ['Model_Form', 'Model_SemiMajor',
                              'Model_SemiMinor', 'Model_PosAng',
-                             'Spatial_Filename'])
+                             'Spatial_Filename', 'Spatial_Function'])
 
         table.sort('Source_Name')
 
