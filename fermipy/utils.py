@@ -666,20 +666,20 @@ def find_function_root(fn, x0, xb, delta=0.0):
         return np.nan
 
     if x0 == 0:
-        xtol = 1e-10 * xb
+        xtol = 1e-10 * np.abs(xb)
     else:
-        xtol = 1e-10 * (xb + x0)
+        xtol = 1e-10 * np.abs(xb + x0)
 
     return brentq(lambda t: fn(t) + delta, x0, xb, xtol=xtol)
 
 
-def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
+def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2):
     """Compute upper/lower limits, peak position, and 1-sigma errors
     from a 1-D likelihood function.  This function uses the
     delta-loglikelihood method to evaluate parameter limits by
     searching for the point at which the change in the log-likelihood
     value with respect to the maximum equals a specific value.  A
-    parabolic spline fit to the log-likelihood values is used to
+    cubic spline fit to the log-likelihood values is used to
     improve the accuracy of the calculation.
 
     Parameters
@@ -691,28 +691,64 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     loglike : `~numpy.ndarray`
        Array of log-likelihood values.
 
-    ul_confidence : float
+    cl_limit : float
        Confidence level to use for limit calculation.
 
+    cl_err : float
+       Confidence level to use for two-sided confidence interval
+       calculation.
+
     tol : float
-       Tolerance parameter for spline.
+       Absolute precision of likelihood values.
+
+    Returns
+    -------
+
+    x0 : float
+        Coordinate at maximum of likelihood function.
+
+    err_lo : float    
+        Lower error for two-sided confidence interval with CL
+        ``cl_err``.  Corresponds to point (x < x0) at which the
+        log-likelihood falls by a given value with respect to the
+        maximum (0.5 for 1 sigma).  Set to nan if the change in the
+        log-likelihood function at the lower bound of the ``xval``
+        input array is less than than the value for the given CL.
+
+    err_hi : float
+        Upper error for two-sided confidence interval with CL
+        ``cl_err``. Corresponds to point (x > x0) at which the
+        log-likelihood falls by a given value with respect to the
+        maximum (0.5 for 1 sigma).  Set to nan if the change in the
+        log-likelihood function at the upper bound of the ``xval``
+        input array is less than the value for the given CL.
+
+    err : float
+        Symmetric 1-sigma error.  Average of ``err_lo`` and ``err_hi``
+        if both are defined.
+
+    ll : float
+        Lower limit evaluated at confidence level ``cl_limit``.
+
+    ul : float
+        Upper limit evaluated at confidence level ``cl_limit``.
+
+    lnlmax : float
+        Log-likelihood value at ``x0``.
 
     """
 
-    deltalnl = onesided_cl_to_dlnl(ul_confidence)
+    dlnl_limit = onesided_cl_to_dlnl(cl_limit)
+    dlnl_err = twosided_cl_to_dlnl(cl_err)
 
-    # EAC FIXME, added try block here b/c sometimes xval is np.nan
     try:
-        spline = UnivariateSpline(xval, loglike, k=2, s=tol)
+        spline = UnivariateSpline(xval, loglike, k=3,
+                                  w=(1 / tol) * np.ones(len(xval)))
     except:
         print("Failed to create spline: ", xval, loglike)
         return {'x0': np.nan, 'ul': np.nan, 'll': np.nan,
                 'err_lo': np.nan, 'err_hi': np.nan, 'err': np.nan,
                 'lnlmax': np.nan}
-    # m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
-    # xval = np.concatenate((xval[:1],xval[1:][m]))
-    # loglike = np.concatenate((loglike[:1],loglike[1:][m]))
-    # spline = InterpolatedUnivariateSpline(xval, loglike, k=2)
 
     sd = spline.derivative()
 
@@ -731,25 +767,28 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
 
     def fn(t): return spline(t) - lnlmax
     fn_val = fn(xval)
-    if np.any(fn_val[imax:] < -deltalnl):
-        xhi = xval[imax:][fn_val[imax:] < -deltalnl][0]
+    if np.any(fn_val[imax:] < -dlnl_limit):
+        xhi = xval[imax:][fn_val[imax:] < -dlnl_limit][0]
     else:
         xhi = xval[-1]
 
-    if np.any(fn_val[:imax] < -deltalnl):
-        xlo = xval[:imax][fn_val[:imax] < -deltalnl][-1]
+    if np.any(fn_val[:imax] < -dlnl_limit):
+        xlo = xval[:imax][fn_val[:imax] < -dlnl_limit][-1]
     else:
         xlo = xval[0]
 
-    ul = find_function_root(fn, x0, xhi, deltalnl)
-    ll = find_function_root(fn, x0, xlo, deltalnl)
-    err_lo = np.abs(x0 - find_function_root(fn, x0, xlo, 0.5))
-    err_hi = np.abs(x0 - find_function_root(fn, x0, xhi, 0.5))
+    ul = find_function_root(fn, x0, xhi, dlnl_limit)
+    ll = find_function_root(fn, x0, xlo, dlnl_limit)
+    err_lo = np.abs(x0 - find_function_root(fn, x0, xlo, dlnl_err))
+    err_hi = np.abs(x0 - find_function_root(fn, x0, xhi, dlnl_err))
 
-    if np.isfinite(err_lo):
+    err = np.nan
+    if np.isfinite(err_lo) and np.isfinite(err_hi):
         err = 0.5 * (err_lo + err_hi)
-    else:
+    elif np.isfinite(err_hi):
         err = err_hi
+    elif np.isfinite(err_lo):
+        err = err_lo
 
     o = {'x0': x0, 'ul': ul, 'll': ll,
          'err_lo': err_lo, 'err_hi': err_hi, 'err': err,

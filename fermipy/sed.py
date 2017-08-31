@@ -485,7 +485,7 @@ class SEDGenerator(object):
 
             ul_data = utils.get_parameter_limits(lnlp['flux'],
                                                  lnlp['dloglike'],
-                                                 ul_confidence=ul_confidence)
+                                                 cl_limit=ul_confidence)
             o['norm_ul'][i] = ul_data['ul'] / ref_flux
 
             saved_state_bin.restore()

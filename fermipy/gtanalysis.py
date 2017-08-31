@@ -2189,7 +2189,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                     reoptimize=False, xvals=xvals)
                 lims = utils.get_parameter_limits(lnlp['xvals'],
                                                   lnlp['dloglike'],
-                                                  ul_confidence=0.99)
+                                                  cl_limit=0.99)
 
                 if not np.isfinite(lims['ul']):
                     self.logger.warning('Upper limit not found.  '
@@ -2201,7 +2201,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         xvals=xvals)
                     lims = utils.get_parameter_limits(lnlp['xvals'],
                                                       lnlp['dloglike'],
-                                                      ul_confidence=0.99)
+                                                      cl_limit=0.99)
 
                 if np.isfinite(lims['ll']):
                     xhi = np.linspace(lims['x0'], lims['ul'], npts - npts // 2)
@@ -2288,7 +2288,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                              reoptimize=False, xvals=xvals, **kwargs)
         xval0 = self.like.normPar(name).getValue()
         lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dloglike'],
-                                           ul_confidence=0.99)
+                                           cl_limit=0.99)
 
         if not np.isfinite(lims0['ll']) and lims0['x0'] > 1E-6:
             xvals = np.array([0.0, lims0['x0'],
@@ -2311,7 +2311,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for i in range(20):
 
             lims1 = utils.get_parameter_limits(xvals, dloglike,
-                                               ul_confidence=0.99)
+                                               cl_limit=0.99)
 
 #            print('iter',i,np.abs(np.abs(dloglike0) - utils.onesided_cl_to_dlnl(0.99)),xup)
 #            print(loglike)
