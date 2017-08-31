@@ -49,6 +49,8 @@ def join_tables(left, right, key_left, key_right,
 
     if cols_right is None:
         cols_right = right.colnames
+    else:
+        cols_right = [c for c in cols_right if c in right.colnames]
 
     if key_left != key_right:
         right[key_right].name = key_left
@@ -113,8 +115,12 @@ class Catalog(object):
             self.table['Spatial_Filename'] = Column(
                 dtype='S20', length=len(self.table))
 
-        m = (self.table['Spatial_Filename'] != '') & (
-            self.table['Spatial_Filename'] != 'None')
+        if 'Spatial_Function' not in self.table.columns:
+            self.table['Spatial_Function'] = Column(
+                dtype='S20', length=len(self.table))
+
+        m = (self.table['Spatial_Filename'] != '') | (
+            self.table['Spatial_Function'] != '')
         self.table['extended'] = False
         self.table['extended'][m] = True
         self.table['extdir'] = extdir
@@ -231,12 +237,16 @@ class Catalog3FGL(Catalog):
             table.remove_column('Unc_Flux_History')
         strip_columns(table)
         strip_columns(table_extsrc)
+        if 'Spatial_Function' not in table_extsrc.colnames:
+            table_extsrc.add_column(Column(name='Spatial_Function', dtype='S20',
+                                           length=len(table_extsrc)))
+            table_extsrc['Spatial_Function'] = 'SpatialMap'
 
         table = join_tables(table, table_extsrc,
                             'Extended_Source_Name', 'Source_Name',
                             ['Model_Form', 'Model_SemiMajor',
                              'Model_SemiMinor', 'Model_PosAng',
-                             'Spatial_Filename'])
+                             'Spatial_Filename', 'Spatial_Function'])
 
         table.sort('Source_Name')
 
@@ -244,6 +254,11 @@ class Catalog3FGL(Catalog):
 
         m = self.table['SpectrumType'] == 'PLExpCutoff'
         self.table['SpectrumType'][m] = 'PLSuperExpCutoff'
+
+        self.table['Spatial_Function'] = Column(name='Spatial_Function', dtype='S20',
+                                                data=self.table['Spatial_Function'].data)
+        m = self.table['Spatial_Function'] == 'RadialGauss'
+        self.table['Spatial_Function'][m] = 'RadialGaussian'
 
         self.table['TS_value'] = 0.0
         self.table['TS'] = 0.0

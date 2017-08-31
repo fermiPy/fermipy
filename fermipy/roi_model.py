@@ -213,13 +213,25 @@ def get_true_params_dict(pars_dict):
 
     params = {}
     for k, p in pars_dict.items():
-        val = float(p['value'])*float(p['scale'])
+        val = float(p['value']) * float(p['scale'])
         err = np.nan
         if 'error' in p:
-            err = float(p['error'])*np.abs(float(p['scale']))
+            err = float(p['error']) * np.abs(float(p['scale']))
         params[k] = {'value': val, 'error': err}
 
     return params
+
+
+def spatial_pars_from_catalog(cat):
+
+    if cat['Spatial_Function'] == 'RadialDisk':
+        rext = np.sqrt(cat['Model_SemiMajor'] * cat['Model_SemiMinor'])
+        return {'Radius': {'value': rext}}
+    elif cat['Spatial_Function'] == 'RadialGaussian':
+        sigma_to_r68 = np.sqrt(-2.0 * np.log(1.0 - 0.6827))
+        rext = np.sqrt(cat['Model_SemiMajor'] * cat['Model_SemiMinor'])
+        return {'Sigma': {'value': rext / sigma_to_r68}}
+    return {}
 
 
 def spectral_pars_from_catalog(cat):
@@ -478,7 +490,7 @@ class Model(object):
 
         row = [row_dict[k] for k in tab.columns]
         tab.add_row(row)
-    
+
     def get_catalog_dict(self):
 
         o = {'Spectral_Index': np.nan,
@@ -1800,7 +1812,7 @@ class ROIModel(fermipy.config.Configurable):
         for s in srcs + self.diffuse_sources:
 
             if names and s.name not in names:
-                continue            
+                continue
             if s.name in exclude:
                 continue
             if not s.check_cuts(cuts):
@@ -1925,8 +1937,8 @@ class ROIModel(fermipy.config.Configurable):
 
             if row['extended']:
                 src_dict['SourceType'] = 'DiffuseSource'
-                src_dict['SpatialType'] = 'SpatialMap'
-                src_dict['SpatialModel'] = 'SpatialMap'
+                src_dict['SpatialType'] = row['Spatial_Function']
+                src_dict['SpatialModel'] = row['Spatial_Function']
 
                 search_dirs = []
                 if extdir is not None:
@@ -1935,9 +1947,10 @@ class ROIModel(fermipy.config.Configurable):
                 search_dirs += [row['extdir'],
                                 os.path.join(row['extdir'], 'Templates')]
 
-                src_dict['Spatial_Filename'] = utils.resolve_file_path(
-                    row['Spatial_Filename'],
-                    search_dirs=search_dirs)
+                if src_dict['SpatialType'] == 'SpatialMap':
+                    src_dict['Spatial_Filename'] = utils.resolve_file_path(
+                        row['Spatial_Filename'],
+                        search_dirs=search_dirs)
 
             else:
                 src_dict['SourceType'] = 'PointSource'
@@ -1946,6 +1959,8 @@ class ROIModel(fermipy.config.Configurable):
 
             src_dict['spectral_pars'] = spectral_pars_from_catalog(
                 catalog_dict)
+            src_dict['spatial_pars'] = spatial_pars_from_catalog(catalog_dict)
+
             src = Source(src_dict['Source_Name'], src_dict, radec=radec)
             src.data['offset'] = offset[m][i]
             src.data['offset_ra'] = offset_cel[:, 0][m][i]
@@ -2116,7 +2131,7 @@ class ROIModel(fermipy.config.Configurable):
             if names is not None and s.name not in names:
                 continue
             s.add_to_table(tab)
-            
+
         return tab
 
     def write_fits(self, fitsfile):
