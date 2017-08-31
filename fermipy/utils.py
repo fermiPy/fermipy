@@ -742,7 +742,7 @@ def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2)
     dlnl_err = twosided_cl_to_dlnl(cl_err)
 
     try:
-        spline = UnivariateSpline(xval, loglike, k=3,
+        spline = UnivariateSpline(xval, loglike, k=min(len(xval)-1,3),
                                   w=(1 / tol) * np.ones(len(xval)))
     except:
         print("Failed to create spline: ", xval, loglike)
