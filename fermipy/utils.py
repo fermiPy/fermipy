@@ -741,8 +741,17 @@ def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2)
     dlnl_limit = onesided_cl_to_dlnl(cl_limit)
     dlnl_err = twosided_cl_to_dlnl(cl_err)
 
+    # Pad the likelihood function
+    if len(xval) >= 3 and np.max(loglike) - loglike[-1] < dlnl_limit:
+        p = np.polyfit(xval[-3:], loglike[-3:], 2)
+        x0 = np.linspace(xval[-1], 10 * xval[-1], 3)
+        y0 = np.polyval(p, x0)
+        xval = np.concatenate((xval, x0))
+        loglike = np.concatenate((loglike, y0))
+
     try:
-        spline = UnivariateSpline(xval, loglike, k=min(len(xval)-1,3),
+        spline = UnivariateSpline(xval, loglike,
+                                  k=min(len(xval) - 1, 3),
                                   w=(1 / tol) * np.ones(len(xval)))
     except:
         print("Failed to create spline: ", xval, loglike)
