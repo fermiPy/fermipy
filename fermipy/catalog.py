@@ -199,7 +199,7 @@ class Catalog2FHL(Catalog):
         strip_columns(table)
         strip_columns(table_extsrc)
         if 'Spatial_Function' not in table_extsrc.colnames:
-            table_extsrc.add_column(Column(name='Spatial_Function', dtype='S20',
+            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
                                            length=len(table_extsrc)))
             table_extsrc['Spatial_Function'] = 'SpatialMap'
 
@@ -242,7 +242,7 @@ class Catalog3FGL(Catalog):
         strip_columns(table)
         strip_columns(table_extsrc)
         if 'Spatial_Function' not in table_extsrc.colnames:
-            table_extsrc.add_column(Column(name='Spatial_Function', dtype='S20',
+            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
                                            length=len(table_extsrc)))
             table_extsrc['Spatial_Function'] = 'SpatialMap'
 
@@ -259,7 +259,7 @@ class Catalog3FGL(Catalog):
         m = self.table['SpectrumType'] == 'PLExpCutoff'
         self.table['SpectrumType'][m] = 'PLSuperExpCutoff'
 
-        self.table['Spatial_Function'] = Column(name='Spatial_Function', dtype='S20',
+        self.table['Spatial_Function'] = Column(name='Spatial_Function', dtype='U20',
                                                 data=self.table['Spatial_Function'].data)
         m = self.table['Spatial_Function'] == 'RadialGauss'
         self.table['Spatial_Function'][m] = 'RadialGaussian'

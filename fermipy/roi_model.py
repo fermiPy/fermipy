@@ -1937,8 +1937,8 @@ class ROIModel(fermipy.config.Configurable):
 
             if row['extended']:
                 src_dict['SourceType'] = 'DiffuseSource'
-                src_dict['SpatialType'] = row['Spatial_Function']
-                src_dict['SpatialModel'] = row['Spatial_Function']
+                src_dict['SpatialType'] = str(row['Spatial_Function'])
+                src_dict['SpatialModel'] = str(row['Spatial_Function'])
 
                 search_dirs = []
                 if extdir is not None:
