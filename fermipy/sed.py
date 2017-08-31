@@ -23,6 +23,7 @@ from fermipy import gtutils
 from fermipy import fits_utils
 from fermipy import roi_model
 from fermipy.config import ConfigSchema
+from fermipy.timing import Timer
 from fermipy import model_utils
 
 from LikelihoodState import LikelihoodState
@@ -67,7 +68,7 @@ class SEDGenerator(object):
             Dictionary containing output of the SED analysis.
 
         """
-
+        timer = Timer.create(start=True)
         name = self.roi.get_source_by_name(name).name
 
         # Create schema for method configuration
@@ -106,6 +107,7 @@ class SEDGenerator(object):
         if config['make_plots']:
             self._plotter.make_sed_plots(o, **config)
 
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return o
 
     def _make_sed_fits(self, sed, filename, **kwargs):
@@ -483,7 +485,7 @@ class SEDGenerator(object):
 
             ul_data = utils.get_parameter_limits(lnlp['flux'],
                                                  lnlp['dloglike'],
-                                                 ul_confidence=ul_confidence)
+                                                 cl_limit=ul_confidence)
             o['norm_ul'][i] = ul_data['ul'] / ref_flux
 
             saved_state_bin.restore()

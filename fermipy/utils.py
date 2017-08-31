@@ -666,20 +666,20 @@ def find_function_root(fn, x0, xb, delta=0.0):
         return np.nan
 
     if x0 == 0:
-        xtol = 1e-10 * xb
+        xtol = 1e-10 * np.abs(xb)
     else:
-        xtol = 1e-10 * (xb + x0)
+        xtol = 1e-10 * np.abs(xb + x0)
 
     return brentq(lambda t: fn(t) + delta, x0, xb, xtol=xtol)
 
 
-def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
+def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2):
     """Compute upper/lower limits, peak position, and 1-sigma errors
     from a 1-D likelihood function.  This function uses the
     delta-loglikelihood method to evaluate parameter limits by
     searching for the point at which the change in the log-likelihood
     value with respect to the maximum equals a specific value.  A
-    parabolic spline fit to the log-likelihood values is used to
+    cubic spline fit to the log-likelihood values is used to
     improve the accuracy of the calculation.
 
     Parameters
@@ -691,28 +691,64 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
     loglike : `~numpy.ndarray`
        Array of log-likelihood values.
 
-    ul_confidence : float
+    cl_limit : float
        Confidence level to use for limit calculation.
 
+    cl_err : float
+       Confidence level to use for two-sided confidence interval
+       calculation.
+
     tol : float
-       Tolerance parameter for spline.
+       Absolute precision of likelihood values.
+
+    Returns
+    -------
+
+    x0 : float
+        Coordinate at maximum of likelihood function.
+
+    err_lo : float    
+        Lower error for two-sided confidence interval with CL
+        ``cl_err``.  Corresponds to point (x < x0) at which the
+        log-likelihood falls by a given value with respect to the
+        maximum (0.5 for 1 sigma).  Set to nan if the change in the
+        log-likelihood function at the lower bound of the ``xval``
+        input array is less than than the value for the given CL.
+
+    err_hi : float
+        Upper error for two-sided confidence interval with CL
+        ``cl_err``. Corresponds to point (x > x0) at which the
+        log-likelihood falls by a given value with respect to the
+        maximum (0.5 for 1 sigma).  Set to nan if the change in the
+        log-likelihood function at the upper bound of the ``xval``
+        input array is less than the value for the given CL.
+
+    err : float
+        Symmetric 1-sigma error.  Average of ``err_lo`` and ``err_hi``
+        if both are defined.
+
+    ll : float
+        Lower limit evaluated at confidence level ``cl_limit``.
+
+    ul : float
+        Upper limit evaluated at confidence level ``cl_limit``.
+
+    lnlmax : float
+        Log-likelihood value at ``x0``.
 
     """
 
-    deltalnl = onesided_cl_to_dlnl(ul_confidence)
+    dlnl_limit = onesided_cl_to_dlnl(cl_limit)
+    dlnl_err = twosided_cl_to_dlnl(cl_err)
 
-    # EAC FIXME, added try block here b/c sometimes xval is np.nan
     try:
-        spline = UnivariateSpline(xval, loglike, k=2, s=tol)
+        spline = UnivariateSpline(xval, loglike, k=3,
+                                  w=(1 / tol) * np.ones(len(xval)))
     except:
         print("Failed to create spline: ", xval, loglike)
         return {'x0': np.nan, 'ul': np.nan, 'll': np.nan,
                 'err_lo': np.nan, 'err_hi': np.nan, 'err': np.nan,
                 'lnlmax': np.nan}
-    # m = np.abs(loglike[1:] - loglike[:-1]) > delta_tol
-    # xval = np.concatenate((xval[:1],xval[1:][m]))
-    # loglike = np.concatenate((loglike[:1],loglike[1:][m]))
-    # spline = InterpolatedUnivariateSpline(xval, loglike, k=2)
 
     sd = spline.derivative()
 
@@ -731,25 +767,28 @@ def get_parameter_limits(xval, loglike, ul_confidence=0.95, tol=1E-3):
 
     def fn(t): return spline(t) - lnlmax
     fn_val = fn(xval)
-    if np.any(fn_val[imax:] < -deltalnl):
-        xhi = xval[imax:][fn_val[imax:] < -deltalnl][0]
+    if np.any(fn_val[imax:] < -dlnl_limit):
+        xhi = xval[imax:][fn_val[imax:] < -dlnl_limit][0]
     else:
         xhi = xval[-1]
 
-    if np.any(fn_val[:imax] < -deltalnl):
-        xlo = xval[:imax][fn_val[:imax] < -deltalnl][-1]
+    if np.any(fn_val[:imax] < -dlnl_limit):
+        xlo = xval[:imax][fn_val[:imax] < -dlnl_limit][-1]
     else:
         xlo = xval[0]
 
-    ul = find_function_root(fn, x0, xhi, deltalnl)
-    ll = find_function_root(fn, x0, xlo, deltalnl)
-    err_lo = np.abs(x0 - find_function_root(fn, x0, xlo, 0.5))
-    err_hi = np.abs(x0 - find_function_root(fn, x0, xhi, 0.5))
+    ul = find_function_root(fn, x0, xhi, dlnl_limit)
+    ll = find_function_root(fn, x0, xlo, dlnl_limit)
+    err_lo = np.abs(x0 - find_function_root(fn, x0, xlo, dlnl_err))
+    err_hi = np.abs(x0 - find_function_root(fn, x0, xhi, dlnl_err))
 
-    if np.isfinite(err_lo):
+    err = np.nan
+    if np.isfinite(err_lo) and np.isfinite(err_hi):
         err = 0.5 * (err_lo + err_hi)
-    else:
+    elif np.isfinite(err_hi):
         err = err_hi
+    elif np.isfinite(err_lo):
+        err = err_lo
 
     o = {'x0': x0, 'ul': ul, 'll': ll,
          'err_lo': err_lo, 'err_hi': err_hi, 'err': err,
@@ -828,6 +867,36 @@ def parabola(xy, amplitude, x0, y0, sx, sy, theta):
     return vals
 
 
+def get_bounded_slice(idx, dpix, shape):
+
+    dpix = int(dpix)
+    idx_lo = idx - dpix
+    idx_hi = idx + dpix + 1
+
+    if idx_lo < 0:
+        idx_lo = max(idx_lo, 0)
+        idx_hi = idx_lo + (2 * dpix + 1)
+    elif idx_hi > shape:
+        idx_hi = min(idx_hi, shape)
+        idx_lo = idx_hi - (2 * dpix + 1)
+
+    return slice(idx_lo, idx_hi)
+
+
+def get_region_mask(z, delta, xy=None):
+    """Get mask of connected region within delta of max(z)."""
+
+    if xy is None:
+        ix, iy = np.unravel_index(np.argmax(z), z.shape)
+    else:
+        ix, iy = xy
+
+    mz = (z > z[ix, iy] - delta)
+    labels = label(mz)[0]
+    mz &= labels == labels[ix, iy]
+    return mz
+
+
 def fit_parabola(z, ix, iy, dpix=3, zmin=None):
     """Fit a parabola to a 2D numpy array.  This function will fit a
     parabola with the functional form described in
@@ -857,21 +926,19 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
                        indexing='ij')
 
     m = (offset <= dpix)
-    #m = (np.abs(x-ix) <= dpix) & (np.abs(y-iy) <= dpix)
+    if np.sum(m) < 9:
+        m = (offset <= dpix + 0.5)
+
     if zmin is not None:
-        mz = (z - np.max(z[m]) > zmin)
-        labels = label(mz)[0]
-        mz &= labels == labels[ix, iy]
-        m |= mz
+        m |= get_region_mask(z, np.abs(zmin), (ix, iy))
 
-    mx = np.abs(x[:, iy] - ix) <= dpix
-    my = np.abs(y[ix, :] - iy) <= dpix
+    sx = get_bounded_slice(ix, dpix, z.shape[0])
+    sy = get_bounded_slice(iy, dpix, z.shape[1])
 
-    coeffx = poly_to_parabola(np.polyfit(x[:, iy][mx],
-                                         z[:, iy][mx], 2))
-    coeffy = poly_to_parabola(np.polyfit(y[ix, :][my],
-                                         z[ix, :][my], 2))
-    p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
+    coeffx = poly_to_parabola(np.polyfit(x[sx, iy], z[sx, iy], 2))
+    coeffy = poly_to_parabola(np.polyfit(y[ix, sy], z[ix, sy], 2))
+    #p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
+    p0 = [coeffx[2], float(ix), float(iy), coeffx[1], coeffy[1], 0.0]
 
     o = {'fit_success': True, 'p0': p0}
 
@@ -879,9 +946,14 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
         return np.ravel(parabola(*args))
 
     try:
+        bounds = (-np.inf * np.ones(6), np.inf * np.ones(6))
+        bounds[0][1] = -0.5
+        bounds[0][2] = -0.5
+        bounds[1][1] = z.shape[0] - 0.5
+        bounds[1][2] = z.shape[1] - 0.5
         popt, pcov = scipy.optimize.curve_fit(curve_fit_fn,
                                               (np.ravel(x[m]), np.ravel(y[m])),
-                                              np.ravel(z[m]), p0)
+                                              np.ravel(z[m]), p0, bounds=bounds)
     except Exception:
         popt = copy.deepcopy(p0)
         o['fit_success'] = False

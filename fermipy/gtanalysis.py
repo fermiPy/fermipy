@@ -40,6 +40,7 @@ from fermipy.logger import Logger, log_level
 from fermipy.config import ConfigSchema
 from fermipy.docstring_utils import DocstringMeta
 from fermipy.fitcache import FitCache
+from fermipy.data_struct import MutableNamedTuple
 # pylikelihood
 import GtApp
 import FluxDensity
@@ -668,13 +669,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 spectrum_type == 'LogParabola'):
             spectrum_pars.setdefault('beta', {'value': 0.0, 'scale': 1.0,
                                               'min': 0.0, 'max': 1.0})
-            spectrum_pars.setdefault('alpha', src.spectral_pars['Index'])
             spectrum_pars.setdefault('Eb', src.spectral_pars['Scale'])
             spectrum_pars.setdefault('norm', src.spectral_pars['Prefactor'])
-            spectrum_pars['alpha']['value'] *= -1.0
-            if spectrum_pars['alpha']['scale'] == -1.0:
+            if 'alpha' not in spectrum_pars:
+                spectrum_pars['alpha'] = src.spectral_pars['Index']
                 spectrum_pars['alpha']['value'] *= -1.0
-                spectrum_pars['alpha']['scale'] *= -1.0
+                if spectrum_pars['alpha']['scale'] == -1.0:
+                    spectrum_pars['alpha']['value'] *= -1.0
+                    spectrum_pars['alpha']['scale'] *= -1.0
 
         if spectrum_type == 'FileFunction':
             self._create_filefunction(name, spectrum_pars)
@@ -1398,7 +1400,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         srcs = self.roi.get_sources(skydir=skydir, distance=distance, cuts=cuts,
                                     minmax_ts=minmax_ts, minmax_npred=minmax_npred,
                                     exclude=exclude, square=square,
-                                    coordsys=self.config['binning']['coordsys'],
+                                    coordsys=self.config[
+                                        'binning']['coordsys'],
                                     names=names)
 
         for s in srcs:
@@ -1883,6 +1886,17 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         name = self.get_source_name(name)
         return self.like.normPar(name).getValue()
 
+    def _get_param(self, name, par_name):
+
+        idx = self.like.par_index(name, par_name)
+        par = self.like.model[idx]
+        bounds = par.getBounds()
+        return {'value': par.getValue(),
+                'error': par.error(),
+                'scale': par.getScale(),
+                'free': par.isFree(),
+                'min': bounds[0], 'max': bounds[1]}
+
     def get_params(self, freeonly=False):
 
         params = {}
@@ -1896,22 +1910,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             for parName in par_names:
                 idx = self.like.par_index(srcName, parName)
                 par = self.like.model[idx]
-                bounds = par.getBounds()
-
-                is_norm = parName == self.like.normPar(srcName).getName()
 
                 if freeonly and not par.isFree():
                     continue
 
+                is_norm = parName == self.like.normPar(srcName).getName()
                 params[idx] = {'src_name': srcName,
                                'par_name': parName,
-                               'value': par.getValue(),
-                               'error': par.error(),
-                               'scale': par.getScale(),
-                               'idx': idx,
-                               'free': par.isFree(),
                                'is_norm': is_norm,
-                               'bounds': bounds}
+                               'idx': idx}
+                params[idx].update(self._get_param(srcName, parName))
 
         return [params[k] for k in sorted(params.keys())]
 
@@ -2181,7 +2189,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                     reoptimize=False, xvals=xvals)
                 lims = utils.get_parameter_limits(lnlp['xvals'],
                                                   lnlp['dloglike'],
-                                                  ul_confidence=0.99)
+                                                  cl_limit=0.99)
 
                 if not np.isfinite(lims['ul']):
                     self.logger.warning('Upper limit not found.  '
@@ -2193,7 +2201,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         xvals=xvals)
                     lims = utils.get_parameter_limits(lnlp['xvals'],
                                                       lnlp['dloglike'],
-                                                      ul_confidence=0.99)
+                                                      cl_limit=0.99)
 
                 if np.isfinite(lims['ll']):
                     xhi = np.linspace(lims['x0'], lims['ul'], npts - npts // 2)
@@ -2280,7 +2288,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                              reoptimize=False, xvals=xvals, **kwargs)
         xval0 = self.like.normPar(name).getValue()
         lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dloglike'],
-                                           ul_confidence=0.99)
+                                           cl_limit=0.99)
 
         if not np.isfinite(lims0['ll']) and lims0['x0'] > 1E-6:
             xvals = np.array([0.0, lims0['x0'],
@@ -2303,7 +2311,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for i in range(20):
 
             lims1 = utils.get_parameter_limits(xvals, dloglike,
-                                               ul_confidence=0.99)
+                                               cl_limit=0.99)
 
 #            print('iter',i,np.abs(np.abs(dloglike0) - utils.onesided_cl_to_dlnl(0.99)),xup)
 #            print(loglike)
@@ -2536,7 +2544,25 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         retries = kwargs.get('retries', 3)
         covar = kwargs.get('covar', True)
 
-        #saved_state = LikelihoodState(self.like)
+        num_free = self.like.nFreeParams()
+        o = {'values': np.ones(num_free) * np.nan,
+             'errors': np.ones(num_free) * np.nan,
+             'covariance': np.ones((num_free, num_free)) * np.nan,
+             'correlation': np.ones((num_free, num_free)) * np.nan,
+             'indices': np.zeros(num_free, dtype=int),
+             'is_norm': np.empty(num_free, dtype=bool),
+             'src_names': num_free * [None],
+             'par_names': num_free * [None],
+             'fit_quality': 3,
+             'fit_status': 0,
+             'fit_success': True,
+             'edm': 0,
+             'niter': 0,
+             'loglike': np.nan}
+
+        if num_free == 0:
+            o['loglike'] = -self.like()
+            return o
 
         quality = 0
         niter = 0
@@ -2550,20 +2576,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self.logger.debug("Retry fit iter: %i quality: %i edm: %8.4f loglike: %12.3f",
                               niter, quality, edm, loglike)
 
-        num_free = self.like.nFreeParams()
-        o = {'values': np.ones(num_free) * np.nan,
-             'errors': np.ones(num_free) * np.nan,
-             'indices': np.zeros(num_free, dtype=int),
-             'is_norm': np.empty(num_free, dtype=bool),
-             'src_names': num_free * [None],
-             'par_names': num_free * [None]}
-
         o['fit_quality'] = quality
         o['fit_status'] = status
         o['edm'] = edm
         o['niter'] = niter
         o['loglike'] = loglike
-        o['fit_success'] = True
 
         if quality < min_fit_quality or o['fit_status']:
             o['fit_success'] = False
@@ -3152,7 +3169,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
                 o += '%4i %-20.19s' % (p['idx'], p['par_name'])
                 o += '%10.3g%10.3g' % (p['value'], p['error'])
-                o += '%10.3g%10.3g%10.3g' % (p['bounds'][0], p['bounds'][1],
+                o += '%10.3g%10.3g%10.3g' % (p['min'], p['max'],
                                              p['scale'])
 
                 if p['free']:
@@ -3427,15 +3444,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def create_roi_table(self):
 
         rd = copy.deepcopy(self._roi_data)
-        loge_bounds = rd.pop('loge_bounds').tolist()
-
         tab = fits_utils.dict_to_table(rd)
         tab['component'] = -1
-        tab.meta['loge_bounds'] = loge_bounds
-
         row_dict = {}
         for i, c in enumerate(rd['components']):
             c['component'] = i
+            c['loge_bounds'] = rd['loge_bounds']
 
             row = []
             for k in tab.columns:
@@ -3462,6 +3476,111 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                            fileio=self.config['fileio'],
                                            logging=self.config['logging'])
         plotter.run(self, mcube_map, prefix=prefix, **kwargs)
+
+    def curvature(self, name, **kwargs):
+        """Test whether a source shows spectral curvature by comparing
+        the likelihood ratio of PowerLaw and LogParabola spectral
+        models.
+
+        Parameters
+        ----------
+        name : str
+            Source name.
+
+        """
+
+        name = self.roi.get_source_by_name(name).name
+
+        saved_state = LikelihoodState(self.like)
+        source = self.components[0].like.logLike.getSource(str(name))
+
+        old_spectrum = source.spectrum()
+        old_pars = copy.deepcopy(self.roi[name].spectral_pars)
+        old_type = self.roi[name]['SpectrumType']
+
+        if old_type != 'PowerLaw':
+
+            dnde = self.like[name].spectrum()(pyLike.dArg(1000.))
+            value, scale = utils.scale_parameter(dnde)
+            pars0 = {
+                'Prefactor':
+                    {'value': value, 'scale': scale,
+                        'min': 1E-5, 'max': 1000., 'free': True},
+                'Index':
+                    {'value': 2.0, 'scale': -1.0, 'min': 0.0,
+                        'max': 5.0, 'free': False},
+                'Scale':
+                    {'value': 1E3, 'scale': 1.0, 'min': 1.,
+                        'max': 1E6, 'free': False},
+            }
+            self.set_source_spectrum(str(name), 'PowerLaw',
+                                     spectrum_pars=pars0,
+                                     update_source=False)
+
+        self.free_source(name, loglevel=logging.DEBUG)
+        fit_pl = self._fit(loglevel=logging.DEBUG)
+
+        prefactor = self._get_param(name, 'Prefactor')
+        index = self._get_param(name, 'Index')
+        scale = self._get_param(name, 'Scale')
+
+        pars1 = {
+            'norm': copy.deepcopy(prefactor),
+            'alpha': copy.deepcopy(index),
+            'Eb': copy.deepcopy(scale),
+        }
+        pars1['alpha']['scale'] *= -1
+        pars1['alpha']['min'] = -5.0
+        pars1['alpha']['max'] = 5.0
+
+        self.set_source_spectrum(str(name), 'LogParabola',
+                                 spectrum_pars=pars1,
+                                 update_source=False)
+
+        self.free_source(name, loglevel=logging.DEBUG)
+        fit_lp = self._fit(loglevel=logging.DEBUG)
+
+        self.set_source_spectrum(str(name), old_type,
+                                 spectrum_pars=old_pars,
+                                 update_source=False)
+
+        pars2 = {
+            'Prefactor': copy.deepcopy(prefactor),
+            'Index1': copy.deepcopy(index),
+            'Cutoff': {'value': 1000.0, 'scale': 1E3,
+                       'min': 10.0, 'max': 1E4, 'free': True},
+            'Index2': {'value': 1.0, 'scale': 1.0,
+                       'min': 1.0, 'max': 1.0, 'free': False},
+            'Scale': copy.deepcopy(scale)
+        }
+
+        self.set_source_spectrum(str(name), 'PLSuperExpCutoff',
+                                 spectrum_pars=pars2,
+                                 update_source=False)
+
+        self.free_source(name, loglevel=logging.DEBUG)
+        fit_ple = self._fit(loglevel=logging.DEBUG)
+
+        # Revert to initial spectral model
+        self.set_source_spectrum(str(name), old_type,
+                                 spectrum_pars=old_pars,
+                                 update_source=False)
+        saved_state.restore()
+
+        lp_ts_curv = 2.0 * (fit_lp['loglike'] - fit_pl['loglike'])
+        ple_ts_curv = 2.0 * (fit_ple['loglike'] - fit_pl['loglike'])
+        o = MutableNamedTuple(ts_curv=lp_ts_curv,
+                              lp_ts_curv=lp_ts_curv,
+                              ple_ts_curv=ple_ts_curv,
+                              loglike_pl=fit_pl['loglike'],
+                              loglike_lp=fit_lp['loglike'],
+                              loglike_ple=fit_ple['loglike'])
+
+        self.logger.info('LogLike_PL: %12.3f LogLike_LP: %12.3f LogLike_PLE: %12.3f',
+                         o.loglike_pl, o.loglike_lp, o.loglike_ple)
+        self.logger.info('TS_curv:        %.3f (LP)', o.lp_ts_curv)
+        self.logger.info('TS_curv:        %.3f (PLE)', o.ple_ts_curv)
+        return o
 
     def bowtie(self, name, fd=None, loge=None):
         """Generate a spectral uncertainty band (bowtie) for the given
@@ -4117,6 +4236,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.like.logLike.loadSourceMap(str(name), True, False)
             srcmap_utils.delete_source_map(self.files['srcmap'], name)
             self.like.logLike.saveSourceMaps(str(self.files['srcmap']))
+            self._scale_srcmap(self._src_expscale, check_header=False,
+                               names=[name])
             self.like.logLike.buildFixedModelWts()
         else:
             self.write_xml('tmp')
@@ -4130,6 +4251,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         try:
             self.like.logLike.loadSourceMaps(names, True, True)
+            # loadSourceMaps doesn't overwrite the header so we need
+            # to ignore EXPSCALE by setting check_header=False
+            self._scale_srcmap(self._src_expscale, check_header=False,
+                               names=names)
         except:
             for name in names:
                 self.reload_source(name)
@@ -4835,11 +4960,29 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Apply exposure corrections
         self._scale_srcmap(self._src_expscale)
 
-    def _scale_srcmap(self, scale_map):
+    def _scale_srcmap(self, scale_map, check_header=True, names=None):
+        """Apply exposure corrections to the source map file.
+
+        Parameters
+        ----------
+        scale_map : dict
+            Dictionary of exposure corrections.
+
+        check_header : bool
+            Check EXPSCALE header keyword to see if an exposure
+            correction has already been applied to this source.
+
+        names : list, optional
+            Names of sources to which the exposure correction will be
+            applied.  If None then all sources will be corrected.
+        """
+
         srcmap = fits.open(self.files['srcmap'])
 
         for hdu in srcmap[1:]:
             if hdu.name not in scale_map:
+                continue
+            if names is not None and hdu.name not in names:
                 continue
 
             scale = scale_map[hdu.name]
@@ -4847,15 +4990,17 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 self.logger.warning(
                     "The expscale parameter was zero, setting it to 1e-8")
                 scale = 1e-8
-            if 'EXPSCALE' in hdu.header:
+            if 'EXPSCALE' in hdu.header and check_header:
                 old_scale = hdu.header['EXPSCALE']
             else:
                 old_scale = 1.0
             hdu.data *= scale / old_scale
-            hdu.header['EXPSCALE'] = scale
+            hdu.header['EXPSCALE'] = (scale,
+                                      'Exposure correction applied to this map')
 
         srcmap.writeto(self.files['srcmap'], clobber=True)
 
+        # Force reloading the map from disk
         for name in scale_map.keys():
             self.like.logLike.eraseSourceMap(str(name))
         self.like.logLike.buildFixedModelWts()
