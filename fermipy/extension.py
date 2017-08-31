@@ -107,6 +107,7 @@ class ExtensionFit(object):
         free_background = kwargs['free_background']
         free_radius = kwargs.get('free_radius', None)
         fix_shape = kwargs.get('fix_shape', False)
+        make_tsmap = kwargs.get('make_tsmap', False)
         update = kwargs['update']
         sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
 
@@ -228,21 +229,24 @@ class ExtensionFit(object):
             o.ext_src_map = self.model_counts_map(name)
             o.ext_bkg_map = self.model_counts_map(exclude=[name])
 
-        tsmap_model = {'SpatialModel': 'RadialDisk',
-                       'SpatialWidth': 0.1 * 0.8246211251235321}
-        tsmap_model.update(src.spectral_pars)
-        tsmap = self.tsmap(model=tsmap_model,
-                           map_skydir=SkyCoord(o['ra'], o['dec'], unit='deg'),
-                           map_size=max(1.0, 4.0 * o['ext']),
-                           exclude=[name],
-                           write_fits=False,
-                           write_npy=False,
-                           use_pylike=False,
-                           make_plots=False,
-                           loglevel=logging.DEBUG)
+        if make_tsmap:
+            tsmap_model = {'SpatialModel': 'RadialDisk',
+                           'SpatialWidth': 0.1 * 0.8246211251235321}
+            tsmap_model.update(src.spectral_pars)
+            self.logger.info('Generating TS map.')
+            tsmap = self.tsmap(model=tsmap_model,
+                               map_skydir=SkyCoord(
+                                   o['ra'], o['dec'], unit='deg'),
+                               map_size=max(1.0, 4.0 * o['ext']),
+                               exclude=[name],
+                               write_fits=False,
+                               write_npy=False,
+                               use_pylike=False,
+                               make_plots=False,
+                               loglevel=logging.DEBUG)
+            o.tsmap = tsmap['ts']
 
-        o.tsmap = tsmap['ts']
-
+        self.logger.info('Testing point-source model.')
         # Test point-source hypothesis
         self.set_source_morphology(name, spatial_model='PointSource',
                                    use_pylike=False,
@@ -337,9 +341,12 @@ class ExtensionFit(object):
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'EXT_DATA'
 
-        hdus = [ext['tsmap'].create_primary_hdu(),
-                hdu_data] + hdu_images
+        if ext.get('tsmap'):
+            hdus = [ext['tsmap'].create_primary_hdu()]
+        else:
+            hdus = [fits.PrimaryHDU()]
 
+        hdus += [hdu_data] + hdu_images
         hdus[0].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
         hdus[1].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
         fits_utils.write_hdus(hdus, filename,
@@ -521,13 +528,15 @@ class ExtensionFit(object):
         src = self.roi.copy_source(name)
 
         # If the source is extended split the likelihood scan into two
-        # parts -- this ensures better fit stability
-        if src['SpatialModel'] in ['RadialGaussian', 'RadialDisk']:
+        # parts centered on the best-fit value -- this ensures better
+        # fit stability
+        if (src['SpatialModel'] in ['RadialGaussian', 'RadialDisk'] and
+                src['SpatialWidth'] > 0.1):
             width_lo = np.logspace(-2.0, np.log10(src['SpatialWidth']), 11)
             width_hi = np.logspace(np.log10(src['SpatialWidth']), 0.5, 11)
             loglike_lo = self._scan_extension(name, spatial_model=spatial_model,
-                                              width=width_lo[
-                                                  ::-1], optimizer=optimizer,
+                                              width=width_lo[::-1],
+                                              optimizer=optimizer,
                                               skydir=skydir,
                                               psf_scale_fn=psf_scale_fn,
                                               reoptimize=reoptimize)[::-1]
@@ -573,7 +582,6 @@ class ExtensionFit(object):
                                         psf_scale_fn=psf_scale_fn,
                                         reoptimize=reoptimize)
         ul_data2 = utils.get_parameter_limits(width2, loglike2)
-
         return MutableNamedTuple(
             ext=max(ul_data2['x0'], 10**-2.5),
             ext_ul95=ul_data2['ul'],

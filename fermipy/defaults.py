@@ -521,6 +521,7 @@ extension = {
                      'by linearly interpolating the fractional correction factors f in log(E).  The '
                      'corrected PSF is given by P\'(x;E) = P(x/(1+f(E));E) where x is the angular separation.',
                      tuple),
+    'make_tsmap' : (True, 'Make a TS map for the source of interest.', bool), 
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
