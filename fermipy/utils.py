@@ -628,7 +628,7 @@ def interpolate_function_min(x, y):
     return x0
 
 
-def find_function_root(fn, x0, xb, delta=0.0):
+def find_function_root(fn, x0, xb, delta=0.0, bounds=None):
     """Find the root of a function: f(x)+delta in the interval encompassed
     by x0 and xb.
 
@@ -655,7 +655,8 @@ def find_function_root(fn, x0, xb, delta=0.0):
     for i in range(10):
         if np.sign(fn(xb) + delta) != np.sign(fn(x0) + delta):
             break
-
+        if bounds is not None and (xb < bounds[0] or xb > bounds[1]):
+            break
         if xb < x0:
             xb *= 0.5
         else:
@@ -673,7 +674,8 @@ def find_function_root(fn, x0, xb, delta=0.0):
     return brentq(lambda t: fn(t) + delta, x0, xb, xtol=xtol)
 
 
-def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2):
+def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2,
+                         bounds=None):
     """Compute upper/lower limits, peak position, and 1-sigma errors
     from a 1-D likelihood function.  This function uses the
     delta-loglikelihood method to evaluate parameter limits by
@@ -741,18 +743,19 @@ def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2)
     dlnl_limit = onesided_cl_to_dlnl(cl_limit)
     dlnl_err = twosided_cl_to_dlnl(cl_err)
 
-    # Pad the likelihood function
-    if len(xval) >= 3 and np.max(loglike) - loglike[-1] < dlnl_limit:
-        p = np.polyfit(xval[-3:], loglike[-3:], 2)
-        x0 = np.linspace(xval[-1], 10 * xval[-1], 3)
-        y0 = np.polyval(p, x0)
-        xval = np.concatenate((xval, x0))
-        loglike = np.concatenate((loglike, y0))
-
     try:
-        spline = UnivariateSpline(xval, loglike,
-                                  k=min(len(xval) - 1, 3),
-                                  w=(1 / tol) * np.ones(len(xval)))
+        # Pad the likelihood function
+        # if len(xval) >= 3 and np.max(loglike) - loglike[-1] < 1.5*dlnl_limit:
+        #    p = np.polyfit(xval[-3:], loglike[-3:], 2)
+        #    x = np.linspace(xval[-1], 10 * xval[-1], 3)[1:]
+        #    y = np.polyval(p, x)
+        #    x = np.concatenate((xval, x))
+        #    y = np.concatenate((loglike, y))
+        # else:
+        x, y = xval, loglike
+        spline = UnivariateSpline(x, y, k=2,
+                                  #k=min(len(xval) - 1, 3),
+                                  w=(1 / tol) * np.ones(len(x)))
     except:
         print("Failed to create spline: ", xval, loglike)
         return {'x0': np.nan, 'ul': np.nan, 'll': np.nan,
@@ -786,10 +789,12 @@ def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2)
     else:
         xlo = xval[0]
 
-    ul = find_function_root(fn, x0, xhi, dlnl_limit)
-    ll = find_function_root(fn, x0, xlo, dlnl_limit)
-    err_lo = np.abs(x0 - find_function_root(fn, x0, xlo, dlnl_err))
-    err_hi = np.abs(x0 - find_function_root(fn, x0, xhi, dlnl_err))
+    ul = find_function_root(fn, x0, xhi, dlnl_limit, bounds=bounds)
+    ll = find_function_root(fn, x0, xlo, dlnl_limit, bounds=bounds)
+    err_lo = np.abs(x0 - find_function_root(fn, x0, xlo, dlnl_err,
+                                            bounds=bounds))
+    err_hi = np.abs(x0 - find_function_root(fn, x0, xhi, dlnl_err,
+                                            bounds=bounds))
 
     err = np.nan
     if np.isfinite(err_lo) and np.isfinite(err_hi):
