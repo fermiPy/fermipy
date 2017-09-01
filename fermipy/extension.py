@@ -541,7 +541,8 @@ class ExtensionFit(object):
                                               psf_scale_fn=psf_scale_fn,
                                               reoptimize=reoptimize)[::-1]
             loglike_hi = self._scan_extension(name, spatial_model=spatial_model,
-                                              width=width_hi, optimizer=optimizer,
+                                              width=width_hi,
+                                              optimizer=optimizer,
                                               skydir=skydir,
                                               psf_scale_fn=psf_scale_fn,
                                               reoptimize=reoptimize)
@@ -556,7 +557,8 @@ class ExtensionFit(object):
                                            psf_scale_fn=psf_scale_fn,
                                            reoptimize=reoptimize)
 
-        ul_data = utils.get_parameter_limits(width, loglike)
+        ul_data = utils.get_parameter_limits(width, loglike,
+                                             bounds=[10**-3.0, 10**0.5])
 
         if not np.isfinite(ul_data['err']):
             ul_data['x0'] = width[np.argmax(loglike)]
@@ -581,7 +583,16 @@ class ExtensionFit(object):
                                         skydir=skydir,
                                         psf_scale_fn=psf_scale_fn,
                                         reoptimize=reoptimize)
-        ul_data2 = utils.get_parameter_limits(width2, loglike2)
+        ul_data2 = utils.get_parameter_limits(width2, loglike2,
+                                              bounds=[10**-3.0, 10**0.5])
+
+        self.logger.debug('width: %s', width)
+        self.logger.debug('loglike: %s', loglike-np.max(loglike))
+        self.logger.debug('ul_data:\n %s', pprint.pformat(ul_data))
+        self.logger.debug('width2: %s', width2)
+        self.logger.debug('loglike2: %s', loglike2-np.max(loglike2))
+        self.logger.debug('ul_data2:\n %s', pprint.pformat(ul_data2))
+        
         return MutableNamedTuple(
             ext=max(ul_data2['x0'], 10**-2.5),
             ext_ul95=ul_data2['ul'],
