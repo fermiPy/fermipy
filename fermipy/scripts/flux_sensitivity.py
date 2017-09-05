@@ -260,24 +260,22 @@ def run_flux_sensitivity(**kwargs):
             Column(name='eflux', dtype='f8', unit='MeV / (cm2 s)'),
             Column(name='dnde', dtype='f8', unit='ph / (MeV cm2 s)'),
             Column(name='e2dnde', dtype='f8', unit='MeV / (cm2 s)'),
-            Column(name='npred', dtype='f8', unit='ph')]
-
-    cols_ebin = [Column(name='index', dtype='f8'),
-                 Column(name='e_min', dtype='f8',
+            Column(name='npred', dtype='f8', unit='ph'),
+            Column(name='ebin_e_min', dtype='f8',
+                   unit='MeV', shape=(len(ectr),)),
+            Column(name='ebin_e_ref', dtype='f8',
+                   unit='MeV', shape=(len(ectr),)),
+            Column(name='ebin_e_max', dtype='f8',
                         unit='MeV', shape=(len(ectr),)),
-                 Column(name='e_ref', dtype='f8',
-                        unit='MeV', shape=(len(ectr),)),
-                 Column(name='e_max', dtype='f8',
-                        unit='MeV', shape=(len(ectr),)),
-                 Column(name='flux', dtype='f8',
-                        unit='ph / (cm2 s)', shape=(len(ectr),)),
-                 Column(name='eflux', dtype='f8',
-                        unit='MeV / (cm2 s)', shape=(len(ectr),)),
-                 Column(name='dnde', dtype='f8',
-                        unit='ph / (MeV cm2 s)', shape=(len(ectr),)),
-                 Column(name='e2dnde', dtype='f8',
-                        unit='MeV / (cm2 s)', shape=(len(ectr),)),
-                 Column(name='npred', dtype='f8', unit='ph', shape=(len(ectr),))]
+            Column(name='ebin_flux', dtype='f8',
+                   unit='ph / (cm2 s)', shape=(len(ectr),)),
+            Column(name='ebin_eflux', dtype='f8',
+                   unit='MeV / (cm2 s)', shape=(len(ectr),)),
+            Column(name='ebin_dnde', dtype='f8',
+                   unit='ph / (MeV cm2 s)', shape=(len(ectr),)),
+            Column(name='ebin_e2dnde', dtype='f8',
+                   unit='MeV / (cm2 s)', shape=(len(ectr),)),
+            Column(name='ebin_npred', dtype='f8', unit='ph', shape=(len(ectr),))]
 
     cols_ebounds = [Column(name='E_MIN', dtype='f8',
                            unit='MeV', data=ebins[:-1]),
@@ -285,7 +283,6 @@ def run_flux_sensitivity(**kwargs):
                            unit='MeV', data=ebins[1:]), ]
 
     tab_int = Table(cols)
-    tab_int_ebin = Table(cols_ebin)
     tab_ebounds = Table(cols_ebounds)
 
     index = np.linspace(1.0, 5.0, 4 * 4 + 1)
@@ -295,29 +292,23 @@ def run_flux_sensitivity(**kwargs):
         o = scalc.int_flux_threshold(c, fn, ts_thresh, 3.0)
         row = [g]
         for colname in tab_int.columns:
-            if not colname in o:
+            if colname == 'index':
                 continue
-            row += [o[colname]]
+            if 'ebin' in colname:
+                row += [o['bins'][colname.replace('ebin_', '')]]
+            else:
+                row += [o[colname]]
 
         tab_int.add_row(row)
-
-        row = [g]
-        for colname in tab_int.columns:
-            if not colname in o:
-                continue
-            row += [o['bins'][colname]]
-        tab_int_ebin.add_row(row)
 
     hdulist = fits.HDUList()
     hdulist.append(fits.table_to_hdu(tab_diff))
     hdulist.append(fits.table_to_hdu(tab_int))
-    hdulist.append(fits.table_to_hdu(tab_int_ebin))
     hdulist.append(fits.table_to_hdu(tab_ebounds))
 
     hdulist[1].name = 'DIFF_FLUX'
     hdulist[2].name = 'INT_FLUX'
-    hdulist[3].name = 'INT_FLUX_EBIN'
-    hdulist[4].name = 'EBOUNDS'
+    hdulist[3].name = 'EBOUNDS'
 
     if map_type is not None:
         hdu = map_diff_flux.create_image_hdu()
