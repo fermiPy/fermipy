@@ -97,7 +97,8 @@ def compute_ps_loc(egy, flux):
     pass
 
 
-def compute_ps_counts(ebins, exp, psf, bkg, fn, egy_dim=0):
+def compute_ps_counts(ebins, exp, psf, bkg, fn, egy_dim=0, spatial_model='PointSource',
+                      spatial_size=1E-3):
     """Calculate the observed signal and background counts given models
     for the exposure, background intensity, PSF, and source flux.
 
@@ -124,14 +125,28 @@ def compute_ps_counts(ebins, exp, psf, bkg, fn, egy_dim=0):
     ewidth = utils.edge_to_width(ebins)
     ectr = np.exp(utils.edge_to_center(np.log(ebins)))
 
-    theta_edges = np.linspace(0.0, 3.0, 31)[
-        np.newaxis, :] * np.ones((len(ectr), 31))
-    theta_edges *= psf.containment_angle(ectr, fraction=0.68)[:, np.newaxis]
+    r68 = psf.containment_angle(ectr, fraction=0.68)
+    if spatial_model != 'PointSource':
+        r68[r68 < spatial_size] = spatial_size
+
+    # * np.ones((len(ectr), 31))
+    theta_edges = np.linspace(0.0, 3.0, 31)[np.newaxis, :]
+    theta_edges = theta_edges * r68[:, np.newaxis]
     theta = 0.5 * (theta_edges[:, :-1] + theta_edges[:, 1:])
     domega = np.pi * (theta_edges[:, 1:]**2 - theta_edges[:, :-1]**2)
 
-    sig_pdf = domega * \
-        psf.interp(ectr[:, np.newaxis], theta) * (np.pi / 180.)**2
+    if spatial_model == 'PointSource':
+        sig_pdf = domega * psf.interp(ectr[:, np.newaxis], theta)
+    elif spatial_model == 'RadialGaussian':
+        sig_pdf = domega * utils.convolve2d_gauss(lambda t: psf.interp(ectr[:, np.newaxis, np.newaxis], t),
+                                                  theta, spatial_size / 1.5095921854516636, nstep=2000)
+    elif spatial_model == 'RadialDisk':
+        sig_pdf = domega * utils.convolve2d_disk(lambda t: psf.interp(ectr[:, np.newaxis, np.newaxis], t),
+                                                 theta, spatial_size / 0.8246211251235321)
+    else:
+        raise ValueError('Invalid spatial model: {}'.format(spatial_model))
+
+    sig_pdf *= (np.pi / 180.)**2
     sig_flux = fn.flux(ebins[:-1], ebins[1:])
 
     # Background and signal counts

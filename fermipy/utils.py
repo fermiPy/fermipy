@@ -1415,15 +1415,13 @@ def convolve2d_disk(fn, r, sig, nstep=200):
     rmin[rmin < 0] = 0
     delta = (rmax - rmin) / nstep
 
-    redge = rmin[:, np.newaxis] + \
-        delta[:, np.newaxis] * np.linspace(0, nstep, nstep + 1)[np.newaxis, :]
-    rp = 0.5 * (redge[:, 1:] + redge[:, :-1])
-    dr = redge[:, 1:] - redge[:, :-1]
+    redge = rmin[..., np.newaxis] + \
+        delta[..., np.newaxis] * np.linspace(0, nstep, nstep + 1)
+    rp = 0.5 * (redge[..., 1:] + redge[..., :-1])
+    dr = redge[..., 1:] - redge[..., :-1]
     fnv = fn(rp)
 
     r = r.reshape(r.shape + (1,))
-    saxis = 1
-
     cphi = -np.ones(dr.shape)
     m = ((rp + r) / sig < 1) | (r == 0)
 
@@ -1432,7 +1430,7 @@ def convolve2d_disk(fn, r, sig, nstep=200):
     cphi[~m] = sx[~m] / (2 * rrp[~m])
     dphi = 2 * np.arccos(cphi)
     v = rp * fnv * dphi * dr / (np.pi * sig * sig)
-    s = np.sum(v, axis=saxis)
+    s = np.sum(v, axis=-1)
 
     return s
 
@@ -1468,17 +1466,15 @@ def convolve2d_gauss(fn, r, sig, nstep=200):
     rmin[rmin < 0] = 0
     delta = (rmax - rmin) / nstep
 
-    redge = (rmin[:, np.newaxis] +
-             delta[:, np.newaxis] *
-             np.linspace(0, nstep, nstep + 1)[np.newaxis, :])
+    redge = (rmin[..., np.newaxis] +
+             delta[..., np.newaxis] *
+             np.linspace(0, nstep, nstep + 1))
 
-    rp = 0.5 * (redge[:, 1:] + redge[:, :-1])
-    dr = redge[:, 1:] - redge[:, :-1]
+    rp = 0.5 * (redge[..., 1:] + redge[..., :-1])
+    dr = redge[..., 1:] - redge[..., :-1]
     fnv = fn(rp)
 
     r = r.reshape(r.shape + (1,))
-    saxis = 1
-
     sig2 = sig * sig
     x = r * rp / (sig2)
 
@@ -1489,10 +1485,10 @@ def convolve2d_gauss(fn, r, sig, nstep=200):
         convolve2d_gauss.je_fn = UnivariateSpline(t, je, k=2, s=0)
 
     je = convolve2d_gauss.je_fn(x.flat).reshape(x.shape)
-    #    je2 = special.ive(0,x)
+    #je2 = special.ive(0,x)
     v = (rp * fnv / (sig2) * je * np.exp(x - (r * r + rp * rp) /
                                          (2 * sig2)) * dr)
-    s = np.sum(v, axis=saxis)
+    s = np.sum(v, axis=-1)
 
     return s
 
