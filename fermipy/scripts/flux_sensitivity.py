@@ -85,7 +85,8 @@ def main(args=None):
     parser.add_argument('--spatial_model', default='PointSource', type=str,
                         help='Set the spatial morphology of the signal (PointSource, RadialDisk, RadialGaussian).')
     parser.add_argument('--spatial_size', default=1.0, type=float,
-                        help='Set the intrinsic 68% containment radius in degrees for extended spatial models (RadialDisk, RadialGaussian).')
+                        help='Set the intrinsic 68-percent containment radius in degrees for '
+                        'extended spatial models (RadialDisk, RadialGaussian).')
     parser.add_argument('--output', default='output.fits', type=str,
                         help='Output filename.')
     parser.add_argument('--obs_time_yr', default=None, type=float,
