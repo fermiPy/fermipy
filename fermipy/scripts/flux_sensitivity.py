@@ -82,6 +82,10 @@ def main(args=None):
                         help='Set the pixel size in deg of the WCS sensitivity map.')
     parser.add_argument('--wcs_proj', default='AIT', type=str,
                         help='Set the projection of the WCS sensitivity map.')
+    parser.add_argument('--spatial_model', default='PointSource', type=str,
+                        help='Set the spatial morphology of the signal (PointSource, RadialDisk, RadialGaussian).')
+    parser.add_argument('--spatial_size', default=1.0, type=float,
+                        help='Set the intrinsic 68% containment radius in degrees for extended spatial models (RadialDisk, RadialGaussian).')
     parser.add_argument('--output', default='output.fits', type=str,
                         help='Output filename.')
     parser.add_argument('--obs_time_yr', default=None, type=float,
@@ -109,6 +113,8 @@ def run_flux_sensitivity(**kwargs):
     wcs_cdelt = kwargs.get('wcs_cdelt', 0.5)
     wcs_proj = kwargs.get('wcs_proj', 'AIT')
     map_type = kwargs.get('map_type', None)
+    spatial_model = kwargs.get('spatial_model', 'PointSource')
+    spatial_size = kwargs.get('spatial_size', 1E-2)
 
     obs_time_yr = kwargs.get('obs_time_yr', None)
     event_class = kwargs.get('event_class', 'P8R2_SOURCE_V6')
@@ -159,7 +165,8 @@ def run_flux_sensitivity(**kwargs):
 
     scalc = SensitivityCalc(gdiff, iso, ltc, ebins,
                             event_class, event_types, gdiff_fit=gdiff_fit,
-                            iso_fit=iso_fit)
+                            iso_fit=iso_fit, spatial_model=spatial_model,
+                            spatial_size=spatial_size)
 
     # Compute Maps
     map_diff_flux = None
@@ -328,6 +335,7 @@ def run_flux_sensitivity(**kwargs):
         hdulist.append(hdu)
 
     hdulist.writeto(output, clobber=True)
+
 
 if __name__ == "__main__":
     main()
