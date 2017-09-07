@@ -145,6 +145,7 @@ class ExtensionFit(object):
         src = self.roi.copy_source(name)
 
         # Save likelihood value for baseline fit
+        saved_state_base = LikelihoodState(self.like)
         loglike_base = fit_output['loglike']
         self.logger.debug('Baseline Model Log-Likelihood: %f', loglike_base)
 
@@ -253,6 +254,7 @@ class ExtensionFit(object):
                                    psf_scale_fn=psf_scale_fn)
 
         # Fit a point-source
+        saved_state_base.restore()
         self.logger.debug('Fitting point-source model.')
         fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
 
