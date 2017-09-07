@@ -682,6 +682,7 @@ class TSMapGenerator(object):
         schema.add_option('map_size', 1.0)
         schema.add_option('threshold', 1E-2, '', float)
         schema.add_option('use_pylike', True, '', bool)
+        schema.add_option('outfile', None, '', str)
         config = schema.create_config(self.config['tsmap'], **kwargs)
 
         # Defining default properties of test source model
@@ -702,8 +703,13 @@ class TSMapGenerator(object):
 
         self.logger.log(config['loglevel'], 'Finished TS map')
 
-        outfile = utils.format_filename(self.workdir, 'tsmap',
-                                        prefix=[o['name']])
+        outfile = config.get('outfile', None)
+        if outfile is None:        
+            outfile = utils.format_filename(self.workdir, 'tsmap',
+                                            prefix=[o['name']])
+        else:
+            outfile = os.path.join(self.workdir,
+                                   os.path.splitext(outfile)[0])
             
         if config['write_fits']:
             o['file'] = os.path.basename(outfile) + '.fits'
