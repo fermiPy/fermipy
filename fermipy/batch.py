@@ -51,9 +51,18 @@ def check_log(logfile, exited='Exited with exit code',
               successful='Successfully completed', exists=True):
     """ Often logfile doesn't exist because the job hasn't begun
     to run. It is unclear what you want to do in that case...
-    logfile : String with path to logfile
-    exists  : Is the logfile required to exist
-    string  : Value to check for in existing logfile
+
+    Parameters
+    ----------
+    logfile : str
+        String with path to logfile
+    exists  : bool
+        Is the logfile required to exist
+    exited  : str
+        String in logfile used to determine if a job exited.
+    successful : str
+        String in logfile used to determine if a job succeeded.
+
     """
     if not os.path.exists(logfile):
         return not exists
@@ -104,20 +113,33 @@ def add_lsf_args(parser):
                              'job in minutes.')
 
     parser.add_argument('--resources', default='rhel60', type=str,
-                        help='Set the resource string.')
+                        help='Set the LSF resource string.')
 
 
 def dispatch_job(jobname, exe, args, opts, batch_opts, dry_run=True):
+    """Dispatch an LSF job.
+
+    Parameters
+    ----------
+    exe : str
+        Execution string.
+
+    args : list
+        Positional arguments.
+
+    opts : dict
+        Dictionary of command-line options.
+    """
 
     batch_opts.setdefault('W', 300)
     batch_opts.setdefault('R', 'rhel60')
-    batch_opts['oo'] = jobname + '.log'
 
     cmd_opts = ''
     for k, v in opts.items():
+
         if isinstance(v, list):
-            continue
-        if isinstance(v, bool) and v:
+            cmd_opts += ' '.join(['--%s=%s' % (k, t) for t in v])
+        elif isinstance(v, bool) and v:
             cmd_opts += ' --%s ' % (k)
         elif isinstance(v, bool):
             continue
@@ -240,16 +262,44 @@ def link_logfiles(logfiles, outbase="output"):
         os.symlink(log, output)
 
 
-def submit_jobs(exe, infiles, outfiles, opts,
-                overwrite=False, dry_run=False, **kwargs):
+def submit_jobs(exe, args_list, opts_list, outfiles,
+                overwrite=False, dry_run=False, batch_opts=None, **kwargs):
+    """
 
-    batch_opts = {'W': kwargs.get('time', 300),
-                  'R': kwargs.get('resources', 'rhel60'),
-                  'oo': 'batch.log'}
+    Parameters
+    ----------
+    exe : str
+        Executable string.
 
-    for infile, outfile in zip(infiles, outfiles):
-        if os.path.isfile(outfile) and not overwrite:
-            print('Output file exists, skipping.', outfile)
-            continue
+    args_list : list
+        List of positional arguments for each job.
+
+    opts_list : list or dict
+        List of command-line argument dictionaries for each job.
+
+    outfiles : list    
+        List of destination files for each job.  If the output file
+        already exists the submission of that job will be skipped.        
+
+    """
+
+    if not isinstance(opts_list, list):
+        opts_list = [opts_list] * len(infiles)
+
+    for args, outfile, opts in zip(args_list, outfiles, opts_list):
+
+        batch_opts = {'W': opts.get('time', 300),
+                      'R': opts.get('resources', 'rhel60'),
+                      'oo': None}
+        batch_opts.update(kwargs)
+
         jobname = os.path.splitext(outfile)[0]
-        dispatch_job(jobname, exe, infile, opts, batch_opts, dry_run=dry_run)
+        if batch_opts['oo'] is None:
+            batch_opts['oo'] = jobname + '.log'
+
+        if (os.path.isfile(outfile) and not overwrite and
+                check_log(batch_opts['oo']) == 'Successful'):
+            print('Output file exists, skipping ', outfile)
+            continue
+
+        dispatch_job(jobname, exe, args, opts, batch_opts, dry_run=dry_run)
