@@ -90,6 +90,8 @@ FUNCTION_DEFAULT_PARS = {
         'alpha': {'value': 2.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
         'beta': {'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0},
         'Eb': DEFAULT_SCALE_DICT},
+    'SpatialMap': {
+        'Prefactor': {'value': 1.0, 'scale': 1.0, 'min': 1.0, 'max': 1.0}},
     'ConstantValue': {
         'Normalization': {'value': 1.0, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}},
     'FileFunction': {
