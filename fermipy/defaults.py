@@ -342,6 +342,7 @@ sourcefind = {
 
 # Options for lightcurve analysis
 lightcurve = {
+    'directory': (None, "Store all data in this directory (e.g. '30days'). If None then use current directory.", str),
     'use_local_ltcube': (True, '', bool),
     'binsz': (86400.0, 'Set the lightcurve bin size in seconds.', float),
     'nbins': (None, 'Set the number of lightcurve bins.  The total time range will be evenly '

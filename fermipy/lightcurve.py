@@ -160,6 +160,9 @@ class LightCurve(object):
                                                                 'free_radius'],
                                                             exclude=diff_sources)]
 
+        directory = kwargs.get('directory', None)
+        basedir = directory + '/' if directory is not None else ''
+
         for i, time in enumerate(zip(times[:-1], times[1:])):
 
             self.logger.info('Fitting time range %i %i', time[0], time[1])
@@ -187,7 +190,7 @@ class LightCurve(object):
                                      add_new_keys=True)
 
             # create output directories labeled in MET vals
-            outdir = 'lightcurve_%.0f_%.0f' % (time[0], time[1])
+            outdir = basedir + 'lightcurve_%.0f_%.0f' % (time[0], time[1])
             config['fileio']['outdir'] = os.path.join(self.workdir, outdir)
             utils.mkdir(config['fileio']['outdir'])
 
