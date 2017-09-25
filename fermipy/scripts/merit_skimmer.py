@@ -16,7 +16,9 @@ import argparse
 import numpy as np
 import ROOT
 
-from fermipy.batch import submit_jobs, add_lsf_args
+from ..batch import submit_jobs, add_lsf_args
+from ..validate.utils import get_cuts_from_xml, get_files, set_event_list
+from ..validate.utils import load_chain, load_aliases
 
 
 def get_branches(aliases):
@@ -37,54 +39,6 @@ def get_branches(aliases):
                 branches += [t]
 
     return list(set(branches))
-
-
-def strip(input_str):
-    """Strip newlines and whitespace from a string."""
-    return str(input_str.replace('\n', '').replace(' ', ''))
-
-
-def replace_aliases(cut_dict, aliases):
-    """Substitute aliases in a cut dictionary."""    
-    for k, v in cut_dict.items():
-        for k0, v0 in aliases.items():
-            cut_dict[k] = cut_dict[k].replace(k0, v0)
-
-
-def get_cuts_from_xml(xmlfile):
-    """Extract event selection strings from the XML file."""
-
-    root = ElementTree.ElementTree(file=xmlfile).getroot()
-    event_maps = root.findall('EventMap')
-    alias_maps = root.findall('AliasDict')[0]
-
-    event_classes = {}
-    event_types = {}
-    event_aliases = {}
-
-    for m in event_maps:
-        if m.attrib['altName'] == 'EVENT_CLASS':
-            for c in m.findall('EventCategory'):
-                event_classes[c.attrib['name']] = strip(
-                    c.find('ShortCut').text)
-        elif m.attrib['altName'] == 'EVENT_TYPE':
-            for c in m.findall('EventCategory'):
-                event_types[c.attrib['name']] = strip(c.find('ShortCut').text)
-
-    for m in alias_maps.findall('Alias'):
-        event_aliases[m.attrib['name']] = strip(m.text)
-
-    replace_aliases(event_aliases, event_aliases.copy())
-    replace_aliases(event_aliases, event_aliases.copy())
-    replace_aliases(event_classes, event_aliases)
-    replace_aliases(event_types, event_aliases)
-
-    event_selections = {}
-    event_selections.update(event_classes)
-    event_selections.update(event_types)
-    event_selections.update(event_aliases)
-
-    return event_selections
 
 
 class MeritSkimmer:
@@ -121,24 +75,6 @@ class MeritSkimmer:
         return self.outputChain
 
 
-def get_files(files):
-    """Extract a list of merit file from a list containing both paths
-    and file lists."""
-    
-    merit_files = []
-    for f in files:
-
-        mime = mimetypes.guess_type(f)
-        if re.search('\.root?', f):
-            merit_files += [f]
-        elif mime[0] == 'text/plain':
-            merit_files += list(np.loadtxt(f, unpack=True, dtype='str'))
-        else:
-            raise Exception('Unrecognized input type.')
-
-    return merit_files
-
-
 def create_file_list(files):
 
     fd, tmppath = tempfile.mkstemp(
@@ -147,11 +83,6 @@ def create_file_list(files):
     with open(tmppath, 'w') as tmpfile:
         tmpfile.write("\n".join(files))
     return tmppath
-
-
-def rand_str(size=7):
-    chars = string.ascii_uppercase + string.ascii_lowercase + string.digits
-    return ''.join(random.choice(chars) for x in range(size))
 
 
 def has_object(filelist, key):
@@ -167,21 +98,6 @@ def has_object(filelist, key):
     ret = f.GetListOfKeys().Contains(key)
     f.Close()
     return ret
-
-
-def load_chain(chain, files, nfiles=None):
-
-    if isinstance(nfiles, list) and len(nfiles) == 1:
-        files = files[:nfiles[0]]
-    elif isinstance(nfiles, list) and len(nfiles) >= 2:
-        files = files[nfiles[0]:nfiles[1]]
-    elif nfiles is not None:
-        files = files[:nfiles]
-
-    print("Loading %i files..." % len(files))
-    for f in files:
-        chain.Add(f)
-    return chain
 
 
 def load_friend_chains(chain, friend_chains, txt, nfiles=None):
@@ -211,47 +127,6 @@ def load_friend_chains(chain, friend_chains, txt, nfiles=None):
 
     chain.AddFriend(c, rand_str())
     return
-
-
-def set_event_list(tree, selection=None, fraction=None, start_fraction=None):
-    """
-    Set the event list for a tree or chain.
-
-    Parameters
-    ----------    
-    tree : `ROOT.TTree`
-        Input tree/chain.
-    selection : str
-        Cut string defining the event list.
-    fraction : float
-        Fraction of the total file to include in the event list
-        starting from the *end* of the file.
-
-    """
-    elist = rand_str()
-
-    if selection is None:
-        cuts = ''
-    else:
-        cuts = selection
-
-    if fraction is None or fraction >= 1.0:
-        n = tree.Draw(">>%s" % elist, cuts, "goff")
-        tree.SetEventList(ROOT.gDirectory.Get(elist))
-    elif start_fraction is None:
-        nentries = int(tree.GetEntries())
-        first_entry = min(int((1.0 - fraction) * nentries), nentries)
-        n = tree.Draw(">>%s" % elist, cuts, "goff", nentries, first_entry)
-        tree.SetEventList(ROOT.gDirectory.Get(elist))
-    else:
-        nentries = int(tree.GetEntries())
-        first_entry = min(int(start_fraction * nentries), nentries)
-        n = first_entry + int(nentries * fraction)
-        n = tree.Draw(">>%s" % elist, cuts, "goff",
-                      n - first_entry, first_entry)
-        tree.SetEventList(ROOT.gDirectory.Get(elist))
-
-    return n
 
 
 def main():
@@ -316,7 +191,8 @@ defined in the output option appended with the job number
 
     parser.add_argument('--aliases', default=[], action='append',
                         type=str, help='Set a yaml file that contains a '
-                        'set of Merit aliases defined as key/value pairs. Note '
+                        'set of Merit aliases defined as key/value pairs. Also accepts '
+                        'event class XML files.  Note '
                         'that the selection string can use any aliases defined '
                         'in this file.')
 
@@ -341,8 +217,11 @@ defined in the output option appended with the job number
         for ijob, i in enumerate(range(0, nfiles, args.files_per_job)):
             file_range = '%i/%i' % (i, min(nfiles, i + args.files_per_job))
 
+            output_dir = os.path.dirname(args.output)
             output_file = splitext(basename(args.output))[0]
             output_file += '_%03i.root' % (ijob)
+            output_file = os.path.join(output_dir, output_file)
+            
             infiles += [args.files]
             outfiles += [output_file]
             opts = vars(args).copy()
@@ -387,16 +266,8 @@ defined in the output option appended with the job number
         for f in args.friends.split(","):
             load_friend_chains(chain, friendChains, f)
 
-    aliases = {}
-    for f in args.aliases:
-        if f.endswith('.xml'):
-            aliases.update(get_cuts_from_xml(f))
-        elif f.endswith('.yaml'):
-            aliases.update(yaml.load(open(f, 'r')))
-        else:
-            raise Exception('Invalid file type for aliases option.')
-
-    for k, v in aliases.items():
+    aliases = load_aliases(args.aliases)
+    for k, v in sorted(aliases.items()):
         chain.SetAlias(k, v)
         
     # If you want to look at the prefilters, need to change these

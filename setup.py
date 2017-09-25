@@ -36,6 +36,7 @@ setup(
         'fermipy-preprocess = fermipy.scripts.preprocess_data:main',
         'fermipy-validate = fermipy.scripts.validate:main',
         'fermipy-merit-skimmer = fermipy.scripts.merit_skimmer:main',
+        'fermipy-merit-response = fermipy.scripts.merit_response:main',
         'fermipy-quick-analysis = fermipy.scripts.quickanalysis:main',
         'fermipy-coadd = fermipy.scripts.coadd:main',
         'fermipy-vstack = fermipy.scripts.vstack_images:main',
