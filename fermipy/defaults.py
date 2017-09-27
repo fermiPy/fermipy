@@ -358,6 +358,7 @@ lightcurve = {
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'multithread': (False, 'Split the calculation across all available cores.', bool),
 }
 
 # Output for lightcurve Analysis
