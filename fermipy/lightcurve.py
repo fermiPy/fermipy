@@ -100,7 +100,7 @@ def _fit_lc(gta, name, **kwargs):
 
     return fit_results
 
-def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, **kwargs):
+def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_spectrum, free_param_vector, **kwargs):
     i, time = itime
 
     config = copy.deepcopy(config)
@@ -147,6 +147,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, **kwarg
                                  add_new_keys=True)
 
         gta.setup()
+        gta.set_free_param_vector(free_param_vector)
     except:
         print('Analysis failed in time range %i %i'%
                             (time[0], time[1]))
@@ -157,13 +158,24 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, **kwarg
     # Write the current model
     gta.write_xml(xmlfile)
 
-    # Optimize the model (skip diffuse?)
-    gta.optimize(skip=diff_sources)
+    # Optimize the model
+    gta.optimize()
 
     fit_results = _fit_lc(gta, name, **kwargs)
     gta.write_xml('fit_model_final.xml')
-    srcmodel = gta.get_src_model(name)
-    o = {}
+    srcmodel = copy.deepcopy(gta.get_src_model(name))
+
+    # rerun fit using params from full time (constant) fit using same 
+    # param vector as the successful fit to get loglike
+    specname, spectrum = const_spectrum
+    gta.set_source_spectrum(name, spectrum_type=specname, 
+            spectrum_pars=spectrum)
+    gta.free_source(name, free=False)
+    const_fit_results = gta.fit()
+    const_srcmodel = gta.get_src_model(name)
+
+    o = {'flux_const': const_srcmodel['flux'],
+            'loglike_flux_const': const_fit_results['loglike']}
 
     if fit_results['fit_success'] == 1:
         for k in defaults.source_flux_output.keys():
@@ -180,6 +192,13 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, **kwarg
 
     return o
 
+def calcTS_var(loglike, loglike_flux_const, flux_err, flux_const, systematic):
+    # calculates variability according to Eq. 4 in 2FGL 
+    # including correction using non-numbered Eq. following Eq. 4
+    v_sqs = [loglike[i] - loglike_flux_const[i] for i in xrange(len(loglike))]
+    factors = [flux_err[i]**2 / (flux_err[i]**2 + systematic**2 * flux_const**2) for i in xrange(len(flux_err))]
+    return 2.*np.sum([a*b for a,b in zip(factors, v_sqs)])
+
 class LightCurve(object):
 
     def lightcurve(self, name, **kwargs):
@@ -187,7 +206,9 @@ class LightCurve(object):
         complete the basic analysis steps for each bin and perform a
         likelihood fit for each bin. Extracted values (along with
         errors) are Integral Flux, spectral model, Spectral index, TS
-        value, pred. # of photons.
+        value, pred. # of photons. Note: successful calculation of 
+        TS:subscript:`var` requires at least one free background 
+        parameter.
 
         Parameters
         ---------
@@ -311,10 +332,18 @@ class LightCurve(object):
                                                                 'free_radius'],
                                                             exclude=diff_sources)]
 
+        free_param_vector = self.get_free_param_vector()
+        # save params from full time fit
+        spectrum = self.like[name].src.spectrum()
+        specname = spectrum.genericName()
+        const_spectrum = (specname, gtutils.get_function_pars_dict(spectrum))
+
         directory = kwargs.get('directory', None)
         basedir = directory + '/' if directory is not None else ''
         mt = kwargs.get('multithread', False)
-        wrap = partial(_process_lc_bin, name=name, config=self.config, basedir=basedir, workdir=self.workdir, diff_sources=diff_sources, **kwargs)
+        wrap = partial(_process_lc_bin, name=name, config=self.config, 
+                basedir=basedir, workdir=self.workdir, diff_sources=diff_sources, 
+                const_spectrum=const_spectrum, free_param_vector=free_param_vector, **kwargs)
         itimes = enumerate(zip(times[:-1], times[1:]))
         if mt:
             p = Pool()
@@ -328,6 +357,14 @@ class LightCurve(object):
 
         merged = utils.merge_list_of_dicts(mapo)
         o = utils.merge_dict(o, merged, add_new_keys=True)
+
+        systematic = kwargs.get('systematic', 0.02)
+
+        o['ts_var'] = calcTS_var(loglike=o['loglike'], 
+                loglike_flux_const=o['loglike_flux_const'],
+                flux_err=o['flux_err'],
+                flux_const=o['flux_const'][0],
+                systematic=systematic)
 
         return o
 

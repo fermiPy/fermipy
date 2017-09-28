@@ -359,6 +359,7 @@ lightcurve = {
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
     'multithread': (False, 'Split the calculation across all available cores.', bool),
+    'systematic': (0.02, 'Systematic correction factor for TS:subscript:`var`. See Sect. 3.6 in 2FGL for details.', float),
 }
 
 # Output for lightcurve Analysis
@@ -380,6 +381,8 @@ lightcurve_output = OrderedDict((
     ('npred', (None, 'Number of Predicted photons in time bin from source',
                np.ndarray, '`~np.ndarray`')),
     ('config', ({}, 'Copy of the input configuration to this method.', dict)),
+    ('TS_var', (None, r'TS of variability. Should be distributed as :math:`\chi^2` with '
+                    ':math:`n-1` degrees of freedom, where :math:`n` is the number of time bins.', float)),
 ))
 
 # Options for SED analysis
