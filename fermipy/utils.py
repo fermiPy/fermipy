@@ -1291,6 +1291,16 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
     return od
 
 
+def merge_list_of_dicts(listofdicts):
+    # assumes every item in list has the same keys
+    merged = copy.deepcopy(listofdicts[0])
+    for k in merged.keys():
+        merged[k] = []
+    for i in xrange(len(listofdicts)):
+        for k in merged.keys():
+            merged[k].append(listofdicts[i][k])
+    return merged
+
 def tolist(x):
     """ convenience function that takes in a
         nested structure of lists and dictionaries
