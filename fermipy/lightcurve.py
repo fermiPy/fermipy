@@ -100,7 +100,7 @@ def _fit_lc(gta, name, **kwargs):
 
     return fit_results
 
-def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_spectrum, free_param_vector, **kwargs):
+def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_spectrum, **kwargs):
     i, time = itime
 
     config = copy.deepcopy(config)
@@ -132,6 +132,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     try:
         from fermipy.gtanalysis import GTAnalysis
         gta = GTAnalysis(config)
+        gta.load_roi(workdir+'/_lc_%s.npy'%name)
         gta.logger.info('Fitting time range %i %i' % (time[0], time[1]))
         for j, c in enumerate(gta.components):
             if len(config['components']) <= j:
@@ -147,7 +148,6 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
                                  add_new_keys=True)
 
         gta.setup()
-        gta.set_free_param_vector(free_param_vector)
     except:
         print('Analysis failed in time range %i %i'%
                             (time[0], time[1]))
@@ -208,7 +208,7 @@ class LightCurve(object):
         errors) are Integral Flux, spectral model, Spectral index, TS
         value, pred. # of photons. Note: successful calculation of 
         TS:subscript:`var` requires at least one free background 
-        parameter.
+        parameter and a previously optimized ROI model.
 
         Parameters
         ---------
@@ -332,6 +332,7 @@ class LightCurve(object):
                                                                 'free_radius'],
                                                             exclude=diff_sources)]
 
+        self.write_roi('_lc_%s'%name, make_plots=False, save_model_map=False)
         free_param_vector = self.get_free_param_vector()
         # save params from full time fit
         spectrum = self.like[name].src.spectrum()
@@ -341,9 +342,9 @@ class LightCurve(object):
         directory = kwargs.get('directory', None)
         basedir = directory + '/' if directory is not None else ''
         mt = kwargs.get('multithread', False)
-        wrap = partial(_process_lc_bin, name=name, config=self.config, 
+        wrap = partial(_process_lc_bin, name=name, config=self.config,
                 basedir=basedir, workdir=self.workdir, diff_sources=diff_sources, 
-                const_spectrum=const_spectrum, free_param_vector=free_param_vector, **kwargs)
+                const_spectrum=const_spectrum, **kwargs)
         itimes = enumerate(zip(times[:-1], times[1:]))
         if mt:
             p = Pool()
@@ -354,6 +355,11 @@ class LightCurve(object):
         for k in mapo[0].keys():
             if k in o:
                 o.pop(k, None)
+
+        files = os.listdir('./')
+        for file in files:
+            if file.startswith('_lc_%s'%name):
+                os.remove(file)
 
         merged = utils.merge_list_of_dicts(mapo)
         o = utils.merge_dict(o, merged, add_new_keys=True)
