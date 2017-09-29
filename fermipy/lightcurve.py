@@ -132,7 +132,6 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     try:
         from fermipy.gtanalysis import GTAnalysis
         gta = GTAnalysis(config)
-        gta.load_roi(workdir+'/_lc_%s.npy'%name)
         gta.logger.info('Fitting time range %i %i' % (time[0], time[1]))
         for j, c in enumerate(gta.components):
             if len(config['components']) <= j:
@@ -148,6 +147,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
                                  add_new_keys=True)
 
         gta.setup()
+        gta.load_roi(workdir+'/_lc_%s.npy'%name)
     except:
         print('Analysis failed in time range %i %i'%
                             (time[0], time[1]))
