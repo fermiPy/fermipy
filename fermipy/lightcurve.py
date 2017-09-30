@@ -159,7 +159,8 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     gta.write_xml(xmlfile)
 
     # Optimize the model
-    gta.optimize()
+    gta.optimize(skip=diff_sources)
+    gta.optimize(skip=diff_sources)
 
     fit_results = _fit_lc(gta, name, **kwargs)
     gta.write_xml('fit_model_final.xml')
@@ -175,7 +176,8 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     const_srcmodel = gta.get_src_model(name)
 
     o = {'flux_const': const_srcmodel['flux'],
-            'loglike_flux_const': const_fit_results['loglike']}
+            'loglike_flux_const': const_fit_results['loglike'],
+            'fit_success': fit_results['fit_success']}
 
     if fit_results['fit_success'] == 1:
         for k in defaults.source_flux_output.keys():
@@ -195,6 +197,12 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
 def calcTS_var(loglike, loglike_flux_const, flux_err, flux_const, systematic):
     # calculates variability according to Eq. 4 in 2FGL 
     # including correction using non-numbered Eq. following Eq. 4
+
+    # first, remove failed bins
+    loglike = [elm for elm in loglike if isinstance(elm, float)]
+    loglike_flux_const = [elm for elm in loglike_flux_const if isinstance(elm, float)]
+    flux_err = [elm for elm in flux_err if isinstance(elm, float)]
+
     v_sqs = [loglike[i] - loglike_flux_const[i] for i in xrange(len(loglike))]
     factors = [flux_err[i]**2 / (flux_err[i]**2 + systematic**2 * flux_const**2) for i in xrange(len(flux_err))]
     return 2.*np.sum([a*b for a,b in zip(factors, v_sqs)])
@@ -333,7 +341,8 @@ class LightCurve(object):
                                                             exclude=diff_sources)]
 
         self.write_roi('_lc_%s'%name, make_plots=False, save_model_map=False)
-        free_param_vector = self.get_free_param_vector()
+        self.optimize()
+        self.optimize()
         # save params from full time fit
         spectrum = self.like[name].src.spectrum()
         specname = spectrum.genericName()
@@ -351,6 +360,12 @@ class LightCurve(object):
             mapo = p.map(wrap, itimes)
         else:
             mapo = map(wrap, itimes)
+
+        itimes = enumerate(zip(times[:-1], times[1:]))
+        for i, time in itimes:
+            if not mapo[i]['fit_success']:
+                self.logger.error('Fit failed in bin %d in range %i %i.'%(i,time[0],time[1]))
+                mapo[i] = utils.merge_dict(mapo[i], defaults.source_flux_output, add_new_keys=True)
 
         for k in mapo[0].keys():
             if k in o:
