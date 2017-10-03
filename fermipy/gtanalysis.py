@@ -997,6 +997,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.log(loglevel, 'Running setup.')
 
+        # Make spatial maps for extended sources
+        for s in self.roi.sources:
+            if s.diffuse:
+                continue
+            if not s.extended:
+                continue
+            self.make_template(s)
+
         # Run setup for each component
         for i, c in enumerate(self.components):
             c.setup(overwrite=overwrite)
@@ -1284,6 +1292,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.logger.log(loglevel, 'Adding source ' + name)
 
         src = self.roi.create_source(name, src_dict, rescale=True)
+        self.make_template(src)
 
         for c in self.components:
             c.add_source(name, src_dict, free=free,
@@ -1443,6 +1452,32 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self._update_roi()
 
         return srcs
+
+    def make_template(self, src):
+
+        if src['SpatialType'] != 'SpatialMap':
+            return
+
+        if src['SpatialModel'] in ['RadialGaussian']:
+
+            template_file = '%s_template_gauss_%05.3f.fits' % (src.name,
+                                                               src['SpatialWidth'])
+            template_file = os.path.join(self.workdir, template_file)
+
+            sigma = src['SpatialWidth'] / 1.5095921854516636
+            srcmap_utils.make_gaussian_spatial_map(src.skydir, sigma,
+                                                   template_file)
+            src['Spatial_Filename'] = template_file
+        elif src['SpatialModel'] in ['RadialDisk']:
+
+            template_file = '%s_template_disk_%05.3f.fits' % (src.name,
+                                                              src['SpatialWidth'])
+            template_file = os.path.join(self.workdir, template_file)
+
+            radius = src['SpatialWidth'] / 0.8246211251235321
+            srcmap_utils.make_disk_spatial_map(src.skydir, radius,
+                                               template_file)
+            src['Spatial_Filename'] = template_file
 
     def free_sources_by_name(self, names, free=True, pars=None,
                              **kwargs):
@@ -4310,10 +4345,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         srcmap_utils.delete_source_map(self.files['srcmap'], name)
 
-        # FIXME: Template generation should be moved to GTAnalysis
         src = self.roi[name]
-        self.make_template(src, self.config['file_suffix'])
-
         if self.config['gtlike']['expscale'] is not None and \
                 name not in self._src_expscale:
             self._src_expscale[name] = self.config['gtlike']['expscale']
@@ -4685,14 +4717,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self._create_expcube(overwrite=overwrite, **kwargs)
 
         self._bexp = Map.create_from_fits(self.files['bexpmap'])
-
-        # Make spatial maps for extended sources
-        for s in self.roi.sources:
-            if s.diffuse:
-                continue
-            if not s.extended:
-                continue
-            self.make_template(s, self.config['file_suffix'])
 
         # Write ROI XML
         self.roi.write_xml(self.files['srcmdl'], self.config['model'])
@@ -5134,36 +5158,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
         return cmap
-
-    def make_template(self, src, suffix):
-
-        if src['SpatialType'] != 'SpatialMap':
-            return
-        if src['Spatial_Filename'] is not None:
-            return
-
-        if src['SpatialModel'] in ['RadialGaussian']:
-
-            template_file = '%s_template_gauss_%05.3f%s.fits' % (src.name,
-                                                                 src['SpatialWidth'],
-                                                                 suffix)
-            template_file = os.path.join(self.workdir, template_file)
-
-            sigma = src['SpatialWidth'] / 1.5095921854516636
-            srcmap_utils.make_gaussian_spatial_map(src.skydir, sigma,
-                                                   template_file)
-            src['Spatial_Filename'] = template_file
-        elif src['SpatialModel'] in ['RadialDisk']:
-
-            template_file = '%s_template_disk_%05.3f%s.fits' % (src.name,
-                                                                src['SpatialWidth'],
-                                                                suffix)
-            template_file = os.path.join(self.workdir, template_file)
-
-            radius = src['SpatialWidth'] / 0.8246211251235321
-            srcmap_utils.make_disk_spatial_map(src.skydir, radius,
-                                               template_file)
-            src['Spatial_Filename'] = template_file
 
     def _update_srcmap_file(self, sources, overwrite=True):
         """Check the contents of the source map file and generate
