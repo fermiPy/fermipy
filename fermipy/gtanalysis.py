@@ -361,7 +361,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         self.energies)
 
         else:
-            print('create skywcs')
             self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
                                                 coordsys=self.config['binning'][
                                                     'coordsys'],
@@ -371,7 +370,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                                 crpix=1.0 + 0.5 *
                                                 (self._npix - 1),
                                                 naxis=2)
-            print('create skyproj')
             self._proj = wcs_utils.create_wcs(self._roi.skydir,
                                               coordsys=self.config[
                                                   'binning']['coordsys'],
