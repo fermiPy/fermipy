@@ -319,11 +319,11 @@ def test_gtanalysis_lightcurve(create_pg1553_analysis):
     ts = np.array([1463.06618532,
                    1123.16013115])
 
-    assert_allclose(o['flux'], flux, rtol=1E-4)
-    assert_allclose(o['flux_err'], flux_err, rtol=1E-4)
-    assert_allclose(o['ts'], ts, rtol=1E-4)
+    assert_allclose(o['flux'], flux, rtol=1E-3)
+    assert_allclose(o['flux_err'], flux_err, rtol=1E-3)
+    assert_allclose(o['ts'], ts, rtol=1E-3)
 
     tab = Table.read(os.path.join(gta.workdir, o['file']))
-    assert_allclose(tab['flux'], flux, rtol=1E-4)
-    assert_allclose(tab['flux_err'], flux_err, rtol=1E-4)
-    assert_allclose(tab['ts'], ts, rtol=1E-4)
+    assert_allclose(tab['flux'], flux, rtol=1E-3)
+    assert_allclose(tab['flux_err'], flux_err, rtol=1E-3)
+    assert_allclose(tab['ts'], ts, rtol=1E-3)
