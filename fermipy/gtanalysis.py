@@ -220,7 +220,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'plotting': defaults.plotting,
                 'components': (None, '', list)}
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, config, roi=None, **kwargs):
 
         # Setup directories
         self._rootdir = os.getcwd()
@@ -249,12 +249,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         if self.config['fileio']['logfile'] is None:
             self.config['fileio']['logfile'] = os.path.join(self.outdir,
-                                                            'fermipy')
+                                                            'fermipy.log')
 
-        self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['fileio']['logfile'],
-                                 log_level(self.config['logging']
-                                           ['verbosity']))
+        Logger.configure(self.__class__.__name__,
+                         self.config['fileio']['logfile'],
+                         log_level(self.config['logging']['verbosity']))
 
         self.logger.log(self.loglevel, '\n' + '-' * 80 + '\n' +
                         "fermipy version {} ".
@@ -285,10 +284,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         logging=self.config['logging'])
 
         # Setup the ROI definition
-        self._roi = ROIModel.create(self.config['selection'],
-                                    self.config['model'],
-                                    fileio=self.config['fileio'],
-                                    coordsys=self.config['binning']['coordsys'])
+        if roi is None:
+            self._roi = ROIModel.create(self.config['selection'],
+                                        self.config['model'],
+                                        fileio=self.config['fileio'],
+                                        coordsys=self.config['binning']['coordsys'])
+        else:
+            self._roi = roi
 
         self._like = None
         self._components = []
@@ -297,11 +299,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for cfg in configs:
             comp = self._create_component(cfg, loglevel=self.loglevel)
             self._components.append(comp)
-
-        for c in self.components:
-            for s in c.roi.sources:
-                if s.name not in self.roi:
-                    self.roi.load_source(s)
 
         self._files = {}
         self._files['ccube'] = os.path.join(self.workdir, 'ccube.fits')
@@ -364,6 +361,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         self.energies)
 
         else:
+            print('create skywcs')
             self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
                                                 coordsys=self.config['binning'][
                                                     'coordsys'],
@@ -373,7 +371,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                                 crpix=1.0 + 0.5 *
                                                 (self._npix - 1),
                                                 naxis=2)
-
+            print('create skyproj')
             self._proj = wcs_utils.create_wcs(self._roi.skydir,
                                               coordsys=self.config[
                                                   'binning']['coordsys'],
@@ -396,6 +394,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def __del__(self):
         self.stage_output()
         self.cleanup()
+
+    @property
+    def logger(self):
+        """Return the default loglevel."""
+        return logging.getLogger(self.__class__.__name__)
 
     @property
     def loglevel(self):
@@ -515,9 +518,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """Make a clone of this analysis instance."""
         gta = GTAnalysis(config, **kwargs)
         gta._roi = copy.deepcopy(self.roi)
-        for i, c in enumerate(self.components):
-            gta.components[i]._roi = copy.deepcopy(c.roi)
-
         return gta
 
     def set_log_level(self, level):
@@ -858,7 +858,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             if not k in GTBinnedAnalysis.defaults:
                 cfg.pop(k)
 
-        comp = GTBinnedAnalysis(cfg, logging=self.config['logging'], **kwargs)
+        comp = GTBinnedAnalysis(
+            cfg, self.roi, logging=self.config['logging'], **kwargs)
 
         return comp
 
@@ -1860,8 +1861,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src = self.components[0].like.logLike.getSource(str(name))
         spectral_pars = gtutils.get_function_pars_dict(src.spectrum())
         self.roi[name].set_spectral_pars(spectral_pars)
-        for c in self.components:
-            c.roi[name].set_spectral_pars(spectral_pars)
 
     def _sync_params_state(self, name=None):
 
@@ -1876,11 +1875,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
             src = self.like[name].src
             pars = gtutils.get_function_pars(src.spectrum())
-
             for p in pars:
                 self.roi[name].spectral_pars[p['name']]['free'] = p['free']
-                for c in self.components:
-                    c.roi[name].spectral_pars[p['name']]['free'] = p['free']
 
     def get_norm(self, name):
         name = self.get_source_name(name)
@@ -2974,9 +2970,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             Name of the output XML file.
 
         """
-
-        # Write a common XML file?
-
         for c in self._components:
             c.write_xml(xmlfile)
 
@@ -3302,7 +3295,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.roi.load_sources(sources.values())
         for i, c in enumerate(self.components):
-            c.roi.load_sources(sources.values())
             if 'src_expscale' in self._roi_data['components'][i]:
                 c._src_expscale = copy.deepcopy(self._roi_data['components']
                                                 [i]['src_expscale'])
@@ -3317,7 +3309,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.logger.info('Finished Loading ROI')
 
     def write_roi(self, outfile=None,
-                  save_model_map=False, fmt='npy', **kwargs):
+                  save_model_map=False, **kwargs):
         """Write current state of the analysis to a file.  This method
         writes an XML model definition, a ROI dictionary, and a FITS
         source catalog file.  A previously saved analysis state can be
@@ -3337,9 +3329,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         save_model_map : bool
             Save the current counts model to a FITS file.
-
-        fmt : str
-            Set the output file format (yaml or npy).
 
         """
         # extract the results in a convenient format
@@ -3363,7 +3352,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         xmlfile = pathprefix + '.xml'
         fitsfile = pathprefix + '.fits'
         npyfile = pathprefix + '.npy'
-        ymlfile = pathprefix + '.yaml'
 
         self.write_xml(xmlfile)
         self.write_fits(fitsfile)
@@ -3389,14 +3377,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             o['roi']['components'][i][
                 'src_expscale'] = copy.deepcopy(c.src_expscale)
 
-        if fmt == 'yaml':
-            self.logger.info('Writing %s...', ymlfile)
-            utils.write_yaml(o, ymlfile)
-        elif fmt == 'npy':
-            self.logger.info('Writing %s...', npyfile)
-            np.save(npyfile, o)
-        else:
-            raise Exception('Unrecognized output format: %s' % fmt)
+        self.logger.info('Writing %s...', npyfile)
+        np.save(npyfile, o)
 
         if make_plots:
             self.make_plots(prefix, None,
@@ -3705,10 +3687,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src = self.roi.get_source_by_name(name)
         src.update_data(sd)
 
-        for c in self.components:
-            src = c.roi.get_source_by_name(name)
-            src.update_data(sd)
-
     def get_src_model(self, name, paramsonly=False, reoptimize=False,
                       npts=None, **kwargs):
         """Compose a dictionary for a source with the current best-fit
@@ -3954,7 +3932,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                     name=('00', '', str),
                     file_suffix=('', '', str))
 
-    def __init__(self, config, **kwargs):
+    def __init__(self, config, roi, **kwargs):
 
         self._loglevel = kwargs.pop('loglevel', logging.INFO)
 
@@ -3962,14 +3940,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._projtype = self.config['binning']['projtype']
 
-        self.logger = Logger.get(self.__class__.__name__,
-                                 self.config['fileio']['logfile'],
-                                 log_level(self.config['logging']['verbosity']))
+        Logger.configure(self.__class__.__name__,
+                         self.config['fileio']['logfile'],
+                         log_level(self.config['logging']['verbosity']))
 
-        self._roi = ROIModel.create(self.config['selection'],
-                                    self.config['model'],
-                                    fileio=self.config['fileio'],
-                                    coordsys=self.config['binning']['coordsys'])
+        self._roi = roi
+        # ROIModel.create(self.config['selection'],
+        #                            self.config['model'],
+        #                            fileio=self.config['fileio'],
+        #                            coordsys=self.config['binning']['coordsys'])
 
         workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
@@ -4139,6 +4118,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 "Did not recognize projection type %s", self.projtype)
 
         self.print_config(self.logger, loglevel=logging.DEBUG)
+
+    @property
+    def logger(self):
+        """Return the default loglevel."""
+        return logging.getLogger(self.__class__.__name__)
 
     @property
     def loglevel(self):
@@ -4415,8 +4399,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 os.path.dirname(src['Spatial_Filename']) == self.config['fileio']['workdir']):
             os.remove(src['Spatial_Filename'])
 
-        self.roi.delete_sources([src])
-
         if delete_source_map:
             srcmap_utils.delete_source_map(self.files['srcmap'], name)
 
@@ -4680,7 +4662,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.make_template(s, self.config['file_suffix'])
 
         # Write ROI XML
-        self.roi.write_xml(self.files['srcmdl'])
+        self.roi.write_xml(self.files['srcmdl'], self.config['model'])
 
         # Create source maps file
         if not use_external_srcmap:
