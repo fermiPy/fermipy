@@ -123,12 +123,6 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
 
     xmlfile = os.path.join(config['fileio']['outdir'], 'base.xml')
 
-    # Make a copy of the source maps. TODO: Implement a
-    # correction to account for the difference in exposure for
-    # each time bin.
-    #     for c in self.components:
-    #        shutil.copy(c._files['srcmap'],config['fileio']['outdir'])
-
     try:
         from fermipy.gtanalysis import GTAnalysis
         gta = GTAnalysis(config, roi, loglevel=logging.DEBUG)
@@ -366,6 +360,7 @@ class LightCurve(object):
         if mt:
             p = Pool()
             mapo = p.map(wrap, itimes)
+            p.close()
         else:
             mapo = map(wrap, itimes)
 

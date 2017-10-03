@@ -142,11 +142,11 @@ def create_table_from_fits(fitsfile, hduname, colnames=None):
     if colnames is None:
         return Table.read(fitsfile, hduname)
 
-    h = fits.open(fitsfile, memmap=True)
     cols = []
-    for k in colnames:
-        data = h[hduname].data.field(k)
-        cols += [Column(name=k, data=data)]
+    with fits.open(fitsfile, memmap=True) as h:
+        for k in colnames:
+            data = h[hduname].data.field(k)
+            cols += [Column(name=k, data=data)]
     return Table(cols)
 
 
@@ -5022,6 +5022,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                       'Exposure correction applied to this map')
 
         srcmap.writeto(self.files['srcmap'], clobber=True)
+        srcmap.close()
 
         # Force reloading the map from disk
         for name in scale_map.keys():
@@ -5188,6 +5189,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 'Updating source map file for component %s.', self.name)
             srcmap_utils.update_source_maps(self.files['srcmap'], srcmaps,
                                             logger=self.logger)
+        hdulist.close()
 
     def _create_srcmap_cache(self, name, src, **kwargs):
 

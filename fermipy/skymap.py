@@ -182,22 +182,22 @@ class Map(Map_Base):
     def create_from_fits(cls, fitsfile, **kwargs):
         hdu = kwargs.get('hdu', 0)
 
-        hdulist = fits.open(fitsfile)
-        header = hdulist[hdu].header
-        data = hdulist[hdu].data
-        header = fits.Header.fromstring(header.tostring())
-        wcs = WCS(header)
+        with fits.open(fitsfile) as hdulist:
+            header = hdulist[hdu].header
+            data = hdulist[hdu].data
+            header = fits.Header.fromstring(header.tostring())
+            wcs = WCS(header)
 
-        ebins = None
-        if 'ENERGIES' in hdulist:
-            tab = Table.read(fitsfile, 'ENERGIES')
-            ectr = np.array(tab.columns[0])
-            ebins = np.exp(utils.center_to_edge(np.log(ectr)))
-        elif 'EBOUNDS' in hdulist:
-            tab = Table.read(fitsfile, 'EBOUNDS')
-            emin = np.array(tab['E_MIN']) / 1E3
-            emax = np.array(tab['E_MAX']) / 1E3
-            ebins = np.append(emin, emax[-1])
+            ebins = None
+            if 'ENERGIES' in hdulist:
+                tab = Table.read(fitsfile, 'ENERGIES')
+                ectr = np.array(tab.columns[0])
+                ebins = np.exp(utils.center_to_edge(np.log(ectr)))
+            elif 'EBOUNDS' in hdulist:
+                tab = Table.read(fitsfile, 'EBOUNDS')
+                emin = np.array(tab['E_MIN']) / 1E3
+                emax = np.array(tab['E_MAX']) / 1E3
+                ebins = np.append(emin, emax[-1])
 
         return cls(data, wcs, ebins)
 
