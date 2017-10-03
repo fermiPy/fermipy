@@ -153,7 +153,10 @@ gtlike = {
                'local source maps file.', str),
     'bexpmap': (None, '', str),
     'bexpmap_roi': (None, '', str),
+    'srcmap_base': (None, 'Set the baseline source maps file.  This will be used to generate a scaled source map.', str),
+    'bexpmap_roi_base': (None, 'Set the basline expoure map file.  This will be used to generate a scaled source map.', str),    
     'use_external_srcmap': (False, 'Use an external precomputed source map file.', bool),
+    'use_scaled_srcmap': (False, 'Generate source map by scaling an external srcmap file.', bool),
     'wmap': (None, 'Likelihood weights map.', str),
     'llscan_npts': (20, 'Number of evaluation points to use when performing a likelihood scan.', int),
     'src_expscale': (None, 'Dictionary of exposure corrections for individual sources keyed to source name.  The exposure '
@@ -342,8 +345,12 @@ sourcefind = {
 
 # Options for lightcurve analysis
 lightcurve = {
-    'directory': (None, "Store all data in this directory (e.g. '30days'). If None then use current directory.", str),
-    'use_local_ltcube': (True, '', bool),
+    'outdir': (None, r'Store all data in this directory (e.g. "30days"). If None then use current directory.', str),
+    'use_local_ltcube': (True, 'Generate a fast LT cube.', bool),
+    'use_scaled_srcmap': (False, 'Generate approximate source maps for each time bin by scaling '
+                          'the current source maps by the exposure ratio with respect to that time bin.', bool),
+    'save_bin_data': (True, 'Save analysis directories for individual time bins.  If False then only '
+                      'the analysis results table will be saved.', bool),    
     'binsz': (86400.0, 'Set the lightcurve bin size in seconds.', float),
     'nbins': (None, 'Set the number of lightcurve bins.  The total time range will be evenly '
               'split into this number of time bins.', int),

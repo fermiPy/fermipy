@@ -92,6 +92,32 @@ index_parameters = {
 }
 
 
+def make_scaled_srcmap(roi, srcmap0, bexpfile0, bexpfile1, ccubefile1,
+                       outfile):
+
+    bexp0 = Map.create_from_fits(bexpfile0)
+    bexp1 = Map.create_from_fits(bexpfile1)
+    bexp_ratio = Map(bexp1.data / bexp0.data, bexp0.wcs,
+                     bexp0._ebins)
+    hdulist = fits.open(srcmap0)
+    for src in roi.sources:
+
+        if src.diffuse:
+            ratio = bexp_ratio.data
+            hdulist[src.name].data *= ratio
+        else:
+            ratio = bexp_ratio.interpolate_at_skydir(src.skydir)
+            hdulist[src.name].data *= ratio[:, None, None]
+
+    hdulist_ccube = fits.open(ccubefile1)
+    hdulist['PRIMARY'] = hdulist_ccube['PRIMARY']
+    hdulist['EBOUNDS'] = hdulist_ccube['EBOUNDS']
+    hdulist['GTI'] = hdulist_ccube['GTI']
+    hdulist.writeto(outfile, overwrite=True)
+    hdulist_ccube.close()
+    hdulist.close()
+
+
 def create_sc_table(scfile, colnames=None):
     """Load an FT2 file from a file or list of files."""
 
@@ -1055,9 +1081,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if self.workdir == self.outdir:
             return
         elif os.path.isdir(self.workdir):
-            self.logger.info('Deleting working directory: ' +
-                             self.workdir)
-            shutil.rmtree(self.workdir)
+            self.delete_workdir()
+
+    def delete_workdir(self):
+        self.logger.info('Deleting working directory: ' +
+                         self.workdir)
+        shutil.rmtree(self.workdir)
 
     def generate_model(self, model_name=None):
         """Generate model maps for all components.  model_name should
@@ -4864,6 +4893,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def _create_srcmaps(self, overwrite=False, **kwargs):
 
         loglevel = kwargs.get('loglevel', self.loglevel)
+        use_scaled_srcmap = self.config['gtlike']['use_scaled_srcmap']
 
         # Run gtsrcmaps
         kw = dict(scfile=self.data_files['scfile'],
@@ -4881,10 +4911,17 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no')
 
-        if not os.path.isfile(self.files['srcmap']) or overwrite:
-            run_gtapp('gtsrcmaps', self.logger, kw, loglevel=loglevel)
-        else:
+        if os.path.isfile(self.files['srcmap']) and not overwrite:
             self.logger.log(loglevel, 'Skipping gtsrcmaps.')
+        elif use_scaled_srcmap:
+            make_scaled_srcmap(self.roi,
+                               self.config['gtlike']['srcmap_base'],
+                               self.config['gtlike']['bexpmap_roi_base'],
+                               self.files['bexpmap_roi'],
+                               self.files['ccube'],
+                               self.files['srcmap'])
+        else:
+            run_gtapp('gtsrcmaps', self.logger, kw, loglevel=loglevel)
 
     def _create_binned_analysis(self, xmlfile=None, **kwargs):
 

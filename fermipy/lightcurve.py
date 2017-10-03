@@ -105,7 +105,7 @@ def _fit_lc(gta, name, **kwargs):
 def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_spectrum, roi,
                     **kwargs):
     i, time = itime
-    
+
     roi = copy.deepcopy(roi)
 
     config = copy.deepcopy(config)
@@ -163,7 +163,8 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
 
     o = {'flux_const': const_srcmodel['flux'],
          'loglike_const': const_fit_results['loglike'],
-         'fit_success': fit_results['fit_success']}
+         'fit_success': fit_results['fit_success'],
+         'config': config}
 
     if fit_results['fit_success'] == 1:
         for k in defaults.source_flux_output.keys():
@@ -333,6 +334,7 @@ class LightCurve(object):
         # Create Configurations
         config = copy.deepcopy(self.config)
         config['ltcube']['use_local_ltcube'] = kwargs['use_local_ltcube']
+        config['gtlike']['use_scaled_srcmap'] = kwargs['use_scaled_srcmap']
         config['model']['diffuse_dir'] = [self.workdir]
         if config['components'] is None:
             config['components'] = []
@@ -344,13 +346,18 @@ class LightCurve(object):
                         'scfile': c.data_files['scfile'],
                         'ltcube': None}
 
+            gtlike_cfg = {}
+            if config['gtlike']['use_scaled_srcmap']:
+                gtlike_cfg['bexpmap_roi_base'] = c.files['bexpmap_roi']
+                gtlike_cfg['srcmap_base'] = c.files['srcmap']
+
             config['components'][j] = \
                 utils.merge_dict(config['components'][j],
-                                 {'data': data_cfg},
+                                 {'data': data_cfg, 'gtlike': gtlike_cfg},
                                  add_new_keys=True)
 
-        directory = kwargs.get('directory', None)
-        basedir = directory + '/' if directory is not None else ''
+        outdir = kwargs.get('outdir', None)
+        basedir = outdir + '/' if outdir is not None else ''
         mt = kwargs.get('multithread', False)
         wrap = partial(_process_lc_bin, name=name, config=config,
                        basedir=basedir, workdir=self.workdir, diff_sources=diff_sources,
@@ -361,6 +368,10 @@ class LightCurve(object):
             mapo = p.map(wrap, itimes)
         else:
             mapo = map(wrap, itimes)
+
+        if not kwargs.get('save_bin_data', False):
+            for m in mapo:
+                shutil.rmtree(m['config']['fileio']['outdir'])
 
         o = self._create_lc_dict(name, times)
         o['config'] = kwargs
@@ -374,6 +385,9 @@ class LightCurve(object):
                 continue
 
             for k in o.keys():
+
+                if k == 'config':
+                    continue
                 if not k in mapo[i]:
                     continue
                 # if (isinstance(o[k], np.ndarray) and
