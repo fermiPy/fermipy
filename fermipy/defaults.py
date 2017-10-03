@@ -364,25 +364,18 @@ lightcurve = {
 
 # Output for lightcurve Analysis
 lightcurve_output = OrderedDict((
-    ('name', (None, 'Name of Source'', ', str, 'str')),
-    ('plottimes', (None, 'Center of Time Bin in MJD', np.ndarray)),
-    ('model', (None, 'Best fit model to the source', str, 'str')),
-    ('IntFlux', (None, 'Integral Flux in user defined energy range',
-                 np.ndarray)),
-    ('IntFluxErr', (None, 'Error on Integral Flux, if 0 this means IntFlux is an Upperlimit',
-                    np.ndarray, '`~np.ndarray`')),
-    ('Index1', (None, 'Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('Index1Err', (None, 'Error on Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('Index2', (None, 'Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('Index2Err', (None, 'Error on Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('TS', (None, 'Test Statistic', np.ndarray, '`~np.ndarray`')),
+    ('name', (None, 'Name of Source'', ', str)),
+    ('tmin', (None, 'Lower edge of time bin in MET.', np.ndarray)),
+    ('tmax', (None, 'Upper edge of time bin in MET.', np.ndarray)),
+    ('model', (None, 'Best fit model to the source', str)),
+    ('ts', (None, 'Test Statistic', np.ndarray)),
     ('retCode', (None, 'Did the likelihood fit converge? 0 if yes, anything else means no',
-                 np.ndarray, '`~np.ndarray`')),
+                 np.ndarray)),
     ('npred', (None, 'Number of Predicted photons in time bin from source',
-               np.ndarray, '`~np.ndarray`')),
+               np.ndarray)),
     ('config', ({}, 'Copy of the input configuration to this method.', dict)),
-    ('TS_var', (None, r'TS of variability. Should be distributed as :math:`\chi^2` with '
-                    ':math:`n-1` degrees of freedom, where :math:`n` is the number of time bins.', float)),
+    ('ts_var', (None, r'TS of variability. Should be distributed as :math:`\chi^2` with '
+                ':math:`n-1` degrees of freedom, where :math:`n` is the number of time bins.', float)),
 ))
 
 # Options for SED analysis
