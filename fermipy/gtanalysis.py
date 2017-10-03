@@ -4128,6 +4128,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         return self._loglevel
 
     @property
+    def workdir(self):
+        """Return the analysis working directory."""
+        return self.config['fileio']['workdir']
+
+    @property
     def roi(self):
         return self._roi
 
@@ -4269,14 +4274,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         """
 
-        if self.roi.has_source(name):
-            msg = 'Source %s already exists.' % name
-            self.logger.error(msg)
-            raise Exception(msg)
+        # if self.roi.has_source(name):
+        #    msg = 'Source %s already exists.' % name
+        #    self.logger.error(msg)
+        #    raise Exception(msg)
 
         srcmap_utils.delete_source_map(self.files['srcmap'], name)
 
-        src = self.roi.create_source(name, src_dict)
+        # FIXME: Template generation should be moved to GTAnalysis
+        src = self.roi[name]
         self.make_template(src, self.config['file_suffix'])
 
         if self.config['gtlike']['expscale'] is not None and \
@@ -5099,20 +5105,23 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             return
 
         if src['SpatialModel'] in ['RadialGaussian']:
-            template_file = os.path.join(self.config['fileio']['workdir'],
-                                         '%s_template_gauss_%05.3f%s.fits' % (
-                                             src.name, src['SpatialWidth'],
-                                             suffix))
+
+            template_file = '%s_template_gauss_%05.3f%s.fits' % (src.name,
+                                                                 src['SpatialWidth'],
+                                                                 suffix)
+            template_file = os.path.join(self.workdir, template_file)
 
             sigma = src['SpatialWidth'] / 1.5095921854516636
             srcmap_utils.make_gaussian_spatial_map(src.skydir, sigma,
                                                    template_file)
             src['Spatial_Filename'] = template_file
         elif src['SpatialModel'] in ['RadialDisk']:
-            template_file = os.path.join(self.config['fileio']['workdir'],
-                                         '%s_template_disk_%05.3f%s.fits' % (
-                                             src.name, src['SpatialWidth'],
-                                             suffix))
+
+            template_file = '%s_template_disk_%05.3f%s.fits' % (src.name,
+                                                                src['SpatialWidth'],
+                                                                suffix)
+            template_file = os.path.join(self.workdir, template_file)
+
             radius = src['SpatialWidth'] / 0.8246211251235321
             srcmap_utils.make_disk_spatial_map(src.skydir, radius,
                                                template_file)
