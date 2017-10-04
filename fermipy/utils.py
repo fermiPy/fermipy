@@ -125,7 +125,10 @@ def resolve_file_path_list(pathlist, workdir, prefix='',
     """Resolve the path of each file name in the file ``pathlist`` and
     write the updated paths to a new file.
     """
-    files = [line.strip() for line in open(pathlist, 'r')]
+    files = []
+    with open(pathlist, 'r') as f:
+        files = [line.strip() for line in f]
+
     newfiles = []
     for f in files:
         f = os.path.expandvars(f)
@@ -1289,6 +1292,17 @@ def merge_dict(d0, d1, add_new_keys=False, append_arrays=False):
                 od[k] = copy.deepcopy(d1[k])
 
     return od
+
+
+def merge_list_of_dicts(listofdicts):
+    # assumes every item in list has the same keys
+    merged = copy.deepcopy(listofdicts[0])
+    for k in merged.keys():
+        merged[k] = []
+    for i in xrange(len(listofdicts)):
+        for k in merged.keys():
+            merged[k].append(listofdicts[i][k])
+    return merged
 
 
 def tolist(x):

@@ -153,7 +153,10 @@ gtlike = {
                'local source maps file.', str),
     'bexpmap': (None, '', str),
     'bexpmap_roi': (None, '', str),
+    'srcmap_base': (None, 'Set the baseline source maps file.  This will be used to generate a scaled source map.', str),
+    'bexpmap_roi_base': (None, 'Set the basline expoure map file.  This will be used to generate a scaled source map.', str),    
     'use_external_srcmap': (False, 'Use an external precomputed source map file.', bool),
+    'use_scaled_srcmap': (False, 'Generate source map by scaling an external srcmap file.', bool),
     'wmap': (None, 'Likelihood weights map.', str),
     'llscan_npts': (20, 'Number of evaluation points to use when performing a likelihood scan.', int),
     'src_expscale': (None, 'Dictionary of exposure corrections for individual sources keyed to source name.  The exposure '
@@ -342,7 +345,12 @@ sourcefind = {
 
 # Options for lightcurve analysis
 lightcurve = {
-    'use_local_ltcube': (True, '', bool),
+    'outdir': (None, r'Store all data in this directory (e.g. "30days"). If None then use current directory.', str),
+    'use_local_ltcube': (True, 'Generate a fast LT cube.', bool),
+    'use_scaled_srcmap': (False, 'Generate approximate source maps for each time bin by scaling '
+                          'the current source maps by the exposure ratio with respect to that time bin.', bool),
+    'save_bin_data': (True, 'Save analysis directories for individual time bins.  If False then only '
+                      'the analysis results table will be saved.', bool),    
     'binsz': (86400.0, 'Set the lightcurve bin size in seconds.', float),
     'nbins': (None, 'Set the number of lightcurve bins.  The total time range will be evenly '
               'split into this number of time bins.', int),
@@ -357,27 +365,24 @@ lightcurve = {
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'multithread': (False, 'Split the calculation across all available cores.', bool),
+    'systematic': (0.02, 'Systematic correction factor for TS:subscript:`var`. See Sect. 3.6 in 2FGL for details.', float),
 }
 
 # Output for lightcurve Analysis
 lightcurve_output = OrderedDict((
-    ('name', (None, 'Name of Source'', ', str, 'str')),
-    ('plottimes', (None, 'Center of Time Bin in MJD', np.ndarray)),
-    ('model', (None, 'Best fit model to the source', str, 'str')),
-    ('IntFlux', (None, 'Integral Flux in user defined energy range',
-                 np.ndarray)),
-    ('IntFluxErr', (None, 'Error on Integral Flux, if 0 this means IntFlux is an Upperlimit',
-                    np.ndarray, '`~np.ndarray`')),
-    ('Index1', (None, 'Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('Index1Err', (None, 'Error on Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('Index2', (None, 'Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('Index2Err', (None, 'Error on Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('TS', (None, 'Test Statistic', np.ndarray, '`~np.ndarray`')),
+    ('name', (None, 'Name of Source'', ', str)),
+    ('tmin', (None, 'Lower edge of time bin in MET.', np.ndarray)),
+    ('tmax', (None, 'Upper edge of time bin in MET.', np.ndarray)),
+    ('model', (None, 'Best fit model to the source', str)),
+    ('ts', (None, 'Test Statistic', np.ndarray)),
     ('retCode', (None, 'Did the likelihood fit converge? 0 if yes, anything else means no',
-                 np.ndarray, '`~np.ndarray`')),
+                 np.ndarray)),
     ('npred', (None, 'Number of Predicted photons in time bin from source',
-               np.ndarray, '`~np.ndarray`')),
+               np.ndarray)),
     ('config', ({}, 'Copy of the input configuration to this method.', dict)),
+    ('ts_var', (None, r'TS of variability. Should be distributed as :math:`\chi^2` with '
+                ':math:`n-1` degrees of freedom, where :math:`n` is the number of time bins.', float)),
 ))
 
 # Options for SED analysis
