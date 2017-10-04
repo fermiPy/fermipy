@@ -278,10 +278,22 @@ class LTCube(HpxMap):
     def load_ltfile(self, ltfile):
 
         ltc = LTCube.create_from_fits(ltfile)
+        self.load(ltc)
+        
+    def load(self, ltc):
+        
         self._counts += ltc.data
-        self._tstart = min(self.tstart, ltc.tstart)
-        self._tstop = max(self.tstop, ltc.tstop)
 
+        if self._tstart is not None:
+            self._tstart = min(self.tstart, ltc.tstart)
+        else:
+            self._tstart = ltc.tstart
+
+        if self._tstop is not None:
+            self._tstop = max(self.tstop, ltc.tstop)
+        else:
+            self._tstop = ltc.tstop
+            
     def get_skydir_lthist(self, skydir, cth_bins):
         """Get the livetime distribution (observing profile) for a given sky
         direction with binning in incidence angle defined by
