@@ -129,11 +129,26 @@ class SEDGenerator(object):
                 Column(name='ref_eflux', dtype='f8',
                        data=sed['ref_eflux'], unit='MeV / (cm2 s)'),
                 Column(name='ref_npred', dtype='f8', data=sed['ref_npred']),
-                Column(name='dnde', dtype='f8', data=sed['dnde']),
-                Column(name='dnde_err', dtype='f8', data=sed['dnde_err']),
-                Column(name='dnde_errp', dtype='f8', data=sed['dnde_err_hi']),
-                Column(name='dnde_errn', dtype='f8', data=sed['dnde_err_lo']),
-                Column(name='dnde_ul', dtype='f8', data=sed['dnde_ul']),
+                Column(name='dnde', dtype='f8',
+                       data=sed['dnde'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_err', dtype='f8',
+                       data=sed['dnde_err'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_errp', dtype='f8',
+                       data=sed['dnde_err_hi'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_errn', dtype='f8',
+                       data=sed['dnde_err_lo'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_ul', dtype='f8',
+                       data=sed['dnde_ul'], unit='ph / (MeV cm2 s)'),
+                Column(name='e2dnde', dtype='f8',
+                       data=sed['e2dnde'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_err', dtype='f8',
+                       data=sed['e2dnde_err'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_errp', dtype='f8',
+                       data=sed['e2dnde_err_hi'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_errn', dtype='f8',
+                       data=sed['e2dnde_err_lo'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_ul', dtype='f8',
+                       data=sed['e2dnde_ul'], unit='MeV / (cm2 s)'),
                 Column(name='norm', dtype='f8', data=sed['norm']),
                 Column(name='norm_err', dtype='f8', data=sed['norm_err']),
                 Column(name='norm_errp', dtype='f8', data=sed['norm_err_hi']),
@@ -352,7 +367,7 @@ class SEDGenerator(object):
             f0 = self.like[name].flux(emin * (1 - delta), emin * (1 + delta))
             f1 = self.like[name].flux(emax * (1 - delta), emax * (1 + delta))
 
-            if f0 > min_flux:
+            if f0 > min_flux and f1 > min_flux:
                 g = 1 - np.log10(f0 / f1) / np.log10(emin / emax)
                 gf_bin_index += [g]
                 gf_bin_flux += [f]
