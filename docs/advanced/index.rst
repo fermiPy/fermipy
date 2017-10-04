@@ -23,15 +23,19 @@ available in Fermipy:
   source-finding algorithim.  Adds new sources to the ROI by looking
   for peaks in the TS map.
 
-* :ref:`sed`: Compute the spectral energy distribution of a source by
-  fitting its amplitude in a sequence of energy bins.
+* :ref:`sed`: Extract the spectral energy distribution of a source
+  with the `~fermipy.gtanalysis.GTAnalysis.sed` method.  This method
+  fits the source amplitude in a sequence of energy bins.
 
-* :ref:`lightcurve`: Compute the lightcurve of a source by fitting its
-  amplitude in a sequence of time bins.
+* :ref:`lightcurve`: Extract the lightcurve of a source with the
+  `~fermipy.gtanalysis.GTAnalysis.lightcurve` method.  This method
+  fits the source amplitude in a sequence of time bins.
   
-* :ref:`extension`: Fit the angular extension of a source.
+* :ref:`extension`: Fit the angular extension of a source with the
+  `~fermipy.gtanalysis.GTAnalysis.extension` method.
 
-* :ref:`localization`: Find the best-fit position of a source.
+* :ref:`localization`: Find the best-fit position of a source with the
+  `~fermipy.gtanalysis.GTAnalysis.localize` method.
 
 * :ref:`phased`: Instructions for performing a phased-selected analysis.
   

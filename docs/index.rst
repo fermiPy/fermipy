@@ -70,6 +70,7 @@ Documentation Contents
    fitting
    model
    advanced/index
+   validation/index
    fermipy
    fermipy_jobs
    fermipy_diffuse

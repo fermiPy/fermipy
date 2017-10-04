@@ -2,17 +2,31 @@
 ``file``	`~str`	Name of output FITS file.
 ``config``	`~dict`	Copy of the input configuration to this method.
 ``width``	`~numpy.ndarray`	Vector of width (intrinsic 68% containment radius) values (deg).
-``dloglike``	`~numpy.ndarray`	Sequence of delta-log-likelihood values for each point in the profile likelihood scan.
-``loglike``	`~numpy.ndarray`	Sequence of likelihood values for each point in the scan over the spatial extension.
-``loglike_ptsrc``	`~float`	Model log-Likelihood value of the best-fit point-source model.
-``loglike_ext``	`~float`	Model log-Likelihood value of the best-fit extended source model.
-``loglike_base``	`~float`	Model log-Likelihood value of the baseline model.
+``dloglike``	`~numpy.ndarray`	Delta-log-likelihood values for each point in the profile likelihood scan.
+``loglike``	`~numpy.ndarray`	Log-likelihood values for each point in the scan over the spatial extension.
+``loglike_ptsrc``	`~float`	Log-Likelihood value of the best-fit point-source model.
+``loglike_ext``	`~float`	Log-Likelihood of the best-fit extended source model.
+``loglike_init``	`~float`	Log-Likelihood of model before extension fit.
+``loglike_base``	`~float`	Log-Likelihood of model after initial spectral fit.
 ``ext``	`~float`	Best-fit extension (68% containment radius) (deg).
 ``ext_err_hi``	`~float`	Upper (1-sigma) error on the best-fit extension (deg).
 ``ext_err_lo``	`~float`	Lower (1-sigma) error on the best-fit extension (deg).
 ``ext_err``	`~float`	Symmetric (1-sigma) error on the best-fit extension (deg).
 ``ext_ul95``	`~float`	95% CL upper limit on the spatial extension (deg).
 ``ts_ext``	`~float`	Test statistic for the extension hypothesis.
+``ebin_e_min``	`~numpy.ndarray`	
+``ebin_e_ctr``	`~numpy.ndarray`	
+``ebin_e_max``	`~numpy.ndarray`	
+``ebin_ext``	`~numpy.ndarray`	Best-fit extension as measured in each energy bin (intrinsic 68% containment radius) (deg).
+``ebin_ext_err``	`~numpy.ndarray`	Symmetric (1-sigma) error on best-fit extension in each energy bin (deg).
+``ebin_ext_err_hi``	`~numpy.ndarray`	Upper (1-sigma) error on best-fit extension in each energy bin (deg).
+``ebin_ext_err_lo``	`~numpy.ndarray`	Lower (1-sigma) error on best-fit extension in each energy bin (deg).
+``ebin_ext_ul95``	`~numpy.ndarray`	95% CL upper limit on best-fit extension in each energy bin (deg).
+``ebin_ts_ext``	`~numpy.ndarray`	Test statistic for extension hypothesis in each energy bin.
+``ebin_dloglike``	`~numpy.ndarray`	Delta-log-likelihood values for scan over the spatial extension in each energy bin.
+``ebin_loglike``	`~numpy.ndarray`	Log-likelihood values for scan over the spatial extension in each energy bin.
+``ebin_loglike_ptsrc``	`~numpy.ndarray`	Log-Likelihood value of the best-fit point-source model in each energy bin.
+``ebin_loglike_ext``	`~numpy.ndarray`	Log-Likelihood value of the best-fit extended source model in each energy bin.
 ``ra``	`~float`	Right ascension of best-fit position (deg).
 ``dec``	`~float`	Declination of best-fit position (deg).
 ``glon``	`~float`	Galactic Longitude of best-fit position (deg).

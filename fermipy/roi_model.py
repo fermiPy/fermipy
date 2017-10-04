@@ -618,13 +618,15 @@ class IsoSource(Model):
                       'value': '1', 'min': '0', 'max': '10',
                       'free': '0'}}
 
-    def write_xml(self, root):
+    def write_xml(self, root, **kwargs):
+
+        filename = kwargs.get('Spectrum_Filename', self.filefunction)
+        filename = utils.path_to_xmlpath(self.filefunction)
 
         source_element = utils.create_xml_element(root, 'source',
                                                   dict(name=self.name,
                                                        type='DiffuseSource'))
 
-        filename = utils.path_to_xmlpath(self.filefunction)
         spec_el = utils.create_xml_element(source_element, 'spectrum',
                                            dict(file=filename,
                                                 type='FileFunction',
@@ -683,7 +685,10 @@ class MapCubeSource(Model):
                  'value': '1', 'min': '0', 'max': '10',
                  'free': '0'}}
 
-    def write_xml(self, root):
+    def write_xml(self, root, **kwargs):
+
+        filename = kwargs.get('Spatial_Filename', self.mapcube)
+        filename = utils.path_to_xmlpath(filename)
 
         source_element = utils.create_xml_element(root, 'source',
                                                   dict(name=self.name,
@@ -692,7 +697,6 @@ class MapCubeSource(Model):
         spec_el = utils.create_xml_element(source_element, 'spectrum',
                                            dict(type=self.data['SpectrumType']))
 
-        filename = utils.path_to_xmlpath(self.mapcube)
         spat_el = utils.create_xml_element(source_element, 'spatialModel',
                                            dict(type='MapCubeFunction',
                                                 file=filename))
@@ -1284,13 +1288,6 @@ class ROIModel(fermipy.config.Configurable):
         coordsys = kwargs.pop('coordsys', 'CEL')
         srcname = kwargs.pop('srcname', None)
         super(ROIModel, self).__init__(config, **kwargs)
-
-        if self.config['extdir'] is not None and \
-                not os.path.isdir(os.path.expandvars(self.config['extdir'])):
-            self._config['extdir'] = \
-                os.path.join('$FERMIPY_DATA_DIR',
-                             'catalogs', self.config['extdir'])
-
         self._src_radius = self.config['src_radius']
         if self.config['src_roiwidth'] is not None:
             self._config['src_radius_roi'] = self.config['src_roiwidth'] * 0.5
@@ -1301,21 +1298,6 @@ class ROIModel(fermipy.config.Configurable):
         self._src_radius = []
 
         self.load(coordsys=coordsys, srcname=srcname)
-
-#    def __getstate__(self):
-#        d = self.__dict__.copy()
-#        if 'logger' in d.keys():
-#            d['logger'] = d['logger'].name
-#        return d
-
-#    def __setstate__(self, d):
-#        if 'logger' in d.keys():
-#            d['logger'] = \
-#                Logger.get(self.__class__.__name__,
-#                           d['_config']['logfile'],
-#                           log_level(d['_config']['logging']['verbosity']))
-#
-#        self.__dict__.update(d)
 
     def __contains__(self, key):
         key = key.replace(' ', '').lower()
@@ -1379,6 +1361,15 @@ class ROIModel(fermipy.config.Configurable):
     def diffuse_sources(self):
         return self._diffuse_srcs
 
+    @property
+    def extdir(self):
+        extdir = self.config['extdir']
+        if extdir is not None and not os.path.isdir(os.path.expandvars(extdir)):
+            return os.path.join('$FERMIPY_DATA_DIR',
+                                'catalogs', extdir)
+        else:
+            return extdir
+
     def set_projection(self, proj):
         self._projection = proj
         for s in self._srcs:
@@ -1393,12 +1384,20 @@ class ROIModel(fermipy.config.Configurable):
 
     def load_diffuse_srcs(self):
 
-        self._load_diffuse_src('isodiff')
-        self._load_diffuse_src('galdiff')
-        self._load_diffuse_src('limbdiff')
-        self._load_diffuse_src('diffuse')
+        srcs = self.create_diffuse_srcs(self.config)
+        for src in srcs:
+            self.load_source(src, False, self.config['merge_sources'])
 
-    def _load_diffuse_src(self, name, src_type='FileFunction'):
+    def create_diffuse_srcs(self, config):
+
+        srcs = []
+        srcs += self._create_diffuse_src('isodiff', config)
+        srcs += self._create_diffuse_src('galdiff', config)
+        srcs += self._create_diffuse_src('limbdiff', config)
+        srcs += self._create_diffuse_src('diffuse', config)
+        return srcs
+
+    def _create_diffuse_src(self, name, config, src_type='FileFunction'):
 
         if 'FERMI_DIR' in os.environ and 'FERMI_DIFFUSE_DIR' not in os.environ:
             os.environ['FERMI_DIFFUSE_DIR'] = \
@@ -1414,6 +1413,7 @@ class ROIModel(fermipy.config.Configurable):
         if self.config[name] is not None:
             srcs = self.config[name]
 
+        srcs_out = []
         for i, t in enumerate(srcs):
 
             if utils.isstr(t):
@@ -1458,7 +1458,9 @@ class ROIModel(fermipy.config.Configurable):
                                  '', altname)
 
             src.add_name(altname)
-            self.load_source(src, False, self.config['merge_sources'])
+            srcs_out += [src]
+
+        return srcs_out
 
     def create_source(self, name, src_dict, build_index=True,
                       merge_sources=True, rescale=True):
@@ -1604,7 +1606,7 @@ class ROIModel(fermipy.config.Configurable):
         """Load both point source and diffuse components."""
 
         coordsys = kwargs.get('coordsys', 'CEL')
-        extdir = kwargs.get('extdir', self.config['extdir'])
+        extdir = kwargs.get('extdir', self.extdir)
         srcname = kwargs.get('srcname', None)
 
         self.clear()
@@ -1906,7 +1908,7 @@ class ROIModel(fermipy.config.Configurable):
 
         """
         coordsys = kwargs.get('coordsys', 'CEL')
-        extdir = kwargs.get('extdir', self.config['extdir'])
+        extdir = kwargs.get('extdir', self.extdir)
         srcname = kwargs.get('srcname', None)
 
         m0 = get_skydir_distance_mask(cat.skydir, self.skydir,
@@ -1975,7 +1977,7 @@ class ROIModel(fermipy.config.Configurable):
     def load_xml(self, xmlfile, **kwargs):
         """Load sources from an XML file."""
 
-        extdir = kwargs.get('extdir', self.config['extdir'])
+        extdir = kwargs.get('extdir', self.extdir)
         coordsys = kwargs.get('coordsys', 'CEL')
         if not os.path.isfile(xmlfile):
             xmlfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs', xmlfile)
@@ -2043,7 +2045,7 @@ class ROIModel(fermipy.config.Configurable):
         self._src_skydir = SkyCoord(ra=radec[0], dec=radec[1], unit=u.deg)
         self._src_radius = self._src_skydir.separation(self.skydir)
 
-    def write_xml(self, xmlfile):
+    def write_xml(self, xmlfile, config=None):
         """Save the ROI model as an XML file."""
 
         root = ElementTree.Element('source_library')
@@ -2052,8 +2054,16 @@ class ROIModel(fermipy.config.Configurable):
         for s in self._srcs:
             s.write_xml(root)
 
-        for s in self._diffuse_srcs:
-            s.write_xml(root)
+        if config is not None:
+            srcs = self.create_diffuse_srcs(config)
+            diffuse_srcs = {s.name: s for s in srcs}
+            for s in self._diffuse_srcs:
+                src = copy.deepcopy(diffuse_srcs.get(s.name, s))
+                src.update_spectral_pars(s.spectral_pars)
+                src.write_xml(root)
+        else:
+            for s in self._diffuse_srcs:
+                s.write_xml(root)
 
         output_file = open(xmlfile, 'w')
         output_file.write(utils.prettify_xml(root))
