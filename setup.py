@@ -34,6 +34,7 @@ setup(
         'fermipy-healview = fermipy.scripts.HEALview:main',
         'fermipy-select = fermipy.scripts.select_data:main',
         'fermipy-preprocess = fermipy.scripts.preprocess_data:main',
+        'fermipy-astroserver = fermipy.scripts.astroserver:main',
         'fermipy-validate = fermipy.scripts.validate:main',
         'fermipy-merit-skimmer = fermipy.scripts.merit_skimmer:main',
         'fermipy-merit-response = fermipy.scripts.merit_response:main',

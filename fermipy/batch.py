@@ -163,18 +163,18 @@ def dispatch_job(jobname, exe, args, opts, batch_opts, dry_run=True):
 def bsub(jobname, command, logfile=None, submit=True, sleep='1m', **kwargs):
 
     # Just one command...
-    if 'q' in kwargs and kwargs['q'] == 'local':
-        if isinstance(command, str):
-            job = command
-        else:
-            raise Exception("Cannot run job array locally.")
+    #if 'q' in kwargs and kwargs['q'] == 'local':
+    #    if isinstance(command, str):
+    #        job = command
+    #    else:
+    #        raise Exception("Cannot run job array locally.")
+    #else:
+    if isinstance(command, str):
+        job = create_job(jobname, command, logfile)
     else:
-        if isinstance(command, str):
-            job = create_job(jobname, command, logfile)
-        else:
-            job = create_job_array(jobname, command, logfile, sleep)
-        opts = parse_lsf_opts(**kwargs)
-        job = "bsub " + opts + job
+        job = create_job_array(jobname, command, logfile, sleep)
+    opts = parse_lsf_opts(**kwargs)
+    job = "bsub " + opts + job
 
     print(job)
     if submit:
@@ -263,7 +263,8 @@ def link_logfiles(logfiles, outbase="output"):
 
 
 def submit_jobs(exe, args_list, opts_list, outfiles,
-                overwrite=False, dry_run=False, batch_opts=None, **kwargs):
+                overwrite=False, dry_run=False,
+                batch_opts=None, **kwargs):
     """
 
     Parameters
@@ -284,7 +285,7 @@ def submit_jobs(exe, args_list, opts_list, outfiles,
     """
 
     if not isinstance(opts_list, list):
-        opts_list = [opts_list] * len(infiles)
+        opts_list = [opts_list] * len(args_list)
 
     for args, outfile, opts in zip(args_list, outfiles, opts_list):
 
@@ -301,5 +302,5 @@ def submit_jobs(exe, args_list, opts_list, outfiles,
                 check_log(batch_opts['oo']) == 'Successful'):
             print('Output file exists, skipping ', outfile)
             continue
-
+        
         dispatch_job(jobname, exe, args, opts, batch_opts, dry_run=dry_run)
