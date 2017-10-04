@@ -10,7 +10,7 @@ import re
 import shutil
 import pprint
 from fermipy.utils import mkdir
-from fermipy.batch import dispatch_jobs, add_lsf_args
+from fermipy.batch import submit_jobs, add_lsf_args
 from fermipy.logger import Logger
 from fermipy.gtanalysis import run_gtapp
 
@@ -77,18 +77,12 @@ def main():
 
     if args.batch:
 
-        batch_opts = {'W' : args.time, 'R' : args.resources,
-                      'oo' : 'batch.log' }
-        args.batch=False
-        for infile, outfile in zip(input_files,output_files):
-            
-            if os.path.isfile(outfile) and not args.overwrite:
-                print('Output file exists, skipping.',outfile)
-                continue
-            
-            batch_opts['oo'] = os.path.splitext(outfile)[0] + '_select.log'
-            dispatch_jobs('python ' + os.path.abspath(__file__.rstrip('cd')),
-                          infile, args, batch_opts, dry_run=args.dry_run)
+        opts = vars(args).copy()
+        del opts['files']
+        del opts['batch']
+        submit_jobs('fermipy-select',
+                    input_files, opts, output_files, overwrite=args.overwrite,
+                    dry_run=args.dry_run)
         sys.exit(0)
 
 
