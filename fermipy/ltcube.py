@@ -216,6 +216,8 @@ class LTCube(HpxMap):
         hpx = HPX.create_from_header(hdulist['EXPOSURE'].header, cth_edges)
         #header = dict(hdulist['EXPOSURE'].header)
         tab_gti = Table.read(ltfile, 'GTI')
+        hdulist.close()
+
         return cls(data[:, ::-1].T, hpx, cth_edges,
                    tstart=tstart, tstop=tstop,
                    zmin=zmin, zmax=zmax, tab_gti=tab_gti,
@@ -279,9 +281,9 @@ class LTCube(HpxMap):
 
         ltc = LTCube.create_from_fits(ltfile)
         self.load(ltc)
-        
+
     def load(self, ltc):
-        
+
         self._counts += ltc.data
 
         if self._tstart is not None:
@@ -293,7 +295,7 @@ class LTCube(HpxMap):
             self._tstop = max(self.tstop, ltc.tstop)
         else:
             self._tstop = ltc.tstop
-            
+
     def get_skydir_lthist(self, skydir, cth_bins):
         """Get the livetime distribution (observing profile) for a given sky
         direction with binning in incidence angle defined by
@@ -417,5 +419,5 @@ class LTCube(HpxMap):
             hdu.header['TSTART'] = self.tstart
             hdu.header['TSTOP'] = self.tstop
 
-        hdulist = fits.HDUList(hdus)
-        hdulist.writeto(outfile, clobber=True)
+        with fits.HDUList(hdus) as hdulist:
+            hdulist.writeto(outfile, overwrite=True)

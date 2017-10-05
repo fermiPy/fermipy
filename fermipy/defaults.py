@@ -44,6 +44,9 @@ ENERGY_FLUX_UNIT = ':math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`'
 
 # Options that are common to several sections
 common = {
+    'multithread': (False, 'Split the calculation across number of processes set by nthread option.', bool),
+    'nthread': (None, 'Number of processes to create when multithread is True.  If None then one process '
+                 'will be created for each available core.', int),    
     'model': (None, 'Dictionary defining the spatial/spectral properties of the test source. '
               'If model is None the test source will be a PointSource with an Index 2 power-law spectrum.', dict),
     'free_background': (False, 'Leave background parameters free when performing the fit. If True then any '
@@ -215,6 +218,7 @@ fileio = {
 }
 
 logging = {
+    'prefix': ('', 'Prefix that will be appended to the logger name.', str),
     'chatter': (3, 'Set the chatter parameter of the STs.', int),
     'verbosity': (3, '', int)
 }
@@ -291,7 +295,8 @@ tsmap = {
     'model': common['model'],
     'exclude': (None, 'List of sources that will be removed from the model when '
                 'computing the TS map.', list),
-    'multithread': (False, 'Split the calculation across all available cores.', bool),
+    'multithread': common['multithread'],
+    'nthread': common['nthread'],
     'max_kernel_radius': (3.0, 'Set the maximum radius of the test source kernel.  Using a '
                           'smaller value will speed up the TS calculation at the loss of '
                           'accuracy.', float),
@@ -340,7 +345,8 @@ sourcefind = {
                          'iteration.', int),
     'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.  Valid options are tsmap or tscube.', str),
     'free_params': (None, '', list),
-    'multithread': (False, 'Split the calculation across all available cores.', bool),
+    'multithread': common['multithread'],
+    'nthread': common['nthread'],
 }
 
 # Options for lightcurve analysis
@@ -365,7 +371,8 @@ lightcurve = {
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
-    'multithread': (False, 'Split the calculation across all available cores.', bool),
+    'multithread': common['multithread'],
+    'nthread': common['nthread'],
     'systematic': (0.02, 'Systematic correction factor for TS:subscript:`var`. See Sect. 3.6 in 2FGL for details.', float),
 }
 

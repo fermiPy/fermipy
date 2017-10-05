@@ -115,6 +115,9 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     # create output directories labeled in MET vals
     outdir = basedir + 'lightcurve_%.0f_%.0f' % (time[0], time[1])
     config['fileio']['outdir'] = os.path.join(workdir, outdir)
+    config['logging']['prefix'] = 'lightcurve_%.0f_%.0f ' % (time[0], time[1])
+    config['fileio']['logfile'] = os.path.join(config['fileio']['outdir'],
+                                               'fermipy.log')
     utils.mkdir(config['fileio']['outdir'])
 
     yaml.dump(utils.tolist(config),
@@ -135,6 +138,13 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         print(sys.exc_info()[0])
         raise
         return {}
+
+    # Recompute source map for source of interest and sources within 3 deg
+    if gta.config['gtlike']['use_scaled_srcmap']:
+        names = [s.name for s in
+                 gta.roi.get_sources(distance=3.0, skydir=gta.roi[name].skydir)
+                 if not s.diffuse]
+        gta.reload_sources(names)
 
     # Write the current model
     gta.write_xml(xmlfile)
@@ -158,6 +168,8 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     o = {'flux_const': const_srcmodel['flux'],
          'loglike_const': const_fit_results['loglike'],
          'fit_success': fit_results['fit_success'],
+         'fit_quality': fit_results['fit_quality'],
+         'fit_status': fit_results['fit_status'],
          'config': config}
 
     if fit_results['fit_success'] == 1:
@@ -167,7 +179,6 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
             o[k] = srcmodel[k]
 
     gta.logger.info('Finished time range %i %i' % (time[0], time[1]))
-
     return o
 
 
@@ -279,6 +290,9 @@ class LightCurve(object):
         o['tmin_mjd'] = utils.met_to_mjd(o['tmin'])
         o['tmax_mjd'] = utils.met_to_mjd(o['tmax'])
         o['loglike_const'] = np.nan * np.ones(o['tmin'].shape)
+        o['fit_success'] = np.zeros(o['tmin'].shape, dtype=bool)
+        o['fit_status'] = np.zeros(o['tmin'].shape, dtype=int)
+        o['fit_quality'] = np.zeros(o['tmin'].shape, dtype=int)
 
         for k, v in defaults.source_flux_output.items():
 
@@ -330,6 +344,7 @@ class LightCurve(object):
         config['ltcube']['use_local_ltcube'] = kwargs['use_local_ltcube']
         config['gtlike']['use_scaled_srcmap'] = kwargs['use_scaled_srcmap']
         config['model']['diffuse_dir'] = [self.workdir]
+        config['selection']['filter'] = None
         if config['components'] is None:
             config['components'] = []
         for j, c in enumerate(self.components):
@@ -350,15 +365,17 @@ class LightCurve(object):
                                  {'data': data_cfg, 'gtlike': gtlike_cfg},
                                  add_new_keys=True)
 
+            config.setdefault('selection', {})
+            config['selection']['filter'] = None
+
         outdir = kwargs.get('outdir', None)
         basedir = outdir + '/' if outdir is not None else ''
-        mt = kwargs.get('multithread', False)
         wrap = partial(_process_lc_bin, name=name, config=config,
                        basedir=basedir, workdir=self.workdir, diff_sources=diff_sources,
                        const_spectrum=const_spectrum, roi=self.roi, **kwargs)
         itimes = enumerate(zip(times[:-1], times[1:]))
-        if mt:
-            p = Pool()
+        if kwargs.get('multithread', False):
+            p = Pool(processes=kwargs.get('nthread', None))
             mapo = p.map(wrap, itimes)
             p.close()
         else:
