@@ -277,7 +277,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self.config['fileio']['logfile'] = os.path.join(self.outdir,
                                                             'fermipy.log')
 
-        Logger.configure(self.__class__.__name__,
+        self._logger_name = self.config['logging']['prefix'] + \
+            self.__class__.__name__
+        Logger.configure(self._logger_name,
                          self.config['fileio']['logfile'],
                          log_level(self.config['logging']['verbosity']))
 
@@ -422,7 +424,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     @property
     def logger(self):
         """Return the default loglevel."""
-        return logging.getLogger(self.__class__.__name__)
+        return logging.getLogger(self._logger_name)
 
     @property
     def loglevel(self):
@@ -4001,9 +4003,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         super(GTBinnedAnalysis, self).__init__(config, **kwargs)
 
         self._projtype = self.config['binning']['projtype']
+        self._logger_name = self.config['logging']['prefix'] + \
+            self.__class__.__name__
 
-        Logger.configure(self.__class__.__name__,
-                         self.config['fileio']['logfile'],
+        Logger.configure(self._logger_name, self.config['fileio']['logfile'],
                          log_level(self.config['logging']['verbosity']))
 
         self._roi = roi
@@ -4184,7 +4187,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     @property
     def logger(self):
         """Return the default loglevel."""
-        return logging.getLogger(self.__class__.__name__)
+        return logging.getLogger(self._logger_name)
 
     @property
     def loglevel(self):
@@ -5045,7 +5048,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             hdu.header['EXPSCALE'] = (scale,
                                       'Exposure correction applied to this map')
 
-        srcmap.writeto(self.files['srcmap'], clobber=True)
+        srcmap.writeto(self.files['srcmap'], overwrite=True)
         srcmap.close()
 
         # Force reloading the map from disk
