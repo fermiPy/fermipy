@@ -140,10 +140,11 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         return {}
 
     # Recompute source map for source of interest and sources within 3 deg
-    names = [s.name for s in
-             gta.roi.get_sources(distance=3.0, skydir=gta.roi[name].skydir)
-             if not s.diffuse]
-    gta.reload_sources(names)
+    if gta.config['gtlike']['use_scaled_srcmap']:
+        names = [s.name for s in
+                 gta.roi.get_sources(distance=3.0, skydir=gta.roi[name].skydir)
+                 if not s.diffuse]
+        gta.reload_sources(names)
 
     # Write the current model
     gta.write_xml(xmlfile)
