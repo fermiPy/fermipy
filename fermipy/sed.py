@@ -287,7 +287,8 @@ class SEDGenerator(object):
         # Perform global spectral fit
         self._latch_free_params()
         self.free_sources(False, pars='shape', loglevel=logging.DEBUG)
-        self.free_source(name, loglevel=logging.DEBUG)
+        self.free_source(name, pars=config.get('free_pars', None),
+                         loglevel=logging.DEBUG)
         fit_output = self.fit(loglevel=logging.DEBUG, update=False,
                               min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)

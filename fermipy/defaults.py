@@ -393,6 +393,8 @@ sed = {
                         'will be used.', bool),
     'free_background': common['free_background'],
     'free_radius': common['free_radius'],
+    'free_pars': (None, 'Set the parameters of the source of interest that will be freed when performing '
+                  'the global fit.  By default all parameters will be freed.', list),
     'ul_confidence': (0.95, 'Confidence level for flux upper limit.',
                       float),
     'cov_scale': (3.0, 'Scale factor that sets the strength of the prior on nuisance '
