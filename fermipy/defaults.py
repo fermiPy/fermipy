@@ -157,7 +157,8 @@ gtlike = {
     'bexpmap': (None, '', str),
     'bexpmap_roi': (None, '', str),
     'srcmap_base': (None, 'Set the baseline source maps file.  This will be used to generate a scaled source map.', str),
-    'bexpmap_roi_base': (None, 'Set the basline expoure map file.  This will be used to generate a scaled source map.', str),    
+    'bexpmap_base': (None, 'Set the basline all-sky expoure map file.  This will be used to generate a scaled source map.', str),    
+    'bexpmap_roi_base': (None, 'Set the basline ROI expoure map file.  This will be used to generate a scaled source map.', str),    
     'use_external_srcmap': (False, 'Use an external precomputed source map file.', bool),
     'use_scaled_srcmap': (False, 'Generate source map by scaling an external srcmap file.', bool),
     'wmap': (None, 'Likelihood weights map.', str),
@@ -358,6 +359,10 @@ lightcurve = {
     'save_bin_data': (True, 'Save analysis directories for individual time bins.  If False then only '
                       'the analysis results table will be saved.', bool),    
     'binsz': (86400.0, 'Set the lightcurve bin size in seconds.', float),
+    'shape_ts_threshold': (16.0, 'Set the TS threshold at which shape parameters of '
+                           'sources will be freed.  If a source is detected with TS less than this '
+                           'value then its shape parameters will be fixed to values derived from the '
+                           'analysis of the full time range.', float),
     'nbins': (None, 'Set the number of lightcurve bins.  The total time range will be evenly '
               'split into this number of time bins.', int),
     'time_bins': (None, 'Set the lightcurve bin edge sequence in MET.  This option '

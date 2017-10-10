@@ -93,18 +93,25 @@ index_parameters = {
 }
 
 
-def make_scaled_srcmap(roi, srcmap0, bexpfile0, bexpfile1, ccubefile1,
+def make_scaled_srcmap(roi, srcmap0,
+                       bexp_file0, bexproi_file0,
+                       bexp_file1, bexproi_file1,
+                       ccubefile1,
                        outfile):
 
-    bexp0 = Map.create_from_fits(bexpfile0)
-    bexp1 = Map.create_from_fits(bexpfile1)
+    bexp0 = Map.create_from_fits(bexp_file0)
+    bexp1 = Map.create_from_fits(bexp_file1)
+    bexproi0 = Map.create_from_fits(bexproi_file0)
+    bexproi1 = Map.create_from_fits(bexproi_file1)
     bexp_ratio = Map(bexp1.data / bexp0.data, bexp0.wcs,
                      bexp0._ebins)
+    bexproi_ratio = Map(bexproi1.data / bexproi0.data, bexproi0.wcs,
+                        bexproi0._ebins)
     hdulist = fits.open(srcmap0)
     for src in roi.sources:
 
         if src.diffuse:
-            ratio = bexp_ratio.data
+            ratio = bexproi_ratio.data
             hdulist[src.name].data *= ratio
         else:
             ratio = bexp_ratio.interpolate_at_skydir(src.skydir)
@@ -2646,7 +2653,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if quality < min_fit_quality or o['fit_status']:
             o['fit_success'] = False
 
-        if covar:
+        if covar and self.like.covariance is not None:
             o['covariance'] = np.array(self.like.covariance)
             o['errors'] = np.diag(o['covariance'])**0.5
             errinv = 1. / o['errors']
@@ -4944,7 +4951,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         elif use_scaled_srcmap:
             make_scaled_srcmap(self.roi,
                                self.config['gtlike']['srcmap_base'],
+                               self.config['gtlike']['bexpmap_base'],
                                self.config['gtlike']['bexpmap_roi_base'],
+                               self.files['bexpmap'],
                                self.files['bexpmap_roi'],
                                self.files['ccube'],
                                self.files['srcmap'])
