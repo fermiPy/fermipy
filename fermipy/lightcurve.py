@@ -47,39 +47,54 @@ def _fit_lc(gta, name, **kwargs):
     free_sources = kwargs.get('free_sources', [])
     free_background = kwargs.get('free_background', False)
     free_params = kwargs.get('free_params', None)
+    shape_ts_threshold = kwargs.get('shape_ts_threshold', 16)
 
     if name in free_sources:
         free_sources.remove(name)
 
     free_state = FreeParameterState(gta)
     gta.free_sources(free=False)
+    gta.free_sources_by_name(free_sources + [name], pars='norm')
+    gta.fit()
+
+    free_sources_norm = free_sources + [name]
+    free_sources_shape = []
+    for t in free_sources_norm:
+        if gta.roi[t]['ts'] > shape_ts_threshold:
+            free_sources_shape += [t]
+
+    gta.logger.debug('Free Sources Norm: %s', free_sources_norm)
+    gta.logger.debug('Free Sources Shape: %s', free_sources_shape)
 
     for niter in range(5):
 
         if free_background:
             free_state.restore()
-        gta.free_source(name, pars=free_params)
+
+        if free_params:
+            gta.free_source(name, pars=free_params)
 
         if niter == 0:
-            gta.free_sources_by_name(free_sources)
+            gta.free_sources_by_name(free_sources_norm, pars='norm')
+            gta.free_sources_by_name(free_sources_shape, pars='shape')
         elif niter == 1:
             gta.logger.info('Fit Failed. Retrying with free '
                             'normalizations.')
             gta.free_sources_by_name(free_sources, False)
-            gta.free_sources_by_name(free_sources, pars='norm')
+            gta.free_sources_by_name(free_sources_norm, pars='norm')
         elif niter == 2:
             gta.logger.info('Fit Failed with User Supplied List of '
                             'Free/Fixed Sources.....Lets try '
                             'fixing TS<4 sources')
             gta.free_sources_by_name(free_sources, False)
-            gta.free_sources_by_name(free_sources, pars='norm')
+            gta.free_sources_by_name(free_sources_norm, pars='norm')
             gta.free_sources(minmax_ts=[0, 4], free=False, exclude=[name])
         elif niter == 3:
             gta.logger.info('Fit Failed with User Supplied List of '
                             'Free/Fixed Sources.....Lets try '
                             'fixing TS<9 sources')
             gta.free_sources_by_name(free_sources, False)
-            gta.free_sources_by_name(free_sources, pars='norm')
+            gta.free_sources_by_name(free_sources_norm, pars='norm')
             gta.free_sources(minmax_ts=[0, 9], free=False, exclude=[name])
         elif niter == 4:
             gta.logger.info('Fit still did not converge, lets try fixing the '
@@ -96,6 +111,7 @@ def _fit_lc(gta, name, **kwargs):
             break
 
         fit_results = gta.fit()
+
         if fit_results['fit_success'] is True:
             break
 
@@ -150,7 +166,8 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     gta.write_xml(xmlfile)
 
     # Optimize the model
-    gta.optimize(skip=diff_sources)
+    gta.optimize(skip=diff_sources,
+                 shape_ts_threshold=kwargs.get('shape_ts_threshold'))
 
     fit_results = _fit_lc(gta, name, **kwargs)
     gta.write_xml('fit_model_final.xml')
@@ -357,6 +374,7 @@ class LightCurve(object):
 
             gtlike_cfg = {}
             if config['gtlike']['use_scaled_srcmap']:
+                gtlike_cfg['bexpmap_base'] = c.files['bexpmap']
                 gtlike_cfg['bexpmap_roi_base'] = c.files['bexpmap_roi']
                 gtlike_cfg['srcmap_base'] = c.files['srcmap']
 
