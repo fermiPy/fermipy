@@ -38,6 +38,7 @@ from fermipy.ltcube import LTCube
 from fermipy.plotting import AnalysisPlotter
 from fermipy.logger import Logger, log_level
 from fermipy.config import ConfigSchema
+from fermipy.timing import Timer
 from fermipy.docstring_utils import DocstringMeta
 from fermipy.fitcache import FitCache
 from fermipy.data_struct import MutableNamedTuple
@@ -2096,7 +2097,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """
 
         loglevel = kwargs.pop('loglevel', self.loglevel)
-
+        timer = Timer.create(start=True)
         self.logger.log(loglevel, 'Starting')
 
         loglike0 = -self.like()
@@ -2199,7 +2200,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.logger.log(loglevel, 'Finished')
         self.logger.log(loglevel, 'LogLike: %f Delta-LogLike: %f',
                         loglike1, loglike1 - loglike0)
-
+        self.logger.log(loglevel, 'Execution time: %.2f s', timer.elapsed_time)
         return o
 
     def profile_norm(self, name, logemin=None, logemax=None, reoptimize=False,
