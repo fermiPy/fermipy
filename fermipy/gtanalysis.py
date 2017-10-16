@@ -319,18 +319,18 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         fileio=self.config['fileio'],
                                         logging=self.config['logging'])
 
-        # Setup the ROI definition
-        if roi is None:
-            self._roi = ROIModel.create(self.config['selection'],
-                                        self.config['model'],
-                                        fileio=self.config['fileio'],
-                                        coordsys=self.config['binning']['coordsys'])
-        else:
-            self._roi = roi
-
         self._like = None
         self._components = []
         configs = self._create_component_configs()
+
+        # Setup the ROI definition
+        if roi is None:
+            self._roi = ROIModel.create(configs[0]['selection'],
+                                        configs[0]['model'],
+                                        fileio=configs[0]['fileio'],
+                                        coordsys=configs[0]['binning']['coordsys'])
+        else:
+            self._roi = roi
 
         for cfg in configs:
             comp = self._create_component(cfg, loglevel=self.loglevel)
