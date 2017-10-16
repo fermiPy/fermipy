@@ -420,4 +420,4 @@ class LTCube(HpxMap):
             hdu.header['TSTOP'] = self.tstop
 
         with fits.HDUList(hdus) as hdulist:
-            hdulist.writeto(outfile, overwrite=True)
+            hdulist.writeto(outfile, clobber=True)
