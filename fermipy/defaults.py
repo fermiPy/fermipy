@@ -373,6 +373,8 @@ lightcurve = {
                      'satisfying the free_radius selection.', list),
     'free_params': (None, 'Set the parameters of the source of interest that will be re-fit in each time bin. '
                     'If this list is empty then all parameters will be freed.', list),
+    'max_free_sources':
+        (5, 'Maximum number of sources that will be fit simultaneously with the source of interest.', int),
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],

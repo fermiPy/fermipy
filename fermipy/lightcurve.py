@@ -48,6 +48,7 @@ def _fit_lc(gta, name, **kwargs):
     free_background = kwargs.get('free_background', False)
     free_params = kwargs.get('free_params', None)
     shape_ts_threshold = kwargs.get('shape_ts_threshold', 16)
+    max_free_sources = kwargs.get('max_free_sources', 5)
 
     if name in free_sources:
         free_sources.remove(name)
@@ -57,11 +58,19 @@ def _fit_lc(gta, name, **kwargs):
     gta.free_sources_by_name(free_sources + [name], pars='norm')
     gta.fit()
 
+    free_sources = sorted(free_sources,
+                          key=lambda t: gta.roi[t]['ts']
+                          if np.isfinite(gta.roi[t]['ts']) else -100.,
+                          reverse=True)
+    free_sources = free_sources[:max_free_sources]
+
     free_sources_norm = free_sources + [name]
     free_sources_shape = []
     for t in free_sources_norm:
         if gta.roi[t]['ts'] > shape_ts_threshold:
             free_sources_shape += [t]
+
+    gta.free_sources(free=False)
 
     gta.logger.debug('Free Sources Norm: %s', free_sources_norm)
     gta.logger.debug('Free Sources Shape: %s', free_sources_shape)
