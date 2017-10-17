@@ -2653,7 +2653,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if quality < min_fit_quality or o['fit_status']:
             o['fit_success'] = False
 
-        if covar and self.like.covariance is not None:
+        if (covar and self.like.covariance is not None and
+            len(self.like.covariance) == num_free):
             o['covariance'] = np.array(self.like.covariance)
             o['errors'] = np.diag(o['covariance'])**0.5
             errinv = 1. / o['errors']
