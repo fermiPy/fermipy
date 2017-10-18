@@ -88,7 +88,7 @@ FUNCTION_DEFAULT_PARS = {
     'LogParabola': {
         'norm': DEFAULT_NORM_DICT,
         'alpha': {'value': 2.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
-        'beta': {'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0},
+        'beta': {'value': 0.0, 'scale': 1.0, 'min': -2.0, 'max': 2.0},
         'Eb': DEFAULT_SCALE_DICT},
     'SpatialMap': {
         'Prefactor': {'value': 1.0, 'scale': 1.0, 'min': 1.0, 'max': 1.0}},

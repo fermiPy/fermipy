@@ -222,7 +222,7 @@ EblAtten::LogParabola:
       value: 1000.0}
     alpha: {error: .nan, free: false, max: 5.0, min: -5.0, name: alpha, scale: 1.0,
       value: 2.0}
-    beta: {error: .nan, free: false, max: 10.0, min: -10.0, name: beta, scale: 1.0,
+    beta: {error: .nan, free: false, max: 2.0, min: -2.0, name: beta, scale: 1.0,
       value: 0.0}
     ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
       name: ebl_model, scale: 1.0, value: 0.0}
@@ -536,7 +536,7 @@ LogParabola:
       value: 1000.0}
     alpha: {error: .nan, free: false, max: 5.0, min: -5.0, name: alpha, scale: 1.0,
       value: 2.0}
-    beta: {error: .nan, free: false, max: 10.0, min: -10.0, name: beta, scale: 1.0,
+    beta: {error: .nan, free: false, max: 2.0, min: -2.0, name: beta, scale: 1.0,
       value: 0.0}
     norm: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: norm, scale: 1.0,
       value: 1.0e-12}
