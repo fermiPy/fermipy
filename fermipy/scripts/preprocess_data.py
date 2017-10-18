@@ -45,15 +45,18 @@ def main():
                         help="Minimum energy for selection")
     parser.add_argument("--emax", default=1000000., type=float,
                         help="Minimum energy for selection")
-    parser.add_argument("--transient_cut", default=False, action='store_true',
-                        help="Apply selection to remove GRBs and SFRs.")
     parser.add_argument("--rock", default=52., type=float,
                         help="Maximum rocking angle cut")
     parser.add_argument("--rock_min", default=None, type=float,
                         help="Minimum rocking angle cut")
     parser.add_argument("--chatter", default=2, type=int,
                         help="ST chatter level")
-
+    parser.add_argument("--gtifile_grb", default=None, type=str,
+                        help="GRB GTI file.")
+    parser.add_argument("--gtifile_sun", default=None, type=str,
+                        help="Sun GTI file.")
+    
+    
     args = parser.parse_args()
 
     basedir = pwd()
@@ -63,11 +66,9 @@ def main():
     gti_dir = '/u/gl/mdwood/ki20/mdwood/fermi/data'
     gti_grb = '%s/nogrb.gti' % gti_dir
     gti_sfr = '%s/nosolarflares.gti' % gti_dir
-
-    grb_gticut = "gtifilter(\"%s\",START) && " % (gti_grb)
-    grb_gticut += "gtifilter(\"%s\",STOP)" % (gti_grb)
-    sfr_gticut = "gtifilter(\"%s\",(START+STOP)/2)" % (gti_sfr)
-    sun_gticut = "ANGSEP(RA_SUN,DEC_SUN,RA_ZENITH,DEC_ZENITH)>115"
+    
+    #sfr_gticut = "gtifilter(\"%s\",(START+STOP)/2)" % (gti_sfr)
+    #gticut_sun = "ANGSEP(RA_SUN,DEC_SUN,RA_ZENITH,DEC_ZENITH)>115"
 
     mktime_filter = 'DATA_QUAL==1 && LAT_CONFIG==1 '
     if args.rock is not None:
@@ -75,10 +76,19 @@ def main():
 
     if args.rock_min is not None:
         mktime_filter += '&& ABS(ROCK_ANGLE)>%(rock)s ' % dict(rock=args.rock_min)
-
-    if args.transient_cut:
-        mktime_filter += '&& %s' % grb_gticut
-        mktime_filter += '&& (%s || %s)' % (sfr_gticut, sun_gticut)
+    
+    if args.gtifile_grb:    
+        gticut_grb = "gtifilter(\"%s\",START) && " % (args.gtifile_grb)
+        gticut_grb += "gtifilter(\"%s\",STOP)" % (args.gtifile_grb)
+        mktime_filter += '&& %s' % gticut_grb
+        
+    if args.gtifile_sun:
+        gticut_sun = "gtifilter(\"%s\",(START+STOP)/2)" % (args.gtifile_sun)
+        mktime_filter += '&& (ANGSEP(RA_SUN,DEC_SUN,RA_ZENITH,DEC_ZENITH)>115 || %s)' % gticut_sun
+        
+    #if args.transient_cut:
+    #    mktime_filter += '&& %s' % gticut_grb
+    #    mktime_filter += '&& (%s || %s)' % (sfr_gticut, gticut_sun)
 
     # First take care of the scfile
     scfile = os.path.basename(args.scfile)
@@ -116,13 +126,8 @@ def main():
         tstop = int(float(header['TSTOP']))
         tstarts.append(tstart)
         tstops.append(tstop)
-
-        if args.transient_cut:
-            outfile = join(outdir, "%s_%i_%i_z%g_r%g_gti_ft1.fits" % (
-                args.evclass, tstart, tstop, args.zmax, args.rock))
-        else:
-            outfile = join(outdir, "%s_%i_%i_z%g_r%g_ft1.fits" %
-                           (args.evclass, tstart, tstop, args.zmax, args.rock))
+        outfile = join(outdir, "%s_%i_%i_z%g_r%g_ft1.fits" %
+                       (args.evclass, tstart, tstop, args.zmax, args.rock))
 
         logfile = join(logdir, basename(outfile).replace('fits', 'log'))
 
