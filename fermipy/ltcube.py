@@ -201,6 +201,18 @@ class LTCube(HpxMap):
         hdulist = fits.open(ltfile)
         data = hdulist['EXPOSURE'].data.field('COSBINS')
         data_wt = hdulist['WEIGHTED_EXPOSURE'].data.field('COSBINS')
+	if hdulist['EXPOSURE'].header['PHIBINS'] > 0:
+	    data = data[:,:hdulist['EXPOSURE'].header['NBRBINS']]
+	    # first phibin is the same as phibin = 0 or sum of phibin 1:n
+	    # data = reshape(data.shape[0],
+		     #hdulist["EXPOSURE"].header["PHIBINS"]+1,
+		     #hdulist["EXPOSURE"].header["NBRBINS"])
+	if hdulist['WEIGHTED_EXPOSURE'].header['PHIBINS'] > 0:
+	    data_wt = data[:,:hdulist['WEIGHTED_EXPOSURE'].header['NBRBINS']]
+	    # first phibin is the same as phibin = 0 or sum of phibin 1:n
+	    # data_wt = reshape(data_wt.shape[0],
+		     #hdulist["WEIGHTED_EXPOSURE"].header["PHIBINS"]+1,
+		     #hdulist["WEIGHTED_EXPOSURE"].header["NBRBINS"])
         data = data.astype(float)
         data_wt = data_wt.astype(float)
         tstart = hdulist[0].header['TSTART']
@@ -321,6 +333,7 @@ class LTCube(HpxMap):
         width = edge_to_width(bins)
         ipix = hp.ang2pix(self.hpx.nside, np.pi / 2. - np.radians(dec),
                           np.radians(ra), nest=self.hpx.nest)
+
         lt = np.histogram(self._cth_center,
                           weights=self.data[:, ipix], bins=bins)[0]
         lt = np.sum(lt.reshape(-1, npts), axis=1)
