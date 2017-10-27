@@ -4854,6 +4854,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   outfile=self.files['ltcube'],
                   binsz=self.config['ltcube']['binsz'],
                   dcostheta=self.config['ltcube']['dcostheta'],
+                  phibins=self.config['ltcube']['phibins'],
                   zmax=self.config['selection']['zmax'])
 
         if self.config['ltcube']['use_local_ltcube']:
