@@ -44,11 +44,16 @@ ENERGY_FLUX_UNIT = ':math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`'
 
 # Options that are common to several sections
 common = {
+    'multithread': (False, 'Split the calculation across number of processes set by nthread option.', bool),
+    'nthread': (None, 'Number of processes to create when multithread is True.  If None then one process '
+                 'will be created for each available core.', int),    
     'model': (None, 'Dictionary defining the spatial/spectral properties of the test source. '
               'If model is None the test source will be a PointSource with an Index 2 power-law spectrum.', dict),
     'free_background': (False, 'Leave background parameters free when performing the fit. If True then any '
                         'parameters that are currently free in the model will be fit simultaneously '
                         'with the source of interest.', bool),
+    'fix_shape': (False, 'Fix spectral shape parameters of the source of interest. If True then only '
+                  'the normalization parameter will be fit.', bool),
     'free_radius': (None, 'Free normalizations of background sources within this angular distance in degrees '
                     'from the source of interest.  If None then no sources will be freed.', float),
     'make_plots': (False, 'Generate diagnostic plots.', bool),
@@ -151,7 +156,11 @@ gtlike = {
                'local source maps file.', str),
     'bexpmap': (None, '', str),
     'bexpmap_roi': (None, '', str),
+    'srcmap_base': (None, 'Set the baseline source maps file.  This will be used to generate a scaled source map.', str),
+    'bexpmap_base': (None, 'Set the basline all-sky expoure map file.  This will be used to generate a scaled source map.', str),    
+    'bexpmap_roi_base': (None, 'Set the basline ROI expoure map file.  This will be used to generate a scaled source map.', str),    
     'use_external_srcmap': (False, 'Use an external precomputed source map file.', bool),
+    'use_scaled_srcmap': (False, 'Generate source map by scaling an external srcmap file.', bool),
     'wmap': (None, 'Likelihood weights map.', str),
     'llscan_npts': (20, 'Number of evaluation points to use when performing a likelihood scan.', int),
     'src_expscale': (None, 'Dictionary of exposure corrections for individual sources keyed to source name.  The exposure '
@@ -163,6 +172,7 @@ gtlike = {
 # Options for generating livetime cubes
 ltcube = {
     'binsz': (1.0, 'Set the angular bin size for generating livetime cubes.', float),
+    'phibins': (0, 'Set the number of phi bins for generating livetime cubes.', int),
     'dcostheta': (0.025, 'Set the inclination angle binning represented as the cosine of the off-axis angle.', float),
     'use_local_ltcube': (False, 'Generate a livetime cube in the vicinity of the ROI using interpolation. '
                          'This option disables LT cube generation with gtltcube.', bool),
@@ -210,6 +220,7 @@ fileio = {
 }
 
 logging = {
+    'prefix': ('', 'Prefix that will be appended to the logger name.', str),
     'chatter': (3, 'Set the chatter parameter of the STs.', int),
     'verbosity': (3, '', int)
 }
@@ -286,7 +297,8 @@ tsmap = {
     'model': common['model'],
     'exclude': (None, 'List of sources that will be removed from the model when '
                 'computing the TS map.', list),
-    'multithread': (False, 'Split the calculation across all available cores.', bool),
+    'multithread': common['multithread'],
+    'nthread': common['nthread'],
     'max_kernel_radius': (3.0, 'Set the maximum radius of the test source kernel.  Using a '
                           'smaller value will speed up the TS calculation at the loss of '
                           'accuracy.', float),
@@ -335,13 +347,23 @@ sourcefind = {
                          'iteration.', int),
     'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.  Valid options are tsmap or tscube.', str),
     'free_params': (None, '', list),
-    'multithread': (False, 'Split the calculation across all available cores.', bool),
+    'multithread': common['multithread'],
+    'nthread': common['nthread'],
 }
 
 # Options for lightcurve analysis
 lightcurve = {
-    'use_local_ltcube': (True, '', bool),
+    'outdir': (None, r'Store all data in this directory (e.g. "30days"). If None then use current directory.', str),
+    'use_local_ltcube': (True, 'Generate a fast LT cube.', bool),
+    'use_scaled_srcmap': (False, 'Generate approximate source maps for each time bin by scaling '
+                          'the current source maps by the exposure ratio with respect to that time bin.', bool),
+    'save_bin_data': (True, 'Save analysis directories for individual time bins.  If False then only '
+                      'the analysis results table will be saved.', bool),    
     'binsz': (86400.0, 'Set the lightcurve bin size in seconds.', float),
+    'shape_ts_threshold': (16.0, 'Set the TS threshold at which shape parameters of '
+                           'sources will be freed.  If a source is detected with TS less than this '
+                           'value then its shape parameters will be fixed to values derived from the '
+                           'analysis of the full time range.', float),
     'nbins': (None, 'Set the number of lightcurve bins.  The total time range will be evenly '
               'split into this number of time bins.', int),
     'time_bins': (None, 'Set the lightcurve bin edge sequence in MET.  This option '
@@ -352,30 +374,30 @@ lightcurve = {
                      'satisfying the free_radius selection.', list),
     'free_params': (None, 'Set the parameters of the source of interest that will be re-fit in each time bin. '
                     'If this list is empty then all parameters will be freed.', list),
+    'max_free_sources':
+        (5, 'Maximum number of sources that will be fit simultaneously with the source of interest.', int),
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'multithread': common['multithread'],
+    'nthread': common['nthread'],
+    'systematic': (0.02, 'Systematic correction factor for TS:subscript:`var`. See Sect. 3.6 in 2FGL for details.', float),
 }
 
 # Output for lightcurve Analysis
 lightcurve_output = OrderedDict((
-    ('name', (None, 'Name of Source'', ', str, 'str')),
-    ('plottimes', (None, 'Center of Time Bin in MJD', np.ndarray)),
-    ('model', (None, 'Best fit model to the source', str, 'str')),
-    ('IntFlux', (None, 'Integral Flux in user defined energy range',
-                 np.ndarray)),
-    ('IntFluxErr', (None, 'Error on Integral Flux, if 0 this means IntFlux is an Upperlimit',
-                    np.ndarray, '`~np.ndarray`')),
-    ('Index1', (None, 'Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('Index1Err', (None, 'Error on Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('Index2', (None, 'Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('Index2Err', (None, 'Error on Spectral Index', np.ndarray, '`~np.ndarray`')),
-    ('TS', (None, 'Test Statistic', np.ndarray, '`~np.ndarray`')),
+    ('name', (None, 'Name of Source'', ', str)),
+    ('tmin', (None, 'Lower edge of time bin in MET.', np.ndarray)),
+    ('tmax', (None, 'Upper edge of time bin in MET.', np.ndarray)),
+    ('model', (None, 'Best fit model to the source', str)),
+    ('ts', (None, 'Test Statistic', np.ndarray)),
     ('retCode', (None, 'Did the likelihood fit converge? 0 if yes, anything else means no',
-                 np.ndarray, '`~np.ndarray`')),
+                 np.ndarray)),
     ('npred', (None, 'Number of Predicted photons in time bin from source',
-               np.ndarray, '`~np.ndarray`')),
+               np.ndarray)),
     ('config', ({}, 'Copy of the input configuration to this method.', dict)),
+    ('ts_var', (None, r'TS of variability. Should be distributed as :math:`\chi^2` with '
+                ':math:`n-1` degrees of freedom, where :math:`n` is the number of time bins.', float)),
 ))
 
 # Options for SED analysis
@@ -386,6 +408,8 @@ sed = {
                         'will be used.', bool),
     'free_background': common['free_background'],
     'free_radius': common['free_radius'],
+    'free_pars': (None, 'Set the parameters of the source of interest that will be freed when performing '
+                  'the global fit.  By default all parameters will be freed.', list),
     'ul_confidence': (0.95, 'Confidence level for flux upper limit.',
                       float),
     'cov_scale': (3.0, 'Scale factor that sets the strength of the prior on nuisance '
@@ -504,6 +528,7 @@ extension = {
                     'Scan points will be spaced evenly on a logarithmic scale '
                     'between `width_min` and `width_max`.', int),
     'free_background': common['free_background'],
+    'fix_shape': common['fix_shape'],
     'free_radius': common['free_radius'],
     'fit_ebin': (False, 'Perform a fit for the angular extension in each analysis energy bin.', bool),
     'update': (False, 'Update this source with the best-fit model for spatial '
@@ -518,6 +543,7 @@ extension = {
                      'by linearly interpolating the fractional correction factors f in log(E).  The '
                      'corrected PSF is given by P\'(x;E) = P(x/(1+f(E));E) where x is the angular separation.',
                      tuple),
+    'make_tsmap' : (True, 'Make a TS map for the source of interest.', bool), 
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
@@ -532,6 +558,7 @@ localize = {
               'sampling points will be nstep**2.', int),
     'dtheta_max': (0.5, 'Half-width of the search region in degrees used for the first pass of the localization search.', float),
     'free_background': common['free_background'],
+    'fix_shape': common['fix_shape'],
     'free_radius': common['free_radius'],
     'update': (True, 'Update the source model with the best-fit position.', bool),
     'make_plots': common['make_plots'],
@@ -600,7 +627,8 @@ localize_output = OrderedDict((
     ('tsmap_peak', (None, '', fermipy.skymap.Map)),
 
     # Miscellaneous
-    ('loglike_base', (np.nan, 'Log-Likelihood of model before localization.', float)),
+    ('loglike_init', (np.nan, 'Log-Likelihood of model before localization.', float)),
+    ('loglike_base', (np.nan, 'Log-Likelihood of model after initial spectral fit.', float)),
     ('loglike_loc', (np.nan, 'Log-Likelihood of model after localization.', float)),
     ('dloglike_loc', (np.nan,
                       'Difference in log-likelihood before and after localization.', float)),
@@ -627,9 +655,9 @@ extension_output = OrderedDict((
                  np.ndarray)),
     ('loglike_ptsrc', (np.nan,
                        'Log-Likelihood value of the best-fit point-source model.', float)),
-    ('loglike_ext', (np.nan, 'Log-Likelihood value of the best-fit extended source model.', float)),
-    ('loglike_base', (np.nan,
-                      'Log-Likelihood value of the baseline model.', float)),
+    ('loglike_ext', (np.nan, 'Log-Likelihood of the best-fit extended source model.', float)),
+    ('loglike_init', (np.nan, 'Log-Likelihood of model before extension fit.', float)),
+    ('loglike_base', (np.nan, 'Log-Likelihood of model after initial spectral fit.', float)),
     ('ext', (np.nan, 'Best-fit extension (68% containment radius) (deg).', float)),
     ('ext_err_hi', (np.nan,
                     'Upper (1-sigma) error on the best-fit extension (deg).', float)),

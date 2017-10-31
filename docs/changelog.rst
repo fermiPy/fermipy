@@ -6,6 +6,28 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+0.15.0 (09/05/2017)
+-------------------
+
+* Bug fix related to restoring analysis state for phased analysis
+  (scaled exposure).
+* Many improvements and feature additions to senstivity tools (see e.g. `#148
+  <https://github.com/fermiPy/fermipy/pull/148>`_, `#149
+  <https://github.com/fermiPy/fermipy/pull/149>`_, and `#152
+  <https://github.com/fermiPy/fermipy/pull/152>`_).
+* Various updates to support DM pipeline package (`#146
+  <https://github.com/fermiPy/fermipy/pull/146>`_).
+* Improve robustness of algorithms for extracting peak and
+  uncertainty ellipse from 2D likelihood surface.
+* Added `~fermipy.gtanalysis.GTAnalysis.curvature` method for testing a
+  source for spectral curvature.
+* Added ``fix_shape`` option to
+  `~fermipy.gtanalysis.GTAnalysis.extension` and
+  `~fermipy.gtanalysis.GTAnalysis.localize` to fix spectral shape
+  parameters.  Spectral shape parameters of the source of interest are
+  now free by default when localizing or fitting extension.
+  
+
 0.14.0 (03/28/2017)
 -------------------
 * Refactoring and improvements in

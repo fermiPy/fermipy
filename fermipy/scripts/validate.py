@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+import glob
+import yaml
 import argparse
 import tempfile
 import logging
@@ -10,10 +12,10 @@ import re
 import shutil
 import pprint
 from fermipy.utils import mkdir
-from fermipy.batch import dispatch_jobs, add_lsf_args
+from fermipy.batch import submit_jobs, add_lsf_args
 from fermipy.logger import Logger
 from fermipy.gtanalysis import run_gtapp
-from fermipy.validate.tools import AGNAccumulator
+from fermipy.validate.tools import *
 
 def make_outpath(f,outdir):
 
@@ -32,64 +34,83 @@ def main():
 
     add_lsf_args(parser)
 
+    parser.add_argument('--config', default=None, type=str, required=True,
+                        help='Configuration file.')
+    parser.add_argument('--dataset', default=None, type=str,
+                        help='Key name of data set to analyze.  If None then all data '
+                        'sets will be analyzed.')    
     parser.add_argument('--outdir', default=None, type=str,
                         help='Path to output directory used when merge=False.')
     parser.add_argument('--outfile', default=None, type=str,
                         help='Path to output file used when merge=True.')
     parser.add_argument('--dry_run', default=False, action='store_true')
-    parser.add_argument('--data_type', default='agn', type=str)
     parser.add_argument('--mode', default='fill', type=str)
     parser.add_argument('--overwrite', default=False, action='store_true')
-    parser.add_argument('files', nargs='+', default=None,
-                        help='List of directories in which the analysis will '
-                             'be run.')
     
     args = parser.parse_args()
     
-    if args.outdir is not None:
-        args.outdir = os.path.abspath(args.outdir)
-        mkdir(args.outdir)
+    #if args.outdir is not None:
+    #    args.outdir = os.path.abspath(args.outdir)
+    #    mkdir(args.outdir)
 
-    if args.mode == 'fill':
-        input_files = [[os.path.abspath(x)] for x in args.files]
-        output_files = [make_outpath(x,args.outdir) for x in args.files]
-    elif args.mode == 'collect':        
-        input_files = [[os.path.abspath(x) for x in args.files]]
-        output_files = [args.outfile]
+    #if args.mode == 'fill':
+    #    input_files = [[os.path.abspath(x)] for x in args.files]
+    #    output_files = [make_outpath(x,args.outdir) for x in args.files]
+    #elif args.mode == 'collect':        
+    #    input_files = [[os.path.abspath(x) for x in args.files]]
+    #    output_files = [args.outfile]
 
-    print(input_files)
-    print(output_files)
-        
+    #print(input_files)
+    #print(output_files)
+
+    config = yaml.load(open(args.config))
+    
     if args.batch:
 
-        batch_opts = {'W' : args.time, 'R' : args.resources,
-                      'oo' : 'batch.log' }
-        args.batch=False
-        for infile, outfile in zip(input_files,output_files):
-            
-            if os.path.isfile(outfile) and not args.overwrite:
-                print('Output file exists, skipping.',outfile)
-                continue
-            
-            batch_opts['oo'] = os.path.splitext(outfile)[0] + '.log'
-            dispatch_jobs('python ' + os.path.abspath(__file__.rstrip('cd')),
-                          infile, args, batch_opts, dry_run=args.dry_run)
+        input_files = [[]]*len(config.keys())
+        output_files = [v['outfile'] for k,v in config.items()]
+        
+        opts = []
+        for k,v in config['datasets'].items():
+            o = vars(args).copy()
+            del o['batch']
+            o['dataset'] = k
+            opts += [o]        
+        
+        submit_jobs('fermipy-validate',
+                    input_files, opts, output_files, overwrite=args.overwrite,
+                    dry_run=args.dry_run)
         sys.exit(0)
 
     logger = Logger.get(os.path.basename(__file__),None,logging.INFO)
     logger.info('Starting.')
 
-    for infiles, outfile in zip(input_files,output_files):
+    for k, v in config['datasets'].items():
 
-        if args.data_type == 'agn':    
-            acc = AGNAccumulator()
+        if args.dataset is not None and k != args.dataset:
+            continue
 
+        if v['data_type'] == 'agn':    
+            val = AGNValidator(config['scfile'],100.)
+        elif v['data_type'] == 'psr':    
+            val = PSRValidator(config['scfile'],100.)
+        elif v['data_type'] == 'ridge':
+            val = GRValidator(config['scfile'],100.)
+        else:
+            raise Exception('Unknown data type {}'.format(v['data_type']))
+
+        infiles = glob.glob(v['files'])
+        
         for f in infiles:
-            print('process',f)
-            acc.process(f)
+            print('processing',f)
+            val.process(f)
 
-        print('write',outfile)
-        acc.write(outfile)
+        val.calc_eff()
+        if v['data_type'] in ['agn','psr']:
+            val.calc_containment()
+                    
+        print('write',v['outfile'])
+        val.write(v['outfile'])
         
     logger.info('Done.')
 

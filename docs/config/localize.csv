@@ -1,4 +1,5 @@
 ``dtheta_max``	0.5	Half-width of the search region in degrees used for the first pass of the localization search.
+``fix_shape``	False	Fix spectral shape parameters of the source of interest. If True then only the normalization parameter will be fit.
 ``free_background``	False	Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
 ``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
 ``make_plots``	False	Generate diagnostic plots.

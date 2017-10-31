@@ -46,8 +46,8 @@ as a dictionary containing *name* and *file* fields:
    
    model:
      galdiff  : 
-       - { 'name' : 'component0' : 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component0.fits' }
-       - { 'name' : 'component1' : 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component1.fits' }
+       - { 'name' : 'component0', 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component0.fits' }
+       - { 'name' : 'component1', 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component1.fits' }
 
 Configuring Source Components
 -----------------------------

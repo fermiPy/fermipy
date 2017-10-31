@@ -36,7 +36,9 @@ class MutableNamedTuple(OrderedDict):
         else:
             super(MutableNamedTuple, self).__setitem__(name, value)
 
-    def update(self, d):
+    def update(self, d, strict=False):
         for k, v in d.items():
             if k in self:
                 self[k] = v
+            elif strict:
+                raise KeyError('Missing key {}'.format(k))

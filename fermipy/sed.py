@@ -23,6 +23,7 @@ from fermipy import gtutils
 from fermipy import fits_utils
 from fermipy import roi_model
 from fermipy.config import ConfigSchema
+from fermipy.timing import Timer
 from fermipy import model_utils
 
 from LikelihoodState import LikelihoodState
@@ -67,7 +68,7 @@ class SEDGenerator(object):
             Dictionary containing output of the SED analysis.
 
         """
-
+        timer = Timer.create(start=True)
         name = self.roi.get_source_by_name(name).name
 
         # Create schema for method configuration
@@ -106,6 +107,7 @@ class SEDGenerator(object):
         if config['make_plots']:
             self._plotter.make_sed_plots(o, **config)
 
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return o
 
     def _make_sed_fits(self, sed, filename, **kwargs):
@@ -127,6 +129,26 @@ class SEDGenerator(object):
                 Column(name='ref_eflux', dtype='f8',
                        data=sed['ref_eflux'], unit='MeV / (cm2 s)'),
                 Column(name='ref_npred', dtype='f8', data=sed['ref_npred']),
+                Column(name='dnde', dtype='f8',
+                       data=sed['dnde'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_err', dtype='f8',
+                       data=sed['dnde_err'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_errp', dtype='f8',
+                       data=sed['dnde_err_hi'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_errn', dtype='f8',
+                       data=sed['dnde_err_lo'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_ul', dtype='f8',
+                       data=sed['dnde_ul'], unit='ph / (MeV cm2 s)'),
+                Column(name='e2dnde', dtype='f8',
+                       data=sed['e2dnde'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_err', dtype='f8',
+                       data=sed['e2dnde_err'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_errp', dtype='f8',
+                       data=sed['e2dnde_err_hi'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_errn', dtype='f8',
+                       data=sed['e2dnde_err_lo'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_ul', dtype='f8',
+                       data=sed['e2dnde_ul'], unit='MeV / (cm2 s)'),
                 Column(name='norm', dtype='f8', data=sed['norm']),
                 Column(name='norm_err', dtype='f8', data=sed['norm_err']),
                 Column(name='norm_errp', dtype='f8', data=sed['norm_err_hi']),
@@ -265,7 +287,8 @@ class SEDGenerator(object):
         # Perform global spectral fit
         self._latch_free_params()
         self.free_sources(False, pars='shape', loglevel=logging.DEBUG)
-        self.free_source(name, loglevel=logging.DEBUG)
+        self.free_source(name, pars=config.get('free_pars', None),
+                         loglevel=logging.DEBUG)
         fit_output = self.fit(loglevel=logging.DEBUG, update=False,
                               min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
@@ -345,7 +368,7 @@ class SEDGenerator(object):
             f0 = self.like[name].flux(emin * (1 - delta), emin * (1 + delta))
             f1 = self.like[name].flux(emax * (1 - delta), emax * (1 + delta))
 
-            if f0 > min_flux:
+            if f0 > min_flux and f1 > min_flux:
                 g = 1 - np.log10(f0 / f1) / np.log10(emin / emax)
                 gf_bin_index += [g]
                 gf_bin_flux += [f]
@@ -483,7 +506,7 @@ class SEDGenerator(object):
 
             ul_data = utils.get_parameter_limits(lnlp['flux'],
                                                  lnlp['dloglike'],
-                                                 ul_confidence=ul_confidence)
+                                                 cl_limit=ul_confidence)
             o['norm_ul'][i] = ul_data['ul'] / ref_flux
 
             saved_state_bin.restore()
