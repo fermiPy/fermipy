@@ -624,7 +624,7 @@ class CastroData_Base(object):
 
         for i, (normv, nllv) in enumerate(zip(self._norm_vals,
                                               self._nll_vals)):
-            nllfunc = self._buildLnLFn(normv, nllv)
+            nllfunc = self.build_lnl_fn(normv, nllv)
             self._nll_null += self._nll_vals[i][0]
             self._loglikes.append(nllfunc)
 
@@ -680,7 +680,7 @@ class CastroData_Base(object):
 
         return nll_val
 
-    def _buildLnLFn(self, normv, nllv):
+    def build_lnl_fn(self, normv, nllv):
         """
         """
         return LnLFn(normv, nllv, self._norm_type)

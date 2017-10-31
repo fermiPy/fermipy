@@ -1,7 +1,10 @@
+``fit_ebin``	False	Perform a fit for the angular extension in each analysis energy bin.
 ``fit_position``	False	Perform a simultaneous fit to the source position and extension.
+``fix_shape``	False	Fix spectral shape parameters of the source of interest. If True then only the normalization parameter will be fit.
 ``free_background``	False	Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
 ``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
 ``make_plots``	False	Generate diagnostic plots.
+``make_tsmap``	True	Make a TS map for the source of interest.
 ``psf_scale_fn``	None	Tuple of two vectors (logE,f) defining an energy-dependent PSF scaling function that will be applied when building spatial models for the source of interest.  The tuple (logE,f) defines the fractional corrections f at the sequence of energies logE = log10(E/MeV) where f=0 corresponds to no correction.  The correction function f(E) is evaluated by linearly interpolating the fractional correction factors f in log(E).  The corrected PSF is given by P'(x;E) = P(x/(1+f(E));E) where x is the angular separation.
 ``save_model_map``	False	Save model counts cubes for the best-fit model of extension.
 ``spatial_model``	RadialGaussian	Spatial model that will be used to test the sourceextension.  The spatial scale parameter of the model will be set such that the 68% containment radius of the model is equal to the width parameter.

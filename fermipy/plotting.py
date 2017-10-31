@@ -1414,10 +1414,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
     def make_extension_plots(self, ext, roi=None, **kwargs):
 
-        if 'tsmap' in ext:
+        if ext.get('tsmap') is not None:
             self._plot_extension_tsmap(ext, roi=roi, **kwargs)
 
-        if 'ebin_ts_ext' in ext:
+        if ext.get('ebin_ts_ext') is not None:
             self._plot_extension_ebin(ext, roi=roi, **kwargs)
 
     def _plot_extension_ebin(self, ext, roi=None, **kwargs):

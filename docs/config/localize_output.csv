@@ -34,7 +34,8 @@
 ``pos_cel_corr``	`~numpy.ndarray`	Correlation matrix of positional uncertainties in local projection in celestial coordinates.
 ``tsmap``	`~fermipy.skymap.Map`	
 ``tsmap_peak``	`~fermipy.skymap.Map`	
-``loglike_base``	`~float`	Log-Likelihood of model before localization.
+``loglike_init``	`~float`	Log-Likelihood of model before localization.
+``loglike_base``	`~float`	Log-Likelihood of model after initial spectral fit.
 ``loglike_loc``	`~float`	Log-Likelihood of model after localization.
 ``dloglike_loc``	`~float`	Difference in log-likelihood before and after localization.
 ``fit_success``	`~bool`	

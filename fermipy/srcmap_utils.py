@@ -5,7 +5,7 @@ import numpy as np
 from scipy.ndimage import map_coordinates
 from scipy.ndimage.interpolation import spline_filter
 from scipy.ndimage.interpolation import shift
-import astropy.io.fits as pyfits
+from astropy.io import fits
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 
@@ -297,18 +297,18 @@ def make_cgauss_mapcube(skydir, psf, sigma, outfile, npix=500, cdelt=0.01,
     w.wcs.cdelt[2] = energies[1] - energies[0]
     w.wcs.ctype[2] = 'Energy'
 
-    ecol = pyfits.Column(name='Energy', format='D', array=10 ** energies)
-    hdu_energies = pyfits.BinTableHDU.from_columns([ecol], name='ENERGIES')
+    ecol = fits.Column(name='Energy', format='D', array=10 ** energies)
+    hdu_energies = fits.BinTableHDU.from_columns([ecol], name='ENERGIES')
 
-    hdu_image = pyfits.PrimaryHDU(np.zeros((nebin, npix, npix)),
-                                  header=w.to_header())
+    hdu_image = fits.PrimaryHDU(np.zeros((nebin, npix, npix)),
+                                header=w.to_header())
 
     hdu_image.data[...] = k
 
     hdu_image.header['CUNIT3'] = 'MeV'
 
-    hdulist = pyfits.HDUList([hdu_image, hdu_energies])
-    hdulist.writeto(outfile, clobber=True)
+    with fits.HDUList([hdu_image, hdu_energies]) as hdulist:
+        hdulist.writeto(outfile, clobber=True)
 
 
 def make_psf_mapcube(skydir, psf, outfile, npix=500, cdelt=0.01, rebin=1):
@@ -327,18 +327,18 @@ def make_psf_mapcube(skydir, psf, outfile, npix=500, cdelt=0.01, rebin=1):
     w.wcs.cdelt[2] = energies[1] - energies[0]
     w.wcs.ctype[2] = 'Energy'
 
-    ecol = pyfits.Column(name='Energy', format='D', array=10 ** energies)
-    hdu_energies = pyfits.BinTableHDU.from_columns([ecol], name='ENERGIES')
+    ecol = fits.Column(name='Energy', format='D', array=10 ** energies)
+    hdu_energies = fits.BinTableHDU.from_columns([ecol], name='ENERGIES')
 
-    hdu_image = pyfits.PrimaryHDU(np.zeros((nebin, npix, npix)),
-                                  header=w.to_header())
+    hdu_image = fits.PrimaryHDU(np.zeros((nebin, npix, npix)),
+                                header=w.to_header())
 
     hdu_image.data[...] = k
 
     hdu_image.header['CUNIT3'] = 'MeV'
 
-    hdulist = pyfits.HDUList([hdu_image, hdu_energies])
-    hdulist.writeto(outfile, clobber=True)
+    with fits.HDUList([hdu_image, hdu_energies]) as hdulist:
+        hdulist.writeto(outfile, clobber=True)
 
 
 def make_gaussian_spatial_map(skydir, sigma, outfile, cdelt=None, npix=None):
@@ -350,13 +350,13 @@ def make_gaussian_spatial_map(skydir, sigma, outfile, cdelt=None, npix=None):
         npix = int(np.ceil((6.0 * (sigma + cdelt)) / cdelt))
 
     w = wcs_utils.create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5)
-    hdu_image = pyfits.PrimaryHDU(np.zeros((npix, npix)),
-                                  header=w.to_header())
+    hdu_image = fits.PrimaryHDU(np.zeros((npix, npix)),
+                                header=w.to_header())
 
     hdu_image.data[:, :] = utils.make_gaussian_kernel(sigma, npix=npix,
                                                       cdelt=cdelt)
-    hdulist = pyfits.HDUList([hdu_image])
-    hdulist.writeto(outfile, clobber=True)
+    with fits.HDUList([hdu_image]) as hdulist:
+        hdulist.writeto(outfile, clobber=True)
 
 
 def make_disk_spatial_map(skydir, radius, outfile, cdelt=None, npix=None):
@@ -368,13 +368,13 @@ def make_disk_spatial_map(skydir, radius, outfile, cdelt=None, npix=None):
         npix = int(np.ceil((2.0 * (radius + cdelt)) / cdelt))
 
     w = wcs_utils.create_wcs(skydir, cdelt=cdelt, crpix=npix / 2. + 0.5)
-    hdu_image = pyfits.PrimaryHDU(np.zeros((npix, npix)),
-                                  header=w.to_header())
+    hdu_image = fits.PrimaryHDU(np.zeros((npix, npix)),
+                                header=w.to_header())
 
     hdu_image.data[:, :] = utils.make_disk_kernel(radius, npix=npix,
                                                   cdelt=cdelt)
-    hdulist = pyfits.HDUList([hdu_image])
-    hdulist.writeto(outfile, clobber=True)
+    with fits.HDUList([hdu_image]) as hdulist:
+        hdulist.writeto(outfile, clobber=True)
 
 
 def delete_source_map(srcmap_file, names, logger=None):
@@ -389,39 +389,40 @@ def delete_source_map(srcmap_file, names, logger=None):
        List of HDU keys of source maps to be deleted.
 
     """
-    hdulist = pyfits.open(srcmap_file)
-    hdunames = [hdu.name.upper() for hdu in hdulist]
+    with fits.open(srcmap_file) as hdulist:
+        hdunames = [hdu.name.upper() for hdu in hdulist]
 
-    if not isinstance(names, list):
-        names = [names]
+        if not isinstance(names, list):
+            names = [names]
 
-    for name in names:
-        if not name.upper() in hdunames:
-            continue
-        del hdulist[name.upper()]
+        for name in names:
+            if not name.upper() in hdunames:
+                continue
+            del hdulist[name.upper()]
 
-    hdulist.writeto(srcmap_file, clobber=True)
+        hdulist.writeto(srcmap_file, clobber=True)
 
 
 def update_source_maps(srcmap_file, srcmaps, logger=None):
-    hdulist = pyfits.open(srcmap_file)
-    hdunames = [hdu.name.upper() for hdu in hdulist]
 
-    for name, data in srcmaps.items():
+    with fits.open(srcmap_file) as hdulist:
+        hdunames = [hdu.name.upper() for hdu in hdulist]
 
-        if not name.upper() in hdunames:
+        for name, data in srcmaps.items():
 
-            for hdu in hdulist[1:]:
-                if hdu.header['XTENSION'] == 'IMAGE':
-                    break
+            if not name.upper() in hdunames:
 
-            newhdu = pyfits.ImageHDU(data, hdu.header, name=name)
-            newhdu.header['EXTNAME'] = name
-            hdulist.append(newhdu)
+                for hdu in hdulist[1:]:
+                    if hdu.header['XTENSION'] == 'IMAGE':
+                        break
 
-        if logger is not None:
-            logger.debug('Updating source map for %s' % name)
+                newhdu = fits.ImageHDU(data, hdu.header, name=name)
+                newhdu.header['EXTNAME'] = name
+                hdulist.append(newhdu)
 
-        hdulist[name].data[...] = data
+            if logger is not None:
+                logger.debug('Updating source map for %s' % name)
 
-    hdulist.writeto(srcmap_file, clobber=True)
+            hdulist[name].data[...] = data
+
+        hdulist.writeto(srcmap_file, clobber=True)

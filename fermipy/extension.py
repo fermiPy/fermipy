@@ -14,6 +14,8 @@ from fermipy import utils
 from fermipy import defaults
 from fermipy.config import ConfigSchema
 from fermipy.gtutils import SourceMapState, FreeParameterState
+from fermipy.timing import Timer
+from fermipy.data_struct import MutableNamedTuple
 from fermipy import fits_utils
 from LikelihoodState import LikelihoodState
 
@@ -29,13 +31,13 @@ class ExtensionFit(object):
         one-dimensional scan of the spatial extension parameter over
         the range specified with the width parameters.  The 1-D
         profile likelihood is then used to compute the best-fit value,
-        upper limit, and TS for extension.  The background parameters
-        that will be simultaneously profiled when performing the
-        spatial scan can be controlled with the ``free_background``
-        and ``free_radius`` options.  By default the position of the
-        source will be fixed to its current position.  A simultaneous
-        fit to position and extension can be performed by setting
-        ``fit_position`` to True.
+        upper limit, and TS for extension.  The nuisance parameters
+        that will be simultaneously fit when performing the spatial
+        scan can be controlled with the ``fix_shape``,
+        ``free_background``, and ``free_radius`` options.  By default
+        the position of the source will be fixed to its current
+        position.  A simultaneous fit to position and extension can be
+        performed by setting ``fit_position`` to True.
 
         Parameters
         ----------
@@ -54,7 +56,7 @@ class ExtensionFit(object):
             dictionary is also saved to the dictionary of this source under
             'extension'.
         """
-
+        timer = Timer.create(start=True)
         name = self.roi.get_source_by_name(name).name
 
         schema = ConfigSchema(self.defaults['extension'],
@@ -92,6 +94,7 @@ class ExtensionFit(object):
         if config['write_npy']:
             np.save(outfile + '.npy', dict(ext))
 
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return ext
 
     def _extension(self, name, **kwargs):
@@ -103,6 +106,8 @@ class ExtensionFit(object):
         width = kwargs['width']
         free_background = kwargs['free_background']
         free_radius = kwargs.get('free_radius', None)
+        fix_shape = kwargs.get('fix_shape', False)
+        make_tsmap = kwargs.get('make_tsmap', False)
         update = kwargs['update']
         sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
 
@@ -114,6 +119,8 @@ class ExtensionFit(object):
             psf_scale_fn = None
 
         saved_state = LikelihoodState(self.like)
+        loglike_init = -self.like()
+        self.logger.debug('Initial Model Log-Likelihood: %f', loglike_init)
 
         if not free_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
@@ -129,13 +136,18 @@ class ExtensionFit(object):
                                       loglevel=logging.DEBUG)
 
         # Fit baseline model
-        self.free_norm(name, loglevel=logging.DEBUG)
+        self.free_source(name, loglevel=logging.DEBUG)
+        if fix_shape:
+            self.free_source(name, free=False, pars='shape',
+                             loglevel=logging.DEBUG)
+
         fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
         src = self.roi.copy_source(name)
 
         # Save likelihood value for baseline fit
-        loglike0 = fit_output['loglike']
-        self.logger.debug('Baseline Likelihood: %f', loglike0)
+        saved_state_base = LikelihoodState(self.like)
+        loglike_base = fit_output['loglike']
+        self.logger.debug('Baseline Model Log-Likelihood: %f', loglike_base)
 
         if not width:
             width = np.logspace(np.log10(width_min), np.log10(width_max),
@@ -150,7 +162,8 @@ class ExtensionFit(object):
         o.width = width
         o.dloglike = np.zeros(len(width) + 1)
         o.loglike = np.zeros(len(width) + 1)
-        o.loglike_base = loglike0
+        o.loglike_base = loglike_base
+        o.loglike_init = loglike_init
         o.config = kwargs
         o.ebin_ext = np.ones(self.enumbins) * np.nan
         o.ebin_ext_err = np.ones(self.enumbins) * np.nan
@@ -166,29 +179,6 @@ class ExtensionFit(object):
         o.ebin_e_max = self.energies[1:]
         o.ebin_e_ctr = np.sqrt(o.ebin_e_min * o.ebin_e_max)
 
-        self.set_source_morphology(name, spatial_model='PointSource',
-                                   use_pylike=False,
-                                   psf_scale_fn=psf_scale_fn)
-
-        # Fit a point-source
-        self.logger.debug('Fitting point-source model.')
-        fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
-
-        if src['SpatialModel'] != 'PointSource' and kwargs['fit_position']:
-            loc = self.localize(name, update=False,
-                                dtheta_max=max(0.5, src['SpatialWidth']))
-            o.loglike_ptsrc = loc['loglike_loc']
-        else:
-            o.loglike_ptsrc = fit_output['loglike']
-
-        self.logger.debug('Point Source Likelihood: %f', o['loglike_ptsrc'])
-
-        if kwargs['save_model_map']:
-            o.ptsrc_tot_map = self.model_counts_map()
-            o.ptsrc_src_map = self.model_counts_map(name)
-            o.ptsrc_bkg_map = self.model_counts_map(exclude=[name])
-
-        # Perform scan over width parameter
         self.logger.debug('Width scan vector:\n %s', width)
 
         if kwargs['fit_position']:
@@ -212,6 +202,7 @@ class ExtensionFit(object):
                                    use_pylike=False,
                                    psf_scale_fn=psf_scale_fn)
 
+        # Perform scan over width parameter
         o.loglike = self._scan_extension(name,
                                          spatial_model=spatial_model,
                                          width=width,
@@ -224,60 +215,80 @@ class ExtensionFit(object):
                                    use_pylike=False,
                                    psf_scale_fn=psf_scale_fn)
 
-        #self.logger.debug('Likelihood: %s',o['loglike'])
-        o.dloglike = o.loglike - o.loglike_ptsrc
-
         fit_output = self._fit(loglevel=logging.DEBUG, update=False,
                                **kwargs['optimizer'])
+
         o.source_fit = self.get_src_model(name, reoptimize=True,
                                           optimizer=kwargs['optimizer'])
         o.loglike_ext = fit_output['loglike']
-        o.ts_ext = 2 * (o['loglike_ext'] - o['loglike_ptsrc'])
 
         if kwargs['fit_ebin']:
             self._fit_extension_ebin(name, o, **kwargs)
-
-        self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
-                         % (o['ext'], o['ext_err_hi'], o['ext_err_lo']))
-        self.logger.info('TS_ext:        %.3f' % o['ts_ext'])
-        self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
-
-        if kwargs['fit_position']:
-            self.logger.info('Position:\n'
-                             '(  ra, dec) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
-                             '(glon,glat) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
-                             'offset = %8.4f r68 = %8.4f r95 = %8.4f r99 = %8.4f',
-                             o.ra, o.ra_err, o.dec, o.dec_err,
-                             o.glon, o.glon_err, o.glat, o.glat_err,
-                             o.pos_offset, o.pos_r68, o.pos_r95, o.pos_r99)
 
         if kwargs['save_model_map']:
             o.ext_tot_map = self.model_counts_map()
             o.ext_src_map = self.model_counts_map(name)
             o.ext_bkg_map = self.model_counts_map(exclude=[name])
 
-        tsmap_model = {'SpatialModel': 'RadialDisk',
-                       'SpatialWidth': 0.1 * 0.8246211251235321}
-        tsmap_model.update(src.spectral_pars)
-        tsmap = self.tsmap(model=tsmap_model,
-                           map_skydir=SkyCoord(o['ra'], o['dec'], unit='deg'),
-                           map_size=max(1.0, 4.0 * o['ext']),
-                           exclude=[name],
-                           write_fits=False,
-                           write_npy=False,
-                           use_pylike=False,
-                           make_plots=False,
-                           loglevel=logging.DEBUG)
+        if make_tsmap:
+            tsmap_model = {'SpatialModel': 'RadialDisk',
+                           'SpatialWidth': 0.1 * 0.8246211251235321}
+            tsmap_model.update(src.spectral_pars)
+            self.logger.info('Generating TS map.')
+            tsmap = self.tsmap(model=tsmap_model,
+                               map_skydir=SkyCoord(
+                                   o['ra'], o['dec'], unit='deg'),
+                               map_size=max(1.0, 4.0 * o['ext']),
+                               exclude=[name],
+                               write_fits=False,
+                               write_npy=False,
+                               use_pylike=False,
+                               make_plots=False,
+                               loglevel=logging.DEBUG)
+            o.tsmap = tsmap['ts']
 
-        o.tsmap = tsmap['ts']
+        self.logger.info('Testing point-source model.')
+        # Test point-source hypothesis
+        self.set_source_morphology(name, spatial_model='PointSource',
+                                   use_pylike=False,
+                                   psf_scale_fn=psf_scale_fn)
+
+        # Fit a point-source
+        saved_state_base.restore()
+        self.logger.debug('Fitting point-source model.')
+        fit_output = self._fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
+
+        if src['SpatialModel'] == 'PointSource' and kwargs['fit_position']:
+            loc = self.localize(name, update=False)
+            o.loglike_ptsrc = loc['loglike_loc']
+        else:
+            o.loglike_ptsrc = fit_output['loglike']
+
+        o.dloglike = o.loglike - o.loglike_ptsrc
+        o.ts_ext = 2 * (o.loglike_ext - o.loglike_ptsrc)
+        self.logger.debug('Point-Source Model Likelihood: %f', o.loglike_ptsrc)
+
+        if kwargs['save_model_map']:
+            o.ptsrc_tot_map = self.model_counts_map()
+            o.ptsrc_src_map = self.model_counts_map(name)
+            o.ptsrc_bkg_map = self.model_counts_map(exclude=[name])
 
         if update and (sqrt_ts_threshold is None or
                        np.sqrt(o['ts_ext']) > sqrt_ts_threshold):
-            src = self.delete_source(name)
+            src = self.delete_source(name, loglevel=logging.DEBUG)
+            src.set_spatial_model(spatial_model,
+                                  {'ra': o.ra, 'dec': o.dec,
+                                   'SpatialWidth': o.ext})
             # FIXME: Issue with source map cache with source is
             # initialized as fixed.
-            self.add_source(name, src, free=True)
-            self.fit(loglevel=logging.DEBUG, **kwargs['optimizer'])
+            self.add_source(name, src, free=True, loglevel=logging.DEBUG)
+            self.free_source(name, loglevel=logging.DEBUG)
+            if fix_shape:
+                self.free_source(name, free=False, pars='shape',
+                                 loglevel=logging.DEBUG)
+            fit_output = self.fit(loglevel=logging.DEBUG,
+                                  **kwargs['optimizer'])
+            o.loglike_ext = fit_output['loglike']
 
             src = self.roi.get_source_by_name(name)
             if kwargs['fit_position']:
@@ -289,11 +300,27 @@ class ExtensionFit(object):
         else:
             self.set_source_morphology(name, spatial_model=src['SpatialModel'],
                                        spatial_pars=src.spatial_pars,
-                                       update_source=True)
+                                       update_source=False)
             # Restore ROI to previous state
             saved_state.restore()
             self._sync_params(name)
             self._update_roi()
+
+        self.logger.info('Best-fit extension: %6.4f + %6.4f - %6.4f'
+                         % (o['ext'], o['ext_err_hi'], o['ext_err_lo']))
+        self.logger.info('TS_ext:        %.3f' % o['ts_ext'])
+        self.logger.info('Extension UL: %6.4f' % o['ext_ul95'])
+        self.logger.info('LogLike: %12.3f DeltaLogLike: %12.3f',
+                         o.loglike_ext, o.loglike_ext - o.loglike_init)
+
+        if kwargs['fit_position']:
+            self.logger.info('Position:\n'
+                             '(  ra, dec) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                             '(glon,glat) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                             'offset = %8.4f r68 = %8.4f r95 = %8.4f r99 = %8.4f',
+                             o.ra, o.ra_err, o.dec, o.dec_err,
+                             o.glon, o.glon_err, o.glat, o.glat_err,
+                             o.pos_offset, o.pos_r68, o.pos_r95, o.pos_r99)
 
         return o
 
@@ -316,9 +343,12 @@ class ExtensionFit(object):
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'EXT_DATA'
 
-        hdus = [ext['tsmap'].create_primary_hdu(),
-                hdu_data] + hdu_images
+        if ext.get('tsmap'):
+            hdus = [ext['tsmap'].create_primary_hdu()]
+        else:
+            hdus = [fits.PrimaryHDU()]
 
+        hdus += [hdu_data] + hdu_images
         hdus[0].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
         hdus[1].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
         fits_utils.write_hdus(hdus, filename,
@@ -497,16 +527,40 @@ class ExtensionFit(object):
         psf_scale_fn = kwargs.get('psf_scale_fn', None)
         reoptimize = kwargs.get('reoptimize', True)
 
-        width = np.logspace(-2.0, 0.5, 16)
-        width = np.concatenate(([0.0], width))
+        src = self.roi.copy_source(name)
 
-        loglike = self._scan_extension(name, spatial_model=spatial_model,
-                                       width=width, optimizer=optimizer,
-                                       skydir=skydir,
-                                       psf_scale_fn=psf_scale_fn,
-                                       reoptimize=reoptimize)
+        # If the source is extended split the likelihood scan into two
+        # parts centered on the best-fit value -- this ensures better
+        # fit stability
+        if (src['SpatialModel'] in ['RadialGaussian', 'RadialDisk'] and
+                src['SpatialWidth'] > 0.1):
+            width_lo = np.logspace(-2.0, np.log10(src['SpatialWidth']), 11)
+            width_hi = np.logspace(np.log10(src['SpatialWidth']), 0.5, 11)
+            loglike_lo = self._scan_extension(name, spatial_model=spatial_model,
+                                              width=width_lo[::-1],
+                                              optimizer=optimizer,
+                                              skydir=skydir,
+                                              psf_scale_fn=psf_scale_fn,
+                                              reoptimize=reoptimize)[::-1]
+            loglike_hi = self._scan_extension(name, spatial_model=spatial_model,
+                                              width=width_hi,
+                                              optimizer=optimizer,
+                                              skydir=skydir,
+                                              psf_scale_fn=psf_scale_fn,
+                                              reoptimize=reoptimize)
+            width = np.concatenate((width_lo, width_hi[1:]))
+            loglike = np.concatenate((loglike_lo, loglike_hi[1:]))
+        else:
+            width = np.logspace(-2.0, 0.5, 21)
+            width = np.concatenate(([0.0], width))
+            loglike = self._scan_extension(name, spatial_model=spatial_model,
+                                           width=width, optimizer=optimizer,
+                                           skydir=skydir,
+                                           psf_scale_fn=psf_scale_fn,
+                                           reoptimize=reoptimize)
 
-        ul_data = utils.get_parameter_limits(width, loglike)
+        ul_data = utils.get_parameter_limits(width, loglike,
+                                             bounds=[10**-3.0, 10**0.5])
 
         if not np.isfinite(ul_data['err']):
             ul_data['x0'] = width[np.argmax(loglike)]
@@ -514,8 +568,9 @@ class ExtensionFit(object):
             ul_data['err_lo'] = ul_data['x0']
             ul_data['err_hi'] = ul_data['x0']
 
+        imax = np.argmax(loglike)
         err = max(10**-2.0, ul_data['err'])
-        lolim = max(ul_data['x0'] - 2.0 * err, 0)
+        lolim = max(min(ul_data['x0'], width[imax]) - 2.0 * err, 0)
 
         if np.isfinite(ul_data['ul']):
             hilim = 1.5 * ul_data['ul']
@@ -530,21 +585,28 @@ class ExtensionFit(object):
                                         skydir=skydir,
                                         psf_scale_fn=psf_scale_fn,
                                         reoptimize=reoptimize)
-        ul_data = utils.get_parameter_limits(width2, loglike2)
+        ul_data2 = utils.get_parameter_limits(width2, loglike2,
+                                              bounds=[10**-3.0, 10**0.5])
 
-        o = {}
-        o['ext'] = max(ul_data['x0'], 10**-2.5)
-        o['ext_ul95'] = ul_data['ul']
-        o['ext_err_lo'] = ul_data['err_lo']
-        o['ext_err_hi'] = ul_data['err_hi']
-        o['ext_err'] = ul_data['err']
-        o['loglike_ext'] = ul_data['lnlmax']
-        o['ra'] = skydir.ra.deg
-        o['dec'] = skydir.dec.deg
-        o['glon'] = skydir.galactic.l.deg
-        o['glat'] = skydir.galactic.b.deg
-        o['pos_offset'] = 0.0
-        return o
+        self.logger.debug('width: %s', width)
+        self.logger.debug('loglike: %s', loglike-np.max(loglike))
+        self.logger.debug('ul_data:\n %s', pprint.pformat(ul_data))
+        self.logger.debug('width2: %s', width2)
+        self.logger.debug('loglike2: %s', loglike2-np.max(loglike2))
+        self.logger.debug('ul_data2:\n %s', pprint.pformat(ul_data2))
+        
+        return MutableNamedTuple(
+            ext=max(ul_data2['x0'], 10**-2.5),
+            ext_ul95=ul_data2['ul'],
+            ext_err_lo=ul_data2['err_lo'],
+            ext_err_hi=ul_data2['err_hi'],
+            ext_err=ul_data2['err'],
+            loglike_ext=ul_data2['lnlmax'],
+            ra=skydir.ra.deg,
+            dec=skydir.dec.deg,
+            glon=skydir.galactic.l.deg,
+            glat=skydir.galactic.b.deg,
+            pos_offset=0.0)
 
     def _fit_extension_full(self, name, **kwargs):
 
@@ -553,48 +615,74 @@ class ExtensionFit(object):
         spatial_model = kwargs.get('spatial_model', 'RadialGaussian')
         loglike = -self.like()
 
+        o = MutableNamedTuple(
+            ext=np.nan, ext_ul95=np.nan,
+            ext_err_lo=np.nan, ext_err_hi=np.nan,
+            ext_err=np.nan,
+            loglike_ext=np.nan,
+            ra=np.nan, dec=np.nan, glon=np.nan, glat=np.nan,
+            ra_err=np.nan, dec_err=np.nan,
+            glon_err=np.nan, glat_err=np.nan,
+            pos_err=np.nan, pos_r68=np.nan,
+            pos_r95=np.nan, pos_r99=np.nan,
+            pos_err_semimajor=np.nan, pos_err_semiminor=np.nan,
+            pos_angle=np.nan, pos_offset=np.nan)
+
+        t0 = Timer()
+        t1 = Timer()
+
         nstep = 7
         for i in range(4):
 
+            t0.start()
             fit_ext = self._fit_extension(name, skydir=skydir, **kwargs)
+            o.update(fit_ext)
             self.set_source_morphology(name,
                                        spatial_model=spatial_model,
-                                       spatial_pars={'SpatialWidth': max(
-                                           fit_ext['ext'], 0.00316)},
+                                       spatial_pars={
+                                           'SpatialWidth': max(o.ext, 0.00316)},
                                        use_pylike=False)
+            t0.stop()
 
-            dtheta_max = max(0.5, 1.5 * fit_ext['ext'])
-            fit_pos = self._fit_position(name, nstep=nstep,
-                                         dtheta_max=dtheta_max,
-                                         zmin=-3.0, use_pylike=False)
+            t1.start()
+            if i == 0 or not np.isfinite(o.pos_r99):
+                dtheta_max = max(0.5, 1.5 * o.ext)
+            else:
+                dtheta_max = max(0.5, o.pos_r99)
 
-            scan_cdelt = min(
-                2.0 * fit_pos['pos_r68'] / (nstep - 1.0), self._binsz)
+            fit_pos0, fit_pos1 = self._fit_position(name, nstep=nstep,
+                                                    dtheta_max=dtheta_max,
+                                                    zmin=-3.0, use_pylike=False)
+            o.update(fit_pos0)
+            t1.stop()
+
             self.set_source_morphology(name,
                                        spatial_model=spatial_model,
-                                       spatial_pars={'RA': fit_pos['ra'],
-                                                     'DEC': fit_pos['dec']},
+                                       spatial_pars={'RA': o['ra'],
+                                                     'DEC': o['dec']},
                                        use_pylike=False)
 
-            fit_ext.update(fit_pos)
+            self.logger.debug('Elapsed Time: %.2f %.2f',
+                              t0.elapsed_time, t1.elapsed_time)
 
-            skydir = fit_pos['skydir']
-            fit_ext['ra'] = skydir.ra.deg
-            fit_ext['dec'] = skydir.dec.deg
-            fit_ext['pos_offset'] = skydir.separation(src.skydir).deg
-            fit_ext['loglike_ext'] = -self.like()
-            dloglike = fit_ext['loglike_ext'] - loglike
+            fit_output = self._fit(
+                loglevel=logging.DEBUG, **kwargs['optimizer'])
 
-            self.logger.info('Extension Fit Iteration %i', i)
-            self.logger.info('R68 = %8.3f Offset = %8.3f '
-                             'Delta-LogLikelihood = %8.2f',
-                             fit_ext['ext'], fit_ext['pos_offset'], dloglike)
+            skydir = fit_pos0['skydir']
+            o.pos_offset = skydir.separation(src.skydir).deg
+            o.loglike_ext = -self.like()
+            dloglike = o.loglike_ext - loglike
+
+            self.logger.info('Iter %i R68 = %8.3f Offset = %8.3f '
+                             'LogLikelihood = %10.2f Delta-LogLikelihood = %8.2f',
+                             i, o.ext, o.pos_offset, o.loglike_ext,
+                             dloglike)
 
             if i > 0 and dloglike < 0.1:
                 break
 
-            loglike = fit_ext['loglike_ext']
+            loglike = o.loglike_ext
 
         self.set_source_morphology(name, spatial_pars=src.spatial_pars,
                                    use_pylike=False)
-        return fit_ext
+        return o

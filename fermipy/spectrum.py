@@ -588,3 +588,18 @@ class DMFitFunction(SpectralFunction):
         dndx = dndx_interp((mass, xm))
         dndx[xm > 0] = 0
         return phip * dndx / x
+
+    def set_channel(self, chan):
+
+        if isinstance(chan, int):
+            ichan = DMFitFunction.channel_index_mapping[chan]
+        else:
+            chan_code = DMFitFunction.channel_rev_map[chan]
+            ichan = DMFitFunction.channel_index_mapping[chan_code]
+
+        self._dndx_interp = RegularGridInterpolator([self._mass, self._x],
+                                                    self._dndx[ichan, :, :],
+                                                    bounds_error=False,
+                                                    fill_value=None)
+        self.extra_params['dndx_interp'] = self._dndx_interp
+        self.extra_params['chan'] = chan

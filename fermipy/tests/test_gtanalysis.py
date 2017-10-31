@@ -312,18 +312,19 @@ def test_gtanalysis_lightcurve(create_pg1553_analysis):
     o = gta.lightcurve('3FGL J1555.7+1111', nbins=2,
                        free_radius=3.0)
 
-    flux = np.array([2.91756869996e-08,
-                     2.36889996939e-08])
-    flux_err = np.array([1.93194096609e-09,
-                         1.82269439301e-09])
-    ts = np.array([1463.06618532,
-                   1123.16013115])
+    rtol = 0.01    
+    flux = np.array([2.917568e-08,
+                     2.359114e-08])
+    flux_err = np.array([1.931940e-09,
+                         1.822694e-09])
+    ts = np.array([1463.066,
+                   1123.160])
 
-    assert_allclose(o['flux'], flux, rtol=1E-4)
-    assert_allclose(o['flux_err'], flux_err, rtol=1E-4)
-    assert_allclose(o['ts'], ts, rtol=1E-4)
+    assert_allclose(o['flux'], flux, rtol=rtol)
+    assert_allclose(o['flux_err'], flux_err, rtol=rtol)
+    assert_allclose(o['ts'], ts, rtol=rtol)
 
     tab = Table.read(os.path.join(gta.workdir, o['file']))
-    assert_allclose(tab['flux'], flux, rtol=1E-4)
-    assert_allclose(tab['flux_err'], flux_err, rtol=1E-4)
-    assert_allclose(tab['ts'], ts, rtol=1E-4)
+    assert_allclose(tab['flux'], flux, rtol=rtol)
+    assert_allclose(tab['flux_err'], flux_err, rtol=rtol)
+    assert_allclose(tab['ts'], ts, rtol=rtol)

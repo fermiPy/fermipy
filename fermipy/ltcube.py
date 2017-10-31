@@ -201,6 +201,18 @@ class LTCube(HpxMap):
         hdulist = fits.open(ltfile)
         data = hdulist['EXPOSURE'].data.field('COSBINS')
         data_wt = hdulist['WEIGHTED_EXPOSURE'].data.field('COSBINS')
+        if hdulist['EXPOSURE'].header['PHIBINS'] > 0:
+            data = data[:,:hdulist['EXPOSURE'].header['NBRBINS']]
+            # first phibin is the same as phibin = 0 or sum of phibin 1:n
+            # data = reshape(data.shape[0],
+            #hdulist["EXPOSURE"].header["PHIBINS"]+1,
+            #hdulist["EXPOSURE"].header["NBRBINS"])
+        if hdulist['WEIGHTED_EXPOSURE'].header['PHIBINS'] > 0:
+            data_wt = data[:,:hdulist['WEIGHTED_EXPOSURE'].header['NBRBINS']]
+            # first phibin is the same as phibin = 0 or sum of phibin 1:n
+            # data_wt = reshape(data_wt.shape[0],
+            #hdulist["WEIGHTED_EXPOSURE"].header["PHIBINS"]+1,
+            #hdulist["WEIGHTED_EXPOSURE"].header["NBRBINS"])
         data = data.astype(float)
         data_wt = data_wt.astype(float)
         tstart = hdulist[0].header['TSTART']
@@ -216,6 +228,8 @@ class LTCube(HpxMap):
         hpx = HPX.create_from_header(hdulist['EXPOSURE'].header, cth_edges)
         #header = dict(hdulist['EXPOSURE'].header)
         tab_gti = Table.read(ltfile, 'GTI')
+        hdulist.close()
+
         return cls(data[:, ::-1].T, hpx, cth_edges,
                    tstart=tstart, tstop=tstop,
                    zmin=zmin, zmax=zmax, tab_gti=tab_gti,
@@ -278,9 +292,21 @@ class LTCube(HpxMap):
     def load_ltfile(self, ltfile):
 
         ltc = LTCube.create_from_fits(ltfile)
+        self.load(ltc)
+
+    def load(self, ltc):
+
         self._counts += ltc.data
-        self._tstart = min(self.tstart, ltc.tstart)
-        self._tstop = max(self.tstop, ltc.tstop)
+
+        if self._tstart is not None:
+            self._tstart = min(self.tstart, ltc.tstart)
+        else:
+            self._tstart = ltc.tstart
+
+        if self._tstop is not None:
+            self._tstop = max(self.tstop, ltc.tstop)
+        else:
+            self._tstop = ltc.tstop
 
     def get_skydir_lthist(self, skydir, cth_bins):
         """Get the livetime distribution (observing profile) for a given sky
@@ -405,5 +431,5 @@ class LTCube(HpxMap):
             hdu.header['TSTART'] = self.tstart
             hdu.header['TSTOP'] = self.tstop
 
-        hdulist = fits.HDUList(hdus)
-        hdulist.writeto(outfile, clobber=True)
+        with fits.HDUList(hdus) as hdulist:
+            hdulist.writeto(outfile, clobber=True)

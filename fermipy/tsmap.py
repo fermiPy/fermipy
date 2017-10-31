@@ -24,6 +24,7 @@ from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.spectrum import PowerLaw
 from fermipy.config import ConfigSchema
+from fermipy.timing import Timer
 from LikelihoodState import LikelihoodState
 
 MAX_NITER = 100
@@ -673,6 +674,7 @@ class TSMapGenerator(object):
            for TS and source amplitude.
 
         """
+        timer = Timer.create(start=True)
 
         schema = ConfigSchema(self.defaults['tsmap'])
         schema.add_option('loglevel', logging.INFO)
@@ -680,6 +682,7 @@ class TSMapGenerator(object):
         schema.add_option('map_size', 1.0)
         schema.add_option('threshold', 1E-2, '', float)
         schema.add_option('use_pylike', True, '', bool)
+        schema.add_option('outfile', None, '', str)
         config = schema.create_config(self.config['tsmap'], **kwargs)
 
         # Defining default properties of test source model
@@ -700,8 +703,13 @@ class TSMapGenerator(object):
 
         self.logger.log(config['loglevel'], 'Finished TS map')
 
-        outfile = utils.format_filename(self.workdir, 'tsmap',
-                                        prefix=[o['name']])
+        outfile = config.get('outfile', None)
+        if outfile is None:        
+            outfile = utils.format_filename(self.workdir, 'tsmap',
+                                            prefix=[o['name']])
+        else:
+            outfile = os.path.join(self.workdir,
+                                   os.path.splitext(outfile)[0])
             
         if config['write_fits']:
             o['file'] = os.path.basename(outfile) + '.fits'
@@ -709,7 +717,9 @@ class TSMapGenerator(object):
 
         if config['write_npy']:
             np.save(outfile + '.npy', o)
-            
+
+        self.logger.log(config['loglevel'],
+                        'Execution time: %.2f s', timer.elapsed_time)
         return o
 
     def _make_tsmap_fits(self, data, filename, **kwargs):

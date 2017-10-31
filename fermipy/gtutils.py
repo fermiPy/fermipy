@@ -36,6 +36,7 @@ def bitmask_to_bits(mask):
 
     return bits
 
+
 DEFAULT_SCALE_DICT = {'value': 1000.0,
                       'scale': 1.0, 'min': 0.001, 'max': 1000.0}
 DEFAULT_NORM_DICT = {'value': 1E-12, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}
@@ -46,47 +47,59 @@ DEFAULT_INDEX_DICT = {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0}
 FUNCTION_NORM_PARS = {}
 FUNCTION_PAR_NAMES = {}
 FUNCTION_DEFAULT_PARS = {
-    'PowerLaw': {'Index': DEFAULT_INDEX_DICT,
-                 'Scale': DEFAULT_SCALE_DICT,
-                 'Prefactor': DEFAULT_NORM_DICT},
-    'PowerLaw2': {'Index': DEFAULT_INDEX_DICT,
-                  'LowerLimit': {'value': 100.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
-                  'UpperLimit': {'value': 100000.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
-                  'Integral': DEFAULT_INTEGRAL_DICT},
-    'BrokenPowerLaw': {'Index1': DEFAULT_INDEX_DICT,
-                       'Index2': DEFAULT_INDEX_DICT,
-                       'BreakValue': DEFAULT_SCALE_DICT,
-                       'Prefactor': DEFAULT_NORM_DICT},
-    'BrokenPowerLaw2': {'Index1': DEFAULT_INDEX_DICT,
-                        'Index2': DEFAULT_INDEX_DICT,
-                        'LowerLimit': {'value': 100.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
-                        'UpperLimit': {'value': 100000.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
-                        'BreakValue': DEFAULT_SCALE_DICT,
-                        'Integral': DEFAULT_INTEGRAL_DICT},
-    'BPLExpCutoff': {'Index1': DEFAULT_INDEX_DICT,
-                     'Index2': DEFAULT_INDEX_DICT,
-                     'BreakValue': DEFAULT_SCALE_DICT,
-                     'Prefactor': DEFAULT_NORM_DICT},
-    'SmoothBrokenPowerLaw': {'Index1': DEFAULT_INDEX_DICT,
-                             'Index2': DEFAULT_INDEX_DICT,
-                             'BreakValue': DEFAULT_SCALE_DICT,
-                             'Prefactor': DEFAULT_NORM_DICT,
-                             'Beta': {'value': 0.2, 'scale': 1.0, 'min': 0.01, 'max': 10.0}},
-    'PLSuperExpCutoff': {'Cutoff': DEFAULT_SCALE_DICT,
-                         'Index1': {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0},
-                         'Index2': {'value': 1.0, 'scale': 1.0, 'min': 0.0, 'max': 2.0},
-                         'Prefactor': DEFAULT_NORM_DICT,
-                         },
-    'LogParabola': {'norm': DEFAULT_NORM_DICT,
-                    'alpha': {'value': 2.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
-                    'beta': {'value': 0.0, 'scale': 1.0, 'min': -10.0, 'max': 10.0},
-                    'Eb': DEFAULT_SCALE_DICT},
-    'ConstantValue': {'Normalization': {'value': 1.0, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}},
-    'FileFunction': {'Normalization': {'value': 1.0, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}},
-    'Gaussian': {'Mean': {'value': 1000.0, 'scale': 1.0, 'min': 1E-5, 'max': 1E5},
-                 'Sigma': {'value': 100.0, 'scale': 1.0, 'min': 10., 'max': 1E5},
-                 'Prefactor': DEFAULT_NORM_DICT},
-
+    'PowerLaw': {
+        'Index': DEFAULT_INDEX_DICT,
+        'Scale': DEFAULT_SCALE_DICT,
+        'Prefactor': DEFAULT_NORM_DICT},
+    'PowerLaw2': {
+        'Index': DEFAULT_INDEX_DICT,
+        'LowerLimit': {'value': 100.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
+        'UpperLimit': {'value': 100000.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
+        'Integral': DEFAULT_INTEGRAL_DICT},
+    'BrokenPowerLaw': {
+        'Index1': DEFAULT_INDEX_DICT,
+        'Index2': DEFAULT_INDEX_DICT,
+        'BreakValue': DEFAULT_SCALE_DICT,
+        'Prefactor': DEFAULT_NORM_DICT},
+    'BrokenPowerLaw2': {
+        'Index1': DEFAULT_INDEX_DICT,
+        'Index2': DEFAULT_INDEX_DICT,
+        'LowerLimit': {'value': 100.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
+        'UpperLimit': {'value': 100000.0, 'scale': 1.0, 'min': 20.0, 'max': 1000000.},
+        'BreakValue': DEFAULT_SCALE_DICT,
+        'Integral': DEFAULT_INTEGRAL_DICT},
+    'BPLExpCutoff': {
+        'Index1': DEFAULT_INDEX_DICT,
+        'Index2': DEFAULT_INDEX_DICT,
+        'BreakValue': DEFAULT_SCALE_DICT,
+        'Prefactor': DEFAULT_NORM_DICT},
+    'SmoothBrokenPowerLaw': {
+        'Index1': DEFAULT_INDEX_DICT,
+        'Index2': DEFAULT_INDEX_DICT,
+        'BreakValue': DEFAULT_SCALE_DICT,
+        'Prefactor': DEFAULT_NORM_DICT,
+        'Beta': {'value': 0.2, 'scale': 1.0, 'min': 0.01, 'max': 10.0}},
+    'PLSuperExpCutoff': {
+        'Cutoff': DEFAULT_SCALE_DICT,
+        'Index1': {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0},
+        'Index2': {'value': 1.0, 'scale': 1.0, 'min': 0.0, 'max': 2.0},
+        'Prefactor': DEFAULT_NORM_DICT,
+    },
+    'LogParabola': {
+        'norm': DEFAULT_NORM_DICT,
+        'alpha': {'value': 2.0, 'scale': 1.0, 'min': -5.0, 'max': 5.0},
+        'beta': {'value': 0.0, 'scale': 1.0, 'min': -2.0, 'max': 2.0},
+        'Eb': DEFAULT_SCALE_DICT},
+    'SpatialMap': {
+        'Prefactor': {'value': 1.0, 'scale': 1.0, 'min': 1.0, 'max': 1.0}},
+    'ConstantValue': {
+        'Normalization': {'value': 1.0, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}},
+    'FileFunction': {
+        'Normalization': {'value': 1.0, 'scale': 1.0, 'min': 1E-5, 'max': 1000.0}},
+    'Gaussian': {
+        'Mean': {'value': 1000.0, 'scale': 1.0, 'min': 1E-5, 'max': 1E5},
+        'Sigma': {'value': 100.0, 'scale': 1.0, 'min': 10., 'max': 1E5},
+        'Prefactor': DEFAULT_NORM_DICT},
 }
 
 
@@ -106,8 +119,11 @@ def init_function_pars():
 
     for fname in names:
 
-        FUNCTION_DEFAULT_PARS.setdefault(fname, {})
-        FUNCTION_PAR_NAMES.setdefault(fname, [])
+        pars = FUNCTION_DEFAULT_PARS.setdefault(fname, {})
+        par_names = FUNCTION_PAR_NAMES.setdefault(fname, [])
+
+        if 'EblAtten' in fname and fname[len('EblAtten::'):] in FUNCTION_DEFAULT_PARS:
+            pars.update(FUNCTION_DEFAULT_PARS[fname[len('EblAtten::'):]])
 
         fn = funcFactory.create(fname)
         try:
@@ -121,16 +137,14 @@ def init_function_pars():
         for i, p in enumerate(params):
 
             pname = p.getName()
-            FUNCTION_PAR_NAMES[fname] += [pname]
+            par_names += [pname]
 
             if pname == 'Scale':
-                FUNCTION_DEFAULT_PARS[fname].setdefault(
-                    pname, DEFAULT_SCALE_DICT)
+                pars.setdefault(pname, DEFAULT_SCALE_DICT)
             elif pname == 'Prefactor':
-                FUNCTION_DEFAULT_PARS[fname].setdefault(
-                    pname, DEFAULT_NORM_DICT)
+                pars.setdefault(pname, DEFAULT_NORM_DICT)
             else:
-                FUNCTION_DEFAULT_PARS[fname].setdefault(pname, {})
+                pars.setdefault(pname, {})
 
             bounds = p.getBounds()
             par_dict = dict(name=pname,
@@ -140,9 +154,9 @@ def init_function_pars():
                             scale=1.0,
                             free=False)
 
-            par_dict.update(copy.deepcopy(FUNCTION_DEFAULT_PARS[fname][pname]))
+            par_dict.update(copy.deepcopy(pars[pname]))
             par_dict['name'] = pname
-            FUNCTION_DEFAULT_PARS[fname][pname] = par_dict
+            pars[pname] = par_dict
 
 
 def get_function_par_names(function_type):
@@ -235,11 +249,11 @@ def gtlike_spectrum_to_vectors(spectrum):
     """ Convert a pyLikelihood object to a python dictionary which can
         be easily saved to a file."""
 
-    o = {'param_names' : np.zeros(10, dtype='S32'),
-         'param_values' : np.empty(10, dtype=float) * np.nan,
-         'param_errors' : np.empty(10, dtype=float) * np.nan,
+    o = {'param_names': np.zeros(10, dtype='S32'),
+         'param_values': np.empty(10, dtype=float) * np.nan,
+         'param_errors': np.empty(10, dtype=float) * np.nan,
          }
-    
+
     parameters = pyLike.ParameterVector()
     spectrum.getParams(parameters)
     for i, p in enumerate(parameters):

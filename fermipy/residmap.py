@@ -11,6 +11,7 @@ import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 from fermipy.skymap import Map
 from fermipy.config import ConfigSchema
+from fermipy.timing import Timer
 
 
 def poisson_lnl(nc, mu):
@@ -152,7 +153,7 @@ class ResidMapGenerator(object):
            for the residual significance and amplitude.    
 
         """
-
+        timer = Timer.create(start=True)
         self.logger.info('Generating residual maps')
 
         schema = ConfigSchema(self.defaults['residmap'])
@@ -186,6 +187,7 @@ class ResidMapGenerator(object):
         if config['write_npy']:
             np.save(outfile + '.npy', o)
 
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return o
 
     def _make_residmap_fits(self, data, filename, **kwargs):

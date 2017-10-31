@@ -44,7 +44,8 @@ class SensitivityCalc(object):
     """
 
     def __init__(self, gdiff, iso, ltc, ebins, event_class, event_types=None,
-                 gdiff_fit=None, iso_fit=None):
+                 gdiff_fit=None, iso_fit=None, spatial_model='PointSource',
+                 spatial_size=None):
 
         self._gdiff = gdiff
         self._gdiff_fit = gdiff_fit
@@ -55,8 +56,10 @@ class SensitivityCalc(object):
         self._log_ebins = np.log10(ebins)
         self._ectr = np.exp(utils.edge_to_center(np.log(self._ebins)))
         self._event_class = event_class
+        self._spatial_model = spatial_model
+        self._spatial_size = spatial_size
         if event_types is None:
-            self._event_types = [['FRONT'],['BACK']]
+            self._event_types = [['FRONT'], ['BACK']]
         else:
             self._event_types = event_types
 
@@ -80,6 +83,14 @@ class SensitivityCalc(object):
     @property
     def ectr(self):
         return self._ectr
+
+    @property
+    def spatial_model(self):
+        return self._spatial_model
+
+    @property
+    def spatial_size(self):
+        return self._spatial_size
 
     def compute_counts(self, skydir, fn, ebins=None):
         """Compute signal and background counts for a point source at
@@ -143,11 +154,13 @@ class SensitivityCalc(object):
             isov = np.exp(np.interp(np.log(ectr), np.log(self._iso[0]),
                                     np.log(self._iso[1])))
             bkgv += isov
-            s, b = irfs.compute_ps_counts(
-                ebins, expv, psf, bkgv, fn, egy_dim=1)
+            s0, b0 = irfs.compute_ps_counts(ebins, expv, psf, bkgv, fn,
+                                            egy_dim=1,
+                                            spatial_model=self.spatial_model,
+                                            spatial_size=self.spatial_size)
 
-            sig += [s]
-            bkg += [b]
+            sig += [s0]
+            bkg += [b0]
 
             if self._iso_fit is not None:
                 isov_fit = np.exp(np.interp(np.log(ectr), np.log(self._iso_fit[0]),
@@ -161,9 +174,11 @@ class SensitivityCalc(object):
                                                        np.ravel(coords0[1]))
                 bkgv_fit = bkgv_fit.reshape(expv.shape)
                 bkgv_fit += isov_fit
-                s, b = irfs.compute_ps_counts(ebins, expv, psf,
-                                              bkgv_fit, fn, egy_dim=1)
-                bkg_fit += [b]
+                s0, b0 = irfs.compute_ps_counts(ebins, expv, psf,
+                                                bkgv_fit, fn, egy_dim=1,
+                                                spatial_model=self.spatial_model,
+                                                spatial_size=self.spatial_size)
+                bkg_fit += [b0]
 
         sig = np.concatenate([np.expand_dims(t, -1) for t in sig])
         bkg = np.concatenate([np.expand_dims(t, -1) for t in bkg])
@@ -224,12 +239,12 @@ class SensitivityCalc(object):
         norms = irfs.compute_norm(sig, bkg, ts_thresh,
                                   min_counts, sum_axes=[1, 2, 3], bkg_fit=bkg_fit,
                                   rebin_axes=[4, 10, 1])
+
         npred = np.squeeze(np.apply_over_axes(np.sum, norms * sig, [1, 2, 3]))
         npred = np.array(npred, ndmin=1)
-        norms = np.array(np.squeeze(norms), ndmin=1)
-        flux = norms * fn.flux(ebins[0], ebins[-1])
-        eflux = norms * fn.eflux(ebins[0], ebins[-1])
-        dnde = norms * fn.dnde(ectr)
+        flux = np.squeeze(norms) * fn.flux(ebins[0], ebins[-1])
+        eflux = np.squeeze(norms) * fn.eflux(ebins[0], ebins[-1])
+        dnde = np.squeeze(norms) * fn.dnde(ectr)
         e2dnde = ectr**2 * dnde
 
         o = dict(e_min=self.ebins[0], e_max=self.ebins[-1], e_ref=ectr,
@@ -237,12 +252,15 @@ class SensitivityCalc(object):
                  dnde=dnde, e2dnde=e2dnde)
 
         sig, bkg, bkg_fit = self.compute_counts(skydir, fn)
-        npred = np.squeeze(np.apply_over_axes(np.sum, norms * sig, [2, 3]))
-        flux = np.squeeze(norms[:, None] *
+
+        npred = np.squeeze(np.apply_over_axes(np.sum, norms * sig,
+                                              [2, 3]))
+        flux = np.squeeze(np.squeeze(norms, axis=(1, 2, 3))[:, None] *
                           fn.flux(self.ebins[:-1], self.ebins[1:]))
-        eflux = np.squeeze(norms[:, None] *
+        eflux = np.squeeze(np.squeeze(norms, axis=(1, 2, 3))[:, None] *
                            fn.eflux(self.ebins[:-1], self.ebins[1:]))
-        dnde = np.squeeze(norms[:, None] * fn.dnde(self.ectr))
+        dnde = np.squeeze(np.squeeze(norms, axis=(1, 2, 3))
+                          [:, None] * fn.dnde(self.ectr))
         e2dnde = ectr**2 * dnde
 
         o['bins'] = dict(npred=npred,

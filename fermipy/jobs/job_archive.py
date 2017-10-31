@@ -278,10 +278,7 @@ class JobDetails(object):
         """Create a `JobDetails` from an `astropy.table.row.Row` """
         kwargs = {}
         for key in table_row.colnames:
-            if table_row[key].dtype.kind in ['S', 'U']:
-                kwargs[key] = table_row[key].astype(str)
-            else:
-                kwargs[key] = table_row[key]
+            kwargs[key] = table_row[key]
 
         infile_refs = kwargs.pop('infile_refs')
         outfile_refs = kwargs.pop('outfile_refs')
