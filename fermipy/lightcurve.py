@@ -156,7 +156,6 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         gta = GTAnalysis(config, roi, loglevel=logging.DEBUG)
         gta.logger.info('Fitting time range %i %i' % (time[0], time[1]))
         gta.setup()
-        # gta.load_roi(workdir+'/_lc_%s.npy'%name)
     except:
         print('Analysis failed in time range %i %i' %
               (time[0], time[1]))
@@ -181,6 +180,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     fit_results = _fit_lc(gta, name, **kwargs)
     gta.write_xml('fit_model_final.xml')
     srcmodel = copy.deepcopy(gta.get_src_model(name))
+    numfree = gta.get_free_param_vector().count(True)
 
     # rerun fit using params from full time (constant) fit using same
     # param vector as the successful fit to get loglike
@@ -191,32 +191,42 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     const_fit_results = gta.fit()
     const_srcmodel = gta.get_src_model(name)
 
+    # rerun using shape fixed to full time fit
+    # for the fixed-shape lightcurve
+    gta.free_sources(name, pars='norm')
+    gta.fit()
+    fixed_srcmodel = gta.get_src_model(name)
+
+    # special lc output
     o = {'flux_const': const_srcmodel['flux'],
          'loglike_const': const_fit_results['loglike'],
          'fit_success': fit_results['fit_success'],
          'fit_quality': fit_results['fit_quality'],
          'fit_status': fit_results['fit_status'],
+         'num_free_params': numfree,
          'config': config}
 
+    # full flux output
     if fit_results['fit_success'] == 1:
         for k in defaults.source_flux_output.keys():
             if not k in srcmodel:
                 continue
             o[k] = srcmodel[k]
+            o[k+'_fixed'] = fixed_srcmodel[k]
 
     gta.logger.info('Finished time range %i %i' % (time[0], time[1]))
     return o
 
 
-def calcTS_var(loglike, loglike_const, flux_err, flux_const, systematic):
+def calcTS_var(loglike, loglike_const, flux_err, flux_const, systematic, fit_success):
     # calculates variability according to Eq. 4 in 2FGL
     # including correction using non-numbered Eq. following Eq. 4
 
     # first, remove failed bins
-    loglike = [elm for elm in loglike if isinstance(elm, float)]
+    loglike = [elm for elm,success in zip(loglike,fit_success) if success]
     loglike_const = [
-        elm for elm in loglike_const if isinstance(elm, float)]
-    flux_err = [elm for elm in flux_err if isinstance(elm, float)]
+        elm for elm,success in zip(loglike_const,fit_success) if success]
+    flux_err = [elm for elm,success in zip(flux_err,fit_success) if success]
 
     v_sqs = [loglike[i] - loglike_const[i] for i in xrange(len(loglike))]
     factors = [flux_err[i]**2 / (flux_err[i]**2 + systematic**2 * flux_const**2)
@@ -316,9 +326,11 @@ class LightCurve(object):
         o['tmin_mjd'] = utils.met_to_mjd(o['tmin'])
         o['tmax_mjd'] = utils.met_to_mjd(o['tmax'])
         o['loglike_const'] = np.nan * np.ones(o['tmin'].shape)
+        o['flux_const'] = np.nan * np.ones(o['tmin'].shape)
         o['fit_success'] = np.zeros(o['tmin'].shape, dtype=bool)
         o['fit_status'] = np.zeros(o['tmin'].shape, dtype=int)
         o['fit_quality'] = np.zeros(o['tmin'].shape, dtype=int)
+        o['num_free_params'] = np.zeros(o['tmin'].shape, dtype=int)
 
         for k, v in defaults.source_flux_output.items():
 
@@ -357,9 +369,6 @@ class LightCurve(object):
                                                      distance=kwargs['free_radius'],
                                                      exclude=diff_sources)]
 
-        #self.write_roi('_lc_%s'%name, make_plots=False, save_model_map=False)
-        # self.optimize()
-        # self.optimize()
         # save params from full time fit
         spectrum = self.like[name].src.spectrum()
         specname = spectrum.genericName()
@@ -439,14 +448,13 @@ class LightCurve(object):
                 except:
                     pass
 
-        #merged = utils.merge_list_of_dicts(mapo)
-        #o = utils.merge_dict(o, merged, add_new_keys=True)
         systematic = kwargs.get('systematic', 0.02)
 
         o['ts_var'] = calcTS_var(loglike=o['loglike'],
                                  loglike_const=o['loglike_const'],
                                  flux_err=o['flux_err'],
                                  flux_const=mapo[0]['flux_const'],
-                                 systematic=systematic)
+                                 systematic=systematic,
+                                 fit_success=o['fit_success'])
 
         return o
