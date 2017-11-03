@@ -5,6 +5,7 @@ import argparse
 from fermipy import merge_utils
 from fermipy import fits_utils
 from astropy.wcs import WCS
+from astropy.io.fits.verify import VerifyError
 from fermipy.hpx_utils import HPX
 
 def main():
@@ -31,8 +32,7 @@ def main():
         raise TypeError("Could not read projection from file %s"%args.files[0])
 
     if args.output:
-        hdulist.writeto(args.output, clobber=args.clobber)
-
+        hdulist.writeto(args.output, clobber=args.clobber, output_verify='silentfix')
 
 if __name__ == '__main__':
     main()
