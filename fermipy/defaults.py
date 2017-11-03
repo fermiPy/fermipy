@@ -172,6 +172,7 @@ gtlike = {
 # Options for generating livetime cubes
 ltcube = {
     'binsz': (1.0, 'Set the angular bin size for generating livetime cubes.', float),
+    'phibins': (0, 'Set the number of phi bins for generating livetime cubes.', int),
     'dcostheta': (0.025, 'Set the inclination angle binning represented as the cosine of the off-axis angle.', float),
     'use_local_ltcube': (False, 'Generate a livetime cube in the vicinity of the ROI using interpolation. '
                          'This option disables LT cube generation with gtltcube.', bool),
