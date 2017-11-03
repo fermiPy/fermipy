@@ -440,7 +440,7 @@ def create_sg_gtexpcube2(**kwargs):
     linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Run gtexpcube2 for a series of event types."
@@ -463,7 +463,7 @@ def create_sg_gtsrcmaps_catalog(**kwargs):
     linkname=kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 6000,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Run gtsrcmaps for catalog sources"
@@ -486,7 +486,7 @@ def create_sg_sum_ring_gasmaps(**kwargs):
     linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Sum gasmaps to build diffuse model components"
@@ -509,7 +509,7 @@ def create_sg_vstack_diffuse(**kwargs):
     linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Sum gasmaps to build diffuse model components"
@@ -532,7 +532,7 @@ def create_sg_healview_diffuse(**kwargs):
     linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Sum gasmaps to build diffuse model components"
