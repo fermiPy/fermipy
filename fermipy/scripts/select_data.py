@@ -9,10 +9,12 @@ import logging
 import re
 import shutil
 import pprint
+import numpy as np
 from fermipy.utils import mkdir
 from fermipy.batch import submit_jobs, add_lsf_args
 from fermipy.logger import Logger
 from fermipy.gtanalysis import run_gtapp
+from fermipy.validate.utils import get_files
 
 def create_filelist(filelist, outfile):
 
@@ -49,45 +51,97 @@ def main():
         
     parser.add_argument('--outdir', default=None, type=str,
                         help='Path to output directory used when merge=False.')
-    parser.add_argument('--outfile', default=None, type=str,
-                        help='Path to output file used when merge=True.')
+    parser.add_argument('--output', default=None, type=str,
+                        help='Path to output file used when merge=True.')    
     parser.add_argument('--scfile', default=None, type=str, help='')
         
     parser.add_argument('--dry_run', default=False, action='store_true')
     parser.add_argument('--overwrite', default=False, action='store_true')
     parser.add_argument('--merge', default=False, action='store_true',
-                        help='Merge input FT1 files into a single file.')
+                        help='Merge input FT1 files into N files where N is determined '
+                        'by files_per_split.')
 
+    parser.add_argument('--files_per_split', default=100,
+                        type=int, help='Set the number of files to combine in each '
+                        'split of the input file list.')
+
+    parser.add_argument('--file_idx_min', default=None,
+                        type=int, help='Set the number of files to assign to '
+                        'each batch job.')
+
+    parser.add_argument('--file_idx_max', default=None,
+                        type=int, help='Set the number of files to assign to '
+                        'each batch job.')
+    
     parser.add_argument('files', nargs='+', default=None,
-                        help='List of directories in which the analysis will '
-                             'be run.')
+                        help='List of files.')
     
     args = parser.parse_args()
 
-    if args.merge:
-        if not args.outfile:
-            raise Exception('No output file defined.')        
-        input_files = [[os.path.abspath(x) for x in args.files]]
-        output_files = [os.path.abspath(args.outfile)]
-    else:
-        args.outdir = os.path.abspath(args.outdir)
-        mkdir(args.outdir)
-        input_files = [[os.path.abspath(x)] for x in args.files]
-        output_files = [os.path.join(args.outdir,os.path.basename(x)) for x in args.files]
+    batch = vars(args).pop('batch')
+    files = vars(args).pop('files')    
+    args.outdir = os.path.abspath(args.outdir)
+    files = [os.path.abspath(f) for f in files]
+    
+    ft1_files = get_files(files,['.fit','.fits'])
+    for i, f in enumerate(ft1_files):
+        if re.search('^root\:\/\/', f) is None:
+            ft1_files[i] = os.path.abspath(f)
 
-    if args.batch:
+    input_files = []
+    output_files = []
+    files_idx_min = []
+    files_idx_max = []
+    opts = []
 
-        opts = vars(args).copy()
-        del opts['files']
-        del opts['batch']
+    if args.file_idx_min is not None and args.file_idx_max is not None:
+
+        files_idx_min = [args.file_idx_min]
+        files_idx_max = [args.file_idx_max]
+        input_files = [files]
+        output_files = [args.output]
+        
+    elif args.merge:
+        if not args.output:
+            raise Exception('No output file defined.')
+
+        nfiles = len(ft1_files)
+        njob = int(np.ceil(nfiles / float(args.files_per_split)))
+        for ijob, i in enumerate(range(0, nfiles, args.files_per_split)):
+
+            if args.outdir is not None:
+                mkdir(args.outdir)
+                outdir = os.path.abspath(args.outdir)
+            else:
+                outdir = os.path.dirname(os.path.dirname(args.output))
+
+            outfile = os.path.splitext(os.path.basename(args.output))[0]
+            outfile += '_%03i.fits' % (ijob)
+            outfile = os.path.join(outdir, outfile)
+            input_files += [files]
+            output_files += [outfile]
+            files_idx_min += [i]
+            files_idx_max += [i + args.files_per_split]
+            opts += [vars(args).copy()]
+            opts[-1]['output'] = outfile
+            opts[-1]['file_idx_min'] = i
+            opts[-1]['file_idx_max'] = i + args.files_per_split
+        
+    else:        
+        input_files = ft1_files
+        files_idx_min = [i for i in range(len(ft1_files))]
+        files_idx_max = [i+1 for i in range(len(ft1_files))]
+        output_files = [os.path.join(args.outdir,os.path.basename(x)) for x in ft1_files]
+        opts = [vars(args).copy() for x in ft1_files]
+        
+    if batch:
         submit_jobs('fermipy-select',
                     input_files, opts, output_files, overwrite=args.overwrite,
                     dry_run=args.dry_run)
         sys.exit(0)
 
 
-    logger = Logger.get(os.path.basename(__file__),None,logging.INFO)
-
+    logger = Logger.configure(os.path.basename(__file__),None,logging.INFO)
     logger.info('Starting.')
     
     if args.scfile is not None:
@@ -100,12 +154,24 @@ def main():
 
     logger.info('tmpdir %s',tmpdir)
     logger.info('outdir %s',args.outdir)
-    logger.info('outfile %s',args.outfile)
+    logger.info('output %s',args.output)
     
-    for infiles, outfile in zip(input_files,output_files):
+    for infiles, outfile, idx_min, idx_max in zip(input_files,output_files,
+                                                  files_idx_min, files_idx_max):
 
         logger.info('infiles %s',pprint.pformat(infiles))
         logger.info('outfile %s',outfile)
+        infiles = get_files(infiles,['.fit','.fits'])
+        if idx_min is not None:
+            infiles = infiles[idx_min:idx_max]
+        
+        for i, f in enumerate(infiles):
+
+            if re.search('^root\:\/\/', f) is None:
+                continue            
+            os.system('xrdcp %s %s'%(f, f.split('/')[-1]))
+            infiles[i] = os.path.join(tmpdir, f.split('/')[-1])
+            
         
         kw = { k : args.__dict__[k] for k in gtselect_keys }
         if kw['emax'] is None:
