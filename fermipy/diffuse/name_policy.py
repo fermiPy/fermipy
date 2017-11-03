@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import yaml
 
 # Map reprocessing 'key' to IRF name
-DATASET_DICTIONARY = dict(P8_P302='P8R2')
+DATASET_DICTIONARY = dict(P8_P302='P8R2', P8_P304='P8R3')
 
 # Map event class 'key' to IRF name
 EVCLASS_NAME_DICTIONARY = dict(source='SOURCE',
