@@ -441,7 +441,7 @@ def create_sg_residual_cr(**kwargs):
     appname = kwargs.pop('appname', 'gt-residual-cr-sg')
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Copy source maps from the library to a analysis directory"
