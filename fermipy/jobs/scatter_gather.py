@@ -764,13 +764,13 @@ class ScatterGather(Link):
             return JobStatus.done
 
         if self._initialize_link is not None:
-            failed_jobs = self._initialize_link.get_failed_jobs(True)
+            failed_jobs = self._initialize_link.get_failed_jobs(True, True)
             if len(failed_jobs) != 0:
                 init_status = self.initialize()
                 if init_status == JobStatus.failed:
                     return JobStatus.failed
 
-        failed_jobs = self._scatter_link.get_failed_jobs(True)
+        failed_jobs = self._scatter_link.get_failed_jobs(True, True)
         if len(failed_jobs) != 0:
             scatter_status = self.submit_jobs(self._scatter_link, failed_jobs)
             if scatter_status == JobStatus.failed:
