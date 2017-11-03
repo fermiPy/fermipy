@@ -264,6 +264,7 @@ class SplitAndMktime(Chain):
         
         output_dict = input_dict.copy()
         output_dict['filter'] = input_dict.get('mktimefilter')
+        output_dict.pop('evclass')
 
         for key_e, comp_e in sorted(self.comp_dict.items()):
             zcut = "zmax%i"%comp_e['zmax']
@@ -356,6 +357,7 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
 
         inputfiles = create_inputlist(args['ft1file'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
+        data_ver = NAME_FACTORY.base_dict['data_ver']
 
         nfiles = len(inputfiles)
         for idx, infile in enumerate(inputfiles):
@@ -367,7 +369,7 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
             except OSError:
                 pass
             scfile = args['ft2file'].replace('.lst', '_%s.fits' % key_scfile)
-            logfile = os.path.join(output_dir, 'scatter_mk_%s.log' % key)
+            logfile = os.path.join(output_dir, 'scatter_mk_%s_%s.log' % (data_ver, key))
 
             job_configs[key] = dict(ft1file=infile,
                                     scfile=scfile,
@@ -403,7 +405,7 @@ def create_sg_split_and_mktime(**kwargs):
     appname = kwargs.pop('appname', 'fermipy-split-and-mktime-sg')
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
