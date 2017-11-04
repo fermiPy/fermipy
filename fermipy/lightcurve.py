@@ -329,6 +329,7 @@ class LightCurve(object):
         o['loglike_const'] = np.nan * np.ones(o['tmin'].shape)
         o['flux_const'] = np.nan * np.ones(o['tmin'].shape)
         o['fit_success'] = np.zeros(o['tmin'].shape, dtype=bool)
+        o['fit_success_fixed'] = np.zeros(o['tmin'].shape, dtype=bool)
         o['fit_status'] = np.zeros(o['tmin'].shape, dtype=int)
         o['fit_quality'] = np.zeros(o['tmin'].shape, dtype=int)
         o['num_free_params'] = np.zeros(o['tmin'].shape, dtype=int)
