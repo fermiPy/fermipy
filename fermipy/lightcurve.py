@@ -194,13 +194,14 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     # rerun using shape fixed to full time fit
     # for the fixed-shape lightcurve
     gta.free_source(name, pars='norm')
-    gta.fit()
+    fixed_fit_results = gta.fit()
     fixed_srcmodel = gta.get_src_model(name)
 
     # special lc output
     o = {'flux_const': const_srcmodel['flux'],
          'loglike_const': const_fit_results['loglike'],
          'fit_success': fit_results['fit_success'],
+         'fit_success_fixed': fixed_fit_results['fit_success'],
          'fit_quality': fit_results['fit_quality'],
          'fit_status': fit_results['fit_status'],
          'num_free_params': numfree,
@@ -341,10 +342,13 @@ class LightCurve(object):
 
             if isinstance(v, np.ndarray) and v.dtype.kind in ['S', 'U']:
                 o[k] = np.zeros(o['tmin'].shape + v.shape, dtype=v.dtype)
+                o[k+'_fixed'] = copy.deepcopy(o[k])
             elif isinstance(v, np.ndarray):
                 o[k] = np.nan * np.ones(o['tmin'].shape + v.shape)
+                o[k+'_fixed'] = copy.deepcopy(o[k])
             elif isinstance(v, np.float):
                 o[k] = np.nan * np.ones(o['tmin'].shape)
+                o[k+'_fixed'] = copy.deepcopy(o[k])
 
         return o
 
@@ -450,11 +454,11 @@ class LightCurve(object):
 
         systematic = kwargs.get('systematic', 0.02)
 
-        o['ts_var'] = calcTS_var(loglike=o['loglike'],
+        o['ts_var'] = calcTS_var(loglike=o['loglike_fixed'],
                                  loglike_const=o['loglike_const'],
-                                 flux_err=o['flux_err'],
+                                 flux_err=o['flux_err_fixed'],
                                  flux_const=mapo[0]['flux_const'],
                                  systematic=systematic,
-                                 fit_success=o['fit_success'])
+                                 fit_success=o['fit_success_fixed'])
 
         return o
