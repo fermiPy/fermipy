@@ -193,7 +193,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
 
     # rerun using shape fixed to full time fit
     # for the fixed-shape lightcurve
-    gta.free_sources(name, pars='norm')
+    gta.free_source(name, pars='norm')
     gta.fit()
     fixed_srcmodel = gta.get_src_model(name)
 
