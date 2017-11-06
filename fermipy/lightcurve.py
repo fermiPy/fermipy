@@ -186,7 +186,8 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     # param vector as the successful fit to get loglike
     specname, spectrum = const_spectrum
     gta.set_source_spectrum(name, spectrum_type=specname,
-                            spectrum_pars=spectrum)
+                            spectrum_pars=spectrum,
+                            update_source=False)
     gta.free_source(name, free=False)
     const_fit_results = gta.fit()
     const_srcmodel = gta.get_src_model(name)
