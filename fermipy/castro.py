@@ -941,7 +941,7 @@ class CastroData_Base(object):
         ts_spec = self.TS_spectrum(spec_vals)
         chi2_vals = self.chi2_vals(spec_vals)
         chi2_spec = np.sum(chi2_vals)
-        pval_spec = stats.chisqprob(chi2_spec, len(spec_vals))
+        pval_spec = stats.distributions.chi2.sf(chi2_spec, len(spec_vals))
         return dict(params=out_pars, spec_vals=spec_vals,
                     spec_npred=spec_npred,
                     ts_spec=ts_spec, chi2_spec=chi2_spec,
