@@ -5012,6 +5012,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.logger.debug('Disabling energy dispersion for %s', s)
             self.set_edisp_flag(s, False)
 
+        if hasattr(self._like.logLike, 'set_save_all_srcmaps'):
+            self._like.logLike.set_save_all_srcmaps(True)
+            
         # Recompute fixed model weights
         self.logger.debug('Computing fixed weights')
         self.like.logLike.buildFixedModelWts()

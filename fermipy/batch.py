@@ -112,7 +112,7 @@ def add_lsf_args(parser):
                         help='Set the wallclock time allocation for the '
                              'job in minutes.')
 
-    parser.add_argument('--resources', default='rhel60', type=str,
+    parser.add_argument('--resources', default='rhel60 && scratch > 10', type=str,
                         help='Set the LSF resource string.')
 
 
@@ -132,7 +132,7 @@ def dispatch_job(jobname, exe, args, opts, batch_opts, dry_run=True):
     """
 
     batch_opts.setdefault('W', 300)
-    batch_opts.setdefault('R', 'rhel60')
+    batch_opts.setdefault('R', 'rhel60 && scratch > 10')
 
     cmd_opts = ''
     for k, v in opts.items():
