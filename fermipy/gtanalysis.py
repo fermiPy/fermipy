@@ -2654,7 +2654,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             o['fit_success'] = False
 
         if (covar and self.like.covariance is not None and
-            len(self.like.covariance) == num_free):
+                len(self.like.covariance) == num_free):
             o['covariance'] = np.array(self.like.covariance)
             o['errors'] = np.diag(o['covariance'])**0.5
             errinv = 1. / o['errors']
@@ -5014,7 +5014,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if hasattr(self._like.logLike, 'set_save_all_srcmaps'):
             self._like.logLike.set_save_all_srcmaps(True)
-            
+
         # Recompute fixed model weights
         self.logger.debug('Computing fixed weights')
         self.like.logLike.buildFixedModelWts()

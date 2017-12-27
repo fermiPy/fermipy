@@ -1483,7 +1483,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         plt.savefig(outfile)
         plt.close(fig)
-        
+
     def _plot_extension_tsmap(self, ext, roi=None, **kwargs):
 
         fmt = kwargs.get('format', self.config['format'])

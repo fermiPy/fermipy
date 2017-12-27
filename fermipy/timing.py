@@ -13,7 +13,7 @@ class Timer(object):
     @property
     def elapsed_time(self):
         """Get the elapsed time."""
-        
+
         # Timer is running
         if self._t0 is not None:
             return self._time + self._get_time()
@@ -33,7 +33,7 @@ class Timer(object):
 
     def start(self):
         """Start the timer."""
-        
+
         if self._t0 is not None:
             raise RuntimeError('Timer already started.')
 
