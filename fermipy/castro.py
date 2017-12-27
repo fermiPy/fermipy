@@ -840,7 +840,8 @@ class CastroData_Base(object):
         returns the best-fit normalization value
         """
         from scipy.optimize import brentq
-        fDeriv = lambda x: self.norm_derivative(specVals, x)
+
+        def fDeriv(x): return self.norm_derivative(specVals, x)
         try:
             result = brentq(fDeriv, xlims[0], xlims[1])
         except:
@@ -869,7 +870,8 @@ class CastroData_Base(object):
             Best-fit normalization value
         """
         from scipy.optimize import fmin
-        fToMin = lambda x: self.__call__(specVals * x)
+
+        def fToMin(x): return self.__call__(specVals * x)
         result = fmin(fToMin, 0., disp=False, xtol=1e-6)
         return result
 
@@ -1265,7 +1267,6 @@ class CastroData(CastroData_Base):
         return cls(norm_vals, nll_vals,
                    components[0].refSpec,
                    components[0].norm_type)
-
 
     def spectrum_loglike(self, specType, params, scale=1E3):
         """ return the log-likelihood for a particular spectrum

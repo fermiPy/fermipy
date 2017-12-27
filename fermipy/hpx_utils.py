@@ -781,11 +781,11 @@ class HPX(object):
     def get_sky_dirs(self):
 
         lonlat = self.get_sky_coords()
-        if self.coordsys == 'CEL':        
+        if self.coordsys == 'CEL':
             return SkyCoord(ra=lonlat.T[0], dec=lonlat.T[1], unit='deg', frame='icrs')
         else:
             return SkyCoord(l=lonlat.T[0], b=lonlat.T[1], unit='deg', frame='galactic')
-        
+
     def get_pixel_indices(self, lats, lons):
         """ "Return the indices in the flat array corresponding to a set of coordinates """
         theta = np.radians(90. - lats)

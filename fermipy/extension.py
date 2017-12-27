@@ -112,9 +112,9 @@ class ExtensionFit(object):
         sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
 
         if kwargs['psf_scale_fn']:
-            psf_scale_fn = lambda t: 1.0 + np.interp(np.log10(t),
-                                                     kwargs['psf_scale_fn'][0],
-                                                     kwargs['psf_scale_fn'][1])
+            def psf_scale_fn(t): return 1.0 + np.interp(np.log10(t),
+                                                        kwargs['psf_scale_fn'][0],
+                                                        kwargs['psf_scale_fn'][1])
         else:
             psf_scale_fn = None
 
@@ -589,12 +589,12 @@ class ExtensionFit(object):
                                               bounds=[10**-3.0, 10**0.5])
 
         self.logger.debug('width: %s', width)
-        self.logger.debug('loglike: %s', loglike-np.max(loglike))
+        self.logger.debug('loglike: %s', loglike - np.max(loglike))
         self.logger.debug('ul_data:\n %s', pprint.pformat(ul_data))
         self.logger.debug('width2: %s', width2)
-        self.logger.debug('loglike2: %s', loglike2-np.max(loglike2))
+        self.logger.debug('loglike2: %s', loglike2 - np.max(loglike2))
         self.logger.debug('ul_data2:\n %s', pprint.pformat(ul_data2))
-        
+
         return MutableNamedTuple(
             ext=max(ul_data2['x0'], 10**-2.5),
             ext_ul95=ul_data2['ul'],
