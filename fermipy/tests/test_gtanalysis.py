@@ -223,7 +223,7 @@ def test_gtanalysis_sed(create_draco_analysis):
     gta.simulate_roi()
 
     params = gta.roi['draco'].params
-    
+
     prefactor = 3E-12
     index = 1.9
     scale = params['Scale']['value']
@@ -247,7 +247,8 @@ def test_gtanalysis_sed(create_draco_analysis):
     assert_allclose(flux_resid, 0, atol=3.0)
 
     params = gta.roi['draco'].params
-    index_resid = (-params['Index']['value'] - index) / params['Index']['error']
+    index_resid = (-params['Index']['value'] - index) / \
+        params['Index']['error']
     assert_allclose(index_resid, 0, atol=3.0)
 
     prefactor_resid = (params['Prefactor']['value'] -
@@ -312,7 +313,7 @@ def test_gtanalysis_lightcurve(create_pg1553_analysis):
     o = gta.lightcurve('3FGL J1555.7+1111', nbins=2,
                        free_radius=3.0)
 
-    rtol = 0.01    
+    rtol = 0.01
     flux = np.array([2.917568e-08,
                      2.359114e-08])
     flux_err = np.array([1.931940e-09,

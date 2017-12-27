@@ -168,13 +168,12 @@ class Validator(object):
         print('loading events')
         self.load_events(tab)
 
-        skydir = SkyCoord(0.0,0.0,unit='deg')
+        skydir = SkyCoord(0.0, 0.0, unit='deg')
 
         print('creating LT Cube')
         ltc = LTCube.create_from_gti(skydir, self._tab_sc, tab_gti,
                                      self._zmax)
         self._ltc.load(ltc)
-        
 
     def load(self, filename, fill=False):
 
@@ -299,9 +298,9 @@ class Validator(object):
                 m, *(evclass, evtype, evt_xsep, energy, evt_ctheta))
             hists['evclass_%s' % lbl] += self.create_hist(*args_in)
             hists['evtype_%s' % lbl] += self.create_hist(*args_in,
-                                                          fill_evtype=True)
+                                                         fill_evtype=True)
             hists['evclass_psf_%s' % lbl] += self.create_hist(*args_in,
-                                                               fill_sep=True)
+                                                              fill_sep=True)
             hists['evtype_psf_%s' % lbl] += self.create_hist(*args_in, fill_sep=True,
                                                              fill_evtype=True)
 
@@ -428,10 +427,10 @@ class GRValidator(Validator):
         evt_ebin = utils.val_to_bin(self._energy_bins, tab['ENERGY'])
         evt_xsep = evt_sep / self._psf_scale[evt_ebin][None, :]
 
-        evt_ctheta = evt_ctheta.reshape((1,-1))
-        evt_sep = evt_sep.reshape((1,-1))
-        evt_xsep = evt_xsep.reshape((1,-1))
-        
+        evt_ctheta = evt_ctheta.reshape((1, -1))
+        evt_sep = evt_sep.reshape((1, -1))
+        evt_xsep = evt_xsep.reshape((1, -1))
+
         return evt_sep, evt_xsep, evt_ctheta
 
     def create_onoff_mask(self, sep, phase):
@@ -439,14 +438,15 @@ class GRValidator(Validator):
         mon = sep < 5.0
         moff = sep > 60.0
         return mon, moff
-    
+
     def fill_alpha(self):
 
-        domega_on = np.sin(np.radians(5.0))*4*np.pi
-        domega_off = (1.0-np.sin(np.radians(60.0)))*4*np.pi
-        
-        self._hists['evclass_alpha'][...] = domega_on/domega_off
-        self._hists['evtype_alpha'][...] = domega_on/domega_off
+        domega_on = np.sin(np.radians(5.0)) * 4 * np.pi
+        domega_off = (1.0 - np.sin(np.radians(60.0))) * 4 * np.pi
+
+        self._hists['evclass_alpha'][...] = domega_on / domega_off
+        self._hists['evtype_alpha'][...] = domega_on / domega_off
+
 
 class AGNValidator(Validator):
 
