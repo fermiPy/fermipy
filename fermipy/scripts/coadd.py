@@ -7,6 +7,7 @@ from fermipy import fits_utils
 from astropy.wcs import WCS
 from fermipy.hpx_utils import HPX
 
+
 def main():
     """ Main function for command line usage """
     usage = "usage: %(prog)s [options] "
@@ -28,7 +29,8 @@ def main():
     elif isinstance(proj, HPX):
         hdulist = merge_utils.merge_hpx_counts_cubes(args.files)
     else:
-        raise TypeError("Could not read projection from file %s"%args.files[0])
+        raise TypeError("Could not read projection from file %s" %
+                        args.files[0])
 
     if args.output:
         hdulist.writeto(args.output, clobber=args.clobber)
@@ -36,4 +38,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

@@ -177,7 +177,7 @@ def main():
     for infiles, outfile in zip(input_files, output_files):
 
         infile = infiles[0]
-        
+
         staged_infile = os.path.join(tmpdir, os.path.basename(infile))
         logFile = os.path.splitext(infile)[0] + '_tempo2.log'
 

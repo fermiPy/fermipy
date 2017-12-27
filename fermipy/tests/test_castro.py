@@ -67,14 +67,12 @@ def test_fit_dmfitfunction(sedfile):
     assert_allclose(fit_out['ts_spec'], 23.96697127, atol=0.01)
     assert_allclose(fit_out['params'][0], 8.02000000e-25)
 
-
     init_pars = np.array([1E-26, 30.])
     spec_func = cd.create_functor(dmfn_mumu, init_pars)
     fit_out = cd.fit_spectrum(spec_func, init_pars, freePars=[True, False])
 
     assert_allclose(fit_out['ts_spec'], 14.66041109, atol=0.01)
     assert_allclose(fit_out['params'][0], 2.45750000e-24, rtol=0.05)
-
 
     init_pars = np.array([1E-26, 30.])
     spec_func = cd.create_functor(dmfn_tautau, init_pars)
