@@ -3,6 +3,7 @@
 ``make_plots``	False	Generate diagnostic plots.
 ``max_kernel_radius``	3.0	Set the maximum radius of the test source kernel.  Using a smaller value will speed up the TS calculation at the loss of accuracy.
 ``model``	None	Dictionary defining the spatial/spectral properties of the test source. If model is None the test source will be a PointSource with an Index 2 power-law spectrum.
-``multithread``	False	Split the calculation across all available cores.
+``multithread``	False	Split the calculation across number of processes set by nthread option.
+``nthread``	None	Number of processes to create when multithread is True.  If None then one process will be created for each available core.
 ``write_fits``	True	Write the output to a FITS file.
 ``write_npy``	True	Write the output dictionary to a numpy file.
