@@ -1,9 +1,6 @@
 ``name``	`~str`	Name of Source, 
 ``tmin``	`~numpy.ndarray`	Lower edge of time bin in MET.
 ``tmax``	`~numpy.ndarray`	Upper edge of time bin in MET.
-``model``	`~str`	Best fit model to the source
-``ts``	`~numpy.ndarray`	Test Statistic
-``retCode``	`~numpy.ndarray`	Did the likelihood fit converge? 0 if yes, anything else means no
-``npred``	`~numpy.ndarray`	Number of Predicted photons in time bin from source
+``fit_success``	`~numpy.ndarray`	Did the likelihood fit converge? True if yes.
 ``config``	`~dict`	Copy of the input configuration to this method.
 ``ts_var``	`~float`	TS of variability. Should be distributed as :math:`\chi^2` with :math:`n-1` degrees of freedom, where :math:`n` is the number of time bins.

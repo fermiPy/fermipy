@@ -20,8 +20,8 @@ releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
   speed up source map calculation by rescaling source maps (enabled
   with ``use_scaled_srcmap=True``) and split the lightcurve
   calculation across N cores (enabled with ``multithread=True`` and
-  ``nthread=N``).  Add output parameters to for variability using
-  method from the 2FGL.
+  ``nthread=N``).  Add calculation of ``TS_var`` to test for
+  variability using method from the 2FGL.
 * Updates to validation tools.  Added MeritSkimmer script
   (``fermipy-merit-skimmer``) for skimming ROOT merit tuples either
   locally or on xrootd.
