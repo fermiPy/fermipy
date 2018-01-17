@@ -64,7 +64,8 @@ cat $0
 
         c = copy.deepcopy(config)
         c = utils.merge_dict(c, vdict, add_new_keys=True)
-        yaml.dump(utils.tolist(c), open(cfgfile, 'w'), default_flow_style=False)
+        yaml.dump(utils.tolist(c), open(cfgfile, 'w'),
+                  default_flow_style=False)
 
 
 def main():
@@ -91,11 +92,11 @@ def main():
     src_dict = {}
     for x in args.source_list:
         src_dict.update(yaml.load(open(x)))
-        
+
     if args.num_config:
-        src_dict = { k : src_dict[k] for k in
-                     list(src_dict.keys())[:args.num_config] }
-    
+        src_dict = {k: src_dict[k] for k in
+                    list(src_dict.keys())[:args.num_config]}
+
     clone_configs(args.basedir, args.configs, src_dict, args.script, args.args)
 
 

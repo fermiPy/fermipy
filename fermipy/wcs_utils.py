@@ -374,7 +374,7 @@ def get_cel_to_gal_angle(skydir):
     ----------
     skydir : `~astropy.coordinates.SkyCoord`
         Direction of projection center.
-    
+
     Returns
     -------
     angle : float

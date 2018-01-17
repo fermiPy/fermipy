@@ -337,12 +337,14 @@ def create_prior_functor(d):
     elif functype == 'lgauss':
         return function_prior(functype, d['mu'], d['sigma'], lgauss, lnlgauss)
     elif functype in ['lgauss_like', 'lgauss_lik']:
-        fn = lambda x, y, s: lgauss(y, x, s)
-        lnfn = lambda x, y, s: lnlgauss(y, x, s)
+        def fn(x, y, s): return lgauss(y, x, s)
+
+        def lnfn(x, y, s): return lnlgauss(y, x, s)
         return function_prior(functype, d['mu'], d['sigma'], fn, lnfn)
     elif functype == 'lgauss_log':
-        fn = lambda x, y, s: lgauss(x, y, s, logpdf=True)
-        lnfn = lambda x, y, s: lnlgauss(x, y, s, logpdf=True)
+        def fn(x, y, s): return lgauss(x, y, s, logpdf=True)
+
+        def lnfn(x, y, s): return lnlgauss(x, y, s, logpdf=True)
         return function_prior(functype, d['mu'], d['sigma'], fn, lnfn)
     else:
         raise KeyError("Unrecognized prior_functor type %s" % functype)
@@ -550,7 +552,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         y = []
 
         for xtmp in x:
-            fn = lambda t: -self.loglike(xtmp, t)
+            def fn(t): return -self.loglike(xtmp, t)
             ytmp = opt.fmin(fn, 1.0, disp=False)[0]
             ztmp = self.loglike(xtmp, ytmp)
             z.append(ztmp)
@@ -573,7 +575,8 @@ class LnLFn_norm_prior(castro.LnLFn):
         for xtmp in x:
             zv = -1. * self._lnlfn.interp(xtmp * yv) + nuis_vals
             sp = splrep(yv, zv, k=2, s=0)
-            rf = lambda t: splev(t, sp, der=1)
+
+            def rf(t): return splev(t, sp, der=1)
             ix = np.argmax(splev(yv, sp))
             imin, imax = max(0, ix - 3), min(len(yv) - 1, ix + 3)
             try:

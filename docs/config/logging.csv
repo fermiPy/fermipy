@@ -1,2 +1,3 @@
 ``chatter``	3	Set the chatter parameter of the STs.
+``prefix``		Prefix that will be appended to the logger name.
 ``verbosity``	3	

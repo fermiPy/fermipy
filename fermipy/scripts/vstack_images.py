@@ -6,6 +6,7 @@ import glob
 import argparse
 from fermipy import merge_utils
 
+
 def main():
     """ Main function for command line usage """
     usage = "usage: %(prog)s [options] "
@@ -19,29 +20,29 @@ def main():
                         help='Overwrite output file.')
     parser.add_argument('--hdu', default=None, type=str,
                         help='HDU name.')
-    parser.add_argument('--gzip', action='store_true', 
+    parser.add_argument('--gzip', action='store_true',
                         help='Compress output file')
-    parser.add_argument('--rm', action='store_true', 
+    parser.add_argument('--rm', action='store_true',
                         help='Remove input files.')
     parser.add_argument('files', nargs='+', default=None,
                         help='List of input files.')
 
     args = parser.parse_args()
 
-    hpx_map = merge_utils.stack_energy_planes_hpx(args.files,hdu=args.hdu)
+    hpx_map = merge_utils.stack_energy_planes_hpx(args.files, hdu=args.hdu)
 
     if args.output:
-        hpx_map.hpx.write_fits(hpx_map.counts,args.output,extname=args.hdu,clobber=args.clobber)
+        hpx_map.hpx.write_fits(hpx_map.counts, args.output,
+                               extname=args.hdu, clobber=args.clobber)
 
         if args.gzip:
-            os.system('gzip -9 %s'%args.output)
+            os.system('gzip -9 %s' % args.output)
 
         if args.rm:
             for farg in args.files:
                 flist = glob.glob(farg)
                 for ffound in flist:
                     os.path.unlink(ffound)
-
 
 
 if __name__ == '__main__':
