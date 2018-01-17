@@ -12,6 +12,31 @@ import subprocess
 from fermipy.jobs.job_archive import JobStatus, JobArchive
 from fermipy.jobs.scatter_gather import clean_job, ScatterGather
 
+def make_nfs_path(path):
+    """Make a nfs version of a file path. 
+    This just puts /nfs at the beginning instead of /gpfs"""
+    if os.path.isabs(path):
+        fullpath = path
+    else:
+        fullpath = os.path.abspath(path)
+    if len(fullpath) < 6:
+        return fullpath
+    if fullpath[0:6] == '/gpfs/':
+        fullpath = fullpath.replace('/gpfs/', '/nfs/')
+    return fullpath
+
+def make_gpfs_path(path):
+    """Make a gpfs version of a file path. 
+    This just puts /gpfs at the beginning instead of /nfs"""
+    if os.path.isabs(path):
+        fullpath = pathos.path.abspath(path)
+    else:
+        fullpath = os.path.abspath(path)
+    if len(fullpath) < 5:
+        return fullpath
+    if fullpath[0:5] == '/nfs/':
+        fullpath = fullpath.replace('/nfs/', '/gpfs/')
+    return fullpath
 
 def get_lsf_status():
     """Count and print the number of jobs in various LSF states
