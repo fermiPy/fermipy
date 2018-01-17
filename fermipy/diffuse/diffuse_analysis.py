@@ -19,13 +19,15 @@ from fermipy.diffuse import defaults as diffuse_defaults
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.job_library import create_sg_gtexpcube2,\
     create_sg_fermipy_coadd, create_sg_sum_ring_gasmaps,\
-    create_sg_vstack_diffuse, create_sg_gtsrcmaps_catalog
-    
+    create_sg_vstack_diffuse
+from fermipy.diffuse.gt_srcmaps_catalog import create_sg_gtsrcmaps_catalog
 from fermipy.diffuse.gt_srcmap_partial import create_sg_srcmap_partial
-from fermipy.diffuse.gt_assemble_model import create_sg_assemble_model
+from fermipy.diffuse.gt_assemble_model import create_sg_assemble_model,\
+    create_link_init_model
 from fermipy.diffuse.gt_split_and_bin import create_sg_split_and_bin
 from fermipy.diffuse.gt_merge_srcmaps import create_sg_merge_srcmaps
-from fermipy.diffuse.gt_coadd_aplit import create_chain_coadd_split
+
+
 
 NAME_FACTORY = NameFactory()
 
@@ -40,8 +42,8 @@ class DiffuseAnalysisChain(Chain):
         link_split_and_bin = create_sg_split_and_bin(linkname="%s.split"%linkname,
                                                      mapping={'hpx_order_max':'hpx_order_ccube',
                                                               'action': 'action_split'})
-        link_coadd_split = create_chain_coadd_split(linkname="%s.coadd"%linkname,
-                                                     mapping={'action': 'action_coadd'})
+        link_coadd_split = create_sg_fermipy_coadd(linkname="%s.coadd"%linkname,
+                                                   mapping={'action': 'action_coadd'})
         link_expcube = create_sg_gtexpcube2(linkname="%s.expcube"%linkname,
                                             mapping={'hpx_order_max':'hpx_order_expcube',
                                                      'action': 'action_expcube'})
