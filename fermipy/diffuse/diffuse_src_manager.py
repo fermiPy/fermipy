@@ -50,7 +50,7 @@ class GalpropMapManager(object):
         basedir : str
             Top level directory for finding files
         """
-        self.maptype = kwargs.get('maptype', 'newGasMaps_ST')
+        self.maptype = kwargs.get('maptype', 'ST')
         self.projtype = kwargs.get('projtype', 'healpix')
         self._name_factory = NameFactory(basedir=kwargs.get('basedir'))
         self._ring_dicts = {}
@@ -206,7 +206,7 @@ class GalpropMapManager(object):
         galkey : str
             A short key identifying the galprop parameters
 
-        Returns `odel_component.ModelComponentInfo`
+        Returns `Model_component.ModelComponentInfo`
         """
         kwargs = dict(source_name=merged_name,
                       source_ver=galkey,
@@ -353,6 +353,7 @@ class DiffuseModelManager(object):
         else:
             template_name = self.make_template_name(
                 model_type, "%s_%s" % (sourcekey, comp_key))
+            print ('comp_key', source_name, comp_key, template_name)           
             srcmdl_name = self.make_xml_name("%s_%s" % (sourcekey, comp_key))
 
         template_name = self._name_factory.fullpath(localpath=template_name)

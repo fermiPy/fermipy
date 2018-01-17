@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import yaml
 
 # Map reprocessing 'key' to IRF name
-DATASET_DICTIONARY = dict(P8_P302='P8R2', P8_P304='P8R3')
+DATASET_DICTIONARY = dict(P8_P302='P8R2', P8_P304='P8R3', P8_P305='P8R3')
 
 # Map event class 'key' to IRF name
 EVCLASS_NAME_DICTIONARY = dict(source='SOURCE',
@@ -111,7 +111,7 @@ class NameFactory(object):
     # galprop rings merging yaml file
     galprop_rings_yaml_format = 'models/galprop_rings_{galkey}.yaml'
     # catalog split yaml file
-    catalog_split_yaml_format = 'models/{sourcekey}.yaml'
+    catalog_split_yaml_format = 'models/catalog_{sourcekey}.yaml'
     # model yaml file
     model_yaml_format = 'models/model_{modelkey}.yaml'
 

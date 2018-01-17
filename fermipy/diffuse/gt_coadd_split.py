@@ -110,35 +110,7 @@ class CoaddSplit(Chain):
         return links
 
     @staticmethod
-    def _make_input_file_list(binnedfile, num_files):
-        """Make the list of input files for a particular energy bin X psf type """
-        outdir_base = os.path.dirname(binnedfile)
-        outbasename = os.path.basename(binnedfile)
-        filelist = ""
-        for i in range(num_files):
-            split_key = "%06i" % i
-            output_dir = os.path.join(outdir_base, split_key)
-            filepath = os.path.join(output_dir,
-                                    outbasename.replace('.fits', '_%s.fits.gz' % split_key))
-            filelist += ' %s' % filepath
-        return filelist
 
-    @staticmethod
-    def _make_ltcube_file_list(ltsumfile, num_files):
-        """Make the list of input files for a particular energy bin X psf type """
-        outdir_base = os.path.dirname(ltsumfile)
-        outbasename = os.path.basename(ltsumfile)
-        lt_list_file = ltsumfile.replace('fits', 'lst')
-        outfile = open(lt_list_file, 'w!')
-        filelist = ""
-        for i in range(num_files):
-            split_key = "%06i" % i
-            output_dir = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes', split_key)
-            filepath = os.path.join(output_dir, outbasename.replace('.fits', '_%s.fits' % split_key))
-            outfile.write(filepath)
-            outfile.write("\n")
-        outfile.close()
-        return '@'+lt_list_file
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
@@ -179,9 +151,6 @@ class CoaddSplit(Chain):
                 if self.args['do_ltsum']:                    
                     ltsumname = os.path.join(NAME_FACTORY.base_dict['basedir'], 
                                              NAME_FACTORY.ltcube(**kwargs_mktime))
-                    output_dict['ltsum_%s_%s' % (key_e, mktimekey)] = ltsumname
-                    output_dict['ltsumlist_%s_%s' % (key_e, mktimekey)] = CoaddSplit._make_ltcube_file_list(
-                        ltsumname, num_files)
                 for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):
                     for psf_type in sorted(comp_e['psf_types'].keys()):
                         kwargs_bin = kwargs_mktime.copy()
@@ -209,9 +178,9 @@ class CoaddSplit(Chain):
 
 
 def create_chain_coadd_split(**kwargs):
-    """Build and return a `CoaddSplit` object"""
-    chain = CoaddSplit(linkname=kwargs.pop('linkname', 'coadd-split'),
-                       comp_dict=kwargs.get('comp_dict', None))
+    """Build and return a `Link` object that can invoke coadd-split"""
+    linkname = kwargs.pop('linkname', 'coadd-split')
+    chain = CoaddSplit(**kwargs)
     return chain
 
 def main():

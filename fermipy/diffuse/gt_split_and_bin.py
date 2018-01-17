@@ -16,6 +16,7 @@ from fermipy.jobs.chain import Chain
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.gt_coadd_split import CoaddSplit
 from fermipy.diffuse import defaults as diffuse_defaults
@@ -23,45 +24,6 @@ from fermipy.diffuse.binning import EVT_TYPE_DICT
 
 
 NAME_FACTORY = NameFactory()
-
-
-def readlines(arg):
-    """Read lines from a file into a list.
-
-    Removes whitespace and lines that start with '#'
-    """
-    fin = open(arg)
-    lines_in = fin.readlines()
-    fin.close()
-    lines_out = []
-    for line in lines_in:
-        line = line.strip()
-        if len(line) == 0 or line[0] == '#':
-            continue
-        lines_out.append(line)
-    return lines_out
-
-
-def create_inputlist(arglist):
-    """Read lines from a file and makes a list of file names.
-
-    Removes whitespace and lines that start with '#'
-    Recursively read all files with the extension '.lst'
-    """
-    lines = []
-    if isinstance(arglist, list):
-        for arg in arglist:
-            if os.path.splitext(arg)[1] == '.lst':
-                lines += readlines(arg)
-            else:
-                lines.append(arg)
-    else:
-        if os.path.splitext(arglist)[1] == '.lst':
-            lines += readlines(arglist)
-        else:
-            lines.append(arglist)
-    return lines
-
 
 def make_full_path(basedir, outkey, origname):
     """Make a full file path"""
@@ -236,12 +198,11 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
                            ft1file=(None, 'Input FT1 file', str),
                            scratch=(None, 'Path to scratch area', str))
 
-    def __init__(self, chain, gather, **kwargs):
+    def __init__(self, chain, **kwargs):
         """C'tor
         """
         ConfigMaker.__init__(self, chain,
                              options=kwargs.get('options', self.default_options.copy()))
-        self.gather = gather
 
     def make_base_config(self, args):
         """Hook to build a baseline job configuration
@@ -256,15 +217,12 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
         if comp_file is not None:
             comp_dict = yaml.safe_load(open(comp_file))
             self.link.update_links(comp_dict)
-            self.gather.update_links(comp_dict)
         self.link.update_args(args)
-        self.gather.update_args(args)
         return self.link.args
 
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         NAME_FACTORY.update_base_dict(args['data'])
@@ -290,20 +248,13 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
                                     logfile=logfile,
                                     pfiles=output_dir)
 
-        output_config = dict(comp=args['comp'],
-                             data=args['data'],
-                             coordsys=args['coordsys'],
-                             nfiles=nfiles,
-                             link=None,
-                             logfile=os.path.join(outdir_base, 'gather.log'),
-                             dry_run=args['dry_run'])
 
-        return input_config, job_configs, output_config
+        return job_configs
 
 def create_chain_split_and_bin(**kwargs):
-    """Make a `fermipy.jobs.SplitAndBin` """
-    chain = SplitAndBin(linkname=kwargs.pop('linkname', 'split-and-bin'),
-                        comp_dict=kwargs.get('comp_dict', None))
+    """Build and return a `Link` object that can invoke split-and-bin"""
+    linkname = kwargs.pop('linkname', 'split-and-bin')
+    chain = SplitAndBin(**kwargs)
     return chain
 
 def create_sg_split_and_bin(**kwargs):
@@ -312,20 +263,18 @@ def create_sg_split_and_bin(**kwargs):
     appname = kwargs.pop('appname', 'fermipy-split-and-bin-sg')
 
     chain = SplitAndBin('%s.split'%linkname, **kwargs)
-    gather = CoaddSplit('%s.coadd'%linkname, **kwargs)
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
-    config_maker = ConfigMaker_SplitAndBin(chain, gather, **kwargs)
+    config_maker = ConfigMaker_SplitAndBin(chain, **kwargs)
     lsf_sg = build_sg_from_link(chain, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
                                 description=description,
-                                gather=gather,
                                 linkname=linkname,
                                 appname=appname,
                                 **kwargs)

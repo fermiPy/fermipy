@@ -7,12 +7,14 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import copy
+import math
 
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Link
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.lsf_impl import build_sg_from_link, make_nfs_path
+from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.diffuse_src_manager import make_ring_dicts,\
@@ -22,6 +24,34 @@ from fermipy.diffuse import defaults as diffuse_defaults
 
 NAME_FACTORY = NameFactory()
 
+def make_input_file_list(binnedfile, num_files):
+    """Make the list of input files for a particular energy bin X psf type """
+    outdir_base = os.path.dirname(binnedfile)
+    outbasename = os.path.basename(binnedfile)
+    filelist = ""
+    for i in range(num_files):
+        split_key = "%06i" % i
+        output_dir = os.path.join(outdir_base, split_key)
+        filepath = os.path.join(output_dir,
+                                outbasename.replace('.fits', '_%s.fits.gz' % split_key))
+        filelist += ' %s' % filepath
+    return filelist
+
+def make_ltcube_file_list(ltsumfile, num_files):
+    """Make the list of input files for a particular energy bin X psf type """
+    outdir_base = os.path.dirname(ltsumfile)
+    outbasename = os.path.basename(ltsumfile)
+    lt_list_file = ltsumfile.replace('fits', 'lst')
+    outfile = open(lt_list_file, 'w!')
+    filelist = ""
+    for i in range(num_files):
+        split_key = "%06i" % i
+        output_dir = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes', split_key)
+        filepath = os.path.join(output_dir, outbasename.replace('.fits', '_%s.fits' % split_key))
+        outfile.write(filepath)
+        outfile.write("\n")
+    outfile.close()
+    return '@'+lt_list_file
 
 def create_link_gtexpcube2(**kwargs):
     """Make a `fermipy.jobs.Gtlink` object to run gtexpcube2  """
@@ -59,12 +89,39 @@ def create_link_gtscrmaps(**kwargs):
                     **kwargs)
     return gtlink
 
+
+def create_link_gtltsum(**kwargs):
+    """Make a `fermipy.jobs.Gtlink` object to run gtltsum  """
+    gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtltsum'),
+                    appname='gtltsum',
+                    options=dict(infile1=(None, "Livetime cube 1 or list of files", str),
+                                 infile2=("none", "Livetime cube 2", str),
+                                 outfile=(None, "Output file", str)),
+                    file_args=dict(infile1=FileFlags.input_mask,
+                                   outfile=FileFlags.output_mask),
+                    **kwargs)
+    return gtlink    
+
 def create_link_fermipy_coadd(**kwargs):
     """Make a `fermipy.jobs.Link` object to run fermipy-coadd  """
     link = Link(linkname=kwargs.pop('linkname', 'fermipy-coadd'),
                 appname='fermipy-coadd',
                 options=dict(args=([], "List of input files", list),
                              output=(None, "Output file", str)),
+                file_args=dict(args=FileFlags.input_mask,
+                               output=FileFlags.output_mask),
+                **kwargs)
+    return link
+
+def create_link_fermipy_gather_srcmaps(**kwargs):
+    """Make a `fermipy.jobs.Link` object to run fermipy-gather-srcmaps  """
+    link = Link(linkname=kwargs.pop('linkname', 'fermipy-gather-srcmaps'),
+                appname='fermipy-gather-srcmaps',
+                options=dict(output=(None, "Output file name", str),
+                             args=([], "List of input files", list),
+                             gzip=(False, "Compress output", bool),
+                             rm=(False, "Remove input files", bool),
+                             clobber=(False, "Overwrite output", bool)),
                 file_args=dict(args=FileFlags.input_mask,
                                output=FileFlags.output_mask),
                 **kwargs)
@@ -77,7 +134,9 @@ def create_link_fermipy_vstack(**kwargs):
                 options=dict(output=(None, "Output file name", str),
                              hdu=(None, "Name of HDU to stack", str),
                              args=([], "List of input files", list),
-                             gzip=(False, "Compress output", bool)),
+                             gzip=(False, "Compress output", bool),
+                             rm=(False, "Remove input files", bool),
+                             clobber=(False, "Overwrite output", bool)),
                 file_args=dict(args=FileFlags.input_mask,
                                output=FileFlags.output_mask),
                 **kwargs)
@@ -122,13 +181,12 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
         datafile = args['data']
         if datafile is None or datafile == 'None':
-            return input_config, job_configs, {}
+            return job_configs
         NAME_FACTORY.update_base_dict(args['data'])
 
         for comp in components:
@@ -159,96 +217,167 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
                     outfile = NAME_FACTORY.bexpcube(**name_keys)
                     cmap = NAME_FACTORY.ccube(**name_keys)
                     infile = NAME_FACTORY.ltcube(**name_keys)
+                    logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                     job_configs[fullkey] = dict(cmap=cmap,
                                                 infile=infile,
                                                 outfile=outfile,
                                                 irfs=NAME_FACTORY.irfs(**name_keys),
                                                 hpx_order=min(comp.hpx_order, args['hpx_order_max']),
                                                 evtype=comp.evtype,
-                                                logfile=outfile.replace('.fits', '.log'))
+                                                logfile=logfile)
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 
-class ConfigMaker_SrcmapsCatalog(ConfigMaker):
-    """Small class to generate configurations for gtsrcmaps for catalog sources
+
+class ConfigMaker_Gtltsum(ConfigMaker):
+    """Small class to generate configurations for gtexpcube2
 
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
     --irf_ver  : IRF verions string (e.g., 'V6')
-    --sources  : Yaml file with input source model definitions
-    --make_xml : Write xml files for the individual components
+    --coordsys : Coordinate system ['GAL' | 'CEL']
+    --ft1file  : Input list of ft1 files
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           sources=diffuse_defaults.diffuse['sources'],
-                           make_xml=(False, 'Write xml files needed to make source maps', bool),)
+                           coordsys=diffuse_defaults.diffuse['coordsys'],
+                           ft1file=(None, 'Input FT1 file', str))
 
     def __init__(self, link, **kwargs):
         """C'tor
         """
         ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',
-                                                ConfigMaker_SrcmapsCatalog.default_options.copy()))
-        self.link = link
-
-    @staticmethod
-    def _make_xml_files(catalog_info_dict, comp_info_dict):
-        """Make all the xml file for individual components
-        """
-        for val in catalog_info_dict.values():
-            print("%s : %06i" % (val.srcmdl_name, len(val.roi_model.sources)))
-            val.roi_model.write_xml(val.srcmdl_name)
-
-        for val in comp_info_dict.values():
-            for val2 in val.values():
-                print("%s : %06i" % (val2.srcmdl_name, len(val2.roi_model.sources)))
-                val2.roi_model.write_xml(val2.srcmdl_name)
+                             options=kwargs.get('options', self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
+        datafile = args['data']
+        if datafile is None or datafile == 'None':
+            return job_configs
         NAME_FACTORY.update_base_dict(args['data'])
 
-        ret_dict = make_catalog_comp_dict(sources=args['sources'], basedir='.')
-        catalog_info_dict = ret_dict['catalog_info_dict']
-        comp_info_dict = ret_dict['comp_info_dict']
+        inputfiles = create_inputlist(args['ft1file'])
+        num_files = len(inputfiles)
 
-        if args['make_xml']:
-            ConfigMaker_SrcmapsCatalog._make_xml_files(catalog_info_dict, comp_info_dict)
+        for comp in components:
+            zcut = "zmax%i" % comp.zmax
+            
+            mktimelist = copy.copy(comp.mktimefilters)
+            if len(mktimelist) == 0:
+                mktimelist.append('none')
+            evtclasslist_keys = copy.copy(comp.evtclasses)
+            if len(evtclasslist_keys) == 0:
+                evtclasslist_keys.append('default')
+                evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
+            else:
+                evtclasslist_vals = copy.copy(evtclasslist_keys)
 
-        for catalog_name, catalog_info in catalog_info_dict.items():
-            for comp in components:
-                zcut = "zmax%i" % comp.zmax
-                key = comp.make_key('{ebin_name}_{evtype_name}')
-                name_keys = dict(zcut=zcut,
-                                 sourcekey=catalog_name,
-                                 ebin=comp.ebin_name,
-                                 psftype=comp.evtype_name,
-                                 coordsys='GAL',
-                                 irf_ver=args['irf_ver'],
-                                 mktime='none',
-                                 fullpath=True)
-                outfile = NAME_FACTORY.srcmaps(**name_keys)
-                logfile = outfile.replace('.fits', '.log')
-                job_configs[key] = dict(cmap=NAME_FACTORY.ccube(**name_keys),
-                                        expcube=NAME_FACTORY.ltcube(**name_keys),
-                                        irfs=NAME_FACTORY.irfs(**name_keys),
-                                        bexpmap=NAME_FACTORY.bexpcube(**name_keys),
-                                        outfile=outfile,
-                                        logfile=logfile,
-                                        srcmdl=catalog_info.srcmdl_name,
-                                        evtype=comp.evtype)
+            for mktimekey in mktimelist:
+                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):       
+                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclassval, zcut, mktimekey))
 
-        output_config = {}
-        return input_config, job_configs, output_config
+                    name_keys = dict(zcut=zcut,
+                                     ebin=comp.ebin_name,
+                                     psftype=comp.evtype_name,
+                                     coordsys=args['coordsys'],
+                                     irf_ver=args['irf_ver'],
+                                     mktime=mktimekey,
+                                     evclass=evtclassval,
+                                     fullpath=True)
+
+                    outfile = os.path.join(NAME_FACTORY.base_dict['basedir'], 
+                                           NAME_FACTORY.ltcube(**name_keys))
+                    infile1 = make_ltcube_file_list(outfile, num_files)
+                    logfile = make_nfs_path(outfile.replace('.fits', '.log'))
+                    job_configs[fullkey] = dict(infile1=infile1,
+                                                outfile=outfile,
+                                                logfile=logfile)
+
+        return job_configs
+
+
+class ConfigMaker_CoaddSplit(ConfigMaker):
+    """Small class to generate configurations for fermipy-coadd
+
+    This takes the following arguments:
+    --comp     : binning component definition yaml file
+    --data     : datset definition yaml file
+    --irf_ver  : IRF verions string (e.g., 'V6')
+    --coordsys : Coordinate system ['GAL' | 'CEL']
+    --ft1file  : Input list of ft1 files
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           coordsys=diffuse_defaults.diffuse['coordsys'],
+                           ft1file=(None, 'Input FT1 file', str))
+
+    def __init__(self, link, **kwargs):
+        """C'tor
+        """
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options', self.default_options.copy()))
+
+    def build_job_configs(self, args):
+        """Hook to build job configurations
+        """
+        job_configs = {}
+
+        components = Component.build_from_yamlfile(args['comp'])
+
+        datafile = args['data']
+        if datafile is None or datafile == 'None':
+            return job_configs
+        NAME_FACTORY.update_base_dict(args['data'])
+        outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
+
+        inputfiles = create_inputlist(args['ft1file'])
+        num_files = len(inputfiles)
+
+        for comp in components:
+            zcut = "zmax%i" % comp.zmax
+            
+            mktimelist = copy.copy(comp.mktimefilters)
+            if len(mktimelist) == 0:
+                mktimelist.append('none')
+            evtclasslist_keys = copy.copy(comp.evtclasses)
+            if len(evtclasslist_keys) == 0:
+                evtclasslist_keys.append('default')
+                evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
+            else:
+                evtclasslist_vals = copy.copy(evtclasslist_keys)
+
+            for mktimekey in mktimelist:
+                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):       
+                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclassval, zcut, mktimekey))
+
+                    name_keys = dict(zcut=zcut,
+                                     ebin=comp.ebin_name,
+                                     psftype=comp.evtype_name,
+                                     coordsys=args['coordsys'],
+                                     irf_ver=args['irf_ver'],
+                                     mktime=mktimekey,
+                                     evclass=evtclassval,
+                                     fullpath=True)
+
+                    ccube_name = os.path.basename(NAME_FACTORY.ccube(**name_keys))
+                    outfile = os.path.join(outdir_base, ccube_name)
+                    infiles = make_input_file_list(outfile, num_files)
+                    logfile = make_nfs_path(outfile.replace('.fits', '.log'))
+                    job_configs[fullkey] = dict(args=infiles,
+                                                output=outfile,
+                                                logfile=logfile)
+
+        return job_configs
+
+
 
 
 class ConfigMaker_SumRings(ConfigMaker):
@@ -272,7 +401,6 @@ class ConfigMaker_SumRings(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         gmm = make_ring_dicts(diffuse=args['diffuse'], basedir='.')
@@ -284,12 +412,12 @@ class ConfigMaker_SumRings(ConfigMaker):
                 file_string = ""
                 for fname in ring_info.files:
                     file_string += " %s" % fname
+                logfile = make_nfs_path(output_file.replace('.fits', '.log'))
                 job_configs[ring_key] = dict(output=output_file,
                                              args=file_string,
-                                             logfile=output_file.replace('.fits', '.log'))
+                                             logfile=logfile)
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 
 class ConfigMaker_Vstack(ConfigMaker):
@@ -317,7 +445,6 @@ class ConfigMaker_Vstack(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
@@ -351,14 +478,73 @@ class ConfigMaker_Vstack(ConfigMaker):
                 outfile_tokens = os.path.splitext(outfile)
                 infile_regexp = "%s_*.fits*" % outfile_tokens[0]
                 full_key = "%s_%s" % (sub_comp_info.sourcekey, key)
-
+                logfile=make_nfs_path(outfile.replace('.fits', '.log'))
                 job_configs[full_key] = dict(output=outfile,
                                              args=infile_regexp,
                                              hdu=sub_comp_info.source_name,
-                                             logfile=outfile.replace('.fits', '.log'))
+                                             logfile=logfile)
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
+
+
+class ConfigMaker_GatherSrcmaps(ConfigMaker):
+    """Small class to generate configurations for fermipy-vstack
+    to merge source maps
+
+    This takes the following arguments:
+    --comp     : binning component definition yaml file
+    --data     : datset definition yaml file
+    --irf_ver  : IRF verions string (e.g., 'V6')
+    --sources  : Catalog component definition yaml file'
+    """
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
+                           sources=diffuse_defaults.diffuse['sources'])
+
+    def __init__(self, link, **kwargs):
+        """C'tor
+        """
+        ConfigMaker.__init__(self, link,
+                             options=kwargs.get('options',
+                                                ConfigMaker_GatherSrcmaps.default_options.copy()))
+
+    def build_job_configs(self, args):
+        """Hook to build job configurations
+        """
+        job_configs = {}
+
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
+
+        ret_dict = make_catalog_comp_dict(sources=args['sources'], 
+                                          basedir=NAME_FACTORY.base_dict['basedir'])
+        catalog_info_dict = ret_dict['catalog_info_dict']
+        comp_info_dict = ret_dict['comp_info_dict']
+
+        for catalog_name, catalog_info in catalog_info_dict.items():
+
+            for comp in components:
+                zcut = "zmax%i" % comp.zmax
+                key = comp.make_key('{ebin_name}_{evtype_name}')
+                name_keys = dict(zcut=zcut,
+                                 sourcekey=catalog_name,
+                                 ebin=comp.ebin_name,
+                                 psftype=comp.evtype_name,
+                                 coordsys='GAL',
+                                 irf_ver=args['irf_ver'],
+                                 mktime='none',
+                                 fullpath=True)
+
+                outfile = NAME_FACTORY.srcmaps(**name_keys)
+                outfile_tokens = os.path.splitext(outfile)
+                infile_regexp = "%s_*.fits" % outfile_tokens[0]
+                logfile = make_nfs_path(outfile.replace('.fits', '.log'))
+                job_configs[key] = dict(output=outfile,
+                                        args=infile_regexp,
+                                        logfile=logfile)
+
+        return job_config
 
 
 class ConfigMaker_healview(ConfigMaker):
@@ -386,7 +572,6 @@ class ConfigMaker_healview(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
@@ -422,15 +607,15 @@ class ConfigMaker_healview(ConfigMaker):
                 infile = NAME_FACTORY.srcmaps(**name_keys)
                 outfile = infile.replace('.fits', '.png')
 
+                logfile = make_nfs_path(outfile.replace('.png', '_png.log'))
                 job_configs[full_key] = dict(input=infile,
                                              output=outfile,
                                              extension=sub_comp_info.source_name,
                                              zscale=args.get('zscale', 'log'),
-                                             logfile=outfile.replace('.png', '_png.log'))
+                                             logfile=logfile)
                                             
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_config
 
 
 def create_sg_gtexpcube2(**kwargs):
@@ -456,19 +641,42 @@ def create_sg_gtexpcube2(**kwargs):
     return lsf_sg
 
 
-def create_sg_gtsrcmaps_catalog(**kwargs):
-    """Build and return a ScatterGather object that can invoke gtsrcmaps for catalog sources"""
-    appname = kwargs.pop('appname', 'fermipy-srcmaps-catalog-sg')
-    link = create_link_gtscrmaps(**kwargs)
-    linkname=kwargs.pop('linkname', link.linkname)
+def create_sg_gtltsum(**kwargs):
+    """Build and return a ScatterGather object that can invoke gtltsum"""
+    appname = kwargs.pop('appname', 'fermipy-gtltsum-sg')
+    link = create_link_gtltsum(**kwargs)
+    linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 6000,
+    lsf_args = {'W': 1500,
                 'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
-    description = "Run gtsrcmaps for catalog sources"
+    description = "Run gtlsum for a series of event types."
 
-    config_maker = ConfigMaker_SrcmapsCatalog(link)
+    config_maker = ConfigMaker_Gtltsum(link)
+    lsf_sg = build_sg_from_link(link, config_maker,
+                                lsf_args=lsf_args,
+                                usage=usage,
+                                description=description,
+                                linkname=linkname,
+                                appname=appname,
+                                **kwargs)
+    return lsf_sg
+
+
+def create_sg_fermipy_coadd(**kwargs):
+    """Build and return a ScatterGather object that can invoke gtltsum"""
+    appname = kwargs.pop('appname', 'fermipy-coadd-sg')
+    link = create_link_fermipy_coadd(**kwargs)
+    linkname = kwargs.pop('linkname', link.linkname)
+
+    lsf_args = {'W': 1500,
+                'R': '\"select[rhel60 && !fell]\"'}
+
+    usage = "%s [options]"%(appname)
+    description = "Run fermipy-coadd for a series of event types."
+
+    config_maker = ConfigMaker_CoaddSplit(link)
     lsf_sg = build_sg_from_link(link, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
@@ -525,6 +733,30 @@ def create_sg_vstack_diffuse(**kwargs):
     return lsf_sg
 
 
+def create_sg_gather_srcmaps(**kwargs):
+    """Build and return a ScatterGather object that can invoke fermipy-vstack"""
+    appname = kwargs.pop('appname', 'fermipy-gather-srcmaps-sg')
+    link = create_link_fermipy_gather_srcmaps(**kwargs)
+    linkname = kwargs.pop('linkname', link.linkname)
+
+    lsf_args = {'W': 1500,
+                'R': '\"select[rhel60 && !fell]\"'}
+
+    usage = "%s [options]"%(appname)
+    description = "Sum gasmaps to build diffuse model components"
+
+    config_maker = ConfigMaker_GatherSrcmaps(link)
+    lsf_sg = build_sg_from_link(link, config_maker,
+                                lsf_args=lsf_args,
+                                usage=usage,
+                                description=description,
+                                linkname=linkname,
+                                appname=appname,
+                                **kwargs)
+    return lsf_sg
+
+
+
 def create_sg_healview_diffuse(**kwargs):
     """Build and return a ScatterGather object that can invoke fermipy-healview"""
     appname = kwargs.pop('appname', 'fermipy-healview-sg')
@@ -555,22 +787,29 @@ def invoke_sg_gtexpcube2():
     lsf_sg = create_sg_gtexpcube2()
     lsf_sg(sys.argv)
 
-
-def invoke_sg_gtsrcmaps_catalog():
+def invoke_sg_gtltsum():
     """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_gtsrcmaps_catalog()
+    lsf_sg = create_sg_gtltsum()
     lsf_sg(sys.argv)
 
+def invoke_sg_fermipy_coadd():
+    """Entry point for command line use for dispatching batch jobs """
+    lsf_sg = create_sg_fermipy_coadd()
+    lsf_sg(sys.argv)
 
 def invoke_sg_sum_ring_gasmaps():
     """Entry point for command line use for dispatching batch jobs """
     lsf_sg = create_sg_sum_ring_gasmaps()
     lsf_sg(sys.argv)
 
-
 def invoke_sg_vstack_diffuse():
     """Entry point for command line use for dispatching batch jobs """
     lsf_sg = create_sg_vstack_diffuse()
+    lsf_sg(sys.argv)
+
+def invoke_sg_gather_srcmaps():
+    """Entry point for command line use for dispatching batch jobs """
+    lsf_sg = create_sg_gather_srcmaps()
     lsf_sg(sys.argv)
 
 def invoke_sg_healview_diffuse():

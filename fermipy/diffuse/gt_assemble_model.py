@@ -16,7 +16,7 @@ from fermipy.skymap import HpxMap
 from fermipy.utils import load_yaml
 
 from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.lsf_impl import build_sg_from_link, make_nfs_path
 from fermipy.jobs.chain import add_argument, Link
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.diffuse.binning import Component
@@ -37,7 +37,8 @@ class GtInitModel(Link):
                            diffuse=diffuse_defaults.diffuse['diffuse'],
                            sources=diffuse_defaults.diffuse['sources'],
                            models=diffuse_defaults.diffuse['models'],
-                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],)
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
+                           irf_ver=diffuse_defaults.diffuse['irf_ver'],)
     
     def __init__(self, **kwargs):
         """C'tor
@@ -63,7 +64,8 @@ class GtInitModel(Link):
         hpx_order = args.hpx_order
         for modelkey, modelpath in models.items():
             model_manager.make_srcmap_manifest(modelkey, components, data)
-            fermipy_config = model_manager.make_fermipy_config_yaml(modelkey, components, data, hpxorder=hpx_order)
+            fermipy_config = model_manager.make_fermipy_config_yaml(modelkey, components, data, 
+                                                                    hpx_order=hpx_order, irf_ver=args.irf_ver)
             
 
 
@@ -112,8 +114,9 @@ class GtAssembleModel(Link):
             hpxlist_out.writeto(outsrcmap)
             return hpx_order
         else:
-            os.system('cp %s.gz %s.gz' % (ccube, outsrcmap))
-            os.system('gunzip -f %s.gz' % (outsrcmap))
+            os.system('cp %s %s' % (ccube, outsrcmap))
+            #os.system('cp %s.gz %s.gz' % (ccube, outsrcmap))
+            #os.system('gunzip -f %s.gz' % (outsrcmap))
         return None
 
     @staticmethod
@@ -242,7 +245,6 @@ class ConfigMaker_AssembleModel(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
@@ -260,12 +262,11 @@ class ConfigMaker_AssembleModel(ConfigMaker):
                                                       coordsys='GAL',
                                                       mktime='none',
                                                       irf_ver=args['irf_ver'])
-                logfile = outfile.replace('.fits', '.log')
+                logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                 job_configs[key] = dict(input=manifest,
                                         comp=key,
                                         logfile=logfile)
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 def create_link_init_model(**kwargs):
     """Build and return a `Link` object that can invoke GtInitModel"""
@@ -289,7 +290,7 @@ def create_sg_assemble_model(**kwargs):
     appname = kwargs.pop('appname', 'fermipy-assemble-model-sg')
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Copy source maps from the library to a analysis directory"

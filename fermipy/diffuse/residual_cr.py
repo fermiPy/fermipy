@@ -23,7 +23,7 @@ from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.gt_split_and_bin import create_sg_split_and_bin
 from fermipy.diffuse.gt_split_and_mktime import create_sg_split_and_mktime
-from fermipy.diffuse.job_library import create_sg_gtexpcube2
+from fermipy.diffuse.job_library import create_sg_gtexpcube2, create_sg_gtltsum, create_sg_fermipy_coadd
 from fermipy.diffuse import defaults as diffuse_defaults
 
 
@@ -391,7 +391,6 @@ class ConfigMaker_ResidualCR(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
@@ -425,8 +424,7 @@ class ConfigMaker_ResidualCR(ConfigMaker):
                                     hpx_order=hpx_order,
                                     logfile=outfile.replace('.fits', '.log'))
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 def create_link_residual_cr(**kwargs):
     """Build and return a `Link` object that can invoke `ResidualCRAnalysis` """
@@ -470,6 +468,14 @@ class ResidualCRChain(Chain):
                                                        mapping={'data':'dataset_yaml',
                                                                 'action': 'action_split',
                                                                 'hpx_order_max':'hpx_order_binning'})
+        link_coadd_split = create_sg_fermipy_coadd(linkname="%s.coadd"%linkname,
+                                                   mapping={'data':'dataset_yaml',
+                                                            'comp':'binning_yaml',
+                                                            'action': 'action_coadd'})
+        link_ltsum = crate_sg_gtltsum(linkname="%s.ltsum"%linkname,
+                                      mapping={'data':'dataset_yaml',
+                                               'comp':'binning_yaml',
+                                               'action': 'action_ltsum'})
         link_expcube = create_sg_gtexpcube2(linkname="%s.expcube"%linkname,
                                             mapping={'data':'dataset_yaml',
                                                      'comp':'binning_yaml',
@@ -486,7 +492,10 @@ class ResidualCRChain(Chain):
                                          description="Run residual cosmic-ray analysis chain")
         Chain.__init__(self, linkname,
                        appname='fermipy-residual-cr-chain',
-                       links=[link_split_mktime, link_expcube,
+                       links=[link_split_mktime,
+                              link_coadd_split,
+                              link_ltsum,
+                              link_expcube,
                               link_cr_analysis],
                        options=ResidualCRChain.default_options.copy(),
                        argmapper=self._map_arguments,

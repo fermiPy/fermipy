@@ -30,43 +30,6 @@ except:
     MKTIME_DICT = MktimeFilterDict(aliases=dict(quality='lat_config==1&&data_qual>0'),
                                    selections=dict(standard='{quality}'))
 
-def readlines(arg):
-    """Read lines from a file into a list.
-
-    Removes whitespace and lines that start with '#'
-    """
-    fin = open(arg)
-    lines_in = fin.readlines()
-    fin.close()
-    lines_out = []
-    for line in lines_in:
-        line = line.strip()
-        if len(line) == 0 or line[0] == '#':
-            continue
-        lines_out.append(line)
-    return lines_out
-
-
-def create_inputlist(arglist):
-    """Read lines from a file and makes a list of file names.
-
-    Removes whitespace and lines that start with '#'
-    Recursively read all files with the extension '.lst'
-    """
-    lines = []
-    if isinstance(arglist, list):
-        for arg in arglist:
-            if os.path.splitext(arg)[1] == '.lst':
-                lines += readlines(arg)
-            else:
-                lines.append(arg)
-    else:
-        if os.path.splitext(arglist)[1] == '.lst':
-            lines += readlines(arglist)
-        else:
-            lines.append(arglist)
-    return lines
-
 
 def make_full_path(basedir, outkey, origname):
     """Make a full file path"""
@@ -319,12 +282,11 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
                            scratch=(None, 'Path to scratch area', str),
                            dry_run=(False, 'Print commands but do not run them', bool))
 
-    def __init__(self, chain, gather, **kwargs):
+    def __init__(self, chain, **kwargs):
         """C'tor
         """
         ConfigMaker.__init__(self, chain,
                              options=kwargs.get('options', self.default_options.copy()))
-        self.gather = gather
 
     def make_base_config(self, args):
         """Hook to build a baseline job configuration
@@ -339,20 +301,17 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
         if comp_file is not None:
             comp_dict = yaml.safe_load(open(comp_file))
             self.link.update_links(comp_dict)
-            self.gather.update_links(comp_dict)
         self.link.update_args(args)
-        self.gather.update_args(args)
         return self.link.args
 
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         datafile = args['data']
         if datafile is None or datafile == 'None':
-            return input_config, job_configs, {}
+            return job_configs
         NAME_FACTORY.update_base_dict(args['data'])
 
         inputfiles = create_inputlist(args['ft1file'])
@@ -380,28 +339,18 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
                                     logfile=logfile,
                                     pfiles=output_dir)
 
-        output_config = dict(comp=args['comp'],
-                             data=args['data'],
-                             coordsys=args['coordsys'],
-                             nfiles=nfiles,
-                             do_ltsum=True,
-                             link=None,
-                             logfile=os.path.join(outdir_base, 'gather.log'),
-                             dry_run=args['dry_run'])
-
-        return input_config, job_configs, output_config
+        return job_configs
 
 def create_chain_split_and_mktime(**kwargs):
-    """Make a `fermipy.jobs.SplitAndMktime` """
-    chain = SplitAndMktime(linkname=kwargs.pop('linkname', 'SplitAndMktime'),
-                           comp=kwargs.get('comp', None))
+    """Build and return a `Link` object that can invoke split-and-mktime"""
+    linkname = kwargs.pop('linkname', 'split-and-mktime')
+    chain = SplitAndMktime(**kwargs)
     return chain
 
 def create_sg_split_and_mktime(**kwargs):
     """Build and return a `fermipy.jobs.ScatterGather` object that can invoke this script"""
     linkname = kwargs.pop('linkname', 'split-and-mktime')
     chain = SplitAndMktime(linkname, **kwargs)
-    gather = CoaddSplit('%s.coadd'%linkname, **kwargs)
     appname = kwargs.pop('appname', 'fermipy-split-and-mktime-sg')
 
     lsf_args = {'W': 1500,
@@ -410,12 +359,11 @@ def create_sg_split_and_mktime(**kwargs):
     usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
-    config_maker = ConfigMaker_SplitAndMktime(chain, gather)
+    config_maker = ConfigMaker_SplitAndMktime(chain)
     lsf_sg = build_sg_from_link(chain, config_maker,
                                 lsf_args=lsf_args,
                                 usage=usage,
                                 description=description,
-                                gather=gather,
                                 linkname=linkname,
                                 appname=appname,
                                 **kwargs)

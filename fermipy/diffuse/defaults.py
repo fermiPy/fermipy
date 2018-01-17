@@ -31,6 +31,7 @@ residual_cr = {
     'hpx_order_fitting' : (4, 'HEALPIX order for analysis', int),
     'coordsys' : ('GAL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
     'irf_ver': ('V6', 'Version of IRFs to use.', str),
+    'scratch' : (None, 'Path to scratch area.', str),
     'dry_run' : (False, 'Print commands but do not run them', bool),
     'full_output' : (False, 'Include diagnostic output', bool),
     }
