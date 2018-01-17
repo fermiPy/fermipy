@@ -98,8 +98,6 @@ def make_sources(comp_key, comp_dict):
     except AttributeError:
         spectrum = None
 
-    print ("Make sources ", comp_info.source_name, comp_key)
-
     model_type = comp_info.model_type
     if model_type == 'PointSource':
         srcdict[comp_key] = make_point_source(comp_info.source_name,
@@ -166,7 +164,6 @@ class SourceFactory(object):
         catalog_extdir : str
             Path to directory with extended source templates
         """
-        print(catalog_file, catalog_extdir)
         if catalog_type == '2FHL':
             return catalog.Catalog2FHL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '3FGL':

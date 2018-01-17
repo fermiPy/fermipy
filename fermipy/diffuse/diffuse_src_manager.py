@@ -353,7 +353,6 @@ class DiffuseModelManager(object):
         else:
             template_name = self.make_template_name(
                 model_type, "%s_%s" % (sourcekey, comp_key))
-            print ('comp_key', source_name, comp_key, template_name)           
             srcmdl_name = self.make_xml_name("%s_%s" % (sourcekey, comp_key))
 
         template_name = self._name_factory.fullpath(localpath=template_name)

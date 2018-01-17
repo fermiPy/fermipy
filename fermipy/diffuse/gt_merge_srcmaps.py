@@ -170,7 +170,7 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
                                      psftype=comp.evtype_name,
                                      coordsys='GAL',
                                      mktime='none',
-                                     irf_ver=args['irf_ver')
+                                     irf_ver=args['irf_ver'])
                     nested_name_keys = dict(zcut=zcut,
                                             sourcekey=source_dict.catalog_info.catalog_name,
                                             ebin=comp.ebin_name,
