@@ -26,7 +26,7 @@ def replace_aliases(cut_dict, aliases):
     """Substitute aliases in a cut dictionary."""
     for k, v in cut_dict.items():
         for k0, v0 in aliases.items():
-            cut_dict[k] = cut_dict[k].replace(k0, '(%s)'%v0)
+            cut_dict[k] = cut_dict[k].replace(k0, '(%s)' % v0)
 
 
 def strip(input_str):
@@ -34,22 +34,22 @@ def strip(input_str):
     return str(input_str.replace('\n', '').replace(' ', ''))
 
 
-def get_files(files, extname='root'):
+def get_files(files, extnames=['.root']):
     """Extract a list of file paths from a list containing both paths
     and file lists with one path per line."""
 
-    merit_files = []
+    files_out = []
     for f in files:
 
         mime = mimetypes.guess_type(f)
-        if re.search('\.%s?' % extname, f):
-            merit_files += [f]
+        if os.path.splitext(f)[1] in extnames:
+            files_out += [f]
         elif mime[0] == 'text/plain':
-            merit_files += list(np.loadtxt(f, unpack=True, dtype='str'))
+            files_out += list(np.loadtxt(f, unpack=True, dtype='str'))
         else:
             raise Exception('Unrecognized input type.')
 
-    return merit_files
+    return files_out
 
 
 def load_chain(chain, files, nfiles=None):

@@ -31,7 +31,7 @@ def update_primary(hdu_in, hdu=None):
     if hdu is None:
         hdu = fits.PrimaryHDU(data=hdu_in.data, header=hdu_in.header)
     else:
-        hdu.data += hdu_in.data        
+        hdu.data += hdu_in.data
     return hdu
 
 

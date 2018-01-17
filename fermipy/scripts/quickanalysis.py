@@ -16,7 +16,7 @@ def run_analysis(config):
     gta.optimize()
 
     gta.print_roi()
-    
+
     # Localize and generate SED for first source in ROI
     srcname = gta.roi.sources[0].name
 
@@ -26,7 +26,7 @@ def run_analysis(config):
     gta.localize(srcname)
     gta.sed(srcname)
 
-    gta.write_roi('roi',make_plots=True)
+    gta.write_roi('roi', make_plots=True)
     gta.tsmap(make_plots=True)
     gta.residmap(make_plots=True)
 

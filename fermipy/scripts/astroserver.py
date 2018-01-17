@@ -14,6 +14,7 @@ import numpy as np
 from fermipy.utils import mkdir
 from fermipy.batch import bsub
 
+
 class astroserver(object):
     """ Wrapper around the glast astroserver.
     Pass in command-line args as kwargs changing
@@ -40,6 +41,7 @@ class astroserver(object):
 
 # Julian Year (365.25 days) in seconds
 YEAR = 31557600
+
 
 def main():
 
@@ -103,7 +105,7 @@ def main():
     else:
         # Remove old ft2 file and replace with link
         if not args.dryrun:
-            #for f in glob.glob(join(basedir, "*ft2.fits")):
+            # for f in glob.glob(join(basedir, "*ft2.fits")):
             #    os.remove(f)
             #    os.symlink(ft2, f)
             for f in glob.glob(join(basedir, "*ft2_fix_checksums.sh")):

@@ -26,6 +26,7 @@ def get_st_version():
     except ImportError:
         return ''
 
+
 PACKAGE_ROOT = os.path.abspath(os.path.dirname(__file__))
 PACKAGE_DATA = os.path.join(PACKAGE_ROOT, 'data')
 os.environ['FERMIPY_ROOT'] = PACKAGE_ROOT
