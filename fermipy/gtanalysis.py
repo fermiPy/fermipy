@@ -31,7 +31,7 @@ from fermipy.extension import ExtensionFit
 from fermipy.utils import merge_dict
 from fermipy.utils import create_hpx_disk_region_string
 from fermipy.utils import resolve_file_path
-from fermipy.skymap import Map, HpxMap
+from fermipy.skymap import Map, HpxMap, read_map_from_fits
 from fermipy.hpx_utils import HPX
 from fermipy.roi_model import ROIModel
 from fermipy.ltcube import LTCube
@@ -1087,7 +1087,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         src.update_data({'sed': None})
         sd = self.get_src_model(name, paramsonly=True)
         src.update_data(sd)
-
         for c in self.components:
             src = c.roi.get_source_by_name(name)
             src.update_data(sd)
@@ -3821,6 +3820,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # Get the Model Fluxes
         try:
+            if self.like[name].src.getType() == "Composite":
+                raise ValueError("Skip Composite source")
+
+            thesrc = self.like[name]
             src_dict['flux'] = self.like.flux(name, self.energies[0],
                                               self.energies[-1])
             src_dict['flux100'] = self.like.flux(name, 100., 10 ** 5.5)
@@ -3843,7 +3846,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 pyLike.dArg(1000.))
             src_dict['dnde10000'] = self.like[name].spectrum()(
                 pyLike.dArg(10000.))
-
             if normPar.getValue() == 0:
                 normPar.setValue(1.0)
 
@@ -3868,7 +3870,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                                      1000.)
                 dnde10000_index = -get_spectral_index(self.like[name],
                                                       10000.)
-
             src_dict['dnde_index'] = dnde_index
             src_dict['dnde100_index'] = dnde100_index
             src_dict['dnde1000_index'] = dnde1000_index
@@ -4728,7 +4729,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self._bin_data(overwrite=overwrite, **kwargs)
             self._create_expcube(overwrite=overwrite, **kwargs)
 
-        self._bexp = Map.create_from_fits(self.files['bexpmap'])
+        # This is needed in case the exposure map is in HEALPix
+        hpxhduname = "HPXEXPOSURES"
+        self._bexp = read_map_from_fits(self.files['bexpmap'], "HPXEXPOSURES")
 
         # Write ROI XML
         self.roi.write_xml(self.files['srcmdl'], self.config['model'])
