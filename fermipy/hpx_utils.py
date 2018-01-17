@@ -440,7 +440,7 @@ class HPX(object):
             return 'FGST_LTCUBE'
         elif colname == 'Bin0':
             return 'GALPROP'
-        elif colname == 'CHANNEL1':
+        elif colname in ['CHANNEL1', 'Bin 0']:
             if extname == 'SKYMAP':
                 return 'FGST_CCUBE'
             else:
@@ -513,7 +513,13 @@ class HPX(object):
                                    "Equinox of RA & DEC specifications"))
 
         if self._region:
+            cards.append(fits.Card("INDXSCHM", "PARTIAL"))
             cards.append(fits.Card("HPX_REG", self._region))
+        else:
+            if self._conv.convname in ['FGST_SRCMAP_SPARSE']:
+                cards.append(fits.Card("INDXSCHM", "SPARSE"))
+            else:
+                cards.append(fits.Card("INDXSCHM", "IMPLICIT"))
 
         header = fits.Header(cards)
         return header
@@ -546,8 +552,8 @@ class HPX(object):
                 cols.append(fits.Column("VALUE", "E", array=data.flat[nonzero].astype(float).reshape(nfilled)))
             elif len(shape) == 2:
                 keys = self._npix * nonzero[0] + nonzero[1]
-                cols.append(fits.Column("PIX", "J", array=nonzero[0].reshape(nfilled)))
-                cols.append(fits.Column("CHAN", "I", array=nonzero[1].reshape(nfilled)))
+                cols.append(fits.Column("PIX", "J", array=nonzero[1].reshape(nfilled)))
+                cols.append(fits.Column("CHANNEL", "I", array=nonzero[0].reshape(nfilled)))
                 cols.append(fits.Column("VALUE", "E",
                                         array=data.flat[keys].astype(float).reshape(nfilled)))
             else:
