@@ -136,13 +136,14 @@ class ModelInfo(object):
             comp_roi_source_info = {}
             for comp_name, model_comp in sub_comp_sources.items():
                 comp_info = model_comp.info
-                #comps = comp_info.components
+                comps = comp_info.components
                 if comp_info.selection_dependent:
                     key = comp.make_key('{ebin_name}_{evtype_name}')
                 elif comp_info.moving:
                     key = zcut
+                info_clone = comp_info.components[key].clone_and_merge_sub(key)
                 comp_roi_source_info[comp_name] =\
-                    ModelComponent(info=comp_info.clone_and_merge_sub(key),
+                    ModelComponent(info=info_clone,
                                    spectrum=model_comp.spectrum)
 
             # Build the xml for the component
@@ -351,10 +352,12 @@ class ModelManager(object):
                               hpx_ordering_scheme="RING",
                               hpx_order=hpx_order,
                               hpx_ebin=True)
-        master_fileio = dict(outdir=model_dir,
-                             logfile=os.path.join(model_dir, 'fermipy.log'))
+        #master_fileio = dict(outdir=model_dir,
+        #                     logfile=os.path.join(model_dir, 'fermipy.log'))
+        master_fileio = dict(logfile='fermipy.log')
         master_gtlike = dict(irfs=self._name_factory.irfs(**kwargs),
-                             edisp_disable=['isodiff', 'diffuse', 'limb'])
+                             edisp_disable=['isodiff', 'diffuse', 'limb'],
+                             use_external_srcmap=True)
         master_selection = dict(glat=0., glon=0., radius=180.)
         master_model = dict(catalogs=[master_xml_mdl])
 
@@ -387,7 +390,8 @@ class ModelManager(object):
             comp_binning = dict(enumbins=comp.enumbins,
                                 hpx_order=min(comp.hpx_order, hpx_order))
             comp_gtlike = dict(srcmap=self._name_factory.merged_srcmaps(**name_keys),
-                               bexpmap=self._name_factory.bexpcube(**name_keys))
+                               bexpmap=self._name_factory.bexpcube(**name_keys),
+                               use_external_srcmap=True)
             #comp_roi_source_info = {}
 
             comp_xml_mdl = os.path.basename(self._name_factory.comp_srcmdl_xml(modelkey=modelkey,

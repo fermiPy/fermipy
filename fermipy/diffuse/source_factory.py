@@ -44,10 +44,11 @@ def make_composite_source(name, catalog_roi_model, spectrum, nested_source_names
     #nested_sources = [ catalog_roi_model[nested_source_name]
     #for nested_source_name in nested_source_names ]
     #data = dict(nested_sources=nested_sources)
-    data = {}
+    data = dict(SpatialType='CompositeSource',
+                SpatialModel='CompositeSource',
+                SourceType='CompositeSource')
     if spectrum is not None:
         data.update(spectrum)
-
     return roi_model.CompositeSource(name, data)
 
 
@@ -96,6 +97,8 @@ def make_sources(comp_key, comp_dict):
         spectrum = comp_dict.spectrum
     except AttributeError:
         spectrum = None
+
+    print ("Make sources ", comp_info.source_name, comp_key)
 
     model_type = comp_info.model_type
     if model_type == 'PointSource':

@@ -91,7 +91,6 @@ class ConfigMaker_Gtexphpsun(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
@@ -115,8 +114,7 @@ class ConfigMaker_Gtexphpsun(ConfigMaker):
                                     enumbins=comp.enumbins,
                                     logfile=outfile.replace('.fits', '.log'))
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 
 class ConfigMaker_Gtsuntemp(ConfigMaker):
@@ -142,7 +140,6 @@ class ConfigMaker_Gtsuntemp(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
@@ -171,8 +168,7 @@ class ConfigMaker_Gtsuntemp(ConfigMaker):
                                         enumbins=comp.enumbins,
                                         logfile=outfile.replace('.fits', '.log'))
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 
 
@@ -183,7 +179,7 @@ def create_sg_Gtexphpsun(**kwargs):
     linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Run gtexpcube2 for a series of event types."
@@ -206,7 +202,7 @@ def create_sg_Gtsuntemp(**kwargs):
     linkname = kwargs.pop('linkname', link.linkname)
 
     lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+                'R': '\"select[rhel60 && !fell]\"'}
 
     usage = "%s [options]"%(appname)
     description = "Run gtexpcube2 for a series of event types."

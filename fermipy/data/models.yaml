@@ -93,7 +93,6 @@ CompositeSource:
   par_names: []
 ConstantValue:
   defaults:
-    Normalization: {error: .nan, max: 1000.0, min: 1.0e-05, scale: 1.0, value: 1.0}
     Value: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
       name: Value, scale: 1.0, value: 1.0}
   norm_par: Value
