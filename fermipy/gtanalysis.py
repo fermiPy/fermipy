@@ -2344,30 +2344,34 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return xvals
 
     def _find_scan_pts_reopt(self, name, logemin=None, logemax=None, npts=20,
-                             dloglike_thresh=3.0, **kwargs):
+                             dloglike_thresh=2.7059, **kwargs):
 
         parName = self.like.normPar(name).getName()
+        cl_limit = utils.onesided_dlnl_to_cl(dloglike_thresh)
 
         npts = max(npts, 5)
         xvals = self._find_scan_pts(name, logemin=logemin, logemax=logemax,
                                     npts=20)
 
+        # Generate likelihood profile w/ fixed nuisance pars
         lnlp0 = self.profile(name, parName, logemin=logemin, logemax=logemax,
                              reoptimize=False, xvals=xvals, **kwargs)
         xval0 = self.like.normPar(name).getValue()
         lims0 = utils.get_parameter_limits(lnlp0['xvals'], lnlp0['dloglike'],
-                                           cl_limit=0.99)
+                                           cl_limit=cl_limit)
 
-        if not np.isfinite(lims0['ll']) and lims0['x0'] > 1E-6:
-            xvals = np.array([0.0, lims0['x0'],
-                              lims0['x0'] + lims0['err_hi'], lims0['ul']])
-        elif not np.isfinite(lims0['ll']) and lims0['x0'] < 1E-6:
+        # Difference in lnL at maximum with respect to lnL(x=0)
+        dlnlmax = np.abs(lnlp0['dloglike'][0]-lims0['lnlmax'])
+
+        if dlnlmax < 0.05:
             xvals = np.array([0.0, lims0['x0'] + lims0['err_hi'], lims0['ul']])
         else:
             xvals = np.array([lims0['ll'],
                               lims0['x0'] - lims0['err_lo'], lims0['x0'],
                               lims0['x0'] + lims0['err_hi'], lims0['ul']])
-
+            xvals = xvals[np.isfinite(xvals)]
+            
+        # Generate likelihood profile w/ free nuisance pars
         lnlp1 = self.profile(name, parName, logemin=logemin, logemax=logemax,
                              reoptimize=True, xvals=xvals, **kwargs)
 
@@ -2376,18 +2380,17 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         dloglike0 = dloglike[-1]
         xup = xvals[-1]
 
+        # Search for value at which likelihood changes by a given amount
         for i in range(20):
 
             lims1 = utils.get_parameter_limits(xvals, dloglike,
-                                               cl_limit=0.99)
-
-#            print('iter',i,np.abs(np.abs(dloglike0) - utils.onesided_cl_to_dlnl(0.99)),xup)
-#            print(loglike)
-
-            if np.abs(np.abs(dloglike0) - utils.onesided_cl_to_dlnl(0.99)) < 0.1:
+                                               cl_limit=cl_limit)
+            delta = np.abs(dloglike0-lims1['lnlmax'])
+            
+            if np.abs(delta - dloglike_thresh) < 0.1:
                 break
 
-            if not np.isfinite(lims1['ul']) or np.abs(dloglike[-1]) < 1.0:
+            if not np.isfinite(lims1['ul']) or delta < 1.0:
                 xup = 2.0 * xvals[-1]
             else:
                 xup = lims1['ul']
@@ -2409,7 +2412,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if np.isfinite(lims1['ll']):
             xlo = np.concatenate(
                 ([0.0], np.linspace(lims1['ll'], xval0, (npts + 1) // 2 - 1)))
-        elif np.abs(dloglike[0]) > 0.1:
+        elif np.abs(dloglike[0]-lims1['lnlmax']) > 0.1:
             xlo = np.linspace(0.0, xval0, (npts + 1) // 2)
         else:
             xlo = np.array([0.0, xval0])
@@ -2419,7 +2422,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         else:
             xhi = np.linspace(xval0, lims0['ul'], npts + 1 - len(xlo))[1:]
 
-        xvals = np.concatenate((xlo, xhi))
+        xvals = np.sort(np.concatenate((xlo, xhi)))
         return xvals
 
     def profile(self, name, parName, logemin=None, logemax=None,
