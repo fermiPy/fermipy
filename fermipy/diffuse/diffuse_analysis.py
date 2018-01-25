@@ -51,12 +51,14 @@ class DiffuseAnalysisChain(Chain):
                                                   mapping={'action':'action_gasmaps'})
         link_srcmaps_diffuse = create_sg_srcmap_partial(linkname="%s.srcmaps_diffuse"%linkname,
                                                         mapping={'action':'action_srcmaps_diffuse'})
-        link_vstack_srcmaps = create_sg_vstack_diffuse(linkname="%s.vstack"%linkname,
-                                                       mapping={'action':'action_vstack'})
-        link_srcmaps_catalogs = create_sg_gtsrcmaps_catalog(linkname="%s.catalog_diffuse"%linkname,
+        link_vstack_diffuse = create_sg_vstack_diffuse(linkname="%s.vstack_diffuse"%linkname,
+                                                       mapping={'action':'action_vstack_diffuse'})
+        link_srcmaps_catalogs = create_sg_gtsrcmaps_catalog(linkname="%s.srcmaps_catalog"%linkname,
                                                             mapping={'action':'action_srcmaps_catalog'})
-        link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
-                                                         mapping={'action':'action_composite'})
+        link_gather_catalogs = create_sg_gather_srcmaps(linkname="%s.gather_catalog"%linkname,
+                                                        mapping={'action':'action_gather_catalog'})
+        link_merge_catalogs = create_sg_merge_srcmaps(linkname="%s.merge_catalog"%linkname,
+                                                         mapping={'action':'action_merge_catalog'})
         link_init_model = create_link_init_model(linkname="%s.init_model"%linkname,
                                                  mapping={'hpx_order':'hpx_order_fitting',
                                                           'action': 'action_init'})
@@ -70,8 +72,8 @@ class DiffuseAnalysisChain(Chain):
         Chain.__init__(self, linkname,
                        appname='fermipy-diffuse-analysis',
                        links=[link_split_and_bin, link_coadd_split, link_expcube,
-                              link_gasmaps, link_srcmaps_diffuse, link_vstack_srcmaps,
-                              link_srcmaps_catalogs, link_srcmaps_composite,
+                              link_gasmaps, link_srcmaps_diffuse, link_vstack_diffuse,
+                              link_srcmaps_catalogs, link_gather_catalogs, link_merge_catalogs,
                               link_init_model, link_assemble_model],
                        options=DiffuseAnalysisChain.default_options.copy(),
                        argmapper=self._map_arguments,
@@ -89,12 +91,14 @@ class DiffuseAnalysisChain(Chain):
             action = 'run'
        
         output_dict['action_split'] = action
+        output_dict['action_coadd'] = action
         output_dict['action_expcube'] = action
         output_dict['action_gasmaps'] = action
         output_dict['action_srcmaps_diffuse'] = action
-        output_dict['action_vstack'] = action
+        output_dict['action_vstack_diffuse'] = action
         output_dict['action_srcmaps_catalog'] = action
-        output_dict['action_composite'] = action
+        output_dict['action_gather_catalog'] = action
+        output_dict['action_merge_catalog'] = action
         output_dict['action_init'] = action
         output_dict['action_assemble'] = action
 
