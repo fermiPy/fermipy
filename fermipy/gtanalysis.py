@@ -58,6 +58,7 @@ norm_parameters = {
     'SmoothBrokenPowerLaw': ['Prefactor'],
     'LogParabola': ['norm'],
     'PLSuperExpCutoff': ['Prefactor'],
+    'PLSuperExpCutoff2': ['Prefactor'],
     'ExpCutoff': ['Prefactor'],
     'FileFunction': ['Normalization'],
     'DMFitFunction': ['sigmav'],
@@ -72,6 +73,7 @@ shape_parameters = {
     'SmoothBrokenPowerLaw': ['Index1', 'Index2'],
     'LogParabola': ['alpha', 'beta'],
     'PLSuperExpCutoff': ['Index1', 'Cutoff'],
+    'PLSuperExpCutoff2': ['Index1', 'Expfactor'],
     'ExpCutoff': ['Index1', 'Cutoff'],
     'FileFunction': [],
     'DMFitFunction': ['mass'],
@@ -86,6 +88,7 @@ index_parameters = {
     'SmoothBrokenPowerLaw': ['Index1', 'Index2'],
     'LogParabola': ['alpha', 'beta'],
     'PLSuperExpCutoff': ['Index1', 'Index2'],
+    'PLSuperExpCutoff2': ['Index1', 'Index2'],
     'ExpCutoff': ['Index1'],
     'FileFunction': [],
     'DMFitFunction': [],
@@ -381,21 +384,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         if self.projtype == 'HPX':
             self._hpx_region = create_hpx_disk_region_string(self._roi.skydir,
-                                                             coordsys=self.config[
-                                                                 'binning'][
-                                                                 'coordsys'],
-                                                             radius=0.5 *
-                                                             self.config[
-                                                                 'binning'][
-                                                                 'roiwidth'])
+                                                             coordsys=self.config['binning']['coordsys'],
+                                                             radius=0.5*self.config['binning']['roiwidth'])
             self._proj = HPX.create_hpx(-1,
                                         self.config['binning'][
                                             'hpx_ordering_scheme'] == "NESTED",
                                         self.config['binning']['coordsys'],
                                         self.config['binning']['hpx_order'],
-                                        self._hpx_region,
-                                        self.energies)
-
+                                        ebins=self.energies,
+                                        region=self._hpx_region)
         else:
             self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
                                                 coordsys=self.config['binning'][
@@ -3820,9 +3817,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # Get the Model Fluxes
         try:
-            if self.like[name].src.getType() == "Composite":
-                raise ValueError("Skip Composite source")
-
             thesrc = self.like[name]
             src_dict['flux'] = self.like.flux(name, self.energies[0],
                                               self.energies[-1])
@@ -4167,8 +4161,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                             'hpx_ordering_scheme'] == "NESTED",
                                         self._coordsys,
                                         self.config['binning']['hpx_order'],
-                                        self._hpx_region,
-                                        self.energies)
+                                        ebins=self.energies,
+                                        region=self._hpx_region)
         elif self.projtype == "WCS":
             self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
                                                 coordsys=self._coordsys,
@@ -4731,7 +4725,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         # This is needed in case the exposure map is in HEALPix
         hpxhduname = "HPXEXPOSURES"
-        self._bexp = read_map_from_fits(self.files['bexpmap'], "HPXEXPOSURES")
+        try:
+            self._bexp = read_map_from_fits(self.files['bexpmap'], hpxhduname)
+        except KeyError:
+            self._bexp = read_map_from_fits(self.files['bexpmap'])
 
         # Write ROI XML
         self.roi.write_xml(self.files['srcmdl'], self.config['model'])
