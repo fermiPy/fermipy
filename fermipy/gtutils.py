@@ -690,8 +690,8 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         return Ts_value
 
     def _isDiffuseOrNearby(self, srcName):
-        if (self[srcName].src.getType() == 'Diffuse' or
-                self._ts_src.getType() == 'Diffuse'):
+        if (self[srcName].src.getType() in ['Diffuse','Composite'] or 
+            self._ts_src.getType() in ['Diffuse','Composite']):
             return True
         elif self._separation(self._ts_src, self[srcName].src) < self.maxdist:
             return True
