@@ -43,8 +43,12 @@ def make_coadd_hpx(maps, hpx, shape):
     data = np.zeros(shape)
     axes = hpx_utils.hpx_to_axes(hpx, shape)
     for m in maps:
-        c = hpx_utils.hpx_to_coords(m.hpx, m.counts.shape)
-        o = np.histogramdd(c.T, bins=axes, weights=np.ravel(m.counts))[0]
+        if m.hpx.order != hpx.order:
+            m_copy = m.ud_grade(hpx.order, True)
+        else:
+            m_copy = m
+        c = hpx_utils.hpx_to_coords(m_copy.hpx, m_copy.counts.shape)
+        o = np.histogramdd(c.T, bins=axes, weights=np.ravel(m_copy.counts))[0]
         data += o
     return HpxMap(data, copy.deepcopy(hpx))
 
@@ -406,7 +410,7 @@ class HpxMap(Map_Base):
         hdu    : The FITS
         ebins  : Energy bin edges [optional]
         """
-        hpx = HPX.create_from_header(hdu.header, ebins)
+        hpx = HPX.create_from_hdu(hdu, ebins)
         colnames = hdu.columns.names
         cnames = []
         if hpx.conv.convname == 'FGST_SRCMAP_SPARSE':
@@ -421,10 +425,10 @@ class HpxMap(Map_Base):
             for c in colnames:
                 if c.find(hpx.conv.colstring) == 0:
                     cnames.append(c)
-            nebin = len(cnames)
+            nebin = len(cnames)                
             data = np.ndarray((nebin, hpx.npix))
             for i, cname in enumerate(cnames):
-                data[i, 0:] = hdu.data.field(cname)
+                data[i,0:] = hdu.data.field(cname)
 
         return cls(data, hpx)
 
@@ -435,13 +439,9 @@ class HpxMap(Map_Base):
         extname : The name of the HDU with the map data
         ebounds : The name of the HDU with the energy bin data
         """
-        extname = kwargs.get('hdu', 'SKYMAP')
+        extname = kwargs.get('hdu', hdulist[1].name)
         ebins = fits_utils.find_and_read_ebins(hdulist)
         return cls.create_from_hdu(hdulist[extname], ebins)
-
-    def create_image_hdu(self, name=None, **kwargs):
-        kwargs['extname'] = name
-        return self.hpx.make_hdu(self.counts, **kwargs)
 
     @classmethod
     def create_from_fits(cls, fitsfile, **kwargs):
@@ -661,6 +661,61 @@ class HpxMap(Map_Base):
             else:
                 data_out = hp.pixelfunc.reorder(self.data, r2n=True)
         return HpxMap(data_out, hpx_out)
+
+    def expanded_counts_map(self):
+        """ return the full counts map """
+        if self.hpx._ipix is None:
+            return self.counts
+        
+        output = np.zeros((self.counts.shape[0], self.hpx._maxpix), self.counts.dtype)
+        for i in range(self.counts.shape[0]):
+            output[i][self.hpx._ipix] = self.counts[i]
+        return output
+
+
+    def explicit_counts_map(self, pixels=None):
+        """ return a counts map with explicit index scheme
+        
+        Parameters
+        ----------
+        pixels : `np.ndarray` or None
+            If set, grab only those pixels.  
+            If none, grab only non-zero pixels
+        """
+        # No pixel index, so build one
+        if self.hpx._ipix is None:
+            if self.data.ndim == 2:
+                summed = self.counts.sum(0)
+                if pixels is None:
+                    nz = summed.nonzero()[0]
+                else:
+                    nz = pixels
+                data_out = np.vstack(self.data[i].flat[nz] for i in range(self.data.shape[0]))
+            else:
+                if pixels is None:
+                    nz = self.data.nonzero()[0]
+                else:
+                    nz = pixels
+                data_out = self.data[nz]
+            return (nz, data_out)
+        else:
+            if pixels is None:
+                return (self.hpx._ipix, self.data)
+        # FIXME, can we catch this
+        raise RuntimeError('HPX.explicit_counts_map called with pixels for a map that already has pixels')
+
+
+    def sparse_counts_map(self):
+        """ return a counts map with sparse index scheme
+        """
+        if self.hpx._ipix is None:
+            flatarray = self.data.flattern()
+        else:
+            flatarray = self.expanded_counts_map()        
+        nz = flatarray.nonzero()[0]
+        data_out = flatarray[nz]
+        return (nz, data_out)
+
 
     def ud_grade(self, order, preserve_counts=False):
         """
