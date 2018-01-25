@@ -14,8 +14,8 @@ import yaml
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Chain
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.gt_coadd_split import CoaddSplit
@@ -239,7 +239,7 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
                 os.mkdir(output_dir)
             except OSError:
                 pass
-            logfile = os.path.join(output_dir, 'scatter_%s.log' % key)
+            logfile = make_nfs_path(os.path.join(output_dir, 'scatter_%s.log' % key))
             job_configs[key] = dict(ft1file=infile,
                                     comp=args['comp'],
                                     hpx_order_max=args['hpx_order_max'],
@@ -264,15 +264,15 @@ def create_sg_split_and_bin(**kwargs):
 
     chain = SplitAndBin('%s.split'%linkname, **kwargs)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
     config_maker = ConfigMaker_SplitAndBin(chain, **kwargs)
     lsf_sg = build_sg_from_link(chain, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
