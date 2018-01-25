@@ -19,7 +19,7 @@ import argparse
 import numpy as np
 #from enum import Enum
 
-from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails
+from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails, JobArchive
 from fermipy.jobs.chain import add_argument, extract_arguments, Link
 
 
@@ -107,26 +107,104 @@ class ConfigMaker(object):
             "ScatterGather.ConfigMaker.build_job_configs")
 
 
+class SG_Interface(object):
+    """ Abstract base class to handle job dispatching interface """
+
+    """C'tor """    
+    def __init__(self, **kwargs):
+        self._dry_run = kwargs.get('dry_run', False)
+        
+    def check_job(self, job_details):
+        """ Check the status of a specfic job """
+        raise NotImplementedError('SG_Interface.check_job')
+
+    def dispatch_job_hook(self, link, key, job_config, logfile):
+        """Hook to dispatch a single job"""
+        raise NotImplementedError("SG_Interface.dispatch_job_hook")
+
+
+    def dispatch_job(self, link, key, job_archive):
+        """Function to dispatch a single job
+
+        Parameters
+        ----------
+
+        link : `Link`
+            Link object that sendes the job
+
+        key : str
+            Key used to identify this particular job
+
+        job_archive : `JobArchive`
+            Archive used to keep track of jobs
+
+        Returns `JobDetails` object
+        """
+        try:
+            job_details = link.jobs[key]
+        except KeyError:
+            print(key, link.jobs)
+        job_config = job_details.job_config
+        link.update_args(job_config)
+        logfile = job_config['logfile']
+        try:
+            self.dispatch_job_hook(link, key, job_config, logfile)
+            job_details.status = JobStatus.running
+        except IOError:
+            job_details.status = JobStatus.failed
+
+        if job_archive is not None:
+            job_archive.register_job(job_details)
+        return job_details
+    
+    def submit_jobs(self, link, job_dict=None, job_archive=None):
+        """Run the `Link` with all of the items job_dict as input.
+
+        If job_dict is None, the job_dict will be take from link.jobs
+
+        Returns a `JobStatus` enum
+        """
+        failed = False
+        if job_dict is None:
+            job_dict = link.jobs
+
+        for job_key, job_details in sorted(job_dict.items()):
+            job_config = job_details.job_config
+            # clean failed jobs
+            if job_details.status == JobStatus.failed:
+                clean_job(job_details.logfile, job_details.outfiles, self._dry_run)
+            job_config['logfile'] = job_details.logfile
+            new_job_details = self.dispatch_job(link, job_key, job_archive)
+            if new_job_details.status == JobStatus.failed:
+                failed = True
+                clean_job(new_job_details.logfile,
+                          new_job_details.outfiles, self._dry_run)
+            link.jobs[job_key] = new_job_details
+        if failed:
+            return JobStatus.failed
+        return JobStatus.done
+
+
 class ScatterGather(Link):
-    """ Abstract base class to dispatch several jobs in parallel and
+    """ Class to dispatch several jobs in parallel and
     collect and merge the results.
     """
     default_prefix_logfile = 'scatter'
 
     default_options = dict(action=('run', 'Action to perform', str),
-                           dry_run=(
-                               False, 'Print commands, but do not execute them', bool),
-                           job_check_sleep=(
-                               300, 'Sleep time between checking on job status (s)', int),
+                           dry_run=(False, 'Print commands, but do not execute them', bool),
+                           job_check_sleep=(300, 'Sleep time between checking on job status (s)', int),
                            print_update=(False, 'Print summary of job status', bool),
-                           check_status_once=(False,
-                                              'Check status only once before proceeding', bool),)
+                           check_status_once=(False,'Check status only once before proceeding', bool),)
 
     def __init__(self, **kwargs):
         """C'tor
 
-        Keyword arguements
-        ---------------
+        Keyword arguments
+        -----------------
+        interface : `SG_Interface` subclass
+            Object used to interface with batch system
+
         config_maker : `ConfigMaker'
             Object used to translate arguments
             Must have functions 'add_arguments' and 'build_job_configs'
@@ -151,6 +229,7 @@ class ScatterGather(Link):
             Defaults to False
         """
         linkname = kwargs.pop('linkname', 'ScatterGather')
+        self._interface = kwargs.pop('interface', None)
         self._config_maker = kwargs.pop('config_maker', None)
         self._usage = kwargs.pop('usage', "")
         self._description = kwargs.pop('description', "")
@@ -165,6 +244,11 @@ class ScatterGather(Link):
                       **kwargs)
         self._base_config = None
         self._job_configs = {}
+
+    @property
+    def interface(self):
+        """Return the object used to interface with the batch system """
+        return self._interface
 
     @property
     def config_maker(self):
@@ -197,14 +281,6 @@ class ScatterGather(Link):
         logfile = job_config.get('logfile', "%s_%s_%s.log" %
                                  (cls.default_prefix_logfile, linkname, key))
         job_config['logfile'] = logfile
-
-    def check_job(self, job_details):
-        """ Check the status of a specfic job """
-        raise NotImplementedError('ScatterGather.check_job')
-
-    def dispatch_job_hook(self, link, key, job_config, logfile):
-        """Hook to dispatch a single job"""
-        raise NotImplementedError("ScatterGather.dispatch_job_hook")
 
     def update_args(self, override_args):
         """Update the arguments used to invoke the application
@@ -349,7 +425,7 @@ class ScatterGather(Link):
             #    continue
             if job_key == '__top__':
                 continue
-            job_details.status = self.check_job(job_details)
+            job_details.status = self._interface.check_job(job_details)
             if job_details.status == JobStatus.failed:
                 failed = True
             elif job_details.status == JobStatus.pending:
@@ -378,65 +454,7 @@ class ScatterGather(Link):
         self._base_config = self._config_maker.make_base_config(args)
         self._job_configs = self._config_maker.build_job_configs(args)
 
-    def submit_jobs(self, link, job_dict=None):
-        """Run the `Link` with all of the items job_dict as input.
 
-        If job_dict is None, the job_dict will be take from link.jobs
-
-        Returns a `JobStatus` enum
-        """
-        failed = False
-        if job_dict is None:
-            job_dict = link.jobs
-
-        for job_key, job_details in sorted(job_dict.items()):
-            job_config = job_details.job_config
-            # clean failed jobs
-            if job_details.status == JobStatus.failed:
-                clean_job(job_details.logfile, job_details.outfiles,
-                          self.args['dry_run'])
-            job_config['logfile'] = job_details.logfile
-            new_job_details = self.dispatch_job(link, job_key)
-            if new_job_details.status == JobStatus.failed:
-                failed = True
-                clean_job(new_job_details.logfile,
-                          new_job_details.outfiles, self.args['dry_run'])
-            link.jobs[job_key] = new_job_details
-        if failed:
-            return JobStatus.failed
-        return JobStatus.done
-
-
-    def dispatch_job(self, link, key):
-        """Function to dispatch a single job
-
-        Parameters
-        ----------
-
-        link : `Link`
-            Link object that sendes the job
-
-        key : str
-            Key used to identify this particular job
-
-        Returns `JobDetails` object
-        """
-        try:
-            job_details = link.jobs[key]
-        except KeyError:
-            print(key, link.jobs)
-        job_config = job_details.job_config
-        link.update_args(job_config)
-        logfile = job_config['logfile']
-        try:
-            self.dispatch_job_hook(link, key, job_config, logfile)
-            job_details.status = JobStatus.running
-        except IOError:
-            job_details.status = JobStatus.failed
-
-        if self._job_archive is not None:
-            self._job_archive.register_job(job_details)
-        return job_details
 
     def _make_parser(self):
         """Make an argument parser for this chain """
@@ -523,12 +541,14 @@ class ScatterGather(Link):
     def run_action(self, action, dry_run):
         """
         """
+        self._interface._dry_run = dry_run
         if action == 'run':
             return self.run_jobs()
         elif action == 'resubmit':
             return self.resubmit()
         elif action == 'scatter':
-            return self.submit_jobs(self.scatter_link)
+            return self._interface.submit_jobs(self.scatter_link,
+                                               job_archive=self._job_archive)
         elif action == 'check_status':
             running, failed = self.check_status()
             if failed:
@@ -576,7 +596,9 @@ class ScatterGather(Link):
         """
         self.build_job_dict()
 
-        scatter_status = self.submit_jobs(self.scatter_link)
+        self._interface._dry_run = self.args['dry_run']
+        scatter_status = self._interface.submit_jobs(self.scatter_link,
+                                                     job_archive=self._job_archive)
         if scatter_status == JobStatus.failed:
             return JobStatus.failed
 
@@ -611,7 +633,8 @@ class ScatterGather(Link):
 
         failed_jobs = self._scatter_link.get_failed_jobs(True, True)
         if len(failed_jobs) != 0:
-            scatter_status = self.submit_jobs(self._scatter_link, failed_jobs)
+            scatter_status = self._interface.submit_jobs(self._scatter_link, failed_jobs,
+                                                         job_archive=self._job_archive)
             if scatter_status == JobStatus.failed:
                 return JobStatus.failed
 
@@ -630,3 +653,19 @@ class ScatterGather(Link):
         self.update_args(args.__dict__)
 
         return args
+
+
+
+def build_sg_from_link(link, config_maker, **kwargs):
+    """Build a `ScatterGather` that will run multiple instance of a single link
+    """
+    kwargs['config_maker'] = config_maker
+    kwargs['scatter'] = link
+    linkname = kwargs.get('linkname', None)
+    if linkname is None:
+        kwargs['linkname'] = link.linkname
+    job_archive = kwargs.get('job_archive', None)
+    if job_archive is None:
+        kwargs['job_archive'] = JobArchive.build_temp_job_archive()
+    sg = ScatterGather(**kwargs)
+    return sg

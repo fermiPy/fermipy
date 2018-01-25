@@ -545,7 +545,6 @@ class Link(object):
             stream.write("%s\n" % command)
             stream.flush()
         else:
-            print(command)
             os.system(command)
 
     def register_self(self, logfile, key="__top__", status=JobStatus.unknown):
@@ -953,7 +952,6 @@ class Chain(Link):
             elif link_status == JobStatus.done:
                 n_passed +=1
 
-        print (n_failed, n_passed, n_total)
         if n_failed > 0:
             if n_passed > 0:
                 return JobStatus.partial_failed
@@ -992,7 +990,7 @@ class Chain(Link):
         #ok = self.pre_run_checks(stream, dry_run)
         # if not ok:
         #    return
-        print ('Chain.run_chain ', self.args)
+        #print ('Chain.run_chain ', self.args)
 
         if self.args['list']:
             stream.write("Links: \n")
@@ -1018,7 +1016,7 @@ class Chain(Link):
                 pass
             else:
                 continue
-            print ("Running link ", link.linkname, type(link), dry_run)
+            print ("Running link ", link.linkname)
             logfile = "log_%s_top.log"%link.linkname
             link.archive_self(logfile, status=JobStatus.unknown)
             close_file = False
@@ -1034,7 +1032,6 @@ class Chain(Link):
             link.set_status_self(status=link_status)
                         
             outstr.write("Link status: %i %s\n"%(link_status, link.linkname))
-            print(self.jobs)
             if close_file:
                 outstr.close()
             

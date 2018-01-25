@@ -9,8 +9,8 @@ import os
 import time
 import subprocess
 
-from fermipy.jobs.job_archive import JobStatus, JobArchive
-from fermipy.jobs.scatter_gather import clean_job, ScatterGather
+from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails
+from fermipy.jobs.scatter_gather import clean_job, SG_Interface
 
 def make_nfs_path(path):
     """Make a nfs version of a file path. 
@@ -118,17 +118,8 @@ def build_bsub_command(command_template, lsf_args):
     return full_command
 
 
-class LsfScatterGather(ScatterGather):
+class LSF_Interface(SG_Interface):
     """Implmentation of ScatterGather that uses LSF"""
-
-    default_options = ScatterGather.default_options.copy()
-    default_options.update(dict(max_jobs=(500,
-                                          'Limit on the number of running or queued jobs.', int),
-                                jobs_per_cycle=(
-                                    20, 'Maximum number of jobs to submit in each cycle.', int),
-                                time_per_cycle=(
-                                    15., 'Time per submission cycle in seconds.', float),
-                                max_job_age=(90., 'Max job age in minutes.', float),))
 
     def __init__(self, **kwargs):
         """C'tor
@@ -141,12 +132,31 @@ class LsfScatterGather(ScatterGather):
 
         lsf_successful : str ['Successfully completed']
             String used to identify completed jobs
+
+        lsf_args : dict 
+            Dictionary of arguments passed to LSF
+
+        max_jobs : int [500]
+            Limit on the number of running or queued jobs
+
+        jobs_per_cycle : int [20]
+            Maximum number of jobs to submit in each cycle
+
+        time_per_cycle : int [15]
+            Time per submission cycle in seconds
+        
+        max_job_age : int [90]
+            Max job age in minutes
         """
-        super(LsfScatterGather, self).__init__(**kwargs)
+        super(LSF_Interface, self).__init__(**kwargs)
         self._exited = kwargs.pop('lsf_exited', 'Exited with exit code')
-        self._successful = kwargs.pop(
-            'lsf_successful', 'Successfully completed')
+        self._successful = kwargs.pop('lsf_successful', 'Successfully completed')
         self._lsf_args = kwargs.pop('lsf_args', {})
+        self._max_jobs = kwargs.pop('max_jobs', 500)
+        self._time_per_cycle = kwargs.pop('time_per_cycle', 15)
+        self._jobs_per_cycle = kwargs.pop('jobs_per_cycle', 20)
+        self._max_job_age = kwargs.pop('max_job_age', 90)
+        self._no_batch =  kwargs.pop('no_batch', False)
 
     def check_job(self, job_details):
         """Check the status of a single job
@@ -176,7 +186,7 @@ class LsfScatterGather(ScatterGather):
         """
         full_sub_dict = job_config.copy()
 
-        if self.no_batch:
+        if self._no_batch:
             full_command = "%s >& %s" % (
                 link.command_template().format(**full_sub_dict), logfile)
         else:
@@ -187,8 +197,10 @@ class LsfScatterGather(ScatterGather):
 
         logdir = os.path.dirname(logfile)
 
-        if self.args['dry_run']:
-            sys.stdout.write("%s\n" % full_command)
+        print_bsub = True
+        if self._dry_run:
+            if print_bsub:
+                sys.stdout.write("%s\n" % full_command)
         else:
             try:
                 os.makedirs(logdir)
@@ -196,7 +208,7 @@ class LsfScatterGather(ScatterGather):
                 pass
             os.system(full_command)
 
-    def submit_jobs(self, link, job_dict=None):
+    def submit_jobs(self, link, job_dict=None, job_archive=None):
         """Submit all the jobs in job_dict """
         if link is None:
             return JobStatus.no_job
@@ -213,11 +225,11 @@ class LsfScatterGather(ScatterGather):
         failed = False
         while len(unsubmitted_jobs) > 0:
             status = get_lsf_status()
-            njob_to_submit = min(self.args['max_jobs'] - status['NJOB'],
-                                 self.args['jobs_per_cycle'],
+            njob_to_submit = min(self._max_jobs - status['NJOB'],
+                                 self._jobs_per_cycle,
                                  len(unsubmitted_jobs))
 
-            if self.args['dry_run']:
+            if self._dry_run:
                 njob_to_submit = len(unsubmitted_jobs)
 
             for i in range(njob_to_submit):
@@ -227,36 +239,36 @@ class LsfScatterGather(ScatterGather):
                 job_details = link.jobs[job_key]
                 job_config = job_details.job_config
                 if job_details.status == JobStatus.failed:
-                    clean_job(job_details.logfile, {}, self.args['dry_run'])
+                    clean_job(job_details.logfile, {}, self._dry_run)
                     #clean_job(job_details.logfile,
                     #          job_details.outfiles, self.args['dry_run'])
                     
                 job_config['logfile'] = job_details.logfile
-                new_job_details = self.dispatch_job(link, job_key)
+                new_job_details = self.dispatch_job(link, job_key, job_archive)
                 if new_job_details.status == JobStatus.failed:
                     failed = True
                     clean_job(new_job_details.logfile,
-                              new_job_details.outfiles, self.args['dry_run'])
+                              new_job_details.outfiles, self._dry_run)
                 link.jobs[job_key] = new_job_details
 
             if len(unsubmitted_jobs) > 0:
                 print('Sleeping %.0f seconds between submission cycles' %
-                      self.args['time_per_cycle'])
-                time.sleep(self.args['time_per_cycle'])
+                      self._time_per_cycle)
+                time.sleep(self._time_per_cycle)
 
         return failed
 
 
-def build_sg_from_link(link, config_maker, **kwargs):
-    """Build a `ScatterGather` that will run multiple instance of a single link
-    """
-    kwargs['config_maker'] = config_maker
-    kwargs['scatter'] = link
-    linkname = kwargs.get('linkname', None)
-    if linkname is None:
-        kwargs['linkname'] = link.linkname
-    job_archive = kwargs.get('job_archive', None)
-    if job_archive is None:
-        kwargs['job_archive'] = JobArchive.build_temp_job_archive()
-    lsf_sg = LsfScatterGather(**kwargs)
-    return lsf_sg
+
+
+def get_lsf_default_args():
+    lsf_default_args = dict(lsf_exited='Exited with exit code',
+                            lsf_successful='Successfully completed',
+                            lsf_args={'W': 1500,
+                                      'R': '\"select[rhel60 && !fell]\"'},
+                            max_jobs=500,
+                            time_per_cycle=15,
+                            jobs_per_cycle=20,
+                            max_job_age=90,
+                            no_batch=False)
+    return lsf_default_args.copy()
