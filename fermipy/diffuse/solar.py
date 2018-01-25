@@ -11,8 +11,8 @@ import argparse
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Link, Chain
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse import defaults as diffuse_defaults
@@ -178,15 +178,15 @@ def create_sg_Gtexphpsun(**kwargs):
     link = create_link_gtexphpsun(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Run gtexpcube2 for a series of event types."
 
     config_maker = ConfigMaker_Gtexphpsun(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
@@ -201,15 +201,15 @@ def create_sg_Gtsuntemp(**kwargs):
     link = create_link_gtsuntemp(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Run gtexpcube2 for a series of event types."
 
     config_maker = ConfigMaker_Gtsuntemp(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
