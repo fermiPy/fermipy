@@ -16,8 +16,8 @@ from fermipy.skymap import HpxMap
 from fermipy import fits_utils
 from fermipy.jobs.job_archive import JobArchive
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import check_log, build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import check_log, make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.jobs.chain import add_argument, Link, Chain
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
@@ -438,15 +438,15 @@ def create_sg_residual_cr(**kwargs):
     link.linkname = kwargs.pop('linkname', link.linkname)
     appname = kwargs.pop('appname', 'gt-residual-cr-sg')
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Copy source maps from the library to a analysis directory"
 
     config_maker = ConfigMaker_ResidualCR(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=link.linkname,
