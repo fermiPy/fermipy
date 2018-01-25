@@ -52,9 +52,9 @@ class NameFactory(object):
 
     # Galprop inputs
     # Galprop input gasmaps
-    galprop_gasmap_format = 'gasmap/{sourcekey}_{projtype}_{galprop_run}_{maptype}.fits.gz'
+    galprop_gasmap_format = 'gasmap/{sourcekey}_{projtype}_{galprop_run}.gz'
     # Galprop merged gasmaps
-    merged_gasmap_format = 'merged_gasmaps/{sourcekey}_{projtype}_{maptype}.fits'
+    merged_gasmap_format = 'merged_gasmaps/{sourcekey}_{projtype}.fits'
 
     # Other diffuse map templates
     diffuse_template_format = 'templates/template_{sourcekey}.fits'
