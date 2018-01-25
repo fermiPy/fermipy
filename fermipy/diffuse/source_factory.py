@@ -170,6 +170,8 @@ class SourceFactory(object):
             return catalog.Catalog3FGL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '4FGLP':
             return catalog.Catalog4FGLP(fitsfile=catalog_file, extdir=catalog_extdir)
+        elif catalog_type == '4FGL':
+            return catalog.Catalog4FGL(fitsfile=catalog_file, extdir=catalog_extdir)
         else:
             table = Table.read(catalog_file)
         return catalog.Catalog(table, extdir=catalog_extdir)
