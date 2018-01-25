@@ -27,7 +27,15 @@ class ModelComponent(object):
         """
         self.info = kwargs.get('info')
         self.spectrum = kwargs.get('spectrum')
-
+        self.par_overrides = kwargs.get('par_overrides')
+        if self.par_overrides is not None:
+            for parname, pardict in self.par_overrides.items():
+                try:
+                    self.spectrum['spectral_pars'][parname].update(pardict)
+                except KeyError:
+                    raise KeyError("Failed to update parameter %s in source %s of spectral type %s"%(parname, 
+                                                                                                     self.info.source_name,
+                                                                                                     self.spectrum['SpectrumType']))                
 
 class ModelInfo(object):
     """ Small helper class to keep track of a single fitting model """
@@ -254,6 +262,7 @@ class ModelManager(object):
         self._spec_lib.update(yaml.safe_load(open(spec_model_yaml)))
         for source, source_info in sources.items():
             model_type = source_info.get('model_type', None)
+            par_overrides = source_info.get('par_overides', None)
             version = source_info['version']
             spec_type = source_info['SpectrumType']
             sourcekey = "%s_%s" % (source, version)
@@ -264,7 +273,8 @@ class ModelManager(object):
                     model_comp = ModelComponent(info=comp_info,
                                                 spectrum=\
                                                     self._spec_lib[spec_type.get(comp_key,
-                                                                                 def_spec_type)])
+                                                                                 def_spec_type)],
+                                                par_overrides=par_overrides)
                     components[comp_key] = model_comp
             elif model_type == 'Catalog':
                 comp_info_dict = self.csm.split_comp_info_dict(source, version)
@@ -273,12 +283,14 @@ class ModelManager(object):
                     model_comp = ModelComponent(info=comp_info,
                                                 spectrum=\
                                                     self._spec_lib[spec_type.get(comp_key,
-                                                                                 def_spec_type)])
+                                                                                 def_spec_type)],
+                                                par_overrides=par_overrides)
                     components[comp_key] = model_comp
             else:
                 comp_info = self.dmm.diffuse_comp_info(sourcekey)
                 model_comp = ModelComponent(info=comp_info,
-                                            spectrum=self._spec_lib[spec_type])
+                                            spectrum=self._spec_lib[spec_type],
+                                            par_overrides=par_overrides)
                 components[sourcekey] = model_comp
         ret_val = ModelInfo(model_name=modelkey,
                             model_components=components)
