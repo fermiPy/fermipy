@@ -12,8 +12,8 @@ import math
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Link
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link, make_nfs_path
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
@@ -544,7 +544,7 @@ class ConfigMaker_GatherSrcmaps(ConfigMaker):
                                         args=infile_regexp,
                                         logfile=logfile)
 
-        return job_config
+        return job_configs
 
 
 class ConfigMaker_healview(ConfigMaker):
@@ -602,6 +602,7 @@ class ConfigMaker_healview(ConfigMaker):
                                  psftype=comp.evtype_name,
                                  coordsys='GAL',
                                  irf_ver=args['irf_ver'],
+                                 mktime='none',
                                  fullpath=True)
 
                 infile = NAME_FACTORY.srcmaps(**name_keys)
@@ -615,7 +616,7 @@ class ConfigMaker_healview(ConfigMaker):
                                              logfile=logfile)
                                             
 
-        return job_config
+        return job_configs
 
 
 def create_sg_gtexpcube2(**kwargs):
@@ -624,15 +625,15 @@ def create_sg_gtexpcube2(**kwargs):
     link = create_link_gtexpcube2(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Run gtexpcube2 for a series of event types."
 
     config_maker = ConfigMaker_Gtexpcube2(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
@@ -647,15 +648,15 @@ def create_sg_gtltsum(**kwargs):
     link = create_link_gtltsum(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Run gtlsum for a series of event types."
 
     config_maker = ConfigMaker_Gtltsum(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
@@ -665,20 +666,20 @@ def create_sg_gtltsum(**kwargs):
 
 
 def create_sg_fermipy_coadd(**kwargs):
-    """Build and return a ScatterGather object that can invoke gtltsum"""
+    """Build and return a ScatterGather object that can invoke fermipy-coadd"""
     appname = kwargs.pop('appname', 'fermipy-coadd-sg')
     link = create_link_fermipy_coadd(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Run fermipy-coadd for a series of event types."
 
     config_maker = ConfigMaker_CoaddSplit(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
@@ -693,15 +694,15 @@ def create_sg_sum_ring_gasmaps(**kwargs):
     link = create_link_fermipy_coadd(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Sum gasmaps to build diffuse model components"
 
     config_maker = ConfigMaker_SumRings(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
@@ -716,15 +717,15 @@ def create_sg_vstack_diffuse(**kwargs):
     link = create_link_fermipy_vstack(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Sum gasmaps to build diffuse model components"
 
     config_maker = ConfigMaker_Vstack(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
@@ -739,15 +740,15 @@ def create_sg_gather_srcmaps(**kwargs):
     link = create_link_fermipy_gather_srcmaps(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Sum gasmaps to build diffuse model components"
 
     config_maker = ConfigMaker_GatherSrcmaps(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
@@ -763,15 +764,15 @@ def create_sg_healview_diffuse(**kwargs):
     link = create_link_fermipy_healview(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Sum gasmaps to build diffuse model components"
 
     config_maker = ConfigMaker_healview(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
