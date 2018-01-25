@@ -43,14 +43,11 @@ class GalpropMapManager(object):
         Keyword arguments
         -----------------
 
-        maptype : str [newGasMaps_ST]
-            Used to define path to gasmap files
         projtype : str [healpix]
             Used to define path to gasmap files
         basedir : str
             Top level directory for finding files
         """
-        self.maptype = kwargs.get('maptype', 'ST')
         self.projtype = kwargs.get('projtype', 'healpix')
         self._name_factory = NameFactory(basedir=kwargs.get('basedir'))
         self._ring_dicts = {}
