@@ -14,8 +14,8 @@ import yaml
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Chain
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.name_policy import NameFactory, EVCLASS_MASK_DICTIONARY
 from fermipy.diffuse.gt_coadd_split import CoaddSplit
 from fermipy.diffuse import defaults as diffuse_defaults
@@ -353,15 +353,15 @@ def create_sg_split_and_mktime(**kwargs):
     chain = SplitAndMktime(linkname, **kwargs)
     appname = kwargs.pop('appname', 'fermipy-split-and-mktime-sg')
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
     config_maker = ConfigMaker_SplitAndMktime(chain)
     lsf_sg = build_sg_from_link(chain, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,

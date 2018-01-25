@@ -19,8 +19,8 @@ import pyLikelihood as pyLike
 from fermipy import utils
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import add_argument, Link
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link, make_nfs_path
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.catalog_src_manager import make_catalog_comp_dict
@@ -215,15 +215,16 @@ def create_sg_gtsrcmaps_catalog(**kwargs):
     link = create_link_gtsrcmaps_catalog(**kwargs)
     linkname=kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 6000,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_args['lsf_args']['W'] = 6000
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Run gtsrcmaps for catalog sources"
 
     config_maker = ConfigMaker_SrcmapsCatalog(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,

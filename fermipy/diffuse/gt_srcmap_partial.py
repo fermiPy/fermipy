@@ -18,8 +18,8 @@ import pyLikelihood as pyLike
 from fermipy import utils
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import add_argument, Link
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link, make_nfs_path
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import  make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.diffuse_src_manager import make_diffuse_comp_info_dict
@@ -248,15 +248,15 @@ def create_sg_srcmap_partial(**kwargs):
     link.linkname = kwargs.pop('linkname', link.linkname)
     appname = kwargs.pop('appname', 'fermipy-srcmaps-diffuse-sg')
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Build source maps for diffuse model components"
 
     config_maker = ConfigMaker_SrcmapPartial(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=link.linkname,

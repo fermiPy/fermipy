@@ -15,8 +15,8 @@ from fermipy.skymap import HpxMap
 
 from fermipy.utils import load_yaml
 
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link, make_nfs_path
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.jobs.chain import add_argument, Link
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.diffuse.binning import Component
@@ -257,15 +257,16 @@ class ConfigMaker_AssembleModel(ConfigMaker):
                                     'srcmap_manifest_%s.yaml' % modelkey)
             for comp in components:
                 key = comp.make_key('{ebin_name}_{evtype_name}')
+                fullkey = "%s_%s"%(modelkey, key)
                 outfile = NAME_FACTORY.merged_srcmaps(modelkey=modelkey,
                                                       component=key,
                                                       coordsys='GAL',
                                                       mktime='none',
                                                       irf_ver=args['irf_ver'])
                 logfile = make_nfs_path(outfile.replace('.fits', '.log'))
-                job_configs[key] = dict(input=manifest,
-                                        comp=key,
-                                        logfile=logfile)
+                job_configs[fullkey] = dict(input=manifest,
+                                            comp=key,
+                                            logfile=logfile)
         return job_configs
 
 def create_link_init_model(**kwargs):
@@ -286,23 +287,22 @@ def create_sg_assemble_model(**kwargs):
     gtassemble = GtAssembleModel(**kwargs)
     link = gtassemble
 
-
     appname = kwargs.pop('appname', 'fermipy-assemble-model-sg')
 
-    lsf_args = {'W': 1500,
-                'R': '\"select[rhel60 && !fell]\"'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Copy source maps from the library to a analysis directory"
 
     config_maker = ConfigMaker_AssembleModel(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
-                                usage=usage,
-                                description=description,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
+    sg = build_sg_from_link(link, config_maker,
+                            interface=batch_interface,
+                            usage=usage,
+                            description=description,
+                            appname=appname,
+                            **kwargs)
+    return sg
 
 
 def main_init():
