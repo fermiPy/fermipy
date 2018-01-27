@@ -102,8 +102,8 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
 
     projection : str
 
-    cdelt : float
-
+    cdelt : float or (float,float)
+        In the first case the same value is used for x and y axes
     crpix : float or (float,float)
         In the first case the same value is used for x and y axes
     naxis : {2, 3}
@@ -133,8 +133,13 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
     except:
         w.wcs.crpix[0] = crpix
         w.wcs.crpix[1] = crpix
-    w.wcs.cdelt[0] = -cdelt
-    w.wcs.cdelt[1] = cdelt
+
+    try:
+        w.wcs.cdelt[0] = cdelt[0]
+        w.wcs.cdelt[1] = cdelt[1]
+    except:
+        w.wcs.cdelt[0] = -cdelt
+        w.wcs.cdelt[1] = cdelt
 
     w = WCS(w.to_header())
     if naxis == 3 and energies is not None:
