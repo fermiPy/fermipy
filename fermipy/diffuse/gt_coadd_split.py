@@ -25,7 +25,6 @@ class CoaddSplit(Chain):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           coordsys=diffuse_defaults.diffuse['coordsys'],
                            do_ltsum=(False, 'Sum livetime cube files', bool),
                            nfiles=(96, 'Number of input files', int),                                    
                            dry_run=(False, 'Print commands but do not run them', bool))
@@ -120,7 +119,6 @@ class CoaddSplit(Chain):
             return None
         NAME_FACTORY.update_base_dict(datafile)
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
-        coordsys = input_dict.get('coordsys', 'GAL')
 
         num_files = input_dict.get('nfiles', 96)
         output_dict = input_dict.copy()
@@ -146,7 +144,7 @@ class CoaddSplit(Chain):
                 kwargs_mktime = dict(zcut=zcut,
                                      ebin=key_e,
                                      psftype='ALL',
-                                     coordsys=coordsys,
+                                     coordsys=comp_e.coordsys,
                                      mktime=mktimekey)
                 if self.args['do_ltsum']:                    
                     ltsumname = os.path.join(NAME_FACTORY.base_dict['basedir'], 

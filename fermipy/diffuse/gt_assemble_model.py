@@ -34,11 +34,9 @@ class GtInitModel(Link):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           diffuse=diffuse_defaults.diffuse['diffuse'],
-                           sources=diffuse_defaults.diffuse['sources'],
+                           library=diffuse_defaults.diffuse['library'],
                            models=diffuse_defaults.diffuse['models'],
-                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],)
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'])
     
     def __init__(self, **kwargs):
         """C'tor
@@ -65,7 +63,8 @@ class GtInitModel(Link):
         for modelkey, modelpath in models.items():
             model_manager.make_srcmap_manifest(modelkey, components, data)
             fermipy_config = model_manager.make_fermipy_config_yaml(modelkey, components, data, 
-                                                                    hpx_order=hpx_order, irf_ver=args.irf_ver)
+                                                                    hpx_order=hpx_order, 
+                                                                    irf_ver=NAME_FACTORY.irf_ver())
             
 
 
@@ -75,7 +74,7 @@ class GtAssembleModel(Link):
     This is useful for re-merging after parallelizing source map creation.
     """
     default_options = dict(input=(None, 'Input yaml file', str),
-                           comp=diffuse_defaults.diffuse['comp'],
+                           compname=(None, 'Component name.', str),
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'])
 
     def __init__(self, **kwargs):
@@ -209,9 +208,9 @@ class GtAssembleModel(Link):
         args = self._parser.parse_args(argv)
         manifest = yaml.safe_load(open(args.input))
 
-        key = args.comp
+        compname = args.compname
         value = manifest[key]
-        GtAssembleModel.assemble_component(key, value, args.hpx_order)
+        GtAssembleModel.assemble_component(compname, value, args.hpx_order)
 
 
 class ConfigMaker_AssembleModel(ConfigMaker):
@@ -220,19 +219,14 @@ class ConfigMaker_AssembleModel(ConfigMaker):
     Parameters
     ----------
 
-    --comp      : binning component definition yaml file
+    --compname  : binning component definition yaml file
     --data      : datset definition yaml file
-    --hpx_order : Maximum HEALPix order to use
-    --irf_ver   : IRF verions string (e.g., 'V6')
+    --models    : model definitino yaml file
     args        : Names of models to assemble source maps for
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           sources=diffuse_defaults.diffuse['sources'],
-                           diffuse=diffuse_defaults.diffuse['diffuse'],
-                           models=diffuse_defaults.diffuse['models'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],)
+                           models=diffuse_defaults.diffuse['models'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -260,9 +254,9 @@ class ConfigMaker_AssembleModel(ConfigMaker):
                 fullkey = "%s_%s"%(modelkey, key)
                 outfile = NAME_FACTORY.merged_srcmaps(modelkey=modelkey,
                                                       component=key,
-                                                      coordsys='GAL',
+                                                      coordsys=comp.coordsys,
                                                       mktime='none',
-                                                      irf_ver=args['irf_ver'])
+                                                      irf_ver=NAME_FACTORY.irf_ver())
                 logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                 job_configs[fullkey] = dict(input=manifest,
                                             comp=key,

@@ -115,15 +115,13 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
-    --sources  : Yaml file with input source model definitions
+    --library  : Yaml file with input source model definitions
     --make_xml : Write xml files for the individual components
     --nsrc     : Number of sources per job
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           sources=diffuse_defaults.diffuse['sources'],
+                           library=diffuse_defaults.diffuse['library'],
                            nsrc=(500, 'Number of sources per job', int),
                            make_xml=(False, 'Write xml files needed to make source maps', bool),)
 
@@ -156,7 +154,7 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
 
-        ret_dict = make_catalog_comp_dict(sources=args['sources'], 
+        ret_dict = make_catalog_comp_dict(sources=args['library'], 
                                           basedir=NAME_FACTORY.base_dict['basedir'])
         catalog_info_dict = ret_dict['catalog_info_dict']
         comp_info_dict = ret_dict['comp_info_dict']
@@ -178,8 +176,8 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
                                  sourcekey=catalog_name,
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
-                                 coordsys='GAL',
-                                 irf_ver=args['irf_ver'],
+                                 coordsys=comp.coordsys,
+                                 irf_ver=NAME_FACTORY.irf_ver(),
                                  mktime='none',
                                  fullpath=True)
 

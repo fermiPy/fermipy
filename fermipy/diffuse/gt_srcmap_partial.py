@@ -110,14 +110,12 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
     This adds the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
-    --diffuse  : Diffuse model component definition yaml file'
+    --library  : Diffuse model component definition yaml file'
     --make_xml : Write xml files for the individual components
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           diffuse=diffuse_defaults.diffuse['diffuse'],
+                           library=diffuse_defaults.diffuse['library'],
                            make_xml=(True, 'Write xml files needed to make source maps', bool))
 
     def __init__(self, link, **kwargs):
@@ -181,7 +179,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
         NAME_FACTORY.update_base_dict(args['data'])
         
         ret_dict = make_diffuse_comp_info_dict(components=components,
-                                               diffuse=args['diffuse'],
+                                               library=args['library'],
                                                basedir='.')
         diffuse_comp_info_dict = ret_dict['comp_info_dict']
         if args['make_xml']:
@@ -201,8 +199,8 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
                                  mktime='none',
-                                 coordsys='GAL',
-                                 irf_ver=args['irf_ver'],
+                                 coordsys=comp.coordsys,
+                                 irf_ver=NAME_FACTORY.irf_ver(),
                                  fullpath=True)
 
                 kmin = 0

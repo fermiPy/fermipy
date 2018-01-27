@@ -33,6 +33,8 @@ class Component(object):
         Filters for gtmktime.  
     hpx_order : int
         HEALPix order to use for this component
+    coordsys : str
+        Coodinate system, 'CEL' or 'GAL'
     """
 
     def __init__(self, **kwargs):
@@ -47,12 +49,15 @@ class Component(object):
         self.hpx_order = kwargs['hpx_order']
         self.evtype_name = kwargs['evtype_name']
         self.ebin_name = kwargs['ebin_name']
+        self.coordsys = kwargs['coordsys']
+        
 
     def __repr__(self):
         retstr = "Binning component %s_%s\n"%(self.ebin_name, self.evtype_name)
         retstr += "  log_10(E/MeV) : %.2f %.2f %i bins\n"%(self.log_emin,
                                                            self.log_emax, self.enumbins)
         retstr += "  HPX order     : %i\n"%self.hpx_order
+        retstr += "  Coordsys      : %s\n"%self.coordsys
         retstr += "  Zenith cut    : %.0f\n"%self.zmax
         retstr += "  Mktime filters: %s\n"%str(self.mktimefilters)
         retstr += "  Evt classes   : %s"%str(self.evtclasses)
@@ -100,9 +105,13 @@ class Component(object):
         """ Build a list of components from a yaml string
         """
         top_dict = yaml.safe_load(yamlstr)
+        coordsys = top_dict.pop('coordsys')
         output_list = []
         for e_key, e_dict in sorted(top_dict.items()):
+	    if e_key == 'coordsys':
+                continue
             e_dict = top_dict[e_key]
+            e_dict['coordsys'] = coordsys
             output_list += cls.build_from_energy_dict(e_key, e_dict)
         return output_list
 
