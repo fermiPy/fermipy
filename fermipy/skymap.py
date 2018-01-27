@@ -17,12 +17,12 @@ import fermipy.fits_utils as fits_utils
 from fermipy.hpx_utils import HPX, HpxToWcsMapping
 
 
-def make_coadd_map(maps, proj, shape):
+def make_coadd_map(maps, proj, shape, preserve_counts=True):
 
     if isinstance(proj, WCS):
         return make_coadd_wcs(maps, proj, shape)
     elif isinstance(proj, HPX):
-        return make_coadd_hpx(maps, proj, shape)
+        return make_coadd_hpx(maps, proj, shape, preserve_counts=preserve_counts)
     else:
         raise Exception("Can't co-add map of unknown type %s" % type(proj))
 
@@ -39,12 +39,12 @@ def make_coadd_wcs(maps, wcs, shape):
     return Map(data, copy.deepcopy(wcs))
 
 
-def make_coadd_hpx(maps, hpx, shape):
+def make_coadd_hpx(maps, hpx, shape, preserve_counts=True):
     data = np.zeros(shape)
     axes = hpx_utils.hpx_to_axes(hpx, shape)
     for m in maps:
         if m.hpx.order != hpx.order:
-            m_copy = m.ud_grade(hpx.order, True)
+            m_copy = m.ud_grade(hpx.order, preserve_counts)
         else:
             m_copy = m
         c = hpx_utils.hpx_to_coords(m_copy.hpx, m_copy.counts.shape)
