@@ -42,7 +42,6 @@ class SplitAndMktime(Chain):
     """
     default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
                            data=diffuse_defaults.residual_cr['dataset_yaml'],
-                           coordsys=diffuse_defaults.residual_cr['coordsys'],
                            hpx_order_max=diffuse_defaults.residual_cr['hpx_order_binning'],
                            ft1file=diffuse_defaults.residual_cr['ft1file'],
                            scfile=diffuse_defaults.residual_cr['ft2file'],
@@ -60,6 +59,9 @@ class SplitAndMktime(Chain):
         comp_file = kwargs.get('comp', None)
         if comp_file:
             self.comp_dict = yaml.safe_load(open(comp_file))
+            coordsys = self.comp_dict.pop('coordsys')
+            for v in self.comp_dict.values():
+                v['coordsys'] = coordsys
         else:
             self.comp_dict = None
         job_archive = kwargs.get('job_archive', None)
@@ -219,7 +221,6 @@ class SplitAndMktime(Chain):
 
         NAME_FACTORY.update_base_dict(input_dict['data'])
 
-        coordsys = input_dict.get('coordsys')
         outdir = input_dict.get('outdir')
         outkey = input_dict.get('outkey')
         if outdir is None or outkey is None:
@@ -234,7 +235,7 @@ class SplitAndMktime(Chain):
             kwargs_select = dict(zcut=zcut,
                                  ebin=key_e,
                                  psftype='ALL',
-                                 coordsys=coordsys)
+                                 coordsys=comp_e['coordsys'])
             selectfile = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select) )
             output_dict['selectfile_%s' % key_e] = selectfile
             for mktimekey in comp_e['mktimefilters']:
@@ -248,7 +249,7 @@ class SplitAndMktime(Chain):
                         key = "%s_%s_%s_%s"%(key_e, mktimekey, evtclass, psf_type)
                         kwargs_bin = kwargs_mktime.copy()
                         kwargs_bin['psftype'] = psf_type
-                        kwargs_bin['coordsys'] = coordsys
+                        kwargs_bin['coordsys'] = comp_e.coordsys
                         kwargs_bin['evclass'] = evtclass
                         output_dict['selectfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
                         output_dict['binfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
@@ -272,7 +273,6 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
     """
     default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
                            data=diffuse_defaults.residual_cr['dataset_yaml'],
-                           coordsys=diffuse_defaults.diffuse['coordsys'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                            ft1file=diffuse_defaults.residual_cr['ft1file'],
                            ft2file=diffuse_defaults.residual_cr['ft2file'],

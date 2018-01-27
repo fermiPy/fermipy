@@ -63,7 +63,7 @@ def create_link_gtexpcube2(**kwargs):
                                  infile=(None, "Input livetime cube file", str),
                                  cmap=diffuse_defaults.gtopts['cmap'],
                                  outfile=diffuse_defaults.gtopts['outfile'],
-                                 coordsys=diffuse_defaults.gtopts['coordsys']),
+                                 coordsys=('GAL', "Coordinate system", str)),
                     file_args=dict(infile=FileFlags.input_mask,
                                    cmap=FileFlags.input_mask,
                                    outfile=FileFlags.output_mask),
@@ -162,15 +162,11 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
-    --coordsys : Coordinate system ['GAL' | 'CEL']
     --hpx_order: HEALPix order parameter
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           hpx_order_max=diffuse_defaults.diffuse['hpx_order_expcube'],
-                           coordsys=diffuse_defaults.diffuse['coordsys'])
+                           hpx_order_max=diffuse_defaults.diffuse['hpx_order_expcube'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -208,8 +204,8 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
                     name_keys = dict(zcut=zcut,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
-                                     coordsys=args['coordsys'],
-                                     irf_ver=args['irf_ver'],
+                                     coordsys=comp.coordsys,
+                                     irf_ver=NAME_FACTORY.irf_ver(),
                                      mktime=mktimekey,
                                      evclass=evtclassval,
                                      fullpath=True)
@@ -236,14 +232,10 @@ class ConfigMaker_Gtltsum(ConfigMaker):
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
-    --coordsys : Coordinate system ['GAL' | 'CEL']
     --ft1file  : Input list of ft1 files
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           coordsys=diffuse_defaults.diffuse['coordsys'],
                            ft1file=(None, 'Input FT1 file', str))
 
     def __init__(self, link, **kwargs):
@@ -286,8 +278,8 @@ class ConfigMaker_Gtltsum(ConfigMaker):
                     name_keys = dict(zcut=zcut,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
-                                     coordsys=args['coordsys'],
-                                     irf_ver=args['irf_ver'],
+                                     coordsys=comp.coordsys,
+                                     irf_ver=NAME_FACTORY.irf_ver(),
                                      mktime=mktimekey,
                                      evclass=evtclassval,
                                      fullpath=True)
@@ -309,14 +301,10 @@ class ConfigMaker_CoaddSplit(ConfigMaker):
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
-    --coordsys : Coordinate system ['GAL' | 'CEL']
     --ft1file  : Input list of ft1 files
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           coordsys=diffuse_defaults.diffuse['coordsys'],
                            ft1file=(None, 'Input FT1 file', str))
 
     def __init__(self, link, **kwargs):
@@ -361,8 +349,8 @@ class ConfigMaker_CoaddSplit(ConfigMaker):
                     name_keys = dict(zcut=zcut,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
-                                     coordsys=args['coordsys'],
-                                     irf_ver=args['irf_ver'],
+                                     coordsys=comp.coordsys,
+                                     irf_ver=NAME_FACTORY.irf_ver(),
                                      mktime=mktimekey,
                                      evclass=evtclassval,
                                      fullpath=True)
@@ -385,10 +373,10 @@ class ConfigMaker_SumRings(ConfigMaker):
     to sum galprop ring gasmaps
 
     This takes the following arguments:
-    --diffuse  : Diffuse model component definition yaml file
+    --library  : Diffuse model component definition yaml file
     --outdir   : Output directory
     """
-    default_options = dict(diffuse=diffuse_defaults.diffuse['diffuse'],
+    default_options = dict(library=diffuse_defaults.diffuse['library'],
                            outdir=(None, 'Output directory', str),)
 
     def __init__(self, link, **kwargs):
@@ -403,7 +391,7 @@ class ConfigMaker_SumRings(ConfigMaker):
         """
         job_configs = {}
 
-        gmm = make_ring_dicts(diffuse=args['diffuse'], basedir='.')
+        gmm = make_ring_dicts(library=args['library'], basedir='.')
         
         for galkey in gmm.galkeys():
             ring_dict = gmm.ring_dict(galkey)
@@ -427,13 +415,11 @@ class ConfigMaker_Vstack(ConfigMaker):
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
     --diffuse  : Diffuse model component definition yaml file'
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           diffuse=diffuse_defaults.diffuse['diffuse'],)
+                           library=diffuse_defaults.diffuse['library'],)
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -451,7 +437,7 @@ class ConfigMaker_Vstack(ConfigMaker):
         NAME_FACTORY.update_base_dict(args['data'])
 
         ret_dict = make_diffuse_comp_info_dict(components=components,
-                                               diffuse=args['diffuse'],
+                                               library=args['library'],
                                                basedir=NAME_FACTORY.base_dict['basedir'])
         diffuse_comp_info_dict = ret_dict['comp_info_dict']
 
@@ -470,8 +456,8 @@ class ConfigMaker_Vstack(ConfigMaker):
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
                                  mktime='none',
-                                 coordsys='GAL',
-                                 irf_ver=args['irf_ver'],
+                                 coordsys=comp.coordsys,
+                                 irf_ver=NAME_FACTORY.irf_ver(),
                                  fullpath=True)
 
                 outfile = NAME_FACTORY.srcmaps(**name_keys)
@@ -494,13 +480,11 @@ class ConfigMaker_GatherSrcmaps(ConfigMaker):
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
-    --sources  : Catalog component definition yaml file'
+    --library  : Catalog component definition yaml file'
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           sources=diffuse_defaults.diffuse['sources'])
+                           library=diffuse_defaults.diffuse['library'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -517,7 +501,7 @@ class ConfigMaker_GatherSrcmaps(ConfigMaker):
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
 
-        ret_dict = make_catalog_comp_dict(sources=args['sources'], 
+        ret_dict = make_catalog_comp_dict(library=args['library'], 
                                           basedir=NAME_FACTORY.base_dict['basedir'])
         catalog_info_dict = ret_dict['catalog_info_dict']
         comp_info_dict = ret_dict['comp_info_dict']
@@ -531,8 +515,8 @@ class ConfigMaker_GatherSrcmaps(ConfigMaker):
                                  sourcekey=catalog_name,
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
-                                 coordsys='GAL',
-                                 irf_ver=args['irf_ver'],
+                                 coordsys=comp.coordsys,
+                                 irf_ver=NAME_FACTORY.irf_ver(),
                                  mktime='none',
                                  fullpath=True)
 
@@ -554,13 +538,11 @@ class ConfigMaker_healview(ConfigMaker):
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
-    --diffuse  : Diffuse model component definition yaml file'
+    --library  : Diffuse model component definition yaml file'
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           diffuse=diffuse_defaults.diffuse['diffuse'])
+                           library=diffuse_defaults.diffuse['library'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -578,7 +560,7 @@ class ConfigMaker_healview(ConfigMaker):
         NAME_FACTORY.update_base_dict(args['data'])
 
         ret_dict = make_diffuse_comp_info_dict(components=components,
-                                               diffuse=args['diffuse'],
+                                               library=args['library'],
                                                basedir=NAME_FACTORY.base_dict['basedir'])
         diffuse_comp_info_dict = ret_dict['comp_info_dict']
 
@@ -600,8 +582,8 @@ class ConfigMaker_healview(ConfigMaker):
                                  sourcekey=sub_comp_info.sourcekey,
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
-                                 coordsys='GAL',
-                                 irf_ver=args['irf_ver'],
+                                 coordsys=comp.coordsys,
+                                 irf_ver=NAME_FACTORY.irf_ver(),
                                  mktime='none',
                                  fullpath=True)
 

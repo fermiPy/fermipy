@@ -139,6 +139,11 @@ class NameFactory(object):
         """
         self.base_dict.update(**yaml.safe_load(open(yamlfile)))
 
+    def irf_ver(self, **kwargs):
+        """ Get the name of the IRF version 
+        """
+        return kwargs.get('irf_ver', self.base_dict.get('irf_ver', None))
+
     def irfs(self, **kwargs):
         """ Get the name of IFRs associted with a particular dataset
         """

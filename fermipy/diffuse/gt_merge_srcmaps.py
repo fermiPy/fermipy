@@ -129,13 +129,11 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
     This adds the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
     --sources  : Catalog model component definition yaml file'
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           sources=diffuse_defaults.diffuse['sources'])
+                           library=diffuse_defaults.diffuse['library'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -151,7 +149,7 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
 
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
-        ret_dict = make_catalog_comp_dict(sources=args['sources'], basedir='.')
+        ret_dict = make_catalog_comp_dict(sources=args['library'], basedir='.')
         comp_info_dict = ret_dict['comp_info_dict']
 
         for split_ver, split_dict in comp_info_dict.items():
@@ -168,16 +166,16 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
                                      sourcekey=full_key,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
-                                     coordsys='GAL',
+                                     coordsys=comp.coordsys,
                                      mktime='none',
-                                     irf_ver=args['irf_ver'])
+                                     irf_ver=NAME_FACTORY.irf_ver())
                     nested_name_keys = dict(zcut=zcut,
                                             sourcekey=source_dict.catalog_info.catalog_name,
                                             ebin=comp.ebin_name,
                                             psftype=comp.evtype_name,
-                                            coordsys='GAL',
+                                            coordsys=comp.coordsys,
                                             mktime='none',
-                                            irf_ver=args['irf_ver'])
+                                            irf_ver=NAME_FACTORY.irf_ver())
                     outfile = NAME_FACTORY.srcmaps(**name_keys)
                     logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                     job_configs[key] = dict(srcmaps=NAME_FACTORY.srcmaps(**nested_name_keys),

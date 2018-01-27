@@ -41,7 +41,6 @@ class ResidualCRAnalysis(Link):
                            bexpcube_dirty=(None, 'Input exposure cube for dirty event class.', str),
                            bexpcube_clean=(None, 'Input exposure cube for clean event class.', str),
                            hpx_order=diffuse_defaults.residual_cr['hpx_order_fitting'],
-                           coordsys=diffuse_defaults.residual_cr['coordsys'],
                            outfile=(None, 'Name of output file', str),
                            select_factor=(5.0, 'Pixel selection factor for Aeff Correction',
                                           float),
@@ -369,9 +368,7 @@ class ConfigMaker_ResidualCR(ConfigMaker):
     """
     default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
                            dataset_yaml=diffuse_defaults.residual_cr['dataset_yaml'],
-                           irf_ver=diffuse_defaults.residual_cr['irf_ver'],
                            hpx_order=diffuse_defaults.residual_cr['hpx_order_fitting'],
-                           coordsys=diffuse_defaults.residual_cr['coordsys'],
                            clean=('ultracleanveto', 'Clean event class', str),
                            dirty=('source', 'Dirty event class', str),
                            mktime=('nosm', 'Key for gtmktime selection', str),
@@ -407,8 +404,8 @@ class ConfigMaker_ResidualCR(ConfigMaker):
             name_keys = dict(zcut=zcut,
                              ebin=comp.ebin_name,
                              psftype=comp.evtype_name,
-                             coordsys=args['coordsys'],
-                             irf_ver=args['irf_ver'],
+                             coordsys=comp.coordsys,
+                             irf_ver=NAME_FACTORY.irf_ver(),
                              mktime=args['mktime'],
                              fullpath=True)
             outfile = NAME_FACTORY.residual_cr(**name_keys)

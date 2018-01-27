@@ -358,7 +358,6 @@ class ModelManager(object):
         master_data = dict(scfile=self._name_factory.ft2file(fullpath=True),
                            cacheft1=False)
         master_binning = dict(projtype='HPX',
-                              coordsys=kwargs.get('coordsys', 'GAL'),
                               roiwidth=180.,
                               binsperdec=8,
                               hpx_ordering_scheme="RING",
@@ -400,7 +399,8 @@ class ModelManager(object):
                                   zmax=comp.zmax,
                                   evtype=comp.evtype)
             comp_binning = dict(enumbins=comp.enumbins,
-                                hpx_order=min(comp.hpx_order, hpx_order))
+                                hpx_order=min(comp.hpx_order, hpx_order),
+                                coordsys=comp.coordsys)
             comp_gtlike = dict(srcmap=self._name_factory.merged_srcmaps(**name_keys),
                                bexpmap=self._name_factory.bexpcube(**name_keys),
                                use_external_srcmap=True)
@@ -442,14 +442,13 @@ class ModelManager(object):
 def make_library(**kwargs):
     """Build and return a ModelManager object and fill the associated model library
     """
-    diffuse_yaml = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
-    catalog_yaml = kwargs.pop('sources', 'config/catalog_components.yaml')
+    library_yaml = kwargs.pop('library', 'models/library.yaml')
     comp_yaml = kwargs.pop('comp', 'config/binning.yaml')
     basedir = kwargs.pop('basedir', 
                          '/nfs/slac/kipac/fs1/u/dmcat/data/flight/diffuse_fitting')
 
     model_man = kwargs.get('ModelManager', ModelManager(basedir=basedir))
-    model_comp_dict = model_man.make_library(diffuse_yaml, catalog_yaml, comp_yaml)
+    model_comp_dict = model_man.make_library(library_yaml, library_yaml, comp_yaml)
 
     return dict(model_comp_dict=model_comp_dict,
                 ModelManager=model_man)

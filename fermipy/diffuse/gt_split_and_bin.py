@@ -45,7 +45,6 @@ class SplitAndBin(Chain):
                        links=[],
                        options=dict(data=diffuse_defaults.diffuse['data'],
                                     comp=diffuse_defaults.diffuse['comp'],
-                                    coordsys=diffuse_defaults.diffuse['coordsys'],
                                     hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                                     ft1file=(None, 'Input FT1 file', str),
                                     evclass=(128, 'Event class bit mask', int),
@@ -152,7 +151,6 @@ class SplitAndBin(Chain):
 
         NAME_FACTORY.update_base_dict(input_dict['data'])
 
-        coordsys = input_dict.get('coordsys')
         outdir = input_dict.get('outdir')
         outkey = input_dict.get('outkey')
         if outdir is None or outkey is None:
@@ -164,7 +162,7 @@ class SplitAndBin(Chain):
             kwargs_select = dict(zcut=zcut,
                                  ebin=key_e,
                                  psftype='ALL',
-                                 coordsys=coordsys,
+                                 coordsys=comp_e['coordsys'],
                                  mktime='none')            
             selectfile = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select))
             output_dict['selectfile_%s' % key_e] = selectfile
@@ -193,7 +191,6 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           coordsys=diffuse_defaults.diffuse['coordsys'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                            ft1file=(None, 'Input FT1 file', str),
                            scratch=(None, 'Path to scratch area', str))
@@ -216,6 +213,9 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
         comp_file = args.get('comp', None)
         if comp_file is not None:
             comp_dict = yaml.safe_load(open(comp_file))
+            coordsys = comp_dict.pop('coordsys')
+            for v in comp_dict.values():
+                v['coordsys'] = coordsys
             self.link.update_links(comp_dict)
         self.link.update_args(args)
         return self.link.args
@@ -227,7 +227,6 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
 
         NAME_FACTORY.update_base_dict(args['data'])
 
-        coordsys = args['coordsys']
         inputfiles = create_inputlist(args['ft1file'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
 

@@ -76,11 +76,9 @@ class ConfigMaker_Gtexphpsun(ConfigMaker):
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
     """
     default_options = dict(comp=diffuse_defaults.sun_moon['binning_yaml'],
-                           data=diffuse_defaults.sun_moon['dataset_yaml'],
-                           irf_ver=diffuse_defaults.sun_moon['irf_ver'])
+                           data=diffuse_defaults.sun_moon['dataset_yaml'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -102,7 +100,7 @@ class ConfigMaker_Gtexphpsun(ConfigMaker):
             name_keys = dict(zcut=zcut,
                              ebin=comp.ebin_name,
                              psftype=comp.evtype_name,
-                             irf_ver=args['irf_ver'],
+                             irf_ver=NAME_FACTORY.irf_ver(),
                              fullpath=True)
             outfile = NAME_FACTORY.bexpcube_sun(**name_keys)
             job_configs[key] = dict(infile=NAME_FACTORY.ltcube_sun(**name_keys),
@@ -123,13 +121,11 @@ class ConfigMaker_Gtsuntemp(ConfigMaker):
     This takes the following arguments:
     --comp       : binning component definition yaml file
     --data       : datset definition yaml file
-    --irf_ver    : IRF verions string (e.g., 'V6')
     --sourcekeys : Keys for sources to make template for
     """
     default_options = dict(comp=diffuse_defaults.sun_moon['binning_yaml'],
                            data=diffuse_defaults.sun_moon['dataset_yaml'],
-                           sourcekeys=diffuse_defaults.sun_moon['sourcekeys'],
-                           irf_ver=diffuse_defaults.sun_moon['irf_ver'])
+                           sourcekeys=diffuse_defaults.sun_moon['sourcekeys'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -152,7 +148,7 @@ class ConfigMaker_Gtsuntemp(ConfigMaker):
                 name_keys = dict(zcut=zcut,
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
-                                 irf_ver=args['irf_ver'],
+                                 irf_ver=NAME_FACTORY.irf_ver(),
                                  sourcekey=sourcekey,
                                  fullpath=True)
                 outfile = NAME_FACTORY.template_sunmoon(**name_keys)

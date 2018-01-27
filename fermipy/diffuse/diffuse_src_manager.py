@@ -172,6 +172,7 @@ class GalpropMapManager(object):
         galprop_run = galprop_rings['galprop_run']
         ring_limits = galprop_rings['ring_limits']
         comp_dict = galprop_rings['diffuse_comp_dict']
+        remove_rings = galprop_rings.get('remove_rings', [])
         ring_dict = {}
         nring = len(ring_limits) - 1
         for source_name, source_value in comp_dict.items():
@@ -180,6 +181,8 @@ class GalpropMapManager(object):
                              galprop_run=galprop_run)
             for iring in range(nring):
                 sourcekey = "%s_%i" % (source_name, iring)
+                if sourcekey in remove_rings:
+                    continue
                 full_key = "%s_%s" % (sourcekey, galkey)
                 rings = range(ring_limits[iring], ring_limits[iring + 1])
                 base_dict.update(dict(ring=iring,
@@ -225,11 +228,14 @@ class GalpropMapManager(object):
         galprop_rings = self.read_galprop_rings_yaml(galkey)
         ring_limits = galprop_rings.get('ring_limits')
         comp_dict = galprop_rings.get('diffuse_comp_dict')
+        remove_rings = galprop_rings.get('remove_rings', [])
         diffuse_comp_info_dict = {}
         nring = len(ring_limits) - 1
         for source_key in sorted(comp_dict.keys()):
             for iring in range(nring):
                 source_name = "%s_%i" % (source_key, iring)
+                if source_name in remove_rings:
+                    continue
                 full_key = "%s_%s" % (source_name, galkey)
                 diffuse_comp_info_dict[full_key] =\
                     self.make_diffuse_comp_info(source_name, galkey)
@@ -391,8 +397,8 @@ class DiffuseModelManager(object):
         """
         ret_dict = {}
         for key, value in diffuse_sources.items():
-            model_type = value.get('model_type', 'mapcube')
-            if model_type == 'galprop_rings':
+            model_type = value.get('model_type', 'MapCubeSource')
+            if model_type in ['galprop_rings', 'catalog']:
                 continue
             selection_dependent = value.get('selection_dependent', False)
             moving = value.get('moving', False)
@@ -432,11 +438,11 @@ class DiffuseModelManager(object):
 def make_ring_dicts(**kwargs):
     """Build and return the information about the Galprop rings
     """
-    diffuse_yamlfile = kwargs.get('diffuse', 'config/diffuse_components.yaml')
+    library_yamlfile = kwargs.get('library', 'models/library.yaml')
     gmm = kwargs.get('GalpropMapManager', GalpropMapManager(**kwargs))
-    if diffuse_yamlfile is None or diffuse_yamlfile == 'None':
+    if library_yamlfile is None or library_yamlfile == 'None':
         return gmm
-    diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(diffuse_yamlfile)
+    diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(library_yamlfile)
     for diffuse_value in diffuse_comps.values():
         if diffuse_value['model_type'] != 'galprop_rings':
             continue
@@ -449,18 +455,18 @@ def make_ring_dicts(**kwargs):
 def make_diffuse_comp_info_dict(**kwargs):
     """Build and return the information about the diffuse components
     """
-    diffuse_yamlfile = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
+    library_yamlfile = kwargs.pop('library', 'models/library.yaml')
     components = kwargs.pop('components', None)
     if components is None:
         comp_yamlfile = kwargs.pop('comp', 'config/binning.yaml')
         components = Component.build_from_yamlfile(comp_yamlfile)
     gmm = kwargs.get('GalpropMapManager', GalpropMapManager(**kwargs))
     dmm = kwargs.get('DiffuseModelManager', DiffuseModelManager(**kwargs))
-    if diffuse_yamlfile is None or diffuse_yamlfile == 'None':
+    if library_yamlfile is None or library_yamlfile == 'None':
         diffuse_comps = {}
     else:
         diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(
-            diffuse_yamlfile)
+            library_yamlfile)
     diffuse_comp_info_dict = dmm.make_diffuse_comp_info_dict(
         diffuse_comps, components)
     for diffuse_value in diffuse_comps.values():
@@ -481,7 +487,7 @@ class DiffuseComponentChain(Chain):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           diffuse=diffuse_defaults.diffuse['diffuse'],
+                           library=diffuse_defaults.diffuse['library'],
                            make_xml=(False, "Make XML files for diffuse components", bool),
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 

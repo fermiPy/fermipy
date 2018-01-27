@@ -19,7 +19,7 @@ from fermipy.diffuse import defaults as diffuse_defaults
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.job_library import create_sg_gtexpcube2,\
     create_sg_fermipy_coadd, create_sg_sum_ring_gasmaps,\
-    create_sg_vstack_diffuse
+    create_sg_vstack_diffuse, create_sg_gather_srcmaps
 from fermipy.diffuse.gt_srcmaps_catalog import create_sg_gtsrcmaps_catalog
 from fermipy.diffuse.gt_srcmap_partial import create_sg_srcmap_partial
 from fermipy.diffuse.gt_assemble_model import create_sg_assemble_model,\
