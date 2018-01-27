@@ -458,8 +458,8 @@ class ROIPlotter(fermipy.config.Configurable):
 
         data = kwargs.pop('data', self._data)
         noerror = kwargs.pop('noerror', False)
-        xmin = kwargs.get('xmin', -1)
-        xmax = kwargs.get('xmax', 1)        
+        xmin = kwargs.pop('xmin', -1)
+        xmax = kwargs.pop('xmax', 1)        
 
         axes = wcs_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
         x = utils.edge_to_center(axes[iaxis])
