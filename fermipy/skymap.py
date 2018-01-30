@@ -206,16 +206,22 @@ class Map(Map_Base):
         return cls(data, wcs, ebins)
 
     @classmethod
-    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT', ebins=None):
+    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT', ebins=None, differential=False):
         crpix = np.array([n / 2. + 0.5 for n in npix])
-        wcs = wcs_utils.create_wcs(skydir, coordsys, projection,
-                                   cdelt, crpix)
 
         if ebins is not None:
-            data = np.zeros(list(npix) + [len(ebins) - 1]).T
+            if differential:
+                nebins = len(ebins)
+            else:
+                nebins = len(ebins) - 1                               
+            data = np.zeros(list(npix) + [nebins]).T            
+            naxis = 3
         else:
             data = np.zeros(npix).T
+            naxis = 2
 
+        wcs = wcs_utils.create_wcs(skydir, coordsys, projection,
+                                   cdelt, crpix, naxis=naxis, energies=ebins)
         return cls(data, wcs, ebins=ebins)
 
     def create_image_hdu(self, name=None, **kwargs):
@@ -544,11 +550,10 @@ class HpxMap(Map_Base):
     def get_pixel_skydirs(self):
         """Get a list of sky coordinates for the centers of every pixel. """
         sky_coords = self._hpx.get_sky_coords()
-        if self.hpx.coordsys == 'GAL':
-            frame = Galactic
+        if self.hpx.coordsys == 'GAL':            
+            return SkyCoord(l=sky_coords.T[0], b=sky_coords.T[1], unit='deg', frame='galactic')
         else:
-            frame = ICRS
-        return SkyCoord(sky_coords[0], sky_coords[1], frame=frame, unit='deg')
+            return SkyCoord(ra=sky_coords.T[0], dec=sky_coords.T[1], unit='deg', frame='icrs')
 
     def get_pixel_indices(self, lats, lons):
         """Return the indices in the flat array corresponding to a set of coordinates """
