@@ -56,6 +56,7 @@ def get_xerr(sed):
 def make_counts_spectrum_plot(o, roi, energies, imfile, **kwargs):
 
     figsize = kwargs.get('figsize', (8.0, 6.0))
+    weighted = kwargs.get('weighted', False)
 
     fig = plt.figure(figsize=figsize)
 
@@ -71,8 +72,18 @@ def make_counts_spectrum_plot(o, roi, energies, imfile, **kwargs):
 
     x = 0.5 * (energies[1:] + energies[:-1])
     xerr = 0.5 * (energies[1:] - energies[:-1])
-    y = o['counts']
-    ym = o['model_counts']
+
+    count_str = 'counts'
+    model_counts_str = 'model_counts'
+    npred_str = 'npred'
+   
+    if weighted:
+        count_str += '_wt'
+        model_counts_str += '_wt'
+        npred_str += '_wt'
+
+    y = o[count_str]
+    ym = o[model_counts_str]
 
     ax0.errorbar(x, y, yerr=np.sqrt(y), xerr=xerr, color='k',
                  linestyle='None', marker='s',
@@ -82,13 +93,13 @@ def make_counts_spectrum_plot(o, roi, energies, imfile, **kwargs):
                  label='Total')
 
     for s in sorted(roi.sources,
-                    key=lambda t: t['npred'], reverse=True)[:6]:
-        ax0.errorbar(x, s['model_counts'], linestyle='-', marker='None',
+                    key=lambda t: t[npred_str], reverse=True)[:6]:
+        ax0.errorbar(x, s[model_counts_str], linestyle='-', marker='None',
                      label=s['name'])
 
     for s in sorted(roi.sources,
-                    key=lambda t: t['npred'], reverse=True)[6:]:
-        ax0.errorbar(x, s['model_counts'], color='gray',
+                    key=lambda t: t[npred_str], reverse=True)[6:]:
+        ax0.errorbar(x, s[model_counts_str], color='gray',
                      linestyle='-', marker='None',
                      label='__nolabel__')
 
@@ -1189,6 +1200,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         figsize = kwargs.get('figsize', self.config['figsize'])
         prefix = kwargs.get('prefix', '')
         loge_bounds = kwargs.get('loge_bounds', None)
+        weighted = kwargs.get('weighted', False)
 
         roi_kwargs = {}
         roi_kwargs.setdefault('loge_bounds', loge_bounds)
@@ -1204,6 +1216,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
         esuffix = '_%.3f_%.3f' % (loge_bounds[0], loge_bounds[1])
 
         mcube_diffuse = gta.model_counts_map('diffuse')
+        counts_map = gta.counts_map()
+
+        if weighted:
+            wmap = gta.weight_map()
+            print (wmap.counts.sum(0))
+            counts_map = copy.deepcopy(counts_map)
+            mcube_map = copy.deepcopy(mcube_map)
+            counts_map.data *= wmap.counts
+            mcube_map.data *= wmap.counts
+            mcube_diffuse.data *= wmap.counts         
 
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(mcube_map, roi=gta.roi, **roi_kwargs)
@@ -1219,16 +1241,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure(figsize=figsize)
 
         if p.projtype == "WCS":
-            counts_map = gta.counts_map()
             model_data = mcube_map.counts.T
             diffuse_data = mcube_diffuse.counts.T
+            weight_data = wmap.counts.T
             xmin = -1
             xmax = 1
         elif p.projtype == "HPX":
             if p.cmap._hpx2wcs is None:
                  p.cmap.make_wcs_from_hpx(sum_ebins=False)
             wcs, counts_dataT = p.cmap.convert_to_cached_wcs(
-                gta.counts_map().counts, sum_ebins=False)
+                counts_map.counts, sum_ebins=False)
             counts_data = counts_dataT.swapaxes(1,2)
             counts_map = Map(counts_data, wcs.wcs)
             dummy, model_dataT = p.cmap.convert_to_cached_wcs(
