@@ -75,19 +75,19 @@ def main():
 
     if args.ebin == "ALL":
         for i,data in enumerate(counts):
-            ip =  ImagePlotter(data=data, proj=themap.wcs.dropaxis(2))
+            ip =  ImagePlotter(data=data.T, proj=themap.wcs.dropaxis(2))
             fig = plt.figure(i)
             im,ax = ip.plot(zscale=args.zscale, vmin=args.zmin, vmax=args.zmax)
             outdata.append(fig)
 
     elif args.ebin is None:
-        ip =  ImagePlotter(data=counts.sum(0), proj=themap.wcs.dropaxis(2))
+        ip =  ImagePlotter(data=counts.sum(0).T, proj=themap.wcs.dropaxis(2))
         im,ax = ip.plot(zscale=args.zscale, vmin=args.zmin, vmax=args.zmax)
         outdata.append((im,ax))        
     else:
         try:
             ibin = int(args.ebin)
-            ip =  ImagePlotter(data=counts[ibin], proj=themap.wcs.dropaxis(2))
+            ip =  ImagePlotter(data=counts[ibin].T, proj=themap.wcs.dropaxis(2))
             im,ax = ip.plot(zscale=args.zscale, vmin=args.zmin, vmax=args.zmax)
             outdata.append((im,ax))        
         except:
