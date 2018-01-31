@@ -4834,7 +4834,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if p_method == 0:  # WCS
             if wmap is None:
-                print ("Ones")
                 z = np.ones((self.enumbins, self.npix, self.npix))
             else:
                 z = wmap.model()
