@@ -226,7 +226,7 @@ class ModelManager(object):
         diffuse_yaml : str
             Name of the yaml file with the library of diffuse component definitions
         catalog_yaml : str
-            Name of the yaml file with the library of catalog split definitions
+            Name of the yaml file width the library of catalog split definitions
         binning_yaml : str
             Name of the yaml file with the binning definitions
         """
@@ -235,9 +235,9 @@ class ModelManager(object):
         components_dict = Component.build_from_yamlfile(binning_yaml)
         diffuse_ret_dict = make_diffuse_comp_info_dict(GalpropMapManager=self._gmm,
                                                        DiffuseModelManager=self._dmm,
-                                                       diffuse=diffuse_yaml,
+                                                       library=diffuse_yaml,
                                                        components=components_dict)
-        catalog_ret_dict = make_catalog_comp_dict(sources=catalog_yaml,
+        catalog_ret_dict = make_catalog_comp_dict(library=catalog_yaml,
                                                   CatalogSourceManager=self._csm)
         ret_dict.update(diffuse_ret_dict['comp_info_dict'])
         ret_dict.update(catalog_ret_dict['comp_info_dict'])
@@ -448,6 +448,7 @@ def make_library(**kwargs):
                          '/nfs/slac/kipac/fs1/u/dmcat/data/flight/diffuse_fitting')
 
     model_man = kwargs.get('ModelManager', ModelManager(basedir=basedir))
+
     model_comp_dict = model_man.make_library(library_yaml, library_yaml, comp_yaml)
 
     return dict(model_comp_dict=model_comp_dict,

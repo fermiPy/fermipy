@@ -207,6 +207,8 @@ class CatalogSourceManager(object):
         catalog_ret_dict = {}
         split_ret_dict = {}
         for key, value in catalog_sources.items():
+            if value is None:
+                continue
             if value['model_type'] != 'catalog':
                 continue
             versions = value['versions']
