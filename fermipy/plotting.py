@@ -705,8 +705,8 @@ class SEDPlotter(object):
     @staticmethod
     def get_ylims(sed):
 
-        fmin = np.log10(np.min(sed['e2dnde_ul95'])) - 0.5
-        fmax = np.log10(np.max(sed['e2dnde_ul95'])) + 0.5
+        fmin = np.log10(np.nanmin(sed['e2dnde_ul95'])) - 0.5
+        fmax = np.log10(np.nanmax(sed['e2dnde_ul95'])) + 0.5
         fdelta = fmax - fmin
         if fdelta < 2.0:
             fmin -= 0.5 * (2.0 - fdelta)
