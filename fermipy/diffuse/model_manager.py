@@ -82,7 +82,8 @@ class ModelInfo(object):
                              zcut=zcut,
                              ebin=comp.ebin_name,
                              mktime='none',
-                             psftype=comp.evtype_name)
+                             psftype=comp.evtype_name,
+                             coordsys=comp.coordsys)
             outsrcmap = name_factory.merged_srcmaps(**name_keys)
             ccube = name_factory.ccube(**name_keys)
             src_dict = {}
@@ -392,6 +393,7 @@ class ModelManager(object):
                              modelkey=modelkey,
                              component=compkey,
                              mktime='none',
+                             coordsys=comp.coordsys,
                              fullpath=True)
             comp_data = dict(ltcube=self._name_factory.ltcube(**name_keys))
             comp_selection = dict(logemin=comp.log_emin,
