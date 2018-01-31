@@ -4830,6 +4830,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 else:
                     wmap = None
         except Exception:
+            wmap = None
             p_method = 0
 
         if p_method == 0:  # WCS
