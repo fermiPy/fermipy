@@ -58,7 +58,8 @@ def read_map_from_fits(fitsfile, extname=None):
     """
     proj, f, hdu = fits_utils.read_projection_from_fits(fitsfile, extname)
     if isinstance(proj, WCS):
-        m = Map(hdu.data, proj)
+        ebins = fits_utils.find_and_read_ebins(f)
+        m = Map(hdu.data, proj, ebins=ebins)
     elif isinstance(proj, HPX):
         m = HpxMap.create_from_hdu(hdu, proj.ebins)
     else:
@@ -370,7 +371,7 @@ class Map(Map_Base):
         else:
             if egy is None:
                 egy = self._ectr
-
+            print ('xx', lat, lon, egy, self.npix)
             pixcrd = self.wcs.wcs_world2pix(lon, lat, egy, 0)
             pixcrd[2] = np.array(utils.val_to_pix(np.log(self._ectr),
                                                   np.log(egy)), ndmin=1)
