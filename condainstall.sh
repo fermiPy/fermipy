@@ -15,7 +15,7 @@ if [[ -z $CONDA_DOWNLOAD ]]; then
 fi
 
 if [[ -z $CONDA_DEPS ]]; then
-    CONDA_DEPS='scipy matplotlib pyyaml ipython'
+    CONDA_DEPS='scipy matplotlib pyyaml ipython numpy==1.13.3'
 fi
 
 if [[ -z $CONDA2 ]]; then
