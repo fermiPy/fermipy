@@ -1,5 +1,4 @@
-diffuse_components : config/diffuse_components.yaml
-catalog_components : config/catalog_components.yaml
+library : models/library.yaml
 spectral_models : models/spectral_models.yaml
 sources : 
   galprop_rings : 
@@ -8,19 +7,22 @@ sources :
     SpectrumType : 
       default : LogParabola_Correction
   loopI : 
-    version : v00
+    version : haslam
     SpectrumType : LogParabola_Correction
   bubbles : 
     version : v00
     SpectrumType : LogParabola_Correction
   isotropic : 
-    version : v00
+    version : P8R3_SOURCE_V2
     SpectrumType : FileFunction
-  sun : 
-    version : v00
+  sun-ic : 
+    version : v2r0
+    SpectrumType : LogParabola_Correction
+  sun-disk : 
+    version : v3r1
     SpectrumType : LogParabola_Correction
   moon :
-    version : v00
+    version : v3r2
     SpectrumType : LogParabola_Correction
   3FGL : 
     model_type : Catalog

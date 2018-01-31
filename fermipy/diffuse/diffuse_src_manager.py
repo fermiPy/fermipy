@@ -397,6 +397,8 @@ class DiffuseModelManager(object):
         """
         ret_dict = {}
         for key, value in diffuse_sources.items():
+            if value is None:
+                continue
             model_type = value.get('model_type', 'MapCubeSource')
             if model_type in ['galprop_rings', 'catalog']:
                 continue
@@ -444,6 +446,8 @@ def make_ring_dicts(**kwargs):
         return gmm
     diffuse_comps = DiffuseModelManager.read_diffuse_component_yaml(library_yamlfile)
     for diffuse_value in diffuse_comps.values():
+        if diffuse_value is None:
+            continue
         if diffuse_value['model_type'] != 'galprop_rings':
             continue
         versions = diffuse_value['versions']
@@ -470,6 +474,8 @@ def make_diffuse_comp_info_dict(**kwargs):
     diffuse_comp_info_dict = dmm.make_diffuse_comp_info_dict(
         diffuse_comps, components)
     for diffuse_value in diffuse_comps.values():
+        if diffuse_value is None:
+            continue
         if diffuse_value['model_type'] != 'galprop_rings':
             continue
         versions = diffuse_value['versions']
