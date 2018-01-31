@@ -63,7 +63,7 @@ def read_map_from_fits(fitsfile, extname=None):
         m = HpxMap.create_from_hdu(hdu, proj.ebins)
     else:
         raise Exception("Did not recognize projection type %s" % type(proj))
-    return m, f
+    return m
 
 
 class Map_Base(object):

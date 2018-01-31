@@ -293,6 +293,10 @@ class HPX(object):
         self._coordsys = coordsys
         self._region = kwargs.get('region', None)
         self._ipix = kwargs.get('pixels', None)
+        if self._region is not None:
+            if self._ipix is None:
+                self._ipix = self.get_index_list(self._nside, self._nest, self._region)
+                
         self._maxpix = 12 * self._nside * self._nside
         if self._ipix is None:
             self._rmap = None

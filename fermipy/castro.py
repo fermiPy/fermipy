@@ -1495,7 +1495,7 @@ class TSCube(object):
            String specifying the quantity used for the normalization
 
         """
-        tsmap, _ = read_map_from_fits(fitsfile)
+        tsmap = read_map_from_fits(fitsfile)
 
         tab_e = Table.read(fitsfile, 'EBOUNDS')
         tab_s = Table.read(fitsfile, 'SCANDATA')
