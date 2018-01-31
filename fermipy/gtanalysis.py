@@ -567,14 +567,21 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         rm = self._roi_data
 
         rm['loglike'] = -self.like()
+
         rm['model_counts'].fill(0)
-        rm['model_counts_wt'].fill(0)
+        try:
+            rm['model_counts_wt'].fill(0)
+        except:
+            rm['model_counts_wt'] = rm['model_counts'].copy()            
         rm['npred'] = 0
         rm['npred_wt'] = 0
         for i, c in enumerate(self.components):
             rm['components'][i]['loglike'] = -c.like()
             rm['components'][i]['model_counts'].fill(0)
-            rm['components'][i]['model_counts_wt'].fill(0)
+            try:
+                rm['components'][i]['model_counts_wt'].fill(0)
+            except:
+                rm['components'][i]['model_counts_wt'] = rm['components'][i]['model_counts'].copy()
             rm['components'][i]['npred'] = 0
             rm['components'][i]['npred_wt'] = 0
 
@@ -585,9 +592,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
             src = self.roi.get_source_by_name(name)
             rm['model_counts'] += src['model_counts']
-            rm['model_counts_wt'] += src['model_counts_wt']
             rm['npred'] += np.sum(src['model_counts'])
-            rm['npred_wt'] += np.sum(src['model_counts_wt'])
+            try:
+                rm['model_counts_wt'] += src['model_counts_wt']
+                rm['npred_wt'] += np.sum(src['model_counts_wt'])
+            except:
+                rm['model_counts_wt']  += src['model_counts']
+                rm['npred'] += np.sum(src['model_counts'])
+
             mc = self.model_counts_spectrum(name)
             mc_wt = self.model_counts_spectrum(name, weighted=True)
 
@@ -1762,7 +1774,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # For some reason the numerical accuracy is causing this to throw exceptions.
         try:
-            self.like[idx].setBounds(*bounds)
+            if bounds is not None:
+                self.like[idx].setBounds(*bounds)
         except RuntimeError:
             pass
             
@@ -2255,12 +2268,21 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         npred_sum = 0
         skip_sources = skip if skip != None else []
         joint_norm_fit = []
+
+        try:
+            if self.like.logLike.has_weights():
+                npred_str = 'npred_wt'
+            else:
+                npred_str = 'npred'
+        except AttributeError:
+            npred_str = 'npred'
+
         # FIXME, EAC, use npred_wt here
-        for s in sorted(self.roi.sources, key=lambda t: t['npred_wt'],
+        for s in sorted(self.roi.sources, key=lambda t: t[npred_str],
                         reverse=True):
 
-            npred_sum += s['npred_wt']
-            npred_frac = npred_sum / self._roi_data['npred_wt']
+            npred_sum += s[npred_str]
+            npred_frac = npred_sum / self._roi_data[npred_str]
 
             if s.name in skip_sources:
                 continue
@@ -2270,7 +2292,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
             if npred_frac > npred_frac_threshold:
                 break            
-            if s['npred_wt'] < npred_threshold:
+            if s[npred_str] < npred_threshold:
                 break
             if len(joint_norm_fit) >= max_free_sources:
                 break
@@ -2281,25 +2303,23 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # Step through remaining sources and re-fit normalizations
         # FIXME, EAC, use npred_wt here
-        for s in sorted(self.roi.sources, key=lambda t: t['npred_wt'],
+        for s in sorted(self.roi.sources, key=lambda t: t[npred_str],
                         reverse=True):
 
             if s.name in skip_sources or s.name in joint_norm_fit:
                 continue
 
-            if s['npred_wt'] < npred_threshold:
+            if s[npred_str] < npred_threshold:
                 self.logger.debug(
-                    'Skipping %s with npred %10.3f', s.name, s['npred_wt'])
+                    'Skipping %s with npred %10.3f', s.name, s[npred_str])
                 continue
 
-            print ('Fitting %s npred: %10.3f TS: %10.3f'%(s.name, s['npred_wt'], s['ts']))
-
             self.logger.debug('Fitting %s npred: %10.3f TS: %10.3f',
-                              s.name, s['npred_wt'], s['ts'])
+                              s.name, s[npred_str], s['ts'])
             self.free_norm(s.name, loglevel=logging.DEBUG)
             self.fit(loglevel=logging.DEBUG, **config['optimizer'])
             self.logger.debug('Post-fit Results npred: %10.3f TS: %10.3f',
-                              s['npred_wt'], s['ts'])
+                              s[npred_str], s['ts'])
             self.free_norm(s.name, free=False, loglevel=logging.DEBUG)
 
         # Refit spectral shape parameters for sources with TS >
