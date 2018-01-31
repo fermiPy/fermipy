@@ -4056,7 +4056,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         try:
             src_dict['npred_wt'] = self.like.NpredValue(str(name), True)
         except TypeError:
-            src_dict['npred_wt'] = src_dict['npred'].copy()
+            src_dict['npred_wt'] = src_dict['npred']
 
         # Get the Model Fluxes
         try:
