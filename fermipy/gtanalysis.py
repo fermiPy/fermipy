@@ -1283,7 +1283,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 ecenter = 0.5 * (c.log_energies[:-1] + c.log_energies[1:])
                 counts = c.model_counts_spectrum(name, self.log_energies[0],
                                                  self.log_energies[-1], weighted)
-
                 cs += np.histogram(ecenter,
                                    weights=counts,
                                    bins=self.log_energies)[0]
@@ -2269,6 +2268,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         skip_sources = skip if skip != None else []
         joint_norm_fit = []
 
+        # EAC, we need this try block by older version of the ST don't have has_weights function
         try:
             if self.like.logLike.has_weights():
                 npred_str = 'npred_wt'
@@ -2454,7 +2454,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if val == 0:
             par.setValue(1.0)
             self.like.syncSrcParams(str(name))
-            # FIXME, EAC, do we want the weighted version?
             cs = self.model_counts_spectrum(name,
                                             loge_bounds[0],
                                             loge_bounds[1],
@@ -2466,7 +2465,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             par.setValue(0.0)
             self.like.syncSrcParams(str(name))
         else:
-            # FIXME, EAC, do we want the weighted version?
             cs = self.model_counts_spectrum(name,
                                             loge_bounds[0],
                                             loge_bounds[1],
@@ -4817,6 +4815,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         map : `~fermipy.skymap.MapBase`
 
         """
+        #EAC we need the try block b/c older versions of the ST don't have some of these functions
         try:
             if isinstance(self.like, gtutils.SummedLikelihood):
                 cmap = self.like.components[0].logLike.countsMap()
@@ -4959,8 +4958,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
            Source name.
 
         """
-
-        cs = np.array(self.like.logLike.modelCountsSpectrum(str(name), weighted))
+        # EAC, we need this b/c older version of the ST don't have the right signature        
+        try:
+            cs = np.array(self.like.logLike.modelCountsSpectrum(str(name), weighted))
+        except TypeError:
+            cs = np.array(self.like.logLike.modelCountsSpectrum(str(name)))
         imin = utils.val_to_edge(self.log_energies, logemin)[0]
         imax = utils.val_to_edge(self.log_energies, logemax)[0]
         if imax <= imin:
