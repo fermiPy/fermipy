@@ -1020,8 +1020,40 @@ class AnalysisPlotter(fermipy.config.Configurable):
         load_bluered_cmap()
 
         prefix = maps['name']
+        if maps['projtype'] == 'WCS':
+            data_map = maps['data']
+            model_map = maps['model']
+            sigma_map = maps['sigma']
+            excess_map = maps['excess']
+            if maps['mask'] is None:
+                hist_data = np.nan_to_num(maps['sigma'])
+            else:
+                hist_data = np.nan_to_num(maps['sigma'])[maps['mask']!=0]
+
+        elif maps['projtype'] == 'HPX':
+            orig_map = maps['data']
+            if orig_map._hpx2wcs is None:
+                orig_map.make_wcs_from_hpx(sum_ebins=False)
+            wcs, data_dataT = orig_map.convert_to_cached_wcs(
+                maps['data'].counts, sum_ebins=False, normalize=False)
+            dummy, model_dataT = orig_map.convert_to_cached_wcs(
+                maps['model'].counts, sum_ebins=False, normalize=False)
+            dummy, sigma_dataT = orig_map.convert_to_cached_wcs(
+                maps['sigma'].counts, sum_ebins=False, normalize=False)
+            dummy, excess_dataT = orig_map.convert_to_cached_wcs(
+                maps['excess'].counts, sum_ebins=False, normalize=False)
+            data_map = Map(data_dataT.T, wcs.wcs)
+            model_map = Map(model_dataT.T, wcs.wcs)
+            sigma_map = Map(sigma_dataT.T, wcs.wcs)
+            excess_map = Map(excess_dataT.T, wcs.wcs)
+            if maps['mask'] is None:
+                hist_data = np.nan_to_num(maps['sigma'].counts.T)
+            else:
+                hist_data = np.nan_to_num(maps['sigma'].counts.T)[maps['mask'].counts.T != 0]
+
         fig = plt.figure(figsize=figsize)
-        p = ROIPlotter(maps['sigma'], roi=roi, **kwargs)
+        
+        p = ROIPlotter(sigma_map, roi=roi, **kwargs)
         p.plot(vmin=-5, vmax=5, levels=sigma_levels,
                cb_label='Significance [$\sigma$]', interpolation='bicubic',
                cmap=cmap_resid, zoom=zoom)
@@ -1035,14 +1067,15 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig, ax = plt.subplots(figsize=figsize)
         nBins = np.linspace(-6, 6, 121)
         #import pdb; pdb.set_trace()
-        data = np.nan_to_num(maps['sigma'].counts.T)
-        # find best fit parameters
-        mu, sigma = norm.fit(data.flatten())
-        # make and draw the histogram
-        data[data > 6.0] = 6.0
-        data[data < -6.0] = -6.0
+        
 
-        n, bins, patches = ax.hist(data.flatten(), nBins, normed=True,
+        # find best fit parameters
+        mu, sigma = norm.fit(hist_data.flatten())
+        # make and draw the histogram
+        hist_data[hist_data > 6.0] = 6.0
+        hist_data[hist_data < -6.0] = -6.0
+
+        n, bins, patches = ax.hist(hist_data.flatten(), nBins, normed=True,
                                    histtype='stepfilled',
                                    facecolor='green', alpha=0.75)
         # make and draw best fit line
@@ -1066,11 +1099,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
-        vmax = max(np.max(maps['data'].data), np.max(maps['model'].data))
-        vmin = min(np.min(maps['data'].data), np.min(maps['model'].data))
+        vmax = max(np.max(data_map.data), np.max(model_map.data))
+        vmin = min(np.min(data_map.data), np.min(model_map.data))
 
         fig = plt.figure(figsize=figsize)
-        p = ROIPlotter(maps['data'], roi=roi, **kwargs)
+        p = ROIPlotter(data_map, roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic',
                cmap=cmap, zscale='sqrt', vmin=vmin, vmax=vmax)
         plt.savefig(utils.format_filename(workdir,
@@ -1080,7 +1113,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure(figsize=figsize)
-        p = ROIPlotter(maps['model'], roi=roi, **kwargs)
+        p = ROIPlotter(model_map, roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic',
                cmap=cmap, zscale='sqrt', vmin=vmin, vmax=vmax)
         plt.savefig(utils.format_filename(workdir,
@@ -1090,7 +1123,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure(figsize=figsize)
-        p = ROIPlotter(maps['excess'], roi=roi, **kwargs)
+        p = ROIPlotter(excess_map, roi=roi, **kwargs)
         p.plot(cb_label='Counts', interpolation='bicubic',
                cmap=cmap_resid)
         plt.savefig(utils.format_filename(workdir,
