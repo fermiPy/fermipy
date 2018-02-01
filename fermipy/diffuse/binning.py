@@ -108,7 +108,7 @@ class Component(object):
         coordsys = top_dict.pop('coordsys')
         output_list = []
         for e_key, e_dict in sorted(top_dict.items()):
-	    if e_key == 'coordsys':
+            if e_key == 'coordsys':
                 continue
             e_dict = top_dict[e_key]
             e_dict['coordsys'] = coordsys
