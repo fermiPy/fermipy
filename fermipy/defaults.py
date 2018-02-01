@@ -57,6 +57,7 @@ common = {
     'free_radius': (None, 'Free normalizations of background sources within this angular distance in degrees '
                     'from the source of interest.  If None then no sources will be freed.', float),
     'make_plots': (False, 'Generate diagnostic plots.', bool),
+    'use_weights': (False, 'Use weights in making plots.', bool),
     'write_fits': (True, 'Write the output to a FITS file.', bool),
     'write_npy': (True, 'Write the output dictionary to a numpy file.', bool),
     'loge_bounds':  (None, 'Restrict the analysis to an energy range (emin,emax) in '
@@ -290,6 +291,7 @@ residmap = {
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'use_weights': common['use_weights'],
 }
 
 # TS Map
