@@ -94,6 +94,7 @@ def create_source_table(scan_shape):
     cols_dict['beta'] = dict(dtype='f8', format='%.3f')
     cols_dict['Exp_Index'] = dict(dtype='f8', format='%.3f')
     cols_dict['Cutoff'] = dict(dtype='f8', format='%.3f', unit='MeV')
+    cols_dict['Expfactor'] = dict(dtype='f8', format='%.3f')
 
     cols_dict['Conf_68_PosAng'] = dict(dtype='f8', format='%.3f', unit='deg')
     cols_dict['Conf_68_SemiMajor'] = dict(
@@ -287,6 +288,23 @@ def spectral_pars_from_catalog(cat):
         pars['Index2'] = make_parameter_dict(pars['Index2'], False, False)
         pars['Cutoff'] = make_parameter_dict(pars['Cutoff'], False, True)
 
+    elif spectrum_type == 'PLSuperExpCutoff2':
+
+        flux_density = cat['Flux_Density']
+        # EAC, FIXME, check this
+        pars['Prefactor']['value'] = flux_density
+        pars['Index1']['value'] = cat['Spectral_Index']
+        pars['Index1']['scale'] = -1.0
+        pars['Index2']['value'] = cat['PLEC_Exp_Index']
+        pars['Index2']['scale'] = 1.0
+        pars['Scale']['value'] = cat['Pivot_Energy']
+        pars['Expfactor']['value'] = cat['PLEC_Expfactor']
+
+        pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
+        pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
+        pars['Index1'] = make_parameter_dict(pars['Index1'], False, False)
+        pars['Index2'] = make_parameter_dict(pars['Index2'], False, False)
+        pars['Expfactor'] = make_parameter_dict(pars['Expfactor'], False, True)
     else:
         raise Exception('Unsupported spectral type:' + spectrum_type)
 
@@ -305,7 +323,11 @@ class Model(object):
         self._data = defaults.make_default_dict(defaults.source_output)
         self._data['spectral_pars'] = get_function_defaults(
             data['SpectrumType'])
-        self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
+        try:
+            self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
+        except:
+            print (data)
+            raise KeyError("xx")
         self._data.setdefault('catalog', data.pop('catalog', {}))
         self._data.setdefault('assoc', data.pop('assoc', {}))
         self._data.setdefault('class', '')
@@ -498,7 +520,8 @@ class Model(object):
              'Pivot_Energy': np.nan,
              'beta': np.nan,
              'Exp_Index': np.nan,
-             'Cutoff': np.nan}
+             'Cutoff': np.nan,
+             'Expfactor': np.nan}
 
         params = get_true_params_dict(self.spectral_pars)
         if self['SpectrumType'] == 'PowerLaw':
@@ -516,6 +539,12 @@ class Model(object):
             o['Flux_Density'] = params['Prefactor']['value']
             o['Pivot_Energy'] = params['Scale']['value']
             o['Cutoff'] = params['Cutoff']['value']
+        elif self['SpectrumType'] == 'PLSuperExpCutoff2':
+            o['Spectral_Index'] = -1.0 * params['Index1']['value']
+            o['Exp_Index'] = params['Index2']['value']
+            o['Flux_Density'] = params['Prefactor']['value']
+            o['Pivot_Energy'] = params['Scale']['value']
+            o['Expfactor'] = params['Expfactor']['value']
 
         return o
 
@@ -1953,7 +1982,7 @@ class ROIModel(fermipy.config.Configurable):
                     src_dict['Spatial_Filename'] = utils.resolve_file_path(
                         row['Spatial_Filename'],
                         search_dirs=search_dirs)
-
+                        
             else:
                 src_dict['SourceType'] = 'PointSource'
                 src_dict['SpatialType'] = 'SkyDirFunction'

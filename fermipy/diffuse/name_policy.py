@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import yaml
 
 # Map reprocessing 'key' to IRF name
-DATASET_DICTIONARY = dict(P8_P302='P8R2')
+DATASET_DICTIONARY = dict(P8_P302='P8R2', P8_P304='P8R3', P8_P305='P8R3')
 
 # Map event class 'key' to IRF name
 EVCLASS_NAME_DICTIONARY = dict(source='SOURCE',
@@ -52,9 +52,9 @@ class NameFactory(object):
 
     # Galprop inputs
     # Galprop input gasmaps
-    galprop_gasmap_format = 'gasmap/{sourcekey}_{projtype}_{galprop_run}_{maptype}.fits.gz'
+    galprop_gasmap_format = 'gasmap/{sourcekey}_{projtype}_{galprop_run}.gz'
     # Galprop merged gasmaps
-    merged_gasmap_format = 'merged_gasmaps/{sourcekey}_{projtype}_{maptype}.fits'
+    merged_gasmap_format = 'merged_gasmaps/{sourcekey}_{projtype}.fits'
 
     # Other diffuse map templates
     diffuse_template_format = 'templates/template_{sourcekey}.fits'
@@ -111,7 +111,7 @@ class NameFactory(object):
     # galprop rings merging yaml file
     galprop_rings_yaml_format = 'models/galprop_rings_{galkey}.yaml'
     # catalog split yaml file
-    catalog_split_yaml_format = 'models/{sourcekey}.yaml'
+    catalog_split_yaml_format = 'models/catalog_{sourcekey}.yaml'
     # model yaml file
     model_yaml_format = 'models/model_{modelkey}.yaml'
 
@@ -138,6 +138,11 @@ class NameFactory(object):
         """ Update the values in baseline dictionary used to resolve names
         """
         self.base_dict.update(**yaml.safe_load(open(yamlfile)))
+
+    def irf_ver(self, **kwargs):
+        """ Get the name of the IRF version 
+        """
+        return kwargs.get('irf_ver', self.base_dict.get('irf_ver', None))
 
     def irfs(self, **kwargs):
         """ Get the name of IFRs associted with a particular dataset
