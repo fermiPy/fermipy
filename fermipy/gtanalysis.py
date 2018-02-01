@@ -4055,7 +4055,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         # EAC, we need this b/c older version of the ST don't have the right signature        
         try:
             src_dict['npred_wt'] = self.like.NpredValue(str(name), True)
-        except TypeError:
+        except (TypeError, NotImplementedError):
             src_dict['npred_wt'] = src_dict['npred']
 
         # Get the Model Fluxes
@@ -4926,17 +4926,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Remove sources in exclude list
         src_names = [str(t) for t in src_names if t not in excluded_names]
 
+        #EAC we need the try blocks b/c older versions of the ST don't have some of these functions
         if len(src_names) == len(self.roi.sources):
             try:
                 self.like.logLike.computeModelMap(v, use_mask)
-            except TypeError:
+            except (TypeError, NotImplementedError):
                 self.like.logLike.computeModelMap(v)
         elif not hasattr(self.like.logLike, 'setSourceMapImage'):
             for s in src_names:
                 model = self.like.logLike.sourceMap(str(s))
                 try:
                     self.like.logLike.updateModelMap(v, model, use_mask)
-                except TypeError:
+                except (TypeError, NotImplementedError):
                     self.like.logLike.updateModelMap(v, model)                
         else:
             try:
@@ -4977,7 +4978,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # EAC, we need this b/c older version of the ST don't have the right signature        
         try:
             cs = np.array(self.like.logLike.modelCountsSpectrum(str(name), weighted))
-        except TypeError:
+        except (TypeError, NotImplementedError):
             cs = np.array(self.like.logLike.modelCountsSpectrum(str(name)))
         imin = utils.val_to_edge(self.log_energies, logemin)[0]
         imax = utils.val_to_edge(self.log_energies, logemax)[0]
