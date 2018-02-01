@@ -404,11 +404,11 @@ class HPX(object):
         return HPX(self.nside, not self.nest, self.coordsys, -1, self.ebins,
                    region=self.region, conv=self.conv, pixels=pixels)
 
-    def copy_and_drop_energy(self):
+    def copy_and_drop_energy(self, pixels=None):
         """
         """        
         return HPX(self.nside, self.nest, self.coordsys, -1, None,
-                   region=self.region, conv=self.conv, pixels=self.pixels)
+                   region=self.region, conv=self.conv, pixels=pixels)
 
     @classmethod
     def create_hpx(cls, nside, nest, coordsys='CEL', order=-1, ebins=None,
