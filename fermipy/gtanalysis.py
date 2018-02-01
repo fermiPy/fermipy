@@ -4927,19 +4927,31 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         src_names = [str(t) for t in src_names if t not in excluded_names]
 
         if len(src_names) == len(self.roi.sources):
-            self.like.logLike.computeModelMap(v, use_mask)
+            try:
+                self.like.logLike.computeModelMap(v, use_mask)
+            except TypeError:
+                self.like.logLike.computeModelMap(v)
         elif not hasattr(self.like.logLike, 'setSourceMapImage'):
             for s in src_names:
                 model = self.like.logLike.sourceMap(str(s))
-                self.like.logLike.updateModelMap(v, model, use_mask)
+                try:
+                    self.like.logLike.updateModelMap(v, model, use_mask)
+                except TypeError:
+                    self.like.logLike.updateModelMap(v, model)                
         else:
             try:
-                self.like.logLike.computeModelMap(src_names, v, use_mask)
+                if hasattr(self.like.logLike, 'has_weights'):
+                    self.like.logLike.computeModelMap(src_names, v, use_mask)
+                else:
+                    self.like.logLike.computeModelMap(src_names, v)            
             except:
                 vsum = np.zeros(v.size())
                 for s in src_names:
                     vtmp = pyLike.FloatVector(v.size())
-                    self.like.logLike.computeModelMap(str(s), vtmp, use_mask)
+                    if hasattr(self.like.logLike, 'has_weights'):
+                        self.like.logLike.computeModelMap(str(s), vtmp, use_mask)
+                    else:
+                        self.like.logLike.computeModelMap(str(s), vtmp)
                     vsum += vtmp
                 v = pyLike.FloatVector(vsum)
 
