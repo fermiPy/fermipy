@@ -4805,7 +4805,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             z = cmap.data()
             nhpix = self.hpx.npix
             z = np.array(z).reshape(self.enumbins, nhpix)
-            return HpxMap(z, self.hpx)
+            return HpxMap(z, copy.deepcopy(self.hpx))
         else:
             self.logger.error('Did not recognize CountsMap type %i' % p_method,
                               exc_info=True)
