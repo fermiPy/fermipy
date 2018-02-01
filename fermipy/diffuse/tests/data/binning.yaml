@@ -1,3 +1,4 @@
+coordsys: GAL
 E0:
   log_emin : 1.5
   log_emax : 2.0

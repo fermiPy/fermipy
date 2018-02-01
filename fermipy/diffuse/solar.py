@@ -11,8 +11,8 @@ import argparse
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Link, Chain
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse import defaults as diffuse_defaults
@@ -76,11 +76,9 @@ class ConfigMaker_Gtexphpsun(ConfigMaker):
     This takes the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
     """
     default_options = dict(comp=diffuse_defaults.sun_moon['binning_yaml'],
-                           data=diffuse_defaults.sun_moon['dataset_yaml'],
-                           irf_ver=diffuse_defaults.sun_moon['irf_ver'])
+                           data=diffuse_defaults.sun_moon['dataset_yaml'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -91,7 +89,6 @@ class ConfigMaker_Gtexphpsun(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
@@ -103,7 +100,7 @@ class ConfigMaker_Gtexphpsun(ConfigMaker):
             name_keys = dict(zcut=zcut,
                              ebin=comp.ebin_name,
                              psftype=comp.evtype_name,
-                             irf_ver=args['irf_ver'],
+                             irf_ver=NAME_FACTORY.irf_ver(),
                              fullpath=True)
             outfile = NAME_FACTORY.bexpcube_sun(**name_keys)
             job_configs[key] = dict(infile=NAME_FACTORY.ltcube_sun(**name_keys),
@@ -115,8 +112,7 @@ class ConfigMaker_Gtexphpsun(ConfigMaker):
                                     enumbins=comp.enumbins,
                                     logfile=outfile.replace('.fits', '.log'))
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 
 class ConfigMaker_Gtsuntemp(ConfigMaker):
@@ -125,13 +121,11 @@ class ConfigMaker_Gtsuntemp(ConfigMaker):
     This takes the following arguments:
     --comp       : binning component definition yaml file
     --data       : datset definition yaml file
-    --irf_ver    : IRF verions string (e.g., 'V6')
     --sourcekeys : Keys for sources to make template for
     """
     default_options = dict(comp=diffuse_defaults.sun_moon['binning_yaml'],
                            data=diffuse_defaults.sun_moon['dataset_yaml'],
-                           sourcekeys=diffuse_defaults.sun_moon['sourcekeys'],
-                           irf_ver=diffuse_defaults.sun_moon['irf_ver'])
+                           sourcekeys=diffuse_defaults.sun_moon['sourcekeys'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -142,7 +136,6 @@ class ConfigMaker_Gtsuntemp(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
@@ -155,7 +148,7 @@ class ConfigMaker_Gtsuntemp(ConfigMaker):
                 name_keys = dict(zcut=zcut,
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
-                                 irf_ver=args['irf_ver'],
+                                 irf_ver=NAME_FACTORY.irf_ver(),
                                  sourcekey=sourcekey,
                                  fullpath=True)
                 outfile = NAME_FACTORY.template_sunmoon(**name_keys)
@@ -171,8 +164,7 @@ class ConfigMaker_Gtsuntemp(ConfigMaker):
                                         enumbins=comp.enumbins,
                                         logfile=outfile.replace('.fits', '.log'))
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 
 
@@ -182,15 +174,15 @@ def create_sg_Gtexphpsun(**kwargs):
     link = create_link_gtexphpsun(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Run gtexpcube2 for a series of event types."
 
     config_maker = ConfigMaker_Gtexphpsun(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,
@@ -205,15 +197,15 @@ def create_sg_Gtsuntemp(**kwargs):
     link = create_link_gtsuntemp(**kwargs)
     linkname = kwargs.pop('linkname', link.linkname)
 
-    lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Run gtexpcube2 for a series of event types."
 
     config_maker = ConfigMaker_Gtsuntemp(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=linkname,

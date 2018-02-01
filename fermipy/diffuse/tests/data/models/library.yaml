@@ -1,32 +1,38 @@
+# Catalog Components
+3FGL :
+  model_type : catalog
+  versions : [v00]
+# Diffuse Components
 galprop_rings :
   model_type : galprop_rings
   versions : [ref]
+gll-iem :
+  model_type : MapCubeSource
+  versions : [v06]
 loopI : 
   model_type : MapCubeSource
-  versions : [v00]
+  versions : [haslam]
 bubbles : 
   model_type : MapCubeSource
   versions : [v00]
 isotropic : 
   model_type : IsoSource
-  versions : [v00]
-residual_cr : 
+  versions : [P8R3_SOURCE_V2]
+patches : 
+  
+unresolved :
   model_type : MapCubeSource
-  versions : [v00]
-  selection_dependent : True
-limb : 
+  versions : [strong]
+sun-ic : 
   model_type : MapCubeSource
-  versions : [v00]
-  selection_dependent : True
-sun : 
+  versions : [v2r0]
+  moving : True    
+sun-disk : 
   model_type : MapCubeSource
-  versions : [v00]
+  versions : [v3r1]
   moving : True    
 moon :
   model_type : MapCubeSource
-  versions : [v00]
+  versions : [v3r2]
   moving : True    
-    
-  
-    
 

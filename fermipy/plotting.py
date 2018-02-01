@@ -56,6 +56,7 @@ def get_xerr(sed):
 def make_counts_spectrum_plot(o, roi, energies, imfile, **kwargs):
 
     figsize = kwargs.get('figsize', (8.0, 6.0))
+    weighted = kwargs.get('weighted', False)
 
     fig = plt.figure(figsize=figsize)
 
@@ -71,8 +72,18 @@ def make_counts_spectrum_plot(o, roi, energies, imfile, **kwargs):
 
     x = 0.5 * (energies[1:] + energies[:-1])
     xerr = 0.5 * (energies[1:] - energies[:-1])
-    y = o['counts']
-    ym = o['model_counts']
+
+    count_str = 'counts'
+    model_counts_str = 'model_counts'
+    npred_str = 'npred'
+   
+    if weighted:
+        count_str += '_wt'
+        model_counts_str += '_wt'
+        npred_str += '_wt'
+
+    y = o[count_str]
+    ym = o[model_counts_str]
 
     ax0.errorbar(x, y, yerr=np.sqrt(y), xerr=xerr, color='k',
                  linestyle='None', marker='s',
@@ -82,13 +93,13 @@ def make_counts_spectrum_plot(o, roi, energies, imfile, **kwargs):
                  label='Total')
 
     for s in sorted(roi.sources,
-                    key=lambda t: t['npred'], reverse=True)[:6]:
-        ax0.errorbar(x, s['model_counts'], linestyle='-', marker='None',
+                    key=lambda t: t[npred_str], reverse=True)[:6]:
+        ax0.errorbar(x, s[model_counts_str], linestyle='-', marker='None',
                      label=s['name'])
 
     for s in sorted(roi.sources,
-                    key=lambda t: t['npred'], reverse=True)[6:]:
-        ax0.errorbar(x, s['model_counts'], color='gray',
+                    key=lambda t: t[npred_str], reverse=True)[6:]:
+        ax0.errorbar(x, s[model_counts_str], color='gray',
                      linestyle='-', marker='None',
                      label='__nolabel__')
 
@@ -370,32 +381,46 @@ class ROIPlotter(fermipy.config.Configurable):
             else:
                 self._catalogs += [c]
 
+        self._loge_bounds = self.config['loge_bounds']
+
         if isinstance(data_map, Map):
             self._projtype = 'WCS'
             self._data = data_map.counts.T
+            self._wcsdata = self._data
             self._proj = data_map.wcs
             self._wcs = self._proj
         elif isinstance(data_map, HpxMap):
             self._projtype = 'HPX'
+            self._data = data_map.counts.T
             self._proj = data_map.hpx
-            self._wcsproj = self._proj.make_wcs(
-                naxis=2, proj='AIR', energies=None, oversample=2)
+            naxis_wcs = len(self._data.shape) + 1
+            if self._proj.region is None:
+                wcsprojtype = "MOL"
+            else:
+                wcsprojtype = "AIT"
+            self._wcsproj = self._proj.make_wcs(naxis=naxis_wcs,
+                                                proj=wcsprojtype,
+                                                energies=self._loge_bounds,
+                                                oversample=2)
+            if len(self._data.shape) == 1:
+                wcsshape = (self._wcsproj._npix[0], self._wcsproj._npix[1])
+            else:                
+                wcsshape = (self._wcsproj._npix[0], self._wcsproj._npix[1], self._data.shape[1])
+            self._wcsdata = np.ndarray(wcsshape)
             self._wcs = self._wcsproj.wcs
-            self._mapping = hpx_utils.HpxToWcsMapping(
-                self._proj, self._wcsproj)
+            self._mapping = hpx_utils.HpxToWcsMapping(self._proj, self._wcsproj)            
+            self._mapping.fill_wcs_map_from_hpx_data(self._data, self._wcsdata)
         else:
             raise Exception(
                 "Can't make ROIPlotter of unknown projection type %s" % type(data_map))
 
-        self._loge_bounds = self.config['loge_bounds']
-
         if self._loge_bounds:
-            axes = wcs_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
+            axes = wcs_utils.wcs_to_axes(self._wcs, self._wcsdata.shape[::-1])
             i0 = utils.val_to_edge(axes[2], self._loge_bounds[0])[0]
             i1 = utils.val_to_edge(axes[2], self._loge_bounds[1])[0]
-            imdata = self._data[:, :, i0:i1]
+            imdata = self._wcsdata[:, :, i0:i1]
         else:
-            imdata = self._data
+            imdata = self._wcsdata
 
         self._implot = ImagePlotter(imdata, self._wcs)
 
@@ -444,13 +469,16 @@ class ROIPlotter(fermipy.config.Configurable):
 
         data = kwargs.pop('data', self._data)
         noerror = kwargs.pop('noerror', False)
+        xmin = kwargs.pop('xmin', -1)
+        xmax = kwargs.pop('xmax', 1)        
 
         axes = wcs_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
         x = utils.edge_to_center(axes[iaxis])
         w = utils.edge_to_width(axes[iaxis])
 
         c = self.get_data_projection(data, axes, iaxis,
-                                     loge_bounds=self._loge_bounds)
+                                     loge_bounds=self._loge_bounds,
+                                     xmin=xmin, xmax=xmax)
 
         if noerror:
             plt.errorbar(x, c, **kwargs)
@@ -463,13 +491,21 @@ class ROIPlotter(fermipy.config.Configurable):
         s0 = slice(None, None)
         s1 = slice(None, None)
         s2 = slice(None, None)
-
+        
         if iaxis == 0:
+            if xmin is None:
+                xmin = axes[1][0]
+            if xmax is None:
+                xmax = axes[1][-1]           
             i0 = utils.val_to_edge(axes[iaxis], xmin)[0]
             i1 = utils.val_to_edge(axes[iaxis], xmax)[0]
             s1 = slice(i0, i1)
             saxes = [1, 2]
         else:
+            if xmin is None:
+                xmin = axes[0][0]
+            if xmax is None:
+                xmax = axes[0][-1]           
             i0 = utils.val_to_edge(axes[iaxis], xmin)[0]
             i1 = utils.val_to_edge(axes[iaxis], xmax)[0]
             s0 = slice(i0, i1)
@@ -1164,6 +1200,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         figsize = kwargs.get('figsize', self.config['figsize'])
         prefix = kwargs.get('prefix', '')
         loge_bounds = kwargs.get('loge_bounds', None)
+        weighted = kwargs.get('weighted', False)
 
         roi_kwargs = {}
         roi_kwargs.setdefault('loge_bounds', loge_bounds)
@@ -1179,6 +1216,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
         esuffix = '_%.3f_%.3f' % (loge_bounds[0], loge_bounds[1])
 
         mcube_diffuse = gta.model_counts_map('diffuse')
+        counts_map = gta.counts_map()
+
+        if weighted:
+            wmap = gta.weight_map()
+            print (wmap.counts.sum(0))
+            counts_map = copy.deepcopy(counts_map)
+            mcube_map = copy.deepcopy(mcube_map)
+            counts_map.data *= wmap.counts
+            mcube_map.data *= wmap.counts
+            mcube_diffuse.data *= wmap.counts         
 
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(mcube_map, roi=gta.roi, **roi_kwargs)
@@ -1192,18 +1239,30 @@ class AnalysisPlotter(fermipy.config.Configurable):
         data_style = {'marker': 's', 'linestyle': 'None'}
 
         fig = plt.figure(figsize=figsize)
-        p = ROIPlotter(gta.counts_map(), roi=gta.roi, **roi_kwargs)
 
         if p.projtype == "WCS":
             model_data = mcube_map.counts.T
             diffuse_data = mcube_diffuse.counts.T
+            weight_data = wmap.counts.T
+            xmin = -1
+            xmax = 1
         elif p.projtype == "HPX":
+            if p.cmap._hpx2wcs is None:
+                 p.cmap.make_wcs_from_hpx(sum_ebins=False)
+            wcs, counts_dataT = p.cmap.convert_to_cached_wcs(
+                counts_map.counts, sum_ebins=False)
+            counts_data = counts_dataT.swapaxes(1,2)
+            counts_map = Map(counts_data, wcs.wcs)
             dummy, model_dataT = p.cmap.convert_to_cached_wcs(
                 mcube_map.counts, sum_ebins=False)
             dummy, diffuse_dataT = p.cmap.convert_to_cached_wcs(
                 mcube_diffuse.counts, sum_ebins=False)
-            model_data = model_dataT.T
-            diffuse_data = diffuse_dataT.T
+            model_data = model_dataT.T.swapaxes(0,1)
+            diffuse_data = diffuse_dataT.T.swapaxes(0,1)
+            xmin = None
+            xmax = None
+
+        p = ROIPlotter(counts_map, roi=gta.roi, **roi_kwargs)
 
         p.plot(cb_label='Counts', zscale='sqrt')
         plt.savefig(os.path.join(gta.config['fileio']['workdir'],
@@ -1212,11 +1271,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure(figsize=figsize)
-        p.plot_projection(0, label='Data', color='k', **data_style)
-
-        p.plot_projection(0, data=model_data, label='Model',
+        p.plot_projection(0, label='Data', color='k', xmin=xmin, xmax=xmax, **data_style)
+        p.plot_projection(0, data=model_data, label='Model', xmin=xmin, xmax=xmax, 
                           noerror=True)
-        p.plot_projection(0, data=diffuse_data, label='Diffuse',
+        p.plot_projection(0, data=diffuse_data, label='Diffuse', xmin=xmin, xmax=xmax, 
                           noerror=True)
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LON Offset [deg]')
@@ -1229,10 +1287,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure(figsize=figsize)
-        p.plot_projection(1, label='Data', color='k', **data_style)
-        p.plot_projection(1, data=model_data, label='Model',
+        p.plot_projection(1, label='Data', color='k',  xmin=xmin, xmax=xmax, **data_style)
+        p.plot_projection(1, data=model_data, label='Model', xmin=xmin, xmax=xmax, 
                           noerror=True)
-        p.plot_projection(1, data=diffuse_data, label='Diffuse',
+        p.plot_projection(1, data=diffuse_data, label='Diffuse', xmin=xmin, xmax=xmax, 
                           noerror=True)
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LAT Offset [deg]')

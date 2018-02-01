@@ -18,8 +18,8 @@ import pyLikelihood as pyLike
 from fermipy import utils
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import add_argument, Link
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import  make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.diffuse_src_manager import make_diffuse_comp_info_dict
@@ -110,14 +110,12 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
     This adds the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
-    --diffuse  : Diffuse model component definition yaml file'
+    --library  : Diffuse model component definition yaml file'
     --make_xml : Write xml files for the individual components
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           diffuse=diffuse_defaults.diffuse['diffuse'],
+                           library=diffuse_defaults.diffuse['library'],
                            make_xml=(True, 'Write xml files needed to make source maps', bool))
 
     def __init__(self, link, **kwargs):
@@ -175,14 +173,13 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
         
         ret_dict = make_diffuse_comp_info_dict(components=components,
-                                               diffuse=args['diffuse'],
+                                               library=args['library'],
                                                basedir='.')
         diffuse_comp_info_dict = ret_dict['comp_info_dict']
         if args['make_xml']:
@@ -202,8 +199,9 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
                                  mktime='none',
-                                 coordsys='GAL',
-                                 irf_ver=args['irf_ver'])
+                                 coordsys=comp.coordsys,
+                                 irf_ver=NAME_FACTORY.irf_ver(),
+                                 fullpath=True)
 
                 kmin = 0
                 kmax = comp.enumbins + 1
@@ -227,15 +225,14 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                     khi = min(kmax, k + kstep)
                     
                     full_dict = base_dict.copy()
-                    full_dict.update(dict(outfile=\
-                                              outfile_base.replace('.fits', '_%02i.fits' % k),
+                    outfile = outfile_base.replace('.fits', '_%02i.fits' % k)
+                    logfile = make_nfs_path(outfile_base.replace('.fits', '_%02i.log' % k))
+                    full_dict.update(dict(outfile=outfile,
                                           kmin=k, kmax=khi,
-                                          logfile=\
-                                              outfile_base.replace('.fits', '_%02i.log' % k)))
+                                          logfile=logfile))
                     job_configs[full_key] = full_dict
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 def create_link_srcmap_partial(**kwargs):
     """Build and return a `Link` object that can invoke GtAssembleModel"""
@@ -249,15 +246,15 @@ def create_sg_srcmap_partial(**kwargs):
     link.linkname = kwargs.pop('linkname', link.linkname)
     appname = kwargs.pop('appname', 'fermipy-srcmaps-diffuse-sg')
 
-    lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Build source maps for diffuse model components"
 
     config_maker = ConfigMaker_SrcmapPartial(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 linkname=link.linkname,
