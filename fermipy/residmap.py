@@ -384,6 +384,7 @@ class ResidMapGenerator(object):
                 mask = np.where(wmap > 0, 1., 0.)
             else:
                 wmap = None
+                mask = None
 
             ccs = convolve_map(cc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
             mcs = convolve_map(mc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
