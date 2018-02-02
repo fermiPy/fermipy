@@ -1026,9 +1026,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
             sigma_map = maps['sigma']
             excess_map = maps['excess']
             if maps['mask'] is None:
-                hist_data = np.nan_to_num(maps['sigma'])
+                hist_data = np.nan_to_num(maps['sigma'].counts.T)
             else:
-                hist_data = np.nan_to_num(maps['sigma'])[maps['mask']!=0]
+                hist_data = np.nan_to_num(maps['sigma'].counts.T)[maps['mask']!=0]
 
         elif maps['projtype'] == 'HPX':
             orig_map = maps['data']
