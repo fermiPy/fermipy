@@ -840,7 +840,8 @@ class CastroData_Base(object):
         returns the best-fit normalization value
         """
         from scipy.optimize import brentq
-        fDeriv = lambda x: self.norm_derivative(specVals, x)
+
+        def fDeriv(x): return self.norm_derivative(specVals, x)
         try:
             result = brentq(fDeriv, xlims[0], xlims[1])
         except:
@@ -869,7 +870,8 @@ class CastroData_Base(object):
             Best-fit normalization value
         """
         from scipy.optimize import fmin
-        fToMin = lambda x: self.__call__(specVals * x)
+
+        def fToMin(x): return self.__call__(specVals * x)
         result = fmin(fToMin, 0., disp=False, xtol=1e-6)
         return result
 
@@ -941,7 +943,7 @@ class CastroData_Base(object):
         ts_spec = self.TS_spectrum(spec_vals)
         chi2_vals = self.chi2_vals(spec_vals)
         chi2_spec = np.sum(chi2_vals)
-        pval_spec = stats.chisqprob(chi2_spec, len(spec_vals))
+        pval_spec = stats.distributions.chi2.sf(chi2_spec, len(spec_vals))
         return dict(params=out_pars, spec_vals=spec_vals,
                     spec_npred=spec_npred,
                     ts_spec=ts_spec, chi2_spec=chi2_spec,
@@ -1266,7 +1268,6 @@ class CastroData(CastroData_Base):
                    components[0].refSpec,
                    components[0].norm_type)
 
-
     def spectrum_loglike(self, specType, params, scale=1E3):
         """ return the log-likelihood for a particular spectrum
 
@@ -1494,7 +1495,7 @@ class TSCube(object):
            String specifying the quantity used for the normalization
 
         """
-        tsmap, _ = read_map_from_fits(fitsfile)
+        tsmap = read_map_from_fits(fitsfile)
 
         tab_e = Table.read(fitsfile, 'EBOUNDS')
         tab_s = Table.read(fitsfile, 'SCANDATA')

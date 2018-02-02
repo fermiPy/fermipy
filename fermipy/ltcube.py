@@ -202,17 +202,17 @@ class LTCube(HpxMap):
         data = hdulist['EXPOSURE'].data.field('COSBINS')
         data_wt = hdulist['WEIGHTED_EXPOSURE'].data.field('COSBINS')
         if hdulist['EXPOSURE'].header['PHIBINS'] > 0:
-            data = data[:,:hdulist['EXPOSURE'].header['NBRBINS']]
+            data = data[:, :hdulist['EXPOSURE'].header['NBRBINS']]
             # first phibin is the same as phibin = 0 or sum of phibin 1:n
             # data = reshape(data.shape[0],
-            #hdulist["EXPOSURE"].header["PHIBINS"]+1,
-            #hdulist["EXPOSURE"].header["NBRBINS"])
+            # hdulist["EXPOSURE"].header["PHIBINS"]+1,
+            # hdulist["EXPOSURE"].header["NBRBINS"])
         if hdulist['WEIGHTED_EXPOSURE'].header['PHIBINS'] > 0:
-            data_wt = data[:,:hdulist['WEIGHTED_EXPOSURE'].header['NBRBINS']]
+            data_wt = data[:, :hdulist['WEIGHTED_EXPOSURE'].header['NBRBINS']]
             # first phibin is the same as phibin = 0 or sum of phibin 1:n
             # data_wt = reshape(data_wt.shape[0],
-            #hdulist["WEIGHTED_EXPOSURE"].header["PHIBINS"]+1,
-            #hdulist["WEIGHTED_EXPOSURE"].header["NBRBINS"])
+            # hdulist["WEIGHTED_EXPOSURE"].header["PHIBINS"]+1,
+            # hdulist["WEIGHTED_EXPOSURE"].header["NBRBINS"])
         data = data.astype(float)
         data_wt = data_wt.astype(float)
         tstart = hdulist[0].header['TSTART']

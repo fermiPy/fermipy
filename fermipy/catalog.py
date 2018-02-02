@@ -321,3 +321,59 @@ class Catalog4FGLP(Catalog):
 
         table['TS'] = table['Test_Statistic']
         table['Cutoff'] = table['Cutoff_Energy']
+
+
+class Catalog4FGL(Catalog):
+    """This class supports releases of the 4FGL catalog.
+    Because there is currently no dedicated extended source library
+    for 4FGL this class reuses the extended source library from the
+    3FGL."""
+
+    def __init__(self, fitsfile=None, extdir=None):
+
+        if extdir is None:
+            extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
+                                  'Extended_archive_v18')
+
+        #hdulist = fits.open(fitsfile)
+        table = Table.read(fitsfile)
+        table_extsrc = Table.read(fitsfile, 'ExtendedSources')
+        table_extsrc.meta.clear()
+ 
+        strip_columns(table)
+        strip_columns(table_extsrc)
+        if 'Spatial_Function' not in table_extsrc.colnames:
+            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
+                                           length=len(table_extsrc)))
+            table_extsrc['Spatial_Function'] = 'SpatialMap'
+
+        table = join_tables(table, table_extsrc,
+                            'Extended_Source_Name', 'Source_Name',
+                            ['Model_Form', 'Model_SemiMajor',
+                             'Model_SemiMinor', 'Model_PosAng',
+                             'Spatial_Filename', 'Spatial_Function'])
+        table.sort('Source_Name')
+
+        table['beta'] = table['LP_beta']
+        super(Catalog4FGL, self).__init__(table, extdir)
+
+        excol = np.zeros((len(table)), 'bool')
+        for i, exname in enumerate(table['Extended_Source_Name']):
+            if len(exname.strip()) > 0:
+                excol[i] = True 
+
+        self.table['extended'] = excol
+        self.table['Extended'] = excol
+
+        scol = Column(name='Spatial_Function', dtype='U20', data=self.table['Spatial_Function'].data)
+        self.table.remove_column('Spatial_Function')        
+        self.table['Spatial_Function'] = scol
+
+        m = self.table['Spatial_Function'] == 'RadialGauss'
+        self.table['Spatial_Function'][m] = 'RadialGaussian'
+
+        self.table['TS'] = self.table['Signif_Avg']*self.table['Signif_Avg']
+        self.table['Spectral_Index'] = self.table['PL_Index']
+        
+
+        

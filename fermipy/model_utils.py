@@ -222,18 +222,18 @@ def cast_pars_dict(pars_dict):
 
 def pars_dict_to_vectors(function_name, pars_dict):
 
-    o = {'param_names' : np.zeros(10, dtype='S32'),
-         'param_values' : np.empty(10, dtype=float) * np.nan,
-         'param_errors' : np.empty(10, dtype=float) * np.nan,
+    o = {'param_names': np.zeros(10, dtype='S32'),
+         'param_values': np.empty(10, dtype=float) * np.nan,
+         'param_errors': np.empty(10, dtype=float) * np.nan,
          }
-    
+
     par_names = get_function_par_names(function_name)
     for i, p in enumerate(par_names):
 
-        value = pars_dict[p]['value']*pars_dict[p]['scale']
-        scale = pars_dict[p]['error']*pars_dict[p]['scale']        
+        value = pars_dict[p]['value'] * pars_dict[p]['scale']
+        scale = pars_dict[p]['error'] * pars_dict[p]['scale']
         o['param_names'][i] = p
         o['param_values'][i] = value
         o['param_errors'][i] = scale
-        
+
     return o

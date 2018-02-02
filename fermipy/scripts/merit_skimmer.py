@@ -23,7 +23,7 @@ from ..validate.utils import load_chain, load_aliases
 
 def get_branches(aliases):
     """Get unique branch names from an alias dictionary."""
-    
+
     ignore = ['pow', 'log10', 'sqrt', 'max']
     branches = []
     for k, v in aliases.items():
@@ -200,7 +200,7 @@ defined in the output option appended with the job number
                         help='MERIT files or MERIT file lists.')
 
     args = parser.parse_args()
-    
+
     ROOT.TFormula.SetMaxima(2000, 2000, 2000)
 
     # Assemble list of root files
@@ -221,7 +221,7 @@ defined in the output option appended with the job number
             output_file = splitext(basename(args.output))[0]
             output_file += '_%03i.root' % (ijob)
             output_file = os.path.join(output_dir, output_file)
-            
+
             infiles += [args.files]
             outfiles += [output_file]
             opts = vars(args).copy()
@@ -232,7 +232,7 @@ defined in the output option appended with the job number
             job_opts += [opts]
 
         print('Submitting %i jobs...' % (njob))
-        submit_jobs('fermipy-merit-skimmer', infiles, job_opts, outfiles, 
+        submit_jobs('fermipy-merit-skimmer', infiles, job_opts, outfiles,
                     overwrite=args.overwrite)
         sys.exit(0)
 
@@ -269,7 +269,7 @@ defined in the output option appended with the job number
     aliases = load_aliases(args.aliases)
     for k, v in sorted(aliases.items()):
         chain.SetAlias(k, v)
-        
+
     # If you want to look at the prefilters, need to change these
     print('Selection Cut:', args.selection)
     set_event_list(chain, args.selection, args.fraction, args.start_fraction)

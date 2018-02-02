@@ -18,6 +18,7 @@ def pwd():
     # Careful, won't work after a call to os.chdir...
     return os.environ['PWD']
 
+
 # IRF to event class mapping
 EVENTCLASS = odict(
     P7REP_CLEAN=("INDEF", "3"),
@@ -55,8 +56,7 @@ def main():
                         help="GRB GTI file.")
     parser.add_argument("--gtifile_sun", default=None, type=str,
                         help="Sun GTI file.")
-    
-    
+
     args = parser.parse_args()
 
     basedir = pwd()
@@ -66,7 +66,7 @@ def main():
     gti_dir = '/u/gl/mdwood/ki20/mdwood/fermi/data'
     gti_grb = '%s/nogrb.gti' % gti_dir
     gti_sfr = '%s/nosolarflares.gti' % gti_dir
-    
+
     #sfr_gticut = "gtifilter(\"%s\",(START+STOP)/2)" % (gti_sfr)
     #gticut_sun = "ANGSEP(RA_SUN,DEC_SUN,RA_ZENITH,DEC_ZENITH)>115"
 
@@ -76,17 +76,17 @@ def main():
 
     if args.rock_min is not None:
         mktime_filter += '&& ABS(ROCK_ANGLE)>%(rock)s ' % dict(rock=args.rock_min)
-    
-    if args.gtifile_grb:    
+
+    if args.gtifile_grb:
         gticut_grb = "gtifilter(\"%s\",START) && " % (args.gtifile_grb)
         gticut_grb += "gtifilter(\"%s\",STOP)" % (args.gtifile_grb)
         mktime_filter += '&& %s' % gticut_grb
-        
+
     if args.gtifile_sun:
         gticut_sun = "gtifilter(\"%s\",(START+STOP)/2)" % (args.gtifile_sun)
         mktime_filter += '&& (ANGSEP(RA_SUN,DEC_SUN,RA_ZENITH,DEC_ZENITH)>115 || %s)' % gticut_sun
-        
-    #if args.transient_cut:
+
+    # if args.transient_cut:
     #    mktime_filter += '&& %s' % gticut_grb
     #    mktime_filter += '&& (%s || %s)' % (sfr_gticut, gticut_sun)
 
@@ -180,6 +180,7 @@ workdir=$(mktemp -d -p /scratch/$USER);\n
     np.savetxt(lstfile, sorted(lst), fmt="%s")
 
     print("Done.")
+
 
 if __name__ == "__main__":
     main()
