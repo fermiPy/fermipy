@@ -12,7 +12,9 @@ from astropy.io import fits
 
 from fermipy import utils
 from fermipy import catalog
+from fermipy import irfs
 from fermipy.ltcube import LTCube
+
 
 agn_src_list = ['3FGL J1104.4+3812', '3FGL J2158.8-3013', '3FGL J1555.7+1111',
                 '3FGL J0538.8-4405', '3FGL J1427.0+2347', '3FGL J0222.6+4301',
@@ -134,7 +136,7 @@ class Validator(object):
         self.init()
         self._tab_sc = Table.read(scfile)
         self._zmax = zmax
-        self._ltc = LTCube.create_empty()
+        self._ltc = None
 
     @property
     def hists(self):
@@ -171,9 +173,15 @@ class Validator(object):
         skydir = SkyCoord(0.0,0.0,unit='deg')
 
         print('creating LT Cube')
+        
+        
         ltc = LTCube.create_from_gti(skydir, self._tab_sc, tab_gti,
                                      self._zmax)
-        self._ltc.load(ltc)
+
+        if self._ltc is None:
+            self._ltc = ltc
+        else:
+            self._ltc.load(ltc)
         
 
     def load(self, filename, fill=False):
@@ -379,6 +387,15 @@ class Validator(object):
             hists_out['%s_eff' % k] = np.squeeze(eff)
             hists_out['%s_eff_var' % k] = np.squeeze(eff_var)
 
+    def calc_model_eff(self):
+
+        from fermipy.spectrum import PowerLaw
+        fn = PowerLaw([1E-13, -2.0])        
+        skydir = SkyCoord(0.0,0.0,unit='deg')
+        exp = irfs.calc_wtd_exp(skydir, self._ltc, 'P8R2_SOURCE_V6', ['FRONT','BACK'], 
+                                self._energy_bins[10:13], self._ctheta_bins, fn)
+        return exp
+            
     def calc_containment(self):
         """Calculate PSF containment."""
 
