@@ -14,8 +14,8 @@ import pyLikelihood as pyLike
 
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import add_argument, Link
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.catalog_src_manager import make_catalog_comp_dict
@@ -76,6 +76,8 @@ class GtMergeSourceMaps(object):
     def run(self, argv):
         """Run this analysis"""
         args = self.parser.parse_args(argv)
+
+        print("srcmaps = %s"%(args.srcmaps))
         obs = BinnedAnalysis.BinnedObs(irfs=args.irfs,
                                        expCube=args.expcube,
                                        srcMaps=args.srcmaps,
@@ -127,13 +129,11 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
     This adds the following arguments:
     --comp     : binning component definition yaml file
     --data     : datset definition yaml file
-    --irf_ver  : IRF verions string (e.g., 'V6')
     --sources  : Catalog model component definition yaml file'
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           irf_ver=diffuse_defaults.diffuse['irf_ver'],
-                           sources=diffuse_defaults.diffuse['sources'])
+                           library=diffuse_defaults.diffuse['library'])
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -145,19 +145,17 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
-        ret_dict = make_catalog_comp_dict(sources=args['sources'], basedir='.')
+        ret_dict = make_catalog_comp_dict(sources=args['library'], basedir='.')
         comp_info_dict = ret_dict['comp_info_dict']
 
         for split_ver, split_dict in comp_info_dict.items():
             for source_key, source_dict in split_dict.items():
-
-                print(split_ver, source_key, source_dict.model_type)
                 full_key = "%s_%s"%(split_ver, source_key)
+                merged_name = "%s_%s"%(source_dict.catalog_info.catalog_name, source_key)
                 if source_dict.model_type != 'CompositeSource':
                     continue
 
@@ -168,30 +166,29 @@ class ConfigMaker_MergeSrcmaps(ConfigMaker):
                                      sourcekey=full_key,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
-                                     coordsys='GAL',
+                                     coordsys=comp.coordsys,
                                      mktime='none',
-                                     irf_ver=args['irf_ver'])
+                                     irf_ver=NAME_FACTORY.irf_ver())
                     nested_name_keys = dict(zcut=zcut,
                                             sourcekey=source_dict.catalog_info.catalog_name,
                                             ebin=comp.ebin_name,
                                             psftype=comp.evtype_name,
-                                            coordsys='GAL',
+                                            coordsys=comp.coordsys,
                                             mktime='none',
-                                            irf_ver=args['irf_ver'])
+                                            irf_ver=NAME_FACTORY.irf_ver())
                     outfile = NAME_FACTORY.srcmaps(**name_keys)
-                    
+                    logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                     job_configs[key] = dict(srcmaps=NAME_FACTORY.srcmaps(**nested_name_keys),
                                             expcube=NAME_FACTORY.ltcube(**name_keys),
                                             irfs=NAME_FACTORY.irfs(**name_keys),
                                             bexpmap=NAME_FACTORY.bexpcube(**name_keys),
                                             srcmdl=NAME_FACTORY.srcmdl_xml(**name_keys),
-                                            merged=source_key,
+                                            merged=merged_name,
                                             outfile=outfile,
                                             outxml=NAME_FACTORY.nested_srcmdl_xml(**name_keys),
-                                            logfile=outfile.replace('.fits', '.log'))
+                                            logfile=logfile)
 
-        output_config = {}
-        return input_config, job_configs, output_config
+        return job_configs
 
 def create_link_merge_srcmaps(**kwargs):
     """Build and return a `Link` object that can invoke GtAssembleModel"""
@@ -205,15 +202,16 @@ def create_sg_merge_srcmaps(**kwargs):
     link.linkname = kwargs.pop('linkname', link.linkname)
     appname = kwargs.pop('appname', 'fermipy-merge-srcmaps-sg')
 
-    lsf_args = {'W': 6000,
-                'R': 'rhel60'}
+    batch_args = get_lsf_default_args()   
+    batch_args['lsf_args']['W'] = 6000
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
     config_maker = ConfigMaker_MergeSrcmaps(link)
     lsf_sg = build_sg_from_link(link, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
                                 appname=appname,

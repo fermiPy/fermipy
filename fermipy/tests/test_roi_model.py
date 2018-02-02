@@ -24,15 +24,15 @@ def test_load_3fgl_catalog_fits():
     assert len(rm.sources) == 175
 
     rm = ROIModel(catalogs=['gll_psc_v16.fit'], skydir=skydir,
-                            src_radius=20.0)
+                  src_radius=20.0)
     assert len(rm.sources) == 175
 
 
 def test_load_3fgl_catalog_xml():
     skydir = SkyCoord(0.0, 0.0, unit='deg', frame='galactic').icrs
     rm = ROIModel(catalogs=['gll_psc_v16.xml'],
-                            extdir='Extended_archive_v15',
-                            skydir=skydir, src_radius=20.0)
+                  extdir='Extended_archive_v15',
+                  skydir=skydir, src_radius=20.0)
     assert len(rm.sources) == 175
 
 
@@ -44,9 +44,9 @@ def test_load_2fhl_catalog_fits():
 def test_create_roi_from_source():
 
     rm = ROIModel.create_from_source('3FGL J2021.0+4031e',
-                                     {'catalogs' : ['3FGL'], 'src_radius' : 2.0})
+                                     {'catalogs': ['3FGL'], 'src_radius': 2.0})
     assert len(rm.sources) == 9
-    src = rm.sources[0]    
+    src = rm.sources[0]
     assert src.name == '3FGL J2021.0+4031e'
     assert src['SpatialType'] == 'SpatialMap'
     assert src['SourceType'] == 'DiffuseSource'
@@ -54,7 +54,7 @@ def test_create_roi_from_source():
     assert_allclose(src['ra'], 305.26999, rtol=1E-5)
     assert_allclose(src['dec'], 40.52, rtol=1E-5)
     assert_allclose(src.spectral_pars['Index']['value'], 1.53, rtol=1E-4)
-    assert_allclose(src.spectral_pars['Prefactor']['value']*
+    assert_allclose(src.spectral_pars['Prefactor']['value'] *
                     src.spectral_pars['Prefactor']['scale'], 0.4003659112E-12, rtol=1E-4)
     assert_allclose(src.spatial_pars['Prefactor']['value'], 1.0, rtol=1E-4)
     assert_allclose(src.spatial_pars['Prefactor']['scale'], 1.0, rtol=1E-4)
@@ -277,11 +277,11 @@ def test_create_source_from_dict(tmppath):
 
     src = Source.create_from_dict({'name': 'testsrc',
                                    'SpatialModel': 'PointSource',
-                                   'SpectrumType': 'PowerLaw',                                   
+                                   'SpectrumType': 'PowerLaw',
                                    'Index': 2.3,
-                                   'Prefactor': {'value' : 1.3, 'scale' : 1E-8,
-                                                 'min' : 0.15, 'max' : 10.0,
-                                                 'free' : False},
+                                   'Prefactor': {'value': 1.3, 'scale': 1E-8,
+                                                 'min': 0.15, 'max': 10.0,
+                                                 'free': False},
                                    'ra': ra, 'dec': dec},
                                   rescale=True)
 
@@ -290,8 +290,7 @@ def test_create_source_from_dict(tmppath):
     assert_allclose(src.spectral_pars['Prefactor']['min'], 0.15)
     assert_allclose(src.spectral_pars['Prefactor']['max'], 10.0)
     assert src.spectral_pars['Prefactor']['free'] is False
-    
-    
+
     src = Source.create_from_dict({'name': 'testsrc',
                                    'SpatialModel': 'RadialGaussian',
                                    'SpectrumType': 'PowerLaw',
@@ -301,11 +300,12 @@ def test_create_source_from_dict(tmppath):
     assert_allclose(src['ra'], ra)
     assert_allclose(src['dec'], dec)
     assert src['SpatialModel'] == 'RadialGaussian'
-    assert (src['SpatialType'] == 'SpatialMap') or (src['SpatialType'] == 'RadialGaussian')
+    assert (src['SpatialType'] == 'SpatialMap') or (
+        src['SpatialType'] == 'RadialGaussian')
     assert src['SourceType'] == 'DiffuseSource'
     assert src.extended is True
 
-    #src = Source.create_from_dict({'name': 'testsrc',
+    # src = Source.create_from_dict({'name': 'testsrc',
     #                               'SpatialModel': 'RadialGaussian',
     #                               'SpectrumType': 'PowerLaw',
     #                               'Index': 2.3, 'Sigma': 0.5,
@@ -314,7 +314,7 @@ def test_create_source_from_dict(tmppath):
     #assert_allclose(src['ra'], ra)
     #assert_allclose(src['dec'], dec)
     #assert_allclose(src['SpatialWidth'], 0.5*1.5095921854516636)
-    #if src['SpatialType'] == 'RadialGaussian':
+    # if src['SpatialType'] == 'RadialGaussian':
     #    assert_allclose(src.spatial_pars['Sigma']['value'], 0.5)
 
     src = Source.create_from_dict({'name': 'testsrc',
@@ -339,7 +339,7 @@ def test_create_point_source(tmppath):
     src_dict = {'SpatialModel': 'PointSource',
                 'SpectrumType': 'PowerLaw',
                 'ra': ra, 'dec': dec,
-                'spectral_pars' : {'Prefactor': {'value' : prefactor} } }
+                'spectral_pars': {'Prefactor': {'value': prefactor}}}
     src = Source('testsrc', src_dict)
 
     assert_allclose(src['ra'], ra)
@@ -351,14 +351,14 @@ def test_create_point_source(tmppath):
     assert src['SpatialType'] == 'SkyDirFunction'
     assert src['SpectrumType'] == 'PowerLaw'
 
-    
+
 def test_create_gaussian_source(tmppath):
     ra = 252.367
     dec = 52.6356
     sigma = 0.5
 
     src_dict = {'SpatialModel': 'RadialGaussian',
-                'ra': ra, 'dec': dec, 'spatial_pars' : {'Sigma': {'value' : sigma} } }
+                'ra': ra, 'dec': dec, 'spatial_pars': {'Sigma': {'value': sigma}}}
     src = Source('testsrc', src_dict)
 
     assert_allclose(src['ra'], ra)
@@ -377,18 +377,19 @@ def test_set_spatial_model(tmppath):
     src_dict = {'SpatialModel': 'RadialGaussian', 'ra': ra, 'dec': dec}
     src = Source('testsrc', src_dict)
 
-    src.set_spatial_model('PointSource',{'ra' : 1.0, 'dec' : 2.0})
+    src.set_spatial_model('PointSource', {'ra': 1.0, 'dec': 2.0})
     assert_allclose(src.spatial_pars['RA']['value'], 1.0)
     assert_allclose(src.spatial_pars['DEC']['value'], 2.0)
     assert_allclose(src['ra'], 1.0)
-    assert_allclose(src['dec'], 2.0)    
+    assert_allclose(src['dec'], 2.0)
     assert src['SpatialModel'] == 'PointSource'
     assert src['SpatialType'] == 'SkyDirFunction'
     assert src['SourceType'] == 'PointSource'
 
     src_dict = {'SpatialModel': 'RadialGaussian', 'ra': ra, 'dec': dec}
     src = Source('testsrc', src_dict)
-    src.set_spatial_model('PointSource',{'RA' : {'value' : 1.0}, 'DEC' : {'value' : 2.0}})
+    src.set_spatial_model(
+        'PointSource', {'RA': {'value': 1.0}, 'DEC': {'value': 2.0}})
     assert_allclose(src.spatial_pars['RA']['value'], 1.0)
     assert_allclose(src.spatial_pars['DEC']['value'], 2.0)
     assert_allclose(src['ra'], 1.0)
@@ -396,7 +397,8 @@ def test_set_spatial_model(tmppath):
 
     src_dict = {'SpatialModel': 'RadialGaussian', 'RA': ra, 'DEC': dec}
     src = Source('testsrc', src_dict)
-    src.set_spatial_model('PointSource',{'RA' : {'value' : 1.0}, 'DEC' : {'value' : 2.0}})
+    src.set_spatial_model(
+        'PointSource', {'RA': {'value': 1.0}, 'DEC': {'value': 2.0}})
     assert_allclose(src.spatial_pars['RA']['value'], 1.0)
     assert_allclose(src.spatial_pars['DEC']['value'], 2.0)
     assert_allclose(src['ra'], 1.0)
@@ -404,20 +406,21 @@ def test_set_spatial_model(tmppath):
 
     src_dict = {'SpatialModel': 'RadialGaussian', 'RA': ra, 'DEC': dec}
     src = Source('testsrc', src_dict)
-    src.set_spatial_model('RadialDisk',{'ra' : 2.0, 'dec' : 3.0, 'Radius' : 1.0})
+    src.set_spatial_model('RadialDisk', {'ra': 2.0, 'dec': 3.0, 'Radius': 1.0})
 
     if src['SpatialType'] == 'RadialDisk':
         assert_allclose(src.spatial_pars['RA']['value'], 2.0)
         assert_allclose(src.spatial_pars['DEC']['value'], 3.0)
         assert_allclose(src.spatial_pars['Radius']['value'], 1.0)
     assert_allclose(src['ra'], 2.0)
-    assert_allclose(src['dec'], 3.0)    
+    assert_allclose(src['dec'], 3.0)
     assert src['SpatialModel'] == 'RadialDisk'
     assert src['SourceType'] == 'DiffuseSource'
 
     src_dict = {'SpatialModel': 'RadialGaussian', 'RA': ra, 'DEC': dec}
     src = Source('testsrc', src_dict)
-    src.set_spatial_model('RadialDisk',{'ra' : 2.0, 'dec' : 3.0, 'SpatialWidth' : 2.0})
+    src.set_spatial_model(
+        'RadialDisk', {'ra': 2.0, 'dec': 3.0, 'SpatialWidth': 2.0})
 
     if src['SpatialType'] == 'RadialDisk':
         assert_allclose(src.spatial_pars['RA']['value'], 2.0)
@@ -427,4 +430,3 @@ def test_set_spatial_model(tmppath):
     assert_allclose(src['SpatialWidth'], 2.0)
     assert src['SpatialModel'] == 'RadialDisk'
     assert src['SourceType'] == 'DiffuseSource'
-    

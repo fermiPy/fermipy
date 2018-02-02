@@ -691,7 +691,7 @@ class TSMapGenerator(object):
         config['model'].setdefault('SpatialModel', 'PointSource')
 
         self.logger.log(config['loglevel'], 'Generating TS map')
-        
+
         o = self._make_tsmap_fast(prefix, **config)
 
         if config['make_plots']:
@@ -704,13 +704,13 @@ class TSMapGenerator(object):
         self.logger.log(config['loglevel'], 'Finished TS map')
 
         outfile = config.get('outfile', None)
-        if outfile is None:        
+        if outfile is None:
             outfile = utils.format_filename(self.workdir, 'tsmap',
                                             prefix=[o['name']])
         else:
             outfile = os.path.join(self.workdir,
                                    os.path.splitext(outfile)[0])
-            
+
         if config['write_fits']:
             o['file'] = os.path.basename(outfile) + '.fits'
             self._make_tsmap_fits(o, outfile + '.fits')
@@ -724,16 +724,16 @@ class TSMapGenerator(object):
 
     def _make_tsmap_fits(self, data, filename, **kwargs):
 
-        maps =  {'SQRT_TS_MAP': data['sqrt_ts'],
-                 'NPRED_MAP': data['npred'],
-                 'N_MAP': data['amplitude']}
+        maps = {'SQRT_TS_MAP': data['sqrt_ts'],
+                'NPRED_MAP': data['npred'],
+                'N_MAP': data['amplitude']}
 
         hdu_images = []
         for k, v in sorted(maps.items()):
             if v is None:
                 continue
             hdu_images += [v.create_image_hdu(k)]
-        
+
         tab = fits_utils.dict_to_table(data)
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'TSMAP_DATA'
@@ -742,7 +742,7 @@ class TSMapGenerator(object):
                 hdu_data] + hdu_images
 
         hdus[0].header['CONFIG'] = json.dumps(data['config'])
-        hdus[1].header['CONFIG'] = json.dumps(data['config'])        
+        hdus[1].header['CONFIG'] = json.dumps(data['config'])
         fits_utils.write_hdus(hdus, filename)
 
     def _make_tsmap_fast(self, prefix, **kwargs):

@@ -11,8 +11,8 @@ from fermipy.diffuse.model_manager import make_library
 
 def test_catalog_src_manager():
     basedir = os.path.join(PACKAGE_ROOT, 'diffuse', 'tests', 'data')
-    sources = os.path.join(basedir, 'catalog_components.yaml')
-    ret_dict = make_catalog_comp_dict(sources=sources, basedir=basedir)
+    library = os.path.join(basedir, 'models', 'library.yaml')
+    ret_dict = make_catalog_comp_dict(library=library, basedir=basedir)
 
     # spot check results
 
@@ -40,7 +40,7 @@ def test_catalog_src_manager():
 def test_galprop_ring_manager():
     basedir = os.path.join(PACKAGE_ROOT, 'diffuse', 'tests', 'data')
     kwargs = dict(basedir=basedir,
-                  diffuse=os.path.join(basedir, 'diffuse_components.yaml'),
+                  library=os.path.join(basedir, 'models', 'library.yaml'),
                   comp=os.path.join(basedir, 'binning.yaml'))
     gmm = make_ring_dicts(**kwargs)
 
@@ -61,52 +61,38 @@ def test_galprop_ring_manager():
 def test_diffuse_src_manager():
     basedir = os.path.join(PACKAGE_ROOT, 'diffuse', 'tests', 'data')
     kwargs = dict(basedir=basedir,
-                  diffuse=os.path.join(basedir, 'diffuse_components.yaml'),
+                  library=os.path.join(basedir, 'models', 'library.yaml'),
                   comp=os.path.join(basedir, 'binning.yaml'))
     ret_dict = make_diffuse_comp_info_dict(**kwargs)
 
     # spot check results
-    assert(len(ret_dict['comp_info_dict'].keys()) == 28)
+    assert(len(ret_dict['comp_info_dict'].keys()) == 29)
 
     # sun
-    assert(ret_dict['comp_info_dict']['sun_v00'].model_type == 'MapCubeSource')
-    assert(ret_dict['comp_info_dict']['sun_v00'].moving)
-    assert(ret_dict['comp_info_dict']['sun_v00'].selection_dependent is False)
-    assert(ret_dict['comp_info_dict']['sun_v00'].source_name == 'sun')
-    assert(ret_dict['comp_info_dict']['sun_v00'].sourcekey == 'sun_v00')
-    assert(ret_dict['comp_info_dict']['sun_v00'].source_ver == 'v00')
+    assert(ret_dict['comp_info_dict']['sun-ic_v2r0'].model_type == 'MapCubeSource')
+    assert(ret_dict['comp_info_dict']['sun-ic_v2r0'].moving)
+    assert(ret_dict['comp_info_dict']['sun-ic_v2r0'].selection_dependent is False)
+    assert(ret_dict['comp_info_dict']['sun-ic_v2r0'].source_name == 'sun-ic')
+    assert(ret_dict['comp_info_dict']['sun-ic_v2r0'].sourcekey == 'sun-ic_v2r0')
+    assert(ret_dict['comp_info_dict']['sun-ic_v2r0'].source_ver == 'v2r0')
 
-    assert(len(ret_dict['comp_info_dict']['sun_v00'].components) == 4)
-    assert(ret_dict['comp_info_dict']['sun_v00'].components[
+    assert(len(ret_dict['comp_info_dict']['sun-ic_v2r0'].components) == 4)
+    assert(ret_dict['comp_info_dict']['sun-ic_v2r0'].components[
            'zmax100'].comp_key == 'zmax100')
 
-    # residual cr
-    assert(ret_dict['comp_info_dict'][
-           'residual_cr_v00'].model_type == 'MapCubeSource')
-    assert(ret_dict['comp_info_dict']['residual_cr_v00'].moving is False)
-    assert(ret_dict['comp_info_dict']['residual_cr_v00'].selection_dependent)
-    assert(ret_dict['comp_info_dict'][
-           'residual_cr_v00'].source_name == 'residual_cr')
-    assert(ret_dict['comp_info_dict'][
-           'residual_cr_v00'].sourcekey == 'residual_cr_v00')
-    assert(ret_dict['comp_info_dict']['residual_cr_v00'].source_ver == 'v00')
-
-    assert(len(ret_dict['comp_info_dict']['residual_cr_v00'].components) == 10)
-    assert(ret_dict['comp_info_dict']['residual_cr_v00'].components[
-           'E0_PSF3'].comp_key == 'E0_PSF3')
 
     # isotropic
     assert(ret_dict['comp_info_dict'][
-           'isotropic_v00'].model_type == 'IsoSource')
-    assert(ret_dict['comp_info_dict']['isotropic_v00'].moving is False)
+           'isotropic_P8R3_SOURCE_V2'].model_type == 'IsoSource')
+    assert(ret_dict['comp_info_dict']['isotropic_P8R3_SOURCE_V2'].moving is False)
     assert(ret_dict['comp_info_dict'][
-           'isotropic_v00'].selection_dependent is False)
+           'isotropic_P8R3_SOURCE_V2'].selection_dependent is False)
     assert(ret_dict['comp_info_dict'][
-           'isotropic_v00'].source_name == 'isotropic')
+           'isotropic_P8R3_SOURCE_V2'].source_name == 'isotropic')
     assert(ret_dict['comp_info_dict'][
-           'isotropic_v00'].sourcekey == 'isotropic_v00')
-    assert(ret_dict['comp_info_dict']['isotropic_v00'].source_ver == 'v00')
-    assert(ret_dict['comp_info_dict']['isotropic_v00'].components is None)
+           'isotropic_P8R3_SOURCE_V2'].sourcekey == 'isotropic_P8R3_SOURCE_V2')
+    assert(ret_dict['comp_info_dict']['isotropic_P8R3_SOURCE_V2'].source_ver == 'P8R3_SOURCE_V2')
+    assert(ret_dict['comp_info_dict']['isotropic_P8R3_SOURCE_V2'].components is None)
 
     # galprop ring
     assert(ret_dict['comp_info_dict'][
@@ -121,61 +107,43 @@ def test_diffuse_src_manager():
     assert(ret_dict['comp_info_dict']['merged_HI_5_ref'].source_ver == 'ref')
     assert(ret_dict['comp_info_dict']['merged_HI_5_ref'].components is None)
 
-    assert(len(ret_dict['DiffuseModelManager'].sourcekeys()) == 7)
+    assert(len(ret_dict['DiffuseModelManager'].sourcekeys()) == 8)
 
 
 def test_model_manager():
     basedir = os.path.join(PACKAGE_ROOT, 'diffuse', 'tests', 'data')
     kwargs = dict(basedir=basedir,
-                  sources=os.path.join(basedir, 'catalog_components.yaml'),
-                  diffuse=os.path.join(basedir, 'diffuse_components.yaml'),
+                  library=os.path.join(basedir, 'models', 'library.yaml'),
                   comp=os.path.join(basedir, 'binning.yaml'))
     ret_dict = make_library(**kwargs)
 
     # spot check results
-    assert(len(ret_dict['model_comp_dict'].keys()) == 29)
+    assert(len(ret_dict['model_comp_dict'].keys()) == 30)
+ 
+   # sun
+    assert(ret_dict['model_comp_dict']['sun-ic_v2r0'].model_type == 'MapCubeSource')
+    assert(ret_dict['model_comp_dict']['sun-ic_v2r0'].moving)
+    assert(ret_dict['model_comp_dict']['sun-ic_v2r0'].selection_dependent is False)
+    assert(ret_dict['model_comp_dict']['sun-ic_v2r0'].source_name == 'sun-ic')
+    assert(ret_dict['model_comp_dict']['sun-ic_v2r0'].sourcekey == 'sun-ic_v2r0')
+    assert(ret_dict['model_comp_dict']['sun-ic_v2r0'].source_ver == 'v2r0')
 
-    # sun
-    assert(ret_dict['model_comp_dict'][
-           'sun_v00'].model_type == 'MapCubeSource')
-    assert(ret_dict['model_comp_dict']['sun_v00'].moving)
-    assert(ret_dict['model_comp_dict']['sun_v00'].selection_dependent is False)
-    assert(ret_dict['model_comp_dict']['sun_v00'].source_name == 'sun')
-    assert(ret_dict['model_comp_dict']['sun_v00'].sourcekey == 'sun_v00')
-    assert(ret_dict['model_comp_dict']['sun_v00'].source_ver == 'v00')
-
-    assert(len(ret_dict['model_comp_dict']['sun_v00'].components) == 4)
-    assert(ret_dict['model_comp_dict']['sun_v00'].components[
+    assert(len(ret_dict['model_comp_dict']['sun-ic_v2r0'].components) == 4)
+    assert(ret_dict['model_comp_dict']['sun-ic_v2r0'].components[
            'zmax100'].comp_key == 'zmax100')
-
-    # residual cr
-    assert(ret_dict['model_comp_dict'][
-           'residual_cr_v00'].model_type == 'MapCubeSource')
-    assert(ret_dict['model_comp_dict']['residual_cr_v00'].moving is False)
-    assert(ret_dict['model_comp_dict']['residual_cr_v00'].selection_dependent)
-    assert(ret_dict['model_comp_dict'][
-           'residual_cr_v00'].source_name == 'residual_cr')
-    assert(ret_dict['model_comp_dict'][
-           'residual_cr_v00'].sourcekey == 'residual_cr_v00')
-    assert(ret_dict['model_comp_dict']['residual_cr_v00'].source_ver == 'v00')
-
-    assert(len(ret_dict['model_comp_dict'][
-           'residual_cr_v00'].components) == 10)
-    assert(ret_dict['model_comp_dict']['residual_cr_v00'].components[
-           'E0_PSF3'].comp_key == 'E0_PSF3')
 
     # isotropic
     assert(ret_dict['model_comp_dict'][
-           'isotropic_v00'].model_type == 'IsoSource')
-    assert(ret_dict['model_comp_dict']['isotropic_v00'].moving is False)
+           'isotropic_P8R3_SOURCE_V2'].model_type == 'IsoSource')
+    assert(ret_dict['model_comp_dict']['isotropic_P8R3_SOURCE_V2'].moving is False)
     assert(ret_dict['model_comp_dict'][
-           'isotropic_v00'].selection_dependent is False)
+           'isotropic_P8R3_SOURCE_V2'].selection_dependent is False)
     assert(ret_dict['model_comp_dict'][
-           'isotropic_v00'].source_name == 'isotropic')
+           'isotropic_P8R3_SOURCE_V2'].source_name == 'isotropic')
     assert(ret_dict['model_comp_dict'][
-           'isotropic_v00'].sourcekey == 'isotropic_v00')
-    assert(ret_dict['model_comp_dict']['isotropic_v00'].source_ver == 'v00')
-    assert(ret_dict['model_comp_dict']['isotropic_v00'].components is None)
+           'isotropic_P8R3_SOURCE_V2'].sourcekey == 'isotropic_P8R3_SOURCE_V2')
+    assert(ret_dict['model_comp_dict']['isotropic_P8R3_SOURCE_V2'].source_ver == 'P8R3_SOURCE_V2')
+    assert(ret_dict['model_comp_dict']['isotropic_P8R3_SOURCE_V2'].components is None)
 
     # galprop ring
     assert(ret_dict['model_comp_dict'][
@@ -193,4 +161,5 @@ def test_model_manager():
     model_manager = ret_dict['ModelManager']
 
     baseline_model = model_manager.make_model_info('baseline')
-    assert(len(baseline_model.model_components) == 29)
+    assert(len(baseline_model.model_components) == 30)
+

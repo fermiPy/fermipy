@@ -75,7 +75,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
         sigmay = min(sigmay, np.abs(2.0 * npix1 * cdelt1))
     else:
         pix_area = np.abs(cdelt0) * np.abs(cdelt1)
-        mask = get_region_mask(tsmap.data, 1.0, (ix,iy) )
+        mask = get_region_mask(tsmap.data, 1.0, (ix, iy))
         area = np.sum(mask) * pix_area
         sigmax = (area / np.pi)**0.5
         sigmay = (area / np.pi)**0.5

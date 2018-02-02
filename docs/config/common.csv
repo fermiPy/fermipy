@@ -4,5 +4,7 @@
 ``loge_bounds``	None	Restrict the analysis to an energy range (emin,emax) in log10(E/MeV) that is a subset of the analysis energy range. By default the full analysis energy range will be used.  If either emin/emax are None then only an upper/lower bound on the energy range wil be applied.
 ``make_plots``	False	Generate diagnostic plots.
 ``model``	None	Dictionary defining the spatial/spectral properties of the test source. If model is None the test source will be a PointSource with an Index 2 power-law spectrum.
+``multithread``	False	Split the calculation across number of processes set by nthread option.
+``nthread``	None	Number of processes to create when multithread is True.  If None then one process will be created for each available core.
 ``write_fits``	True	Write the output to a FITS file.
 ``write_npy``	True	Write the output dictionary to a numpy file.

@@ -59,7 +59,7 @@ class FitCache(object):
 
         for p in free_norm_params:
             self._like[p['idx']] = p['value']
-            self._like[p['idx']].setBounds(p['min'],p['max'])
+            self._like[p['idx']].setBounds(p['min'], p['max'])
         self._like.syncSrcParams()
 
         self._all_params = gtutils.get_params_dict(self._like)

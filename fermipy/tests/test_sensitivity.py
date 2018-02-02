@@ -16,7 +16,7 @@ try:
     from fermipy.sensitivity import SensitivityCalc
 except ImportError:
     pass
-    
+
 # Skip tests in this file if Fermi ST aren't available
 pytestmark = requires_dependency('Fermi ST')
 
@@ -109,7 +109,7 @@ def test_flux_sensitivity_script(tmpdir):
                                           glon=10.0, glat=10.0,
                                           emin=10**2.0, emax=10**5.0, nbin=24, output=outpath,
                                           obs_time_yr=10.0, ts_thresh=25.0, min_counts=3.0)
-    
+
     tab = Table.read(outpath, 'DIFF_FLUX')
     assert_allclose(tab['flux'],
                     np.array([8.22850449e-09,   5.33257909e-09,   3.46076145e-09,
