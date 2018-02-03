@@ -620,15 +620,22 @@ def create_edisp(event_class, event_type, erec, egy, cth):
     irf = create_irf(event_class, event_type)
     theta = np.degrees(np.arccos(cth))
     v = np.zeros((len(erec), len(egy), len(cth)))
-    m = (erec[:,None] / egy[None,:] < 2.0) & (erec[:,None] / egy[None,:] > 0.5)
-    m |= ((erec[:,None] / egy[None,:] < 3.0) &
-          (erec[:,None] / egy[None,:] > 0.5) & (egy[None,:] < 10**2.5))    
+    m = (erec[:,None] / egy[None,:] < 3.0) & (erec[:,None] / egy[None,:] > 0.33333)
+    #    m |= ((erec[:,None] / egy[None,:] < 3.0) &
+    #          (erec[:,None] / egy[None,:] > 0.5) & (egy[None,:] < 10**2.5))    
     m = np.broadcast_to(m[:,:,None], v.shape)
-    x = np.ones(v.shape)*erec[:,None,None]
-    y = np.ones(v.shape)*egy[None,:,None]
-    z = np.ones(v.shape)*theta[None,None,:]
-    v[m] = irf.edisp().value(np.ravel(x[m]), np.ravel(y[m]), np.ravel(z[m]), 0.0)
-    
+
+    try:    
+        x = np.ones(v.shape)*erec[:,None,None]
+        y = np.ones(v.shape)*egy[None,:,None]
+        z = np.ones(v.shape)*theta[None,None,:]
+        v[m] = irf.edisp().value(np.ravel(x[m]), np.ravel(y[m]), np.ravel(z[m]), 0.0)
+    except:
+        for i, x in enumerate(egy):
+            for j, y in enumerate(theta):
+                m = (erec / x < 3.0) & (erec / x > 0.333)
+                v[m, i, j] = irf.edisp().value(erec[m], x, y, 0.0)
+        
     return v
 
 
