@@ -1776,8 +1776,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             if bounds is not None:
                 self.like[idx].setBounds(*bounds)
         except RuntimeError:
+            self.logger.warning("Caught failure on setBounds for %s::%s."%(name, par))
             pass
-            
 
         if error is not None:
             self.like[idx].setError(error)
@@ -2472,7 +2472,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             npred = np.sum(cs)
 
         if npred < 10:
-            val *= 1. / max(1.0, npred)
+            val *= 1. / max(1e-16, npred)
             xvals = val * 10 ** np.linspace(-1.0, 3.0, npts - 1)
             xvals = np.insert(xvals, 0, 0.0)
         else:
@@ -2515,6 +2515,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             xvals = xvals[np.isfinite(xvals)]
             
         # Generate likelihood profile w/ free nuisance pars
+        if np.isnan(xvals).any():
+            raise ValueError("Parameter scan points for %s::%s include infinite value."%(name, parName))
+
         lnlp1 = self.profile(name, parName, logemin=logemin, logemax=logemax,
                              reoptimize=True, xvals=xvals, **kwargs)
 
@@ -2633,13 +2636,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 xvals = np.linspace(0, 1, 25)
                 xvals = np.concatenate((-1.0 * xvals[1:][::-1], xvals))
                 xvals = val * 10 ** xvals
+                
+        if np.isnan(xvals).any():
+            raise RuntimeError("Parameter scan points for %s::%s include infinite value."%(name, parName))
 
         # Update parameter bounds to encompass scan range
         try:
             self.like[idx].setBounds(min(min(xvals), value, bounds[0]),
                                      max(max(xvals), value, bounds[1]))
         except RuntimeError:
-            print ("xxx", xvals, value, bounds)
+            self.logger.warning("Caught failure on setBounds for %s::%s."%(name, parName))
 
         o = {'xvals': xvals,
              'npred': np.zeros(len(xvals)),
@@ -2662,7 +2668,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             try:
                 self.like[idx] = x
             except RuntimeError:
-                pass
+                self.logger.warning("Caught failure on set for %s::%s: %.2f"%(name, parName, x))                
+
             if self.like.nFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
@@ -4805,7 +4812,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             z = cmap.data()
             nhpix = self.hpx.npix
             z = np.array(z).reshape(self.enumbins, nhpix)
-            return HpxMap(z, self.hpx)
+            return HpxMap(z, copy.deepcopy(self.hpx))
         else:
             self.logger.error('Did not recognize CountsMap type %i' % p_method,
                               exc_info=True)
