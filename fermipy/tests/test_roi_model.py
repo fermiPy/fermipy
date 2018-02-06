@@ -18,10 +18,36 @@ def tmppath(request, tmpdir_factory):
     return path
 
 
+def check_src_params(rm, src_name, par_names, par_vals):
+
+    params = rm[src_name].params
+    for name, val in zip(par_names, par_vals):
+        assert_allclose(params[name]['value'], val, 1E-4)
+
+
 def test_load_3fgl_catalog_fits():
     skydir = SkyCoord(0.0, 0.0, unit='deg', frame='galactic').icrs
     rm = ROIModel(catalogs=['3FGL'], skydir=skydir, src_radius=20.0)
     assert len(rm.sources) == 175
+
+    src_name = '3FGL J1747.7-2904'
+    assert(rm[src_name]['SpectrumType'] == 'PowerLaw')
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'Index', 'Scale'],
+                     [1.1100788257e-12, -2.5154423713, 2248.0983886])
+
+    src_name = '3FGL J1747.0-2828'
+    assert(rm[src_name]['SpectrumType'] == 'LogParabola')
+    check_src_params(rm, src_name,
+                     ['norm', 'alpha', 'beta', 'Eb'],
+                     [6.2330737793e-11, 2.04547667503, 0.417130559682, 742.2312011])
+
+    src_name = '3FGL J1747.2-2958'
+    assert(rm[src_name]['SpectrumType'] == 'PLSuperExpCutoff')
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'Index1', 'Index2', 'Scale', 'Cutoff'],
+                     [2.07284068381e-11, -1.79597532749, 1.0, 1468.48669433,
+                      3328.21728515])
 
     rm = ROIModel(catalogs=['gll_psc_v16.fit'], skydir=skydir,
                   src_radius=20.0)
@@ -35,10 +61,42 @@ def test_load_3fgl_catalog_xml():
                   skydir=skydir, src_radius=20.0)
     assert len(rm.sources) == 175
 
+    src_name = '3FGL J1747.2-2958'
+    assert(rm[src_name]['SpectrumType'] == 'PLSuperExpCutoff')
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'Index1', 'Index2', 'Scale', 'Cutoff'],
+                     [1.08110111000e-10, -1.79597532749, 1.0, 585.4324476,
+                      3328.21728515])
+
 
 def test_load_2fhl_catalog_fits():
     rm = ROIModel(catalogs=['2FHL'])
     assert len(rm.sources) == 360
+
+
+def test_load_fl8y_catalog_fits():
+    skydir = SkyCoord(0.0, 30.0, unit='deg', frame='galactic').icrs
+    rm = ROIModel(catalogs=['FL8Y'], skydir=skydir, src_radius=20.0)
+    assert len(rm.sources) == 146
+
+    src_name = 'FL8Y J1605.1-1140'
+    assert(rm[src_name]['SpectrumType'] == 'PowerLaw')
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'Index', 'Scale'],
+                     [3.0401211875e-14, -2.06162524223, 3171.08496])
+
+    src_name = 'FL8Y J1557.9-1402'
+    assert(rm[src_name]['SpectrumType'] == 'LogParabola')
+    check_src_params(rm, src_name,
+                     ['norm', 'alpha', 'beta', 'Eb'],
+                     [1.4193160535e-13, 2.11492037773, 0.99977719783, 1884.4001464])
+
+    src_name = 'FL8Y J1614.5-2230'
+    assert(rm[src_name]['SpectrumType'] == 'PLSuperExpCutoff2')
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'Index1', 'Index2', 'Scale', 'Expfactor'],
+                     [2.34444495067e-11, -0.099147409200, 0.66666668653,
+                      1415.79650878, 0.016446555033])
 
 
 def test_create_roi_from_source():

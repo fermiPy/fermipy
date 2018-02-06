@@ -240,28 +240,25 @@ def spectral_pars_from_catalog(cat):
 
     spectrum_type = cat['SpectrumType']
     pars = get_function_defaults(cat['SpectrumType'])
-
     if spectrum_type == 'PowerLaw':
 
-        pars['Prefactor']['value'] = cat['Flux_Density']
-        pars['Scale']['value'] = cat['Pivot_Energy']
+        pars['Prefactor']['value'] = cat['params'][0]
+        pars['Index']['value'] = cat['params'][1]
+        pars['Scale']['value'] = cat['params'][2]
         pars['Scale']['scale'] = 1.0
-        pars['Index']['value'] = cat['Spectral_Index']
         pars['Index']['max'] = max(5.0, pars['Index']['value'] + 1.0)
         pars['Index']['min'] = min(0.0, pars['Index']['value'] - 1.0)
         pars['Index']['scale'] = -1.0
-
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
         pars['Index'] = make_parameter_dict(pars['Index'], False, False)
 
     elif spectrum_type == 'LogParabola':
 
-        pars['norm']['value'] = cat['Flux_Density']
-        pars['Eb']['value'] = cat['Pivot_Energy']
-        pars['alpha']['value'] = cat['Spectral_Index']
-        pars['beta']['value'] = cat['beta']
-
+        pars['norm']['value'] = cat['params'][0]
+        pars['alpha']['value'] = cat['params'][1]
+        pars['Eb']['value'] = cat['params'][2]
+        pars['beta']['value'] = cat['params'][3]
         pars['norm'] = make_parameter_dict(pars['norm'], False, True)
         pars['Eb'] = make_parameter_dict(pars['Eb'], True, False)
         pars['alpha'] = make_parameter_dict(pars['alpha'], False, False)
@@ -269,18 +266,13 @@ def spectral_pars_from_catalog(cat):
 
     elif spectrum_type == 'PLSuperExpCutoff':
 
-        flux_density = cat['Flux_Density']
-        prefactor = (cat['Flux_Density'] *
-                     np.exp((cat['Pivot_Energy'] / cat['Cutoff']) **
-                            cat['Exp_Index']))
-
-        pars['Prefactor']['value'] = prefactor
-        pars['Index1']['value'] = cat['Spectral_Index']
+        pars['Prefactor']['value'] = cat['params'][0]
+        pars['Index1']['value'] = cat['params'][1]
         pars['Index1']['scale'] = -1.0
-        pars['Index2']['value'] = cat['Exp_Index']
+        pars['Index2']['value'] = cat['params'][2]
         pars['Index2']['scale'] = 1.0
-        pars['Scale']['value'] = cat['Pivot_Energy']
-        pars['Cutoff']['value'] = cat['Cutoff']
+        pars['Scale']['value'] = cat['params'][3]
+        pars['Cutoff']['value'] = cat['params'][4]
 
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
@@ -290,15 +282,13 @@ def spectral_pars_from_catalog(cat):
 
     elif spectrum_type == 'PLSuperExpCutoff2':
 
-        flux_density = cat['Flux_Density']
-        # EAC, FIXME, check this
-        pars['Prefactor']['value'] = flux_density
-        pars['Index1']['value'] = cat['Spectral_Index']
+        pars['Prefactor']['value'] = cat['params'][0]
+        pars['Index1']['value'] = cat['params'][1]
         pars['Index1']['scale'] = -1.0
-        pars['Index2']['value'] = cat['PLEC_Exp_Index']
+        pars['Index2']['value'] = cat['params'][2]
         pars['Index2']['scale'] = 1.0
-        pars['Scale']['value'] = cat['Pivot_Energy']
-        pars['Expfactor']['value'] = cat['PLEC_Expfactor']
+        pars['Scale']['value'] = cat['params'][3]
+        pars['Expfactor']['value'] = cat['params'][4]
 
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
@@ -324,7 +314,8 @@ class Model(object):
         self._data['spectral_pars'] = get_function_defaults(
             data['SpectrumType'])
         try:
-            self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
+            self._data['spatial_pars'] = get_function_defaults(
+                data['SpatialType'])
         except:
             print (data)
             raise KeyError("xx")
@@ -1982,7 +1973,7 @@ class ROIModel(fermipy.config.Configurable):
                     src_dict['Spatial_Filename'] = utils.resolve_file_path(
                         row['Spatial_Filename'],
                         search_dirs=search_dirs)
-                        
+
             else:
                 src_dict['SourceType'] = 'PointSource'
                 src_dict['SpatialType'] = 'SkyDirFunction'
