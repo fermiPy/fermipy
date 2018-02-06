@@ -5,11 +5,13 @@ import os
 import json
 import numpy as np
 import scipy.signal
+import healpy as hp
+from astropy.io import fits
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
-from fermipy.skymap import Map
+from fermipy.skymap import Map, HpxMap
 from fermipy.config import ConfigSchema
 from fermipy.timing import Timer
 
@@ -31,7 +33,7 @@ def poisson_lnl(nc, mu):
     return lnl
 
 
-def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None):
+def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
     """
     Perform an energy-dependent convolution on a sequence of 2-D spatial maps.
 
@@ -57,6 +59,10 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None):
 
     imax : int
        Maximum index in energy dimension.
+
+    wmap :  `~numpy.ndarray`
+       3-D map containing a sequence of 2-D spatial maps of weights.  First
+       dimension should be energy. This map should have the same dimension as m.
 
     """
     islice = slice(imin, imax)
@@ -95,8 +101,90 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None):
 #                                     origin=origin, cval=0.0)
 
         o[i, ...] = scipy.signal.fftconvolve(ms, ks, mode='same')
+        if wmap is not None:
+            o[i, ...] *= wmap[islice, ...][i, ...]
 
     return o
+
+
+def convolve_map_hpx(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
+    """
+    Perform an energy-dependent convolution on a sequence of 2-D spatial maps.
+
+    Parameters
+    ----------
+
+    m : `~numpy.ndarray`
+       2-D map containing a sequence of 1-D HEALPix maps.  First
+       dimension should be energy.
+
+    k : `~numpy.ndarray`
+       2-D map containing a sequence of convolution kernels (PSF) for
+       each slice in m.  This map should have the same dimension as m.
+
+    threshold : float
+       Kernel amplitude 
+
+    imin : int
+       Minimum index in energy dimension.
+
+    imax : int
+       Maximum index in energy dimension.
+
+    wmap :  `~numpy.ndarray`
+       2-D map containing a sequence of 1-D HEALPix maps of weights.  First
+       dimension should be energy. This map should have the same dimension as m.
+    """
+    raise NotImplementedError('convolve_map_hpx')
+
+
+
+def convolve_map_hpx_gauss(m, sigmas, imin=0, imax=None, wmap=None):
+    """
+    Perform an energy-dependent convolution on a sequence of 2-D spatial maps.
+
+    Parameters
+    ----------
+
+    m : `HpxMap`
+       2-D map containing a sequence of 1-D HEALPix maps.  First
+       dimension should be energy.
+
+    sigmas : `~numpy.ndarray`
+       1-D map containing a sequence gaussian widths for smoothing
+
+    imin : int
+       Minimum index in energy dimension.
+
+    imax : int
+       Maximum index in energy dimension.
+
+    wmap :  `~numpy.ndarray`
+       2-D map containing a sequence of 1-D HEALPix maps of weights.  First
+       dimension should be energy. This map should have the same dimension as m.
+
+    """
+    islice = slice(imin, imax)
+
+    o = np.zeros(m.counts.shape)
+
+    nside = m.hpx.nside
+    nest = m.hpx.nest
+
+    # Loop over energy
+    for i, ms in enumerate(m.counts[islice, ...]):
+        sigma = sigmas[islice][i]
+        # Need to be in RING scheme
+        if nest:
+            ms = hp.pixelfunc.reorder(ms, n2r=True)
+        
+        o[islice, ...][i] = hp.sphtfunc.smoothing(ms, sigma=sigma)
+        if nest:
+            o[islice, ...][i] = hp.pixelfunc.reorder(o[islice, ...][i], r2n=True)
+        if wmap is not None:
+            o[islice, ...][i] *= wmap.counts[islice, ...][i]
+
+    return HpxMap(o, m.hpx)
 
 
 def get_source_kernel(gta, name, kernel=None):
@@ -202,16 +290,31 @@ class ResidMapGenerator(object):
                 continue
             hdu_images += [v.create_image_hdu(k)]
 
-        hdus = [data['sigma'].create_primary_hdu()] + hdu_images
-        hdus[0].header['CONFIG'] = json.dumps(data['config'])
-        hdus[1].header['CONFIG'] = json.dumps(data['config'])
+        if data['projtype'] == 'WCS':
+            hdus = [data['sigma'].create_primary_hdu()] + hdu_images
+            hdus[0].header['CONFIG'] = json.dumps(data['config'])
+            hdus[1].header['CONFIG'] = json.dumps(data['config'])
+        elif data['projtype'] == 'HPX':            
+            hdus = [fits.PrimaryHDU(), data['sigma'].create_image_hdu("SIGMA")] + hdu_images
+            hdus[1].header['CONFIG'] = json.dumps(data['config'])
+            hdus[2].header['CONFIG'] = json.dumps(data['config'])
         fits_utils.write_hdus(hdus, filename)
 
     def _make_residual_map(self, prefix, **kwargs):
 
+        if self.projtype == 'HPX':
+            return self._make_residual_map_hpx(prefix, **kwargs)
+        elif self.projtype == "WCS":
+            return self._make_residual_map_wcs(prefix, **kwargs)
+        else:
+            raise Exception("Did not recognize projection type %s", self.projtype)
+       
+    def _make_residual_map_wcs(self, prefix, **kwargs):
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         exclude = kwargs.setdefault('exclude', None)
         loge_bounds = kwargs.setdefault('loge_bounds', None)
+        use_weights = kwargs.setdefault('use_weights', False)
+        
 
         if loge_bounds:
             if len(loge_bounds) != 2:
@@ -222,6 +325,7 @@ class ResidMapGenerator(object):
                               else self.log_energies[-1])
         else:
             loge_bounds = [self.log_energies[0], self.log_energies[-1]]
+
 
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
@@ -275,9 +379,16 @@ class ResidMapGenerator(object):
             cc = c.counts_map().counts.astype('float')
             ec = np.ones(mc.shape)
 
-            ccs = convolve_map(cc, sm[i], cpix, imin=imin, imax=imax)
-            mcs = convolve_map(mc, sm[i], cpix, imin=imin, imax=imax)
-            ecs = convolve_map(ec, sm[i], cpix, imin=imin, imax=imax)
+            if use_weights:
+                wmap = c.weight_map().counts
+                mask = np.where(wmap > 0, 1., 0.)
+            else:
+                wmap = None
+                mask = None
+
+            ccs = convolve_map(cc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
+            mcs = convolve_map(mc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
+            ecs = convolve_map(ec, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
 
             cms = np.sum(ccs, axis=0)
             mms = np.sum(mcs, axis=0)
@@ -301,11 +412,96 @@ class ResidMapGenerator(object):
         excess_map = Map(excess / emst, skywcs)
 
         o = {'name': utils.join_strings([prefix, modelname]),
+             'projtype': 'WCS',
              'file': None,
              'sigma': sigma_map,
              'model': model_map,
              'data': data_map,
              'excess': excess_map,
+             'mask' : mask,
+             'config': kwargs}
+
+        return o
+
+
+    def _make_residual_map_hpx(self, prefix, **kwargs):
+        src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
+        exclude = kwargs.setdefault('exclude', None)
+        loge_bounds = kwargs.setdefault('loge_bounds', None)
+        use_weights = kwargs.setdefault('use_weights', False)
+
+        if loge_bounds:
+            if len(loge_bounds) != 2:
+                raise Exception('Wrong size of loge_bounds array.')
+            loge_bounds[0] = (loge_bounds[0] if loge_bounds[0] is not None
+                              else self.log_energies[0])
+            loge_bounds[1] = (loge_bounds[1] if loge_bounds[1] is not None
+                              else self.log_energies[-1])
+        else:
+            loge_bounds = [self.log_energies[0], self.log_energies[-1]]
+
+        kernel = None
+
+        gauss_width = np.radians(0.3)
+
+        hpxsky = self.counts_map().hpx.copy_and_drop_energy()
+
+        mmst = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
+        cmst = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
+        emst = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
+        ts = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
+        sigma = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
+        excess = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
+
+        for i, c in enumerate(self.components):
+
+            imin = utils.val_to_edge(c.log_energies, loge_bounds[0])[0]
+            imax = utils.val_to_edge(c.log_energies, loge_bounds[1])[0]
+
+            cc = c.counts_map()
+            mc = c.model_counts_map(exclude=exclude)
+            ec = HpxMap(cc.counts - mc.counts, cc.hpx)
+
+            if use_weights:
+                wmap = c.weight_map()
+                mask = wmap.sum_over_energy()
+                mask.data = np.where(mask.counts > 0., 1., 0.)
+            else:
+                wmap = None
+                mask = None
+
+            sigmas = gauss_width*np.ones(cc.counts.shape[0])
+            ccs = convolve_map_hpx_gauss(cc, sigmas, imin=imin, imax=imax, wmap=wmap)
+            mcs = convolve_map_hpx_gauss(mc, sigmas, imin=imin, imax=imax, wmap=wmap)
+            ecs = convolve_map_hpx_gauss(ec, sigmas, imin=imin, imax=imax, wmap=wmap)
+
+            cms = ccs.sum_over_energy()
+            mms = mcs.sum_over_energy()
+            ems = ecs.sum_over_energy()
+
+            if cms.hpx.order != hpxsky.order:
+                cms = cms.ud_grade(hpxsky.order, preserve_counts=True)
+                mms = mms.ud_grade(hpxsky.order, preserve_counts=True)
+                ems = ems.ud_grade(hpxsky.order, preserve_counts=True)
+
+            cmst.data += cms.data
+            mmst.data += mms.data
+            emst.data += ems.data
+
+
+        ts.data = 2.0 * (poisson_lnl(cmst.data, cmst.data) - poisson_lnl(cmst.data, mmst.data))
+        sigma.data = np.sqrt(ts.data)
+        sigma.data[emst.data < 0] *= -1
+        modelname = 'gauss_0p3'
+
+        o = {'name': utils.join_strings([prefix, modelname]),
+             'projtype': 'HPX',
+             'file': None,
+             'sigma': sigma,
+             'model': mmst,
+             'data': cmst,
+             'excess': emst,
+             'mask' : mask,
              'config': kwargs}
 
         return o
