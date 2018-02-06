@@ -401,7 +401,7 @@ class HpxMap(Map_Base):
 
     def __init__(self, counts, hpx):
         """ C'tor, fill with a counts vector and a HPX object """
-        Map_Base.__init__(self, counts)
+        super(HpxMap, self).__init__(counts)
         self._hpx = hpx
         self._wcs2d = None
         self._hpx2wcs = None
@@ -727,7 +727,10 @@ class HpxMap(Map_Base):
         """
         """
         new_hpx = self.hpx.ud_graded_hpx(order)
-        nebins = len(new_hpx.evals)
+        if new_hpx.evals is None:
+            nebins = 1
+        else:
+            nebins = len(new_hpx.evals)
         shape = self.counts.shape
 
         if preserve_counts:
