@@ -409,7 +409,7 @@ class ROIPlotter(fermipy.config.Configurable):
             self._wcsdata = np.ndarray(wcsshape)
             self._wcs = self._wcsproj.wcs
             self._mapping = hpx_utils.HpxToWcsMapping(self._proj, self._wcsproj)            
-            self._mapping.fill_wcs_map_from_hpx_data(self._data, self._wcsdata)
+            self._mapping.fill_wcs_map_from_hpx_data(self._data, self._wcsdata, normalize=False)
         else:
             raise Exception(
                 "Can't make ROIPlotter of unknown projection type %s" % type(data_map))
@@ -1007,6 +1007,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fmt = kwargs.get('format', self.config['format'])
         figsize = kwargs.get('figsize', self.config['figsize'])
         workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
+        use_weights = kwargs.pop('use_weights', False)
+        # FIXME, how to set this:
+        no_contour = False
         zoom = kwargs.get('zoom', None)
 
         kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
@@ -1015,11 +1018,24 @@ class AnalysisPlotter(fermipy.config.Configurable):
         cmap = kwargs.setdefault('cmap', self.config['cmap'])
         cmap_resid = kwargs.pop('cmap_resid', self.config['cmap_resid'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
-        sigma_levels = [-5, -3, 3, 5, 7] + list(np.logspace(1, 3, 17))
+        if no_contour:
+            sigma_levels = None
+        else:
+            sigma_levels = [-5, -3, 3, 5, 7] + list(np.logspace(1, 3, 17))
 
         load_bluered_cmap()
 
         prefix = maps['name']
+        mask = maps['mask']
+        if use_weights:
+            sigma_hist_data = maps['sigma'].data[maps['mask'].data.astype(bool)]
+            maps['sigma'].data *=  maps['mask'].data            
+            maps['data'].data *=  maps['mask'].data
+            maps['model'].data *=  maps['mask'].data
+            maps['excess'].data *=  maps['mask'].data
+        else:
+            sigma_hist_data = maps['sigma'].data
+
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['sigma'], roi=roi, **kwargs)
         p.plot(vmin=-5, vmax=5, levels=sigma_levels,
@@ -1035,7 +1051,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig, ax = plt.subplots(figsize=figsize)
         nBins = np.linspace(-6, 6, 121)
         #import pdb; pdb.set_trace()
-        data = np.nan_to_num(maps['sigma'].counts.T)
+        data = np.nan_to_num(sigma_hist_data)
         # find best fit parameters
         mu, sigma = norm.fit(data.flatten())
         # make and draw the histogram
@@ -1220,7 +1236,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         if weighted:
             wmap = gta.weight_map()
-            print (wmap.counts.sum(0))
             counts_map = copy.deepcopy(counts_map)
             mcube_map = copy.deepcopy(mcube_map)
             counts_map.data *= wmap.counts
