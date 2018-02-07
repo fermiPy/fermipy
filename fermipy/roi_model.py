@@ -94,6 +94,7 @@ def create_source_table(scan_shape):
     cols_dict['beta'] = dict(dtype='f8', format='%.3f')
     cols_dict['Exp_Index'] = dict(dtype='f8', format='%.3f')
     cols_dict['Cutoff'] = dict(dtype='f8', format='%.3f', unit='MeV')
+    cols_dict['Expfactor'] = dict(dtype='f8', format='%.3f')
 
     cols_dict['Conf_68_PosAng'] = dict(dtype='f8', format='%.3f', unit='deg')
     cols_dict['Conf_68_SemiMajor'] = dict(
@@ -239,28 +240,25 @@ def spectral_pars_from_catalog(cat):
 
     spectrum_type = cat['SpectrumType']
     pars = get_function_defaults(cat['SpectrumType'])
-
     if spectrum_type == 'PowerLaw':
 
-        pars['Prefactor']['value'] = cat['Flux_Density']
-        pars['Scale']['value'] = cat['Pivot_Energy']
+        pars['Prefactor']['value'] = cat['params'][0]
+        pars['Index']['value'] = cat['params'][1]
+        pars['Scale']['value'] = cat['params'][2]
         pars['Scale']['scale'] = 1.0
-        pars['Index']['value'] = cat['Spectral_Index']
         pars['Index']['max'] = max(5.0, pars['Index']['value'] + 1.0)
         pars['Index']['min'] = min(0.0, pars['Index']['value'] - 1.0)
         pars['Index']['scale'] = -1.0
-
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
         pars['Index'] = make_parameter_dict(pars['Index'], False, False)
 
     elif spectrum_type == 'LogParabola':
 
-        pars['norm']['value'] = cat['Flux_Density']
-        pars['Eb']['value'] = cat['Pivot_Energy']
-        pars['alpha']['value'] = cat['Spectral_Index']
-        pars['beta']['value'] = cat['beta']
-
+        pars['norm']['value'] = cat['params'][0]
+        pars['alpha']['value'] = cat['params'][1]
+        pars['Eb']['value'] = cat['params'][2]
+        pars['beta']['value'] = cat['params'][3]
         pars['norm'] = make_parameter_dict(pars['norm'], False, True)
         pars['Eb'] = make_parameter_dict(pars['Eb'], True, False)
         pars['alpha'] = make_parameter_dict(pars['alpha'], False, False)
@@ -268,18 +266,13 @@ def spectral_pars_from_catalog(cat):
 
     elif spectrum_type == 'PLSuperExpCutoff':
 
-        flux_density = cat['Flux_Density']
-        prefactor = (cat['Flux_Density'] *
-                     np.exp((cat['Pivot_Energy'] / cat['Cutoff']) **
-                            cat['Exp_Index']))
-
-        pars['Prefactor']['value'] = prefactor
-        pars['Index1']['value'] = cat['Spectral_Index']
+        pars['Prefactor']['value'] = cat['params'][0]
+        pars['Index1']['value'] = cat['params'][1]
         pars['Index1']['scale'] = -1.0
-        pars['Index2']['value'] = cat['Exp_Index']
+        pars['Index2']['value'] = cat['params'][2]
         pars['Index2']['scale'] = 1.0
-        pars['Scale']['value'] = cat['Pivot_Energy']
-        pars['Cutoff']['value'] = cat['Cutoff']
+        pars['Scale']['value'] = cat['params'][3]
+        pars['Cutoff']['value'] = cat['params'][4]
 
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
@@ -287,6 +280,21 @@ def spectral_pars_from_catalog(cat):
         pars['Index2'] = make_parameter_dict(pars['Index2'], False, False)
         pars['Cutoff'] = make_parameter_dict(pars['Cutoff'], False, True)
 
+    elif spectrum_type == 'PLSuperExpCutoff2':
+
+        pars['Prefactor']['value'] = cat['params'][0]
+        pars['Index1']['value'] = cat['params'][1]
+        pars['Index1']['scale'] = -1.0
+        pars['Index2']['value'] = cat['params'][2]
+        pars['Index2']['scale'] = 1.0
+        pars['Scale']['value'] = cat['params'][3]
+        pars['Expfactor']['value'] = cat['params'][4]
+
+        pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
+        pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
+        pars['Index1'] = make_parameter_dict(pars['Index1'], False, False)
+        pars['Index2'] = make_parameter_dict(pars['Index2'], False, False)
+        pars['Expfactor'] = make_parameter_dict(pars['Expfactor'], False, True)
     else:
         raise Exception('Unsupported spectral type:' + spectrum_type)
 
@@ -305,7 +313,12 @@ class Model(object):
         self._data = defaults.make_default_dict(defaults.source_output)
         self._data['spectral_pars'] = get_function_defaults(
             data['SpectrumType'])
-        self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
+        try:
+            self._data['spatial_pars'] = get_function_defaults(
+                data['SpatialType'])
+        except:
+            print (data)
+            raise KeyError("xx")
         self._data.setdefault('catalog', data.pop('catalog', {}))
         self._data.setdefault('assoc', data.pop('assoc', {}))
         self._data.setdefault('class', '')
@@ -498,7 +511,8 @@ class Model(object):
              'Pivot_Energy': np.nan,
              'beta': np.nan,
              'Exp_Index': np.nan,
-             'Cutoff': np.nan}
+             'Cutoff': np.nan,
+             'Expfactor': np.nan}
 
         params = get_true_params_dict(self.spectral_pars)
         if self['SpectrumType'] == 'PowerLaw':
@@ -516,6 +530,12 @@ class Model(object):
             o['Flux_Density'] = params['Prefactor']['value']
             o['Pivot_Energy'] = params['Scale']['value']
             o['Cutoff'] = params['Cutoff']['value']
+        elif self['SpectrumType'] == 'PLSuperExpCutoff2':
+            o['Spectral_Index'] = -1.0 * params['Index1']['value']
+            o['Exp_Index'] = params['Index2']['value']
+            o['Flux_Density'] = params['Prefactor']['value']
+            o['Pivot_Energy'] = params['Scale']['value']
+            o['Expfactor'] = params['Expfactor']['value']
 
         return o
 

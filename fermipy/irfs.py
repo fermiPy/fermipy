@@ -620,13 +620,22 @@ def create_edisp(event_class, event_type, erec, egy, cth):
     irf = create_irf(event_class, event_type)
     theta = np.degrees(np.arccos(cth))
     v = np.zeros((len(erec), len(egy), len(cth)))
+    m = (erec[:,None] / egy[None,:] < 3.0) & (erec[:,None] / egy[None,:] > 0.33333)
+    #    m |= ((erec[:,None] / egy[None,:] < 3.0) &
+    #          (erec[:,None] / egy[None,:] > 0.5) & (egy[None,:] < 10**2.5))    
+    m = np.broadcast_to(m[:,:,None], v.shape)
 
-    for i, x in enumerate(egy):
-        for j, y in enumerate(theta):
-
-            m = (erec / x < 3.0) & (erec / x > 0.333)
-            v[m, i, j] = irf.edisp().value(erec[m], x, y, 0.0)
-
+    try:    
+        x = np.ones(v.shape)*erec[:,None,None]
+        y = np.ones(v.shape)*egy[None,:,None]
+        z = np.ones(v.shape)*theta[None,None,:]
+        v[m] = irf.edisp().value(np.ravel(x[m]), np.ravel(y[m]), np.ravel(z[m]), 0.0)
+    except:
+        for i, x in enumerate(egy):
+            for j, y in enumerate(theta):
+                m = (erec / x < 3.0) & (erec / x > 0.333)
+                v[m, i, j] = irf.edisp().value(erec[m], x, y, 0.0)
+        
     return v
 
 
@@ -700,7 +709,8 @@ def calc_exp(skydir, ltc, event_class, event_types,
 
 def create_avg_rsp(rsp_fn, skydir, ltc, event_class, event_types, x,
                    egy, cth_bins, npts=None):
-
+    """Calculate the weighted response function.
+    """
     if npts is None:
         npts = int(np.ceil(np.max(cth_bins[1:] - cth_bins[:-1]) / 0.05))
 
@@ -721,7 +731,9 @@ def create_avg_rsp(rsp_fn, skydir, ltc, event_class, event_types, x,
                        ltw[np.newaxis, np.newaxis, :, :], axis=-1)
         exps += np.sum(aeff * ltw[np.newaxis, :, :], axis=-1)
 
-    wrsp /= exps[np.newaxis, :, :]
+    exps_inv = np.zeros_like(exps)
+    exps_inv[exps > 0] = 1./exps[exps>0]        
+    wrsp *= exps_inv[np.newaxis, :, :]
     return wrsp
 
 
@@ -862,7 +874,7 @@ def calc_counts(skydir, ltc, event_class, event_types,
 
 
 def calc_counts_edisp(skydir, ltc, event_class, event_types,
-                      egy_bins, cth_bins, fn, nbin=64, npts=1):
+                      egy_bins, cth_bins, fn, nbin=16, npts=1):
     """Calculate the expected counts vs. observed energy and true
     incidence angle for a source with spectral parameterization ``fn``.
 
@@ -878,8 +890,11 @@ def calc_counts_edisp(skydir, ltc, event_class, event_types,
     cth_bins : `~numpy.ndarray`
         Bin edges in cosine of the true incidence angle.
 
+    nbin : int    
+        Number of points per decade with which to sample true energy.
+        
     npts : int
-        Number of points by which to oversample each energy bin.
+        Number of points by which to oversample each reconstructed energy bin.
 
     """
     #npts = int(np.ceil(32. / bins_per_dec(egy_bins)))
@@ -898,7 +913,7 @@ def calc_counts_edisp(skydir, ltc, event_class, event_types,
 
 
 def calc_wtd_exp(skydir, ltc, event_class, event_types,
-                 egy_bins, cth_bins, fn):
+                 egy_bins, cth_bins, fn, nbin=16):
     """Calculate the effective exposure.
 
     Parameters
@@ -907,9 +922,12 @@ def calc_wtd_exp(skydir, ltc, event_class, event_types,
 
     ltc : `~fermipy.irfs.LTCube`
 
+    nbin : int    
+        Number of points per decade with which to sample true energy.
+
     """
     cnts = calc_counts_edisp(skydir, ltc, event_class, event_types,
-                             egy_bins, cth_bins, fn)
+                             egy_bins, cth_bins, fn, nbin=nbin)
     flux = fn.flux(egy_bins[:-1], egy_bins[1:])
     return cnts / flux[:, None]
 

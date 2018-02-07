@@ -161,6 +161,8 @@ class Catalog(object):
             # Try to guess the catalog type from its name
             if name == '3FGL':
                 return Catalog3FGL(fitsfile)
+            elif name == 'FL8Y':
+                return CatalogFL8Y(fitsfile)
             elif 'gll_psch_v08' in fitsfile:
                 return Catalog2FHL(fitsfile)
 
@@ -176,8 +178,10 @@ class Catalog(object):
             return Catalog3FGL()
         elif name == '2FHL':
             return Catalog2FHL()
+        elif name == 'FL8Y':
+            return CatalogFL8Y()
         else:
-            raise Exception('Unrecognized catalog type.')
+            raise Exception('Unrecognized catalog {}.'.format(name))
 
 
 class Catalog2FHL(Catalog):
@@ -218,6 +222,19 @@ class Catalog2FHL(Catalog):
                                np.array(self.table['Flux50']))
         self._table['Pivot_Energy'] = 50E3
         self._table['SpectrumType'] = 'PowerLaw'
+        self._fill_params(self.table)
+
+    @staticmethod
+    def _fill_params(tab):
+
+        tab['params'] = np.nan * np.ones((len(tab), 10))
+
+        # PowerLaw
+        # Prefactor, Index, Scale
+        m = tab['SpectrumType'] == 'PowerLaw'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['Spectral_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
 
 
 class Catalog3FGL(Catalog):
@@ -280,6 +297,39 @@ class Catalog3FGL(Catalog):
             self._table['TS_value'][m] += self.table[k][m] ** 2
             self._table['TS'][m] += self.table[k][m] ** 2
 
+        self._fill_params(self.table)
+
+    @staticmethod
+    def _fill_params(tab):
+
+        tab['params'] = np.nan * np.ones((len(tab), 10))
+
+        # PowerLaw
+        # Prefactor, Index, Scale
+        m = tab['SpectrumType'] == 'PowerLaw'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['Spectral_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
+
+        # PLSuperExpCutoff2
+        # Prefactor, Index1, Index2, Scale, Cutoff
+        m = tab['SpectrumType'] == 'PLSuperExpCutoff'
+        tab['params'][m, 0] = (tab['Flux_Density'][m] *
+                               np.exp((tab['Pivot_Energy'][m] / tab['Cutoff'][m]) **
+                                      tab['Exp_Index'][m]))
+        tab['params'][m, 1] = tab['Spectral_Index'][m]
+        tab['params'][m, 2] = tab['Exp_Index'][m]
+        tab['params'][m, 3] = tab['Pivot_Energy'][m]
+        tab['params'][m, 4] = tab['Cutoff'][m]
+
+        # LogParabola
+        # norm, Index, Scale, beta
+        m = tab['SpectrumType'] == 'LogParabola'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['Spectral_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
+        tab['params'][m, 3] = tab['beta'][m]
+
 
 class Catalog4FGLP(Catalog):
     """This class supports preliminary releases of the 4FGL catalog.
@@ -321,3 +371,90 @@ class Catalog4FGLP(Catalog):
 
         table['TS'] = table['Test_Statistic']
         table['Cutoff'] = table['Cutoff_Energy']
+
+
+class CatalogFL8Y(Catalog):
+    """This class supports releases the preliminary 8-yr point-source
+    list (FL8Y).  See
+    https://fermi.gsfc.nasa.gov/ssc/data/access/lat/fl8y/.
+    """
+
+    def __init__(self, fitsfile=None, extdir=None):
+
+        if extdir is None:
+            extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
+                                  'Extended_archive_v18')
+
+        if fitsfile is None:
+            fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
+                                    'gll_psc_8year_v5.fit')
+
+        #hdulist = fits.open(fitsfile)
+        table = Table.read(fitsfile)
+        table_extsrc = Table.read(fitsfile, 'ExtendedSources')
+        table_extsrc.meta.clear()
+
+        strip_columns(table)
+        strip_columns(table_extsrc)
+        if 'Spatial_Function' not in table_extsrc.colnames:
+            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
+                                           length=len(table_extsrc)))
+            table_extsrc['Spatial_Function'] = 'SpatialMap'
+
+        table = join_tables(table, table_extsrc,
+                            'Extended_Source_Name', 'Source_Name',
+                            ['Model_Form', 'Model_SemiMajor',
+                             'Model_SemiMinor', 'Model_PosAng',
+                             'Spatial_Filename', 'Spatial_Function'])
+        table.sort('Source_Name')
+        super(CatalogFL8Y, self).__init__(table, extdir)
+
+        excol = np.zeros((len(table)), 'bool')
+        for i, exname in enumerate(table['Extended_Source_Name']):
+            if len(exname.strip()) > 0:
+                excol[i] = True
+
+        self.table['extended'] = excol
+        self.table['Extended'] = excol
+
+        scol = Column(name='Spatial_Function', dtype='U20',
+                      data=self.table['Spatial_Function'].data)
+        self.table.remove_column('Spatial_Function')
+        self.table['Spatial_Function'] = scol
+
+        m = self.table['Spatial_Function'] == 'RadialGauss'
+        self.table['Spatial_Function'][m] = 'RadialGaussian'
+        self.table['TS'] = self.table['Signif_Avg'] * self.table['Signif_Avg']
+        self._fill_params(self.table)
+
+    @staticmethod
+    def _fill_params(tab):
+
+        tab['params'] = np.nan * np.ones((len(tab), 10))
+
+        # PowerLaw
+        # Prefactor, Index, Scale
+        m = tab['SpectrumType'] == 'PowerLaw'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['PL_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
+
+        # PLSuperExpCutoff2
+        # Prefactor, Index1, Index2, Scale, ExpFactor
+        m = tab['SpectrumType'] == 'PLSuperExpCutoff2'
+        tab['params'][m, 0] = (tab['Flux_Density'][m] *
+                               np.exp(tab['PLEC_Expfactor'][m] *
+                                      tab['Pivot_Energy'][m] **
+                                      tab['PLEC_Exp_Index'][m]))
+        tab['params'][m, 1] = tab['PLEC_Index'][m]
+        tab['params'][m, 2] = tab['PLEC_Exp_Index'][m]
+        tab['params'][m, 3] = tab['Pivot_Energy'][m]
+        tab['params'][m, 4] = tab['PLEC_Expfactor'][m]
+
+        # LogParabola
+        # norm, Index, Scale, beta
+        m = tab['SpectrumType'] == 'LogParabola'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['LP_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
+        tab['params'][m, 3] = tab['LP_beta'][m]
