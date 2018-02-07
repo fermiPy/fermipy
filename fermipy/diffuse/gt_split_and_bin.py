@@ -14,8 +14,9 @@ import yaml
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Chain
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
+from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.gt_coadd_split import CoaddSplit
 from fermipy.diffuse import defaults as diffuse_defaults
@@ -23,45 +24,6 @@ from fermipy.diffuse.binning import EVT_TYPE_DICT
 
 
 NAME_FACTORY = NameFactory()
-
-
-def readlines(arg):
-    """Read lines from a file into a list.
-
-    Removes whitespace and lines that start with '#'
-    """
-    fin = open(arg)
-    lines_in = fin.readlines()
-    fin.close()
-    lines_out = []
-    for line in lines_in:
-        line = line.strip()
-        if len(line) == 0 or line[0] == '#':
-            continue
-        lines_out.append(line)
-    return lines_out
-
-
-def create_inputlist(arglist):
-    """Read lines from a file and makes a list of file names.
-
-    Removes whitespace and lines that start with '#'
-    Recursively read all files with the extension '.lst'
-    """
-    lines = []
-    if isinstance(arglist, list):
-        for arg in arglist:
-            if os.path.splitext(arg)[1] == '.lst':
-                lines += readlines(arg)
-            else:
-                lines.append(arg)
-    else:
-        if os.path.splitext(arglist)[1] == '.lst':
-            lines += readlines(arglist)
-        else:
-            lines.append(arglist)
-    return lines
-
 
 def make_full_path(basedir, outkey, origname):
     """Make a full file path"""
@@ -83,7 +45,6 @@ class SplitAndBin(Chain):
                        links=[],
                        options=dict(data=diffuse_defaults.diffuse['data'],
                                     comp=diffuse_defaults.diffuse['comp'],
-                                    coordsys=diffuse_defaults.diffuse['coordsys'],
                                     hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                                     ft1file=(None, 'Input FT1 file', str),
                                     evclass=(128, 'Event class bit mask', int),
@@ -190,7 +151,6 @@ class SplitAndBin(Chain):
 
         NAME_FACTORY.update_base_dict(input_dict['data'])
 
-        coordsys = input_dict.get('coordsys')
         outdir = input_dict.get('outdir')
         outkey = input_dict.get('outkey')
         if outdir is None or outkey is None:
@@ -202,7 +162,7 @@ class SplitAndBin(Chain):
             kwargs_select = dict(zcut=zcut,
                                  ebin=key_e,
                                  psftype='ALL',
-                                 coordsys=coordsys,
+                                 coordsys=comp_e['coordsys'],
                                  mktime='none')            
             selectfile = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select))
             output_dict['selectfile_%s' % key_e] = selectfile
@@ -231,17 +191,15 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           coordsys=diffuse_defaults.diffuse['coordsys'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                            ft1file=(None, 'Input FT1 file', str),
                            scratch=(None, 'Path to scratch area', str))
 
-    def __init__(self, chain, gather, **kwargs):
+    def __init__(self, chain, **kwargs):
         """C'tor
         """
         ConfigMaker.__init__(self, chain,
                              options=kwargs.get('options', self.default_options.copy()))
-        self.gather = gather
 
     def make_base_config(self, args):
         """Hook to build a baseline job configuration
@@ -255,21 +213,20 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
         comp_file = args.get('comp', None)
         if comp_file is not None:
             comp_dict = yaml.safe_load(open(comp_file))
+            coordsys = comp_dict.pop('coordsys')
+            for v in comp_dict.values():
+                v['coordsys'] = coordsys
             self.link.update_links(comp_dict)
-            self.gather.update_links(comp_dict)
         self.link.update_args(args)
-        self.gather.update_args(args)
         return self.link.args
 
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         NAME_FACTORY.update_base_dict(args['data'])
 
-        coordsys = args['coordsys']
         inputfiles = create_inputlist(args['ft1file'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
 
@@ -281,7 +238,7 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
                 os.mkdir(output_dir)
             except OSError:
                 pass
-            logfile = os.path.join(output_dir, 'scatter_%s.log' % key)
+            logfile = make_nfs_path(os.path.join(output_dir, 'scatter_%s.log' % key))
             job_configs[key] = dict(ft1file=infile,
                                     comp=args['comp'],
                                     hpx_order_max=args['hpx_order_max'],
@@ -290,20 +247,13 @@ class ConfigMaker_SplitAndBin(ConfigMaker):
                                     logfile=logfile,
                                     pfiles=output_dir)
 
-        output_config = dict(comp=args['comp'],
-                             data=args['data'],
-                             coordsys=args['coordsys'],
-                             nfiles=nfiles,
-                             link=None,
-                             logfile=os.path.join(outdir_base, 'gather.log'),
-                             dry_run=args['dry_run'])
 
-        return input_config, job_configs, output_config
+        return job_configs
 
 def create_chain_split_and_bin(**kwargs):
-    """Make a `fermipy.jobs.SplitAndBin` """
-    chain = SplitAndBin(linkname=kwargs.pop('linkname', 'split-and-bin'),
-                        comp_dict=kwargs.get('comp_dict', None))
+    """Build and return a `Link` object that can invoke split-and-bin"""
+    linkname = kwargs.pop('linkname', 'split-and-bin')
+    chain = SplitAndBin(**kwargs)
     return chain
 
 def create_sg_split_and_bin(**kwargs):
@@ -312,20 +262,18 @@ def create_sg_split_and_bin(**kwargs):
     appname = kwargs.pop('appname', 'fermipy-split-and-bin-sg')
 
     chain = SplitAndBin('%s.split'%linkname, **kwargs)
-    gather = CoaddSplit('%s.coadd'%linkname, **kwargs)
 
-    lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
-    config_maker = ConfigMaker_SplitAndBin(chain, gather, **kwargs)
+    config_maker = ConfigMaker_SplitAndBin(chain, **kwargs)
     lsf_sg = build_sg_from_link(chain, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
-                                gather=gather,
                                 linkname=linkname,
                                 appname=appname,
                                 **kwargs)

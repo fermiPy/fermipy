@@ -145,12 +145,12 @@ def read_projection_from_fits(fitsfile, extname=None):
             proj = WCS(f[extname].header)
             return proj, f, f[extname]
         elif extname in ['SKYMAP', 'SKYMAP2']:
-            proj = HPX.create_from_header(f[extname].header, ebins)
+            proj = HPX.create_from_hdu(f[extname], ebins)
             return proj, f, f[extname]
         elif f[extname].header['XTENSION'] == 'BINTABLE':
             try:
                 if f[extname].header['PIXTYPE'] == 'HEALPIX':
-                    proj = HPX.create_from_header(f[extname].header, ebins)
+                    proj = HPX.create_from_hdu(f[extname], ebins)
                     return proj, f, f[extname]
             except:
                 pass
@@ -164,11 +164,11 @@ def read_projection_from_fits(fitsfile, extname=None):
             return proj, f, f[i]
         elif f[i].header['XTENSION'] == 'BINTABLE':
             if f[i].name in ['SKYMAP', 'SKYMAP2']:
-                proj = HPX.create_from_header(f[i].header, ebins)
+                proj = HPX.create_from_hdu(f[i], ebins)
                 return proj, f, f[i]
             try:
                 if f[i].header['PIXTYPE'] == 'HEALPIX':
-                    proj = HPX.create_from_header(f[i].header, ebins)
+                    proj = HPX.create_from_hdu(f[i], ebins)
                     return proj, f, f[i]
             except:
                 pass

@@ -14,8 +14,8 @@ import yaml
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Chain
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker
-from fermipy.jobs.lsf_impl import build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
 from fermipy.diffuse.name_policy import NameFactory, EVCLASS_MASK_DICTIONARY
 from fermipy.diffuse.gt_coadd_split import CoaddSplit
 from fermipy.diffuse import defaults as diffuse_defaults
@@ -30,43 +30,6 @@ except:
     MKTIME_DICT = MktimeFilterDict(aliases=dict(quality='lat_config==1&&data_qual>0'),
                                    selections=dict(standard='{quality}'))
 
-def readlines(arg):
-    """Read lines from a file into a list.
-
-    Removes whitespace and lines that start with '#'
-    """
-    fin = open(arg)
-    lines_in = fin.readlines()
-    fin.close()
-    lines_out = []
-    for line in lines_in:
-        line = line.strip()
-        if len(line) == 0 or line[0] == '#':
-            continue
-        lines_out.append(line)
-    return lines_out
-
-
-def create_inputlist(arglist):
-    """Read lines from a file and makes a list of file names.
-
-    Removes whitespace and lines that start with '#'
-    Recursively read all files with the extension '.lst'
-    """
-    lines = []
-    if isinstance(arglist, list):
-        for arg in arglist:
-            if os.path.splitext(arg)[1] == '.lst':
-                lines += readlines(arg)
-            else:
-                lines.append(arg)
-    else:
-        if os.path.splitext(arglist)[1] == '.lst':
-            lines += readlines(arglist)
-        else:
-            lines.append(arglist)
-    return lines
-
 
 def make_full_path(basedir, outkey, origname):
     """Make a full file path"""
@@ -79,7 +42,6 @@ class SplitAndMktime(Chain):
     """
     default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
                            data=diffuse_defaults.residual_cr['dataset_yaml'],
-                           coordsys=diffuse_defaults.residual_cr['coordsys'],
                            hpx_order_max=diffuse_defaults.residual_cr['hpx_order_binning'],
                            ft1file=diffuse_defaults.residual_cr['ft1file'],
                            scfile=diffuse_defaults.residual_cr['ft2file'],
@@ -97,6 +59,9 @@ class SplitAndMktime(Chain):
         comp_file = kwargs.get('comp', None)
         if comp_file:
             self.comp_dict = yaml.safe_load(open(comp_file))
+            coordsys = self.comp_dict.pop('coordsys')
+            for v in self.comp_dict.values():
+                v['coordsys'] = coordsys
         else:
             self.comp_dict = None
         job_archive = kwargs.get('job_archive', None)
@@ -256,7 +221,6 @@ class SplitAndMktime(Chain):
 
         NAME_FACTORY.update_base_dict(input_dict['data'])
 
-        coordsys = input_dict.get('coordsys')
         outdir = input_dict.get('outdir')
         outkey = input_dict.get('outkey')
         if outdir is None or outkey is None:
@@ -264,13 +228,14 @@ class SplitAndMktime(Chain):
         
         output_dict = input_dict.copy()
         output_dict['filter'] = input_dict.get('mktimefilter')
+        output_dict.pop('evclass')
 
         for key_e, comp_e in sorted(self.comp_dict.items()):
             zcut = "zmax%i"%comp_e['zmax']
             kwargs_select = dict(zcut=zcut,
                                  ebin=key_e,
                                  psftype='ALL',
-                                 coordsys=coordsys)
+                                 coordsys=comp_e['coordsys'])
             selectfile = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select) )
             output_dict['selectfile_%s' % key_e] = selectfile
             for mktimekey in comp_e['mktimefilters']:
@@ -284,7 +249,7 @@ class SplitAndMktime(Chain):
                         key = "%s_%s_%s_%s"%(key_e, mktimekey, evtclass, psf_type)
                         kwargs_bin = kwargs_mktime.copy()
                         kwargs_bin['psftype'] = psf_type
-                        kwargs_bin['coordsys'] = coordsys
+                        kwargs_bin['coordsys'] = comp_e.coordsys
                         kwargs_bin['evclass'] = evtclass
                         output_dict['selectfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
                         output_dict['binfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
@@ -308,7 +273,6 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
     """
     default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
                            data=diffuse_defaults.residual_cr['dataset_yaml'],
-                           coordsys=diffuse_defaults.diffuse['coordsys'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                            ft1file=diffuse_defaults.residual_cr['ft1file'],
                            ft2file=diffuse_defaults.residual_cr['ft2file'],
@@ -318,12 +282,11 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
                            scratch=(None, 'Path to scratch area', str),
                            dry_run=(False, 'Print commands but do not run them', bool))
 
-    def __init__(self, chain, gather, **kwargs):
+    def __init__(self, chain, **kwargs):
         """C'tor
         """
         ConfigMaker.__init__(self, chain,
                              options=kwargs.get('options', self.default_options.copy()))
-        self.gather = gather
 
     def make_base_config(self, args):
         """Hook to build a baseline job configuration
@@ -338,24 +301,22 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
         if comp_file is not None:
             comp_dict = yaml.safe_load(open(comp_file))
             self.link.update_links(comp_dict)
-            self.gather.update_links(comp_dict)
         self.link.update_args(args)
-        self.gather.update_args(args)
         return self.link.args
 
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
-        input_config = {}
         job_configs = {}
 
         datafile = args['data']
         if datafile is None or datafile == 'None':
-            return input_config, job_configs, {}
+            return job_configs
         NAME_FACTORY.update_base_dict(args['data'])
 
         inputfiles = create_inputlist(args['ft1file'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
+        data_ver = NAME_FACTORY.base_dict['data_ver']
 
         nfiles = len(inputfiles)
         for idx, infile in enumerate(inputfiles):
@@ -367,7 +328,7 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
             except OSError:
                 pass
             scfile = args['ft2file'].replace('.lst', '_%s.fits' % key_scfile)
-            logfile = os.path.join(output_dir, 'scatter_mk_%s.log' % key)
+            logfile = os.path.join(output_dir, 'scatter_mk_%s_%s.log' % (data_ver, key))
 
             job_configs[key] = dict(ft1file=infile,
                                     scfile=scfile,
@@ -378,42 +339,31 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
                                     logfile=logfile,
                                     pfiles=output_dir)
 
-        output_config = dict(comp=args['comp'],
-                             data=args['data'],
-                             coordsys=args['coordsys'],
-                             nfiles=nfiles,
-                             do_ltsum=True,
-                             link=None,
-                             logfile=os.path.join(outdir_base, 'gather.log'),
-                             dry_run=args['dry_run'])
-
-        return input_config, job_configs, output_config
+        return job_configs
 
 def create_chain_split_and_mktime(**kwargs):
-    """Make a `fermipy.jobs.SplitAndMktime` """
-    chain = SplitAndMktime(linkname=kwargs.pop('linkname', 'SplitAndMktime'),
-                           comp=kwargs.get('comp', None))
+    """Build and return a `Link` object that can invoke split-and-mktime"""
+    linkname = kwargs.pop('linkname', 'split-and-mktime')
+    chain = SplitAndMktime(**kwargs)
     return chain
 
 def create_sg_split_and_mktime(**kwargs):
     """Build and return a `fermipy.jobs.ScatterGather` object that can invoke this script"""
     linkname = kwargs.pop('linkname', 'split-and-mktime')
     chain = SplitAndMktime(linkname, **kwargs)
-    gather = CoaddSplit('%s.coadd'%linkname, **kwargs)
     appname = kwargs.pop('appname', 'fermipy-split-and-mktime-sg')
 
-    lsf_args = {'W': 1500,
-                'R': 'rhel60'}
+    batch_args = get_lsf_default_args()    
+    batch_interface = LSF_Interface(**batch_args)
 
     usage = "%s [options]"%(appname)
     description = "Prepare data for diffuse all-sky analysis"
 
-    config_maker = ConfigMaker_SplitAndMktime(chain, gather)
+    config_maker = ConfigMaker_SplitAndMktime(chain)
     lsf_sg = build_sg_from_link(chain, config_maker,
-                                lsf_args=lsf_args,
+                                interface=batch_interface,
                                 usage=usage,
                                 description=description,
-                                gather=gather,
                                 linkname=linkname,
                                 appname=appname,
                                 **kwargs)
