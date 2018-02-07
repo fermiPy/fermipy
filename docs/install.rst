@@ -20,7 +20,9 @@ For Unix/Linux users we currently recommend following the
 :ref:`condainstall` instructions.  For OSX users we recommend
 following the :ref:`pipinstall` instructions.  The
 :ref:`dockerinstall` instructions can be used to install the STs on
-OSX and Linux machines that are new enough to support Docker.
+OSX and Linux machines that are new enough to support Docker.  To
+install the development version of Fermipy follow the
+:ref:`devinstall` instructions.
 
 .. _stinstall:
 
@@ -52,10 +54,9 @@ Installing with pip
 -------------------
 
 These instructions cover installation with the ``pip`` package
-management tool.  This method will install fermipy and its
-dependencies into the python distribution that comes with the Fermi
-Science Tools.  First verify that you're running the python from the
-Science Tools
+management tool.  This will install fermipy and its dependencies into
+the python distribution that comes with the Fermi Science Tools.
+First verify that you're running the python from the Science Tools
 
 .. code-block:: bash
 
@@ -158,9 +159,6 @@ running ``condainstall.sh`` fermipy can be installed with conda:
 .. code-block:: bash
 
    $ conda install fermipy
-
-Alternatively fermipy can be installed from source following the
-instructions in :ref:`gitinstall`.
 
 Once fermipy is installed you can initialize the ST/fermipy
 environment by running ``condasetup.sh``:
@@ -274,6 +272,30 @@ DISPLAY environment variable to the IP address of the host machine:
    $ xhost +local:
    $ docker run -it --rm -e DISPLAY=$HOST_IP:0 -v $PWD:/workdir -w /workdir fermipy ipython
 
+
+.. _devinstall:
+
+Installing Development Versions
+-------------------------------
+
+The instructions describe how to install development versions of
+Fermipy.  Before installing a development version we recommend first
+installing a tagged release following the :ref:`pipinstall` or
+:ref:`condainstall` instructions above.
+
+The development version of Fermipy can be installed by running ``pip
+install`` with the URL of the git repository:
+
+.. code-block:: bash
+                
+   $ pip install git+https://github.com/fermiPy/fermipy.git
+
+This will install the most recent commit on the master branch.  Note
+that care should be taken when using development versions as
+features/APIs under active development may change in subsequent
+versions without notice.
+   
+   
 Running at SLAC
 ---------------
 
@@ -377,16 +399,15 @@ If you installed fermipy with ``conda`` the equivalent command is:
    
 .. _gitinstall:
    
-Building from Source
---------------------
+Developer Installation
+----------------------
 
 These instructions describe how to install fermipy from its git source
 code repository using the ``setup.py`` script.  Installing from source
 can be useful if you want to make your own modifications to the
-fermipy source code or test features in an untagged commit.  Note that
-non-expert users are recommended to install a tagged release of
-fermipy following the :ref:`pipinstall` or :ref:`condainstall`
-instructions above.
+fermipy source code.  Note that non-developers are recommended to
+install a tagged release of fermipy following the :ref:`pipinstall` or
+:ref:`condainstall` instructions above.
 
 First clone the fermipy git repository and cd to the root directory of
 the repository:
@@ -426,10 +447,9 @@ command with the ``--uninstall`` flag:
    # Install a link to your source code installation
    $ python setup.py develop --user --uninstall
    
-You also have the option of installing a previous release tag.  To see
-the list of release tags run ``git tag``.  To install a specific
-release tag, run ``git checkout`` with the tag name followed by
-``setup.py install``:
+
+Specific release tags can be installed by running ``git checkout``
+before running the installation command:
    
 .. code-block:: bash
    
@@ -437,7 +457,7 @@ release tag, run ``git checkout`` with the tag name followed by
    $ git checkout X.X.X 
    $ python setup.py install --user 
 
-
+To see the list of available release tags run ``git tag``.
    
 Issues
 ------

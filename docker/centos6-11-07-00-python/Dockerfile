@@ -1,4 +1,4 @@
-FROM fermipy/fermist:11-05-03
+FROM fermipy/fermist:11-07-00
 MAINTAINER Matthew Wood <mdwood@slac.stanford.edu>
 ARG PYTHON_VERSION=2.7
 ARG CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
