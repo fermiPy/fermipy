@@ -372,6 +372,7 @@ class ModelManager(object):
                              use_external_srcmap=True)
         master_selection = dict(glat=0., glon=0., radius=180.)
         master_model = dict(catalogs=[master_xml_mdl])
+        master_plotting = dict(label_ts_threshold=1e9)
 
         master = dict(data=master_data,
                       binning=master_binning,
@@ -379,6 +380,7 @@ class ModelManager(object):
                       selection=master_selection,
                       gtlike=master_gtlike,
                       model=master_model,
+                      plotting=master_plotting,
                       components=[])
 
         fermipy_dict = master
