@@ -57,6 +57,7 @@ common = {
     'free_radius': (None, 'Free normalizations of background sources within this angular distance in degrees '
                     'from the source of interest.  If None then no sources will be freed.', float),
     'make_plots': (False, 'Generate diagnostic plots.', bool),
+    'use_weights' : (False, 'Used weighted version of maps in making plots.', bool),
     'write_fits': (True, 'Write the output to a FITS file.', bool),
     'write_npy': (True, 'Write the output dictionary to a numpy file.', bool),
     'loge_bounds':  (None, 'Restrict the analysis to an energy range (emin,emax) in '
@@ -288,6 +289,7 @@ residmap = {
                 'computing the residual map.', list),
     'loge_bounds': common['loge_bounds'],
     'make_plots': common['make_plots'],
+    'use_weights': common['use_weights'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
 }
@@ -760,6 +762,8 @@ source_meta_output = OrderedDict((
     ('correlation', ({}, 'Dictionary of correlation coefficients.', dict)),
     ('model_counts', (None, 'Vector of predicted counts for this source in each analysis energy bin.',
                       np.ndarray)),
+    ('model_counts_wt', (None, 'Vector of predicted counts for this source in each analysis energy bin.',
+                         np.ndarray)),
     ('sed', (None, 'Output of SED analysis.  See :ref:`sed` for more information.', dict)),
 ))
 
@@ -812,6 +816,7 @@ source_flux_output = OrderedDict((
     ('norm_scan', (np.array(
         [np.nan]), 'Normalization parameters values for scan of source normalization.', np.ndarray)),
     ('npred', (np.nan, 'Number of predicted counts from this source integrated over the analysis energy range.', float)),
+    ('npred_wt', (np.nan, 'Number of predicted counts from this source integrated over the analysis energy range.', float)),
     ('pivot_energy', (np.nan, 'Decorrelation energy in MeV.', float)),
     ('flux', (np.nan, 'Photon flux (%s) integrated over analysis energy range' % FLUX_UNIT,
               float)),
