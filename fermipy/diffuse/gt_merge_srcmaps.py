@@ -102,7 +102,8 @@ class GtMergeSourceMaps(object):
         for source_name in source_names:
             try:
                 source = source_factory.releaseSource(source_name)
-                like.addSource(source)
+                # EAC, add the source directly to the model
+                like.logLike.addSource(source)
                 srcs_to_merge.append(source_name)
             except KeyError:
                 missing_sources.append(source_name)

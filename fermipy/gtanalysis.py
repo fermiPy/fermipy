@@ -1512,7 +1512,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         return srcs
 
-    def set_weights_map(self, wmap):   
+    def set_weights_map(self, wmap, update_roi=True):   
 
         if self.like is None:
             raise RuntimeError("GTAnalysis.set_weights_map must be run after GTAnalysis.setup")
@@ -1542,7 +1542,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 projmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap, "")
             for l in likes:
                 l.setWeightsMap(projmap)
-        
+       
+        if update_roi is False:
+            return 
         self._init_roi_model()
         for name in self.like.sourceNames():
             self.logger.debug('Initializing source %s', name)
