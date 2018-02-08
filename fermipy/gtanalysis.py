@@ -4828,25 +4828,27 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         map : `~fermipy.skymap.MapBase`
 
         """
-        #EAC we need the try block b/c older versions of the ST don't have some of these functions
-        try:
-            if isinstance(self.like, gtutils.SummedLikelihood):
-                cmap = self.like.components[0].logLike.countsMap()
-                p_method = cmap.projection().method()
+        #EAC we need the try blocks b/c older versions of the ST don't have some of these functions
+        if isinstance(self.like, gtutils.SummedLikelihood):
+            cmap = self.like.components[0].logLike.countsMap()
+            p_method = cmap.projection().method()
+            try:
                 if self.like.components[0].logLike.has_weights():
                     wmap = self.like.components[0].logLike.weightMap()
                 else: 
                     wmap = None
-            else:
-                cmap = self.like.logLike.countsMap()
-                p_method = cmap.projection().method()
+            except Exception:
+                wmap = None
+        else:
+            cmap = self.like.logLike.countsMap()
+            p_method = cmap.projection().method()
+            try:
                 if self.like.logLike.has_weights():
                     wmap = self.like.logLike.weightMap()
                 else:
                     wmap = None
-        except Exception:
-            wmap = None
-            p_method = 0
+            except Exception:
+                wmap = None
 
         if p_method == 0:  # WCS
             if wmap is None:
