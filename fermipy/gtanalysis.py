@@ -4831,7 +4831,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         #EAC we need the try blocks b/c older versions of the ST don't have some of these functions
         if isinstance(self.like, gtutils.SummedLikelihood):
             cmap = self.like.components[0].logLike.countsMap()
-            p_method = cmap.projection().method()
+            try:
+                p_method = cmap.projection().method()
+            except AttributeError:
+                p_method = 0
             try:
                 if self.like.components[0].logLike.has_weights():
                     wmap = self.like.components[0].logLike.weightMap()
@@ -4841,7 +4844,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 wmap = None
         else:
             cmap = self.like.logLike.countsMap()
-            p_method = cmap.projection().method()
+            try:
+                p_method = cmap.projection().method()
+            except AttributeError:
+                p_method = 0                
             try:
                 if self.like.logLike.has_weights():
                     wmap = self.like.logLike.weightMap()
