@@ -659,7 +659,10 @@ class ROIPlotter(fermipy.config.Configurable):
         path_effects = kwargs.get('path_effects', None)
 
         if skydir is None:
-            pix = self.cmap.pix_center
+            try:
+                pix = self.cmap.pix_center
+            except AttributeError:
+                return
         else:
             pix = skydir.to_pixel(self.cmap.wcs)
 
