@@ -1543,7 +1543,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             for l in likes:
                 l.setWeightsMap(projmap)
        
-	if update_roi is False:
+        if update_roi is False:
             return 
         self._init_roi_model()
         for name in self.like.sourceNames():
