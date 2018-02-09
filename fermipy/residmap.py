@@ -332,7 +332,7 @@ class ResidMapGenerator(object):
                       np.round((self.npix - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        skywcs = self._skywcs
+        skywcs = self.geom.wcs
         skydir = wcs_utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
         if src_dict is None:

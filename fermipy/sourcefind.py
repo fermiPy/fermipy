@@ -343,7 +343,7 @@ class SourceFind(object):
 
         src = self.roi.copy_source(name)
         skydir = src.skydir
-        skywcs = self._skywcs
+        skywcs = self.geom.wcs
         src_pix = skydir.to_pixel(skywcs)
 
         fit0 = self._fit_position_tsmap(name, prefix=prefix,
@@ -549,7 +549,7 @@ class SourceFind(object):
                                        zmin=max(zmin, -ts_value * 0.5))
 
         o.update(posfit)
-        pix = posfit['skydir'].to_pixel(self._skywcs)
+        pix = posfit['skydir'].to_pixel(self.geom.wcs)
         o['xpix'] = float(pix[0])
         o['ypix'] = float(pix[1])
         o['skydir'] = posfit['skydir'].transform_to('icrs')
@@ -567,7 +567,7 @@ class SourceFind(object):
         ts_value = np.max(tsmap.counts)
         posfit = fit_error_ellipse(tsmap, dpix=2,
                                    zmin=max(zmin, -ts_value * 0.5))
-        pix = posfit['skydir'].to_pixel(self._skywcs)
+        pix = posfit['skydir'].to_pixel(self.geom.wcs)
 
         o = {}
         o.update(posfit)
@@ -601,7 +601,7 @@ class SourceFind(object):
         self.free_norm(name, loglevel=logging.DEBUG)
 
         lnlmap = Map.create(skydir, scan_cdelt, (nstep, nstep),
-                            coordsys=wcs_utils.get_coordsys(self._skywcs))
+                            coordsys=wcs_utils.get_coordsys(self.geom.wcs))
 
         src = self.roi.copy_source(name)
 
@@ -642,7 +642,7 @@ class SourceFind(object):
 
         loglike = []
         skydir = src.skydir
-        skywcs = self._skywcs
+        skywcs = self.geom.wcs
         src_pix = skydir.to_pixel(skywcs)
 
         c = skydir.transform_to('icrs')
@@ -657,7 +657,7 @@ class SourceFind(object):
 
             t0 = time.time()
 
-            c = SkyCoord.from_pixel(params[0], params[1], self._skywcs)
+            c = SkyCoord.from_pixel(params[0], params[1], self.geom.wcs)
             c = c.transform_to('icrs')
             src.set_radec(c.ra.deg, c.dec.deg)
 
