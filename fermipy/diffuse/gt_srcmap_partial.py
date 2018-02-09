@@ -48,6 +48,7 @@ class GtSrcmapPartial(Link):
                            source=(None, 'Input source', str),
                            kmin=(0, 'Minimum Energy Bin', int),
                            kmax=(-1, 'Maximum Energy Bin', int),
+                           no_psf=(False, "Do not apply PSF smearing", bool),
                            gzip=(False, 'Compress output file', bool))
 
     def __init__(self, **kwargs):
@@ -76,10 +77,17 @@ class GtSrcmapPartial(Link):
                                        srcMaps=args.cmap,
                                        binnedExpMap=args.bexpmap)
 
+        if args.no_psf:
+            performConvolution = False
+        else:
+            performConvolution = True
+
+        config = BinnedAnalysis.BinnedConfig(performConvolution=performConvolution)
         like = BinnedAnalysis.BinnedAnalysis(obs,
                                              optimizer='MINUIT',
                                              srcModel=GtSrcmapPartial.NULL_MODEL,
-                                             wmap=None)
+                                             wmap=None,
+                                             config=config)
 
         source_factory = pyLike.SourceFactory(obs.observation)
         source_factory.readXml(args.srcmdl, BinnedAnalysis._funcFactory,
@@ -187,6 +195,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
 
         for diffuse_comp_info_key in sorted(diffuse_comp_info_dict.keys()):
             diffuse_comp_info_value = diffuse_comp_info_dict[diffuse_comp_info_key]
+            no_psf = diffuse_comp_info_value.no_psf
             for comp in components:
                 zcut = "zmax%i" % comp.zmax
                 key = comp.make_key('{ebin_name}_{evtype_name}')
@@ -213,6 +222,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                                  bexpmap=NAME_FACTORY.bexpcube(**name_keys),
                                  srcmdl=sub_comp_info.srcmdl_name,
                                  source=sub_comp_info.source_name,
+                                 no_psf=no_psf,
                                  evtype=comp.evtype)
 
                 if kstep < 0:

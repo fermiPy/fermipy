@@ -538,7 +538,7 @@ class HpxMap(Map_Base):
                              0], self._hpx2wcs.npix[1]))
             # replace the WCS with a 3D one
             wcs = self.hpx.make_wcs(3, proj=self._wcs_proj,
-                                    energies=self.hpx.ebins,
+                                    energies=np.log10(self.hpx.ebins),
                                     oversample=self._wcs_oversample)
         else:
             self._hpx2wcs.fill_wcs_map_from_hpx_data(
