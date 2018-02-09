@@ -613,7 +613,7 @@ class HPX(object):
         cols = []
 
         if self._ipix is not None:
-            cols.append(fits.Column(conv.idxstring, "J", array=self._ipix))
+            cols.append(fits.Column(self.conv.idxstring, "J", array=self._ipix))
 
         if self.conv.convname == 'FGST_SRCMAP_SPARSE':
             nonzero = data.nonzero()
