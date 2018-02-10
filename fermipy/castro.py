@@ -193,12 +193,15 @@ class LnLFn(object):
 
         Calls `scipy.optimize.brentq` to find the roots of the derivative.
         """
-        if self._interp.y[0] == np.min(self._interp.y):
+        min_y = np.min(self._interp.y)
+        if self._interp.y[0] == min_y:
             self._mle = self._interp.x[0]
+        elif self._interp.y[-1] == min_y:
+            self._mle = self._interp.x[-1]
         else:
-            ix0 = max(np.argmin(self._interp.y) - 4, 0)
-            ix1 = min(np.argmin(self._interp.y) + 4,
-                      len(self._interp.x) - 1)
+            argmin_y = np.argmin(self._interp.y)
+            ix0 = max(argmin_y - 4, 0)
+            ix1 = min(argmin_y + 4, len(self._interp.x) - 1)
 
             while np.sign(self._interp.derivative(self._interp.x[ix0])) == \
                     np.sign(self._interp.derivative(self._interp.x[ix1])):
