@@ -9,6 +9,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, Column
+from gammapy.maps import WcsNDMap
 import fermipy.config
 from fermipy import utils
 from fermipy import defaults
@@ -116,7 +117,7 @@ class SourceFind(object):
             src_dict = copy.deepcopy(src_dict_template)
             norm_par = get_function_norm_par_name(
                 src_dict_template['SpectrumType'])
-            src_dict.update({norm_par: amp.counts[p['iy'], p['ix']],
+            src_dict.update({norm_par: amp.data[p['iy'], p['ix']],
                              'ra': skydir.icrs.ra.deg,
                              'dec': skydir.icrs.dec.deg})
 
@@ -305,8 +306,8 @@ class SourceFind(object):
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'LOC_DATA'
 
-        hdus = [loc['tsmap_peak'].create_primary_hdu(),
-                loc['tsmap'].create_image_hdu('TSMAP'),
+        hdus = [loc['tsmap_peak'].make_hdu(extname='PRIMARY'),
+                loc['tsmap'].make_hdu(extname='TSMAP'),
                 hdu_data]
 
         hdus[0].header['CONFIG'] = json.dumps(loc['config'])
@@ -535,7 +536,7 @@ class SourceFind(object):
         o = {}
         for p in sorted(peaks, key=lambda t: t['amp'], reverse=True):
             xy = p['ix'], p['iy']
-            ts_value = tsmap['ts'].counts[xy[1], xy[0]]
+            ts_value = tsmap['ts'].data[xy[1], xy[0]]
             posfit = fit_error_ellipse(tsmap['ts'], xy=xy, dpix=2,
                                        zmin=max(zmin, -ts_value * 0.5))
             offset = posfit['skydir'].separation(self.roi[name].skydir).deg
@@ -544,7 +545,7 @@ class SourceFind(object):
                 break
 
         if peak_best is None:
-            ts_value = np.max(tsmap['ts'].counts)
+            ts_value = np.max(tsmap['ts'].data)
             posfit = fit_error_ellipse(tsmap['ts'], dpix=2,
                                        zmin=max(zmin, -ts_value * 0.5))
 
@@ -564,7 +565,7 @@ class SourceFind(object):
 
         zmin = kwargs.get('zmin', -9.0)
         tsmap, loglike = self._scan_position(name, **kwargs)
-        ts_value = np.max(tsmap.counts)
+        ts_value = np.max(tsmap.data)
         posfit = fit_error_ellipse(tsmap, dpix=2,
                                    zmin=max(zmin, -ts_value * 0.5))
         pix = posfit['skydir'].to_pixel(self.geom.wcs)
@@ -600,8 +601,8 @@ class SourceFind(object):
         saved_state.restore()
         self.free_norm(name, loglevel=logging.DEBUG)
 
-        lnlmap = Map.create(skydir, scan_cdelt, (nstep, nstep),
-                            coordsys=wcs_utils.get_coordsys(self.geom.wcs))
+        lnlmap = WcsNDMap.create(skydir=skydir, binsz=scan_cdelt, npix=(nstep, nstep),
+                                 coordsys=wcs_utils.get_coordsys(self.geom.wcs))
 
         src = self.roi.copy_source(name)
 
@@ -626,7 +627,7 @@ class SourceFind(object):
 
         lnlmap.data = np.array(loglike).reshape((nstep, nstep)).T
         lnlmap.data -= fit_output_nosrc['loglike']
-        tsmap = Map(2.0 * lnlmap.data, lnlmap.wcs)
+        tsmap = WcsNDMap(lnlmap.geom, 2.0 * lnlmap.data)
 
         self._clear_srcmap_cache()
         return tsmap, fit_output_nosrc['loglike']

@@ -19,6 +19,7 @@ import numpy as np
 from scipy.stats import norm
 from scipy.stats import chi2
 from scipy import interpolate
+from gammapy.maps import WcsNDMap
 
 import fermipy
 import fermipy.config
@@ -28,7 +29,7 @@ import fermipy.hpx_utils as hpx_utils
 import fermipy.defaults as defaults
 import fermipy.catalog as catalog
 from fermipy.utils import merge_dict
-from fermipy.skymap import Map, HpxMap
+from fermipy import skymap
 from fermipy.logger import Logger
 from fermipy.logger import log_level
 
@@ -76,7 +77,7 @@ def make_counts_spectrum_plot(o, roi, energies, imfile, **kwargs):
     count_str = 'counts'
     model_counts_str = 'model_counts'
     npred_str = 'npred'
-   
+
     if weighted:
         count_str += '_wt'
         model_counts_str += '_wt'
@@ -371,7 +372,6 @@ class ROIPlotter(fermipy.config.Configurable):
     def __init__(self, data_map, **kwargs):
         self._roi = kwargs.pop('roi', None)
         super(ROIPlotter, self).__init__(None, **kwargs)
-        # fermipy.config.Configurable.__init__(self, None, **kwargs)
 
         self._data_map = data_map
         self._catalogs = []
@@ -383,13 +383,19 @@ class ROIPlotter(fermipy.config.Configurable):
 
         self._loge_bounds = self.config['loge_bounds']
 
-        if isinstance(data_map, Map):
+        if isinstance(data_map, WcsNDMap):
+            self._projtype = 'WCS'
+            self._data = data_map.data.T
+            self._wcsdata = self._data
+            self._proj = data_map.geom.wcs
+            self._wcs = self._proj
+        elif isinstance(data_map, skymap.Map):
             self._projtype = 'WCS'
             self._data = data_map.counts.T
             self._wcsdata = self._data
             self._proj = data_map.wcs
             self._wcs = self._proj
-        elif isinstance(data_map, HpxMap):
+        elif isinstance(data_map, skymap.HpxMap):
             self._projtype = 'HPX'
             self._data = data_map.counts.T
             self._proj = data_map.hpx
@@ -404,12 +410,15 @@ class ROIPlotter(fermipy.config.Configurable):
                                                 oversample=2)
             if len(self._data.shape) == 1:
                 wcsshape = (self._wcsproj._npix[0], self._wcsproj._npix[1])
-            else:                
-                wcsshape = (self._wcsproj._npix[0], self._wcsproj._npix[1], self._data.shape[1])
+            else:
+                wcsshape = (
+                    self._wcsproj._npix[0], self._wcsproj._npix[1], self._data.shape[1])
             self._wcsdata = np.ndarray(wcsshape)
             self._wcs = self._wcsproj.wcs
-            self._mapping = hpx_utils.HpxToWcsMapping(self._proj, self._wcsproj)            
-            self._mapping.fill_wcs_map_from_hpx_data(self._data, self._wcsdata, normalize=False)
+            self._mapping = hpx_utils.HpxToWcsMapping(
+                self._proj, self._wcsproj)
+            self._mapping.fill_wcs_map_from_hpx_data(
+                self._data, self._wcsdata, normalize=False)
         else:
             raise Exception(
                 "Can't make ROIPlotter of unknown projection type %s" % type(data_map))
@@ -457,9 +466,10 @@ class ROIPlotter(fermipy.config.Configurable):
             header = fits.Header.fromstring(header.tostring())
             wcs = WCS(header)
             data = copy.deepcopy(hdulist[0].data)
-            themap = Map(data, wcs)
+            themap = skymap.Map(data, wcs)
         elif projtype == "HPX":
-            themap = HpxMap.create_from_hdulist(hdulist, ebounds="EBOUNDS")
+            themap = skymap.HpxMap.create_from_hdulist(
+                hdulist, ebounds="EBOUNDS")
         else:
             raise Exception("Unknown projection type %s" % projtype)
 
@@ -470,7 +480,7 @@ class ROIPlotter(fermipy.config.Configurable):
         data = kwargs.pop('data', self._data)
         noerror = kwargs.pop('noerror', False)
         xmin = kwargs.pop('xmin', -1)
-        xmax = kwargs.pop('xmax', 1)        
+        xmax = kwargs.pop('xmax', 1)
 
         axes = wcs_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
         x = utils.edge_to_center(axes[iaxis])
@@ -491,12 +501,12 @@ class ROIPlotter(fermipy.config.Configurable):
         s0 = slice(None, None)
         s1 = slice(None, None)
         s2 = slice(None, None)
-        
+
         if iaxis == 0:
             if xmin is None:
                 xmin = axes[1][0]
             if xmax is None:
-                xmax = axes[1][-1]           
+                xmax = axes[1][-1]
             i0 = utils.val_to_edge(axes[iaxis], xmin)[0]
             i1 = utils.val_to_edge(axes[iaxis], xmax)[0]
             s1 = slice(i0, i1)
@@ -505,7 +515,7 @@ class ROIPlotter(fermipy.config.Configurable):
             if xmin is None:
                 xmin = axes[0][0]
             if xmax is None:
-                xmax = axes[0][-1]           
+                xmax = axes[0][-1]
             i0 = utils.val_to_edge(axes[iaxis], xmin)[0]
             i1 = utils.val_to_edge(axes[iaxis], xmax)[0]
             s0 = slice(i0, i1)
@@ -1031,11 +1041,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
         prefix = maps['name']
         mask = maps['mask']
         if use_weights:
-            sigma_hist_data = maps['sigma'].data[maps['mask'].data.astype(bool)]
-            maps['sigma'].data *=  maps['mask'].data            
-            maps['data'].data *=  maps['mask'].data
-            maps['model'].data *=  maps['mask'].data
-            maps['excess'].data *=  maps['mask'].data
+            sigma_hist_data = maps['sigma'].data[maps['mask'].data.astype(
+                bool)]
+            maps['sigma'].data *= maps['mask'].data
+            maps['data'].data *= maps['mask'].data
+            maps['model'].data *= maps['mask'].data
+            maps['excess'].data *= maps['mask'].data
         else:
             sigma_hist_data = maps['sigma'].data
 
@@ -1181,7 +1192,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig, ax = plt.subplots(figsize=figsize)
         bins = np.linspace(0, 25, 101)
 
-        data = np.nan_to_num(maps['ts'].counts.T)
+        data = np.nan_to_num(maps['ts'].data.T)
         data[data > 25.0] = 25.0
         data[data < 0.0] = 0.0
         n, bins, patches = ax.hist(data.flatten(), bins, normed=True,
@@ -1241,9 +1252,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
             wmap = gta.weight_map()
             counts_map = copy.deepcopy(counts_map)
             mcube_map = copy.deepcopy(mcube_map)
-            counts_map.data *= wmap.counts
-            mcube_map.data *= wmap.counts
-            mcube_diffuse.data *= wmap.counts         
+            counts_map.data *= wmap.data
+            mcube_map.data *= wmap.data
+            mcube_diffuse.data *= wmap.data
 
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(mcube_map, roi=gta.roi, **roi_kwargs)
@@ -1259,23 +1270,23 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure(figsize=figsize)
 
         if p.projtype == "WCS":
-            model_data = mcube_map.counts.T
-            diffuse_data = mcube_diffuse.counts.T
+            model_data = mcube_map.data.T
+            diffuse_data = mcube_diffuse.data.T
             xmin = -1
             xmax = 1
         elif p.projtype == "HPX":
             if p.cmap._hpx2wcs is None:
-                 p.cmap.make_wcs_from_hpx(sum_ebins=False)
+                p.cmap.make_wcs_from_hpx(sum_ebins=False)
             wcs, counts_dataT = p.cmap.convert_to_cached_wcs(
-                counts_map.counts, sum_ebins=False)
-            counts_data = counts_dataT.swapaxes(1,2)
-            counts_map = Map(counts_data, wcs.wcs)
+                counts_map.data, sum_ebins=False)
+            counts_data = counts_dataT.swapaxes(1, 2)
+            counts_map = skymap.Map(counts_data, wcs.wcs)
             dummy, model_dataT = p.cmap.convert_to_cached_wcs(
-                mcube_map.counts, sum_ebins=False)
+                mcube_map.data, sum_ebins=False)
             dummy, diffuse_dataT = p.cmap.convert_to_cached_wcs(
-                mcube_diffuse.counts, sum_ebins=False)
-            model_data = model_dataT.T.swapaxes(0,1)
-            diffuse_data = diffuse_dataT.T.swapaxes(0,1)
+                mcube_diffuse.data, sum_ebins=False)
+            model_data = model_dataT.T.swapaxes(0, 1)
+            diffuse_data = diffuse_dataT.T.swapaxes(0, 1)
             xmin = None
             xmax = None
 
@@ -1288,10 +1299,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure(figsize=figsize)
-        p.plot_projection(0, label='Data', color='k', xmin=xmin, xmax=xmax, **data_style)
-        p.plot_projection(0, data=model_data, label='Model', xmin=xmin, xmax=xmax, 
+        p.plot_projection(0, label='Data', color='k',
+                          xmin=xmin, xmax=xmax, **data_style)
+        p.plot_projection(0, data=model_data, label='Model', xmin=xmin, xmax=xmax,
                           noerror=True)
-        p.plot_projection(0, data=diffuse_data, label='Diffuse', xmin=xmin, xmax=xmax, 
+        p.plot_projection(0, data=diffuse_data, label='Diffuse', xmin=xmin, xmax=xmax,
                           noerror=True)
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LON Offset [deg]')
@@ -1304,10 +1316,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.close(fig)
 
         fig = plt.figure(figsize=figsize)
-        p.plot_projection(1, label='Data', color='k',  xmin=xmin, xmax=xmax, **data_style)
-        p.plot_projection(1, data=model_data, label='Model', xmin=xmin, xmax=xmax, 
+        p.plot_projection(1, label='Data', color='k',
+                          xmin=xmin, xmax=xmax, **data_style)
+        p.plot_projection(1, data=model_data, label='Model', xmin=xmin, xmax=xmax,
                           noerror=True)
-        p.plot_projection(1, data=diffuse_data, label='Diffuse', xmin=xmin, xmax=xmax, 
+        p.plot_projection(1, data=diffuse_data, label='Diffuse', xmin=xmin, xmax=xmax,
                           noerror=True)
         plt.gca().set_ylabel('Counts')
         plt.gca().set_xlabel('LAT Offset [deg]')

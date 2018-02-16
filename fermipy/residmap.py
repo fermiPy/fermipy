@@ -7,6 +7,7 @@ import numpy as np
 import scipy.signal
 import healpy as hp
 from astropy.io import fits
+from gammapy.maps import WcsNDMap
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
@@ -138,7 +139,6 @@ def convolve_map_hpx(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
     raise NotImplementedError('convolve_map_hpx')
 
 
-
 def convolve_map_hpx_gauss(m, sigmas, imin=0, imax=None, wmap=None):
     """
     Perform an energy-dependent convolution on a sequence of 2-D spatial maps.
@@ -166,23 +166,24 @@ def convolve_map_hpx_gauss(m, sigmas, imin=0, imax=None, wmap=None):
     """
     islice = slice(imin, imax)
 
-    o = np.zeros(m.counts.shape)
+    o = np.zeros(m.data.shape)
 
     nside = m.hpx.nside
     nest = m.hpx.nest
 
     # Loop over energy
-    for i, ms in enumerate(m.counts[islice, ...]):
+    for i, ms in enumerate(m.data[islice, ...]):
         sigma = sigmas[islice][i]
         # Need to be in RING scheme
         if nest:
             ms = hp.pixelfunc.reorder(ms, n2r=True)
-        
+
         o[islice, ...][i] = hp.sphtfunc.smoothing(ms, sigma=sigma)
         if nest:
-            o[islice, ...][i] = hp.pixelfunc.reorder(o[islice, ...][i], r2n=True)
+            o[islice, ...][i] = hp.pixelfunc.reorder(
+                o[islice, ...][i], r2n=True)
         if wmap is not None:
-            o[islice, ...][i] *= wmap.counts[islice, ...][i]
+            o[islice, ...][i] *= wmap.data[islice, ...][i]
 
     return HpxMap(o, m.hpx)
 
@@ -193,7 +194,7 @@ def get_source_kernel(gta, name, kernel=None):
     sm = []
     zs = 0
     for c in gta.components:
-        z = c.model_counts_map(name).counts.astype('float')
+        z = c.model_counts_map(name).data.astype('float')
         if kernel is not None:
             shape = (z.shape[0],) + kernel.shape
             z = np.apply_over_axes(np.sum, z, axes=[1, 2]) * np.ones(
@@ -288,14 +289,15 @@ class ResidMapGenerator(object):
         for k, v in sorted(maps.items()):
             if v is None:
                 continue
-            hdu_images += [v.create_image_hdu(k)]
+            hdu_images += [v.make_hdu(k)]
 
         if data['projtype'] == 'WCS':
-            hdus = [data['sigma'].create_primary_hdu()] + hdu_images
+            hdus = [data['sigma'].make_hdu(extname='PRIMARY')] + hdu_images
             hdus[0].header['CONFIG'] = json.dumps(data['config'])
             hdus[1].header['CONFIG'] = json.dumps(data['config'])
-        elif data['projtype'] == 'HPX':            
-            hdus = [fits.PrimaryHDU(), data['sigma'].create_image_hdu("SIGMA")] + hdu_images
+        elif data['projtype'] == 'HPX':
+            hdus = [fits.PrimaryHDU(), data['sigma'].create_image_hdu(
+                "SIGMA")] + hdu_images
             hdus[1].header['CONFIG'] = json.dumps(data['config'])
             hdus[2].header['CONFIG'] = json.dumps(data['config'])
         fits_utils.write_hdus(hdus, filename)
@@ -307,14 +309,14 @@ class ResidMapGenerator(object):
         elif self.projtype == "WCS":
             return self._make_residual_map_wcs(prefix, **kwargs)
         else:
-            raise Exception("Did not recognize projection type %s", self.projtype)
-       
+            raise Exception(
+                "Did not recognize projection type %s", self.projtype)
+
     def _make_residual_map_wcs(self, prefix, **kwargs):
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         exclude = kwargs.setdefault('exclude', None)
         loge_bounds = kwargs.setdefault('loge_bounds', None)
         use_weights = kwargs.setdefault('use_weights', False)
-        
 
         if loge_bounds:
             if len(loge_bounds) != 2:
@@ -326,12 +328,12 @@ class ResidMapGenerator(object):
         else:
             loge_bounds = [self.log_energies[0], self.log_energies[-1]]
 
-
         # Put the test source at the pixel closest to the ROI center
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
                       np.round((self.npix - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
+        geom = self.geom.to_image()
         skywcs = self.geom.wcs
         skydir = wcs_utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
@@ -375,20 +377,23 @@ class ResidMapGenerator(object):
             imin = utils.val_to_edge(c.log_energies, loge_bounds[0])[0]
             imax = utils.val_to_edge(c.log_energies, loge_bounds[1])[0]
 
-            mc = c.model_counts_map(exclude=exclude).counts.astype('float')
-            cc = c.counts_map().counts.astype('float')
+            mc = c.model_counts_map(exclude=exclude).data.astype('float')
+            cc = c.counts_map().data.astype('float')
             ec = np.ones(mc.shape)
 
             if use_weights:
-                wmap = c.weight_map().counts
+                wmap = c.weight_map().data
                 mask = np.where(wmap > 0, 1., 0.)
             else:
                 wmap = None
                 mask = None
 
-            ccs = convolve_map(cc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
-            mcs = convolve_map(mc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
-            ecs = convolve_map(ec, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
+            ccs = convolve_map(
+                cc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
+            mcs = convolve_map(
+                mc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
+            ecs = convolve_map(
+                ec, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
 
             cms = np.sum(ccs, axis=0)
             mms = np.sum(mcs, axis=0)
@@ -406,10 +411,10 @@ class ResidMapGenerator(object):
         sigma[excess < 0] *= -1
         emst /= np.max(emst)
 
-        sigma_map = Map(sigma, skywcs)
-        model_map = Map(mmst / emst, skywcs)
-        data_map = Map(cmst / emst, skywcs)
-        excess_map = Map(excess / emst, skywcs)
+        sigma_map = WcsNDMap(geom, sigma)
+        model_map = WcsNDMap(geom, mmst / emst)
+        data_map = WcsNDMap(geom, cmst / emst)
+        excess_map = WcsNDMap(geom, excess / emst)
 
         o = {'name': utils.join_strings([prefix, modelname]),
              'projtype': 'WCS',
@@ -418,11 +423,10 @@ class ResidMapGenerator(object):
              'model': model_map,
              'data': data_map,
              'excess': excess_map,
-             'mask' : mask,
+             'mask': mask,
              'config': kwargs}
 
         return o
-
 
     def _make_residual_map_hpx(self, prefix, **kwargs):
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
@@ -460,20 +464,23 @@ class ResidMapGenerator(object):
 
             cc = c.counts_map()
             mc = c.model_counts_map(exclude=exclude)
-            ec = HpxMap(cc.counts - mc.counts, cc.hpx)
+            ec = HpxMap(cc.data - mc.data, cc.hpx)
 
             if use_weights:
                 wmap = c.weight_map()
                 mask = wmap.sum_over_energy()
-                mask.data = np.where(mask.counts > 0., 1., 0.)
+                mask.data = np.where(mask.data > 0., 1., 0.)
             else:
                 wmap = None
                 mask = None
 
-            sigmas = gauss_width*np.ones(cc.counts.shape[0])
-            ccs = convolve_map_hpx_gauss(cc, sigmas, imin=imin, imax=imax, wmap=wmap)
-            mcs = convolve_map_hpx_gauss(mc, sigmas, imin=imin, imax=imax, wmap=wmap)
-            ecs = convolve_map_hpx_gauss(ec, sigmas, imin=imin, imax=imax, wmap=wmap)
+            sigmas = gauss_width * np.ones(cc.data.shape[0])
+            ccs = convolve_map_hpx_gauss(
+                cc, sigmas, imin=imin, imax=imax, wmap=wmap)
+            mcs = convolve_map_hpx_gauss(
+                mc, sigmas, imin=imin, imax=imax, wmap=wmap)
+            ecs = convolve_map_hpx_gauss(
+                ec, sigmas, imin=imin, imax=imax, wmap=wmap)
 
             cms = ccs.sum_over_energy()
             mms = mcs.sum_over_energy()
@@ -488,8 +495,8 @@ class ResidMapGenerator(object):
             mmst.data += mms.data
             emst.data += ems.data
 
-
-        ts.data = 2.0 * (poisson_lnl(cmst.data, cmst.data) - poisson_lnl(cmst.data, mmst.data))
+        ts.data = 2.0 * (poisson_lnl(cmst.data, cmst.data) -
+                         poisson_lnl(cmst.data, mmst.data))
         sigma.data = np.sqrt(ts.data)
         sigma.data[emst.data < 0] *= -1
         modelname = 'gauss_0p3'
@@ -501,7 +508,7 @@ class ResidMapGenerator(object):
              'model': mmst,
              'data': cmst,
              'excess': emst,
-             'mask' : mask,
+             'mask': mask,
              'config': kwargs}
 
         return o
