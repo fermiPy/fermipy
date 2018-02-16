@@ -7,6 +7,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.extern import six
+from gammapy.maps.geom import coordsys_to_frame
 
 
 class WCSProj(object):
@@ -372,6 +373,12 @@ def get_map_skydir(filename, maphdu=0):
     hdulist = fits.open(filename)
     wcs = WCS(hdulist[maphdu].header)
     return wcs_to_skydir(wcs)
+
+
+def get_map_skydirs(m):
+    coords = m.geom.get_coords()
+    frame = coordsys_to_frame(m.geom.coordsys)
+    return SkyCoord(coords[0], coords[1], frame=frame, unit='deg')
 
 
 def get_cel_to_gal_angle(skydir):
