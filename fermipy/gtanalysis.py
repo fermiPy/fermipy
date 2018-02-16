@@ -1259,6 +1259,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             cmap = WcsNDMap(self._geom)
             for m in maps:
                 cmap.coadd(m)
+            
         else:
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
@@ -3971,7 +3972,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                    axis=(1, 2), keepdims=False)
             rm['counts_wt'] += np.sum(self._ccube.data * self._wcube.data,
                                       axis=(1, 2), keepdims=False)
-
         elif self.projtype == "HPX":
             self._ccube = skymap.make_coadd_map(cmaps, self._proj, shape)
             self._wcube = skymap.make_coadd_map(
@@ -4420,7 +4420,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                         width=self.config['binning']['roiwidth'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
-
             self._hpx_region = create_hpx_disk_region_string(self.roi.skydir,
                                                              self._coordsys,
                                                              0.5 * self.config['binning']['roiwidth'])
