@@ -16,7 +16,6 @@ env:
       - SLAC_ST_BUILD=false      
       - PIP_DEPS='coverage pytest-cov coveralls git+http://github.com/gammapy/gammapy.git'
       - CONDA2='conda install -y -c conda-forge healpy'
-      - CONDA_DEPS='Cython==0.26'
       - INSTALL_CMD='python setup.py install'
       - CONDA_CHANNELS=conda-forge
 
@@ -31,7 +30,7 @@ matrix:
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                ST_INSTALL='bash stinstall.sh force'
                DOCKER_INSTALL=''
-               CONDA_DEPS=$CONDA_DEPS numpy==1.13.3 astropy scipy matplotlib pytest pyyaml
+               CONDA_DEPS=Cython==0.26 numpy==1.13.3 astropy scipy matplotlib pytest pyyaml
 
         # The Sphinx docs build
         # Python 3, no Fermi ST, all other dependencies
