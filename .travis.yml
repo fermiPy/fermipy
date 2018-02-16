@@ -30,7 +30,7 @@ matrix:
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
                ST_INSTALL='bash stinstall.sh force'
                DOCKER_INSTALL=''
-               CONDA_DEPS=Cython==0.26 numpy==1.13.3 astropy scipy matplotlib pytest pyyaml
+               CONDA_DEPS='Cython==0.26 numpy==1.13.3 astropy scipy matplotlib pytest pyyaml'
 
         # The Sphinx docs build
         # Python 3, no Fermi ST, all other dependencies
