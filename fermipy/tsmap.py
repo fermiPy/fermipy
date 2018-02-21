@@ -890,7 +890,7 @@ class TSMapGenerator(object):
             npix = (ymax - ymin, xmax - xmin)
             crpix = (map_geom._crpix[0] - ymin, map_geom._crpix[1] - xmin)
             wcs.wcs.crpix[0] -= ymin
-            wcs.wcs.crpix[1] -= ymax
+            wcs.wcs.crpix[1] -= xmin
 
             # FIXME: We should implement this with a proper cutout method
             map_geom = WcsGeom(wcs, npix, crpix=crpix)
