@@ -292,7 +292,7 @@ class ResidMapGenerator(object):
             hdu_images += [v.make_hdu(k)]
 
         if data['projtype'] == 'WCS':
-            hdus = [data['sigma'].make_hdu(extname='PRIMARY')] + hdu_images
+            hdus = [data['sigma'].make_hdu(hdu='PRIMARY')] + hdu_images
             hdus[0].header['CONFIG'] = json.dumps(data['config'])
             hdus[1].header['CONFIG'] = json.dumps(data['config'])
         elif data['projtype'] == 'HPX':

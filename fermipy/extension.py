@@ -344,7 +344,7 @@ class ExtensionFit(object):
         hdu_data.name = 'EXT_DATA'
 
         if ext.get('tsmap'):
-            hdus = [ext['tsmap'].make_hdu(extname='PRIMARY')]
+            hdus = [ext['tsmap'].make_hdu(hdu='PRIMARY')]
         else:
             hdus = [fits.PrimaryHDU()]
 
