@@ -103,14 +103,14 @@ def make_scaled_srcmap(roi, srcmap0,
                        ccubefile1,
                        outfile):
 
-    bexp0 = Map.create_from_fits(bexp_file0)
-    bexp1 = Map.create_from_fits(bexp_file1)
-    bexproi0 = Map.create_from_fits(bexproi_file0)
-    bexproi1 = Map.create_from_fits(bexproi_file1)
-    bexp_ratio = Map(bexp1.data / bexp0.data, bexp0.wcs,
-                     bexp0._ebins)
-    bexproi_ratio = Map(bexproi1.data / bexproi0.data, bexproi0.wcs,
-                        bexproi0._ebins)
+    bexp0 = Map.read(bexp_file0)
+    bexp1 = Map.read(bexp_file1)
+    bexproi0 = Map.read(bexproi_file0)
+    bexproi1 = Map.read(bexproi_file1)
+    bexp_ratio = WcsNDMap(bexp0.geom,
+                          bexp1.data / bexp0.data)
+    bexproi_ratio = WcsNDMap(bexproi0.geom,
+                             bexproi1.data / bexproi0.data)
     hdulist = fits.open(srcmap0)
     for src in roi.sources:
 
@@ -118,7 +118,9 @@ def make_scaled_srcmap(roi, srcmap0,
             ratio = bexproi_ratio.data
             hdulist[src.name].data *= ratio
         else:
-            ratio = bexp_ratio.interpolate_at_skydir(src.skydir)
+            coord = (src.skydir,
+                     bexp_ratio.geom.axes[0].center)
+            ratio = bexp_ratio.interp_by_coord(coord)
             hdulist[src.name].data *= ratio[:, None, None]
 
     hdulist_ccube = fits.open(ccubefile1)
@@ -1293,7 +1295,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         else:
             cs = []
             for c in self.components:
-                cs += [c.model_counts_spectrum(name, logemin, logemax, weighted=weighted)]
+                cs += [c.model_counts_spectrum(name, logemin,
+                                               logemax, weighted=weighted)]
             return cs
 
     def get_sources(self, cuts=None, distance=None, skydir=None,
@@ -3380,7 +3383,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         mmap = Map.from_geom(self.geom)
         for m in maps:
             mmap.coadd(m)
-        mmap.write(outfile, conv='fgst-ccube')        
+        mmap.write(outfile, conv='fgst-ccube')
         return [mmap] + maps
 
     def write_weight_map(self, model_name):
@@ -3401,10 +3404,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                'wcube_%s.fits' % (model_name))
 
         wmap = Map.from_geom(self.geom)
-        # FIXME: Should we average weights maps rather than coadding?        
+        # FIXME: Should we average weights maps rather than coadding?
         for m in maps:
             wmap.coadd(m)
-        wmap.write(outfile, conv='fgst-ccube')        
+        wmap.write(outfile, conv='fgst-ccube')
         return [wmap] + maps
 
     def print_roi(self, loglevel=logging.INFO):
@@ -3943,8 +3946,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self._wcube = Map.from_geom(self.geom)
         for m in wmaps:
             self._wcube.coadd(m)
-        self._ccube.write(self.files['ccube'], conv='fgst-ccube')        
-        
+        self._ccube.write(self.files['ccube'], conv='fgst-ccube')
+
         if self.projtype == "WCS":
             rm['counts'] += np.sum(self._ccube.data,
                                    axis=(1, 2), keepdims=False)
@@ -4485,7 +4488,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     def geom(self):
         """ROI geometry."""
         return self._geom
-    
+
     @property
     def tmin(self):
         """Return the MET time for the start of the observation."""
@@ -4820,7 +4823,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         map : `~fermipy.skymap.MapBase`
 
         """
-        #EAC we need the try blocks b/c older versions of the ST don't have some of these functions
+        # EAC we need the try blocks b/c older versions of the ST don't have some of these functions
         if isinstance(self.like, gtutils.SummedLikelihood):
             cmap = self.like.components[0].logLike.countsMap()
             try:
@@ -4839,7 +4842,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             try:
                 p_method = cmap.projection().method()
             except AttributeError:
-                p_method = 0                
+                p_method = 0
             try:
                 if self.like.logLike.has_weights():
                     wmap = self.like.logLike.weightMap()
@@ -4987,7 +4990,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         """
         # EAC, we need this b/c older version of the ST don't have the right signature
         try:
-            cs = np.array(self.like.logLike.modelCountsSpectrum(str(name), weighted))
+            cs = np.array(self.like.logLike.modelCountsSpectrum(
+                str(name), weighted))
         except (TypeError, NotImplementedError):
             cs = np.array(self.like.logLike.modelCountsSpectrum(str(name)))
         imin = utils.val_to_edge(self.log_energies, logemin)[0]
@@ -5545,7 +5549,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
         xpix, ypix = self.geom.to_image().coord_to_pix(skydir)
-        exp = self._bexp.interp_by_coord((skydir,self._bexp.geom.axes[0].center))        
+        exp = self._bexp.interp_by_coord(
+            (skydir, self._bexp.geom.axes[0].center))
         rebin = min(int(np.ceil(self.binsz / 0.01)), 8)
         shape_out = (self.enumbins + 1, self.npix, self.npix)
         cache = SourceMapCache.create(self._psf, exp, spatial_model,
@@ -5562,7 +5567,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
         xpix, ypix = self.geom.to_image().coord_to_pix(skydir)
-        exp = self._bexp.interp_by_coord((skydir,self._bexp.geom.axes[0].center))
+        exp = self._bexp.interp_by_coord(
+            (skydir, self._bexp.geom.axes[0].center))
         cache = self._srcmap_cache.get(name, None)
         if cache is not None:
             k = cache.create_map([ypix, xpix])
