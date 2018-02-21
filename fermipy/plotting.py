@@ -19,7 +19,7 @@ import numpy as np
 from scipy.stats import norm
 from scipy.stats import chi2
 from scipy import interpolate
-from gammapy.maps import WcsNDMap
+from gammapy.maps import WcsNDMap, MapCoord
 
 import fermipy
 import fermipy.config
@@ -1372,10 +1372,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap = loc['tsmap']
         fit_init = loc['fit_init']
         tsmap_renorm = copy.deepcopy(tsmap)
-        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+        tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
-        skydir = loc['tsmap_peak'].get_pixel_skydirs()
-
+        skydir = loc['tsmap_peak'].geom.get_coord(flat=True)#.get_pixel_skydirs()
+        skydir = MapCoord.create(skydir, coordsys=loc['tsmap_peak'].geom.coordsys).skycoord
+        
         path_effect = PathEffects.withStroke(linewidth=2.0,
                                              foreground="black")
 
@@ -1388,8 +1389,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
                cmap=cmap, vmin=vmin, colors=['k'],
                interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
 
-        cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
-        cdelt1 = np.abs(tsmap.wcs.wcs.cdelt[1])
+        cdelt0 = np.abs(tsmap.geom.wcs.wcs.cdelt[0])
+        cdelt1 = np.abs(tsmap.geom.wcs.wcs.cdelt[1])
         cdelt = [cdelt0, cdelt1]
 
         peak_skydir = SkyCoord(fit_init['ra'], fit_init['dec'],
@@ -1397,8 +1398,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         scan_skydir = SkyCoord(loc['ra'], loc['dec'],
                                frame='icrs', unit='deg')
 
-        peak_pix = peak_skydir.to_pixel(tsmap_renorm.wcs)
-        scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
+        peak_pix = peak_skydir.to_pixel(tsmap_renorm.geom.wcs)
+        scan_pix = scan_skydir.to_pixel(tsmap_renorm.geom.wcs)
 
         if 'ra_preloc' in loc:
             preloc_skydir = SkyCoord(loc['ra_preloc'], loc['dec_preloc'],
@@ -1415,7 +1416,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                      label='New Position')
 
         if skydir is not None:
-            pix = skydir.to_pixel(tsmap_renorm.wcs)
+            pix = skydir.to_pixel(tsmap_renorm.geom.wcs)
             xmin = np.min(pix[0])
             ymin = np.min(pix[1])
             xwidth = np.max(pix[0]) - xmin
@@ -1452,7 +1453,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         tsmap = loc['tsmap_peak']
         tsmap_renorm = copy.deepcopy(tsmap)
-        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+        tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
         p = ROIPlotter(tsmap_renorm, roi=roi)
         fig = plt.figure(figsize=figsize)
@@ -1463,10 +1464,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
                cmap=cmap, vmin=vmin, colors=['k'],
                interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
 
-        cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
-        cdelt1 = np.abs(tsmap.wcs.wcs.cdelt[1])
+        cdelt0 = np.abs(tsmap.geom.wcs.wcs.cdelt[0])
+        cdelt1 = np.abs(tsmap.geom.wcs.wcs.cdelt[1])
         cdelt = [cdelt0, cdelt1]
-        scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
+        scan_pix = scan_skydir.to_pixel(tsmap_renorm.geom.wcs)
 
         if 'ra_preloc' in loc:
             preloc_skydir = SkyCoord(loc['ra_preloc'], loc['dec_preloc'],
