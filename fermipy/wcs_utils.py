@@ -375,12 +375,6 @@ def get_map_skydir(filename, maphdu=0):
     return wcs_to_skydir(wcs)
 
 
-def get_map_skydirs(m):
-    coords = m.geom.get_coords()
-    frame = coordsys_to_frame(m.geom.coordsys)
-    return SkyCoord(coords[0], coords[1], frame=frame, unit='deg')
-
-
 def get_cel_to_gal_angle(skydir):
     """Calculate the rotation angle in radians between the longitude
     axes of a local projection in celestial and galactic coordinates.
