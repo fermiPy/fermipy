@@ -5048,9 +5048,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # This is needed in case the exposure map is in HEALPix
         hpxhduname = "HPXEXPOSURES"
         try:
-            self._bexp = read_map_from_fits(self.files['bexpmap'], hpxhduname)
+            self._bexp = Map.read(self.files['bexpmap'], hdu=hpxhduname)
         except KeyError:
-            self._bexp = read_map_from_fits(self.files['bexpmap'])
+            self._bexp = Map.read(self.files['bexpmap'])
 
         # Write ROI XML
         self.roi.write_xml(self.files['srcmdl'], self.config['model'])
@@ -5544,8 +5544,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         skydir = src.skydir
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
-        xpix, ypix = wcs_utils.skydir_to_pix(skydir, self.geom.wcs)
-        exp = self._bexp.interpolate_at_skydir(skydir)
+        xpix, ypix = self.geom.to_image().coord_to_pix(skydir)
+        exp = self._bexp.interp_by_coord((skydir,self._bexp.geom.axes[0].center))        
         rebin = min(int(np.ceil(self.binsz / 0.01)), 8)
         shape_out = (self.enumbins + 1, self.npix, self.npix)
         cache = SourceMapCache.create(self._psf, exp, spatial_model,
@@ -5561,8 +5561,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         skydir = src.skydir
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
-        xpix, ypix = wcs_utils.skydir_to_pix(skydir, self.geom.wcs)
-        exp = self._bexp.interpolate_at_skydir(skydir)
+        xpix, ypix = self.geom.to_image().coord_to_pix(skydir)
+        exp = self._bexp.interp_by_coord((skydir,self._bexp.geom.axes[0].center))
         cache = self._srcmap_cache.get(name, None)
         if cache is not None:
             k = cache.create_map([ypix, xpix])
