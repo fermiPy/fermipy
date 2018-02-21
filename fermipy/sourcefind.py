@@ -9,7 +9,7 @@ import numpy as np
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, Column
-from gammapy.maps import WcsNDMap
+from gammapy.maps import WcsNDMap, MapCoord
 import fermipy.config
 from fermipy import utils
 from fermipy import defaults
@@ -609,10 +609,11 @@ class SourceFind(object):
         if use_cache and not use_pylike:
             self._create_srcmap_cache(src.name, src)
 
-        scan_skydir = wcs_utils.get_map_skydirs(lnlmap).transform_to('icrs')
-        #scan_skydir = lnlmap.get_pixel_skydirs().transform_to('icrs')
-        loglike = []
-        for ra, dec in zip(scan_skydir.ra.deg, scan_skydir.dec.deg):
+        coord = MapCoord.create(lnlmap.geom.get_coord(flat=True),
+                                coordsys=lnlmap.geom.coordsys)
+        scan_skydir = coord.skycoord.icrs
+        for lon, lat, ra, dec in zip(coord.lon, coord.lat,
+                                     scan_skydir.ra.deg, scan_skydir.dec.deg):
 
             spatial_pars = {'ra': ra, 'dec': dec}
             self.set_source_morphology(name,
@@ -620,13 +621,12 @@ class SourceFind(object):
                                        use_pylike=use_pylike)
             fit_output = self._fit(loglevel=logging.DEBUG,
                                    **optimizer)
-            loglike += [fit_output['loglike']]
+            lnlmap.set_by_coord((lon, lat), fit_output['loglike'])
 
         self.set_source_morphology(name, spatial_pars=src.spatial_pars,
                                    use_pylike=use_pylike)
         saved_state.restore()
 
-        lnlmap.data = np.array(loglike).reshape((nstep, nstep)).T
         lnlmap.data -= fit_output_nosrc['loglike']
         tsmap = WcsNDMap(lnlmap.geom, 2.0 * lnlmap.data)
 
