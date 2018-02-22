@@ -1261,7 +1261,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
         if p.projtype == "WCS":
             model_data = mcube_map.counts.T
             diffuse_data = mcube_diffuse.counts.T
-            weight_data = wmap.counts.T
             xmin = -1
             xmax = 1
         elif p.projtype == "HPX":

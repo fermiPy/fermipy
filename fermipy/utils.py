@@ -232,8 +232,8 @@ def find_rows_by_string(tab, names, colnames=['assoc']):
             continue
 
         col = tab[[colname]].copy()
-        col[colname] = defchararray.replace(defchararray.lower(col[colname]),
-                                            ' ', '')
+        col[colname] = defchararray.replace(defchararray.lower(col[colname]).astype(str),
+                                        ' ', '')
         for name in names:
             mask |= col[colname] == name
     return mask

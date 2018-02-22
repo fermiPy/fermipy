@@ -17,6 +17,7 @@ env:
       - PIP_DEPS='coverage pytest-cov coveralls'
       - CONDA2='conda install -y -c conda-forge healpy'
       - INSTALL_CMD='python setup.py install'
+      - CONDA_CHANNELS=conda-forge
 
 matrix:
     include:
@@ -41,10 +42,19 @@ matrix:
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
 
-        # Python 3, no Fermi ST, all other dependencies
+        # Python 3.5, no Fermi ST, all other dependencies
         - os: linux
-          env: NAME=py3_st-no_dep-yes
+          env: NAME=py35_st-no_dep-yes
                PYTHON_VERSION=3.5
+               ST_INSTALL=''
+               DOCKER_INSTALL=''
+               CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+               CONDA_DEPS='numpy astropy scipy matplotlib pytest pyyaml'
+
+        # Python 3.6, no Fermi ST, all other dependencies
+        - os: linux
+          env: NAME=py36_st-no_dep-yes
+               PYTHON_VERSION=3.6
                ST_INSTALL=''
                DOCKER_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
