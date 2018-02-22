@@ -371,7 +371,6 @@ class Map(Map_Base):
         else:
             if egy is None:
                 egy = self._ectr
-            print ('xx', lat, lon, egy, self.npix)
             pixcrd = self.wcs.wcs_world2pix(lon, lat, egy, 0)
             pixcrd[2] = np.array(utils.val_to_pix(np.log(self._ectr),
                                                   np.log(egy)), ndmin=1)
