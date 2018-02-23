@@ -23,7 +23,6 @@ import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 import fermipy.castro as castro
-from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.spectrum import PowerLaw
 from fermipy.config import ConfigSchema
@@ -1106,12 +1105,12 @@ class TSCubeGenerator(object):
         ts_map = tscube.tsmap
         norm_map = tscube.normmap
         npred_map = copy.deepcopy(norm_map)
-        npred_map._counts *= tscube.refSpec.ref_npred.sum()
+        npred_map.data *= tscube.refSpec.ref_npred.sum()
         amp_map = copy.deepcopy(norm_map)
-        amp_map._counts *= src_dict['Prefactor']
+        amp_map.data *= src_dict['Prefactor']
 
         sqrt_ts_map = copy.deepcopy(ts_map)
-        sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
+        sqrt_ts_map.data[...] = np.abs(sqrt_ts_map.data)**0.5
 
         o = {'name': utils.join_strings([prefix, modelname]),
              'src_dict': copy.deepcopy(src_dict),
