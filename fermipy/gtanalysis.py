@@ -32,8 +32,6 @@ from fermipy.extension import ExtensionFit
 from fermipy.utils import merge_dict
 from fermipy.utils import create_hpx_disk_region_string
 from fermipy.utils import resolve_file_path
-from fermipy.skymap import HpxMap, read_map_from_fits
-from fermipy.hpx_utils import HPX
 from fermipy.roi_model import ROIModel
 from fermipy.ltcube import LTCube
 from fermipy.plotting import AnalysisPlotter
@@ -394,7 +392,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         axes = [MapAxis.from_edges(self.energies, interp='log',
                                    name='energy', unit='MeV')]
         if self.projtype == 'HPX':
-
             is_nested = self.config['binning']['hpx_ordering_scheme'] == "NESTED"
             self._geom = HpxGeom.create(2**self.config['binning']['hpx_order'],
                                         nest=is_nested,
@@ -402,17 +399,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         width=self.config['binning']['roiwidth'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
-
-            self._hpx_region = create_hpx_disk_region_string(self._roi.skydir,
-                                                             coordsys=self.config['binning']['coordsys'],
-                                                             radius=0.5 * self.config['binning']['roiwidth'])
-            self._proj = HPX.create_hpx(-1,
-                                        self.config['binning'][
-                                            'hpx_ordering_scheme'] == "NESTED",
-                                        self.config['binning']['coordsys'],
-                                        self.config['binning']['hpx_order'],
-                                        ebins=self.energies,
-                                        region=self._hpx_region)
         else:
 
             self._geom = WcsGeom.create(npix=self.npix, binsz=self._binsz,
@@ -420,21 +406,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         proj=self.config['binning']['proj'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
-            self._proj = wcs_utils.create_wcs(self._roi.skydir,
-                                              coordsys=self.config[
-                                                  'binning']['coordsys'],
-                                              projection=self.config[
-                                                  'binning']['proj'],
-                                              cdelt=self._binsz,
-                                              crpix=1.0 + 0.5 *
-                                              (self._npix - 1),
-                                              naxis=3,
-                                              energies=self.energies)
-
+            
             # Update projection of ROI object
-            proj = wcs_utils.WCSProj(self._proj,
-                                     np.array([self.npix, self.npix]))
-            self._roi.set_projection(proj)
+            self._roi.set_geom(self.geom)
 
         if self.config['fileio']['usescratch']:
             self.stage_input()
@@ -1112,16 +1086,18 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 crd['counts'] = np.sum(cm.data, axis=(1, 2), keepdims=False)
                 crd['counts_wt'] = np.sum(cm.data * wm.data,
                                           axis=(1, 2), keepdims=False)
-            elif isinstance(cm, HpxMap):
+            elif isinstance(cm, HpxNDMap):
                 proj_type = 1
                 crd['counts'] = np.sum(cm.data, axis=(1,))
                 crd['counts_wt'] = np.sum(cm.data * wm.data, axis=(1,))
+            else:
+                raise ValueError
             crd['loglike'] = -c.like()
 
         if proj_type == 0:
             shape = (self.enumbins, self.npix, self.npix)
         elif proj_type == 1:
-            shape = (self.enumbins, self._proj.npix)
+            shape = (self.enumbins, np.max(self.geom.npix))
 
         self._coadd_maps(cmaps, shape, rm, wmaps)
 
@@ -1253,13 +1229,20 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         Returns
         -------
         map : `~gammapy.maps.Map`
-        """
-
+        """        
         maps = [c.model_counts_map(name, exclude, use_mask=use_mask)
                 for c in self.components]
         cmap = Map.from_geom(self.geom)
         for m in maps:
-            cmap.coadd(m)
+
+            # FIXME: This functionality could be built into the coadd method            
+            m_tmp = m
+            if isinstance(m, HpxNDMap):                
+                if m.geom.order < cmap.geom.order:
+                    factor = cmap.geom.nside//m.geom.nside
+                    m_tmp = m.upsample(factor, preserve_counts=True)
+            cmap.coadd(m_tmp)
+        
         return cmap
 
     def model_counts_spectrum(self, name, logemin=None, logemax=None,
@@ -4355,7 +4338,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             (self._ebin_edges[1:] + self._ebin_edges[:-1])
 
         if self.config['binning']['npix'] is None:
-            self._npix = int(np.round(self.config['binning']['roiwidth'] /
+            roiwidth = (self.config['binning']['roiwidth']
+                        if self.config['binning']['roiwidth'] is not None else 180.)
+            self._npix = int(np.round(roiwidth /
                                       self.config['binning']['binsz']))
         else:
             self._npix = self.config['binning']['npix']
@@ -4385,7 +4370,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         axes = [MapAxis.from_edges(self.energies, interp='log',
                                    name='energy', unit='MeV')]
         if self.projtype == 'HPX':
-
             is_nested = self.config['binning']['hpx_ordering_scheme'] == "NESTED"
             self._geom = HpxGeom.create(2**self.config['binning']['hpx_order'],
                                         nest=is_nested,
@@ -4393,33 +4377,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                         width=self.config['binning']['roiwidth'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
-            self._hpx_region = create_hpx_disk_region_string(self.roi.skydir,
-                                                             self._coordsys,
-                                                             0.5 * self.config['binning']['roiwidth'])
-            self._proj = HPX.create_hpx(-1,
-                                        self.config['binning'][
-                                            'hpx_ordering_scheme'] == "NESTED",
-                                        self._coordsys,
-                                        self.config['binning']['hpx_order'],
-                                        ebins=self.energies,
-                                        region=self._hpx_region)
         elif self.projtype == "WCS":
-
             self._geom = WcsGeom.create(npix=self.npix, binsz=self.binsz,
                                         coordsys=self.config['binning']['coordsys'],
                                         proj=self.config['binning']['proj'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
-            self._proj = wcs_utils.create_wcs(self.roi.skydir,
-                                              coordsys=self._coordsys,
-                                              projection=self.config[
-                                                  'binning']['proj'],
-                                              cdelt=self.binsz,
-                                              crpix=1.0 + 0.5 *
-                                              (self._npix - 1),
-                                              naxis=3,
-                                              energies=self.energies)
-
         else:
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
@@ -4506,13 +4469,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
     @property
     def wcs(self):
         if self.projtype == "WCS":
-            return self._proj
+            return self.geom.wcs
         return None
 
     @property
     def hpx(self):
         if self.projtype == "HPX":
-            return self._proj
+            return self.geom
         return None
 
     @property
@@ -4804,12 +4767,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if p_method == 0:  # WCS
             z = cmap.data()
             z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
-            return WcsNDMap(self._geom, z)
+            return WcsNDMap(copy.deepcopy(self.geom), z)
         elif p_method == 1:  # HPX
             z = cmap.data()
-            nhpix = self.hpx.npix
-            z = np.array(z).reshape(self.enumbins, nhpix)
-            return HpxMap(z, copy.deepcopy(self.hpx))
+            z = np.array(z).reshape(self.enumbins, np.max(self.geom.npix))
+            return HpxNDMap(copy.deepcopy(self.geom), z)
         else:
             self.logger.error('Did not recognize CountsMap type %i' % p_method,
                               exc_info=True)
@@ -4859,13 +4821,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
             return WcsNDMap(copy.deepcopy(self._geom), z)
         elif p_method == 1:  # HPX
-            nhpix = self.hpx.npix
+            nhpix = np.max(self.geom.npix)
             if wmap is None:
                 z = np.ones((self.enumbins, nhpix))
             else:
                 z = wmap.model()
                 z = np.array(z).reshape(self.enumbins, nhpix)
-            return HpxMap(z, self.hpx)
+            return HpxNDMap(self.geom, z)
         else:
             self.logger.error('Did not recognize CountsMap type %i' % p_method,
                               exc_info=True)
@@ -4905,7 +4867,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if self.projtype == "WCS":
             v = pyLike.FloatVector(self.npix ** 2 * self.enumbins)
         elif self.projtype == "HPX":
-            v = pyLike.FloatVector(self._proj.npix * self.enumbins)
+            v = pyLike.FloatVector(np.max(self.geom.npix) * self.enumbins)
         else:
             raise Exception("Unknown projection type %s", self.projtype)
 

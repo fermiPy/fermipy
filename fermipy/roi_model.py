@@ -894,12 +894,12 @@ class Source(Model):
         self['offset_glon'] = offset_gal[0, 0]
         self['offset_glat'] = offset_gal[0, 1]
 
-    def set_roi_projection(self, proj):
+    def set_roi_geom(self, geom):
 
-        if proj is None:
+        if geom is None:
             return
 
-        self['offset_roi_edge'] = proj.distance_to_edge(self.skydir)
+        self['offset_roi_edge'] = float(wcs_utils.distance_to_edge(geom, self.skydir))
 
     def set_spatial_model(self, spatial_model, spatial_pars):
 
@@ -1304,7 +1304,7 @@ class ROIModel(fermipy.config.Configurable):
     def __init__(self, config=None, **kwargs):
         # Coordinate for ROI center (defaults to 0,0)
         self._skydir = kwargs.pop('skydir', SkyCoord(0.0, 0.0, unit=u.deg))
-        self._projection = kwargs.get('projection', None)
+        self._geom = kwargs.get('geom', None)
         coordsys = kwargs.pop('coordsys', 'CEL')
         srcname = kwargs.pop('srcname', None)
         super(ROIModel, self).__init__(config, **kwargs)
@@ -1366,8 +1366,8 @@ class ROIModel(fermipy.config.Configurable):
         return self._skydir
 
     @property
-    def projection(self):
-        return self._projection
+    def geom(self):
+        return self._geom
 
     @property
     def sources(self):
@@ -1390,10 +1390,10 @@ class ROIModel(fermipy.config.Configurable):
         else:
             return extdir
 
-    def set_projection(self, proj):
-        self._projection = proj
+    def set_geom(self, geom):
+        self._geom = geom
         for s in self._srcs:
-            s.set_roi_projection(proj)
+            s.set_roi_geom(geom)
 
     def clear(self):
         """Clear the contents of the ROI."""
@@ -1512,7 +1512,7 @@ class ROIModel(fermipy.config.Configurable):
 
         if isinstance(src, Source):
             src.set_roi_direction(self.skydir)
-            src.set_roi_projection(self.projection)
+            src.set_roi_geom(self.geom)
 
         self.load_source(src, build_index=build_index,
                          merge_sources=merge_sources)
