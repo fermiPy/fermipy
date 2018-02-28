@@ -7,12 +7,11 @@ import numpy as np
 import scipy.signal
 import healpy as hp
 from astropy.io import fits
-from gammapy.maps import WcsNDMap
+from gammapy.maps import WcsNDMap, HpxNDMap
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
-from fermipy.skymap import Map, HpxMap
 from fermipy.config import ConfigSchema
 from fermipy.timing import Timer
 
@@ -185,7 +184,7 @@ def convolve_map_hpx_gauss(m, sigmas, imin=0, imax=None, wmap=None):
         if wmap is not None:
             o[islice, ...][i] *= wmap.data[islice, ...][i]
 
-    return HpxMap(o, m.hpx)
+    return HpxNDMap(m.geom, o)
 
 
 def get_source_kernel(gta, name, kernel=None):
@@ -296,8 +295,8 @@ class ResidMapGenerator(object):
             hdus[0].header['CONFIG'] = json.dumps(data['config'])
             hdus[1].header['CONFIG'] = json.dumps(data['config'])
         elif data['projtype'] == 'HPX':
-            hdus = [fits.PrimaryHDU(), data['sigma'].create_image_hdu(
-                "SIGMA")] + hdu_images
+            hdus = [fits.PrimaryHDU(),
+                    data['sigma'].make_hdu(hdu="SIGMA")] + hdu_images
             hdus[1].header['CONFIG'] = json.dumps(data['config'])
             hdus[2].header['CONFIG'] = json.dumps(data['config'])
         fits_utils.write_hdus(hdus, filename)
@@ -448,14 +447,14 @@ class ResidMapGenerator(object):
 
         gauss_width = np.radians(0.3)
 
-        hpxsky = self.counts_map().hpx.copy_and_drop_energy()
+        hpxsky = self.counts_map().geom.to_image()
 
-        mmst = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
-        cmst = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
-        emst = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
-        ts = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
-        sigma = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
-        excess = HpxMap(np.zeros((hpxsky.npix)), hpxsky)
+        mmst = HpxNDMap.from_geom(hpxsky)
+        cmst = HpxNDMap.from_geom(hpxsky)
+        emst = HpxNDMap.from_geom(hpxsky)
+        ts = HpxNDMap.from_geom(hpxsky)
+        sigma = HpxNDMap.from_geom(hpxsky)
+        excess = HpxNDMap.from_geom(hpxsky)
 
         for i, c in enumerate(self.components):
 
@@ -464,7 +463,7 @@ class ResidMapGenerator(object):
 
             cc = c.counts_map()
             mc = c.model_counts_map(exclude=exclude)
-            ec = HpxMap(cc.data - mc.data, cc.hpx)
+            ec = HpxNDMap(cc.geom, cc.data - mc.data)
 
             if use_weights:
                 wmap = c.weight_map()
