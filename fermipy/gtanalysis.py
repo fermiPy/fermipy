@@ -1232,18 +1232,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """        
         maps = [c.model_counts_map(name, exclude, use_mask=use_mask)
                 for c in self.components]
-        cmap = Map.from_geom(self.geom)
-        for m in maps:
-
-            # FIXME: This functionality could be built into the coadd method            
-            m_tmp = m
-            if isinstance(m, HpxNDMap):                
-                if m.geom.order < cmap.geom.order:
-                    factor = cmap.geom.nside//m.geom.nside
-                    m_tmp = m.upsample(factor, preserve_counts=True)
-            cmap.coadd(m_tmp)
-        
-        return cmap
+        return skymap.coadd_maps(self.geom, maps)
 
     def model_counts_spectrum(self, name, logemin=None, logemax=None,
                               summed=False, weighted=False):
@@ -3923,12 +3912,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def _coadd_maps(self, cmaps, shape, rm, wmaps):
         """
         """
-        self._ccube = Map.from_geom(self.geom)
-        for m in cmaps:
-            self._ccube.coadd(m)
-        self._wcube = Map.from_geom(self.geom)
-        for m in wmaps:
-            self._wcube.coadd(m)
+        self._ccube = skymap.coadd_maps(self.geom, cmaps)
+        self._wcube = skymap.coadd_maps(self.geom, wmaps)
         self._ccube.write(self.files['ccube'], conv='fgst-ccube')
 
         if self.projtype == "WCS":
