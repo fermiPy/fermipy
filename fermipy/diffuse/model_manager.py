@@ -28,6 +28,7 @@ class ModelComponent(object):
         self.info = kwargs.get('info')
         self.spectrum = kwargs.get('spectrum')
         self.par_overrides = kwargs.get('par_overrides')
+        self.edisp_disable = kwargs.get('edisp_disable', False)
         if self.par_overrides is not None:
             for parname, pardict in self.par_overrides.items():
                 try:
@@ -58,6 +59,15 @@ class ModelInfo(object):
     def items(self):
         """ Return the key, value pairs of model components """
         return self.model_components.items()
+
+    def edisp_disable_list(self):
+        """ Return the list of source for which energy dispersion should be turned off """
+        l = []
+        for comp_name, model_comp in self.model_components.items():            
+            if model_comp.edisp_disable:
+                l += [comp_name]
+        return l
+            
 
     def make_srcmap_manifest(self, components, name_factory):
         """  Build a yaml file that specfies how to make the srcmap files for a particular model
@@ -266,6 +276,7 @@ class ModelManager(object):
             par_overrides = source_info.get('par_overides', None)
             version = source_info['version']
             spec_type = source_info['SpectrumType']
+            edisp_disable = source_info.get('edisp_disable', False)
             sourcekey = "%s_%s" % (source, version)
             if model_type == 'galprop_rings':
                 comp_info_dict = self.gmm.diffuse_comp_info_dicts(version)
@@ -275,7 +286,8 @@ class ModelManager(object):
                                                 spectrum=\
                                                     self._spec_lib[spec_type.get(comp_key,
                                                                                  def_spec_type)],
-                                                par_overrides=par_overrides)
+                                                par_overrides=par_overrides,
+                                                edisp_disable=edisp_disable)
                     components[comp_key] = model_comp
             elif model_type == 'Catalog':
                 comp_info_dict = self.csm.split_comp_info_dict(source, version)
@@ -285,13 +297,15 @@ class ModelManager(object):
                                                 spectrum=\
                                                     self._spec_lib[spec_type.get(comp_key,
                                                                                  def_spec_type)],
-                                                par_overrides=par_overrides)
+                                                par_overrides=par_overrides,
+                                                edisp_disable=edisp_disable)
                     components[comp_key] = model_comp
             else:
                 comp_info = self.dmm.diffuse_comp_info(sourcekey)
                 model_comp = ModelComponent(info=comp_info,
                                             spectrum=self._spec_lib[spec_type],
-                                            par_overrides=par_overrides)
+                                            par_overrides=par_overrides,
+                                            edisp_disable=edisp_disable)
                 components[sourcekey] = model_comp
         ret_val = ModelInfo(model_name=modelkey,
                             model_components=components)
@@ -368,7 +382,7 @@ class ModelManager(object):
         #                     logfile=os.path.join(model_dir, 'fermipy.log'))
         master_fileio = dict(logfile='fermipy.log')
         master_gtlike = dict(irfs=self._name_factory.irfs(**kwargs),
-                             edisp_disable=['isodiff', 'diffuse', 'limb'],
+                             edisp_disable=model_info.edisp_disable_list(),
                              use_external_srcmap=True)
         master_selection = dict(glat=0., glon=0., radius=180.)
         master_model = dict(catalogs=[master_xml_mdl])
