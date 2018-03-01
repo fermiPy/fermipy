@@ -62,8 +62,16 @@ def main(args=None):
     parser.add_argument('--glat', default=0.0, type=float,
                         help='Galactic latitude in deg at which the sensitivity will be evaluated.  '
                         'Also sets the center of the sensitivity map for the `wcs` map type.')
+    parser.add_argument('--sedshape', default='PowerLaw', type=str,
+                        help='SED shape')
     parser.add_argument('--index', default=2.0, type=float,
                         help='Source power-law index.')
+    parser.add_argument('--cutoff', default=1e3, type=float,
+                        help='Source cutoff.')
+    parser.add_argument('--curvindex', default=1.0, type=float,
+                        help='Source curvature index')
+    parser.add_argument('--beta', default=0.0, type=float,
+                        help='Source beta')
     parser.add_argument('--emin', default=10**1.5, type=float,
                         help='Minimum energy in MeV.')
     parser.add_argument('--emax', default=10**6.0, type=float,
@@ -100,6 +108,10 @@ def main(args=None):
 def run_flux_sensitivity(**kwargs):
 
     index = kwargs.get('index', 2.0)
+    sedshape = kwargs.get('sedshape', 'PowerLaw')
+    cutoff = kwargs.get('cutoff', 1e3)
+    curvindex = kwargs.get('curvindex', 1.0)
+    beta = kwargs.get('beta', 0.0)
     emin = kwargs.get('emin', 10**1.5)
     emax = kwargs.get('emax', 10**6.0)
     nbin = kwargs.get('nbin', 18)
@@ -125,7 +137,13 @@ def run_flux_sensitivity(**kwargs):
     output = kwargs.get('output', None)
 
     event_types = [['FRONT', 'BACK']]
-    fn = spectrum.PowerLaw([1E-13, -index], scale=1E3)
+
+    if sedshape == 'PowerLaw':
+        fn = spectrum.PowerLaw([1E-13, -index], scale=1E3)
+    elif sedshape == 'PLSuperExpCutoff':
+        fn = spectrum.PLSuperExpCutoff([1E-13, -index, cutoff, curvindex], scale=1E3)
+    elif sedshape == 'LogParabola':
+        fn = spectrum.LogParabola([1E-13, -index, beta], scale=1E3)
 
     log_ebins = np.linspace(np.log10(emin),
                             np.log10(emax), nbin + 1)
@@ -289,6 +307,11 @@ def run_flux_sensitivity(**kwargs):
     index = np.linspace(1.0, 5.0, 4 * 4 + 1)
 
     for g in index:
+        
+        #if sedshape == 'PowerLaw':
+        #    fn = spectrum.PowerLaw([1E-13, -g], scale=10**3.5)
+        #if sedshape == 'PLSuperExpCutoff':
+        #    fn = spectrum.PLSuperExpCutoff([1E-13, -g, cutoff, curvindex], scale=1E3)
         fn = spectrum.PowerLaw([1E-13, -g], scale=10**3.5)
         o = scalc.int_flux_threshold(c, fn, ts_thresh, 3.0)
         row = [g]
