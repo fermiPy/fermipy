@@ -9,7 +9,7 @@ ENV PATH /opt/conda/bin:$PATH
 RUN echo 'export PATH=/opt/conda/bin:$PATH' > /etc/profile.d/conda.sh && \
     curl -o miniconda.sh -L http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD && \
     /bin/bash miniconda.sh -b -p /opt/conda && \
-    rm miniconda.sh && conda update -y conda && conda config --append channels conda-forge 
+    rm miniconda.sh && conda update -y conda && conda config --add channels conda-forge 
 RUN conda install -y python=$PYTHON_VERSION pip pytest $CONDA_DEPS && \
     conda install -y $CONDA_DEPS_EXTRA && \
     if [[ -n $PIP_DEPS ]]; then pip install $PIP_DEPS; fi
