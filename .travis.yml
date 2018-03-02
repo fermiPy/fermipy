@@ -81,7 +81,7 @@ matrix:
                FERMI_DIR='/home'
                SLAC_ST_BUILD=true
 
-        # Python 2, SLAC ST 11-05-02, all other dependencies
+        # Python 2, SLAC ST 11-07-00, all other dependencies
         - os: linux
           sudo: required
           env: NAME=py2_slac-st-11-07-00
@@ -93,6 +93,9 @@ matrix:
                FERMI_DIR='/home'
                SLAC_ST_BUILD=true
 
+    allow_failures:
+
+        # Python 2, SLAC ST 11-07-00, gammapy master
         - os: linux
           sudo: required
           env: NAME=py2_slac-st-11-07-00-gammapy-master
