@@ -493,13 +493,12 @@ class PLSuperExpCutoff(SpectralFunction):
 
     @staticmethod
     def _eval_dnde(x, params, scale=1.0, extra_params=None):
-        return params[0] * (x / scale) ** (params[1]) * np.exp(- (x / params[2]) ** (params[3]) )
+        return params[0] * (x / scale) ** (params[1]) * np.exp(- (x / params[2]) ** (params[3]))
 
     @classmethod
     def _eval_dnde_deriv(cls, x, params, scale=1.0, extra_params=None):
         return (cls._eval_dnde(x, params, scale) *
                 (params[1] * params[2] - x) / (params[2] * x))
-
 
 
 class DMFitFunction(SpectralFunction):
