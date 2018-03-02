@@ -58,7 +58,7 @@ matrix:
                ST_INSTALL=''
                DOCKER_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
-               CONDA_DEPS='Cython numpy astropy scipy matplotlib pytest pyyaml'
+               CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml'
 
         # Python 2, no Fermi ST, all other dependencies
         - os: linux
