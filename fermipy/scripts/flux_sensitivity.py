@@ -63,7 +63,7 @@ def main(args=None):
                         help='Galactic latitude in deg at which the sensitivity will be evaluated.  '
                         'Also sets the center of the sensitivity map for the `wcs` map type.')
     parser.add_argument('--sedshape', default='PowerLaw', type=str,
-                        help='SED shape')
+                        choices=['PowerLaw', 'PLExpCutoff', 'LogParabola'], help='SED shape')
     parser.add_argument('--index', default=2.0, type=float,
                         help='Source power-law index.')
     parser.add_argument('--cutoff', default=1e3, type=float,
@@ -141,7 +141,8 @@ def run_flux_sensitivity(**kwargs):
     if sedshape == 'PowerLaw':
         fn = spectrum.PowerLaw([1E-13, -index], scale=1E3)
     elif sedshape == 'PLSuperExpCutoff':
-        fn = spectrum.PLSuperExpCutoff([1E-13, -index, cutoff, curvindex], scale=1E3)
+        fn = spectrum.PLSuperExpCutoff(
+            [1E-13, -index, cutoff, curvindex], scale=1E3)
     elif sedshape == 'LogParabola':
         fn = spectrum.LogParabola([1E-13, -index, beta], scale=1E3)
 
@@ -307,11 +308,6 @@ def run_flux_sensitivity(**kwargs):
     index = np.linspace(1.0, 5.0, 4 * 4 + 1)
 
     for g in index:
-        
-        #if sedshape == 'PowerLaw':
-        #    fn = spectrum.PowerLaw([1E-13, -g], scale=10**3.5)
-        #if sedshape == 'PLSuperExpCutoff':
-        #    fn = spectrum.PLSuperExpCutoff([1E-13, -g, cutoff, curvindex], scale=1E3)
         fn = spectrum.PowerLaw([1E-13, -g], scale=10**3.5)
         o = scalc.int_flux_threshold(c, fn, ts_thresh, 3.0)
         row = [g]
