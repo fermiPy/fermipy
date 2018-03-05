@@ -84,7 +84,7 @@ setup(
         'scipy >= 0.14',
         'pyyaml',
         'healpy',
-        'wcsaxes',
+        'gammapy',
     ],
     extras_require=dict(
         all=[],
