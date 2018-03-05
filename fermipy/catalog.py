@@ -84,7 +84,7 @@ def row_to_dict(row):
     o = {}
     for colname in row.colnames:
 
-        if row[colname].dtype.kind in ['S', 'U']:
+        if isinstance(row[colname], np.string_) and row[colname].dtype.kind in ['S', 'U']:
             o[colname] = str(row[colname])
         else:
             o[colname] = row[colname]

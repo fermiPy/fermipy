@@ -14,13 +14,15 @@ from scipy.optimize import brentq
 import astropy
 from astropy.io import fits
 from astropy.table import Table
+from astropy.coordinates import SkyCoord
 import astropy.wcs as pywcs
+from gammapy.maps.geom import coordsys_to_frame
+from gammapy.maps import WcsNDMap, WcsGeom
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 import fermipy.castro as castro
-from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.spectrum import PowerLaw
 from fermipy.config import ConfigSchema
@@ -732,15 +734,16 @@ class TSMapGenerator(object):
         for k, v in sorted(maps.items()):
             if v is None:
                 continue
-            hdu_images += [v.create_image_hdu(k)]
+            hdu_images += [v.make_hdu(hdu=k)]
 
         tab = fits_utils.dict_to_table(data)
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'TSMAP_DATA'
 
-        hdus = [data['ts'].create_primary_hdu(),
+        hdus = [data['ts'].make_hdu(hdu='PRIMARY'),
                 hdu_data] + hdu_images
 
+        data['config'].pop('map_skydir', None)
         hdus[0].header['CONFIG'] = json.dumps(data['config'])
         hdus[1].header['CONFIG'] = json.dumps(data['config'])
         fits_utils.write_hdus(hdus, filename)
@@ -788,8 +791,11 @@ class TSMapGenerator(object):
                       np.round((self.npix - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        skywcs = self._skywcs
-        skydir = wcs_utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
+        map_geom = self._geom.to_image()
+        frame = coordsys_to_frame(map_geom.coordsys)
+        skydir = SkyCoord(*map_geom.pix_to_coord((cpix[0], cpix[1])),
+                          frame=frame, unit='deg')
+        skydir = skydir.transform_to('icrs')
 
         src_dict['ra'] = skydir.ra.deg
         src_dict['dec'] = skydir.dec.deg
@@ -811,9 +817,9 @@ class TSMapGenerator(object):
             imax = utils.val_to_edge(c.log_energies, loge_bounds[1])[0]
 
             eslice = slice(imin, imax)
-            bm = c.model_counts_map(exclude=kwargs['exclude']).counts.astype('float')[
+            bm = c.model_counts_map(exclude=kwargs['exclude']).data.astype('float')[
                 eslice, ...]
-            cm = c.counts_map().counts.astype('float')[eslice, ...]
+            cm = c.counts_map().data.astype('float')[eslice, ...]
 
             bkg += [bm]
             counts += [cm]
@@ -829,7 +835,7 @@ class TSMapGenerator(object):
         # self.logger.info(str(src_dict))
         modelname = utils.create_model_name(src)
         for c, eslice in zip(self.components, eslices):
-            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')[
+            mm = c.model_counts_map('tsmap_testsource').data.astype('float')[
                 eslice, ...]
             model_npred += np.sum(mm)
             model += [mm]
@@ -865,8 +871,10 @@ class TSMapGenerator(object):
                                  C_0_map=c0_map)
 
         if kwargs['map_skydir'] is not None:
+
             map_offset = wcs_utils.skydir_to_pix(kwargs['map_skydir'],
-                                                 self._skywcs)
+                                                 map_geom.wcs)
+
             map_delta = 0.5 * kwargs['map_size'] / self.components[0].binsz
             xmin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
             xmax = min(int(np.floor(map_offset[1] + map_delta)) + 1, self.npix)
@@ -877,13 +885,16 @@ class TSMapGenerator(object):
             yslice = slice(ymin, ymax)
             xyrange = [range(xmin, xmax), range(ymin, ymax)]
 
-            map_wcs = skywcs.deepcopy()
-            map_wcs.wcs.crpix[0] -= ymin
-            map_wcs.wcs.crpix[1] -= xmin
+            wcs = map_geom.wcs.deepcopy()
+            npix = (ymax - ymin, xmax - xmin)
+            crpix = (map_geom._crpix[0] - ymin, map_geom._crpix[1] - xmin)
+            wcs.wcs.crpix[0] -= ymin
+            wcs.wcs.crpix[1] -= xmin
+
+            # FIXME: We should implement this with a proper cutout method
+            map_geom = WcsGeom(wcs, npix, crpix=crpix)
         else:
             xyrange = [range(self.npix), range(self.npix)]
-            map_wcs = skywcs
-
             xslice = slice(0, self.npix)
             yslice = slice(0, self.npix)
 
@@ -910,10 +921,10 @@ class TSMapGenerator(object):
         ts_values = ts_values[xslice, yslice]
         amp_values = amp_values[xslice, yslice]
 
-        ts_map = Map(ts_values, map_wcs)
-        sqrt_ts_map = Map(ts_values**0.5, map_wcs)
-        npred_map = Map(amp_values * model_npred, map_wcs)
-        amp_map = Map(amp_values * src.get_norm(), map_wcs)
+        ts_map = WcsNDMap(map_geom, ts_values)
+        sqrt_ts_map = WcsNDMap(map_geom, ts_values**0.5)
+        npred_map = WcsNDMap(map_geom, amp_values * model_npred)
+        amp_map = WcsNDMap(map_geom, amp_values * src.get_norm())
 
         o = {'name': utils.join_strings([prefix, modelname]),
              'src_dict': copy.deepcopy(src_dict),
@@ -927,76 +938,6 @@ class TSMapGenerator(object):
              }
 
         return o
-
-    def _tsmap_pylike(self, prefix, **kwargs):
-        """Evaluate the TS for an additional source component at each point
-        in the ROI.  This is the brute force implementation of TS map
-        generation that runs a full pyLikelihood fit
-        at each point in the ROI."""
-
-        logLike0 = -self.like()
-        self.logger.info('LogLike: %f' % logLike0)
-
-        saved_state = LikelihoodState(self.like)
-
-        # Get the ROI geometry
-
-        # Loop over pixels
-        w = copy.deepcopy(self._skywcs)
-        #        w = create_wcs(self._roi.skydir,cdelt=self._binsz,crpix=50.5)
-
-        data = np.zeros((self.npix, self.npix))
-        #        self.free_sources(free=False)
-
-        xpix = (np.linspace(0, self.npix - 1, self.npix)[:, np.newaxis] *
-                np.ones(data.shape))
-        ypix = (np.linspace(0, self.npix - 1, self.npix)[np.newaxis, :] *
-                np.ones(data.shape))
-
-        radec = wcs_utils.pix_to_skydir(xpix, ypix, w)
-        radec = (np.ravel(radec.ra.deg), np.ravel(radec.dec.deg))
-
-        testsource_dict = {
-            'ra': radec[0][0],
-            'dec': radec[1][0],
-            'SpectrumType': 'PowerLaw',
-            'Index': 2.0,
-            'Scale': 1000,
-            'Prefactor': {'value': 0.0, 'scale': 1e-13},
-            'SpatialModel': 'PSFSource',
-        }
-
-        #        src = self.roi.get_source_by_name('tsmap_testsource')
-
-        for i, (ra, dec) in enumerate(zip(radec[0], radec[1])):
-            testsource_dict['ra'] = ra
-            testsource_dict['dec'] = dec
-            #                        src.set_position([ra,dec])
-            self.add_source('tsmap_testsource', testsource_dict, free=True,
-                            init_source=False, save_source_maps=False)
-
-            #            for c in self.components:
-            #                c.update_srcmap_file([src],True)
-
-            self.set_parameter('tsmap_testsource', 'Prefactor', 0.0,
-                               update_source=False)
-            self.fit(loglevel=logging.DEBUG, update=False)
-
-            logLike1 = -self.like()
-            ts = max(0, 2 * (logLike1 - logLike0))
-
-            data.flat[i] = ts
-
-            #            print(i, ra, dec, ts)
-            #            print(self.like())
-            # print(self.components[0].like.model['tsmap_testsource'])
-
-            self.delete_source('tsmap_testsource')
-
-        saved_state.restore()
-
-        outfile = os.path.join(self.config['fileio']['workdir'], 'tsmap.fits')
-        fits_utils.write_fits_image(data, w, outfile)
 
 
 class TSCubeGenerator(object):
@@ -1084,7 +1025,7 @@ class TSCubeGenerator(object):
 
     def _make_ts_cube(self, prefix, **kwargs):
 
-        skywcs = kwargs.get('wcs', self._skywcs)
+        skywcs = kwargs.get('wcs', self.geom.wcs)
         npix = kwargs.get('npix', self.npix)
 
         galactic = wcs_utils.is_galactic(skywcs)
@@ -1164,12 +1105,12 @@ class TSCubeGenerator(object):
         ts_map = tscube.tsmap
         norm_map = tscube.normmap
         npred_map = copy.deepcopy(norm_map)
-        npred_map._counts *= tscube.refSpec.ref_npred.sum()
+        npred_map.data *= tscube.refSpec.ref_npred.sum()
         amp_map = copy.deepcopy(norm_map)
-        amp_map._counts *= src_dict['Prefactor']
+        amp_map.data *= src_dict['Prefactor']
 
         sqrt_ts_map = copy.deepcopy(ts_map)
-        sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
+        sqrt_ts_map.data[...] = np.abs(sqrt_ts_map.data)**0.5
 
         o = {'name': utils.join_strings([prefix, modelname]),
              'src_dict': copy.deepcopy(src_dict),

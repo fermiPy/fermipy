@@ -223,7 +223,7 @@ class CatalogSourceManager(object):
 
                 try:
                     all_sources = [x.strip() for x in full_cat_info.catalog_table[
-                            'Source_Name'].tolist()]
+                            'Source_Name'].astype(str).tolist()]
                 except KeyError:
                     print(full_cat_info.catalog_table.colnames)
                 used_sources = []

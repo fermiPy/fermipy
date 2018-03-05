@@ -7,6 +7,7 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.extern import six
+from gammapy.maps.geom import coordsys_to_frame
 
 
 class WCSProj(object):
@@ -90,6 +91,35 @@ class WCSProj(object):
         return delta
 
 
+def distance_to_edge(geom, skydir):
+    """Return the angular distance from the given direction and
+    the edge of the projection."""
+
+    # FIXME: We should add a pixel_size property in gammapy.maps
+    # FIXME: We should make this into a MapGeom method 
+    
+    xpix, ypix = skydir.to_pixel(geom.wcs, origin=0)
+    deltax = np.array((xpix - geom.center_pix[0]) * geom._cdelt[0],
+                      ndmin=1)
+    deltay = np.array((ypix - geom.center_pix[1]) * geom._cdelt[1],
+                      ndmin=1)
+
+    deltax = np.abs(deltax) - 0.5 * geom.width[0]
+    deltay = np.abs(deltay) - 0.5 * geom.width[1]
+
+    m0 = (deltax < 0) & (deltay < 0)
+    m1 = (deltax > 0) & (deltay < 0)
+    m2 = (deltax < 0) & (deltay > 0)
+    m3 = (deltax > 0) & (deltay > 0)
+    mx = np.abs(deltax) <= np.abs(deltay)
+    my = np.abs(deltay) < np.abs(deltax)
+
+    delta = np.zeros(len(deltax))
+    delta[(m0 & mx) | (m3 & my) | m1] = deltax[(m0 & mx) | (m3 & my) | m1]
+    delta[(m0 & my) | (m3 & mx) | m2] = deltay[(m0 & my) | (m3 & mx) | m2]
+    return delta
+
+    
 def create_wcs(skydir, coordsys='CEL', projection='AIT',
                cdelt=1.0, crpix=1., naxis=2, energies=None):
     """Create a WCS object.

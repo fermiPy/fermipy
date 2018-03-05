@@ -19,6 +19,7 @@ import numpy as np
 from scipy.stats import norm
 from scipy.stats import chi2
 from scipy import interpolate
+from gammapy.maps import WcsNDMap, HpxNDMap, MapCoord
 
 import fermipy
 import fermipy.config
@@ -28,7 +29,6 @@ import fermipy.hpx_utils as hpx_utils
 import fermipy.defaults as defaults
 import fermipy.catalog as catalog
 from fermipy.utils import merge_dict
-from fermipy.skymap import Map, HpxMap
 from fermipy.logger import Logger
 from fermipy.logger import log_level
 
@@ -76,7 +76,7 @@ def make_counts_spectrum_plot(o, roi, energies, imfile, **kwargs):
     count_str = 'counts'
     model_counts_str = 'model_counts'
     npred_str = 'npred'
-   
+
     if weighted:
         count_str += '_wt'
         model_counts_str += '_wt'
@@ -242,42 +242,27 @@ def plot_error_ellipse(fit, xy, cdelt, **kwargs):
 
 class ImagePlotter(object):
 
-    def __init__(self, data, proj, mapping=None):
+    def __init__(self, img, mapping=None):
 
-        if isinstance(proj, WCS):
+        if isinstance(img, WcsNDMap):
             self._projtype = 'WCS'
-            if data.ndim == 3:
-                data = np.sum(copy.deepcopy(data), axis=2)
-                proj = WCS(proj.to_header(), naxis=[1, 2])
-            else:
-                data = copy.deepcopy(data)
-            self._proj = proj
-            self._wcs = proj
-        elif isinstance(proj, hpx_utils.HPX):
+            img = copy.deepcopy(img)
+            self._geom = img.geom
+        elif isinstance(img, HpxNDMap):
             self._projtype = 'HPX'
-            self._proj = proj
-            self._wcsproj = proj.make_wcs(
-                naxis=2, proj='AIT', energies=None, oversample=2)
-            self._wcs = self._wcsproj.wcs
-            if mapping is None:
-                self._mapping = hpx_utils.HpxToWcsMapping(
-                    self._proj, self._wcsproj)
-            else:
-                self._mapping = mapping
-            if data.ndim == 2:
-                hpx_data = np.sum(copy.deepcopy(data), axis=0)
-            else:
-                hpx_data = copy.deepcopy(data)
-            data = self._mapping.make_wcs_data_from_hpx_data(
-                hpx_data, self._wcsproj, normalize=False)
+            raise ValueError
         else:
-            raise Exception("Can't plot map of unknown type %s" % type(proj))
+            raise ValueError("Can't plot map of unknown type %s" % type(proj))
 
-        self._data = data
+        self._img = img
 
     @property
     def projtype(self):
         return self._projtype
+
+    @property
+    def geom(self):
+        return self._geom
 
     def plot(self, subplot=111, cmap='magma', **kwargs):
 
@@ -305,7 +290,7 @@ class ImagePlotter(object):
 
         fig = plt.gcf()
 
-        ax = fig.add_subplot(subplot, projection=self._wcs)
+        ax = fig.add_subplot(subplot, projection=self._geom.wcs)
 
         load_ds9_cmap()
         try:
@@ -315,7 +300,7 @@ class ImagePlotter(object):
 
         colormap.set_under(colormap(0))
 
-        data = copy.copy(self._data)
+        data = copy.copy(self._img.data)
 
         if transform == 'sqrt':
             data = np.sqrt(data)
@@ -323,7 +308,7 @@ class ImagePlotter(object):
         kwargs_imshow = merge_dict(kwargs_imshow, kwargs)
         kwargs_contour = merge_dict(kwargs_contour, kwargs)
 
-        im = ax.imshow(data.T, **kwargs_imshow)
+        im = ax.imshow(data, **kwargs_imshow)
         im.set_cmap(colormap)
 
         if kwargs_contour['levels']:
@@ -331,11 +316,7 @@ class ImagePlotter(object):
             cs.levels = ['%.0f' % val for val in cs.levels]
             plt.clabel(cs, inline=1, fontsize=8)
 
-        if self._projtype == "WCS":
-            coordsys = wcs_utils.get_coordsys(self._proj)
-        else:
-            coordsys = "GAL"
-
+        coordsys = self._geom.coordsys
         if coordsys == 'CEL':
             ax.set_xlabel('RA')
             ax.set_ylabel('DEC')
@@ -359,6 +340,21 @@ class ImagePlotter(object):
         return im, ax
 
 
+def make_cube_slice(map_in, loge_bounds):
+    """Extract a slice from a map cube object.
+    """
+    # FIXME: This functionality should be moved into a slice method of
+    # gammapy.maps
+    axis = map_in.geom.axes[0]
+    i0 = utils.val_to_edge(axis.edges, 10**loge_bounds[0])[0]
+    i1 = utils.val_to_edge(axis.edges, 10**loge_bounds[1])[0]
+    new_axis = map_in.geom.axes[0].slice(slice(i0, i1))
+    geom = map_in.geom.to_image()
+    geom = geom.to_cube([new_axis])
+    map_out = WcsNDMap(geom, map_in.data[slice(i0, i1), ...].copy())
+    return map_out
+
+
 class ROIPlotter(fermipy.config.Configurable):
     defaults = {
         'loge_bounds': (None, '', list),
@@ -368,12 +364,10 @@ class ROIPlotter(fermipy.config.Configurable):
         'cmap': ('ds9_b', '', str),
     }
 
-    def __init__(self, data_map, **kwargs):
+    def __init__(self, data_map, hpx2wcs=None, **kwargs):
         self._roi = kwargs.pop('roi', None)
         super(ROIPlotter, self).__init__(None, **kwargs)
-        # fermipy.config.Configurable.__init__(self, None, **kwargs)
 
-        self._data_map = data_map
         self._catalogs = []
         for c in self.config['catalogs']:
             if utils.isstr(c):
@@ -383,53 +377,31 @@ class ROIPlotter(fermipy.config.Configurable):
 
         self._loge_bounds = self.config['loge_bounds']
 
-        if isinstance(data_map, Map):
+        if isinstance(data_map, WcsNDMap):
             self._projtype = 'WCS'
-            self._data = data_map.counts.T
-            self._wcsdata = self._data
-            self._proj = data_map.wcs
-            self._wcs = self._proj
-        elif isinstance(data_map, HpxMap):
+            self._data_map = copy.deepcopy(data_map)
+        elif isinstance(data_map, HpxNDMap):
             self._projtype = 'HPX'
-            self._data = data_map.counts.T
-            self._proj = data_map.hpx
-            naxis_wcs = len(self._data.shape) + 1
-            if self._proj.region is None:
-                wcsprojtype = "MOL"
-            else:
-                wcsprojtype = "AIT"
-            self._wcsproj = self._proj.make_wcs(naxis=naxis_wcs,
-                                                proj=wcsprojtype,
-                                                energies=self._loge_bounds,
-                                                oversample=2)
-            if len(self._data.shape) == 1:
-                wcsshape = (self._wcsproj._npix[0], self._wcsproj._npix[1])
-            else:                
-                wcsshape = (self._wcsproj._npix[0], self._wcsproj._npix[1], self._data.shape[1])
-            self._wcsdata = np.ndarray(wcsshape)
-            self._wcs = self._wcsproj.wcs
-            self._mapping = hpx_utils.HpxToWcsMapping(self._proj, self._wcsproj)            
-            self._mapping.fill_wcs_map_from_hpx_data(self._data, self._wcsdata, normalize=False)
+            self._data_map = data_map.to_wcs(normalize=False, hpx2wcs=hpx2wcs)
         else:
             raise Exception(
                 "Can't make ROIPlotter of unknown projection type %s" % type(data_map))
 
         if self._loge_bounds:
-            axes = wcs_utils.wcs_to_axes(self._wcs, self._wcsdata.shape[::-1])
-            i0 = utils.val_to_edge(axes[2], self._loge_bounds[0])[0]
-            i1 = utils.val_to_edge(axes[2], self._loge_bounds[1])[0]
-            imdata = self._wcsdata[:, :, i0:i1]
-        else:
-            imdata = self._wcsdata
+            self._data_map = make_cube_slice(self._data_map, self._loge_bounds)
 
-        self._implot = ImagePlotter(imdata, self._wcs)
+        self._implot = ImagePlotter(self._data_map.sum_over_axes())
 
     @property
     def data(self):
-        return self._data
+        return self._data_map.data
 
     @property
-    def cmap(self):
+    def geom(self):
+        return self._data_map.geom
+
+    @property
+    def map(self):
         return self._data_map
 
     @property
@@ -442,61 +414,42 @@ class ROIPlotter(fermipy.config.Configurable):
 
     @classmethod
     def create_from_fits(cls, fitsfile, roi, **kwargs):
-
-        hdulist = fits.open(fitsfile)
-        try:
-            if hdulist[1].name == "SKYMAP":
-                projtype = "HPX"
-            else:
-                projtype = "WCS"
-        except:
-            projtype = "WCS"
-
-        if projtype == "WCS":
-            header = hdulist[0].header
-            header = fits.Header.fromstring(header.tostring())
-            wcs = WCS(header)
-            data = copy.deepcopy(hdulist[0].data)
-            themap = Map(data, wcs)
-        elif projtype == "HPX":
-            themap = HpxMap.create_from_hdulist(hdulist, ebounds="EBOUNDS")
-        else:
-            raise Exception("Unknown projection type %s" % projtype)
-
-        return cls(themap, roi=roi, **kwargs)
+        map_in = Map.read(fitsfile)
+        return cls(map_in, roi, **kwargs)
 
     def plot_projection(self, iaxis, **kwargs):
 
-        data = kwargs.pop('data', self._data)
+        data_map = kwargs.pop('data', self._data_map)
         noerror = kwargs.pop('noerror', False)
         xmin = kwargs.pop('xmin', -1)
-        xmax = kwargs.pop('xmax', 1)        
+        xmax = kwargs.pop('xmax', 1)
 
-        axes = wcs_utils.wcs_to_axes(self._wcs, self._data.shape[::-1])
+        axes = wcs_utils.wcs_to_axes(self.geom.wcs,
+                                     self._data_map.data.shape[-2:])
         x = utils.edge_to_center(axes[iaxis])
-        w = utils.edge_to_width(axes[iaxis])
+        xerr = 0.5 * utils.edge_to_width(axes[iaxis])
 
-        c = self.get_data_projection(data, axes, iaxis,
+        y = self.get_data_projection(data_map, axes, iaxis,
                                      loge_bounds=self._loge_bounds,
                                      xmin=xmin, xmax=xmax)
 
         if noerror:
-            plt.errorbar(x, c, **kwargs)
+            plt.errorbar(x, y, **kwargs)
         else:
-            plt.errorbar(x, c, yerr=c ** 0.5, xerr=w / 2., **kwargs)
+            plt.errorbar(x, y, yerr=y ** 0.5, xerr=xerr, **kwargs)
 
     @staticmethod
-    def get_data_projection(data, axes, iaxis, xmin=-1, xmax=1, loge_bounds=None):
+    def get_data_projection(data_map, axes, iaxis, xmin=-1, xmax=1, loge_bounds=None):
 
         s0 = slice(None, None)
         s1 = slice(None, None)
         s2 = slice(None, None)
-        
+
         if iaxis == 0:
             if xmin is None:
                 xmin = axes[1][0]
             if xmax is None:
-                xmax = axes[1][-1]           
+                xmax = axes[1][-1]
             i0 = utils.val_to_edge(axes[iaxis], xmin)[0]
             i1 = utils.val_to_edge(axes[iaxis], xmax)[0]
             s1 = slice(i0, i1)
@@ -505,18 +458,20 @@ class ROIPlotter(fermipy.config.Configurable):
             if xmin is None:
                 xmin = axes[0][0]
             if xmax is None:
-                xmax = axes[0][-1]           
+                xmax = axes[0][-1]
             i0 = utils.val_to_edge(axes[iaxis], xmin)[0]
             i1 = utils.val_to_edge(axes[iaxis], xmax)[0]
             s0 = slice(i0, i1)
             saxes = [0, 2]
 
         if loge_bounds is not None:
-            j0 = utils.val_to_edge(axes[2], loge_bounds[0])[0]
-            j1 = utils.val_to_edge(axes[2], loge_bounds[1])[0]
+            j0 = utils.val_to_edge(
+                data_map.geom.axes[0].edges, 10**loge_bounds[0])[0]
+            j1 = utils.val_to_edge(
+                data_map.geom.axes[0].edges, 10**loge_bounds[1])[0]
             s2 = slice(j0, j1)
 
-        c = np.apply_over_axes(np.sum, data[s0, s1, s2], axes=saxes)
+        c = np.apply_over_axes(np.sum, data_map.data.T[s0, s1, s2], axes=saxes)
         c = np.squeeze(c)
         return c
 
@@ -541,7 +496,7 @@ class ROIPlotter(fermipy.config.Configurable):
         if nolabels:
             label_mask.fill(False)
 
-        pixcrd = wcs_utils.skydir_to_pix(skydir, self._implot._wcs)
+        pixcrd = wcs_utils.skydir_to_pix(skydir, self._implot.geom.wcs)
         path_effect = PathEffects.withStroke(linewidth=2.0,
                                              foreground="black")
 
@@ -602,8 +557,8 @@ class ROIPlotter(fermipy.config.Configurable):
         else:
             labels = catalog.table['Source_Name']
 
-        separation = skydir.separation(self.cmap.skydir).deg
-        m = separation < max(self.cmap.width)
+        separation = skydir.separation(self.map.skydir).deg
+        m = separation < max(self.map.width)
 
         self.plot_sources(skydir[m], labels[m], plot_kwargs, text_kwargs,
                           nolabels=True)
@@ -659,17 +614,16 @@ class ROIPlotter(fermipy.config.Configurable):
         path_effects = kwargs.get('path_effects', None)
 
         if skydir is None:
-            try:
-                pix = self.cmap.pix_center
-            except AttributeError:
-                return
+            pix = self.map.geom.center_pix[:2]
         else:
-            pix = skydir.to_pixel(self.cmap.wcs)
+            pix = skydir.to_pixel(self.map.geom.wcs)[:2]
 
         kw = dict(facecolor='none', edgecolor='w', linestyle='--',
                   linewidth=0.5, label='__nolabel__')
         kw = merge_dict(kw, kwargs)
-        c = Circle(pix, radius / max(self.cmap.pix_size), **kw)
+
+        pix_radius = radius / max(np.abs(self.map.geom.wcs.wcs.cdelt))
+        c = Circle(pix, pix_radius, **kw)
 
         if path_effects is not None:
             plt.setp(c, path_effects=path_effects)
@@ -974,7 +928,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
         format = kwargs.get('format', self.config['format'])
 
         loge_bounds = [None] + self.config['loge_bounds']
-
         for x in loge_bounds:
             self.make_roi_plots(gta, mcube_map, loge_bounds=x,
                                 **kwargs)
@@ -1031,11 +984,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
         prefix = maps['name']
         mask = maps['mask']
         if use_weights:
-            sigma_hist_data = maps['sigma'].data[maps['mask'].data.astype(bool)]
-            maps['sigma'].data *=  maps['mask'].data            
-            maps['data'].data *=  maps['mask'].data
-            maps['model'].data *=  maps['mask'].data
-            maps['excess'].data *=  maps['mask'].data
+            sigma_hist_data = maps['sigma'].data[maps['mask'].data.astype(
+                bool)]
+            maps['sigma'].data *= maps['mask'].data
+            maps['data'].data *= maps['mask'].data
+            maps['model'].data *= maps['mask'].data
+            maps['excess'].data *= maps['mask'].data
         else:
             sigma_hist_data = maps['sigma'].data
 
@@ -1181,7 +1135,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig, ax = plt.subplots(figsize=figsize)
         bins = np.linspace(0, 25, 101)
 
-        data = np.nan_to_num(maps['ts'].counts.T)
+        data = np.nan_to_num(maps['ts'].data.T)
         data[data > 25.0] = 25.0
         data[data < 0.0] = 0.0
         n, bins, patches = ax.hist(data.flatten(), bins, normed=True,
@@ -1203,7 +1157,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
-    def make_roi_plots(self, gta, mcube_map, **kwargs):
+    def make_roi_plots(self, gta, mcube_tot, **kwargs):
         """Make various diagnostic plots for the 1D and 2D
         counts/model distributions.
 
@@ -1240,86 +1194,62 @@ class AnalysisPlotter(fermipy.config.Configurable):
         if weighted:
             wmap = gta.weight_map()
             counts_map = copy.deepcopy(counts_map)
-            mcube_map = copy.deepcopy(mcube_map)
-            counts_map.data *= wmap.counts
-            mcube_map.data *= wmap.counts
-            mcube_diffuse.data *= wmap.counts         
-
-        fig = plt.figure(figsize=figsize)
-        p = ROIPlotter(mcube_map, roi=gta.roi, **roi_kwargs)
-        p.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
-        plt.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                 '%s_model_map%s.%s' % (
-                                     prefix, esuffix, fmt)))
-        plt.close(fig)
+            mcube_tot = copy.deepcopy(mcube_tot)
+            counts_map.data *= wmap.data
+            mcube_tot.data *= wmap.data
+            mcube_diffuse.data *= wmap.data
 
         # colors = ['k', 'b', 'g', 'r']
         data_style = {'marker': 's', 'linestyle': 'None'}
 
         fig = plt.figure(figsize=figsize)
 
-        if p.projtype == "WCS":
-            model_data = mcube_map.counts.T
-            diffuse_data = mcube_diffuse.counts.T
-            weight_data = wmap.counts.T
+        if gta.projtype == "WCS":
             xmin = -1
             xmax = 1
-        elif p.projtype == "HPX":
-            if p.cmap._hpx2wcs is None:
-                 p.cmap.make_wcs_from_hpx(sum_ebins=False)
-            wcs, counts_dataT = p.cmap.convert_to_cached_wcs(
-                counts_map.counts, sum_ebins=False)
-            counts_data = counts_dataT.swapaxes(1,2)
-            counts_map = Map(counts_data, wcs.wcs)
-            dummy, model_dataT = p.cmap.convert_to_cached_wcs(
-                mcube_map.counts, sum_ebins=False)
-            dummy, diffuse_dataT = p.cmap.convert_to_cached_wcs(
-                mcube_diffuse.counts, sum_ebins=False)
-            model_data = model_dataT.T.swapaxes(0,1)
-            diffuse_data = diffuse_dataT.T.swapaxes(0,1)
+        elif gta.projtype == "HPX":
+            hpx2wcs = counts_map.make_wcs_mapping(proj='CAR', oversample=2)
+            counts_map = counts_map.to_wcs(hpx2wcs=hpx2wcs)
+            mcube_tot = mcube_tot.to_wcs(hpx2wcs=hpx2wcs)
+            mcube_diffuse = mcube_diffuse.to_wcs(hpx2wcs=hpx2wcs)
             xmin = None
             xmax = None
 
-        p = ROIPlotter(counts_map, roi=gta.roi, **roi_kwargs)
+        fig = plt.figure(figsize=figsize)
+        rp = ROIPlotter(mcube_tot, roi=gta.roi, **roi_kwargs)
+        rp.plot(cb_label='Counts', zscale='pow', gamma=1. / 3.)
+        plt.savefig(os.path.join(gta.config['fileio']['workdir'],
+                                 '%s_model_map%s.%s' % (
+                                     prefix, esuffix, fmt)))
+        plt.close(fig)
 
-        p.plot(cb_label='Counts', zscale='sqrt')
+        rp = ROIPlotter(counts_map, roi=gta.roi, **roi_kwargs)
+
+        rp.plot(cb_label='Counts', zscale='sqrt')
         plt.savefig(os.path.join(gta.config['fileio']['workdir'],
                                  '%s_counts_map%s.%s' % (
                                      prefix, esuffix, fmt)))
         plt.close(fig)
 
-        fig = plt.figure(figsize=figsize)
-        p.plot_projection(0, label='Data', color='k', xmin=xmin, xmax=xmax, **data_style)
-        p.plot_projection(0, data=model_data, label='Model', xmin=xmin, xmax=xmax, 
-                          noerror=True)
-        p.plot_projection(0, data=diffuse_data, label='Diffuse', xmin=xmin, xmax=xmax, 
-                          noerror=True)
-        plt.gca().set_ylabel('Counts')
-        plt.gca().set_xlabel('LON Offset [deg]')
-        plt.gca().legend(frameon=False)
-        annotate(loge_bounds=loge_bounds)
-        #        plt.gca().set_yscale('log')
-        plt.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                 '%s_counts_map_xproj%s.%s' % (
-                                     prefix, esuffix, fmt)))
-        plt.close(fig)
+        for iaxis, xlabel, psuffix in zip([0, 1],
+                                          ['LON Offset [deg]', 'LAT Offset [deg]'],
+                                          ['xproj', 'yproj']):
 
-        fig = plt.figure(figsize=figsize)
-        p.plot_projection(1, label='Data', color='k',  xmin=xmin, xmax=xmax, **data_style)
-        p.plot_projection(1, data=model_data, label='Model', xmin=xmin, xmax=xmax, 
-                          noerror=True)
-        p.plot_projection(1, data=diffuse_data, label='Diffuse', xmin=xmin, xmax=xmax, 
-                          noerror=True)
-        plt.gca().set_ylabel('Counts')
-        plt.gca().set_xlabel('LAT Offset [deg]')
-        plt.gca().legend(frameon=False)
-        annotate(loge_bounds=loge_bounds)
-        #        plt.gca().set_yscale('log')
-        plt.savefig(os.path.join(gta.config['fileio']['workdir'],
-                                 '%s_counts_map_yproj%s.%s' % (
-                                     prefix, esuffix, fmt)))
-
-        plt.close(fig)
+            fig = plt.figure(figsize=figsize)
+            rp.plot_projection(iaxis, label='Data', color='k',
+                               xmin=xmin, xmax=xmax, **data_style)
+            rp.plot_projection(iaxis, data=mcube_tot, label='Model', xmin=xmin, xmax=xmax,
+                               noerror=True)
+            rp.plot_projection(iaxis, data=mcube_diffuse, label='Diffuse', xmin=xmin, xmax=xmax,
+                               noerror=True)
+            plt.gca().set_ylabel('Counts')
+            plt.gca().set_xlabel(xlabel)
+            plt.gca().legend(frameon=False)
+            annotate(loge_bounds=loge_bounds)
+            plt.savefig(os.path.join(gta.config['fileio']['workdir'],
+                                     '%s_counts_map_%s%s.%s' % (prefix, psuffix,
+                                                                esuffix, fmt)))
+            plt.close(fig)
 
     def make_sed_plots(self, sed, **kwargs):
 
@@ -1360,9 +1290,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap = loc['tsmap']
         fit_init = loc['fit_init']
         tsmap_renorm = copy.deepcopy(tsmap)
-        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+        tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
-        skydir = loc['tsmap_peak'].get_pixel_skydirs()
+        skydir = loc['tsmap_peak'].geom.get_coord(flat=True)
+        coordsys = loc['tsmap_peak'].geom.coordsys
+        skydir = MapCoord.create(skydir, coordsys=coordsys).skycoord
 
         path_effect = PathEffects.withStroke(linewidth=2.0,
                                              foreground="black")
@@ -1376,8 +1308,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
                cmap=cmap, vmin=vmin, colors=['k'],
                interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
 
-        cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
-        cdelt1 = np.abs(tsmap.wcs.wcs.cdelt[1])
+        cdelt0 = np.abs(tsmap.geom.wcs.wcs.cdelt[0])
+        cdelt1 = np.abs(tsmap.geom.wcs.wcs.cdelt[1])
         cdelt = [cdelt0, cdelt1]
 
         peak_skydir = SkyCoord(fit_init['ra'], fit_init['dec'],
@@ -1385,8 +1317,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         scan_skydir = SkyCoord(loc['ra'], loc['dec'],
                                frame='icrs', unit='deg')
 
-        peak_pix = peak_skydir.to_pixel(tsmap_renorm.wcs)
-        scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
+        peak_pix = peak_skydir.to_pixel(tsmap_renorm.geom.wcs)
+        scan_pix = scan_skydir.to_pixel(tsmap_renorm.geom.wcs)
 
         if 'ra_preloc' in loc:
             preloc_skydir = SkyCoord(loc['ra_preloc'], loc['dec_preloc'],
@@ -1403,7 +1335,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                      label='New Position')
 
         if skydir is not None:
-            pix = skydir.to_pixel(tsmap_renorm.wcs)
+            pix = skydir.to_pixel(tsmap_renorm.geom.wcs)
             xmin = np.min(pix[0])
             ymin = np.min(pix[1])
             xwidth = np.max(pix[0]) - xmin
@@ -1440,7 +1372,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         tsmap = loc['tsmap_peak']
         tsmap_renorm = copy.deepcopy(tsmap)
-        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
+        tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
         p = ROIPlotter(tsmap_renorm, roi=roi)
         fig = plt.figure(figsize=figsize)
@@ -1451,10 +1383,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
                cmap=cmap, vmin=vmin, colors=['k'],
                interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
 
-        cdelt0 = np.abs(tsmap.wcs.wcs.cdelt[0])
-        cdelt1 = np.abs(tsmap.wcs.wcs.cdelt[1])
+        cdelt0 = np.abs(tsmap.geom.wcs.wcs.cdelt[0])
+        cdelt1 = np.abs(tsmap.geom.wcs.wcs.cdelt[1])
         cdelt = [cdelt0, cdelt1]
-        scan_pix = scan_skydir.to_pixel(tsmap_renorm.wcs)
+        scan_pix = scan_skydir.to_pixel(tsmap_renorm.geom.wcs)
 
         if 'ra_preloc' in loc:
             preloc_skydir = SkyCoord(loc['ra_preloc'], loc['dec_preloc'],
