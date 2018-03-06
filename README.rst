@@ -17,6 +17,14 @@ Fermi-LAT Python Analysis Framework
     :target: https://pypi.python.org/pypi/fermipy/
     :alt: Latest release
 
+.. image:: https://anaconda.org/conda-forge/fermipy/badges/version.svg
+    :target: https://anaconda.org/conda-forge/fermipy
+    :alt: Latest conda release
+
+.. image:: https://img.shields.io/docker/automated/fermipy/fermipy.svg
+    :target: https://hub.docker.com/r/fermipy/fermipy/
+    :alt: Automated Docker Image
+
 .. image:: https://readthedocs.org/projects/fermipy/badge/?version=latest
     :target: https://readthedocs.org/projects/fermipy/?badge=latest
     :alt: Documentation Status
@@ -24,7 +32,7 @@ Fermi-LAT Python Analysis Framework
 License
 -------
 This project is licensed under a 3-clause BSD style license - see the
-``licenses/LICENSE.rst`` file.
+``LICENSE.rst`` file.
 
 
 

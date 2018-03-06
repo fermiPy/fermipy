@@ -1,4 +1,9 @@
-``dtheta_max``	0.3	Half-width of the search region in degrees used for the first pass of the localization search.
-``fix_background``	True	Fix background parameters when fitting the source flux in each energy bin.
-``nstep``	5	Number of steps along each spatial dimension in the refined likelihood scan.
-``update``	False	Update the source model with the best-fit position.
+``dtheta_max``	0.5	Half-width of the search region in degrees used for the first pass of the localization search.
+``fix_shape``	False	Fix spectral shape parameters of the source of interest. If True then only the normalization parameter will be fit.
+``free_background``	False	Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
+``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
+``make_plots``	False	Generate diagnostic plots.
+``nstep``	5	Number of steps in longitude/latitude that will be taken when refining the source position.  The bounds of the scan range are set to the 99% positional uncertainty as determined from the TS map peak fit.  The total number of sampling points will be nstep**2.
+``update``	True	Update the source model with the best-fit position.
+``write_fits``	True	Write the output to a FITS file.
+``write_npy``	True	Write the output dictionary to a numpy file.

@@ -1,0 +1,19 @@
+``binsz``	86400.0	Set the lightcurve bin size in seconds.
+``free_background``	False	Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
+``free_params``	None	Set the parameters of the source of interest that will be re-fit in each time bin. If this list is empty then all parameters will be freed.
+``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
+``free_sources``	None	List of sources to be freed.  These sources will be added to the list of sources satisfying the free_radius selection.
+``make_plots``	False	Generate diagnostic plots.
+``max_free_sources``	5	Maximum number of sources that will be fit simultaneously with the source of interest.
+``multithread``	False	Split the calculation across number of processes set by nthread option.
+``nbins``	None	Set the number of lightcurve bins.  The total time range will be evenly split into this number of time bins.
+``nthread``	None	Number of processes to create when multithread is True.  If None then one process will be created for each available core.
+``outdir``	None	Store all data in this directory (e.g. "30days"). If None then use current directory.
+``save_bin_data``	True	Save analysis directories for individual time bins.  If False then only the analysis results table will be saved.
+``shape_ts_threshold``	16.0	Set the TS threshold at which shape parameters of sources will be freed.  If a source is detected with TS less than this value then its shape parameters will be fixed to values derived from the analysis of the full time range.
+``systematic``	0.02	Systematic correction factor for TS:subscript:`var`. See Sect. 3.6 in 2FGL for details.
+``time_bins``	None	Set the lightcurve bin edge sequence in MET.  This option takes precedence over binsz and nbins.
+``use_local_ltcube``	True	Generate a fast LT cube.
+``use_scaled_srcmap``	False	Generate approximate source maps for each time bin by scaling the current source maps by the exposure ratio with respect to that time bin.
+``write_fits``	True	Write the output to a FITS file.
+``write_npy``	True	Write the output dictionary to a numpy file.

@@ -7,18 +7,19 @@ Many parts of this code are taken from dsphs/like/lnlfn.py by
   Alex Drlica-Wagner <kadrlica@slac.stanford.edu>
 """
 from __future__ import absolute_import, division, print_function
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes, mark_inset
 import numpy as np
 
 NORM_LABEL = {
     'NORM': r'Flux Normalization [a.u.]',
-    'FLUX': r'$F_{\rm min}^{\rm max} [ph $cm^{-2} s^{-1}$]',
-    'EFLUX': r'$E F_{\rm min}^{\rm max}$ [MeV $cm^{-2} s^{-1}]$',
-    'NPRED': r'$n_{\rm pred}$ [ph]',
-    'DFDE': r'dN/dE [ph $cm^{-2} s^{-1} MeV^{-1}$]',
-    'EDFDE': r'E dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
-    'E2DFDE': r'%E^2% dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
-    'SIGVJ': r'$J\langle \sigma v \rangle$ [$GeV^{2} cm^{-2} s^{-1}$]',
-    'SIGV': r'$\langle \sigma v \rangle$ [$cm^{3} s^{-1}$]',
+    'flux': r'$F_{\rm min}^{\rm max} [ph $cm^{-2} s^{-1}$]',
+    'eflux': r'$E F_{\rm min}^{\rm max}$ [MeV $cm^{-2} s^{-1}]$',
+    'npred': r'$n_{\rm pred}$ [ph]',
+    'dfde': r'dN/dE [ph $cm^{-2} s^{-1} MeV^{-1}$]',
+    'edfde': r'E dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
+    'e2dede': r'%E^2% dN/dE [MeV $cm^{-2} s^{-1} MeV^{-1}$]',
+    'sigvj': r'$J\langle \sigma v \rangle$ [$GeV^{2} cm^{-2} s^{-1}$]',
+    'sigv': r'$\langle \sigma v \rangle$ [$cm^{3} s^{-1}$]',
 }
 
 
@@ -61,7 +62,26 @@ def plotNLL_v_Flux(nll, fluxType, nstep=25, xlims=None):
     return fig, ax
 
 
-def plotCastro_base(castroData, xlims, ylims, 
+def make_colorbar(fig, ax, im, zlims):
+    """
+    """
+    pdf_adjust = 0.01  # Dealing with some pdf crap...
+    cax = inset_axes(ax, width="3%", height="100%", loc=3,
+                     bbox_to_anchor=(1.01, 0.0, 1.05, 1.00),
+                     bbox_transform=ax.transAxes,
+                     borderpad=0.)
+    cbar = fig.colorbar(im, cax, ticks=np.arange(zlims[0], zlims[-1]))
+    xy = cbar.outline.xy
+    xy[0:, 0] *= 1 - 5 * pdf_adjust
+    xy[0:, 1] *= 1 - pdf_adjust
+    cbar.outline.set_xy(xy)
+    cax.invert_yaxis()
+    cax.axis['right'].toggle(ticks=True, ticklabels=True, label=True)
+    cax.set_ylabel(r"$\Delta \log \mathcal{L}$")
+    return cax, cbar
+
+
+def plotCastro_base(castroData, xlims, ylims,
                     xlabel, ylabel, nstep=25, zlims=None):
     """ Make a color plot (castro plot) of the 
         log-likelihood as a function of 
@@ -115,7 +135,12 @@ def plotCastro_base(castroData, xlims, ylims,
                    origin='lower', aspect='auto', interpolation='nearest',
                    vmin=zmin, vmax=zmax, cmap=cmap)
 
-    return fig, ax, im, ztmp
+    cax, cbar = make_colorbar(fig, ax, im, (zmin, zmax))
+    # cbar = fig.colorbar(im, ticks=np.arange(zmin,zmax),
+    #                    fraction=0.10,panchor=(1.05,0.5))
+    #cbar.set_label(r'$\Delta \log\mathcal{L}$')
+    #cax = None
+    return fig, ax, im, ztmp, cax, cbar
 
 
 def plotCastro(castroData, ylims, nstep=25, zlims=None):
@@ -131,11 +156,11 @@ def plotCastro(castroData, ylims, nstep=25, zlims=None):
 
     returns fig,ax,im,ztmp which are matplotlib figure, axes and image objects
     """
-    xlims = (castroData.refSpec.log_ebins[0], 
+    xlims = (castroData.refSpec.log_ebins[0],
              castroData.refSpec.log_ebins[-1])
     xlabel = "Energy [GeV]"
     ylabel = NORM_LABEL[castroData.norm_type]
-    return plotCastro_base(castroData, xlims, ylims, 
+    return plotCastro_base(castroData, xlims, ylims,
                            xlabel, ylabel, nstep, zlims)
 
 
@@ -151,24 +176,24 @@ def plotSED_OnAxis(ax, castroData, TS_thresh=4.0, errSigma=1.0,
     ul_vals = castroData.getLimits(0.05)
 
     err_lims_lo, err_lims_hi = castroData.getIntervals(0.32)
-    
+
     err_pos = err_lims_hi - mles
     err_neg = mles - err_lims_lo
-    
+
     yerr_points = (err_neg[has_point], err_pos[has_point])
     xerrs = (castroData.refSpec.eref - castroData.refSpec.ebins[0:-1],
              castroData.refSpec.ebins[1:] - castroData.refSpec.eref)
 
-    yerr_limits = (0.5*ul_vals[has_limit], np.zeros((has_limit.sum())))
+    yerr_limits = (0.5 * ul_vals[has_limit], np.zeros((has_limit.sum())))
 
     ax.errorbar(castroData.refSpec.eref[has_point], mles[has_point],
                 yerr=yerr_points, fmt='o', color=colorPoint)
 
-    ax.errorbar(castroData.refSpec.eref[has_limit], ul_vals[has_limit], 
-                yerr=yerr_limits, lw=1, color=colorLim, 
+    ax.errorbar(castroData.refSpec.eref[has_limit], ul_vals[has_limit],
+                yerr=yerr_limits, lw=1, color=colorLim,
                 ls='none', zorder=1, uplims=True)
 
-    ax.errorbar(castroData.refSpec.eref[has_limit], ul_vals[has_limit], 
+    ax.errorbar(castroData.refSpec.eref[has_limit], ul_vals[has_limit],
                 xerr=(xerrs[0][has_limit], xerrs[1][has_limit]),
                 lw=1.35, ls='none', color=colorLim, zorder=2, capsize=0)
 
@@ -213,7 +238,7 @@ def plotSED(castroData, ylims, TS_thresh=4.0, errSigma=1.0, specVals=[]):
     return fig, ax
 
 
-def compare_SED(castroData1, castroData2, ylims, TS_thresh=4.0, 
+def compare_SED(castroData1, castroData2, ylims, TS_thresh=4.0,
                 errSigma=1.0, specVals=[]):
     """ Compare two SEDs 
 
@@ -246,9 +271,9 @@ def compare_SED(castroData1, castroData2, ylims, TS_thresh=4.0,
     ax.set_xlabel("Energy [GeV]")
     ax.set_ylabel(NORM_LABEL[castroData1.norm_type])
 
-    plotSED_OnAxis(ax, castroData1, TS_thresh, errSigma, 
+    plotSED_OnAxis(ax, castroData1, TS_thresh, errSigma,
                    colorLim='blue', colorPoint='blue')
-    plotSED_OnAxis(ax, castroData2, TS_thresh, errSigma, 
+    plotSED_OnAxis(ax, castroData2, TS_thresh, errSigma,
                    colorLim='red', colorPoint='red')
 
     for spec in specVals:
@@ -286,7 +311,8 @@ if __name__ == "__main__":
         xlims = (0., 1.)
         flux_lims = (1e-13, 1e-9)
     else:
-        print("Didn't reconginize flux type %s, choose from NORM | FLUX | EFLUX | NPRED | DFDE | EDFDE" % sys.argv[1])
+        print(
+            "Didn't reconginize flux type %s, choose from NORM | FLUX | EFLUX | NPRED | DFDE | EDFDE" % sys.argv[1])
         sys.exit()
 
     tscube = castro.TSCube.create_from_fits("tscube_test.fits", flux_type)
@@ -309,7 +335,7 @@ if __name__ == "__main__":
     spec_lp = test_dict["LogParabola"]["Spectrum"]
     spec_pc = test_dict["PLExpCutoff"]["Spectrum"]
 
-    fig3, ax3 = plotSED(castro, ylims=flux_lims, TS_thresh=2.0, 
+    fig3, ax3 = plotSED(castro, ylims=flux_lims, TS_thresh=2.0,
                         specVals=[spec_pl])
 
     result_pl = test_dict["PowerLaw"]["Result"]
@@ -321,9 +347,9 @@ if __name__ == "__main__":
 
     print("TS for PL index = 2:  %.1f" % max_ts)
     print("Cumulative TS:        %.1f" % castro.ts_vals().sum())
-    print("TS for PL index free: %.1f (Index = %.2f)" % 
+    print("TS for PL index free: %.1f (Index = %.2f)" %
           (ts_pl, result_pl[1]))
-    print("TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)" % 
+    print("TS for LogParabola:   %.1f (Index = %.2f, Beta = %.2f)" %
           (ts_lp, result_lp[1], result_lp[2]))
-    print("TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)" % 
+    print("TS for PLExpCutoff:   %.1f (Index = %.2f, E_c = %.2f)" %
           (ts_pc, result_pc[1], result_pc[2]))

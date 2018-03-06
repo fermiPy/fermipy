@@ -32,22 +32,22 @@ def log10norm(x, mu, sigma=1.0):
     mu    : mean of the underlying log10 gaussian
     sigma : variance of underlying log10 gaussian
     """
-    return stats.lognorm(sigma*np.log(10), scale=mu).pdf(x)
+    return stats.lognorm(sigma * np.log(10), scale=mu).pdf(x)
 
 
 def ln_log10norm(x, mu, sigma=1.0):
     """ Natural log of base 10 lognormal """
-    return np.log(stats.lognorm(sigma*np.log(10), scale=mu).pdf(x))
+    return np.log(stats.lognorm(sigma * np.log(10), scale=mu).pdf(x))
 
 
 def gauss(x, mu, sigma=1.0):
-    s2 = sigma*sigma
-    return 1./np.sqrt(2*s2*np.pi)*np.exp(-(x-mu)*(x-mu)/(2*s2))
+    s2 = sigma * sigma
+    return 1. / np.sqrt(2 * s2 * np.pi) * np.exp(-(x - mu) * (x - mu) / (2 * s2))
 
 
 def lngauss(x, mu, sigma=1.0):
-    s2 = sigma*sigma
-    return -0.5*np.log(2*s2*np.pi) - np.power(x-mu, 2)/(2*s2)
+    s2 = sigma * sigma
+    return -0.5 * np.log(2 * s2 * np.pi) - np.power(x - mu, 2) / (2 * s2)
 
 
 def lgauss(x, mu, sigma=1.0, logpdf=False):
@@ -61,17 +61,17 @@ def lgauss(x, mu, sigma=1.0, logpdf=False):
     x = np.array(x, ndmin=1)
 
     lmu = np.log10(mu)
-    s2 = sigma*sigma
+    s2 = sigma * sigma
 
     lx = np.zeros(x.shape)
     v = np.zeros(x.shape)
 
     lx[x > 0] = np.log10(x[x > 0])
 
-    v = 1./np.sqrt(2*s2*np.pi)*np.exp(-(lx-lmu)**2/(2*s2))
+    v = 1. / np.sqrt(2 * s2 * np.pi) * np.exp(-(lx - lmu)**2 / (2 * s2))
 
     if not logpdf:
-        v /= (x*np.log(10.))
+        v /= (x * np.log(10.))
 
     v[x <= 0] = -np.inf
 
@@ -83,7 +83,7 @@ def lnlgauss(x, mu, sigma=1.0, logpdf=False):
     x = np.array(x, ndmin=1)
 
     lmu = np.log10(mu)
-    s2 = sigma*sigma
+    s2 = sigma * sigma
 
     lx = np.zeros(x.shape)
     v = np.zeros(x.shape)
@@ -93,9 +93,9 @@ def lnlgauss(x, mu, sigma=1.0, logpdf=False):
 
     lx[mask] = np.log10(x[mask])
 
-    v = -0.5*np.log(2*s2*np.pi) - np.power(lx-lmu, 2)/(2*s2)
+    v = -0.5 * np.log(2 * s2 * np.pi) - np.power(lx - lmu, 2) / (2 * s2)
     if not logpdf:
-        v -= 2.302585*lx + np.log(np.log(10.))
+        v -= 2.302585 * lx + np.log(np.log(10.))
 
     if inv_mask.any():
         v[inv_mask] = -np.inf
@@ -107,6 +107,7 @@ class prior_functor:
     """A functor class that wraps simple functions we use to
        make priors on parameters.
     """
+
     def __init__(self, funcname):
         self._funcname = funcname
 
@@ -145,17 +146,17 @@ class prior_functor:
         log_mean = np.log10(self.mean())
         # Default is to marginalize over two decades,
         # centered on mean, using 1000 bins
-        return np.logspace(-1.+log_mean, 1.+log_mean, 1001)
+        return np.logspace(-1. + log_mean, 1. + log_mean, 1001)
 
     def profile_bins(self):
         """ The binning to use to do the profile fitting
         """
         log_mean = np.log10(self.mean())
-        log_half_width = max(5.*self.sigma(), 3.)
+        log_half_width = max(5. * self.sigma(), 3.)
         # Default is to profile over +-5 sigma,
         # centered on mean, using 100 bins
-        return np.logspace(log_mean-log_half_width, 
-                           log_mean+log_half_width, 101)
+        return np.logspace(log_mean - log_half_width,
+                           log_mean + log_half_width, 101)
 
     def log_value(self, x):
         """
@@ -166,6 +167,7 @@ class prior_functor:
 class function_prior(prior_functor):
     """
     """
+
     def __init__(self, funcname, mu, sigma, fn, lnfn=None):
         """
         """
@@ -248,6 +250,7 @@ class lognorm_prior(prior_functor):
     sigma : float
         Variance of the underlying gaussian distribution
     """
+
     def __init__(self, mu, sigma):
         self._mu = mu
         self._sigma = sigma
@@ -277,6 +280,7 @@ class norm_prior(prior_functor):
     sigma : float
         Variance of the underlying gaussian distribution
     """
+
     def __init__(self, mu, sigma):
         """
         """
@@ -333,12 +337,14 @@ def create_prior_functor(d):
     elif functype == 'lgauss':
         return function_prior(functype, d['mu'], d['sigma'], lgauss, lnlgauss)
     elif functype in ['lgauss_like', 'lgauss_lik']:
-        fn = lambda x, y, s: lgauss(y, x, s)
-        lnfn = lambda x, y, s: lnlgauss(y, x, s)
+        def fn(x, y, s): return lgauss(y, x, s)
+
+        def lnfn(x, y, s): return lnlgauss(y, x, s)
         return function_prior(functype, d['mu'], d['sigma'], fn, lnfn)
     elif functype == 'lgauss_log':
-        fn = lambda x, y, s: lgauss(x, y, s, logpdf=True)
-        lnfn = lambda x, y, s: lnlgauss(x, y, s, logpdf=True)
+        def fn(x, y, s): return lgauss(x, y, s, logpdf=True)
+
+        def lnfn(x, y, s): return lnlgauss(x, y, s, logpdf=True)
         return function_prior(functype, d['mu'], d['sigma'], fn, lnfn)
     else:
         raise KeyError("Unrecognized prior_functor type %s" % functype)
@@ -546,7 +552,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         y = []
 
         for xtmp in x:
-            fn = lambda t: -self.loglike(xtmp, t)
+            def fn(t): return -self.loglike(xtmp, t)
             ytmp = opt.fmin(fn, 1.0, disp=False)[0]
             ztmp = self.loglike(xtmp, ytmp)
             z.append(ztmp)
@@ -567,11 +573,12 @@ class LnLFn_norm_prior(castro.LnLFn):
         yv = self._nuis_pdf.profile_bins()
         nuis_vals = self._nuis_pdf.log_value(yv) - self._nuis_log_norm
         for xtmp in x:
-            zv = -1.*self._lnlfn.interp(xtmp*yv) + nuis_vals
+            zv = -1. * self._lnlfn.interp(xtmp * yv) + nuis_vals
             sp = splrep(yv, zv, k=2, s=0)
-            rf = lambda t: splev(t, sp, der=1)
+
+            def rf(t): return splev(t, sp, der=1)
             ix = np.argmax(splev(yv, sp))
-            imin, imax = max(0, ix-3), min(len(yv)-1, ix+3)
+            imin, imax = max(0, ix - 3), min(len(yv) - 1, ix + 3)
             try:
                 y0 = opt.brentq(rf, yv[imin], yv[imax], xtol=1e-10)
             except:

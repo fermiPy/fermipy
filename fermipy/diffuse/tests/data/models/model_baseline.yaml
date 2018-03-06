@@ -1,0 +1,33 @@
+library : models/library.yaml
+spectral_models : models/spectral_models.yaml
+sources : 
+  galprop_rings : 
+    model_type : galprop_rings
+    version : ref
+    SpectrumType : 
+      default : LogParabola_Correction
+  loopI : 
+    version : haslam
+    SpectrumType : LogParabola_Correction
+  bubbles : 
+    version : v00
+    SpectrumType : LogParabola_Correction
+  isotropic : 
+    version : P8R3_SOURCE_V2
+    SpectrumType : FileFunction
+  sun-ic : 
+    version : v2r0
+    SpectrumType : LogParabola_Correction
+  sun-disk : 
+    version : v3r1
+    SpectrumType : LogParabola_Correction
+  moon :
+    version : v3r2
+    SpectrumType : LogParabola_Correction
+  3FGL : 
+    model_type : Catalog
+    version : v00
+    SpectrumType : 
+      default : Constant_Correction
+      3FGL_v00_remain : Catalog
+  

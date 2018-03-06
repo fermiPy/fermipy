@@ -1,19 +1,44 @@
-``ra``	float	Right ascension of best-fit position in deg.
-``dec``	float	Declination of best-fit position in deg.
-``glon``	float	Galactic Longitude of best-fit position in deg.
-``glat``	float	Galactic Latitude of best-fit position in deg.
-``offset``	float	Angular offset in deg between the old and new (localized) source positions.
-``sigma``	float	1-sigma positional uncertainty in deg.
-``r68``	float	68% positional uncertainty in deg.
-``r95``	float	95% positional uncertainty in deg.
-``r99``	float	99% positional uncertainty in deg.
-``sigmax``	float	1-sigma uncertainty in deg in longitude.
-``sigmay``	float	1-sigma uncertainty in deg in latitude.
-``sigma_semimajor``	float	1-sigma uncertainty in deg along major axis of uncertainty ellipse.
-``sigma_semiminor``	float	1-sigma uncertainty in deg along minor axis of uncertainty ellipse.
-``xpix``	float	Longitude pixel coordinate of best-fit position.
-``ypix``	float	Latitude pixel coordinate of best-fit position.
-``theta``	float	Position angle of uncertainty ellipse.
-``eccentricity``	float	Eccentricity of uncertainty ellipse defined as sqrt(1-b**2/a**2).
-``eccentricity2``	float	Eccentricity of uncertainty ellipse defined as sqrt(a**2/b**2-1).
-``config``	dict	Copy of the input parameters to this method.
+``name``	`~str`	Name of source.
+``file``	`~str`	Name of output FITS file.
+``config``	`~dict`	Copy of the input configuration to this method.
+``ra``	`~float`	Right ascension of best-fit position (deg).
+``dec``	`~float`	Declination of best-fit position (deg).
+``glon``	`~float`	Galactic Longitude of best-fit position (deg).
+``glat``	`~float`	Galactic Latitude of best-fit position (deg).
+``xpix``	`~float`	Longitude pixel coordinate of best-fit position.
+``ypix``	`~float`	Latitude pixel coordinate of best-fit position.
+``deltax``	`~float`	Longitude offset from old position (deg).
+``deltay``	`~float`	Latitude offset from old position (deg).
+``skydir``	`~astropy.coordinates.SkyCoord`	
+``ra_preloc``	`~float`	Right ascension of pre-localization position (deg).
+``dec_preloc``	`~float`	Declination of pre-localization position (deg).
+``glon_preloc``	`~float`	Galactic Longitude of pre-localization position (deg).
+``glat_preloc``	`~float`	Galactic Latitude of pre-localization position (deg).
+``ra_err``	`~float`	Std. deviation of positional uncertainty in right ascension (deg).
+``dec_err``	`~float`	Std. deviation of positional uncertainty in declination (deg).
+``glon_err``	`~float`	Std. deviation of positional uncertainty in galactic longitude (deg).
+``glat_err``	`~float`	Std. deviation of positional uncertainty in galactic latitude (deg).
+``pos_offset``	`~float`	Angular offset (deg) between the old and new (localized) source positions.
+``pos_err``	`~float`	1-sigma positional uncertainty (deg).
+``pos_r68``	`~float`	68% positional uncertainty (deg).
+``pos_r95``	`~float`	95% positional uncertainty (deg).
+``pos_r99``	`~float`	99% positional uncertainty (deg).
+``pos_err_semimajor``	`~float`	1-sigma uncertainty (deg) along major axis of uncertainty ellipse.
+``pos_err_semiminor``	`~float`	1-sigma uncertainty (deg) along minor axis of uncertainty ellipse.
+``pos_angle``	`~float`	Position angle of uncertainty ellipse with respect to major axis.
+``pos_ecc``	`~float`	Eccentricity of uncertainty ellipse defined as sqrt(1-b**2/a**2).
+``pos_ecc2``	`~float`	Eccentricity of uncertainty ellipse defined as sqrt(a**2/b**2-1).
+``pos_gal_cov``	`~numpy.ndarray`	Covariance matrix of positional uncertainties in local projection in galactic coordinates.
+``pos_gal_corr``	`~numpy.ndarray`	Correlation matrix of positional uncertainties in local projection in galactic coordinates.
+``pos_cel_cov``	`~numpy.ndarray`	Covariance matrix of positional uncertainties in local projection in celestial coordinates.
+``pos_cel_corr``	`~numpy.ndarray`	Correlation matrix of positional uncertainties in local projection in celestial coordinates.
+``tsmap``	`~fermipy.skymap.Map`	
+``tsmap_peak``	`~fermipy.skymap.Map`	
+``loglike_init``	`~float`	Log-Likelihood of model before localization.
+``loglike_base``	`~float`	Log-Likelihood of model after initial spectral fit.
+``loglike_loc``	`~float`	Log-Likelihood of model after localization.
+``dloglike_loc``	`~float`	Difference in log-likelihood before and after localization.
+``fit_success``	`~bool`	
+``fit_inbounds``	`~bool`	
+``fit_init``	`~dict`	
+``fit_scan``	`~dict`	

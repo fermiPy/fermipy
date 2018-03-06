@@ -23,7 +23,8 @@ def collect_jobs(dirs, runscript, overwrite=False, max_job_age=90):
     for dirname in sorted(dirs):
 
         o = dict(cfgfile=os.path.join(dirname, 'config.yaml'),
-                 logfile=os.path.join(dirname, os.path.splitext(runscript)[0] + '.log'),
+                 logfile=os.path.join(
+                     dirname, os.path.splitext(runscript)[0] + '.log'),
                  runscript=os.path.join(dirname, runscript))
 
         if not os.path.isfile(o['cfgfile']):
@@ -47,7 +48,8 @@ def collect_jobs(dirs, runscript, overwrite=False, max_job_age=90):
             print("Job Exited. Resending command.")
             jobs.append(o)
         elif job_status == 'None' and age > max_job_age:
-            print("Job did not exit, but no activity on log file for > %.2f min. Resending command." % max_job_age)
+            print(
+                "Job did not exit, but no activity on log file for > %.2f min. Resending command." % max_job_age)
             jobs.append(o)
         #        elif job_status is True:
         #            print("Job Completed. Resending command.")
@@ -62,6 +64,8 @@ def main():
     parser = argparse.ArgumentParser(usage=usage, description=description)
 
     parser.add_argument('--config', default='sample_config.yaml')
+    parser.add_argument('--resources', default=None, type=str,
+                        help='Set the LSF resource string.')
     parser.add_argument('--time', default=1500, type=int,
                         help='Set the wallclock time allocation for the '
                              'job in minutes.')
@@ -97,7 +101,10 @@ def main():
                         args.overwrite, args.max_job_age)
 
     lsf_opts = {'W': args.time,
-                'R': 'bullet,hequ,kiso'}
+                'R': 'bullet,hequ,kiso && scratch > 5'}
+
+    if args.resources is not None:
+        lsf_opts['R'] = args.resources
 
     lsf_opt_string = ''
     for optname, optval in lsf_opts.items():

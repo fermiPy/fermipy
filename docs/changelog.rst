@@ -3,7 +3,135 @@
 Changelog
 =========
 
-This page is a changelog for releases of Fermipy.
+This page is a changelog for releases of Fermipy.  You can also browse
+releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
+
+0.16.0 (12/27/2017)
+-------------------
+
+* Improvements and refactoring in the internals of the ``lightcurve``
+  method (see `#156 <https://github.com/fermiPy/fermipy/pull/156>`_,
+  `#157 <https://github.com/fermiPy/fermipy/pull/157>`_, `#160
+  <https://github.com/fermiPy/fermipy/pull/160>`_, `#161
+  <https://github.com/fermiPy/fermipy/pull/161>`_, `#162
+  <https://github.com/fermiPy/fermipy/pull/162>`_).  Resolve fit
+  stability issues that were arising when the source of interest was
+  not significantly detected in a given time bin.  Added options to
+  speed up source map calculation by rescaling source maps (enabled
+  with ``use_scaled_srcmap=True``) and split the lightcurve
+  calculation across N cores (enabled with ``multithread=True`` and
+  ``nthread=N``).  Add calculation of ``TS_var`` to test for
+  variability using method from the 2FGL.
+* Updates to validation tools.  Added MeritSkimmer script
+  (``fermipy-merit-skimmer``) for skimming ROOT merit tuples either
+  locally or on xrootd.
+
+0.15.0 (09/05/2017)
+-------------------
+
+* Bug fix related to restoring analysis state for phased analysis
+  (scaled exposure).
+* Many improvements and feature additions to senstivity tools (see e.g. `#148
+  <https://github.com/fermiPy/fermipy/pull/148>`_, `#149
+  <https://github.com/fermiPy/fermipy/pull/149>`_, and `#152
+  <https://github.com/fermiPy/fermipy/pull/152>`_).
+* Various updates to support DM pipeline package (`#146
+  <https://github.com/fermiPy/fermipy/pull/146>`_).
+* Improve robustness of algorithms for extracting peak and
+  uncertainty ellipse from 2D likelihood surface.
+* Added `~fermipy.gtanalysis.GTAnalysis.curvature` method for testing a
+  source for spectral curvature.
+* Added ``fix_shape`` option to
+  `~fermipy.gtanalysis.GTAnalysis.extension` and
+  `~fermipy.gtanalysis.GTAnalysis.localize` to fix spectral shape
+  parameters.  Spectral shape parameters of the source of interest are
+  now free by default when localizing or fitting extension.
+  
+
+0.14.0 (03/28/2017)
+-------------------
+* Refactoring and improvements in
+  `~fermipy.gtanalysis.GTAnalysis.localize` and
+  `~fermipy.gtanalysis.GTAnalysis.extension` (see `#124
+  <https://github.com/fermiPy/fermipy/pull/124>`_).  Cleanup of
+  columns in `~fermipy.gtanalysis.GTAnalysis.localize`.  Add new
+  columns for 1-sigma errors projected in CEL and GAL coordinates as
+  well as associated covariance and correlation matrices.  Add
+  positional errors when running
+  `~fermipy.gtanalysis.GTAnalysis.extension` with
+  ``fit_position=True``.
+* Add ``free_radius`` option to
+  `~fermipy.gtanalysis.GTAnalysis.localize`,
+  `~fermipy.gtanalysis.GTAnalysis.extension`, and
+  `~fermipy.gtanalysis.GTAnalysis.sed`.  This can be used to free
+  background sources within a certain distance of the analyzed source.
+* Relocalize point-source hypothesis when testing extension of
+  extended sources.
+* Improve speed and accuracy of source map calculation (see `#123
+  <https://github.com/fermiPy/fermipy/pull/123>`_).  Exposures are now
+  extracted directly from the exposure map.
+* Write analysis configuration to ``CONFIG`` header keyword of all
+  FITS output files.
+* Add ``jobs`` and ``diffuse`` submodules (see `#120
+  <https://github.com/fermiPy/fermipy/pull/120>`_ and `#122
+  <https://github.com/fermiPy/fermipy/pull/120>`_).  These contain
+  functionality for peforming all-sky diffuse analysis and setting up
+  automated analysis pipelines.  More detailed documentation on these
+  features to be provided in a future release.
+  
+0.13.0 (01/16/2017)
+-------------------
+* Rewrite LTCube class to add support for fast LT cube generation.
+  The ``gtlike.use_local_ltcube`` option can be used to enable the
+  python-based LT cube calculation in lieu of ``gtltcube``.
+* Bug fixes and improvements to lightcurve method (see `#102
+  <https://github.com/fermiPy/fermipy/pull/102>`_).  Python-based LT
+  cube generation is now enabled by default resulting in much faster
+  execution time when generating light curves over long time spans.
+* Add ``fit_position`` option to
+  `~fermipy.gtanalysis.GTAnalysis.extension` that can be used to
+  enable a joint fit of extension and position.
+* New scheme for auto-generating parameter docstrings.
+* Add new `~fermipy.gtanalysis.GTAnalysis.set_source_morphology`
+  method to update the spatial model of a source at runtime.
+* Major refactoring of `~fermipy.gtanalysis.GTAnalysis.extension` and
+  `~fermipy.gtanalysis.GTAnalysis.localize` (see `#106
+  <https://github.com/fermiPy/fermipy/pull/106>`_ and `#110
+  <https://github.com/fermiPy/fermipy/pull/110>`_).
+* Pulled in many new modules and scripts for diffuse all-sky analysis
+  (see `#105 <https://github.com/fermiPy/fermipy/pull/105>`_).
+
+0.12.0 (11/20/2016)
+-------------------
+* Add support for phased analysis (`#87
+  <https://github.com/fermiPy/fermipy/pull/87>`_). ``gtlike.expscale``
+  and ``gtlike.src_expscale`` can be used to apply a constant exposure
+  correction to a whole component or individual sources within a
+  component.  See :ref:`phased` for examples.
+* Add script and tools for calculating flux sensitivity (`#88
+  <https://github.com/fermiPy/fermipy/pull/88>`_ and `#95
+  <https://github.com/fermiPy/fermipy/pull/95>`_).  The
+  ``fermipy-flux-sensitivity`` script evaluates both the differential
+  and integral flux sensitivity for a given TS threshold and minimum
+  number of detected counts.  See :ref:`sensitivity` for examples.
+* Add ``fermipy-healview`` script for generating images of healpix
+  maps and cubes.
+* Improvements to HPX-related classes and utilities.
+* Refactoring in ``irfs`` module to support development of new
+  validation tools.
+* Improvements to configuration handling to allow parameter validation
+  when updating configuration at runtime.
+* Add lightcurve method (`#80
+  <https://github.com/fermiPy/fermipy/pull/80>`_).  See
+  :ref:`lightcurve` for documentation.
+* Change convention for flux arrays in source object.  Values and
+  uncertainties are now stored in separate arrays (e.g. ``flux`` and
+  ``flux_err``).  
+* Add :ref:`Docker-based installation <dockerinstall>` instructions.
+  This can be used to run the RHEL6 SLAC ST builds on any machine that
+  supports Docker (e.g. OSX Yosemite or later).
+* Adopt changes to column name conventions in SED format.  All column
+  names are now lowercase.
 
 0.11.0 (08/24/2016)
 -------------------
@@ -134,7 +262,3 @@ This page is a changelog for releases of Fermipy.
   `~fermipy.gtanalysis.GTAnalysis.tsmap`.
   
   
-0.7.0 (04/19/2016)
-------------------
-
-* some features

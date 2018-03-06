@@ -56,17 +56,27 @@ class Logger(object):
 #        logger = logging.getLogger()
 #        for h in logger.handlers:
 #            if 'file_handler' in h.name:
-#                print h.name
+#                print(h.name)
 
     @staticmethod
-    def get(name, logfile, loglevel=logging.DEBUG):
+    def configure(name, logfile, loglevel=logging.DEBUG):
+        """Create a python logger instance and configure it.
+
+        Parameters
+        ----------
+        name : str
+            Logger name.
+
+        logfile : str
+            Path to the log file.
+
+        loglevel : int
+            Default log level for STDOUT.
+        """
 
         #        logging.config.dictConfig({
         #                'version': 1,
         #                'disable_existing_loggers': False})
-
-        if logfile is not None:
-            logfile = logfile.replace('.log', '') + '.log'
 
         logger = logging.getLogger(name)
 
@@ -87,6 +97,7 @@ class Logger(object):
 
             # Add a file handler
             if logfile is not None:
+                logfile = logfile.replace('.log', '') + '.log'
                 fh = logging.FileHandler(logfile)
                 fh.setLevel(logging.DEBUG)
                 fh.setFormatter(logging.Formatter(format_file, datefmt))

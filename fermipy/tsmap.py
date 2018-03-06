@@ -5,22 +5,28 @@ import copy
 import logging
 import itertools
 import functools
+import json
 from multiprocessing import Pool
 import numpy as np
 import warnings
 import pyLikelihood as pyLike
 from scipy.optimize import brentq
-import astropy.io.fits as pyfits
+import astropy
+from astropy.io import fits
 from astropy.table import Table
+from astropy.coordinates import SkyCoord
 import astropy.wcs as pywcs
+from gammapy.maps.geom import coordsys_to_frame
+from gammapy.maps import WcsNDMap, WcsGeom
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 import fermipy.castro as castro
-from fermipy.skymap import Map
 from fermipy.roi_model import Source
 from fermipy.spectrum import PowerLaw
+from fermipy.config import ConfigSchema
+from fermipy.timing import Timer
 from LikelihoodState import LikelihoodState
 
 MAX_NITER = 100
@@ -29,7 +35,7 @@ MAX_NITER = 100
 def extract_images_from_tscube(infile, outfile):
     """ Extract data from table HDUs in TSCube file and convert them to FITS images
     """
-    inhdulist = pyfits.open(infile)
+    inhdulist = fits.open(infile)
     wcs = pywcs.WCS(inhdulist[0].header)
     map_shape = inhdulist[0].data.shape
 
@@ -55,22 +61,49 @@ def extract_images_from_tscube(infile, outfile):
 
     for c in FIT_COLNAMES:
         data = t_fit[c].data.reshape(map_shape)
-        hdu = pyfits.ImageHDU(data, wcs.to_header(), name=c)
+        hdu = fits.ImageHDU(data, wcs.to_header(), name=c)
         outhdulist.append(hdu)
 
     for c in SCAN_COLNAMES:
         data = t_scan[c].data.swapaxes(0, 1).reshape(cube_shape)
-        hdu = pyfits.ImageHDU(data, wcs_cube.to_header(), name=c)
+        hdu = fits.ImageHDU(data, wcs_cube.to_header(), name=c)
         outhdulist.append(hdu)
 
-    hdulist = pyfits.HDUList(outhdulist)
+    hdulist = fits.HDUList(outhdulist)
     hdulist.writeto(outfile, clobber=True)
     return hdulist
 
 
 def convert_tscube(infile, outfile):
+
+    inhdulist = fits.open(infile)
+    if 'dloglike_scan' in inhdulist['SCANDATA'].columns.names:
+        if infile != outfile:
+            inhdulist.writeto(outfile, clobber=True)
+        return
+    elif 'E_MIN_FL' in inhdulist['EBOUNDS'].columns.names:
+        return convert_tscube_old(infile, outfile)
+
+    for hdu in inhdulist:
+
+        if not isinstance(hdu, fits.BinTableHDU):
+            continue
+
+        for col in hdu.columns:
+
+            if hdu.name == 'EBOUNDS':
+                col.name = col.name.replace('DFDE', 'DNDE')
+            else:
+                colname = col.name.lower()
+                col.name = colname.replace('dfde', 'dnde')
+
+    inhdulist.writeto(outfile, clobber=True)
+    return inhdulist
+
+
+def convert_tscube_old(infile, outfile):
     """Convert between old and new TSCube formats."""
-    inhdulist = pyfits.open(infile)
+    inhdulist = fits.open(infile)
 
     # If already in the new-style format just write and exit
     if 'DLOGLIKE_SCAN' in inhdulist['SCANDATA'].columns.names:
@@ -83,16 +116,16 @@ def convert_tscube(infile, outfile):
     nebins = inhdulist['EBOUNDS']._nrows
     npts = inhdulist['SCANDATA'].data.field('NORMSCAN').shape[1] / nebins
 
-    emin = inhdulist['EBOUNDS'].data.field('E_MIN') / 1E3
-    emax = inhdulist['EBOUNDS'].data.field('E_MAX') / 1E3
+    emin = inhdulist['EBOUNDS'].data.field('e_min') / 1E3
+    emax = inhdulist['EBOUNDS'].data.field('e_max') / 1E3
     eref = np.sqrt(emin * emax)
-    dfde_emin = inhdulist['EBOUNDS'].data.field('E_MIN_FL')
-    dfde_emax = inhdulist['EBOUNDS'].data.field('E_MAX_FL')
-    index = np.log(dfde_emin / dfde_emax) / np.log(emin / emax)
+    dnde_emin = inhdulist['EBOUNDS'].data.field('E_MIN_FL')
+    dnde_emax = inhdulist['EBOUNDS'].data.field('E_MAX_FL')
+    index = np.log(dnde_emin / dnde_emax) / np.log(emin / emax)
 
-    flux = PowerLaw.eval_flux(emin, emax, [dfde_emin, index], emin)
-    eflux = PowerLaw.eval_eflux(emin, emax, [dfde_emin, index], emin)
-    dfde = PowerLaw.eval_dfde(np.sqrt(emin * emax), [dfde_emin, index], emin)
+    flux = PowerLaw.eval_flux(emin, emax, [dnde_emin, index], emin)
+    eflux = PowerLaw.eval_eflux(emin, emax, [dnde_emin, index], emin)
+    dnde = PowerLaw.eval_dnde(np.sqrt(emin * emax), [dnde_emin, index], emin)
 
     ts_map = inhdulist['PRIMARY'].data.reshape((nrows))
     ok_map = inhdulist['TSMAP_OK'].data.reshape((nrows))
@@ -131,155 +164,102 @@ def convert_tscube(infile, outfile):
 
     # Adjust the "EBOUNDS" hdu
     columns = inhdulist['EBOUNDS'].columns
-    columns.add_col(pyfits.Column(name=str('E_REF'),
-                                  format='E', array=eref * 1E3,
-                                  unit='keV'))
-    columns.add_col(pyfits.Column(name=str('REF_FLUX'),
-                                  format='D', array=flux,
-                                  unit='ph / (cm2 s)'))
-    columns.add_col(pyfits.Column(name=str('REF_EFLUX'),
-                                  format='D', array=eflux,
-                                  unit='MeV / (cm2 s)'))
-    columns.add_col(pyfits.Column(name=str('REF_DFDE'),
-                                  format='D', array=dfde,
-                                  unit='ph / (MeV cm2 s)'))
+    columns.add_col(fits.Column(name=str('e_ref'),
+                                format='E', array=eref * 1E3,
+                                unit='keV'))
+    columns.add_col(fits.Column(name=str('ref_flux'),
+                                format='D', array=flux,
+                                unit='ph / (cm2 s)'))
+    columns.add_col(fits.Column(name=str('ref_eflux'),
+                                format='D', array=eflux,
+                                unit='MeV / (cm2 s)'))
+    columns.add_col(fits.Column(name=str('ref_dnde'),
+                                format='D', array=dnde,
+                                unit='ph / (MeV cm2 s)'))
 
-    columns.change_name('E_MIN_FL', str('REF_DFDE_E_MIN'))
-    columns.change_unit('REF_DFDE_E_MIN', 'ph / (MeV cm2 s)')
-    columns.change_name('E_MAX_FL', str('REF_DFDE_E_MAX'))
-    columns.change_unit('REF_DFDE_E_MAX', 'ph / (MeV cm2 s)')
-    columns.change_name('NPRED', str('REF_NPRED'))
+    columns.change_name('E_MIN_FL', str('ref_dnde_e_min'))
+    columns.change_unit('ref_dnde_e_min', 'ph / (MeV cm2 s)')
+    columns.change_name('E_MAX_FL', str('ref_dnde_e_max'))
+    columns.change_unit('ref_dnde_e_max', 'ph / (MeV cm2 s)')
+    columns.change_name('NPRED', str('ref_npred'))
 
-    hdu_e = pyfits.BinTableHDU.from_columns(columns, name='EBOUNDS')
+    hdu_e = fits.BinTableHDU.from_columns(columns, name='EBOUNDS')
 
     # Make the "FITDATA" hdu
-    columns = pyfits.ColDefs([])
+    columns = fits.ColDefs([])
 
-    columns.add_col(pyfits.Column(
-        name=str('FIT_TS'), format='E', array=ts_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_STATUS'), format='E', array=ok_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_NORM'), format='E', array=n_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_NORM_ERR'), format='E', array=err_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_NORM_ERRP'), format='E', array=errp_map))
-    columns.add_col(pyfits.Column(
-        name=str('FIT_NORM_ERRN'), format='E', array=errn_map))
-    hdu_f = pyfits.BinTableHDU.from_columns(columns, name='FITDATA')
+    columns.add_col(fits.Column(
+        name=str('fit_ts'), format='E', array=ts_map))
+    columns.add_col(fits.Column(
+        name=str('fit_status'), format='E', array=ok_map))
+    columns.add_col(fits.Column(
+        name=str('fit_norm'), format='E', array=n_map))
+    columns.add_col(fits.Column(
+        name=str('fit_norm_err'), format='E', array=err_map))
+    columns.add_col(fits.Column(
+        name=str('fit_norm_errp'), format='E', array=errp_map))
+    columns.add_col(fits.Column(
+        name=str('fit_norm_errn'), format='E', array=errn_map))
+    hdu_f = fits.BinTableHDU.from_columns(columns, name='FITDATA')
 
     # Make the "SCANDATA" hdu
-    columns = pyfits.ColDefs([])
+    columns = fits.ColDefs([])
 
-    columns.add_col(pyfits.Column(name=str('TS'),
-                                  format='%iE' % nebins, array=tscube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('ts'),
+                                format='%iE' % nebins, array=tscube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('BIN_STATUS'),
-                                  format='%iE' % nebins, array=ok_cube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('bin_status'),
+                                format='%iE' % nebins, array=ok_cube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM'),
-                                  format='%iE' % nebins, array=ncube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm'),
+                                format='%iE' % nebins, array=ncube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_UL'),
-                                  format='%iE' % nebins, array=ul_cube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm_ul'),
+                                format='%iE' % nebins, array=ul_cube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_ERR'),
-                                  format='%iE' % nebins, array=errcube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm_err'),
+                                format='%iE' % nebins, array=errcube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_ERRP'),
-                                  format='%iE' % nebins, array=errpcube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm_errp'),
+                                format='%iE' % nebins, array=errpcube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_ERRN'),
-                                  format='%iE' % nebins, array=errncube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('norm_errn'),
+                                format='%iE' % nebins, array=errncube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('LOGLIKE'),
-                                  format='%iE' % nebins, array=nll_cube,
-                                  dim=str('(%i)' % nebins)))
+    columns.add_col(fits.Column(name=str('loglike'),
+                                format='%iE' % nebins, array=nll_cube,
+                                dim=str('(%i)' % nebins)))
 
-    columns.add_col(pyfits.Column(name=str('NORM_SCAN'),
-                                  format='%iE' % (nebins * npts),
-                                  array=norm_scan,
-                                  dim=str('(%i,%i)' % (npts, nebins))))
+    columns.add_col(fits.Column(name=str('norm_scan'),
+                                format='%iE' % (nebins * npts),
+                                array=norm_scan,
+                                dim=str('(%i,%i)' % (npts, nebins))))
 
-    columns.add_col(pyfits.Column(name=str('DLOGLIKE_SCAN'),
-                                  format='%iE' % (nebins * npts),
-                                  array=nll_scan,
-                                  dim=str('(%i,%i)' % (npts, nebins))))
+    columns.add_col(fits.Column(name=str('dloglike_scan'),
+                                format='%iE' % (nebins * npts),
+                                array=nll_scan,
+                                dim=str('(%i,%i)' % (npts, nebins))))
 
-    hdu_s = pyfits.BinTableHDU.from_columns(columns, name='SCANDATA')
+    hdu_s = fits.BinTableHDU.from_columns(columns, name='SCANDATA')
 
-    hdulist = pyfits.HDUList([inhdulist[0],
-                              hdu_s,
-                              hdu_f,
-                              inhdulist["BASELINE"],
-                              hdu_e])
+    hdulist = fits.HDUList([inhdulist[0],
+                            hdu_s,
+                            hdu_f,
+                            inhdulist["BASELINE"],
+                            hdu_e])
 
     hdulist['SCANDATA'].header['UL_CONF'] = 0.95
 
     hdulist.writeto(outfile, clobber=True)
 
     return hdulist
-
-
-def overlap_slices(large_array_shape, small_array_shape, position):
-    """
-    Modified version of `~astropy.nddata.utils.overlap_slices`.
-
-    Get slices for the overlapping part of a small and a large array.
-
-    Given a certain position of the center of the small array, with
-    respect to the large array, tuples of slices are returned which can be
-    used to extract, add or subtract the small array at the given
-    position. This function takes care of the correct behavior at the
-    boundaries, where the small array is cut of appropriately.
-
-    Parameters
-    ----------
-    large_array_shape : tuple
-        Shape of the large array.
-    small_array_shape : tuple
-        Shape of the small array.
-    position : tuple
-        Position of the small array's center, with respect to the large array.
-        Coordinates should be in the same order as the array shape.
-
-    Returns
-    -------
-    slices_large : tuple of slices
-        Slices in all directions for the large array, such that
-        ``large_array[slices_large]`` extracts the region of the large array
-        that overlaps with the small array.
-    slices_small : slice
-        Slices in all directions for the small array, such that
-        ``small_array[slices_small]`` extracts the region that is inside the
-        large array.
-    """
-    # Get edge coordinates
-    edges_min = [int(pos - small_shape // 2) for (pos, small_shape) in
-                 zip(position, small_array_shape)]
-    edges_max = [int(pos + (small_shape - small_shape // 2)) for
-                 (pos, small_shape) in
-                 zip(position, small_array_shape)]
-
-    # Set up slices
-    slices_large = tuple(slice(max(0, edge_min), min(large_shape, edge_max))
-                         for (edge_min, edge_max, large_shape) in
-                         zip(edges_min, edges_max, large_array_shape))
-    slices_small = tuple(slice(max(0, -edge_min),
-                               min(large_shape - edge_min,
-                                   edge_max - edge_min))
-                         for (edge_min, edge_max, large_shape) in
-                         zip(edges_min, edges_max, large_array_shape))
-
-    return slices_large, slices_small
 
 
 def truncate_array(array1, array2, position):
@@ -319,14 +299,14 @@ def extract_array(array_large, array_small, position):
 
 
 def extract_large_array(array_large, array_small, position):
-    large_slices, small_slices = overlap_slices(array_large.shape,
-                                                array_small.shape, position)
+    large_slices, small_slices = utils.overlap_slices(array_large.shape,
+                                                      array_small.shape, position)
     return array_large[large_slices]
 
 
 def extract_small_array(array_small, array_large, position):
-    large_slices, small_slices = overlap_slices(array_large.shape,
-                                                array_small.shape, position)
+    large_slices, small_slices = utils.overlap_slices(array_large.shape,
+                                                      array_small.shape, position)
     return array_small[small_slices]
 
 
@@ -585,8 +565,7 @@ def _ts_value(position, counts, bkg, model, C_0_map):
                                               root_fn=_f_cash_root)
 
     if niter > MAX_NITER:
-        if logger is not None:
-            logger.warning('Exceeded maximum number of function evaluations!')
+        print('Exceeded maximum number of function evaluations!')
         return np.nan, amplitude, niter
 
     with np.errstate(invalid='ignore', divide='ignore'):
@@ -654,8 +633,7 @@ def _ts_value_newton(position, counts, bkg, model, C_0_map):
                                              model_sum)
 
     if niter > MAX_NITER:
-        if logger is not None:
-            logger.warning('Exceeded maximum number of function evaluations!')
+        print('Exceeded maximum number of function evaluations!')
         return np.nan, amplitude, niter
 
     with np.errstate(invalid='ignore', divide='ignore'):
@@ -686,73 +664,91 @@ class TSMapGenerator(object):
 
         Parameters
         ----------
-
         prefix : str
-           Optional string that will be prepended to all output files
-           (FITS and rendered images).
+           Optional string that will be prepended to all output files.
 
-        model : dict
-           Dictionary defining the properties of the test source.
-
-        exclude : str or list of str
-            Source or sources that will be removed from the model when
-            computing the TS map.
-
-        loge_bounds : list
-           Restrict the analysis to an energy range (emin,emax) in
-           log10(E/MeV) that is a subset of the analysis energy range.
-           By default the full analysis energy range will be used.  If
-           either emin/emax are None then only an upper/lower bound on
-           the energy range wil be applied.
-
-        max_kernel_radius : float
-           Set the maximum radius of the test source kernel.  Using a
-           smaller value will speed up the TS calculation at the loss of
-           accuracy.  The default value is 3 degrees.
-
-        make_plots : bool
-           Write image files.
-
-        write_fits : bool
-           Write a FITS file.
-
-        write_npy : bool
-           Write a numpy file.
+        {options}
 
         Returns
         -------
-
-        maps : dict
+        tsmap : dict
            A dictionary containing the `~fermipy.skymap.Map` objects
            for TS and source amplitude.
 
         """
+        timer = Timer.create(start=True)
 
-        self.logger.info('Generating TS map')
-
-        config = copy.deepcopy(self.config['tsmap'])
-        config = utils.merge_dict(config, kwargs, add_new_keys=True)
+        schema = ConfigSchema(self.defaults['tsmap'])
+        schema.add_option('loglevel', logging.INFO)
+        schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)
+        schema.add_option('map_size', 1.0)
+        schema.add_option('threshold', 1E-2, '', float)
+        schema.add_option('use_pylike', True, '', bool)
+        schema.add_option('outfile', None, '', str)
+        config = schema.create_config(self.config['tsmap'], **kwargs)
 
         # Defining default properties of test source model
         config['model'].setdefault('Index', 2.0)
         config['model'].setdefault('SpectrumType', 'PowerLaw')
         config['model'].setdefault('SpatialModel', 'PointSource')
-        config['model'].setdefault('Prefactor', 1E-13)
 
-        make_plots = kwargs.get('make_plots', True)
-        maps = self._make_tsmap_fast(prefix, config, **kwargs)
+        self.logger.log(config['loglevel'], 'Generating TS map')
 
-        if make_plots:
+        o = self._make_tsmap_fast(prefix, **config)
+
+        if config['make_plots']:
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_tsmap_plots(maps, self.roi)
+            plotter.make_tsmap_plots(o, self.roi)
 
-        self.logger.info('Finished TS map')
-        return maps
+        self.logger.log(config['loglevel'], 'Finished TS map')
 
-    def _make_tsmap_fast(self, prefix, config, **kwargs):
+        outfile = config.get('outfile', None)
+        if outfile is None:
+            outfile = utils.format_filename(self.workdir, 'tsmap',
+                                            prefix=[o['name']])
+        else:
+            outfile = os.path.join(self.workdir,
+                                   os.path.splitext(outfile)[0])
+
+        if config['write_fits']:
+            o['file'] = os.path.basename(outfile) + '.fits'
+            self._make_tsmap_fits(o, outfile + '.fits')
+
+        if config['write_npy']:
+            np.save(outfile + '.npy', o)
+
+        self.logger.log(config['loglevel'],
+                        'Execution time: %.2f s', timer.elapsed_time)
+        return o
+
+    def _make_tsmap_fits(self, data, filename, **kwargs):
+
+        maps = {'SQRT_TS_MAP': data['sqrt_ts'],
+                'NPRED_MAP': data['npred'],
+                'N_MAP': data['amplitude']}
+
+        hdu_images = []
+        for k, v in sorted(maps.items()):
+            if v is None:
+                continue
+            hdu_images += [v.make_hdu(hdu=k)]
+
+        tab = fits_utils.dict_to_table(data)
+        hdu_data = fits.table_to_hdu(tab)
+        hdu_data.name = 'TSMAP_DATA'
+
+        hdus = [data['ts'].make_hdu(hdu='PRIMARY'),
+                hdu_data] + hdu_images
+
+        data['config'].pop('map_skydir', None)
+        hdus[0].header['CONFIG'] = json.dumps(data['config'])
+        hdus[1].header['CONFIG'] = json.dumps(data['config'])
+        fits_utils.write_hdus(hdus, filename)
+
+    def _make_tsmap_fast(self, prefix, **kwargs):
         """
         Make a TS map from a GTAnalysis instance.  This is a
         simplified implementation optimized for speed that only fits
@@ -769,24 +765,20 @@ class TSMapGenerator(object):
            test source that will be used in the scan.
 
         """
+        loglevel = kwargs.get('loglevel', self.loglevel)
 
-        write_fits = kwargs.get('write_fits', True)
-        write_npy = kwargs.get('write_npy', True)
-        map_skydir = kwargs.get('map_skydir', None)
-        map_size = kwargs.get('map_size', 1.0)
-        exclude = kwargs.get('exclude', None)
+        src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
+        src_dict = {} if src_dict is None else src_dict
 
-        src_dict = copy.deepcopy(config.setdefault('model', {}))
-        multithread = config.setdefault('multithread', False)
-        threshold = config.setdefault('threshold', 1E-2)
-        max_kernel_radius = config.get('max_kernel_radius')
-        loge_bounds = config.setdefault('loge_bounds', None)
+        multithread = kwargs.setdefault('multithread', False)
+        threshold = kwargs.setdefault('threshold', 1E-2)
+        max_kernel_radius = kwargs.get('max_kernel_radius')
+        loge_bounds = kwargs.setdefault('loge_bounds', None)
+        use_pylike = kwargs.setdefault('use_pylike', True)
 
-        if loge_bounds is not None:
-            if len(loge_bounds) == 0:
-                loge_bounds = [None, None]
-            elif len(loge_bounds) == 1:
-                loge_bounds += [None]
+        if loge_bounds:
+            if len(loge_bounds) != 2:
+                raise Exception('Wrong size of loge_bounds array.')
             loge_bounds[0] = (loge_bounds[0] if loge_bounds[0] is not None
                               else self.log_energies[0])
             loge_bounds[1] = (loge_bounds[1] if loge_bounds[1] is not None
@@ -799,11 +791,12 @@ class TSMapGenerator(object):
                       np.round((self.npix - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        skywcs = self._skywcs
-        skydir = wcs_utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
+        map_geom = self._geom.to_image()
+        frame = coordsys_to_frame(map_geom.coordsys)
+        skydir = SkyCoord(*map_geom.pix_to_coord((cpix[0], cpix[1])),
+                          frame=frame, unit='deg')
+        skydir = skydir.transform_to('icrs')
 
-        if src_dict is None:
-            src_dict = {}
         src_dict['ra'] = skydir.ra.deg
         src_dict['dec'] = skydir.dec.deg
         src_dict.setdefault('SpatialModel', 'PointSource')
@@ -824,9 +817,9 @@ class TSMapGenerator(object):
             imax = utils.val_to_edge(c.log_energies, loge_bounds[1])[0]
 
             eslice = slice(imin, imax)
-            bm = c.model_counts_map(exclude=exclude).counts.astype('float')[
+            bm = c.model_counts_map(exclude=kwargs['exclude']).data.astype('float')[
                 eslice, ...]
-            cm = c.counts_map().counts.astype('float')[eslice, ...]
+            cm = c.counts_map().data.astype('float')[eslice, ...]
 
             bkg += [bm]
             counts += [cm]
@@ -835,17 +828,19 @@ class TSMapGenerator(object):
             enumbins += [cm.shape[0]]
 
         self.add_source('tsmap_testsource', src_dict, free=True,
-                        init_source=False)
+                        init_source=False, use_single_psf=True,
+                        use_pylike=use_pylike,
+                        loglevel=logging.DEBUG)
         src = self.roi['tsmap_testsource']
         # self.logger.info(str(src_dict))
         modelname = utils.create_model_name(src)
         for c, eslice in zip(self.components, eslices):
-            mm = c.model_counts_map('tsmap_testsource').counts.astype('float')[
+            mm = c.model_counts_map('tsmap_testsource').data.astype('float')[
                 eslice, ...]
             model_npred += np.sum(mm)
             model += [mm]
 
-        self.delete_source('tsmap_testsource')
+        self.delete_source('tsmap_testsource', loglevel=logging.DEBUG)
 
         for i, mm in enumerate(model):
 
@@ -875,9 +870,12 @@ class TSMapGenerator(object):
                                  bkg=bkg, model=model,
                                  C_0_map=c0_map)
 
-        if map_skydir is not None:
-            map_offset = wcs_utils.skydir_to_pix(map_skydir, self._skywcs)
-            map_delta = 0.5 * map_size / self.components[0].binsz
+        if kwargs['map_skydir'] is not None:
+
+            map_offset = wcs_utils.skydir_to_pix(kwargs['map_skydir'],
+                                                 map_geom.wcs)
+
+            map_delta = 0.5 * kwargs['map_size'] / self.components[0].binsz
             xmin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
             xmax = min(int(np.floor(map_offset[1] + map_delta)) + 1, self.npix)
             ymin = max(int(np.ceil(map_offset[0] - map_delta)), 0)
@@ -887,13 +885,16 @@ class TSMapGenerator(object):
             yslice = slice(ymin, ymax)
             xyrange = [range(xmin, xmax), range(ymin, ymax)]
 
-            map_wcs = skywcs.deepcopy()
-            map_wcs.wcs.crpix[0] -= ymin
-            map_wcs.wcs.crpix[1] -= xmin
+            wcs = map_geom.wcs.deepcopy()
+            npix = (ymax - ymin, xmax - xmin)
+            crpix = (map_geom._crpix[0] - ymin, map_geom._crpix[1] - xmin)
+            wcs.wcs.crpix[0] -= ymin
+            wcs.wcs.crpix[1] -= xmin
+
+            # FIXME: We should implement this with a proper cutout method
+            map_geom = WcsGeom(wcs, npix, crpix=crpix)
         else:
             xyrange = [range(self.npix), range(self.npix)]
-            map_wcs = skywcs
-
             xslice = slice(0, self.npix)
             yslice = slice(0, self.npix)
 
@@ -902,6 +903,7 @@ class TSMapGenerator(object):
             p = [[k // 2, i, j] for k in enumbins]
             positions += [p]
 
+        self.logger.log(loglevel, 'Fitting test source.')
         if multithread:
             pool = Pool()
             results = pool.map(wrap, positions)
@@ -919,10 +921,10 @@ class TSMapGenerator(object):
         ts_values = ts_values[xslice, yslice]
         amp_values = amp_values[xslice, yslice]
 
-        ts_map = Map(ts_values, map_wcs)
-        sqrt_ts_map = Map(ts_values**0.5, map_wcs)
-        npred_map = Map(amp_values * model_npred, map_wcs)
-        amp_map = Map(amp_values * src.get_norm(), map_wcs)
+        ts_map = WcsNDMap(map_geom, ts_values)
+        sqrt_ts_map = WcsNDMap(map_geom, ts_values**0.5)
+        npred_map = WcsNDMap(map_geom, amp_values * model_npred)
+        amp_map = WcsNDMap(map_geom, amp_values * src.get_norm())
 
         o = {'name': utils.join_strings([prefix, modelname]),
              'src_dict': copy.deepcopy(src_dict),
@@ -931,96 +933,11 @@ class TSMapGenerator(object):
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
              'amplitude': amp_map,
-             'config': config
+             'loglike': -self.like(),
+             'config': kwargs
              }
 
-        fits_file = utils.format_filename(self.config['fileio']['workdir'],
-                                          'tsmap.fits',
-                                          prefix=[prefix, modelname])
-
-        if write_fits:
-
-            fits_utils.write_maps(ts_map,
-                                  {'SQRT_TS_MAP': sqrt_ts_map,
-                                   'NPRED_MAP': npred_map,
-                                   'N_MAP': amp_map},
-                                  fits_file)
-            o['file'] = os.path.basename(fits_file)
-
-        if write_npy:
-            np.save(os.path.splitext(fits_file)[0] + '.npy', o)
-
         return o
-
-    def _tsmap_pylike(self, prefix, **kwargs):
-        """Evaluate the TS for an additional source component at each point
-        in the ROI.  This is the brute force implementation of TS map
-        generation that runs a full pyLikelihood fit
-        at each point in the ROI."""
-
-        logLike0 = -self.like()
-        self.logger.info('LogLike: %f' % logLike0)
-
-        saved_state = LikelihoodState(self.like)
-
-        # Get the ROI geometry
-
-        # Loop over pixels
-        w = copy.deepcopy(self._skywcs)
-        #        w = create_wcs(self._roi.skydir,cdelt=self._binsz,crpix=50.5)
-
-        data = np.zeros((self.npix, self.npix))
-        #        self.free_sources(free=False)
-
-        xpix = (np.linspace(0, self.npix - 1, self.npix)[:, np.newaxis] *
-                np.ones(data.shape))
-        ypix = (np.linspace(0, self.npix - 1, self.npix)[np.newaxis, :] *
-                np.ones(data.shape))
-
-        radec = wcs_utils.pix_to_skydir(xpix, ypix, w)
-        radec = (np.ravel(radec.ra.deg), np.ravel(radec.dec.deg))
-
-        testsource_dict = {
-            'ra': radec[0][0],
-            'dec': radec[1][0],
-            'SpectrumType': 'PowerLaw',
-            'Index': 2.0,
-            'Scale': 1000,
-            'Prefactor': {'value': 0.0, 'scale': 1e-13},
-            'SpatialModel': 'PSFSource',
-        }
-
-        #        src = self.roi.get_source_by_name('tsmap_testsource')
-
-        for i, (ra, dec) in enumerate(zip(radec[0], radec[1])):
-            testsource_dict['ra'] = ra
-            testsource_dict['dec'] = dec
-            #                        src.set_position([ra,dec])
-            self.add_source('tsmap_testsource', testsource_dict, free=True,
-                            init_source=False, save_source_maps=False)
-
-            #            for c in self.components:
-            #                c.update_srcmap_file([src],True)
-
-            self.set_parameter('tsmap_testsource', 'Prefactor', 0.0,
-                               update_source=False)
-            self.fit(loglevel=logging.DEBUG, update=False)
-
-            logLike1 = -self.like()
-            ts = max(0, 2 * (logLike1 - logLike0))
-
-            data.flat[i] = ts
-
-            #            print i, ra, dec, ts
-            #            print self.like()
-            # print self.components[0].like.model['tsmap_testsource']
-
-            self.delete_source('tsmap_testsource')
-
-        saved_state.restore()
-
-        outfile = os.path.join(self.config['fileio']['workdir'], 'tsmap.fits')
-        fits_utils.write_fits_image(data, w, outfile)
 
 
 class TSCubeGenerator(object):
@@ -1088,13 +1005,15 @@ class TSCubeGenerator(object):
 
         self.logger.info('Generating TS cube')
 
-        config = copy.deepcopy(self.config['tscube'])
-        config = utils.merge_dict(config, kwargs, add_new_keys=True)
+        schema = ConfigSchema(self.defaults['tscube'])
+        schema.add_option('make_plots', True)
+        schema.add_option('write_fits', True)
+        schema.add_option('write_npy', True)
+        config = schema.create_config(self.config['tscube'], **kwargs)
 
-        make_plots = kwargs.get('make_plots', True)
-        maps = self._make_ts_cube(prefix, config, **kwargs)
+        maps = self._make_ts_cube(prefix, **config)
 
-        if make_plots:
+        if config['make_plots']:
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
@@ -1104,10 +1023,9 @@ class TSCubeGenerator(object):
         self.logger.info("Finished TS cube")
         return maps
 
-    def _make_ts_cube(self, prefix, config, **kwargs):
+    def _make_ts_cube(self, prefix, **kwargs):
 
-        write_fits = kwargs.get('write_fits', True)
-        skywcs = kwargs.get('wcs', self._skywcs)
+        skywcs = kwargs.get('wcs', self.geom.wcs)
         npix = kwargs.get('npix', self.npix)
 
         galactic = wcs_utils.is_galactic(skywcs)
@@ -1120,9 +1038,8 @@ class TSCubeGenerator(object):
                                                  refdir, pixsize, npix,
                                                  galactic)
 
-        src_dict = copy.deepcopy(config.setdefault('model', {}))
-        if src_dict is None:
-            src_dict = {}
+        src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
+        src_dict = {} if src_dict is None else src_dict
 
         xpix, ypix = (np.round((self.npix - 1.0) / 2.),
                       np.round((self.npix - 1.0) / 2.))
@@ -1159,24 +1076,24 @@ class TSCubeGenerator(object):
 
         try:
             fitScanner.run_tscube(True,
-                                  config['do_sed'], config['nnorm'],
-                                  config['norm_sigma'],
-                                  config['cov_scale_bb'], config['cov_scale'],
-                                  config['tol'], config['max_iter'],
-                                  config['tol_type'], config[
-                                      'remake_test_source'],
-                                  config['st_scan_level'],
+                                  kwargs['do_sed'], kwargs['nnorm'],
+                                  kwargs['norm_sigma'],
+                                  kwargs['cov_scale_bb'], kwargs['cov_scale'],
+                                  kwargs['tol'], kwargs['max_iter'],
+                                  kwargs['tol_type'],
+                                  kwargs['remake_test_source'],
+                                  kwargs['st_scan_level'],
                                   str(''),
-                                  config['init_lambda'])
+                                  kwargs['init_lambda'])
         except Exception:
             fitScanner.run_tscube(True,
-                                  config['do_sed'], config['nnorm'],
-                                  config['norm_sigma'],
-                                  config['cov_scale_bb'], config['cov_scale'],
-                                  config['tol'], config['max_iter'],
-                                  config['tol_type'], config[
-                                      'remake_test_source'],
-                                  config['st_scan_level'])
+                                  kwargs['do_sed'], kwargs['nnorm'],
+                                  kwargs['norm_sigma'],
+                                  kwargs['cov_scale_bb'], kwargs['cov_scale'],
+                                  kwargs['tol'], kwargs['max_iter'],
+                                  kwargs['tol_type'],
+                                  kwargs['remake_test_source'],
+                                  kwargs['st_scan_level'])
 
         self.logger.info("Writing FITS output")
 
@@ -1188,12 +1105,12 @@ class TSCubeGenerator(object):
         ts_map = tscube.tsmap
         norm_map = tscube.normmap
         npred_map = copy.deepcopy(norm_map)
-        npred_map._counts *= tscube.refSpec.npred.sum()
+        npred_map.data *= tscube.refSpec.ref_npred.sum()
         amp_map = copy.deepcopy(norm_map)
-        amp_map._counts *= src_dict['Prefactor']
+        amp_map.data *= src_dict['Prefactor']
 
         sqrt_ts_map = copy.deepcopy(ts_map)
-        sqrt_ts_map._counts = np.abs(sqrt_ts_map._counts)**0.5
+        sqrt_ts_map.data[...] = np.abs(sqrt_ts_map.data)**0.5
 
         o = {'name': utils.join_strings([prefix, modelname]),
              'src_dict': copy.deepcopy(src_dict),
@@ -1202,11 +1119,11 @@ class TSCubeGenerator(object):
              'sqrt_ts': sqrt_ts_map,
              'npred': npred_map,
              'amplitude': amp_map,
-             'config': config,
+             'config': kwargs,
              'tscube': tscube
              }
 
-        if not write_fits:
+        if not kwargs['write_fits']:
             os.remove(outfile)
             os['file'] = None
 

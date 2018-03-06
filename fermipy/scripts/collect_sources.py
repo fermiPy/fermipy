@@ -105,7 +105,8 @@ def main():
     parser = argparse.ArgumentParser(usage=usage, description=description)
     parser.add_argument('--output', type=argparse.FileType('w'), help='Output FITS file.',
                         required=True)
-    parser.add_argument('--clobber', action='store_true', help='Overwrite output file.')
+    parser.add_argument('--clobber', action='store_true',
+                        help='Overwrite output file.')
     parser.add_argument('--all_sources', action='store_true',
                         help='Include all sources.')
     parser.add_argument('input', nargs="*", help='Input npy or yaml files.')

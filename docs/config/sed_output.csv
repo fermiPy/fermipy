@@ -1,45 +1,45 @@
-``logemin``	`~numpy.ndarray`	Lower edges of SED energy bins (log10(E/MeV)).
-``logemax``	`~numpy.ndarray`	Upper edges of SED energy bins (log10(E/MeV)).
-``logectr``	`~numpy.ndarray`	Centers of SED energy bins (log10(E/MeV)).
-``emin``	`~numpy.ndarray`	Lower edges of SED energy bins (MeV).
-``emax``	`~numpy.ndarray`	Upper edges of SED energy bins (MeV).
-``ectr``	`~numpy.ndarray`	Centers of SED energy bins (MeV).
+``loge_min``	`~numpy.ndarray`	Lower edges of SED energy bins (log10(E/MeV)).
+``loge_max``	`~numpy.ndarray`	Upper edges of SED energy bins (log10(E/MeV)).
+``loge_ctr``	`~numpy.ndarray`	Centers of SED energy bins (log10(E/MeV)).
+``loge_ref``	`~numpy.ndarray`	Reference energies of SED energy bins (log10(E/MeV)).
+``e_min``	`~numpy.ndarray`	Lower edges of SED energy bins (MeV).
+``e_max``	`~numpy.ndarray`	Upper edges of SED energy bins (MeV).
+``e_ctr``	`~numpy.ndarray`	Centers of SED energy bins (MeV).
+``e_ref``	`~numpy.ndarray`	Reference energies of SED energy bins (MeV).
 ``ref_flux``	`~numpy.ndarray`	Flux of the reference model in each bin (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
 ``ref_eflux``	`~numpy.ndarray`	Energy flux of the reference model in each bin (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
-``ref_dfde``	`~numpy.ndarray`	Differential flux of the reference model evaluated at the bin center (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
-``ref_dfde_emin``	`~numpy.ndarray`	Differential flux of the reference model evaluated at the lower bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
-``ref_dfde_emax``	`~numpy.ndarray`	Differential flux of the reference model evaluated at the upper bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
-``ref_e2dfde``	`~numpy.ndarray`	E^2 x the differential flux of the reference model evaluated at the bin center (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`)
+``ref_dnde``	`~numpy.ndarray`	Differential flux of the reference model evaluated at the bin center (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
+``ref_dnde_e_min``	`~numpy.ndarray`	Differential flux of the reference model evaluated at the lower bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
+``ref_dnde_e_max``	`~numpy.ndarray`	Differential flux of the reference model evaluated at the upper bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
+``ref_e2dnde``	`~numpy.ndarray`	E^2 x the differential flux of the reference model evaluated at the bin center (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`)
 ``ref_npred``	`~numpy.ndarray`	Number of predicted counts in the reference model in each bin.
 ``norm``	`~numpy.ndarray`	Normalization in each bin in units of the reference model.
 ``flux``	`~numpy.ndarray`	Flux in each bin (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
 ``eflux``	`~numpy.ndarray`	Energy flux in each bin (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
-``dfde``	`~numpy.ndarray`	Differential flux in each bin (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
-``e2dfde``	`~numpy.ndarray`	E^2 x the differential flux in each bin (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
-``dfde_err``	`~numpy.ndarray`	1-sigma error on dfde evaluated from likelihood curvature.
-``dfde_err_lo``	`~numpy.ndarray`	Lower 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).
-``dfde_err_hi``	`~numpy.ndarray`	Upper 1-sigma error on dfde evaluated from the profile likelihood (MINOS errors).
-``dfde_ul95``	`~numpy.ndarray`	95% CL upper limit on dfde evaluated from the profile likelihood (MINOS errors).
-``dfde_ul``	`~numpy.ndarray`	Upper limit on dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.
-``e2dfde_err``	`~numpy.ndarray`	1-sigma error on e2dfde evaluated from likelihood curvature.
-``e2dfde_err_lo``	`~numpy.ndarray`	Lower 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).
-``e2dfde_err_hi``	`~numpy.ndarray`	Upper 1-sigma error on e2dfde evaluated from the profile likelihood (MINOS errors).
-``e2dfde_ul95``	`~numpy.ndarray`	95% CL upper limit on e2dfde evaluated from the profile likelihood (MINOS errors).
-``e2dfde_ul``	`~numpy.ndarray`	Upper limit on e2dfde evaluated from the profile likelihood using a CL = ``ul_confidence``.
+``dnde``	`~numpy.ndarray`	Differential flux in each bin (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
+``e2dnde``	`~numpy.ndarray`	E^2 x the differential flux in each bin (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
+``dnde_err``	`~numpy.ndarray`	1-sigma error on dnde evaluated from likelihood curvature.
+``dnde_err_lo``	`~numpy.ndarray`	Lower 1-sigma error on dnde evaluated from the profile likelihood (MINOS errors).
+``dnde_err_hi``	`~numpy.ndarray`	Upper 1-sigma error on dnde evaluated from the profile likelihood (MINOS errors).
+``dnde_ul95``	`~numpy.ndarray`	95% CL upper limit on dnde evaluated from the profile likelihood (MINOS errors).
+``dnde_ul``	`~numpy.ndarray`	Upper limit on dnde evaluated from the profile likelihood using a CL = ``ul_confidence``.
+``e2dnde_err``	`~numpy.ndarray`	1-sigma error on e2dnde evaluated from likelihood curvature.
+``e2dnde_err_lo``	`~numpy.ndarray`	Lower 1-sigma error on e2dnde evaluated from the profile likelihood (MINOS errors).
+``e2dnde_err_hi``	`~numpy.ndarray`	Upper 1-sigma error on e2dnde evaluated from the profile likelihood (MINOS errors).
+``e2dnde_ul95``	`~numpy.ndarray`	95% CL upper limit on e2dnde evaluated from the profile likelihood (MINOS errors).
+``e2dnde_ul``	`~numpy.ndarray`	Upper limit on e2dnde evaluated from the profile likelihood using a CL = ``ul_confidence``.
 ``ts``	`~numpy.ndarray`	Test statistic.
 ``loglike``	`~numpy.ndarray`	Log-likelihood of model for the best-fit amplitude.
 ``npred``	`~numpy.ndarray`	Number of model counts.
 ``fit_quality``	`~numpy.ndarray`	Fit quality parameter for MINUIT and NEWMINUIT optimizers (3 - Full accurate covariance matrix, 2 - Full matrix, but forced positive-definite (i.e. not accurate), 1 - Diagonal approximation only, not accurate, 0 - Error matrix not calculated at all).
 ``fit_status``	`~numpy.ndarray`	Fit status parameter (0=ok).
 ``index``	`~numpy.ndarray`	Spectral index of the power-law model used to fit this bin.
-``lnlprofile``	dict	Likelihood scan for each energy bin.
 ``norm_scan``	`~numpy.ndarray`	Array of NxM normalization values for the profile likelihood scan in N energy bins and M scan points.  A row-wise multiplication with any of ``ref`` columns can be used to convert this matrix to the respective unit.
 ``dloglike_scan``	`~numpy.ndarray`	Array of NxM delta-loglikelihood values for the profile likelihood scan in N energy bins and M scan points.
 ``loglike_scan``	`~numpy.ndarray`	Array of NxM loglikelihood values for the profile likelihood scan in N energy bins and M scan points.
-``params``	dict	Dictionary of best-fit spectral parameters with 1-sigma uncertainties.
 ``param_covariance``	`~numpy.ndarray`	Covariance matrix for the best-fit spectral parameters of the source.
 ``param_names``	`~numpy.ndarray`	Array of names for the parameters in the global spectral parameterization of this source.
 ``param_values``	`~numpy.ndarray`	Array of parameter values.
 ``param_errors``	`~numpy.ndarray`	Array of parameter errors.
-``model_flux``	dict	Dictionary containing the differential flux uncertainty band of the best-fit global spectral parameterization for the source.
-``config``	dict	Copy of input configuration to this method.
+``model_flux``	`~dict`	Dictionary containing the differential flux uncertainty band of the best-fit global spectral parameterization for the source.
+``config``	`~dict`	Copy of input configuration to this method.

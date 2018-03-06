@@ -6,7 +6,8 @@ from astropy.wcs import WCS
 from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-import fermipy.utils as utils
+from astropy.extern import six
+from gammapy.maps.geom import coordsys_to_frame
 
 
 class WCSProj(object):
@@ -56,13 +57,13 @@ class WCSProj(object):
     def npix(self):
         return self._npix
 
-    @staticmethod
-    def create(skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
+    @classmethod
+    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT'):
         npix = np.array(npix, ndmin=1)
         crpix = npix / 2. + 0.5
         wcs = create_wcs(skydir, coordsys, projection,
                          cdelt, crpix)
-        return WCSProj(wcs, npix)
+        return cls(wcs, npix)
 
     def distance_to_edge(self, skydir):
         """Return the angular distance from the given direction and
@@ -90,6 +91,35 @@ class WCSProj(object):
         return delta
 
 
+def distance_to_edge(geom, skydir):
+    """Return the angular distance from the given direction and
+    the edge of the projection."""
+
+    # FIXME: We should add a pixel_size property in gammapy.maps
+    # FIXME: We should make this into a MapGeom method 
+    
+    xpix, ypix = skydir.to_pixel(geom.wcs, origin=0)
+    deltax = np.array((xpix - geom.center_pix[0]) * geom._cdelt[0],
+                      ndmin=1)
+    deltay = np.array((ypix - geom.center_pix[1]) * geom._cdelt[1],
+                      ndmin=1)
+
+    deltax = np.abs(deltax) - 0.5 * geom.width[0]
+    deltay = np.abs(deltay) - 0.5 * geom.width[1]
+
+    m0 = (deltax < 0) & (deltay < 0)
+    m1 = (deltax > 0) & (deltay < 0)
+    m2 = (deltax < 0) & (deltay > 0)
+    m3 = (deltax > 0) & (deltay > 0)
+    mx = np.abs(deltax) <= np.abs(deltay)
+    my = np.abs(deltay) < np.abs(deltax)
+
+    delta = np.zeros(len(deltax))
+    delta[(m0 & mx) | (m3 & my) | m1] = deltax[(m0 & mx) | (m3 & my) | m1]
+    delta[(m0 & my) | (m3 & mx) | m2] = deltay[(m0 & my) | (m3 & mx) | m2]
+    return delta
+
+    
 def create_wcs(skydir, coordsys='CEL', projection='AIT',
                cdelt=1.0, crpix=1., naxis=2, energies=None):
     """Create a WCS object.
@@ -102,8 +132,8 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
 
     projection : str
 
-    cdelt : float
-
+    cdelt : float or (float,float)
+        In the first case the same value is used for x and y axes
     crpix : float or (float,float)
         In the first case the same value is used for x and y axes
     naxis : {2, 3}
@@ -133,8 +163,13 @@ def create_wcs(skydir, coordsys='CEL', projection='AIT',
     except:
         w.wcs.crpix[0] = crpix
         w.wcs.crpix[1] = crpix
-    w.wcs.cdelt[0] = -cdelt
-    w.wcs.cdelt[1] = cdelt
+
+    try:
+        w.wcs.cdelt[0] = cdelt[0]
+        w.wcs.cdelt[1] = cdelt[1]
+    except:
+        w.wcs.cdelt[0] = -cdelt
+        w.wcs.cdelt[1] = cdelt
 
     w = WCS(w.to_header())
     if naxis == 3 and energies is not None:
@@ -280,7 +315,7 @@ def get_target_skydir(config, ref_skydir=None):
 
     radec = config.get('radec', None)
 
-    if utils.isstr(radec):
+    if isinstance(radec, six.string_types):
         return SkyCoord(radec, unit=u.deg)
     elif isinstance(radec, list):
         return SkyCoord(radec[0], radec[1], unit=u.deg)
@@ -326,6 +361,9 @@ def wcs_to_axes(w, npix):
     y = np.linspace(-(npix[1]) / 2., (npix[1]) / 2.,
                     npix[1] + 1) * np.abs(w.wcs.cdelt[1])
 
+    if w.wcs.naxis == 2:
+        return x, y
+
     cdelt2 = np.log10((w.wcs.cdelt[2] + w.wcs.crval[2]) / w.wcs.crval[2])
 
     z = (np.linspace(0, npix[2], npix[2] + 1)) * cdelt2
@@ -360,12 +398,36 @@ def wcs_to_coords(w, shape):
     return np.vstack((x, y, z))
 
 
+def get_map_skydir(filename, maphdu=0):
+    hdulist = fits.open(filename)
+    wcs = WCS(hdulist[maphdu].header)
+    return wcs_to_skydir(wcs)
+
+
+def get_cel_to_gal_angle(skydir):
+    """Calculate the rotation angle in radians between the longitude
+    axes of a local projection in celestial and galactic coordinates.
+
+    Parameters
+    ----------
+    skydir : `~astropy.coordinates.SkyCoord`
+        Direction of projection center.
+
+    Returns
+    -------
+    angle : float
+        Rotation angle in radians.
+    """
+    wcs0 = create_wcs(skydir, coordsys='CEL')
+    wcs1 = create_wcs(skydir, coordsys='GAL')
+    x, y = SkyCoord.to_pixel(SkyCoord.from_pixel(1.0, 0.0, wcs0), wcs1)
+    return np.arctan2(y, x)
+
+
 def wcs_to_skydir(wcs):
     lon = wcs.wcs.crval[0]
     lat = wcs.wcs.crval[1]
-
     coordsys = get_coordsys(wcs)
-
     if coordsys == 'GAL':
         return SkyCoord(lon, lat, unit='deg',
                         frame='galactic').transform_to('icrs')

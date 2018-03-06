@@ -1,0 +1,6 @@
+``name``	`~str`	Name of Source, 
+``tmin``	`~numpy.ndarray`	Lower edge of time bin in MET.
+``tmax``	`~numpy.ndarray`	Upper edge of time bin in MET.
+``fit_success``	`~numpy.ndarray`	Did the likelihood fit converge? True if yes.
+``config``	`~dict`	Copy of the input configuration to this method.
+``ts_var``	`~float`	TS of variability. Should be distributed as :math:`\chi^2` with :math:`n-1` degrees of freedom, where :math:`n` is the number of time bins.

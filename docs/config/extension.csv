@@ -1,8 +1,18 @@
-``fix_background``	False	Fix any background parameters that are currently free in the model when performing the likelihood scan over extension.
-``spatial_model``	RadialGaussian	Spatial model use for extension test.
+``fit_ebin``	False	Perform a fit for the angular extension in each analysis energy bin.
+``fit_position``	False	Perform a simultaneous fit to the source position and extension.
+``fix_shape``	False	Fix spectral shape parameters of the source of interest. If True then only the normalization parameter will be fit.
+``free_background``	False	Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
+``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
+``make_plots``	False	Generate diagnostic plots.
+``make_tsmap``	True	Make a TS map for the source of interest.
+``psf_scale_fn``	None	Tuple of two vectors (logE,f) defining an energy-dependent PSF scaling function that will be applied when building spatial models for the source of interest.  The tuple (logE,f) defines the fractional corrections f at the sequence of energies logE = log10(E/MeV) where f=0 corresponds to no correction.  The correction function f(E) is evaluated by linearly interpolating the fractional correction factors f in log(E).  The corrected PSF is given by P'(x;E) = P(x/(1+f(E));E) where x is the angular separation.
+``save_model_map``	False	Save model counts cubes for the best-fit model of extension.
+``spatial_model``	RadialGaussian	Spatial model that will be used to test the sourceextension.  The spatial scale parameter of the model will be set such that the 68% containment radius of the model is equal to the width parameter.
 ``sqrt_ts_threshold``	None	Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then nothreshold is applied.
-``update``	False	Update the source model with the best-fit spatial extension.
-``width``	None	Parameter vector for scan over spatial extent.  If none then the parameter vector will be set from ``width_min``, ``width_max``, and ``width_nstep``.
+``update``	False	Update this source with the best-fit model for spatial extension if TS_ext > ``tsext_threshold``.
+``width``	None	Sequence of values in degrees for the likelihood scan over spatial extension (68% containment radius).  If this argument is None then the scan points will be determined from width_min/width_max/width_nstep.
 ``width_max``	1.0	Maximum value in degrees for the likelihood scan over spatial extent.
 ``width_min``	0.01	Minimum value in degrees for the likelihood scan over spatial extent.
-``width_nstep``	21	Number of steps for the spatial likelihood scan.
+``width_nstep``	21	Number of scan points between width_min and width_max. Scan points will be spaced evenly on a logarithmic scale between `width_min` and `width_max`.
+``write_fits``	True	Write the output to a FITS file.
+``write_npy``	True	Write the output dictionary to a numpy file.
