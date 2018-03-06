@@ -1,0 +1,25 @@
+``ra``	`~float`	Right ascension of the source (deg).
+``dec``	`~float`	Declination of the source (deg).
+``glon``	`~float`	Galactic longitude of the source (deg).
+``glat``	`~float`	Galactic latitude of the source (deg).
+``ra_err``	`~float`	Std. deviation of positional uncertainty in right ascension (deg).
+``dec_err``	`~float`	Std. deviation of positional uncertainty in declination (deg).
+``glon_err``	`~float`	Std. deviation of positional uncertainty in galactic longitude (deg).
+``glat_err``	`~float`	Std. deviation of positional uncertainty in galactic latitude (deg).
+``pos_err``	`~float`	1-sigma positional uncertainty (deg).
+``pos_r68``	`~float`	68% positional uncertainty (deg).
+``pos_r95``	`~float`	95% positional uncertainty (deg).
+``pos_r99``	`~float`	99% positional uncertainty (deg).
+``pos_err_semimajor``	`~float`	1-sigma uncertainty (deg) along major axis of uncertainty ellipse.
+``pos_err_semiminor``	`~float`	1-sigma uncertainty (deg) along minor axis of uncertainty ellipse.
+``pos_angle``	`~float`	Position angle of uncertainty ellipse with respect to major axis.
+``pos_gal_cov``	`~numpy.ndarray`	Covariance matrix of positional uncertainties in local projection in galactic coordinates.
+``pos_gal_corr``	`~numpy.ndarray`	Correlation matrix of positional uncertainties in local projection in galactic coordinates.
+``pos_cel_cov``	`~numpy.ndarray`	Covariance matrix of positional uncertainties in local projection in celestial coordinates.
+``pos_cel_corr``	`~numpy.ndarray`	Correlation matrix of positional uncertainties in local projection in celestial coordinates.
+``offset_ra``	`~float`	Right ascension offset from ROI center in local celestial projection (deg).
+``offset_dec``	`~float`	Declination offset from ROI center in local celestial projection (deg).
+``offset_glon``	`~float`	Galactic longitude offset from ROI center in local galactic projection (deg).
+``offset_glat``	`~float`	Galactic latitude offset from ROI center in local galactic projection (deg).
+``offset_roi_edge``	`~float`	Distance from the edge of the ROI (deg).  Negative (positive) values indicate locations inside (outside) the ROI.
+``offset``	`~float`	Angular offset from ROI center (deg).

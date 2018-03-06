@@ -46,8 +46,8 @@ as a dictionary containing *name* and *file* fields:
    
    model:
      galdiff  : 
-       - { 'name' : 'component0' : 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component0.fits' }
-       - { 'name' : 'component1' : 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component1.fits' }
+       - { 'name' : 'component0', 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component0.fits' }
+       - { 'name' : 'component1', 'file' : '$FERMI_DIFFUSE_DIR/diffuse_component1.fits' }
 
 Configuring Source Components
 -----------------------------
@@ -105,25 +105,37 @@ sets the value and scale properties:
 Spatial Models
 --------------
 
-Fermipy supports three types of pre-defined spatial models which
-can be defined by setting the ``SpatialModel`` property: PointSource
-(the default), RadialDisk, and RadialGaussian.  The spatial extension
-of RadialDisk and RadialGaussian can be controlled with the
-``SpatialWidth`` parameter which sets the 68% containment radius in
-degrees.  Note for ST releases prior to 11-01-01, RadialDisk and
-RadialGaussian sources will be represented with the ``SpatialMap``
-type.
+Fermipy supports four spatial models which are defined with the
+``SpatialModel`` property:
+
+* PointSource : A point source (SkyDirFunction).
+* RadialGaussian : A symmetric 2D Gaussian with width parameter 'Sigma'.
+* RadialDisk : A symmetric 2D Disk with radius 'Radius'.
+* SpatialMap : An arbitrary 2D shape with morphology defined by a FITS template.
+  
+The spatial extension of RadialDisk and RadialGaussian can be
+controlled with the ``SpatialWidth`` parameter which sets the 68%
+containment radius in degrees.  Note for ST releases prior to
+11-01-01, RadialDisk and RadialGaussian sources will be represented
+with the ``SpatialMap`` type.
 
 .. code-block:: yaml
    
    model:
-     sources  : 
+     sources  :
+       - { name: 'PointSource', glon : 120.0, glat : 0.0, 
+        SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
+        SpatialModel: 'PointSource' }
        - { name: 'DiskSource', glon : 120.0, glat : 0.0, 
         SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
         SpatialModel: 'RadialDisk', SpatialWidth: 1.0 }
        - { name: 'GaussSource', glon : 120.0, glat : 0.0, 
         SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
         SpatialModel: 'RadialGaussian', SpatialWidth: 1.0 }
+       - { name: 'MapSource', glon : 120.0, glat : 0.0, 
+        SpectrumType : 'PowerLaw', Index : 2.0, Scale : 1000, Prefactor : !!float 1e-11, 
+        SpatialModel: 'SpatialMap', Spatial_Filename : 'template.fits' }
+        
 
 
 Editing the Model at Runtime

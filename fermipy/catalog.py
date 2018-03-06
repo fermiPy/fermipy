@@ -3,11 +3,11 @@ from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
 from astropy import units as u
-from astropy.table import Table, Column
+from astropy.table import Table, Column, join
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 import fermipy
-from fermipy import spectrum
+from fermipy.spectrum import PowerLaw
 
 
 def add_columns(t0, t1):
@@ -22,28 +22,61 @@ def add_columns(t0, t1):
         t0.add_column(new_col)
 
 
-def join_tables(t0, t1, key0, key1):
-    v0, v1 = t0[key0], t1[key1]
-    v0 = np.core.defchararray.strip(v0)
-    v1 = np.core.defchararray.strip(v1)
-    add_columns(t0, t1)
+def join_tables(left, right, key_left, key_right,
+                cols_right=None):
+    """Perform a join of two tables.
 
-    # Get mask of elements in t0 that are shared with t0
-    m0 = np.in1d(v0, v1)
-    idx1 = np.searchsorted(v1, v0)[m0]
+    Parameters
+    ----------
+    left : `~astropy.Table`
+        Left table for join.
 
-    for colname in t1.colnames:
-        if colname == 'Source_Name':
-            continue
-        t0[colname][m0] = t1[colname][idx1]
+    right : `~astropy.Table`
+        Right table for join.
+
+    key_left : str
+        Key used to match elements from ``left`` table.
+
+    key_right : str
+        Key used to match elements from ``right`` table.
+
+    cols_right : list    
+        Subset of columns from ``right`` table that will be appended
+        to joined table.
+
+    """
+    right = right.copy()
+
+    if cols_right is None:
+        cols_right = right.colnames
+    else:
+        cols_right = [c for c in cols_right if c in right.colnames]
+
+    if key_left != key_right:
+        right[key_right].name = key_left
+
+    if key_left not in cols_right:
+        cols_right += [key_left]
+
+    out = join(left, right[cols_right], keys=key_left,
+               join_type='left')
+
+    for col in out.colnames:
+        if out[col].dtype.kind in ['S', 'U']:
+            out[col].fill_value = ''
+        elif out[col].dtype.kind in ['i']:
+            out[col].fill_value = 0
+        else:
+            out[col].fill_value = np.nan
+
+    return out.filled()
 
 
 def strip_columns(tab):
     """Strip whitespace from string columns."""
     for colname in tab.colnames:
-        if not tab[colname].dtype.type is np.string_:
-            continue
-        tab[colname] = np.core.defchararray.strip(tab[colname])
+        if tab[colname].dtype.kind in ['S', 'U']:
+            tab[colname] = np.core.defchararray.strip(tab[colname])
 
 
 def row_to_dict(row):
@@ -51,7 +84,7 @@ def row_to_dict(row):
     o = {}
     for colname in row.colnames:
 
-        if isinstance(row[colname], np.string_):
+        if isinstance(row[colname], np.string_) and row[colname].dtype.kind in ['S', 'U']:
             o[colname] = str(row[colname])
         else:
             o[colname] = row[colname]
@@ -68,8 +101,8 @@ class Catalog(object):
         self._extdir = extdir
 
         if self.table['RAJ2000'].unit is None:
-            self._src_skydir = SkyCoord(ra=self.table['RAJ2000']*u.deg,
-                                        dec=self.table['DEJ2000']*u.deg)
+            self._src_skydir = SkyCoord(ra=self.table['RAJ2000'] * u.deg,
+                                        dec=self.table['DEJ2000'] * u.deg)
         else:
             self._src_skydir = SkyCoord(ra=self.table['RAJ2000'],
                                         dec=self.table['DEJ2000'])
@@ -79,9 +112,15 @@ class Catalog(object):
                                    self._src_skydir.galactic.b.deg)).T
 
         if 'Spatial_Filename' not in self.table.columns:
-            self.table['Spatial_Filename'] = Column(dtype='S20',length=len(self.table))
+            self.table['Spatial_Filename'] = Column(
+                dtype='S20', length=len(self.table))
 
-        m = (self.table['Spatial_Filename'] != '') & (self.table['Spatial_Filename'] != 'None')
+        if 'Spatial_Function' not in self.table.columns:
+            self.table['Spatial_Function'] = Column(
+                dtype='S20', length=len(self.table))
+
+        m = (self.table['Spatial_Filename'] != '') | (
+            self.table['Spatial_Function'] != '')
         self.table['extended'] = False
         self.table['extended'][m] = True
         self.table['extdir'] = extdir
@@ -104,8 +143,8 @@ class Catalog(object):
     def glonlat(self):
         return self._glonlat
 
-    @staticmethod
-    def create(name):
+    @classmethod
+    def create(cls, name):
 
         extname = os.path.splitext(name)[1]
         if extname == '.fits' or extname == '.fit':
@@ -114,26 +153,39 @@ class Catalog(object):
                 fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
                                         fitsfile)
 
-            # Try to guess the catalog type form its name
-            if 'gll_psc' in fitsfile:                
+            h = fits.open(fitsfile)
+            name = ''
+            if 'CDS-NAME' in h[1].header:
+                name = h[1].header['CDS-NAME']
+
+            # Try to guess the catalog type from its name
+            if name == '3FGL':
                 return Catalog3FGL(fitsfile)
+            elif name == 'FL8Y':
+                return CatalogFL8Y(fitsfile)
+            elif 'gll_psch_v08' in fitsfile:
+                return Catalog2FHL(fitsfile)
 
             tab = Table.read(fitsfile)
 
             if 'NickName' in tab.columns:
                 return Catalog4FGLP(fitsfile)
             else:
-                return Catalog(Table.read(fitsfile))
+                table = Table.read(fitsfile)
+                return cls(table)
 
         elif name == '3FGL':
             return Catalog3FGL()
         elif name == '2FHL':
             return Catalog2FHL()
+        elif name == 'FL8Y':
+            return CatalogFL8Y()
         else:
-            raise Exception('Unrecognized catalog type.')
+            raise Exception('Unrecognized catalog {}.'.format(name))
 
 
 class Catalog2FHL(Catalog):
+
     def __init__(self, fitsfile=None, extdir=None):
 
         if extdir is None:
@@ -147,23 +199,46 @@ class Catalog2FHL(Catalog):
         hdulist = fits.open(fitsfile)
         table = Table(hdulist['2FHL Source Catalog'].data)
         table_extsrc = Table(hdulist['Extended Sources'].data)
-
+        table_extsrc.meta.clear()
         strip_columns(table)
         strip_columns(table_extsrc)
+        if 'Spatial_Function' not in table_extsrc.colnames:
+            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
+                                           length=len(table_extsrc)))
+            table_extsrc['Spatial_Function'] = 'SpatialMap'
 
-        join_tables(table, table_extsrc, 'Source_Name', 'Source_Name')
+        table = join_tables(table, table_extsrc, 'Source_Name', 'Source_Name',
+                            ['Model_Form', 'Model_SemiMajor',
+                             'Model_SemiMinor', 'Model_PosAng',
+                             'Spatial_Filename', 'Spatial_Function'])
+
+        table.sort('Source_Name')
 
         super(Catalog2FHL, self).__init__(table, extdir)
 
         self._table['Flux_Density'] = \
-            spectrum.PowerLaw.eval_norm(50E3, -np.array(self.table['Spectral_Index']),
-                                        50E3, 2000E3,
-                                        np.array(self.table['Flux50']))
+            PowerLaw.eval_norm(50E3, -np.array(self.table['Spectral_Index']),
+                               50E3, 2000E3,
+                               np.array(self.table['Flux50']))
         self._table['Pivot_Energy'] = 50E3
         self._table['SpectrumType'] = 'PowerLaw'
+        self._fill_params(self.table)
+
+    @staticmethod
+    def _fill_params(tab):
+
+        tab['params'] = np.nan * np.ones((len(tab), 10))
+
+        # PowerLaw
+        # Prefactor, Index, Scale
+        m = tab['SpectrumType'] == 'PowerLaw'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['Spectral_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
 
 
 class Catalog3FGL(Catalog):
+
     def __init__(self, fitsfile=None, extdir=None):
 
         if extdir is None:
@@ -174,22 +249,37 @@ class Catalog3FGL(Catalog):
             fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
                                     'gll_psc_v16.fit')
 
-        hdulist = fits.open(fitsfile)
-        table = Table(hdulist['LAT_Point_Source_Catalog'].data)
-        #table = Table.read(fitsfile)
-        table_extsrc = Table(hdulist['ExtendedSources'].data)
-
+        table = Table.read(fitsfile, 'LAT_Point_Source_Catalog')
+        table_extsrc = Table.read(fitsfile, 'ExtendedSources')
+        table_extsrc.meta.clear()
+        if 'Flux_History' in table.columns:
+            table.remove_column('Flux_History')
+        if 'Unc_Flux_History' in table.columns:
+            table.remove_column('Unc_Flux_History')
         strip_columns(table)
         strip_columns(table_extsrc)
+        if 'Spatial_Function' not in table_extsrc.colnames:
+            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
+                                           length=len(table_extsrc)))
+            table_extsrc['Spatial_Function'] = 'SpatialMap'
 
-        self._table_extsrc = table_extsrc
+        table = join_tables(table, table_extsrc,
+                            'Extended_Source_Name', 'Source_Name',
+                            ['Model_Form', 'Model_SemiMajor',
+                             'Model_SemiMinor', 'Model_PosAng',
+                             'Spatial_Filename', 'Spatial_Function'])
 
-        join_tables(table, table_extsrc, 'Extended_Source_Name', 'Source_Name')
+        table.sort('Source_Name')
 
         super(Catalog3FGL, self).__init__(table, extdir)
 
         m = self.table['SpectrumType'] == 'PLExpCutoff'
         self.table['SpectrumType'][m] = 'PLSuperExpCutoff'
+
+        self.table['Spatial_Function'] = Column(name='Spatial_Function', dtype='U20',
+                                                data=self.table['Spatial_Function'].data)
+        m = self.table['Spatial_Function'] == 'RadialGauss'
+        self.table['Spatial_Function'][m] = 'RadialGaussian'
 
         self.table['TS_value'] = 0.0
         self.table['TS'] = 0.0
@@ -199,9 +289,46 @@ class Catalog3FGL(Catalog):
                    'Sqrt_TS3000_10000', 'Sqrt_TS10000_100000']
 
         for k in ts_keys:
+
+            if not k in self.table.columns:
+                continue
+
             m = np.isfinite(self.table[k])
             self._table['TS_value'][m] += self.table[k][m] ** 2
             self._table['TS'][m] += self.table[k][m] ** 2
+
+        self._fill_params(self.table)
+
+    @staticmethod
+    def _fill_params(tab):
+
+        tab['params'] = np.nan * np.ones((len(tab), 10))
+
+        # PowerLaw
+        # Prefactor, Index, Scale
+        m = tab['SpectrumType'] == 'PowerLaw'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['Spectral_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
+
+        # PLSuperExpCutoff2
+        # Prefactor, Index1, Index2, Scale, Cutoff
+        m = tab['SpectrumType'] == 'PLSuperExpCutoff'
+        tab['params'][m, 0] = (tab['Flux_Density'][m] *
+                               np.exp((tab['Pivot_Energy'][m] / tab['Cutoff'][m]) **
+                                      tab['Exp_Index'][m]))
+        tab['params'][m, 1] = tab['Spectral_Index'][m]
+        tab['params'][m, 2] = tab['Exp_Index'][m]
+        tab['params'][m, 3] = tab['Pivot_Energy'][m]
+        tab['params'][m, 4] = tab['Cutoff'][m]
+
+        # LogParabola
+        # norm, Index, Scale, beta
+        m = tab['SpectrumType'] == 'LogParabola'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['Spectral_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
+        tab['params'][m, 3] = tab['beta'][m]
 
 
 class Catalog4FGLP(Catalog):
@@ -222,16 +349,20 @@ class Catalog4FGLP(Catalog):
         strip_columns(table)
 
         table['Source_Name'] = table['NickName']
-        table['beta'] = table['Beta']
+        try:
+            table['beta'] = table['Beta']
+        except KeyError:
+            pass
 
         m = table['Extended'] == True
 
-        table['Spatial_Filename'] = Column(dtype='S20',length=len(table))
+        table['Spatial_Filename'] = Column(dtype='S20', length=len(table))
 
         spatial_filenames = []
         for i, row in enumerate(table[m]):
-            spatial_filenames += [table[m][i]['Source_Name'].replace(' ','') + '.fits']
-        table['Spatial_Filename'][m] =  np.array(spatial_filenames)
+            spatial_filenames += [table[m][i]
+                                  ['Source_Name'].replace(' ', '') + '.fits']
+        table['Spatial_Filename'][m] = np.array(spatial_filenames)
 
         super(Catalog4FGLP, self).__init__(table, extdir)
 
@@ -240,3 +371,90 @@ class Catalog4FGLP(Catalog):
 
         table['TS'] = table['Test_Statistic']
         table['Cutoff'] = table['Cutoff_Energy']
+
+
+class CatalogFL8Y(Catalog):
+    """This class supports releases the preliminary 8-yr point-source
+    list (FL8Y).  See
+    https://fermi.gsfc.nasa.gov/ssc/data/access/lat/fl8y/.
+    """
+
+    def __init__(self, fitsfile=None, extdir=None):
+
+        if extdir is None:
+            extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
+                                  'Extended_archive_v18')
+
+        if fitsfile is None:
+            fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
+                                    'gll_psc_8year_v5.fit')
+
+        #hdulist = fits.open(fitsfile)
+        table = Table.read(fitsfile)
+        table_extsrc = Table.read(fitsfile, 'ExtendedSources')
+        table_extsrc.meta.clear()
+
+        strip_columns(table)
+        strip_columns(table_extsrc)
+        if 'Spatial_Function' not in table_extsrc.colnames:
+            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
+                                           length=len(table_extsrc)))
+            table_extsrc['Spatial_Function'] = 'SpatialMap'
+
+        table = join_tables(table, table_extsrc,
+                            'Extended_Source_Name', 'Source_Name',
+                            ['Model_Form', 'Model_SemiMajor',
+                             'Model_SemiMinor', 'Model_PosAng',
+                             'Spatial_Filename', 'Spatial_Function'])
+        table.sort('Source_Name')
+        super(CatalogFL8Y, self).__init__(table, extdir)
+
+        excol = np.zeros((len(table)), 'bool')
+        for i, exname in enumerate(table['Extended_Source_Name']):
+            if len(exname.strip()) > 0:
+                excol[i] = True
+
+        self.table['extended'] = excol
+        self.table['Extended'] = excol
+
+        scol = Column(name='Spatial_Function', dtype='U20',
+                      data=self.table['Spatial_Function'].data)
+        self.table.remove_column('Spatial_Function')
+        self.table['Spatial_Function'] = scol
+
+        m = self.table['Spatial_Function'] == 'RadialGauss'
+        self.table['Spatial_Function'][m] = 'RadialGaussian'
+        self.table['TS'] = self.table['Signif_Avg'] * self.table['Signif_Avg']
+        self._fill_params(self.table)
+
+    @staticmethod
+    def _fill_params(tab):
+
+        tab['params'] = np.nan * np.ones((len(tab), 10))
+
+        # PowerLaw
+        # Prefactor, Index, Scale
+        m = tab['SpectrumType'] == 'PowerLaw'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['PL_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
+
+        # PLSuperExpCutoff2
+        # Prefactor, Index1, Index2, Scale, ExpFactor
+        m = tab['SpectrumType'] == 'PLSuperExpCutoff2'
+        tab['params'][m, 0] = (tab['Flux_Density'][m] *
+                               np.exp(tab['PLEC_Expfactor'][m] *
+                                      tab['Pivot_Energy'][m] **
+                                      tab['PLEC_Exp_Index'][m]))
+        tab['params'][m, 1] = tab['PLEC_Index'][m]
+        tab['params'][m, 2] = tab['PLEC_Exp_Index'][m]
+        tab['params'][m, 3] = tab['Pivot_Energy'][m]
+        tab['params'][m, 4] = tab['PLEC_Expfactor'][m]
+
+        # LogParabola
+        # norm, Index, Scale, beta
+        m = tab['SpectrumType'] == 'LogParabola'
+        tab['params'][m, 0] = tab['Flux_Density'][m]
+        tab['params'][m, 1] = tab['LP_Index'][m]
+        tab['params'][m, 2] = tab['Pivot_Energy'][m]
+        tab['params'][m, 3] = tab['LP_beta'][m]

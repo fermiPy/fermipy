@@ -1,69 +1,52 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
+import os
+import json
 import copy
 import pprint
 import logging
 import numpy as np
+from astropy.io import fits
 from astropy.coordinates import SkyCoord
+from astropy.table import Table, Column
+from gammapy.maps import WcsNDMap, MapCoord
 import fermipy.config
-import fermipy.utils as utils
-import fermipy.wcs_utils as wcs_utils
+from fermipy import utils
+from fermipy import defaults
+from fermipy import wcs_utils
+from fermipy import fits_utils
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
 from fermipy.skymap import Map
+from fermipy.config import ConfigSchema
+from fermipy.gtutils import FreeParameterState, SourceMapState
+from fermipy.timing import Timer
+from fermipy.model_utils import get_function_norm_par_name
 from LikelihoodState import LikelihoodState
+import pyLikelihood as pyLike
 
 
-class SourceFinder(object):
+class SourceFind(object):
     """Mixin class which provides source-finding functionality to
     `~fermipy.gtanalysis.GTAnalysis`."""
 
     def find_sources(self, prefix='', **kwargs):
-        """An iterative source-finding algorithm.
+        """An iterative source-finding algorithm that uses likelihood
+        ratio (TS) maps of the region of interest to find new sources.
+        After each iteration a new TS map is generated incorporating
+        sources found in the previous iteration.  The method stops
+        when the number of iterations exceeds ``max_iter`` or no
+        sources exceeding ``sqrt_ts_threshold`` are found.
 
         Parameters
         ----------
-
-        model : dict
-           Dictionary defining the properties of the test source.
-           This is the model that will be used for generating TS maps.
-
-        sqrt_ts_threshold : float
-           Source threshold in sqrt(TS).  Only peaks with sqrt(TS)
-           exceeding this threshold will be used as seeds for new
-           sources.
-
-        min_separation : float
-           Minimum separation in degrees of sources detected in each
-           iteration. The source finder will look for the maximum peak
-           in the TS map within a circular region of this radius.
-
-        max_iter : int
-           Maximum number of source finding iterations.  The source
-           finder will continue adding sources until no additional
-           peaks are found or the number of iterations exceeds this
-           number.
-
-        sources_per_iter : int
-           Maximum number of sources that will be added in each
-           iteration.  If the number of detected peaks in a given
-           iteration is larger than this number, only the N peaks with
-           the largest TS will be used as seeds for the current
-           iteration.
-
-        tsmap_fitter : str
-           Set the method used internally for generating TS maps.
-           Valid options:
-
-           * tsmap
-           * tscube
+        {options}
 
         tsmap : dict
            Keyword arguments dictionary for tsmap method.
 
         tscube : dict
            Keyword arguments dictionary for tscube method.
-
 
         Returns
         -------
@@ -75,12 +58,20 @@ class SourceFinder(object):
            List of source objects.
 
         """
-
+        timer = Timer.create(start=True)
         self.logger.info('Starting.')
 
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['sourcefind'])
-        config.update(kwargs)
+        schema = ConfigSchema(self.defaults['sourcefind'],
+                              tsmap=self.defaults['tsmap'],
+                              tscube=self.defaults['tscube'])
+
+        schema.add_option('search_skydir', None, '', SkyCoord)
+        schema.add_option('search_minmax_radius', [None, 1.0], '', list)
+
+        config = utils.create_dict(self.config['sourcefind'],
+                                   tsmap=self.config['tsmap'],
+                                   tscube=self.config['tscube'])
+        config = schema.create_config(config, **kwargs)
 
         # Defining default properties of test source model
         config['model'].setdefault('Index', 2.0)
@@ -102,6 +93,7 @@ class SourceFinder(object):
                 break
 
         self.logger.info('Done.')
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
 
         return o
 
@@ -115,30 +107,35 @@ class SourceFinder(object):
 
         for p in peaks:
 
-            o, skydir = fit_error_ellipse(tsmap, (p['ix'], p['iy']), dpix=2)
+            o = fit_error_ellipse(tsmap, (p['ix'], p['iy']), dpix=2)
+            skydir = o['skydir']
             p['fit_loc'] = o
-            p['fit_skydir'] = skydir
+            p['fit_skydir'] = o['skydir']
 
             p.update(o)
-
-            if o['fit_success']:
-                skydir = p['fit_skydir']
-            else:
-                skydir = p['skydir']
-
             name = utils.create_source_name(skydir)
             src_dict = copy.deepcopy(src_dict_template)
-            src_dict.update({'Prefactor': amp.counts[p['iy'], p['ix']],
+            norm_par = get_function_norm_par_name(
+                src_dict_template['SpectrumType'])
+            src_dict.update({norm_par: amp.data[p['iy'], p['ix']],
                              'ra': skydir.icrs.ra.deg,
                              'dec': skydir.icrs.dec.deg})
 
-            src_dict['pos_sigma'] = o['sigma']
-            src_dict['pos_sigma_semimajor'] = o['sigma_semimajor']
-            src_dict['pos_sigma_semiminor'] = o['sigma_semiminor']
-            src_dict['pos_r68'] = o['r68']
-            src_dict['pos_r95'] = o['r95']
-            src_dict['pos_r99'] = o['r99']
-            src_dict['pos_angle'] = np.degrees(o['theta'])
+            src_dict['glon_err'] = o['glon_err']
+            src_dict['glat_err'] = o['glat_err']
+            src_dict['ra_err'] = o['ra_err']
+            src_dict['dec_err'] = o['dec_err']
+            src_dict['pos_err'] = o['pos_err']
+            src_dict['pos_err_semimajor'] = o['pos_err_semimajor']
+            src_dict['pos_err_semiminor'] = o['pos_err_semiminor']
+            src_dict['pos_r68'] = o['pos_r68']
+            src_dict['pos_r95'] = o['pos_r95']
+            src_dict['pos_r99'] = o['pos_r99']
+            src_dict['pos_angle'] = o['pos_angle']
+            src_dict['pos_gal_cov'] = o['pos_gal_cov']
+            src_dict['pos_gal_corr'] = o['pos_gal_corr']
+            src_dict['pos_cel_cov'] = o['pos_cel_cov']
+            src_dict['pos_cel_corr'] = o['pos_cel_corr']
 
             self.logger.info('Found source\n' +
                              'name: %s\n' % name +
@@ -154,23 +151,30 @@ class SourceFinder(object):
         src_dict_template = kwargs.pop('model')
 
         threshold = kwargs.get('sqrt_ts_threshold')
+        multithread = kwargs.get('multithread', False)
         min_separation = kwargs.get('min_separation')
         sources_per_iter = kwargs.get('sources_per_iter')
         search_skydir = kwargs.get('search_skydir', None)
         search_minmax_radius = kwargs.get('search_minmax_radius', [None, 1.0])
-
-        tsmap_fitter = kwargs.get('tsmap_fitter')
-        tsmap_kwargs = kwargs.get('tsmap', {})
-        tscube_kwargs = kwargs.get('tscube', {})
+        tsmap_fitter = kwargs.get('tsmap_fitter', 'tsmap')
+        free_params = kwargs.get('free_params', None)
+        if not free_params:
+            free_params = None
 
         if tsmap_fitter == 'tsmap':
-            m = self.tsmap('%s_sourcefind_%02i' % (prefix, iiter),
-                           model=src_dict_template,
-                           **tsmap_kwargs)
+            kw = kwargs.get('tsmap', {})
+            kw['model'] = src_dict_template
+            kw['multithread'] = multithread
+            m = self.tsmap(utils.join_strings([prefix,
+                                               'sourcefind_%02i' % iiter]),
+                           **kw)
+
         elif tsmap_fitter == 'tscube':
-            m = self.tscube('%s_sourcefind_%02i' % (prefix, iiter),
-                            model=src_dict_template,
-                            **tscube_kwargs)
+            kw = kwargs.get('tscube', {})
+            kw['model'] = src_dict_template
+            m = self.tscube(utils.join_strings([prefix,
+                                                'sourcefind_%02i' % iiter]),
+                            **kw)
         else:
             raise Exception(
                 'Unrecognized option for fitter: %s.' % tsmap_fitter)
@@ -217,9 +221,9 @@ class SourceFinder(object):
 
         # Re-fit spectral parameters of each source individually
         for name in new_src_names:
-            self.logger.info('Performing spectral fit for %s.',name)
+            self.logger.info('Performing spectral fit for %s.', name)
             self.logger.debug(pprint.pformat(self.roi[name].params))
-            self.free_source(name, True)
+            self.free_source(name, True, pars=free_params)
             self.fit()
             self.logger.info(pprint.pformat(self.roi[name].params))
             self.free_source(name, False)
@@ -242,288 +246,475 @@ class SourceFinder(object):
 
         Parameters
         ----------
-
         name : str
             Source name.
 
-        dtheta_max : float
-            Maximum offset in RA/DEC in deg from the nominal source
-            position that will be used to define the boundaries of the
-            TS map search region.
-
-        nstep : int
-            Number of steps in longitude/latitude that will be taken
-            when refining the source position.  The bounds of the scan
-            range are set to the 99% positional uncertainty as
-            determined from the TS map peak fit.  The total number of
-            sampling points will be nstep**2.
-
-        fix_background : bool
-            Fix background parameters when fitting the source position.
-
-        update : bool
-            Update the model for this source with the best-fit
-            position.  If newname=None this will overwrite the
-            existing source map of this source with one corresponding
-            to its new location.
-
-        newname : str
-            Name that will be assigned to the relocalized source
-            when update=True.  If newname is None then the existing
-            source name will be used.
+        {options}
 
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
 
         Returns
         -------
-
         localize : dict
             Dictionary containing results of the localization
-            analysis.  This dictionary is also saved to the
-            dictionary of this source in 'localize'.
+            analysis.
 
         """
-
+        timer = Timer.create(start=True)
         name = self.roi.get_source_by_name(name).name
 
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['localize'])
-        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
-        config.setdefault('newname', name)
-        config.setdefault('prefix', '')
-        fermipy.config.validate_config(kwargs, config)
-        config = utils.merge_dict(config, kwargs)
-
-        nstep = config['nstep']
-        dtheta_max = config['dtheta_max']
-        update = config['update']
-        newname = config['newname']
-        prefix = config['prefix']
+        schema = ConfigSchema(self.defaults['localize'],
+                              optimizer=self.defaults['optimizer'])
+        schema.add_option('use_cache', True)
+        schema.add_option('prefix', '')
+        config = utils.create_dict(self.config['localize'],
+                                   optimizer=self.config['optimizer'])
+        config = schema.create_config(config, **kwargs)
 
         self.logger.info('Running localization for %s' % name)
 
-        saved_state = LikelihoodState(self.like)
+        free_state = FreeParameterState(self)
+        loc = self._localize(name, **config)
+        free_state.restore()
 
-        if config['fix_background']:
+        self.logger.info('Finished localization.')
+
+        if config['make_plots']:
+            self._plotter.make_localization_plots(loc, self.roi,
+                                                  prefix=config['prefix'])
+
+        outfile = \
+            utils.format_filename(self.workdir, 'loc',
+                                  prefix=[config['prefix'],
+                                          name.lower().replace(' ', '_')])
+
+        if config['write_fits']:
+            loc['file'] = os.path.basename(outfile) + '.fits'
+            self._make_localize_fits(loc, outfile + '.fits',
+                                     **config)
+
+        if config['write_npy']:
+            np.save(outfile + '.npy', dict(loc))
+
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
+        return loc
+
+    def _make_localize_fits(self, loc, filename, **kwargs):
+
+        tab = fits_utils.dict_to_table(loc)
+        hdu_data = fits.table_to_hdu(tab)
+        hdu_data.name = 'LOC_DATA'
+
+        hdus = [loc['tsmap_peak'].make_hdu(hdu='PRIMARY'),
+                loc['tsmap'].make_hdu(hdu='TSMAP'),
+                hdu_data]
+
+        hdus[0].header['CONFIG'] = json.dumps(loc['config'])
+        hdus[2].header['CONFIG'] = json.dumps(loc['config'])
+        fits_utils.write_hdus(hdus, filename)
+
+    def _localize(self, name, **kwargs):
+
+        nstep = kwargs.get('nstep')
+        dtheta_max = kwargs.get('dtheta_max')
+        update = kwargs.get('update', True)
+        prefix = kwargs.get('prefix', '')
+        use_cache = kwargs.get('use_cache', False)
+        free_background = kwargs.get('free_background', False)
+        free_radius = kwargs.get('free_radius', None)
+        fix_shape = kwargs.get('fix_shape', False)
+
+        saved_state = LikelihoodState(self.like)
+        loglike_init = -self.like()
+        self.logger.debug('Initial Model Log-Likelihood: %f', loglike_init)
+
+        if not free_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
+
+        if free_radius is not None:
+            diff_sources = [s.name for s in self.roi.sources if s.diffuse]
+            skydir = self.roi[name].skydir
+            free_srcs = [s.name for s in
+                         self.roi.get_sources(skydir=skydir,
+                                              distance=free_radius,
+                                              exclude=diff_sources)]
+            self.free_sources_by_name(free_srcs, pars='norm',
+                                      loglevel=logging.DEBUG)
 
         src = self.roi.copy_source(name)
         skydir = src.skydir
-        skywcs = self._skywcs
+        skywcs = self.geom.wcs
         src_pix = skydir.to_pixel(skywcs)
 
-        tsmap_fit, tsmap = self._localize_tsmap(name, prefix=prefix,
-                                                dtheta_max=dtheta_max)
+        fit0 = self._fit_position_tsmap(name, prefix=prefix,
+                                        dtheta_max=dtheta_max,
+                                        zmin=-3.0,
+                                        use_pylike=False)
 
         self.logger.debug('Completed localization with TS Map.\n'
-                          '(ra,dec) = (%10.4f,%10.4f)\n'
+                          '(ra,dec) = (%10.4f,%10.4f) '
                           '(glon,glat) = (%10.4f,%10.4f)',
-                          tsmap_fit['ra'], tsmap_fit['dec'],
-                          tsmap_fit['glon'], tsmap_fit['glat'])
+                          fit0['ra'], fit0['dec'],
+                          fit0['glon'], fit0['glat'])
 
         # Fit baseline (point-source) model
-        self.free_norm(name)
-        fit_output = self._fit(loglevel=logging.DEBUG, **config['optimizer'])
+        self.free_source(name, loglevel=logging.DEBUG)
+        if fix_shape:
+            self.free_source(name, free=False, pars='shape',
+                             loglevel=logging.DEBUG)
+        fit_output = self._fit(loglevel=logging.DEBUG, **
+                               kwargs.get('optimizer', {}))
 
         # Save likelihood value for baseline fit
-        loglike0 = fit_output['loglike']
-        self.logger.debug('Baseline Model Likelihood: %f',loglike0)
+        loglike_base = fit_output['loglike']
+        self.logger.debug('Baseline Model Log-Likelihood: %f', loglike_base)
 
-        self.zero_source(name)
+        o = defaults.make_default_tuple(defaults.localize_output)
+        o.name = name
+        o.config = kwargs
+        o.fit_success = True
+        o.loglike_init = loglike_init
+        o.loglike_base = loglike_base
+        o.loglike_loc = np.nan
+        o.dloglike_loc = np.nan
 
-        o = {'config': config,
-             'fit_success': True,
-             'loglike_base': loglike0,
-             'loglike_loc' : np.nan,
-             'dloglike_loc' : np.nan }
-
-        cdelt0 = np.abs(skywcs.wcs.cdelt[0])
-        cdelt1 = np.abs(skywcs.wcs.cdelt[1])
-        scan_step = 2.0 * tsmap_fit['r95'] / (nstep - 1.0)
+        if fit0['fit_success']:
+            scan_cdelt = 2.0 * fit0['pos_r95'] / (nstep - 1.0)
+        else:
+            scan_cdelt = np.abs(skywcs.wcs.cdelt[0])
 
         self.logger.debug('Refining localization search to '
                           'region of width: %.4f deg',
-                          tsmap_fit['r95'])
+                          scan_cdelt * nstep)
 
-        scan_map = Map.create(SkyCoord(tsmap_fit['ra'],
-                                       tsmap_fit['dec'], unit='deg'),
-                              scan_step, (nstep, nstep),
-                              coordsys=wcs_utils.get_coordsys(skywcs))
+        fit1 = self._fit_position_scan(name,
+                                       skydir=fit0['skydir'],
+                                       scan_cdelt=scan_cdelt,
+                                       **kwargs)
 
-        scan_skydir = scan_map.get_pixel_skydirs()
-
-        lnlscan = dict(wcs=scan_map.wcs.to_header().items(),
-                       loglike=np.zeros((nstep, nstep)),
-                       dloglike=np.zeros((nstep, nstep)),
-                       dloglike_fit=np.zeros((nstep, nstep)))
-
-        for i, t in enumerate(scan_skydir):
-            model_name = '%s_localize' % (name.replace(' ', '').lower())
-            src.set_name(model_name)
-            src.set_position(t)
-            self.add_source(model_name, src, free=True,
-                            init_source=False, save_source_maps=False,
-                            loglevel=logging.DEBUG)
-            fit_output = self._fit(
-                loglevel=logging.DEBUG, **config['optimizer'])
-
-            loglike1 = fit_output['loglike']
-            lnlscan['loglike'].flat[i] = loglike1
-            self.delete_source(model_name, loglevel=logging.DEBUG)
-
-        lnlscan['dloglike'] = lnlscan['loglike'] - np.max(lnlscan['loglike'])
-        scan_tsmap = Map(2.0 * lnlscan['dloglike'].T, scan_map.wcs)
-        
-        self.unzero_source(name)
-        saved_state.restore()
-        self._sync_params(name)
-        self._update_roi()
-
-        scan_fit, new_skydir = fit_error_ellipse(scan_tsmap, dpix=3)
-        o.update(scan_fit)
-
-        o['loglike_loc'] = np.max(lnlscan['loglike'])+0.5*scan_fit['offset']
-        o['dloglike_loc'] = o['loglike_loc'] - o['loglike_base']
-        
-        # lnlscan['dloglike_fit'] = \
-        #   utils.parabola(np.linspace(0,nstep-1.0,nstep)[:,np.newaxis],
-        #                  np.linspace(0,nstep-1.0,nstep)[np.newaxis,:],
-        #                  *scan_fit['popt']).reshape((nstep,nstep))
-
-        o['lnlscan'] = lnlscan
+        o.loglike_loc = fit1['loglike']
+        o.dloglike_loc = o.loglike_loc - o.loglike_base
+        o.tsmap = fit0.pop('tsmap')
+        o.tsmap_peak = fit1.pop('tsmap')
+        # o.update(fit1)
 
         # Best fit position and uncertainty from fit to TS map
-        o['tsmap_fit'] = tsmap_fit
+        o.fit_init = fit0
 
         # Best fit position and uncertainty from pylike scan
-        o['scan_fit'] = scan_fit
-        pix = new_skydir.to_pixel(skywcs)
-        o['xpix'] = float(pix[0])
-        o['ypix'] = float(pix[1])
-        o['deltax'] = (o['xpix'] - src_pix[0]) * cdelt0
-        o['deltay'] = (o['ypix'] - src_pix[1]) * cdelt1
+        o.fit_scan = fit1
+        o.update(fit1)
 
-        o['offset'] = skydir.separation(new_skydir).deg
+        cdelt0 = np.abs(skywcs.wcs.cdelt[0])
+        cdelt1 = np.abs(skywcs.wcs.cdelt[1])
+        pix = fit1['skydir'].to_pixel(skywcs)
+        o.pos_offset = skydir.separation(fit1['skydir']).deg
+        o.xpix = float(pix[0])
+        o.ypix = float(pix[1])
+        o.deltax = (o.xpix - src_pix[0]) * cdelt0
+        o.deltay = (o.ypix - src_pix[1]) * cdelt1
 
-        if o['offset'] > dtheta_max:
-            o['fit_success'] = False
+        o.ra_preloc = skydir.ra.deg
+        o.dec_preloc = skydir.dec.deg
+        o.glon_preloc = skydir.galactic.l.deg
+        o.glat_preloc = skydir.galactic.b.deg
 
-        if not o['fit_success']:
-            self.logger.error('Localization failed.\n'
-                              '(ra,dec) = (%10.4f,%10.4f)\n'
-                              '(glon,glat) = (%10.4f,%10.4f)\n'
-                              'offset = %8.4f deltax = %8.4f '
-                              'deltay = %8.4f',
-                              o['ra'], o['dec'], o['glon'], o['glat'],
-                              o['offset'], o['deltax'],
-                              o['deltay'])
+        if o.pos_offset > dtheta_max:
+            o.fit_success = False
+
+        if not o.fit_success:
+            self.logger.warning('Fit to localization contour failed.')
+        elif not o.fit_inbounds:
+            self.logger.warning('Best-fit position outside of search region.')
         else:
-            self.logger.info('Localization succeeded with '
-                             'coordinates:\n'
-                             '(ra,dec) = (%10.4f,%10.4f)\n'
-                             '(glon,glat) = (%10.4f,%10.4f)\n'
-                             'offset = %8.4f r68 = %8.4f',
-                             o['ra'], o['dec'],
-                             o['glon'], o['glat'],
-                             o['offset'], o['r68'])
+            self.logger.info('Localization succeeded.')
 
-        self.roi[name]['localize'] = copy.deepcopy(o)
+        if update and ((not o.fit_success) or (not o.fit_inbounds)):
+            self.logger.warning(
+                'Localization failed.  Keeping existing position.')
 
-        try:
-            self._plotter.make_localization_plot(self, name, tsmap,
-                                                 prefix=prefix,
-                                                 skydir=scan_skydir)
-        except Exception:
-            self.logger.error('Plot failed.', exc_info=True)
-
-        if update and o['fit_success']:
+        if update and o.fit_success and o.fit_inbounds:
             self.logger.info('Updating source %s '
                              'to localized position.', name)
             src = self.delete_source(name)
-            src.set_position(new_skydir)
-            src.set_name(newname, names=src.names)
+            src.set_position(fit1['skydir'])
+            self.add_source(name, src, free=True)
+            self.free_source(name, loglevel=logging.DEBUG)
+            if fix_shape:
+                self.free_source(name, free=False, pars='shape',
+                                 loglevel=logging.DEBUG)
 
-            self.add_source(newname, src, free=True)
             fit_output = self.fit(loglevel=logging.DEBUG)
-            o['loglike_loc'] = fit_output['loglike']
-            o['dloglike_loc'] = o['loglike_loc'] - o['loglike_base']
-            src = self.roi.get_source_by_name(newname)
-            self.roi[newname]['localize'] = copy.deepcopy(o)
-            self.logger.info('LogLike: %12.3f DeltaLogLike: %12.3f',
-                             o['loglike_loc'],o['dloglike_loc'])
+            o.loglike_loc = fit_output['loglike']
+            o.dloglike_loc = o.loglike_loc - o.loglike_base
+            src = self.roi.get_source_by_name(name)
 
-        if o['fit_success']:
-            src = self.roi.get_source_by_name(newname)
-            src['pos_sigma'] = o['sigma']
-            src['pos_sigma_semimajor'] = o['sigma_semimajor']
-            src['pos_sigma_semiminor'] = o['sigma_semiminor']
-            src['pos_r68'] = o['r68']
-            src['pos_r95'] = o['r95']
-            src['pos_r99'] = o['r99']
-            src['pos_angle'] = np.degrees(o['theta'])
+            src['glon_err'] = o.glon_err
+            src['glat_err'] = o.glat_err
+            src['ra_err'] = o.glon_err
+            src['dec_err'] = o.glat_err
+            src['pos_err'] = o.pos_err
+            src['pos_err_semimajor'] = o.pos_err_semimajor
+            src['pos_err_semiminor'] = o.pos_err_semiminor
+            src['pos_r68'] = o.pos_r68
+            src['pos_r95'] = o.pos_r95
+            src['pos_r99'] = o.pos_r99
+            src['pos_angle'] = o.pos_angle
+            src['pos_gal_cov'] = o.pos_gal_cov
+            src['pos_gal_corr'] = o.pos_gal_corr
+            src['pos_cel_cov'] = o.pos_cel_cov
+            src['pos_cel_corr'] = o.pos_cel_corr
+        else:
+            saved_state.restore()
+            self._sync_params(name)
+            self._update_roi()
 
-        self.logger.info('Finished localization.')
+        self.logger.info('Localization completed with new position:\n'
+                         '(  ra, dec) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                         '(glon,glat) = (%10.4f +/- %8.4f,%10.4f +/- %8.4f)\n'
+                         'offset = %8.4f r68 = %8.4f r95 = %8.4f r99 = %8.4f',
+                         o.ra, o.ra_err, o.dec, o.dec_err,
+                         o.glon, o.glon_err, o.glat, o.glat_err,
+                         o.pos_offset, o.pos_r68, o.pos_r95, o.pos_r99)
+        self.logger.info('LogLike: %12.3f DeltaLogLike: %12.3f',
+                         o.loglike_loc, o.loglike_loc - o.loglike_init)
+
         return o
 
-    def _localize_tscube(self, name, **kwargs):
-        """Localize a source from a TS map generated with
-        `~fermipy.gtanalysis.GTAnalysis.tscube`. """
-        import matplotlib.pyplot as plt
-        from fermipy.plotting import ROIPlotter
+    def _fit_position(self, name, **kwargs):
 
-        prefix = kwargs.get('prefix', '')
+        dtheta_max = kwargs.setdefault('dtheta_max', 0.5)
+        nstep = kwargs.setdefault('nstep', 5)
+        fit0 = self._fit_position_tsmap(name, **kwargs)
 
-        src = self.roi.copy_source(name)
-        skydir = src.skydir
+        if np.isfinite(fit0['pos_r68']):
+            scan_cdelt = min(2.0 * fit0['pos_r68'] / (nstep - 1.0),
+                             self._binsz)
+        else:
+            scan_cdelt = self._binsz
 
-        wp = wcs_utils.WCSProj.create(skydir, 0.0125, 20, coordsys='GAL')
+        fit1 = self._fit_position_scan(name,
+                                       skydir=fit0['skydir'],
+                                       scan_cdelt=scan_cdelt,
+                                       **kwargs)
+        return fit1, fit0
 
-        self.zero_source(name)
-        tscube = self.tscube(utils.join_strings([prefix,
-                                                 name.lower().
-                                                replace(' ', '_')]),
-                             wcs=wp.wcs, npix=wp.npix,
-                             remake_test_source=False)
-        self.unzero_source(name)
-
-        tsmap_renorm = copy.deepcopy(tscube['ts'])
-        tsmap_renorm._counts -= np.max(tsmap_renorm._counts)
-
-        plt.figure()
-
-        p = ROIPlotter(tsmap_renorm, roi=self.roi)
-
-        p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3],
-               cmap='BuGn', vmin=-50.0,
-               interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
-
-        plt.savefig('tscube_localize.png')
-
-    def _localize_tsmap(self, name, **kwargs):
+    def _fit_position_tsmap(self, name, **kwargs):
         """Localize a source from its TS map."""
 
         prefix = kwargs.get('prefix', '')
         dtheta_max = kwargs.get('dtheta_max', 0.5)
+        zmin = kwargs.get('zmin', -3.0)
+
+        kw = {
+            'map_size': 2.0 * dtheta_max,
+            'write_fits':  kwargs.get('write_fits', False),
+            'write_npy':  kwargs.get('write_npy', False),
+            'use_pylike': kwargs.get('use_pylike', True),
+            'max_kernel_radius': self.config['tsmap']['max_kernel_radius'],
+            'loglevel': logging.DEBUG
+        }
 
         src = self.roi.copy_source(name)
-        skydir = src.skydir
-        skywcs = self._skywcs
+
+        if src['SpatialModel'] in ['RadialDisk', 'RadialGaussian']:
+            kw['max_kernel_radius'] = max(kw['max_kernel_radius'],
+                                          2.0 * src['SpatialWidth'])
+
+        skydir = kwargs.get('skydir', src.skydir)
         tsmap = self.tsmap(utils.join_strings([prefix, name.lower().
-                                              replace(' ', '_')]),
+                                               replace(' ', '_')]),
                            model=src.data,
                            map_skydir=skydir,
-                           map_size=2.0 * dtheta_max,
-                           exclude=[name], make_plots=False)
+                           exclude=[name],
+                           make_plots=False, **kw)
 
-        posfit, skydir = fit_error_ellipse(tsmap['ts'], dpix=2)
-        pix = skydir.to_pixel(skywcs)
+        # Find peaks with TS > 4
+        peaks = find_peaks(tsmap['ts'], 4.0, 0.2)
+        peak_best = None
+        o = {}
+        for p in sorted(peaks, key=lambda t: t['amp'], reverse=True):
+            xy = p['ix'], p['iy']
+            ts_value = tsmap['ts'].data[xy[1], xy[0]]
+            posfit = fit_error_ellipse(tsmap['ts'], xy=xy, dpix=2,
+                                       zmin=max(zmin, -ts_value * 0.5))
+            offset = posfit['skydir'].separation(self.roi[name].skydir).deg
+            if posfit['fit_success'] and posfit['fit_inbounds']:
+                peak_best = p
+                break
+
+        if peak_best is None:
+            ts_value = np.max(tsmap['ts'].data)
+            posfit = fit_error_ellipse(tsmap['ts'], dpix=2,
+                                       zmin=max(zmin, -ts_value * 0.5))
+
+        o.update(posfit)
+        pix = posfit['skydir'].to_pixel(self.geom.wcs)
+        o['xpix'] = float(pix[0])
+        o['ypix'] = float(pix[1])
+        o['skydir'] = posfit['skydir'].transform_to('icrs')
+        o['pos_offset'] = posfit['skydir'].separation(
+            self.roi[name].skydir).deg
+        o['loglike'] = 0.5 * posfit['zoffset']
+        o['tsmap'] = tsmap['ts']
+
+        return o
+
+    def _fit_position_scan(self, name, **kwargs):
+
+        zmin = kwargs.get('zmin', -9.0)
+        tsmap, loglike = self._scan_position(name, **kwargs)
+        ts_value = np.max(tsmap.data)
+        posfit = fit_error_ellipse(tsmap, dpix=2,
+                                   zmin=max(zmin, -ts_value * 0.5))
+        pix = posfit['skydir'].to_pixel(self.geom.wcs)
 
         o = {}
         o.update(posfit)
         o['xpix'] = float(pix[0])
         o['ypix'] = float(pix[1])
-        return o, tsmap
+        o['skydir'] = posfit['skydir'].transform_to('icrs')
+        o['pos_offset'] = posfit['skydir'].separation(
+            self.roi[name].skydir).deg
+        o['loglike'] = 0.5 * posfit['zoffset'] + loglike
+        o['tsmap'] = tsmap
 
-    def _localize_pylike(self, name, **kwargs):
-        pass
+        return o
+
+    def _scan_position(self, name, **kwargs):
+
+        saved_state = LikelihoodState(self.like)
+
+        skydir = kwargs.pop('skydir', self.roi[name].skydir)
+        scan_cdelt = kwargs.pop('scan_cdelt', 0.02)
+        nstep = kwargs.pop('nstep', 5)
+        use_cache = kwargs.get('use_cache', True)
+        use_pylike = kwargs.get('use_pylike', False)
+        optimizer = kwargs.get('optimizer', {})
+
+        # Fit without source
+        self.zero_source(name, loglevel=logging.DEBUG)
+        fit_output_nosrc = self._fit(loglevel=logging.DEBUG,
+                                     **optimizer)
+        self.unzero_source(name, loglevel=logging.DEBUG)
+        saved_state.restore()
+        self.free_norm(name, loglevel=logging.DEBUG)
+
+        lnlmap = WcsNDMap.create(skydir=skydir, binsz=scan_cdelt, npix=(nstep, nstep),
+                                 coordsys=wcs_utils.get_coordsys(self.geom.wcs))
+
+        src = self.roi.copy_source(name)
+
+        if use_cache and not use_pylike:
+            self._create_srcmap_cache(src.name, src)
+
+        coord = MapCoord.create(lnlmap.geom.get_coord(flat=True),
+                                coordsys=lnlmap.geom.coordsys)
+        scan_skydir = coord.skycoord.icrs
+        for lon, lat, ra, dec in zip(coord.lon, coord.lat,
+                                     scan_skydir.ra.deg, scan_skydir.dec.deg):
+
+            spatial_pars = {'ra': ra, 'dec': dec}
+            self.set_source_morphology(name,
+                                       spatial_pars=spatial_pars,
+                                       use_pylike=use_pylike)
+            fit_output = self._fit(loglevel=logging.DEBUG,
+                                   **optimizer)
+            lnlmap.set_by_coord((lon, lat), fit_output['loglike'])
+
+        self.set_source_morphology(name, spatial_pars=src.spatial_pars,
+                                   use_pylike=use_pylike)
+        saved_state.restore()
+
+        lnlmap.data -= fit_output_nosrc['loglike']
+        tsmap = WcsNDMap(lnlmap.geom, 2.0 * lnlmap.data)
+
+        self._clear_srcmap_cache()
+        return tsmap, fit_output_nosrc['loglike']
+
+    def _fit_position_opt(self, name, use_cache=True):
+
+        state = SourceMapState(self.like, [name])
+
+        src = self.roi.copy_source(name)
+
+        if use_cache:
+            self._create_srcmap_cache(src.name, src)
+
+        loglike = []
+        skydir = src.skydir
+        skywcs = self.geom.wcs
+        src_pix = skydir.to_pixel(skywcs)
+
+        c = skydir.transform_to('icrs')
+        src.set_radec(c.ra.deg, c.dec.deg)
+        self._update_srcmap(src.name, src)
+
+        print(src_pix, self.like())
+
+        import time
+
+        def fit_fn(params):
+
+            t0 = time.time()
+
+            c = SkyCoord.from_pixel(params[0], params[1], self.geom.wcs)
+            c = c.transform_to('icrs')
+            src.set_radec(c.ra.deg, c.dec.deg)
+
+            t1 = time.time()
+
+            self._update_srcmap(src.name, src)
+
+            t2 = time.time()
+
+            val = self.like()
+
+            t3 = time.time()
+
+            print(params, val)
+            # print(t1-t0,t2-t1,t3-t2)
+
+            return val
+
+        #lnl0 = fit_fn(src_pix[0],src_pix[1])
+        #lnl1 = fit_fn(src_pix[0]+0.1,src_pix[1])
+        # print(lnl0,lnl1)
+
+        import scipy
+
+        #src_pix[1] += 3.0
+        p0 = [src_pix[0], src_pix[1]]
+
+        #p0 = np.array([14.665692574327048, 16.004594098101926])
+        #delta = np.array([0.3,-0.4])
+        #p0 = [14.665692574327048, 16.004594098101926]
+
+        o = scipy.optimize.minimize(fit_fn, p0,
+                                    bounds=[(0.0, 39.0),
+                                            (0.0, 39.0)],
+                                    # method='L-BFGS-B',
+                                    method='SLSQP',
+                                    tol=1e-6)
+
+        print('fit 2')
+
+        o = scipy.optimize.minimize(fit_fn, o.x,
+                                    bounds=[(0.0, 39.0),
+                                            (0.0, 39.0)],
+                                    # method='L-BFGS-B',
+                                    method='SLSQP',
+                                    tol=1e-6)
+        print(o)
+
+        print(fit_fn(p0))
+        print(fit_fn(o.x))
+        print(fit_fn(o.x + np.array([0.02, 0.02])))
+        print(fit_fn(o.x + np.array([0.02, -0.02])))
+        print(fit_fn(o.x + np.array([-0.02, 0.02])))
+        print(fit_fn(o.x + np.array([-0.02, -0.02])))
+
+        state.restore()
+
+        return o

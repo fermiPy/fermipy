@@ -64,7 +64,7 @@ def find_matches_by_distance(cos_vects, cut_dist):
     cut_dist : float    
         Angular cut in degrees that will be used to select pairs by
         their separation.
-       
+
     Returns
     -------
     match_dict : dict((int,int):float).    
@@ -78,7 +78,7 @@ def find_matches_by_distance(cos_vects, cut_dist):
     for i, v1 in enumerate(cos_vects.T):
         cos_t_vect = (v1 * cos_vects.T).sum(1)
         cos_t_vect[cos_t_vect < -1.0] = -1.0
-        cos_t_vect[cos_t_vect > 1.0] = 1.0        
+        cos_t_vect[cos_t_vect > 1.0] = 1.0
         mask = cos_t_vect > cos_t_cut
         acos_t_vect = np.ndarray(nsrc)
         # The 1e-6 is here b/c we use 0.0 for sources that failed the cut elsewhere.
@@ -86,7 +86,7 @@ def find_matches_by_distance(cos_vects, cut_dist):
         acos_t_vect[mask] = np.degrees(np.arccos(cos_t_vect[mask])) + 1e-6
         for j in np.where(mask[:i])[0]:
             match_dict[(j, i)] = acos_t_vect[j]
-        
+
     return match_dict
 
 
@@ -105,7 +105,7 @@ def find_matches_by_sigma(cos_vects, unc_vect, cut_sigma):
     cut_sigma : float    
         Angular cut in positional errors standard deviations that will
         be used to select pairs by their separation.
-    
+
     Returns
     -------
     match_dict : dict((int,int):float)    
@@ -117,7 +117,7 @@ def find_matches_by_sigma(cos_vects, unc_vect, cut_sigma):
     for i, v1 in enumerate(cos_vects.T):
         cos_t_vect = (v1 * cos_vects.T).sum(1)
         cos_t_vect[cos_t_vect < -1.0] = -1.0
-        cos_t_vect[cos_t_vect > 1.0] = 1.0 
+        cos_t_vect[cos_t_vect > 1.0] = 1.0
         sig_2_i = sig_2_vect[i]
         acos_t_vect = np.degrees(np.arccos(cos_t_vect))
         total_unc = np.sqrt(sig_2_i + sig_2_vect)
@@ -314,9 +314,9 @@ def find_centroid(cvects, idx_list, weights=None):
     return weighted
 
 
-def count_sources_in_cluster(n_src,cdict,rev_dict):
+def count_sources_in_cluster(n_src, cdict, rev_dict):
     """ Make a vector  of sources in each cluster
- 
+
     Parameters
     ----------
     n_src : number of sources 
@@ -329,15 +329,15 @@ def count_sources_in_cluster(n_src,cdict,rev_dict):
        A single valued dictionary pointing from source index to
        cluster key for each source in a cluster.  Note that the key
        does not point to itself.
-  
-     
+
+
     Returns
     ----------
     `np.ndarray((n_src),int)' with the number of in the cluster a given source 
     belongs to.
     """
-    ret_val = np.zeros((n_src),int)
-    for i in xrange(n_src):
+    ret_val = np.zeros((n_src), int)
+    for i in range(n_src):
         try:
             key = rev_dict[i]
         except KeyError:
@@ -443,7 +443,7 @@ def make_reverse_dict(in_dict, warn=True):
     return out_dict
 
 
-def make_cluster_vector(rev_dict,n_src):
+def make_cluster_vector(rev_dict, n_src):
     """ Converts the cluster membership dictionary to an array
 
     Parameters
@@ -461,14 +461,15 @@ def make_cluster_vector(rev_dict,n_src):
        An array filled with the index of the seed of a cluster if a source belongs to a cluster, 
        and with -1 if it does not.
     """
-    out_array = -1*np.ones((n_src),int)
-    for k,v in rev_dict.items():
+    out_array = -1 * np.ones((n_src), int)
+    for k, v in rev_dict.items():
         out_array[k] = v
-        out_array[v] = v  # We need this to make sure the see source points at itself
+        # We need this to make sure the see source points at itself
+        out_array[v] = v
     return out_array
 
 
-def make_cluster_name_vector(cluster_vect,src_names):
+def make_cluster_name_vector(cluster_vect, src_names):
     """ Converts the cluster membership dictionary to an array
 
     Parameters
@@ -505,8 +506,8 @@ def make_dict_from_vector(in_array):
        Dictionary of clusters keyed by the best source in each cluster
     """
     out_dict = {}
-    for i,k in enumerate(in_array):
-        if k < 0: 
+    for i, k in enumerate(in_array):
+        if k < 0:
             continue
         try:
             out_dict[k].append(i)
@@ -577,7 +578,7 @@ def main():
                         help='Remove duplicates from output file.  By default '
                         'duplicates will be indicated by the boolean "duplicate" '
                         'column.')
-    
+
     # Argument parsing
     args = parser.parse_args()
 
@@ -652,20 +653,24 @@ def main():
     to_remove = rev_dict.keys()
     if args.remove_duplicates:
         out_tab = filter_and_copy_table(tab, to_remove)
-    else:        
+    else:
         out_tab = tab.copy()
         n_src = len(out_tab)
-        cluster_vect = make_cluster_vector(rev_dict,n_src)
+        cluster_vect = make_cluster_vector(rev_dict, n_src)
         cluster_name_vect = make_cluster_name_vector(cluster_vect, src_names)
-        cluster_count_vect = count_sources_in_cluster(n_src,sel_dict,rev_dict)        
-        cluster_id_col = Column(name='cluster_ids', dtype='S20',length=n_src,data=cluster_name_vect)
-        cluster_cnt_col = Column(name='cluster_size', dtype=int,length=n_src,data=cluster_count_vect)
+        cluster_count_vect = count_sources_in_cluster(
+            n_src, sel_dict, rev_dict)
+        cluster_id_col = Column(
+            name='cluster_ids', dtype='S20', length=n_src, data=cluster_name_vect)
+        cluster_cnt_col = Column(
+            name='cluster_size', dtype=int, length=n_src, data=cluster_count_vect)
         out_tab.add_column(cluster_id_col)
         out_tab.add_column(cluster_cnt_col)
-    
+
     # Write the output
     if args.output:
         out_tab.write(args.output, format='fits')
+
 
 if __name__ == "__main__":
     main()

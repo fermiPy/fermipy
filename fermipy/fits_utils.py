@@ -5,7 +5,39 @@ import numpy as np
 from astropy.io import fits
 from astropy.wcs import WCS
 import fermipy
+from fermipy import utils
 from fermipy.hpx_utils import HPX
+
+
+def write_fits(hdulist, outfile, keywords):
+
+    for h in hdulist:
+        for k, v in keywords.items():
+            h.header[k] = v
+        h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+        h.header['STVER'] = fermipy.get_st_version()
+
+    hdulist.writeto(outfile, clobber=True)
+
+
+def find_and_read_ebins(hdulist):
+    """  Reads and returns the energy bin edges.
+
+    This works for both the CASE where the energies are in the ENERGIES HDU
+    and the case where they are in the EBOUND HDU
+    """
+    from fermipy import utils
+    ebins = None
+    if 'ENERGIES' in hdulist:
+        hdu = hdulist['ENERGIES']
+        ectr = hdu.data.field(hdu.columns[0].name)
+        ebins = np.exp(utils.center_to_edge(np.log(ectr)))
+    elif 'EBOUNDS' in hdulist:
+        hdu = hdulist['EBOUNDS']
+        emin = hdu.data.field('E_MIN') / 1E3
+        emax = hdu.data.field('E_MAX') / 1E3
+        ebins = np.append(emin, emax[-1])
+    return ebins
 
 
 def read_energy_bounds(hdu):
@@ -13,8 +45,12 @@ def read_energy_bounds(hdu):
     """
     nebins = len(hdu.data)
     ebin_edges = np.ndarray((nebins + 1))
-    ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
-    ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
+    try:
+        ebin_edges[0:-1] = np.log10(hdu.data.field("E_MIN")) - 3.
+        ebin_edges[-1] = np.log10(hdu.data.field("E_MAX")[-1]) - 3.
+    except KeyError:
+        ebin_edges[0:-1] = np.log10(hdu.data.field("energy_MIN"))
+        ebin_edges[-1] = np.log10(hdu.data.field("energy_MAX")[-1])
     return ebin_edges
 
 
@@ -34,19 +70,45 @@ def read_spectral_data(hdu):
     return ebins, fluxes, npreds
 
 
-def write_maps(primary_map, maps, outfile):
+def make_energies_hdu(energy_vals, extname="ENERGIES"):
+    """ Builds and returns a FITs HDU with the energy values
+
+    extname   : The HDU extension name           
+    """
+    cols = [fits.Column("Energy", "D", unit='MeV', array=energy_vals)]
+    hdu = fits.BinTableHDU.from_columns(cols, name=extname)
+    return hdu
+
+
+def write_maps(primary_map, maps, outfile, **kwargs):
 
     if primary_map is None:
         hdu_images = [fits.PrimaryHDU()]
-    else:        
+    else:
         hdu_images = [primary_map.create_primary_hdu()]
-        
-    for k, v in sorted(maps.items()):
-        hdu_images += [v.create_image_hdu(k)]
 
-    hdulist = fits.HDUList(hdu_images)
+    for k, v in sorted(maps.items()):
+        hdu_images += [v.create_image_hdu(k, **kwargs)]
+
+    energy_hdu = kwargs.get('energy_hdu', None)
+    if energy_hdu:
+        hdu_images += [energy_hdu]
+
+    write_hdus(hdu_images, outfile)
+
+
+def write_hdus(hdus, outfile, **kwargs):
+
+    keywords = kwargs.get('keywords', {})
+
+    hdulist = fits.HDUList(hdus)
     for h in hdulist:
+
+        for k, v in keywords.items():
+            h.header[k] = v
+
         h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
+        h.header['STVER'] = fermipy.get_st_version()
     hdulist.writeto(outfile, clobber=True)
 
 
@@ -68,7 +130,7 @@ def read_projection_from_fits(fitsfile, extname=None):
     nhdu = len(f)
     # Try and get the energy bounds
     try:
-        ebins = read_energy_bounds(f['EBOUNDS'])
+        ebins = find_and_read_ebins(f)
     except:
         ebins = None
 
@@ -82,10 +144,13 @@ def read_projection_from_fits(fitsfile, extname=None):
         if f[extname].header['XTENSION'] == 'IMAGE':
             proj = WCS(f[extname].header)
             return proj, f, f[extname]
+        elif extname in ['SKYMAP', 'SKYMAP2']:
+            proj = HPX.create_from_hdu(f[extname], ebins)
+            return proj, f, f[extname]
         elif f[extname].header['XTENSION'] == 'BINTABLE':
             try:
                 if f[extname].header['PIXTYPE'] == 'HEALPIX':
-                    proj = HPX.create_from_header(f[extname].header, ebins)
+                    proj = HPX.create_from_hdu(f[extname], ebins)
                     return proj, f, f[extname]
             except:
                 pass
@@ -98,9 +163,12 @@ def read_projection_from_fits(fitsfile, extname=None):
             proj = WCS(f[i].header)
             return proj, f, f[i]
         elif f[i].header['XTENSION'] == 'BINTABLE':
+            if f[i].name in ['SKYMAP', 'SKYMAP2']:
+                proj = HPX.create_from_hdu(f[i], ebins)
+                return proj, f, f[i]
             try:
                 if f[i].header['PIXTYPE'] == 'HEALPIX':
-                    proj = HPX.create_from_header(f[i].header, ebins)
+                    proj = HPX.create_from_hdu(f[i], ebins)
                     return proj, f, f[i]
             except:
                 pass
@@ -139,3 +207,25 @@ def write_tables_to_fits(filepath, tablelist, clobber=False,
     fits.HDUList(outhdulist).writeto(filepath, clobber=clobber)
     for rm in rmlist:
         os.unlink(rm)
+
+
+def dict_to_table(input_dict):
+
+    from astropy.table import Table, Column
+
+    cols = []
+
+    for k, v in sorted(input_dict.items()):
+
+        if isinstance(v, dict):
+            continue
+        elif isinstance(v, float):
+            cols += [Column(name=k, dtype='f8', data=np.array([v]))]
+        elif isinstance(v, bool):
+            cols += [Column(name=k, dtype=bool, data=np.array([v]))]
+        elif utils.isstr(v):
+            cols += [Column(name=k, dtype='S32', data=np.array([v]))]
+        elif isinstance(v, np.ndarray):
+            cols += [Column(name=k, dtype=v.dtype, data=np.array([v]))]
+
+    return Table(cols)

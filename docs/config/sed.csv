@@ -1,5 +1,10 @@
 ``bin_index``	2.0	Spectral index that will be use when fitting the energy distribution within an energy bin.
-``cov_scale``	3.0	Scale factor that sets the strength of the prior on nuisance parameters when ``fix_background``=True.  Setting this to None disables the prior.
-``fix_background``	True	Fix background normalization parameters when fitting the source flux in each energy bin.  If True background normalizations will be profiled with a prior on their value with strength set by ``cov_scale``.
-``ul_confidence``	0.95	Confidence level for upper limit calculation.
+``cov_scale``	3.0	Scale factor that sets the strength of the prior on nuisance parameters that are free.  Setting this to None disables the prior.
+``free_background``	False	Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
+``free_pars``	None	Set the parameters of the source of interest that will be freed when performing the global fit.  By default all parameters will be freed.
+``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
+``make_plots``	False	Generate diagnostic plots.
+``ul_confidence``	0.95	Confidence level for flux upper limit.
 ``use_local_index``	False	Use a power-law approximation to the shape of the global spectrum in each bin.  If this is false then a constant index set to `bin_index` will be used.
+``write_fits``	True	Write the output to a FITS file.
+``write_npy``	True	Write the output dictionary to a numpy file.

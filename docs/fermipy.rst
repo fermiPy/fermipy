@@ -3,8 +3,6 @@
 fermipy package
 ===============
 
-Submodules
-----------
 
 fermipy.config module
 ---------------------
@@ -55,6 +53,14 @@ fermipy.utils module
     :undoc-members:
     :show-inheritance:
 
+fermipy.plotting module
+-----------------------
+
+.. automodule:: fermipy.plotting
+    :members:
+    :undoc-members:
+    :show-inheritance:
+       
 fermipy.sed module
 ------------------
 
@@ -107,6 +113,14 @@ fermipy.residmap module
 -----------------------
 
 .. automodule:: fermipy.residmap
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+fermipy.lightcurve module
+-------------------------
+
+.. automodule:: fermipy.lightcurve
     :members:
     :undoc-members:
     :show-inheritance:

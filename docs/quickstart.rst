@@ -244,11 +244,11 @@ fit quality and look for new sources.
             'SpectrumType' : 'PowerLaw'}
 
    # Both methods return a dictionary with the maps
-   m0 = gta.residmap('fit_model',model=model)
-   m1 = gta.tsmap('fit_model',model=model)
+   m0 = gta.residmap('fit_model', model=model, make_plots=True)
+   m1 = gta.tsmap('fit_model', model=model, make_plots=True)
 
-More documentation about these methods is available in
-the :ref:`detection` page.
+More documentation on these methods is available in
+the :ref:`tsmap` and :ref:`residmap` pages.
 
 By default, calls to :py:meth:`~fermipy.gtanalysis.GTAnalysis.fit` will
 execute a global spectral fit over the entire energy range of the
@@ -258,7 +258,7 @@ name of the source:
 
 .. code-block:: python
 
-   gta.sed('mkn421')
+   gta.sed('mkn421', make_plots=True)
 
 More information about :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed`
 method can be found in the :ref:`sed` page.
@@ -284,7 +284,7 @@ was written to *fit_model.npy* in the Mkn421 analysis example:
    >>> # Load analysis dictionary from a npy file
    >>> import np
    >>> c = np.load('fit_model.npy').flat[0]
-   >>> print(c.keys())
+   >>> list(c.keys())
    ['roi', 'config', 'sources', 'version']
 
 The output dictionary contains the following top-level elements:
@@ -301,16 +301,16 @@ the analysis.
 
 .. code-block:: python
    
-   >>> print c['sources'].keys()
+   >>> list(c['sources'].keys())
    ['3FGL J1032.7+3735',
    '3FGL J1033.2+4116',
    ...
    '3FGL J1145.8+4425',
    'galdiff',
    'isodiff']
-   >>> print c['sources']['3FGL J1104.4+3812']['ts']
+   >>> c['sources']['3FGL J1104.4+3812']['ts']
    87455.9709683
-   >>> print c['sources']['3FGL J1104.4+3812']['npred']
+   >>> c['sources']['3FGL J1104.4+3812']['npred']
    31583.7166495
     
 Information about individual sources in the ROI is also saved to a
@@ -323,7 +323,7 @@ This file can be loaded with the `astropy.io.fits` or
    >>> # Load the source catalog file
    >>> from astropy.table import Table
    >>> tab = Table.read('fit_model.fits')
-   >>> print(tab[['name','class','ts','npred','flux']])
+   >>> tab[['name','class','ts','npred','flux']]
        name       class       ts           npred                    flux [2]               
                                                                   1 / (cm2 s)              
    ----------------- ----- -------------- ------------- --------------------------------------
@@ -339,7 +339,7 @@ the source dictionary.  Spectral fit parameters are contained in the
 
 .. code-block:: python
                 
-   >>> print(tab[['param_names','param_values','param_errors']][0])
+   >>> tab[['param_names','param_values','param_errors']][0]
    <Row 0 of table
     values=(['Prefactor', 'Index', 'Scale', '', '', ''],
             [2.1301351784512767e-11, -1.7716399431228638, 1187.1300048828125, nan, nan, nan],
@@ -431,3 +431,16 @@ conda- or pip-based installation as follows:
 
    # Install with pip
    $ pip install ipython jupyter
+
+One can also run the notebooks from a docker container following the
+:ref:`dockerinstall` instructions:
+
+.. code-block:: bash
+
+   $ git clone https://github.com/fermiPy/fermipy-extra.git    
+   $ cd fermipy-extra
+   $ docker pull fermipy/fermipy
+   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermipy/fermipy
+
+After launching the notebook server, paste the URL that appears into
+your web browser and navigate to the *notebooks* directory.

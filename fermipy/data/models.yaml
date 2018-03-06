@@ -1,0 +1,740 @@
+AbsEdge:
+  defaults:
+    E0: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: E0, scale: 1.0, value: 1.0}
+    Index: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index, scale: 1.0, value: -3.0}
+    Tau0: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Tau0, scale: 1.0, value: 1.0}
+  norm_par: null
+  par_names: [Tau0, E0, Index]
+BPLExpCutoff:
+  defaults:
+    BreakValue: {error: .nan, free: false, max: 1000.0, min: 0.001, name: BreakValue,
+      scale: 1.0, value: 1000.0}
+    Eabs: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Eabs, scale: 1.0, value: 10.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index2, scale: -1.0,
+      value: 2.0}
+    P1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P1, scale: 1.0, value: 150.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Index2, BreakValue, Eabs, P1]
+BandFunction:
+  defaults:
+    Ep: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Ep, scale: 1.0, value: 0.1}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+    alpha: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: alpha, scale: 1.0, value: -1.0}
+    beta: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: beta, scale: 1.0, value: -2.0}
+    norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: norm, scale: 1.0, value: 1.0}
+  norm_par: norm
+  par_names: [norm, alpha, beta, Ep, Scale]
+BrokenPowerLaw:
+  defaults:
+    BreakValue: {error: .nan, free: false, max: 1000.0, min: 0.001, name: BreakValue,
+      scale: 1.0, value: 1000.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index2, scale: -1.0,
+      value: 2.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Index2, BreakValue]
+BrokenPowerLaw2:
+  defaults:
+    BreakValue: {error: .nan, free: false, max: 1000.0, min: 0.001, name: BreakValue,
+      scale: 1.0, value: 1000.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index2, scale: -1.0,
+      value: 2.0}
+    Integral: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Integral,
+      scale: 1.0, value: 1.0e-06}
+    LowerLimit: {error: .nan, free: false, max: 1000000.0, min: 20.0, name: LowerLimit,
+      scale: 1.0, value: 100.0}
+    UpperLimit: {error: .nan, free: false, max: 1000000.0, min: 20.0, name: UpperLimit,
+      scale: 1.0, value: 100000.0}
+  norm_par: Integral
+  par_names: [Integral, Index1, Index2, BreakValue, LowerLimit, UpperLimit]
+BrokenPowerLaw3:
+  defaults:
+    Index1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index1, scale: 1.0, value: -2.0}
+    Index2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index2, scale: 1.0, value: -3.0}
+    Integral1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Integral1, scale: 1.0, value: 1.0}
+    Integral2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Integral2, scale: 1.0, value: 1.0}
+    LowerLimit1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: LowerLimit1, scale: 1.0, value: 100.0}
+    LowerLimit2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: LowerLimit2, scale: 1.0, value: 20000.0}
+    UpperLimit1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: UpperLimit1, scale: 1.0, value: 10000.0}
+    UpperLimit2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: UpperLimit2, scale: 1.0, value: 100000.0}
+  norm_par: Integral1
+  par_names: [Integral1, Index1, Integral2, Index2, LowerLimit1, UpperLimit1, LowerLimit2,
+    UpperLimit2]
+CompositeSource:
+  defaults: {}
+  norm_par: null
+  par_names: []
+ConstantValue:
+  defaults:
+    Value: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Value, scale: 1.0, value: 1.0}
+  norm_par: Value
+  par_names: [Value]
+DMFitFunction:
+  defaults:
+    bratio: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: bratio, scale: 1.0, value: 1.0}
+    channel0: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: channel0, scale: 1.0, value: 1.0}
+    channel1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: channel1, scale: 1.0, value: 1.0}
+    mass: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: mass, scale: 1.0, value: 100.0}
+    norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: norm, scale: 1.0, value: 1.0}
+    sigmav: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: sigmav, scale: 1.0, value: 1.0}
+  norm_par: sigmav
+  par_names: [norm, sigmav, mass, bratio, channel0, channel1]
+EblAtten::BPLExpCutoff:
+  defaults:
+    BreakValue: {error: .nan, free: false, max: 1000.0, min: 0.001, name: BreakValue,
+      scale: 1.0, value: 1000.0}
+    Eabs: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Eabs, scale: 1.0, value: 10.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index2, scale: -1.0,
+      value: 2.0}
+    P1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P1, scale: 1.0, value: 150.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ebl_model, scale: 1.0, value: 0.0}
+    redshift: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: redshift, scale: 1.0, value: 0.0}
+    tau_norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: tau_norm, scale: 1.0, value: 1.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Index2, BreakValue, Eabs, P1, tau_norm, redshift,
+    ebl_model]
+EblAtten::BandFunction:
+  defaults:
+    Ep: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Ep, scale: 1.0, value: 0.1}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+    alpha: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: alpha, scale: 1.0, value: -1.0}
+    beta: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: beta, scale: 1.0, value: -2.0}
+    ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ebl_model, scale: 1.0, value: 0.0}
+    norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: norm, scale: 1.0, value: 1.0}
+    redshift: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: redshift, scale: 1.0, value: 0.0}
+    tau_norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: tau_norm, scale: 1.0, value: 1.0}
+  norm_par: norm
+  par_names: [norm, alpha, beta, Ep, Scale, tau_norm, redshift, ebl_model]
+EblAtten::BrokenPowerLaw2:
+  defaults:
+    BreakValue: {error: .nan, free: false, max: 1000.0, min: 0.001, name: BreakValue,
+      scale: 1.0, value: 1000.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index2, scale: -1.0,
+      value: 2.0}
+    Integral: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Integral,
+      scale: 1.0, value: 1.0e-06}
+    LowerLimit: {error: .nan, free: false, max: 1000000.0, min: 20.0, name: LowerLimit,
+      scale: 1.0, value: 100.0}
+    UpperLimit: {error: .nan, free: false, max: 1000000.0, min: 20.0, name: UpperLimit,
+      scale: 1.0, value: 100000.0}
+    ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ebl_model, scale: 1.0, value: 0.0}
+    redshift: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: redshift, scale: 1.0, value: 0.0}
+    tau_norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: tau_norm, scale: 1.0, value: 1.0}
+  norm_par: Integral
+  par_names: [Integral, Index1, Index2, BreakValue, LowerLimit, UpperLimit, tau_norm,
+    redshift, ebl_model]
+EblAtten::ExpCutoff:
+  defaults:
+    Ebreak: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Ebreak, scale: 1.0, value: 10.0}
+    Index: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index, scale: 1.0, value: -2.1}
+    P1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P1, scale: 1.0, value: 150.0}
+    P2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P2, scale: 1.0, value: 0.0}
+    P3: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P3, scale: 1.0, value: 0.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+    ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ebl_model, scale: 1.0, value: 0.0}
+    redshift: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: redshift, scale: 1.0, value: 0.0}
+    tau_norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: tau_norm, scale: 1.0, value: 1.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index, Scale, Ebreak, P1, P2, P3, tau_norm, redshift, ebl_model]
+EblAtten::FileFunction:
+  defaults:
+    Normalization: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Normalization,
+      scale: 1.0, value: 1.0}
+    ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ebl_model, scale: 1.0, value: 0.0}
+    redshift: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: redshift, scale: 1.0, value: 0.0}
+    tau_norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: tau_norm, scale: 1.0, value: 1.0}
+  norm_par: Normalization
+  par_names: [Normalization, tau_norm, redshift, ebl_model]
+EblAtten::LogParabola:
+  defaults:
+    Eb: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Eb, scale: 1.0,
+      value: 1000.0}
+    alpha: {error: .nan, free: false, max: 5.0, min: -5.0, name: alpha, scale: 1.0,
+      value: 2.0}
+    beta: {error: .nan, free: false, max: 2.0, min: -2.0, name: beta, scale: 1.0,
+      value: 0.0}
+    ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ebl_model, scale: 1.0, value: 0.0}
+    norm: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: norm, scale: 1.0,
+      value: 1.0e-12}
+    redshift: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: redshift, scale: 1.0, value: 0.0}
+    tau_norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: tau_norm, scale: 1.0, value: 1.0}
+  norm_par: norm
+  par_names: [norm, alpha, beta, Eb, tau_norm, redshift, ebl_model]
+EblAtten::PLSuperExpCutoff:
+  defaults:
+    Cutoff: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Cutoff, scale: 1.0,
+      value: 1000.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 2.0, min: 0.0, name: Index2, scale: 1.0,
+      value: 1.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+    ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ebl_model, scale: 1.0, value: 0.0}
+    redshift: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: redshift, scale: 1.0, value: 0.0}
+    tau_norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: tau_norm, scale: 1.0, value: 1.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Scale, Cutoff, Index2, tau_norm, redshift, ebl_model]
+EblAtten::PowerLaw2:
+  defaults:
+    Index: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index, scale: -1.0,
+      value: 2.0}
+    Integral: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Integral,
+      scale: 1.0, value: 1.0e-06}
+    LowerLimit: {error: .nan, free: false, max: 1000000.0, min: 20.0, name: LowerLimit,
+      scale: 1.0, value: 100.0}
+    UpperLimit: {error: .nan, free: false, max: 1000000.0, min: 20.0, name: UpperLimit,
+      scale: 1.0, value: 100000.0}
+    ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ebl_model, scale: 1.0, value: 0.0}
+    redshift: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: redshift, scale: 1.0, value: 0.0}
+    tau_norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: tau_norm, scale: 1.0, value: 1.0}
+  norm_par: Integral
+  par_names: [Integral, Index, LowerLimit, UpperLimit, tau_norm, redshift, ebl_model]
+EblAtten::SmoothBrokenPowerLaw:
+  defaults:
+    Beta: {error: .nan, free: false, max: 10.0, min: 0.01, name: Beta, scale: 1.0,
+      value: 0.2}
+    BreakValue: {error: .nan, free: false, max: 1000.0, min: 0.001, name: BreakValue,
+      scale: 1.0, value: 1000.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index2, scale: -1.0,
+      value: 2.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+    ebl_model: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ebl_model, scale: 1.0, value: 0.0}
+    redshift: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: redshift, scale: 1.0, value: 0.0}
+    tau_norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: tau_norm, scale: 1.0, value: 1.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Scale, Index2, BreakValue, Beta, tau_norm, redshift,
+    ebl_model]
+EnergyBand::BPLExpCutoff:
+  defaults:
+    BreakValue: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: BreakValue, scale: 1.0, value: 1000.0}
+    Eabs: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Eabs, scale: 1.0, value: 10.0}
+    Emax: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emax, scale: 1.0, value: 300000.0}
+    Emin: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emin, scale: 1.0, value: 100.0}
+    Index1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index1, scale: 1.0, value: -2.1}
+    Index2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index2, scale: 1.0, value: -2.1}
+    P1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P1, scale: 1.0, value: 150.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Index2, BreakValue, Eabs, P1, Emin, Emax]
+EnergyBand::BandFunction:
+  defaults:
+    Emax: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emax, scale: 1.0, value: 300000.0}
+    Emin: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emin, scale: 1.0, value: 100.0}
+    Ep: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Ep, scale: 1.0, value: 0.1}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+    alpha: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: alpha, scale: 1.0, value: -1.0}
+    beta: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: beta, scale: 1.0, value: -2.0}
+    norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: norm, scale: 1.0, value: 1.0}
+  norm_par: norm
+  par_names: [norm, alpha, beta, Ep, Scale, Emin, Emax]
+EnergyBand::BrokenPowerLaw2:
+  defaults:
+    BreakValue: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: BreakValue, scale: 1.0, value: 1000.0}
+    Emax: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emax, scale: 1.0, value: 300000.0}
+    Emin: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emin, scale: 1.0, value: 100.0}
+    Index1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index1, scale: 1.0, value: -2.0}
+    Index2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index2, scale: 1.0, value: -3.0}
+    Integral: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Integral, scale: 1.0, value: 1.0}
+    LowerLimit: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: LowerLimit, scale: 1.0, value: 20.0}
+    UpperLimit: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: UpperLimit, scale: 1.0, value: 200000.0}
+  norm_par: Integral
+  par_names: [Integral, Index1, Index2, BreakValue, LowerLimit, UpperLimit, Emin,
+    Emax]
+EnergyBand::ExpCutoff:
+  defaults:
+    Ebreak: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Ebreak, scale: 1.0, value: 10.0}
+    Emax: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emax, scale: 1.0, value: 300000.0}
+    Emin: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emin, scale: 1.0, value: 100.0}
+    Index: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index, scale: 1.0, value: -2.1}
+    P1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P1, scale: 1.0, value: 150.0}
+    P2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P2, scale: 1.0, value: 0.0}
+    P3: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P3, scale: 1.0, value: 0.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index, Scale, Ebreak, P1, P2, P3, Emin, Emax]
+EnergyBand::FileFunction:
+  defaults:
+    Emax: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emax, scale: 1.0, value: 300000.0}
+    Emin: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emin, scale: 1.0, value: 100.0}
+    Normalization: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Normalization, scale: 1.0, value: 1.0}
+  norm_par: Normalization
+  par_names: [Normalization, Emin, Emax]
+EnergyBand::LogParabola:
+  defaults:
+    Eb: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Eb, scale: 1.0, value: 100.0}
+    Emax: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emax, scale: 1.0, value: 300000.0}
+    Emin: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emin, scale: 1.0, value: 100.0}
+    alpha: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: alpha, scale: 1.0, value: 1.0}
+    beta: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: beta, scale: 1.0, value: 2.0}
+    norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: norm, scale: 1.0, value: 1.0}
+  norm_par: norm
+  par_names: [norm, alpha, beta, Eb, Emin, Emax]
+EnergyBand::PLSuperExpCutoff:
+  defaults:
+    Cutoff: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Cutoff, scale: 1.0, value: 10000.0}
+    Emax: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emax, scale: 1.0, value: 300000.0}
+    Emin: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emin, scale: 1.0, value: 100.0}
+    Index1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index1, scale: 1.0, value: -2.1}
+    Index2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index2, scale: 1.0, value: 2.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Scale, Cutoff, Index2, Emin, Emax]
+EnergyBand::PowerLaw2:
+  defaults:
+    Emax: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emax, scale: 1.0, value: 300000.0}
+    Emin: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emin, scale: 1.0, value: 100.0}
+    Index: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index, scale: 1.0, value: -2.0}
+    Integral: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Integral, scale: 1.0, value: 1.0}
+    LowerLimit: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: LowerLimit, scale: 1.0, value: 100.0}
+    UpperLimit: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: UpperLimit, scale: 1.0, value: 200000.0}
+  norm_par: Integral
+  par_names: [Integral, Index, LowerLimit, UpperLimit, Emin, Emax]
+EnergyBand::SmoothBrokenPowerLaw:
+  defaults:
+    Beta: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Beta, scale: 1.0, value: 0.2}
+    BreakValue: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: BreakValue, scale: 1.0, value: 1000.0}
+    Emax: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emax, scale: 1.0, value: 300000.0}
+    Emin: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Emin, scale: 1.0, value: 100.0}
+    Index1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index1, scale: 1.0, value: -2.1}
+    Index2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index2, scale: 1.0, value: -2.1}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Scale, Index2, BreakValue, Beta, Emin, Emax]
+ExpCutoff:
+  defaults:
+    Ebreak: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Ebreak, scale: 1.0, value: 10.0}
+    Index: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index, scale: 1.0, value: -2.1}
+    P1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P1, scale: 1.0, value: 150.0}
+    P2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P2, scale: 1.0, value: 0.0}
+    P3: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: P3, scale: 1.0, value: 0.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index, Scale, Ebreak, P1, P2, P3]
+ExpCutoffSEDPeak:
+  defaults:
+    Epeak: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Epeak, scale: 1.0, value: 1000.0}
+    Fpeak: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Fpeak, scale: 1.0, value: 10.0}
+    Index: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index, scale: 1.0, value: -2.1}
+  norm_par: Fpeak
+  par_names: [Fpeak, Index, Epeak]
+FileFunction:
+  defaults:
+    Normalization: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Normalization,
+      scale: 1.0, value: 1.0}
+  norm_par: Normalization
+  par_names: [Normalization]
+Gaussian:
+  defaults:
+    Mean: {error: .nan, free: false, max: 100000.0, min: 1.0e-05, name: Mean, scale: 1.0,
+      value: 1000.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Sigma: {error: .nan, free: false, max: 100000.0, min: 10.0, name: Sigma, scale: 1.0,
+      value: 100.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Mean, Sigma]
+LogGaussian:
+  defaults:
+    Mean: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Mean, scale: 1.0, value: 0.0}
+    Norm: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Norm, scale: 1.0, value: 1.0}
+    Sigma: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Sigma, scale: 1.0, value: 1.0}
+  norm_par: Norm
+  par_names: [Norm, Mean, Sigma]
+LogNormal:
+  defaults:
+    Log10_Mean: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Log10_Mean, scale: 1.0, value: 3.0}
+    Log10_Sigma: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Log10_Sigma, scale: 1.0, value: 2.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+  norm_par: Prefactor
+  par_names: [Prefactor, Log10_Mean, Log10_Sigma]
+LogNormalLog:
+  defaults:
+    Log10_Mean: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Log10_Mean, scale: 1.0, value: 3.0}
+    Log10_Sigma: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Log10_Sigma, scale: 1.0, value: 2.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+  norm_par: Prefactor
+  par_names: [Prefactor, Log10_Mean, Log10_Sigma]
+LogParabola:
+  defaults:
+    Eb: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Eb, scale: 1.0,
+      value: 1000.0}
+    alpha: {error: .nan, free: false, max: 5.0, min: -5.0, name: alpha, scale: 1.0,
+      value: 2.0}
+    beta: {error: .nan, free: false, max: 2.0, min: -2.0, name: beta, scale: 1.0,
+      value: 0.0}
+    norm: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: norm, scale: 1.0,
+      value: 1.0e-12}
+  norm_par: norm
+  par_names: [norm, alpha, beta, Eb]
+MapCubeFunction:
+  defaults:
+    Normalization: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Normalization, scale: 1.0, value: 1.0}
+  norm_par: Normalization
+  par_names: [Normalization]
+MultipleBrokenPowerLaw:
+  defaults: {}
+  norm_par: null
+  par_names: []
+PLSuperExpCutoff:
+  defaults:
+    Cutoff: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Cutoff, scale: 1.0,
+      value: 1000.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 2.0, min: 0.0, name: Index2, scale: 1.0,
+      value: 1.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Scale, Cutoff, Index2]
+PLSuperExpCutoff2:
+  defaults:
+    Expfactor: {error: .nan, free: false, max: 0.5, min: -0.5, name: Expfactor, scale: 1.0,
+      value: 0.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 2.0, min: 0.0, name: Index2, scale: 1.0,
+      value: 1.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Scale, Expfactor, Index2]
+PiecewisePowerLaw:
+  defaults: {}
+  norm_par: null
+  par_names: []
+PowerLaw:
+  defaults:
+    Index: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index, scale: -1.0,
+      value: 2.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index, Scale]
+PowerLaw2:
+  defaults:
+    Index: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index, scale: -1.0,
+      value: 2.0}
+    Integral: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Integral,
+      scale: 1.0, value: 1.0e-06}
+    LowerLimit: {error: .nan, free: false, max: 1000000.0, min: 20.0, name: LowerLimit,
+      scale: 1.0, value: 100.0}
+    UpperLimit: {error: .nan, free: false, max: 1000000.0, min: 20.0, name: UpperLimit,
+      scale: 1.0, value: 100000.0}
+  norm_par: Integral
+  par_names: [Integral, Index, LowerLimit, UpperLimit]
+RadialDisk:
+  defaults:
+    DEC: {error: .nan, free: false, max: 90.0, min: -90.0, name: DEC, scale: 1.0,
+      value: 0.0}
+    RA: {error: .nan, free: false, max: 360.0, min: -360.0, name: RA, scale: 1.0,
+      value: 0.0}
+    Radius: {error: .nan, free: false, max: 180.0, min: 0.0, name: Radius, scale: 1.0,
+      value: 1.0}
+  norm_par: null
+  par_names: [RA, DEC, Radius]
+RadialGaussian:
+  defaults:
+    DEC: {error: .nan, free: false, max: 90.0, min: -90.0, name: DEC, scale: 1.0,
+      value: 0.0}
+    RA: {error: .nan, free: false, max: 360.0, min: -360.0, name: RA, scale: 1.0,
+      value: 0.0}
+    Sigma: {error: .nan, free: false, max: 180.0, min: 0.0, name: Sigma, scale: 1.0,
+      value: 1.0}
+  norm_par: null
+  par_names: [RA, DEC, Sigma]
+RadialProfile:
+  defaults:
+    DEC: {error: .nan, free: false, max: 90.0, min: -90.0, name: DEC, scale: 1.0,
+      value: 0.0}
+    Normalization: {error: .nan, free: false, max: 10.0, min: 0.0, name: Normalization,
+      scale: 1.0, value: 1.0}
+    RA: {error: .nan, free: false, max: 360.0, min: -360.0, name: RA, scale: 1.0,
+      value: 0.0}
+  norm_par: Normalization
+  par_names: [Normalization, RA, DEC]
+ScaleFactor::FileFunction:
+  defaults:
+    Normalization: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Normalization, scale: 1.0, value: 1.0}
+    ScaleFactor: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ScaleFactor, scale: 1.0, value: 1.0}
+  norm_par: Normalization
+  par_names: [Normalization, ScaleFactor]
+ScaleFactor::Gaussian:
+  defaults:
+    Mean: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Mean, scale: 1.0, value: 150.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    ScaleFactor: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ScaleFactor, scale: 1.0, value: 1.0}
+    Sigma: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Sigma, scale: 1.0, value: 15.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Mean, Sigma, ScaleFactor]
+ScaleFactor::PLSuperExpCutoff:
+  defaults:
+    Cutoff: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Cutoff, scale: 1.0, value: 10000.0}
+    Index1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index1, scale: 1.0, value: -2.1}
+    Index2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index2, scale: 1.0, value: 2.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+    ScaleFactor: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ScaleFactor, scale: 1.0, value: 1.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Scale, Cutoff, Index2, ScaleFactor]
+ScaleFactor::PowerLaw2:
+  defaults:
+    Index: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index, scale: 1.0, value: -2.0}
+    Integral: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Integral, scale: 1.0, value: 1.0}
+    LowerLimit: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: LowerLimit, scale: 1.0, value: 100.0}
+    ScaleFactor: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: ScaleFactor, scale: 1.0, value: 1.0}
+    UpperLimit: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: UpperLimit, scale: 1.0, value: 200000.0}
+  norm_par: Integral
+  par_names: [Integral, Index, LowerLimit, UpperLimit, ScaleFactor]
+SkyDirFunction:
+  defaults:
+    DEC: {error: .nan, free: false, max: 90.0, min: -90.0, name: DEC, scale: 1.0,
+      value: 0.0}
+    RA: {error: .nan, free: false, max: 360.0, min: -360.0, name: RA, scale: 1.0,
+      value: 0.0}
+  norm_par: null
+  par_names: [RA, DEC]
+SmoothBrokenPowerLaw:
+  defaults:
+    Beta: {error: .nan, free: false, max: 10.0, min: 0.01, name: Beta, scale: 1.0,
+      value: 0.2}
+    BreakValue: {error: .nan, free: false, max: 1000.0, min: 0.001, name: BreakValue,
+      scale: 1.0, value: 1000.0}
+    Index1: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index1, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index2, scale: -1.0,
+      value: 2.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Scale, Index2, BreakValue, Beta]
+SmoothDoubleBrokenPowerLaw:
+  defaults:
+    Beta12: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Beta12, scale: 1.0, value: 0.1}
+    Beta23: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Beta23, scale: 1.0, value: 0.1}
+    BreakValue12: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: BreakValue12, scale: 1.0, value: 1000.0}
+    BreakValue23: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: BreakValue23, scale: 1.0, value: 10000.0}
+    Index1: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index1, scale: 1.0, value: -1.5}
+    Index2: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index2, scale: 1.0, value: -2.0}
+    Index3: {error: .nan, free: false, max: 3.4028234663852886e+38, min: -3.4028234663852886e+38,
+      name: Index3, scale: 1.0, value: -2.5}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, Index1, Scale, Index2, BreakValue12, Beta12, Index3, BreakValue23,
+    Beta23]
+SpatialMap:
+  defaults:
+    Prefactor: {error: .nan, free: false, max: 1.0, min: 1.0, name: Prefactor, scale: 1.0,
+      value: 1.0}
+  norm_par: Prefactor
+  par_names: [Prefactor]

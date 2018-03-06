@@ -13,7 +13,8 @@ else
 fi
     
 export PATH=$HOME/miniconda/bin:$PATH
-source activate fermi-env
-export PATH=$CONDA_ENV_PATH/bin:$PATH
 
+if [[ -n $CONDA_ENV_PATH ]]; then
+   export PATH=$CONDA_ENV_PATH/bin:$PATH
+fi
 

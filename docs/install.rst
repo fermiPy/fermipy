@@ -18,7 +18,11 @@ installing and setting up the STs see :ref:`stinstall`.  If you are
 running at SLAC you can follow the `Running at SLAC`_ instructions.
 For Unix/Linux users we currently recommend following the
 :ref:`condainstall` instructions.  For OSX users we recommend
-following the :ref:`pipinstall` instructions.
+following the :ref:`pipinstall` instructions.  The
+:ref:`dockerinstall` instructions can be used to install the STs on
+OSX and Linux machines that are new enough to support Docker.  To
+install the development version of Fermipy follow the
+:ref:`devinstall` instructions.
 
 .. _stinstall:
 
@@ -50,10 +54,9 @@ Installing with pip
 -------------------
 
 These instructions cover installation with the ``pip`` package
-management tool.  This method will install fermipy and its
-dependencies into the python distribution that comes with the Fermi
-Science Tools.  First verify that you're running the python from the
-Science Tools
+management tool.  This will install fermipy and its dependencies into
+the python distribution that comes with the Fermi Science Tools.
+First verify that you're running the python from the Science Tools
 
 .. code-block:: bash
 
@@ -124,15 +127,23 @@ Installing with Anaconda Python
    :ref:`pipinstall` thread above.
 
 These instructions cover how to use fermipy with a new or existing
-conda python installation.  These instructions assume that you have
+anaconda python installation.  These instructions assume that you have
 already downloaded and installed the Fermi STs from the FSSC and you
 have set the ``FERMI_DIR`` environment variable to point to the location
 of this installation.
 
-The ``condainstall.sh`` script can be used to install the fermipy
-dependencies in an existing anaconda python installation or to create
-a minimal anaconda installation from scratch.  In either case download
-and source the ``condainstall.sh`` script from the fermipy repository:
+If you already have an existing anaconda python installation then fermipy
+can be installed from the conda-forge channel as follows:
+
+.. code-block:: bash
+
+   $ conda config --append channels conda-forge
+   $ conda install fermipy
+   
+If you do not have an anaconda installation, the ``condainstall.sh``
+script can be used to create a minimal anaconda installation from
+scratch.  First download and source the ``condainstall.sh`` script
+from the fermipy repository:
 
 .. code-block:: bash
 
@@ -142,35 +153,149 @@ and source the ``condainstall.sh`` script from the fermipy repository:
 If you do not already have anaconda python installed on your system
 this script will create a new installation under ``$HOME/miniconda``.
 If you already have anaconda installed and the ``conda`` command is in
-your path the script will use your existing installation.  The script
-will create a separate conda environment for your fermipy installation
-called *fermi-env*.  After running ``condainstall.sh`` fermipy can be
-installed with pip:
+your path the script will use your existing installation.  After
+running ``condainstall.sh`` fermipy can be installed with conda:
 
 .. code-block:: bash
 
-   $ pip install fermipy
+   $ conda install fermipy
 
-Alternatively fermipy can be installed from source following the
-instructions in :ref:`gitinstall`.
-
-Once fermipy is installed you can initialize the ST/fermipy environment at
-any time by running ``condasetup.sh``:
+Once fermipy is installed you can initialize the ST/fermipy
+environment by running ``condasetup.sh``:
 
 .. code-block:: bash
 
    $ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condasetup.sh 
    $ source condasetup.sh
 
-This will both activate the *fermi-env* conda environment and set up
-your shell environment to run the Fermi Science Tools.  The
-*fermi-env* python environment can be exited by running:
+If you installed fermipy in a specific conda environment you should
+switch to this environment before running the script:
+   
+.. code-block:: bash
+
+   $ source activate fermi-env
+   $ source condasetup.sh
+
+.. _dockerinstall:
+
+Installing with Docker
+----------------------
+
+.. note::
+
+   This method for installing the STs is currently experimental
+   and has not been fully tested on all operating systems.  If you
+   encounter issues please try either the pip- or anaconda-based
+   installation instructions.
+
+Docker is a virtualization tool that can be used to deploy software in
+portable containers that can be run on any operating system that
+supports Docker.  Before following these instruction you should first
+install docker on your machine following the `installation instructions
+<https://docs.docker.com/engine/installation/>`_ for your operating
+system.  Docker is currently supported on the following operating
+systems:
+
+* macOS 10.10.3 Yosemite or later
+* Ubuntu Precise 12.04 or later
+* Debian 8.0 or later
+* RHEL7 or later
+* Windows 10 or later
+
+Note that Docker is not supported by RHEL6 or its variants (CentOS6,
+Scientific Linux 6).
+
+These instructions describe how to create a docker-based ST
+installation that comes preinstalled with anaconda python and fermipy.
+The installation is fully contained in a docker image that is roughly
+2GB in size.  To see a list of the available images go to the `fermipy
+Docker Hub page <https://hub.docker.com/r/fermipy/fermipy/tags/>`_.
+Images are tagged with the release version of the STs that was used to
+build the image (e.g. 11-05-00).  The *latest* tag points to the image
+for the most recent ST release.
+
+To install the *latest* image first download the image file:
 
 .. code-block:: bash
 
-   $ source deactivate
+   $ docker pull fermipy/fermipy
+   
+Now switch to the directory where you plan to run your analysis and execute
+the following command to launch a docker container instance:
+
+.. code-block:: bash
+   
+   $ docker run -it --rm -p 8888:8888 -v $PWD:/workdir -w /workdir fermipy/fermipy
+
+This will start an ipython notebook server that will be attached to
+port 8888.  Once you start the server it will print a URL that you can
+use to connect to it with the web browser on your host machine.  The
+`-v $PWD:/workdir` argument mounts the current directory to the
+working area of the container.  Additional directories may be mounted
+by adding more volume arguments ``-v`` with host and container paths
+separated by a colon.
+
+The same docker image may be used to launch python, ipython, or a bash
+shell by passing the command as an argument to ``docker run``:
+
+.. code-block:: bash
+   
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy/fermipy ipython
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy/fermipy python
+   $ docker run -it --rm -v $PWD:/workdir -w /workdir fermipy/fermipy /bin/bash
+
+By default interactive graphics will not be enabled.  The following
+commands can be used to enable X11 forwarding for interactive graphics
+on an OSX machine.  This requires you to have installed XQuartz 2.7.10
+or later.  First enable remote connections by default and start the X
+server:
+
+.. code-block:: bash
+                
+   $ defaults write org.macosforge.xquartz.X11 nolisten_tcp -boolean false
+   $ open -a XQuartz
+
+Now check that the X server is running and listening on port 6000:
+
+.. code-block:: bash
+                
+   $ lsof -i :6000
+
+If you don't see X11 listening on port 6000 then try restarting XQuartz.
+
+Once you have XQuartz configured you can enable forwarding by setting
+DISPLAY environment variable to the IP address of the host machine:
+
+.. code-block:: bash
+
+   $ export HOST_IP=`ifconfig en0 | grep "inet " | cut -d " " -f2`
+   $ xhost +local:
+   $ docker run -it --rm -e DISPLAY=$HOST_IP:0 -v $PWD:/workdir -w /workdir fermipy ipython
 
 
+.. _devinstall:
+
+Installing Development Versions
+-------------------------------
+
+The instructions describe how to install development versions of
+Fermipy.  Before installing a development version we recommend first
+installing a tagged release following the :ref:`pipinstall` or
+:ref:`condainstall` instructions above.
+
+The development version of Fermipy can be installed by running ``pip
+install`` with the URL of the git repository:
+
+.. code-block:: bash
+                
+   $ pip install git+https://github.com/fermiPy/fermipy.git
+
+This will install the most recent commit on the master branch.  Note
+that care should be taken when using development versions as
+features/APIs under active development may change in subsequent
+versions without notice.
+   
+   
 Running at SLAC
 ---------------
 
@@ -191,8 +316,8 @@ To initialize the ST environment run the ``slacsetup`` function:
 
 This will setup your ``GLAST_EXT`` path and source the setup script
 for one of the pre-built ST installations (the current default is
-11-03-00).  To manually override the ST version you can optionally
-provide the release tag as an argument to ``slacsetup``:
+11-05-00).  To manually override the ST version you can provide the
+release tag as an argument to ``slacsetup``:
 
 .. code-block:: bash
 
@@ -221,12 +346,22 @@ the installation has succeeded by importing
    Please check out: http://continuum.io/thanks and https://binstar.org
    >>> from fermipy.gtanalysis import GTAnalysis
 
+Alternatively you can install with conda as follows:
+
+.. code-block:: bash
+
+   # Note that this first command may take a long time (> 10 m)
+   $ conda create -n fermipy --clone=root
+   $ conda config --append channels conda-forge
+   $ source activate fermipy
+   (fermipy) $ conda install fermipy
+   
 .. _upgrade:
    
 Upgrading
 ---------
 
-By default installing fermipy with ``pip`` will get the latest tagged
+By default installing fermipy with ``pip`` or ``conda`` will get the latest tagged
 released available on the `PyPi <https://pypi.python.org/pypi>`_
 package respository.  You can check your currently installed version
 of fermipy with ``pip show``:
@@ -234,20 +369,16 @@ of fermipy with ``pip show``:
 .. code-block:: bash
 
    $ pip show fermipy
-   ---
-   Metadata-Version: 2.0
-   Name: fermipy
-   Version: 0.6.7
-   Summary: A Python package for analysis of Fermi-LAT data
-   Home-page: https://github.com/fermiPy/fermipy
-   Author: The Fermipy developers
-   Author-email: fermipy.developers@gmail.com
-   License: BSD
-   Location: /home/vagrant/miniconda/envs/fermi-env/lib/python2.7/site-packages
-   Requires: wcsaxes, astropy, matplotlib, healpy, scipy, numpy, pyyaml
 
+or ``conda info``:
+
+.. code-block:: bash
+
+   $ conda info fermipy
+   
 To upgrade your fermipy installation to the latest version run the pip
-installation command with ``--upgrade --no-deps`` (remember to also include the ``--user`` option if you're running at SLAC):
+installation command with ``--upgrade --no-deps`` (remember to also
+include the ``--user`` option if you're running at SLAC):
    
 .. code-block:: bash
    
@@ -259,18 +390,24 @@ installation command with ``--upgrade --no-deps`` (remember to also include the 
          Successfully uninstalled fermipy-0.6.6
    Successfully installed fermipy-0.6.7
 
+If you installed fermipy with ``conda`` the equivalent command is:
+
+.. code-block:: bash
+
+   $ conda update fermipy
+   
    
 .. _gitinstall:
    
-Building from Source
---------------------
+Developer Installation
+----------------------
 
 These instructions describe how to install fermipy from its git source
 code repository using the ``setup.py`` script.  Installing from source
 can be useful if you want to make your own modifications to the
-fermipy source code or test features in an untagged commit.  Note that
-non-expert users are recommended to install fermipy with ``pip``
-following the :ref:`pipinstall` instructions above.
+fermipy source code.  Note that non-developers are recommended to
+install a tagged release of fermipy following the :ref:`pipinstall` or
+:ref:`condainstall` instructions above.
 
 First clone the fermipy git repository and cd to the root directory of
 the repository:
@@ -310,23 +447,9 @@ command with the ``--uninstall`` flag:
    # Install a link to your source code installation
    $ python setup.py develop --user --uninstall
    
-You also have the option of installing a previous release tag.  To see
-the list of release tags use ``git tag``:
 
-.. code-block:: bash
-
-   $ git tag
-   0.4.0
-   0.5.0
-   0.5.1
-   0.5.2
-   0.5.3
-   0.5.4
-   0.6.0
-   0.6.1
-
-To install a specific release tag, run ``git checkout`` with the tag
-name followed by ``setup.py install``:
+Specific release tags can be installed by running ``git checkout``
+before running the installation command:
    
 .. code-block:: bash
    
@@ -334,7 +457,7 @@ name followed by ``setup.py install``:
    $ git checkout X.X.X 
    $ python setup.py install --user 
 
-
+To see the list of available release tags run ``git tag``.
    
 Issues
 ------
@@ -347,14 +470,26 @@ instructions to modify your default matplotlibrc file (you can pick
 GTK or WX as an alternative).  Specifically the ``TkAgg`` and
 ``macosx`` backends currently do not work on OSX if you upgrade
 matplotlib to the version required by fermipy.  To get around this
-issue you can enable the ``Agg`` backend at runtime:
+issue you can switch to the ``Agg`` backend at runtime before
+importing fermipy:
 
 .. code-block:: bash
 
    >>> import matplotlib
    >>> matplotlib.use('Agg')
 
-However this backend does not support interactive plotting.
+However note that this backend does not support interactive plotting.
+
+If you are running OSX El Capitan or newer you may see errors like the following:
+
+.. code-block:: bash
+                
+   dyld: Library not loaded
+
+In this case you will need to disable the System Integrity Protections
+(SIP).  See `here
+<http://www.macworld.com/article/2986118/security/how-to-modify-system-integrity-protection-in-el-capitan.html>`_
+for instructions on disabling SIP on your machine.
 
 In some cases the setup.py script will fail to properly install the
 fermipy package dependecies.  If installation fails you can try

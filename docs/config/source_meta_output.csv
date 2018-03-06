@@ -1,0 +1,12 @@
+``name``	`~str`	Name of the source.
+``Source_Name``	`~str`	Name of the source.
+``SpatialModel``	`~str`	Spatial model.
+``SpatialWidth``	`~float`	Spatial size parameter.
+``SpatialType``	`~str`	Spatial type string.  This corresponds to the type attribute of the spatialModel component in the XML model.
+``SourceType``	`~str`	Source type string (PointSource or DiffuseSource).
+``SpectrumType``	`~str`	Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).
+``Spatial_Filename``	`~str`	Path to spatial template associated to this source.
+``Spectrum_Filename``	`~str`	Path to file associated to the spectral model of this source.
+``correlation``	`~dict`	Dictionary of correlation coefficients.
+``model_counts``	`~numpy.ndarray`	Vector of predicted counts for this source in each analysis energy bin.
+``sed``	`~dict`	Output of SED analysis.  See :ref:`sed` for more information.

@@ -1,28 +1,28 @@
-SED	``E_MIN``	Lower edges of SED energy bins (MeV).
-SED	``E_REF``	Upper edges of SED energy bins (MeV).
-SED	``E_MAX``	Centers of SED energy bins (MeV).
-SED	``REF_DFDE_E_MIN``	Differential flux of the reference model evaluated at the lower bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
-SED	``REF_DFDE_E_MAX``	Differential flux of the reference model evaluated at the upper bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
-SED	``REF_FLUX``	Flux of the reference model in each bin (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
-SED	``REF_EFLUX``	Energy flux of the reference model in each bin (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
-SED	``REF_DFDE``	Differential flux of the reference model evaluated at the bin center (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
-SED	``REF_NPRED``	Number of predicted counts in the reference model in each bin.
-SED	``NORM``	Normalization in each bin in units of the reference model.
-SED	``NORM_ERR``	Symmetric error on the normalization in each bin in units of the reference model.
-SED	``NORM_ERRN``	Lower 1-sigma error on the normalization in each bin in units of the reference model.
-SED	``NORM_ERRP``	Upper 1-sigma error on the normalization in each bin in units of the reference model.
-SED	``NORM_UL``	Upper limit on the normalization in each bin in units of the reference model.
-SED	``LOGLIKE``	Log-likelihood value of the model for the best-fit amplitude.
-SED	``NORM_SCAN``	Array of NxM normalization values for the profile likelihood scan in N energy bins and M scan points.  A row-wise multiplication with any of ``ref`` columns can be used to convert this matrix to the respective unit.
-SED	``DLOGLIKE_SCAN``	Array of NxM delta-loglikelihood values for the profile likelihood scan in N energy bins and M scan points.
-MODEL_FLUX	``ENERGY``	Energies at which the spectral band is evaluated (MeV).
-MODEL_FLUX	``DFDE``	Central value of spectral band (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
-MODEL_FLUX	``DFDE_LO``	Lower 1-sigma bound of spectral band (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
-MODEL_FLUX	``DFDE_HI``	Upper 1-sigma bound of spectral band (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
-MODEL_FLUX	``DFDE_ERR``	Symmetric error of spectral band (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
-MODEL_FLUX	``DFDE_FERR``	Fractional width of spectral band.
-PARAMS	``NAME``	Name of the parameter.
-PARAMS	``VALUE``	Value of the parameter.
-PARAMS	``ERROR``	1-sigma parameter error (nan indicates that the parameter was not included in the fit).
-PARAMS	``COVARIANCE``	Covariance matrix among free parameters.
-PARAMS	``CORRELATION``	Correlation matrix among free parameters.
+SED	``e_min``	Lower edges of SED energy bins (MeV).
+SED	``e_ref``	Upper edges of SED energy bins (MeV).
+SED	``e_max``	Centers of SED energy bins (MeV).
+SED	``ref_dnde_e_min``	Differential flux of the reference model evaluated at the lower bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
+SED	``ref_dnde_e_max``	Differential flux of the reference model evaluated at the upper bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
+SED	``ref_flux``	Flux of the reference model in each bin (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
+SED	``ref_eflux``	Energy flux of the reference model in each bin (:math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).
+SED	``ref_dnde``	Differential flux of the reference model evaluated at the bin center (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
+SED	``ref_npred``	Number of predicted counts in the reference model in each bin.
+SED	``norm``	Normalization in each bin in units of the reference model.
+SED	``norm_err``	Symmetric error on the normalization in each bin in units of the reference model.
+SED	``norm_errn``	Lower 1-sigma error on the normalization in each bin in units of the reference model.
+SED	``norm_errp``	Upper 1-sigma error on the normalization in each bin in units of the reference model.
+SED	``norm_UL``	Upper limit on the normalization in each bin in units of the reference model.
+SED	``loglike``	Log-likelihood value of the model for the best-fit amplitude.
+SED	``norm_scan``	Array of NxM normalization values for the profile likelihood scan in N energy bins and M scan points.  A row-wise multiplication with any of ``ref`` columns can be used to convert this matrix to the respective unit.
+SED	``dloglike_scan``	Array of NxM delta-loglikelihood values for the profile likelihood scan in N energy bins and M scan points.
+MODEL_FLUX	``energy``	Energies at which the spectral band is evaluated (MeV).
+MODEL_FLUX	``dnde``	Central value of spectral band (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
+MODEL_FLUX	``dnde_lo``	Lower 1-sigma bound of spectral band (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
+MODEL_FLUX	``dnde_hi``	Upper 1-sigma bound of spectral band (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
+MODEL_FLUX	``dnde_err``	Symmetric error of spectral band (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`).
+MODEL_FLUX	``dnde_ferr``	Fractional width of spectral band.
+PARAMS	``name``	Name of the parameter.
+PARAMS	``value``	Value of the parameter.
+PARAMS	``error``	1-sigma parameter error (nan indicates that the parameter was not included in the fit).
+PARAMS	``covariance``	Covariance matrix among free parameters.
+PARAMS	``correlation``	Correlation matrix among free parameters.

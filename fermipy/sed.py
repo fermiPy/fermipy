@@ -10,28 +10,24 @@ from __future__ import absolute_import, division, print_function
 import copy
 import logging
 import os
+import json
 
 import numpy as np
 
-import pyLikelihood as pyLike
-
-import astropy.io.fits as pyfits
+from astropy.io import fits
 from astropy.table import Table, Column
 
 import fermipy.config
-import fermipy.utils as utils
-import fermipy.gtutils as gtutils
-import fermipy.roi_model as roi_model
+from fermipy import utils
+from fermipy import gtutils
+from fermipy import fits_utils
+from fermipy import roi_model
+from fermipy.config import ConfigSchema
+from fermipy.timing import Timer
+from fermipy import model_utils
 
 from LikelihoodState import LikelihoodState
-
-# Some useful functions
-
-FluxTypes = ['NORM', 'FLUX', 'EFLUX', 'NPRED', 'DIF_FLUX', 'DIF_EFLUX']
-
-PAR_NAMES = {"PowerLaw": ["Prefactor", "Index"],
-             "LogParabola": ["norm", "alpha", "beta"],
-             "PLExpCutoff": ["Prefactor", "Index1", "Cutoff"]}
+import pyLikelihood as pyLike
 
 
 class SEDGenerator(object):
@@ -51,8 +47,8 @@ class SEDGenerator(object):
             Source name.
 
         prefix : str
-           Optional string that will be prepended to all output files
-           (FITS and rendered images).
+            Optional string that will be prepended to all output files
+            (FITS and rendered images).
 
         loge_bins : `~numpy.ndarray`
             Sequence of energies in log10(E/MeV) defining the edges of
@@ -61,37 +57,7 @@ class SEDGenerator(object):
             sequence must align with the bin edges of the underyling
             analysis instance.
 
-        bin_index : float
-            Spectral index that will be use when fitting the energy
-            distribution within an energy bin.
-
-        use_local_index : bool
-            Use a power-law approximation to the shape of the global
-            spectrum in each bin.  If this is false then a constant
-            index set to `bin_index` will be used.
-
-        fix_background : bool
-            Fix background components when fitting the flux
-            normalization in each energy bin.  If fix_background=False
-            then all background parameters that are currently free in
-            the fit will be profiled.  By default fix_background=True.
-
-        ul_confidence : float
-            Set the confidence level that will be used for the
-            calculation of flux upper limits in each energy bin.
-
-        cov_scale : float
-            Scaling factor that will be applied when setting the
-            gaussian prior on the normalization of free background
-            sources.  If this parameter is None then no gaussian prior
-            will be applied.
-
-        write_fits : bool
-            Write a FITS file containing the SED analysis results.
-
-        write_npy : bool
-            Write a numpy file with the contents of the output
-            dictionary.
+        {options}
 
         optimizer : dict
             Dictionary that overrides the default optimizer settings.
@@ -99,146 +65,169 @@ class SEDGenerator(object):
         Returns
         -------
         sed : dict
-           Dictionary containing output of the SED analysis.  This
-           dictionary is also saved to the 'sed' dictionary of the
-           `~fermipy.roi_model.Source` instance.
+            Dictionary containing output of the SED analysis.
 
         """
-
+        timer = Timer.create(start=True)
         name = self.roi.get_source_by_name(name).name
 
-        # Extract options from kwargs
-        config = copy.deepcopy(self.config['sed'])
-        config['optimizer'] = copy.deepcopy(self.config['optimizer'])
-        config.setdefault('prefix', '')
-        config.setdefault('write_fits', True)
-        config.setdefault('write_npy', True)
-        config.setdefault('loge_bins', None)
-        fermipy.config.validate_config(kwargs, config)
-        config = utils.merge_dict(config, kwargs)
+        # Create schema for method configuration
+        schema = ConfigSchema(self.defaults['sed'],
+                              optimizer=self.defaults['optimizer'])
+        schema.add_option('prefix', '')
+        schema.add_option('outfile', None, '', str)
+        schema.add_option('loge_bins', None, '', list)
+        config = utils.create_dict(self.config['sed'],
+                                   optimizer=self.config['optimizer'])
+        config = schema.create_config(config, **kwargs)
 
         self.logger.info('Computing SED for %s' % name)
 
         o = self._make_sed(name, **config)
-        filename = \
-            utils.format_filename(self.workdir, 'sed',
-                                  prefix=[config['prefix'],
-                                          name.lower().replace(' ', '_')])
-
-        o['file'] = None
-        if config['write_fits']:
-            o['file'] = os.path.basename(filename) + '.fits'
-            self._make_sed_fits(o, filename + '.fits', **config)
-
-        if config['write_npy']:
-            np.save(filename + '.npy', o)
-
-        try:
-            self._plotter.make_sed_plot(self, name, **config)
-        except Exception:
-            self.logger.error('SED plotting failed.', exc_info=True)
 
         self.logger.info('Finished SED')
 
+        outfile = config.get('outfile', None)
+        if outfile is None:
+            outfile = utils.format_filename(self.workdir, 'sed',
+                                            prefix=[config['prefix'],
+                                                    name.lower().replace(' ', '_')])
+        else:
+            outfile = os.path.join(self.workdir,
+                                   os.path.splitext(outfile)[0])
+
+        o['file'] = None
+        if config['write_fits']:
+            o['file'] = os.path.basename(outfile) + '.fits'
+            self._make_sed_fits(o, outfile + '.fits', **config)
+
+        if config['write_npy']:
+            np.save(outfile + '.npy', o)
+
+        if config['make_plots']:
+            self._plotter.make_sed_plots(o, **config)
+
+        self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return o
 
     def _make_sed_fits(self, sed, filename, **kwargs):
 
         # Write a FITS file
-        cols = [Column(name='E_MIN', dtype='f8', data=sed['emin'], unit='MeV'),
-                Column(name='E_REF', dtype='f8', data=sed['ectr'], unit='MeV'),
-                Column(name='E_MAX', dtype='f8', data=sed['emax'], unit='MeV'),
-                Column(name='REF_DFDE_E_MIN', dtype='f8',
-                       data=sed['ref_dfde_emin'], unit='ph / (MeV cm2 s)'),
-                Column(name='REF_DFDE_E_MAX', dtype='f8',
-                       data=sed['ref_dfde_emax'], unit='ph / (MeV cm2 s)'),
-                Column(name='REF_DFDE', dtype='f8',
-                       data=sed['ref_dfde'], unit='ph / (MeV cm2 s)'),
-                Column(name='REF_FLUX', dtype='f8',
+        cols = [Column(name='e_min', dtype='f8', data=sed['e_min'], unit='MeV'),
+                Column(name='e_ref', dtype='f8',
+                       data=sed['e_ref'], unit='MeV'),
+                Column(name='e_max', dtype='f8',
+                       data=sed['e_max'], unit='MeV'),
+                Column(name='ref_dnde_e_min', dtype='f8',
+                       data=sed['ref_dnde_e_min'], unit='ph / (MeV cm2 s)'),
+                Column(name='ref_dnde_e_max', dtype='f8',
+                       data=sed['ref_dnde_e_max'], unit='ph / (MeV cm2 s)'),
+                Column(name='ref_dnde', dtype='f8',
+                       data=sed['ref_dnde'], unit='ph / (MeV cm2 s)'),
+                Column(name='ref_flux', dtype='f8',
                        data=sed['ref_flux'], unit='ph / (cm2 s)'),
-                Column(name='REF_EFLUX', dtype='f8',
+                Column(name='ref_eflux', dtype='f8',
                        data=sed['ref_eflux'], unit='MeV / (cm2 s)'),
-                Column(name='REF_NPRED', dtype='f8', data=sed['ref_npred']),
-                Column(name='NORM', dtype='f8', data=sed['norm']),
-                Column(name='NORM_ERR', dtype='f8', data=sed['norm_err']),
-                Column(name='NORM_ERRP', dtype='f8', data=sed['norm_err_hi']),
-                Column(name='NORM_ERRN', dtype='f8', data=sed['norm_err_lo']),
-                Column(name='NORM_UL', dtype='f8', data=sed['norm_ul95']),
-                Column(name='TS', dtype='f8', data=sed['ts']),
-                Column(name='LOGLIKE', dtype='f8', data=sed['loglike']),
-                Column(name='NORM_SCAN', dtype='f8', data=sed['norm_scan']),
-                Column(name='DLOGLIKE_SCAN', dtype='f8',
+                Column(name='ref_npred', dtype='f8', data=sed['ref_npred']),
+                Column(name='dnde', dtype='f8',
+                       data=sed['dnde'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_err', dtype='f8',
+                       data=sed['dnde_err'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_errp', dtype='f8',
+                       data=sed['dnde_err_hi'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_errn', dtype='f8',
+                       data=sed['dnde_err_lo'], unit='ph / (MeV cm2 s)'),
+                Column(name='dnde_ul', dtype='f8',
+                       data=sed['dnde_ul'], unit='ph / (MeV cm2 s)'),
+                Column(name='e2dnde', dtype='f8',
+                       data=sed['e2dnde'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_err', dtype='f8',
+                       data=sed['e2dnde_err'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_errp', dtype='f8',
+                       data=sed['e2dnde_err_hi'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_errn', dtype='f8',
+                       data=sed['e2dnde_err_lo'], unit='MeV / (cm2 s)'),
+                Column(name='e2dnde_ul', dtype='f8',
+                       data=sed['e2dnde_ul'], unit='MeV / (cm2 s)'),
+                Column(name='norm', dtype='f8', data=sed['norm']),
+                Column(name='norm_err', dtype='f8', data=sed['norm_err']),
+                Column(name='norm_errp', dtype='f8', data=sed['norm_err_hi']),
+                Column(name='norm_errn', dtype='f8', data=sed['norm_err_lo']),
+                Column(name='norm_ul', dtype='f8', data=sed['norm_ul95']),
+                Column(name='ts', dtype='f8', data=sed['ts']),
+                Column(name='loglike', dtype='f8', data=sed['loglike']),
+                Column(name='norm_scan', dtype='f8', data=sed['norm_scan']),
+                Column(name='dloglike_scan', dtype='f8',
                        data=sed['dloglike_scan']),
 
                 ]
 
         tab = Table(cols)
+        tab.meta['UL_CONF'] = 0.95
+        hdu_sed = fits.table_to_hdu(tab)
+        hdu_sed.name = 'SED'
 
-        tab.write(filename, format='fits', overwrite=True)
+        columns = fits.ColDefs([])
 
-        columns = pyfits.ColDefs([])
+        columns.add_col(fits.Column(name=str('energy'), format='E',
+                                    array=sed['model_flux']['energies'],
+                                    unit='MeV'))
+        columns.add_col(fits.Column(name=str('dnde'), format='E',
+                                    array=sed['model_flux']['dnde'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('dnde_lo'), format='E',
+                                    array=sed['model_flux']['dnde_lo'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('dnde_hi'), format='E',
+                                    array=sed['model_flux']['dnde_hi'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('dnde_err'), format='E',
+                                    array=sed['model_flux']['dnde_err'],
+                                    unit='ph / (MeV cm2 s)'))
+        columns.add_col(fits.Column(name=str('dnde_ferr'), format='E',
+                                    array=sed['model_flux']['dnde_ferr']))
 
-        columns.add_col(pyfits.Column(name=str('ENERGY'), format='E',
-                                      array=sed['model_flux']['energies'],
-                                      unit='MeV'))
-        columns.add_col(pyfits.Column(name=str('DFDE'), format='E',
-                                      array=sed['model_flux']['dfde'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('DFDE_LO'), format='E',
-                                      array=sed['model_flux']['dfde_lo'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('DFDE_HI'), format='E',
-                                      array=sed['model_flux']['dfde_hi'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('DFDE_ERR'), format='E',
-                                      array=sed['model_flux']['dfde_err'],
-                                      unit='ph / (MeV cm2 s)'))
-        columns.add_col(pyfits.Column(name=str('DFDE_FERR'), format='E',
-                                      array=sed['model_flux']['dfde_ferr']))
+        hdu_f = fits.BinTableHDU.from_columns(columns, name='MODEL_FLUX')
 
-        hdu_f = pyfits.BinTableHDU.from_columns(columns, name='MODEL_FLUX')
-
-        columns = pyfits.ColDefs([])
+        columns = fits.ColDefs([])
 
         npar = len(sed['param_names'])
-        columns.add_col(pyfits.Column(name=str('NAME'),
-                                      format='A32',
-                                      array=sed['param_names']))
-        columns.add_col(pyfits.Column(name=str('VALUE'), format='E',
-                                      array=sed['param_values']))
-        columns.add_col(pyfits.Column(name=str('ERROR'), format='E',
-                                      array=sed['param_errors']))
-        columns.add_col(pyfits.Column(name=str('COVARIANCE'),
-                                      format='%iE' % npar,
-                                      dim=str('(%i)' % npar),
-                                      array=sed['param_covariance']))
-        columns.add_col(pyfits.Column(name=str('CORRELATION'),
-                                      format='%iE' % npar,
-                                      dim=str('(%i)' % npar),
-                                      array=sed['param_correlation']))
+        columns.add_col(fits.Column(name=str('name'),
+                                    format='A32',
+                                    array=sed['param_names']))
+        columns.add_col(fits.Column(name=str('value'), format='E',
+                                    array=sed['param_values']))
+        columns.add_col(fits.Column(name=str('error'), format='E',
+                                    array=sed['param_errors']))
+        columns.add_col(fits.Column(name=str('covariance'),
+                                    format='%iE' % npar,
+                                    dim=str('(%i)' % npar),
+                                    array=sed['param_covariance']))
+        columns.add_col(fits.Column(name=str('correlation'),
+                                    format='%iE' % npar,
+                                    dim=str('(%i)' % npar),
+                                    array=sed['param_correlation']))
 
-        hdu_p = pyfits.BinTableHDU.from_columns(columns, name='PARAMS')
+        hdu_p = fits.BinTableHDU.from_columns(columns, name='PARAMS')
 
-        hdulist = pyfits.open(filename)
-        hdulist[1].name = 'SED'
-        hdulist = pyfits.HDUList([hdulist[0], hdulist[1], hdu_f, hdu_p])
+        hdus = [fits.PrimaryHDU(), hdu_sed, hdu_f, hdu_p]
+        hdus[0].header['CONFIG'] = json.dumps(sed['config'])
+        hdus[1].header['CONFIG'] = json.dumps(sed['config'])
 
-        for h in hdulist:
-            h.header['SRCNAME'] = sed['name']
-            h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
-
-        hdulist.writeto(filename, clobber=True)
+        fits_utils.write_hdus(hdus, filename,
+                              keywords={'SRCNAME': sed['name']})
 
     def _make_sed(self, name, **config):
 
         bin_index = config['bin_index']
         use_local_index = config['use_local_index']
-        fix_background = config['fix_background']
+        free_background = config['free_background']
+        free_radius = config['free_radius']
         ul_confidence = config['ul_confidence']
         cov_scale = config['cov_scale']
         loge_bins = config['loge_bins']
 
-        if loge_bins is None:
+        if not loge_bins or loge_bins is None:
             loge_bins = self.log_energies
         else:
             loge_bins = np.array(loge_bins)
@@ -251,24 +240,26 @@ class SEDGenerator(object):
 
         # Output Dictionary
         o = {'name': name,
-             'logemin': loge_bins[:-1],
-             'logemax': loge_bins[1:],
-             'logectr': 0.5 * (loge_bins[:-1] + loge_bins[1:]),
-             'emin': 10 ** loge_bins[:-1],
-             'emax': 10 ** loge_bins[1:],
-             'ectr': 10 ** (0.5 * (loge_bins[:-1] + loge_bins[1:])),
+             'loge_min': loge_bins[:-1],
+             'loge_max': loge_bins[1:],
+             'loge_ctr': 0.5 * (loge_bins[:-1] + loge_bins[1:]),
+             'loge_ref': 0.5 * (loge_bins[:-1] + loge_bins[1:]),
+             'e_min': 10 ** loge_bins[:-1],
+             'e_max': 10 ** loge_bins[1:],
+             'e_ctr': 10 ** (0.5 * (loge_bins[:-1] + loge_bins[1:])),
+             'e_ref': 10 ** (0.5 * (loge_bins[:-1] + loge_bins[1:])),
              'ref_flux': np.zeros(nbins),
              'ref_eflux': np.zeros(nbins),
-             'ref_dfde': np.zeros(nbins),
-             'ref_dfde_emin': np.zeros(nbins),
-             'ref_dfde_emax': np.zeros(nbins),
-             'ref_e2dfde': np.zeros(nbins),
+             'ref_dnde': np.zeros(nbins),
+             'ref_dnde_e_min': np.zeros(nbins),
+             'ref_dnde_e_max': np.zeros(nbins),
+             'ref_e2dnde': np.zeros(nbins),
              'ref_npred': np.zeros(nbins),
              'norm': np.zeros(nbins),
              'flux': np.zeros(nbins),
              'eflux': np.zeros(nbins),
-             'dfde': np.zeros(nbins),
-             'e2dfde': np.zeros(nbins),
+             'dnde': np.zeros(nbins),
+             'e2dnde': np.zeros(nbins),
              'index': np.zeros(nbins),
              'npred': np.zeros(nbins),
              'ts': np.zeros(nbins),
@@ -278,14 +269,12 @@ class SEDGenerator(object):
              'loglike_scan': np.zeros((nbins, npts)),
              'fit_quality': np.zeros(nbins),
              'fit_status': np.zeros(nbins),
-             'lnlprofile': [],
              'correlation': {},
              'model_flux': {},
-             'params': {},
              'config': config
              }
 
-        for t in ['norm', 'flux', 'eflux', 'dfde', 'e2dfde']:
+        for t in ['norm', 'flux', 'eflux', 'dnde', 'e2dnde']:
             o['%s_err' % t] = np.zeros(nbins) * np.nan
             o['%s_err_hi' % t] = np.zeros(nbins) * np.nan
             o['%s_err_lo' % t] = np.zeros(nbins) * np.nan
@@ -298,20 +287,19 @@ class SEDGenerator(object):
         # Perform global spectral fit
         self._latch_free_params()
         self.free_sources(False, pars='shape', loglevel=logging.DEBUG)
-        self.free_source(name, loglevel=logging.DEBUG)
+        self.free_source(name, pars=config.get('free_pars', None),
+                         loglevel=logging.DEBUG)
         fit_output = self.fit(loglevel=logging.DEBUG, update=False,
                               min_fit_quality=2)
         o['model_flux'] = self.bowtie(name)
         spectral_pars = gtutils.get_function_pars_dict(source.spectrum())
-        o['params'] = roi_model.get_params_dict(spectral_pars)
         o['SpectrumType'] = self.roi[name]['SpectrumType']
+        o.update(model_utils.pars_dict_to_vectors(o['SpectrumType'],
+                                                  spectral_pars))
 
         param_names = gtutils.get_function_par_names(o['SpectrumType'])
         npar = len(param_names)
         o['param_covariance'] = np.empty((npar, npar), dtype=float) * np.nan
-        o['param_names'] = np.array(param_names)
-        o['param_values'] = np.empty(npar, dtype=float) * np.nan
-        o['param_errors'] = np.empty(npar, dtype=float) * np.nan
 
         pmask0 = np.empty(len(fit_output['par_names']), dtype=bool)
         pmask0.fill(False)
@@ -319,8 +307,6 @@ class SEDGenerator(object):
         pmask1.fill(False)
         for i, pname in enumerate(param_names):
 
-            o['param_values'][i] = o['params'][pname][0]
-            o['param_errors'][i] = o['params'][pname][1]
             for j, pname2 in enumerate(fit_output['par_names']):
                 if name != fit_output['src_names'][j]:
                     continue
@@ -340,13 +326,26 @@ class SEDGenerator(object):
 
         self._restore_free_params()
 
+        self.logger.info('Fitting SED')
+
         # Setup background parameters for SED
         self.free_sources(False, pars='shape')
         self.free_norm(name)
 
-        if fix_background:
+        if not free_background:
             self.free_sources(free=False, loglevel=logging.DEBUG)
-        elif cov_scale is not None:
+
+        if free_radius is not None:
+            diff_sources = [s.name for s in self.roi.sources if s.diffuse]
+            skydir = self.roi[name].skydir
+            free_srcs = [s.name for s in
+                         self.roi.get_sources(skydir=skydir,
+                                              distance=free_radius,
+                                              exclude=diff_sources)]
+            self.free_sources_by_name(free_srcs, pars='norm',
+                                      loglevel=logging.DEBUG)
+
+        if cov_scale is not None:
             self._latch_free_params()
             self.zero_source(name)
             self.fit(loglevel=logging.DEBUG, update=False)
@@ -369,7 +368,7 @@ class SEDGenerator(object):
             f0 = self.like[name].flux(emin * (1 - delta), emin * (1 + delta))
             f1 = self.like[name].flux(emax * (1 - delta), emax * (1 + delta))
 
-            if f0 > min_flux:
+            if f0 > min_flux and f1 > min_flux:
                 g = 1 - np.log10(f0 / f1) / np.log10(emin / emax)
                 gf_bin_index += [g]
                 gf_bin_flux += [f]
@@ -378,15 +377,22 @@ class SEDGenerator(object):
                 gf_bin_flux += [min_flux]
 
         old_spectrum = source.spectrum()
-        self.like.setSpectrum(str(name), str('PowerLaw'))
-        self.free_parameter(name, 'Index', False)
-        self.set_parameter(name, 'Prefactor', 1.0, scale=1E-13,
-                           true_value=False,
-                           bounds=[1E-10, 1E10],
-                           update_source=False)
-        self.free_parameter(name, 'Prefactor', True)
-        self.set_parameter(name, 'Scale', 1E3, scale=1.0,
-                           bounds=[1, 1E6], update_source=False)
+        old_pars = copy.deepcopy(self.roi[name].spectral_pars)
+        old_type = self.roi[name]['SpectrumType']
+
+        spectrum_pars = {
+            'Prefactor':
+                {'value': 1.0, 'scale': 1E-13, 'min': 1E-10,
+                    'max': 1E10, 'free': True},
+            'Index':
+                {'value': 2.0, 'scale': -1.0, 'min': 0.0, 'max': 5.0, 'free': False},
+            'Scale':
+                {'value': 1E3, 'scale': 1.0, 'min': 1., 'max': 1E6, 'free': False},
+        }
+
+        self.set_source_spectrum(str(name), 'PowerLaw',
+                                 spectrum_pars=spectrum_pars,
+                                 update_source=False)
 
         src_norm_idx = -1
         free_params = self.get_params(True)
@@ -424,12 +430,12 @@ class SEDGenerator(object):
 
             o['ref_flux'][i] = self.like[name].flux(emin, emax)
             o['ref_eflux'][i] = self.like[name].energyFlux(emin, emax)
-            o['ref_dfde'][i] = self.like[name].spectrum()(pyLike.dArg(ectr))
-            o['ref_dfde_emin'][i] = self.like[
+            o['ref_dnde'][i] = self.like[name].spectrum()(pyLike.dArg(ectr))
+            o['ref_dnde_e_min'][i] = self.like[
                 name].spectrum()(pyLike.dArg(emin))
-            o['ref_dfde_emax'][i] = self.like[
+            o['ref_dnde_e_max'][i] = self.like[
                 name].spectrum()(pyLike.dArg(emax))
-            o['ref_e2dfde'][i] = o['ref_dfde'][i] * ectr2
+            o['ref_e2dnde'][i] = o['ref_dnde'][i] * ectr2
             cs = self.model_counts_spectrum(
                 name, logemin, logemax, summed=True)
             o['ref_npred'][i] = np.sum(cs)
@@ -461,13 +467,13 @@ class SEDGenerator(object):
 
             flux = self.like[name].flux(emin, emax)
             eflux = self.like[name].energyFlux(emin, emax)
-            dfde = self.like[name].spectrum()(pyLike.dArg(ectr))
+            dnde = self.like[name].spectrum()(pyLike.dArg(ectr))
 
             o['norm'][i] = flux / o['ref_flux'][i]
             o['flux'][i] = flux
             o['eflux'][i] = eflux
-            o['dfde'][i] = dfde
-            o['e2dfde'][i] = dfde * ectr2
+            o['dnde'][i] = dnde
+            o['e2dnde'][i] = dnde * ectr2
 
             cs = self.model_counts_spectrum(name, logemin,
                                             logemax, summed=True)
@@ -483,7 +489,6 @@ class SEDGenerator(object):
             o['loglike_scan'][i] = lnlp['loglike']
             o['dloglike_scan'][i] = lnlp['dloglike']
             o['norm_scan'][i] = lnlp['flux'] / ref_flux
-            o['lnlprofile'] += [lnlp]
 
             ul_data = utils.get_parameter_limits(
                 lnlp['flux'], lnlp['dloglike'])
@@ -501,12 +506,12 @@ class SEDGenerator(object):
 
             ul_data = utils.get_parameter_limits(lnlp['flux'],
                                                  lnlp['dloglike'],
-                                                 ul_confidence=ul_confidence)
+                                                 cl_limit=ul_confidence)
             o['norm_ul'][i] = ul_data['ul'] / ref_flux
 
             saved_state_bin.restore()
 
-        for t in ['flux', 'eflux', 'dfde', 'e2dfde']:
+        for t in ['flux', 'eflux', 'dnde', 'e2dnde']:
 
             o['%s_err' % t] = o['norm_err'] * o['ref_%s' % t]
             o['%s_err_hi' % t] = o['norm_err_hi'] * o['ref_%s' % t]
@@ -515,15 +520,15 @@ class SEDGenerator(object):
             o['%s_ul' % t] = o['norm_ul'] * o['ref_%s' % t]
 
         self.set_energy_range(loge_bounds[0], loge_bounds[1])
-        self.like.setSpectrum(str(name), old_spectrum)
+        self.set_source_spectrum(str(name), old_type,
+                                 spectrum_pars=old_pars,
+                                 update_source=False)
+
         saved_state.restore()
         self._sync_params(name)
 
         if cov_scale is not None:
             self.remove_priors()
-
-        src = self.roi.get_source_by_name(name)
-        src.update_data({'sed': copy.deepcopy(o)})
 
         return o
 
