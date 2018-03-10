@@ -4024,54 +4024,62 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             thesrc = self.like[name]
             src_dict['flux'] = self.like.flux(name, self.energies[0],
                                               self.energies[-1])
-            src_dict['flux100'] = self.like.flux(name, 100., 10 ** 5.5)
-            src_dict['flux1000'] = self.like.flux(name, 1000., 10 ** 5.5)
-            src_dict['flux10000'] = self.like.flux(name, 10000., 10 ** 5.5)
             src_dict['eflux'] = self.like.energyFlux(name,
                                                      self.energies[0],
                                                      self.energies[-1])
-            src_dict['eflux100'] = self.like.energyFlux(name, 100.,
-                                                        10 ** 5.5)
-            src_dict['eflux1000'] = self.like.energyFlux(name, 1000.,
-                                                         10 ** 5.5)
-            src_dict['eflux10000'] = self.like.energyFlux(name, 10000.,
-                                                          10 ** 5.5)
-            src_dict['dnde'] = self.like[name].spectrum()(
-                pyLike.dArg(src_dict['pivot_energy']))
-            src_dict['dnde100'] = self.like[name].spectrum()(
-                pyLike.dArg(100.))
-            src_dict['dnde1000'] = self.like[name].spectrum()(
-                pyLike.dArg(1000.))
-            src_dict['dnde10000'] = self.like[name].spectrum()(
-                pyLike.dArg(10000.))
+            emax = np.min([self.energies.max(), 10 ** 5.5])
+            for e in np.logspace(2.,4.,3):
+                k = "{0:n}".format(e)
+                if emax > e:
+                    src_dict['flux' + k] = self.like.flux(name, e, emax)
+                    src_dict['eflux' + k] = self.like.energyFlux(name, e,
+                                                        emax)
+                    src_dict['dnde' + k] = self.like[name].spectrum()(
+                            pyLike.dArg(e))
+                else:
+                    src_dict['flux' + k] = 0.
+                    src_dict['eflux' + k] = 0.
+                    src_dict['dnde' + k] = 0.
+
+            if emax > src_dict['pivot_energy']:
+                src_dict['dnde'] = self.like[name].spectrum()(
+                    pyLike.dArg(src_dict['pivot_energy']))
+            else:
+                src_dict['dnde'] = 0.
+
+            earray = np.concatenate([[src_dict['pivot_energy']],
+                    np.logspace(2.,4.,3)])
+            dnde_index = {}
+
             if normPar.getValue() == 0:
                 normPar.setValue(1.0)
 
-                dnde_index = -get_spectral_index(self.like[name],
-                                                 src_dict['pivot_energy'])
+                for i,e in enumerate(earray):
+                    if not i:
+                        k = 'dnde_index'
+                    else:
+                        k = 'dnde_index{0:n}'.format(e)
 
-                dnde100_index = -get_spectral_index(self.like[name],
-                                                    100.)
-                dnde1000_index = -get_spectral_index(self.like[name],
-                                                     1000.)
-                dnde10000_index = -get_spectral_index(self.like[name],
-                                                      10000.)
+                    if emax > e:
+                        dnde_index[k] = -get_spectral_index(self.like[name],e)
+                    else:
+                        dnde_index[k] = np.nan
 
                 normPar.setValue(0.0)
             else:
-                dnde_index = -get_spectral_index(self.like[name],
-                                                 src_dict['pivot_energy'])
 
-                dnde100_index = -get_spectral_index(self.like[name],
-                                                    100.)
-                dnde1000_index = -get_spectral_index(self.like[name],
-                                                     1000.)
-                dnde10000_index = -get_spectral_index(self.like[name],
-                                                      10000.)
-            src_dict['dnde_index'] = dnde_index
-            src_dict['dnde100_index'] = dnde100_index
-            src_dict['dnde1000_index'] = dnde1000_index
-            src_dict['dnde10000_index'] = dnde10000_index
+                for i,e in enumerate(earray):
+                    if not i:
+                        k = 'dnde_index'
+                    else:
+                        k = 'dnde_index{0:n}'.format(e)
+
+                    if emax > e:
+                        dnde_index[k] = -get_spectral_index(self.like[name],e)
+                    else:
+                        dnde_index[k] = np.nan
+            for k, v in dnde_index.items():
+                src_dict[k] = v 
 
         except Exception:
             self.logger.error('Failed to update source parameters.',
@@ -4082,24 +4090,23 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if not self.get_free_source_params(name) or paramsonly:
             return src_dict
 
-        emax = 10 ** 5.5
-
         try:
             src_dict['flux_err'] = self.like.fluxError(name,
                                                        self.energies[0],
                                                        self.energies[-1])
-            src_dict['flux100_err'] = self.like.fluxError(name, 100., emax)
-            src_dict['flux1000_err'] = self.like.fluxError(name, 1000., emax)
-            src_dict['flux10000_err'] = self.like.fluxError(name, 10000., emax)
             src_dict['eflux_err'] = \
                 self.like.energyFluxError(name, self.energies[0],
                                           self.energies[-1])
-            src_dict['eflux100_err'] = self.like.energyFluxError(name, 100.,
-                                                                 emax)
-            src_dict['eflux1000_err'] = self.like.energyFluxError(name, 1000.,
-                                                                  emax)
-            src_dict['eflux10000_err'] = self.like.energyFluxError(name, 10000.,
-                                                                   emax)
+
+            for e in np.logspace(2.,4.,3):
+                k = "{0:n}_err".format(e)
+                if emax > e:
+                    src_dict['flux' + k] = self.like.fluxError(name, e, emax)
+                    src_dict['eflux' + k] = self.like.energyFluxError(name, e,
+                                                        emax)
+                else:
+                    src_dict['flux' + k] = 0.
+                    src_dict['eflux' + k] = 0.
 
         except Exception:
             pass
@@ -4121,43 +4128,43 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         eflux_ul_data = utils.get_parameter_limits(
             lnlp['eflux'], lnlp['dloglike'])
 
+        flux_ratio = {}
+        eflux_ratio = {}
+
         if normPar.getValue() == 0:
             normPar.setValue(1.0)
             flux = self.like.flux(name, self.energies[0], self.energies[-1])
-            flux100 = self.like.flux(name, 100., emax)
-            flux1000 = self.like.flux(name, 1000., emax)
-            flux10000 = self.like.flux(name, 10000., emax)
             eflux = self.like.energyFlux(name, self.energies[0],
                                          self.energies[-1])
-            eflux100 = self.like.energyFlux(name, 100., emax)
-            eflux1000 = self.like.energyFlux(name, 1000., emax)
-            eflux10000 = self.like.energyFlux(name, 10000., emax)
 
-            flux100_ratio = flux100 / flux
-            flux1000_ratio = flux1000 / flux
-            flux10000_ratio = flux10000 / flux
-            eflux100_ratio = eflux100 / eflux
-            eflux1000_ratio = eflux1000 / eflux
-            eflux10000_ratio = eflux10000 / eflux
+            for e in np.logspace(2.,4.,3):
+                k = "{0:n}".format(e)
+                if emax > e:
+                    flux_ratio['flux' + k] = self.like.flux(name, e, emax) / flux
+                    eflux_ratio['eflux' + k] = self.like.energyFlux(name, e,
+                                                        emax) / eflux
+                else:
+                    flux_ratio['flux' + k] = np.nan
+                    eflux_ratio['eflux' + k] = np.nan
+
             normPar.setValue(0.0)
         else:
-            flux100_ratio = src_dict['flux100'] / src_dict['flux']
-            flux1000_ratio = src_dict['flux1000'] / src_dict['flux']
-            flux10000_ratio = src_dict['flux10000'] / src_dict['flux']
-
-            eflux100_ratio = src_dict['eflux100'] / src_dict['eflux']
-            eflux1000_ratio = src_dict['eflux1000'] / src_dict['eflux']
-            eflux10000_ratio = src_dict['eflux10000'] / src_dict['eflux']
+            for e in np.logspace(2.,4.,3):
+                k = "{0:n}".format(e)
+                if emax > e:
+                    flux_ratio['flux' + k] = self.like.flux(name, e, emax) / src_dict['flux']
+                    eflux_ratio['eflux' + k] = self.like.energyFlux(name, e,
+                                                        emax) / src_dict['eflux']
+                else:
+                    flux_ratio['flux' + k] = np.nan
+                    eflux_ratio['eflux' + k] = np.nan
 
         src_dict['flux_ul95'] = flux_ul_data['ul']
-        src_dict['flux100_ul95'] = flux_ul_data['ul'] * flux100_ratio
-        src_dict['flux1000_ul95'] = flux_ul_data['ul'] * flux1000_ratio
-        src_dict['flux10000_ul95'] = flux_ul_data['ul'] * flux10000_ratio
-
         src_dict['eflux_ul95'] = eflux_ul_data['ul']
-        src_dict['eflux100_ul95'] = eflux_ul_data['ul'] * eflux100_ratio
-        src_dict['eflux1000_ul95'] = eflux_ul_data['ul'] * eflux1000_ratio
-        src_dict['eflux10000_ul95'] = eflux_ul_data['ul'] * eflux10000_ratio
+        for e in np.logspace(2.,4.,3):
+            k = "{0:n}".format(e)
+            src_dict['flux{0:n}_ul95'] = flux_ul_data['ul'] * flux_ratio['flux' + k]
+            src_dict['eflux{0:n}_ul95'] = flux_ul_data['ul'] * eflux_ratio['eflux' + k]
 
         # Extract covariance matrix
         fd = None
@@ -4174,15 +4181,23 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             loge = np.linspace(self.log_energies[0],
                                self.log_energies[-1], 50)
             src_dict['model_flux'] = self.bowtie(name, fd=fd, loge=loge)
-            src_dict['dnde100_err'] = fd.error(100.)
-            src_dict['dnde1000_err'] = fd.error(1000.)
-            src_dict['dnde10000_err'] = fd.error(10000.)
+
+            for e in np.logspace(2.,4.,3):
+                k = "dnde{0:n}_err".format(e)
+                if emax > e:
+                    src_dict[k] = fd.error(e)
+                else:
+                    src_dict[k] = np.nan
 
             src_dict['pivot_energy'] = src_dict['model_flux']['pivot_energy']
 
             e0 = src_dict['pivot_energy']
-            src_dict['dnde'] = self.like[name].spectrum()(pyLike.dArg(e0))
-            src_dict['dnde_err'] = fd.error(e0)
+            if emax > e0:
+                src_dict['dnde'] = self.like[name].spectrum()(pyLike.dArg(e0))
+                src_dict['dnde_err'] = fd.error(e0)
+            else:
+                src_dict['dnde'] = 0.
+                src_dict['dnde_err'] = np.nan
 
         if not reoptimize:
             src_dict['ts'] = self.like.Ts2(name, reoptimize=reoptimize)
