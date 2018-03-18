@@ -240,25 +240,25 @@ def spectral_pars_from_catalog(cat):
 
     spectrum_type = cat['SpectrumType']
     pars = get_function_defaults(cat['SpectrumType'])
+    par_idxs = {k: i for i, k in
+                enumerate(get_function_par_names(cat['SpectrumType']))}
+
+    for k in pars:
+        pars[k]['value'] = cat['param_values'][par_idxs[k]]
+
     if spectrum_type == 'PowerLaw':
 
-        pars['Prefactor']['value'] = cat['params'][0]
-        pars['Index']['value'] = cat['params'][1]
-        pars['Scale']['value'] = cat['params'][2]
+        pars['Index']['value'] *= -1.0
+        pars['Index']['scale'] = -1.0
         pars['Scale']['scale'] = 1.0
         pars['Index']['max'] = max(5.0, pars['Index']['value'] + 1.0)
         pars['Index']['min'] = min(0.0, pars['Index']['value'] - 1.0)
-        pars['Index']['scale'] = -1.0
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
         pars['Index'] = make_parameter_dict(pars['Index'], False, False)
 
     elif spectrum_type == 'LogParabola':
 
-        pars['norm']['value'] = cat['params'][0]
-        pars['alpha']['value'] = cat['params'][1]
-        pars['Eb']['value'] = cat['params'][2]
-        pars['beta']['value'] = cat['params'][3]
         pars['norm'] = make_parameter_dict(pars['norm'], False, True)
         pars['Eb'] = make_parameter_dict(pars['Eb'], True, False)
         pars['alpha'] = make_parameter_dict(pars['alpha'], False, False)
@@ -266,14 +266,9 @@ def spectral_pars_from_catalog(cat):
 
     elif spectrum_type == 'PLSuperExpCutoff':
 
-        pars['Prefactor']['value'] = cat['params'][0]
-        pars['Index1']['value'] = cat['params'][1]
+        pars['Index1']['value'] *= -1.0
         pars['Index1']['scale'] = -1.0
-        pars['Index2']['value'] = cat['params'][2]
         pars['Index2']['scale'] = 1.0
-        pars['Scale']['value'] = cat['params'][3]
-        pars['Cutoff']['value'] = cat['params'][4]
-
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
         pars['Index1'] = make_parameter_dict(pars['Index1'], False, False)
@@ -282,14 +277,9 @@ def spectral_pars_from_catalog(cat):
 
     elif spectrum_type == 'PLSuperExpCutoff2':
 
-        pars['Prefactor']['value'] = cat['params'][0]
-        pars['Index1']['value'] = cat['params'][1]
+        pars['Index1']['value'] *= -1.0
         pars['Index1']['scale'] = -1.0
-        pars['Index2']['value'] = cat['params'][2]
         pars['Index2']['scale'] = 1.0
-        pars['Scale']['value'] = cat['params'][3]
-        pars['Expfactor']['value'] = cat['params'][4]
-
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
         pars['Index1'] = make_parameter_dict(pars['Index1'], False, False)
@@ -899,7 +889,8 @@ class Source(Model):
         if geom is None:
             return
 
-        self['offset_roi_edge'] = float(wcs_utils.distance_to_edge(geom, self.skydir))
+        self['offset_roi_edge'] = float(
+            wcs_utils.distance_to_edge(geom, self.skydir))
 
     def set_spatial_model(self, spatial_model, spatial_pars):
 
