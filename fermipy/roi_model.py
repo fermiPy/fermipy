@@ -1415,14 +1415,15 @@ class ROIModel(fermipy.config.Configurable):
                 os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
 
         search_dirs = []
-        search_dirs += self.config['diffuse_dir']
+        if config.get('diffuse_dir', []):
+            search_dirs += config.get('diffuse_dir', [])
         search_dirs += [self.config['fileio']['outdir'],
                         os.path.join('$FERMIPY_ROOT', 'data'),
                         '$FERMI_DIFFUSE_DIR']
 
         srcs = []
-        if self.config[name] is not None:
-            srcs = self.config[name]
+        if config[name] is not None:
+            srcs = config[name]
 
         srcs_out = []
         for i, t in enumerate(srcs):
