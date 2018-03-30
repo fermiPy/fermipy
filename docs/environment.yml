@@ -10,4 +10,4 @@ dependencies:
   - astropy
   - pyyaml
   - healpy
-  - wcsaxes
+  - gammapy

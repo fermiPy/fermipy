@@ -85,7 +85,7 @@ def test_print_params(create_draco_analysis):
 
 def test_gtanalysis_write_roi(create_draco_analysis):
     gta = create_draco_analysis
-    gta.write_roi('test')
+    gta.write_roi('test', make_plots=True)
 
 
 def test_gtanalysis_load_roi(create_draco_analysis):

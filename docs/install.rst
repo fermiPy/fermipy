@@ -300,41 +300,58 @@ Running at SLAC
 ---------------
 
 This section provides specific installation instructions for running
-in the SLAC computing environment.  First download and source the
-``slacsetup.sh`` script:
+in the SLAC computing environment.  
+We suggest to follow these instruction if you are running Fermipy at SLAC. 
+You will create your own conda installation in this way you will not depend on old version of programs present in the SLAC machines.  
+First grab the installation and setup scripts from the fermipy github repository:
 
 .. code-block:: bash
 
-   $ wget https://raw.githubusercontent.com/fermiPy/fermipy/master/slacsetup.sh -O slacsetup.sh
-   $ source slacsetup.sh
+   $ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condainstall.sh
+   $ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/slacsetup.sh
    
-To initialize the ST environment run the ``slacsetup`` function:
+Now choose an installation path. This should be a new directory (e.g. $HOME/anaconda) that has at least 2-4 GB available. 
+We will assign this location to the ``CONDABASE`` environment variable which is used by the setup script to find the location of your python installation. 
+To avoid setting this every time you log in it's recommended to set ``CONDABASE`` into your .bashrc file.
+
+Now run the following commands to install anaconda and fermipy. This will take about 5-10 minutes.
 
 .. code-block:: bash
 
+   $ export CONDABASE=<path to install directory>
+   $ bash condainstall.sh $CONDABASE
+
+Once anaconda is installed you will initialize your python and ST environment by running the slacsetup function in ``slacsetup.sh``. 
+This function will set the appropriate environment variables needed to run the STs and python.
+
+.. code-block:: bash
+
+   $ source slacsetup.sh
    $ slacsetup
 
-This will setup your ``GLAST_EXT`` path and source the setup script
-for one of the pre-built ST installations (the current default is
-11-05-00).  To manually override the ST version you can provide the
-release tag as an argument to ``slacsetup``:
+For convenience you can also copy this function into your .bashrc file so that it will automatically be available when you launch a new shell session. 
+By default the function will setup your environment to point to a recent version of the STs and the installation of python in ``CONDABASE``. 
+If ``CONDABASE`` is not defined then it will use the installation of python that is packaged with a given release of the STs. 
+The slacsetup function takes two optional arguments which can be used to override the ST version or python installation path.
 
 .. code-block:: bash
 
-   $ slacsetup XX-XX-XX
+   # Use ST 10-00-05
+   $ slacsetup 10-00-05
+   # Use ST 11-01-01 and python distribution located at <PATH>
+   $ slacsetup 11-01-01 <PATH>
 
-Because users don't have write access to the ST python installation
-all pip commands that install or uninstall packages must be executed
-with the ``--user`` flag.  After initializing the STs environment,
-install fermipy with pip:
+The installation script only installs packages that are required by fermipy and the STs. 
+Once you've initialized your shell environment you are free to install additional python packages with the conda package manager tool with conda install <package name>. 
+Packages that are not available on conda can also be installed with pip.
+
+conda can also be used to upgrade packages. For instance you can upgrade fermipy to the newest version with the conda update command:
 
 .. code-block:: bash
 
-   $ pip install fermipy --user
+   $ conda update fermipy
 
-This will install fermipy in ``$HOME/.local``.  You can verify that
-the installation has succeeded by importing
-`~fermipy.gtanalysis.GTAnalysis`:
+You can verify that the installation has succeeded by importing ``GTAnalysis``:
 
 .. code-block:: bash
 
@@ -346,17 +363,6 @@ the installation has succeeded by importing
    Please check out: http://continuum.io/thanks and https://binstar.org
    >>> from fermipy.gtanalysis import GTAnalysis
 
-Alternatively you can install with conda as follows:
-
-.. code-block:: bash
-
-   # Note that this first command may take a long time (> 10 m)
-   $ conda create -n fermipy --clone=root
-   $ conda config --append channels conda-forge
-   $ source activate fermipy
-   (fermipy) $ conda install fermipy
-   
-.. _upgrade:
    
 Upgrading
 ---------

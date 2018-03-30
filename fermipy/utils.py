@@ -232,8 +232,8 @@ def find_rows_by_string(tab, names, colnames=['assoc']):
             continue
 
         col = tab[[colname]].copy()
-        col[colname] = defchararray.replace(defchararray.lower(col[colname]),
-                                            ' ', '')
+        col[colname] = defchararray.replace(defchararray.lower(col[colname]).astype(str),
+                                        ' ', '')
         for name in names:
             mask |= col[colname] == name
     return mask
@@ -785,12 +785,20 @@ def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2,
     if np.any(fn_val[imax:] < -dlnl_limit):
         xhi = xval[imax:][fn_val[imax:] < -dlnl_limit][0]
     else:
-        xhi = xval[-1]
+        xhi = xval[-1]        
+    # EAC: brute force check that xhi is greater than x0
+    # The fabs is here in case x0 is negative
+    if xhi <= x0:
+        xhi = x0 + np.fabs(x0)
 
     if np.any(fn_val[:imax] < -dlnl_limit):
         xlo = xval[:imax][fn_val[:imax] < -dlnl_limit][-1]
     else:
         xlo = xval[0]
+    # EAC: brute force check that xlo is less than x0
+    # The fabs is here in case x0 is negative        
+    if xlo >= x0:
+        xlo = x0 - 0.5*np.fabs(x0)
 
     ul = find_function_root(fn, x0, xhi, dlnl_limit, bounds=bounds)
     ll = find_function_root(fn, x0, xlo, dlnl_limit, bounds=bounds)

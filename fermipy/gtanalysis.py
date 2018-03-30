@@ -12,6 +12,7 @@ import json
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table, Column, vstack
+from gammapy.maps import Map, HpxGeom, WcsGeom, MapAxis, WcsNDMap, HpxNDMap
 import fermipy
 import fermipy.defaults as defaults
 import fermipy.utils as utils
@@ -31,8 +32,6 @@ from fermipy.extension import ExtensionFit
 from fermipy.utils import merge_dict
 from fermipy.utils import create_hpx_disk_region_string
 from fermipy.utils import resolve_file_path
-from fermipy.skymap import Map, HpxMap, read_map_from_fits
-from fermipy.hpx_utils import HPX
 from fermipy.roi_model import ROIModel
 from fermipy.ltcube import LTCube
 from fermipy.plotting import AnalysisPlotter
@@ -102,14 +101,14 @@ def make_scaled_srcmap(roi, srcmap0,
                        ccubefile1,
                        outfile):
 
-    bexp0 = Map.create_from_fits(bexp_file0)
-    bexp1 = Map.create_from_fits(bexp_file1)
-    bexproi0 = Map.create_from_fits(bexproi_file0)
-    bexproi1 = Map.create_from_fits(bexproi_file1)
-    bexp_ratio = Map(bexp1.data / bexp0.data, bexp0.wcs,
-                     bexp0._ebins)
-    bexproi_ratio = Map(bexproi1.data / bexproi0.data, bexproi0.wcs,
-                        bexproi0._ebins)
+    bexp0 = Map.read(bexp_file0)
+    bexp1 = Map.read(bexp_file1)
+    bexproi0 = Map.read(bexproi_file0)
+    bexproi1 = Map.read(bexproi_file1)
+    bexp_ratio = WcsNDMap(bexp0.geom,
+                          bexp1.data / bexp0.data)
+    bexproi_ratio = WcsNDMap(bexproi0.geom,
+                             bexproi1.data / bexproi0.data)
     hdulist = fits.open(srcmap0)
     for src in roi.sources:
 
@@ -117,7 +116,9 @@ def make_scaled_srcmap(roi, srcmap0,
             ratio = bexproi_ratio.data
             hdulist[src.name].data *= ratio
         else:
-            ratio = bexp_ratio.interpolate_at_skydir(src.skydir)
+            coord = (src.skydir,
+                     bexp_ratio.geom.axes[0].center)
+            ratio = bexp_ratio.interp_by_coord(coord)
             hdulist[src.name].data *= ratio[:, None, None]
 
     hdulist_ccube = fits.open(ccubefile1)
@@ -388,42 +389,26 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self._binsz = min(binsz)
         self._npix = int(np.round(self._roiwidth / self._binsz))
 
+        axes = [MapAxis.from_edges(self.energies, interp='log',
+                                   name='energy', unit='MeV')]
         if self.projtype == 'HPX':
-            self._hpx_region = create_hpx_disk_region_string(self._roi.skydir,
-                                                             coordsys=self.config['binning']['coordsys'],
-                                                             radius=0.5*self.config['binning']['roiwidth'])
-            self._proj = HPX.create_hpx(-1,
-                                        self.config['binning'][
-                                            'hpx_ordering_scheme'] == "NESTED",
-                                        self.config['binning']['coordsys'],
-                                        self.config['binning']['hpx_order'],
-                                        ebins=self.energies,
-                                        region=self._hpx_region)
+            is_nested = self.config['binning']['hpx_ordering_scheme'] == "NESTED"
+            self._geom = HpxGeom.create(2**self.config['binning']['hpx_order'],
+                                        nest=is_nested,
+                                        coordsys=self.config['binning']['coordsys'],
+                                        width=self.config['binning']['roiwidth'],
+                                        skydir=self.roi.skydir,
+                                        axes=axes)
         else:
-            self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
-                                                coordsys=self.config['binning'][
-                                                    'coordsys'],
-                                                projection=self.config[
-                                                    'binning']['proj'],
-                                                cdelt=self._binsz,
-                                                crpix=1.0 + 0.5 *
-                                                (self._npix - 1),
-                                                naxis=2)
-            self._proj = wcs_utils.create_wcs(self._roi.skydir,
-                                              coordsys=self.config[
-                                                  'binning']['coordsys'],
-                                              projection=self.config[
-                                                  'binning']['proj'],
-                                              cdelt=self._binsz,
-                                              crpix=1.0 + 0.5 *
-                                              (self._npix - 1),
-                                              naxis=3,
-                                              energies=self.energies)
 
+            self._geom = WcsGeom.create(npix=self.npix, binsz=self._binsz,
+                                        coordsys=self.config['binning']['coordsys'],
+                                        proj=self.config['binning']['proj'],
+                                        skydir=self.roi.skydir,
+                                        axes=axes)
+            
             # Update projection of ROI object
-            proj = wcs_utils.WCSProj(self._proj,
-                                     np.array([self.npix, self.npix]))
-            self._roi.set_projection(proj)
+            self._roi.set_geom(self.geom)
 
         if self.config['fileio']['usescratch']:
             self.stage_input()
@@ -503,6 +488,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return self._projtype
 
     @property
+    def geom(self):
+        """ROI geometry."""
+        return self._geom
+
+    @property
     def tmin(self):
         """Return the MET time for the start of the observation."""
         return self._tmin
@@ -572,7 +562,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         try:
             rm['model_counts_wt'].fill(0)
         except:
-            rm['model_counts_wt'] = rm['model_counts'].copy()            
+            rm['model_counts_wt'] = rm['model_counts'].copy()
         rm['npred'] = 0
         rm['npred_wt'] = 0
         for i, c in enumerate(self.components):
@@ -597,7 +587,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 rm['model_counts_wt'] += src['model_counts_wt']
                 rm['npred_wt'] += np.sum(src['model_counts_wt'])
             except:
-                rm['model_counts_wt']  += src['model_counts']
+                rm['model_counts_wt'] += src['model_counts']
                 rm['npred'] += np.sum(src['model_counts'])
 
             mc = self.model_counts_spectrum(name)
@@ -1087,30 +1077,27 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         cmaps = []
         wmaps = []
         proj_type = 0
-        for i, c in enumerate(self.components):
+        for c, crd in zip(self.components, rm['components']):
             cm = c.counts_map()
             wm = c.weight_map()
             cmaps += [cm]
             wmaps += [wm]
-            if isinstance(cm, Map):
-                rm['components'][i]['counts'] = \
-                    np.squeeze(
-                        np.apply_over_axes(np.sum, cm.counts, axes=[1, 2]))
-                rm['components'][i]['counts_wt'] = \
-                    np.squeeze(
-                        np.apply_over_axes(np.sum, cm.counts*wm.counts, axes=[1, 2]))            
-            elif isinstance(cm, HpxMap):
+            if isinstance(cm, WcsNDMap):
+                crd['counts'] = np.sum(cm.data, axis=(1, 2), keepdims=False)
+                crd['counts_wt'] = np.sum(cm.data * wm.data,
+                                          axis=(1, 2), keepdims=False)
+            elif isinstance(cm, HpxNDMap):
                 proj_type = 1
-                rm['components'][i]['counts'] = \
-                    np.squeeze(np.apply_over_axes(np.sum, cm.counts, axes=[1]))
-                rm['components'][i]['counts_wt'] = \
-                    np.squeeze(np.apply_over_axes(np.sum, cm.counts*wm.counts, axes=[1]))
-            rm['components'][i]['loglike'] = -c.like()
+                crd['counts'] = np.sum(cm.data, axis=(1,))
+                crd['counts_wt'] = np.sum(cm.data * wm.data, axis=(1,))
+            else:
+                raise ValueError
+            crd['loglike'] = -c.like()
 
         if proj_type == 0:
             shape = (self.enumbins, self.npix, self.npix)
         elif proj_type == 1:
-            shape = (self.enumbins, self._proj.npix)
+            shape = (self.enumbins, np.max(self.geom.npix))
 
         self._coadd_maps(cmaps, shape, rm, wmaps)
 
@@ -1213,7 +1200,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         map : `~fermipy.skymap.Map`
 
         """
-        return self._wcube       
+        return self._wcube
 
     def model_counts_map(self, name=None, exclude=None, use_mask=False):
         """Return the model counts map for a single source, a list of
@@ -1233,30 +1220,19 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
            List of sources that will be excluded when calculating the
            model map.
-     
+
         use_mask : bool
-        
+
            Parameter that specifies in the model counts map should include
            mask pixels (i.e., ones whose weights are <= 0)
 
         Returns
         -------
-
-        map : `~fermipy.skymap.Map`
-        """
-
-        maps = [c.model_counts_map(name, exclude, use_mask=use_mask) for c in self.components]
-
-        if self.projtype == "HPX":
-            shape = (self.enumbins, self._proj.npix)
-            cmap = skymap.make_coadd_map(maps, self._proj, shape)
-        elif self.projtype == "WCS":
-            shape = (self.enumbins, self.npix, self.npix)
-            cmap = skymap.make_coadd_map(maps, self._proj, shape)
-        else:
-            raise Exception(
-                "Did not recognize projection type %s", self.projtype)
-        return cmap
+        map : `~gammapy.maps.Map`
+        """        
+        maps = [c.model_counts_map(name, exclude, use_mask=use_mask)
+                for c in self.components]
+        return skymap.coadd_maps(self.geom, maps)
 
     def model_counts_spectrum(self, name, logemin=None, logemax=None,
                               summed=False, weighted=False):
@@ -1291,7 +1267,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         else:
             cs = []
             for c in self.components:
-                cs += [c.model_counts_spectrum(name, logemin, logemax, weighted=weighted)]
+                cs += [c.model_counts_spectrum(name, logemin,
+                                               logemax, weighted=weighted)]
             return cs
 
     def get_sources(self, cuts=None, distance=None, skydir=None,
@@ -1512,27 +1489,29 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         return srcs
 
-    def set_weights_map(self, wmap):   
+    def set_weights_map(self, wmap, update_roi=True):
 
         if self.like is None:
-            raise RuntimeError("GTAnalysis.set_weights_map must be run after GTAnalysis.setup")
+            raise RuntimeError(
+                "GTAnalysis.set_weights_map must be run after GTAnalysis.setup")
 
         likes = []
         if isinstance(self.like, gtutils.SummedLikelihood):
             for c in self.like.components:
                 likes += [c.logLike]
         else:
-            likes += [self.like.logLike]        
+            likes += [self.like.logLike]
         projmaps = []
         if isinstance(wmap, list):
             for w in wmap:
                 if w is None:
                     projmap = None
                 else:
-                    projmap = pyLike.WcsMapLibrary.instance().wcsmap(w,"")
+                    projmap = pyLike.WcsMapLibrary.instance().wcsmap(w, "")
                 projmaps += [projmap]
             if len(projmaps) != len(likes):
-                raise ValueError("Length of weights maps list is not equal to number of components %i %i"%(len(projmaps), len(likes)))            
+                raise ValueError("Length of weights maps list is not equal to number of components %i %i" % (
+                    len(projmaps), len(likes)))
             for l, projmap in zip(likes, projmaps):
                 l.setWeightsMap(projmap)
         else:
@@ -1542,7 +1521,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 projmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap, "")
             for l in likes:
                 l.setWeightsMap(projmap)
-        
+
+        if update_roi is False:
+            return
         self._init_roi_model()
         for name in self.like.sourceNames():
             self.logger.debug('Initializing source %s', name)
@@ -1753,7 +1734,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         else:
             current_bounds[0] = min(current_bounds[0], value)
             current_bounds[1] = max(current_bounds[1], value)
- 
+
         # update current bounds to encompass new value
         self.like[idx].setBounds(*current_bounds)
 
@@ -1776,7 +1757,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             if bounds is not None:
                 self.like[idx].setBounds(*bounds)
         except RuntimeError:
-            self.logger.warning("Caught failure on setBounds for %s::%s."%(name, par))
+            self.logger.warning(
+                "Caught failure on setBounds for %s::%s." % (name, par))
             pass
 
         if error is not None:
@@ -1821,7 +1803,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.like[idx].setBounds(*bounds)
         self._sync_params(name)
 
-
     def set_parameter_error(self, name, par, error):
         """Set the error on the value of a parameter.
 
@@ -1840,7 +1821,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         idx = self.like.par_index(name, par)
         self.like[idx].setError(error)
         self._sync_params(name)
-
 
     def lock_parameter(self, name, par, lock=True):
         """Set parameter to locked/unlocked state.  A locked parameter
@@ -2291,7 +2271,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             joint_norm_fit.append(s.name)
 
             if npred_frac > npred_frac_threshold:
-                break            
+                break
             if s[npred_str] < npred_threshold:
                 break
             if len(joint_norm_fit) >= max_free_sources:
@@ -2334,7 +2314,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             if s['ts'] < shape_ts_threshold or not np.isfinite(s['ts']):
                 continue
 
-            print ('Fitting shape %s TS: %10.3f'%(s.name, s['ts']))
+            print ('Fitting shape %s TS: %10.3f' % (s.name, s['ts']))
             self.logger.debug('Fitting shape %s TS: %10.3f', s.name, s['ts'])
             self.free_source(s.name, loglevel=logging.DEBUG)
             self.fit(loglevel=logging.DEBUG, **config['optimizer'])
@@ -2504,7 +2484,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                            cl_limit=cl_limit)
 
         # Difference in lnL at maximum with respect to lnL(x=0)
-        dlnlmax = np.abs(lnlp0['dloglike'][0]-lims0['lnlmax'])
+        dlnlmax = np.abs(lnlp0['dloglike'][0] - lims0['lnlmax'])
 
         if dlnlmax < 0.05:
             xvals = np.array([0.0, lims0['x0'] + lims0['err_hi'], lims0['ul']])
@@ -2513,10 +2493,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                               lims0['x0'] - lims0['err_lo'], lims0['x0'],
                               lims0['x0'] + lims0['err_hi'], lims0['ul']])
             xvals = xvals[np.isfinite(xvals)]
-            
+
         # Generate likelihood profile w/ free nuisance pars
         if np.isnan(xvals).any():
-            raise ValueError("Parameter scan points for %s::%s include infinite value."%(name, parName))
+            raise ValueError(
+                "Parameter scan points for %s::%s include infinite value." % (name, parName))
 
         lnlp1 = self.profile(name, parName, logemin=logemin, logemax=logemax,
                              reoptimize=True, xvals=xvals, **kwargs)
@@ -2531,8 +2512,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
             lims1 = utils.get_parameter_limits(xvals, dloglike,
                                                cl_limit=cl_limit)
-            delta = np.abs(dloglike0-lims1['lnlmax'])
-            
+            delta = np.abs(dloglike0 - lims1['lnlmax'])
+
             if np.abs(delta - dloglike_thresh) < 0.1:
                 break
 
@@ -2558,7 +2539,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if np.isfinite(lims1['ll']):
             xlo = np.concatenate(
                 ([0.0], np.linspace(lims1['ll'], xval0, (npts + 1) // 2 - 1)))
-        elif np.abs(dloglike[0]-lims1['lnlmax']) > 0.1:
+        elif np.abs(dloglike[0] - lims1['lnlmax']) > 0.1:
             xlo = np.linspace(0.0, xval0, (npts + 1) // 2)
         else:
             xlo = np.array([0.0, xval0])
@@ -2636,16 +2617,18 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 xvals = np.linspace(0, 1, 25)
                 xvals = np.concatenate((-1.0 * xvals[1:][::-1], xvals))
                 xvals = val * 10 ** xvals
-                
+
         if np.isnan(xvals).any():
-            raise RuntimeError("Parameter scan points for %s::%s include infinite value."%(name, parName))
+            raise RuntimeError(
+                "Parameter scan points for %s::%s include infinite value." % (name, parName))
 
         # Update parameter bounds to encompass scan range
         try:
             self.like[idx].setBounds(min(min(xvals), value, bounds[0]),
                                      max(max(xvals), value, bounds[1]))
         except RuntimeError:
-            self.logger.warning("Caught failure on setBounds for %s::%s."%(name, parName))
+            self.logger.warning(
+                "Caught failure on setBounds for %s::%s." % (name, parName))
 
         o = {'xvals': xvals,
              'npred': np.zeros(len(xvals)),
@@ -2668,7 +2651,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             try:
                 self.like[idx] = x
             except RuntimeError:
-                self.logger.warning("Caught failure on set for %s::%s: %.2f"%(name, parName, x))                
+                self.logger.warning(
+                    "Caught failure on set for %s::%s: %.2f" % (name, parName, x))
 
             if self.like.nFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
@@ -2694,7 +2678,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             cs = self.model_counts_spectrum(name,
                                             loge_bounds[0],
                                             loge_bounds[1], summed=True)
-            o['npred'][i] += np.sum(cs)            
+            o['npred'][i] += np.sum(cs)
             cs_wt = self.model_counts_spectrum(name,
                                                loge_bounds[0],
                                                loge_bounds[1], summed=True, weighted=True)
@@ -3237,7 +3221,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 if par_free is not None:
                     self.free_parameter(src, par_name, par_free)
 
-
     def _restore_counts_maps(self):
         """
         Revert counts maps to their state prior to injecting any simulated
@@ -3369,20 +3352,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         outfile = os.path.join(self.workdir,
                                'mcube_%s.fits' % (model_name))
 
-        if self.projtype == "HPX":
-            shape = (self.enumbins, self._proj.npix)
-            model_counts = skymap.make_coadd_map(maps, self._proj, shape)
-            fits_utils.write_hpx_image(
-                model_counts.counts, self._proj, outfile)
-        elif self.projtype == "WCS":
-            shape = (self.enumbins, self.npix, self.npix)
-            model_counts = skymap.make_coadd_map(maps, self._proj, shape)
-            fits_utils.write_fits_image(
-                model_counts.counts, self._proj, outfile)
-        else:
-            raise Exception(
-                "Did not recognize projection type %s", self.projtype)
-        return [model_counts] + maps
+        mmap = Map.from_geom(self.geom)
+        for m in maps:
+            mmap.coadd(m)
+        mmap.write(outfile, conv='fgst-ccube')
+        return [mmap] + maps
 
     def write_weight_map(self, model_name):
         """Save the counts model map to a FITS file.
@@ -3401,19 +3375,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         outfile = os.path.join(self.workdir,
                                'wcube_%s.fits' % (model_name))
 
-        if self.projtype == "HPX":
-            shape = (self.enumbins, self._proj.npix)
-            wmap = skymap.make_coadd_map(maps, self._proj, shape)
-            fits_utils.write_hpx_image(
-                wmap.counts, self._proj, outfile)
-        elif self.projtype == "WCS":
-            shape = (self.enumbins, self.npix, self.npix)
-            wmap = skymap.make_coadd_map(maps, self._proj, shape)
-            fits_utils.write_fits_image(
-                wmap.counts, self._proj, outfile)
-        else:
-            raise Exception(
-                "Did not recognize projection type %s", self.projtype)
+        wmap = Map.from_geom(self.geom)
+        # FIXME: Should we average weights maps rather than coadding?
+        for m in maps:
+            wmap.coadd(m)
+        wmap.write(outfile, conv='fgst-ccube')
         return [wmap] + maps
 
     def print_roi(self, loglevel=logging.INFO):
@@ -3946,31 +3912,19 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def _coadd_maps(self, cmaps, shape, rm, wmaps):
         """
         """
+        self._ccube = skymap.coadd_maps(self.geom, cmaps)
+        self._wcube = skymap.coadd_maps(self.geom, wmaps)
+        self._ccube.write(self.files['ccube'], conv='fgst-ccube')
 
         if self.projtype == "WCS":
-            shape = (self.enumbins, self.npix, self.npix)
-            self._ccube = skymap.make_coadd_map(cmaps, self._proj, shape)
-            self._wcube = skymap.make_coadd_map(wmaps, self._proj, shape)
-            fits_utils.write_fits_image(self._ccube.counts, self._ccube.wcs,
-                                        self.files['ccube'])
-            rm['counts'] += np.squeeze(
-                np.apply_over_axes(np.sum, self._ccube.counts,
-                                   axes=[1, 2]))
-            rm['counts_wt'] += np.squeeze(
-                np.apply_over_axes(np.sum, self._ccube.counts*self._wcube.counts,
-                                   axes=[1, 2]))
-            
+            rm['counts'] += np.sum(self._ccube.data,
+                                   axis=(1, 2), keepdims=False)
+            rm['counts_wt'] += np.sum(self._ccube.data * self._wcube.data,
+                                      axis=(1, 2), keepdims=False)
         elif self.projtype == "HPX":
-            self._ccube = skymap.make_coadd_map(cmaps, self._proj, shape)
-            self._wcube = skymap.make_coadd_map(wmaps, self._proj, shape, preserve_counts=False)
-            fits_utils.write_hpx_image(self._ccube.counts, self._ccube.hpx,
-                                       self.files['ccube'])
-            rm['counts'] += np.squeeze(
-                np.apply_over_axes(np.sum, self._ccube.counts,
-                                   axes=[1]))
-            rm['counts_wt'] += np.squeeze(
-                np.apply_over_axes(np.sum, self._ccube.counts*self._wcube.counts,
-                                   axes=[1]))
+            rm['counts'] += np.sum(self._ccube.data, axis=(1,), keepdims=False)
+            rm['counts_wt'] += np.sum(self._ccube.data * self._wcube.data,
+                                      axis=(1,), keepdims=False)
         else:
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
@@ -4059,7 +4013,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # Get NPred
         src_dict['npred'] = self.like.NpredValue(str(name))
-        # EAC, we need this b/c older version of the ST don't have the right signature        
+        # EAC, we need this b/c older version of the ST don't have the right signature
         try:
             src_dict['npred_wt'] = self.like.NpredValue(str(name), True)
         except (TypeError, NotImplementedError):
@@ -4264,11 +4218,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                          log_level(self.config['logging']['verbosity']))
 
         self._roi = roi
-        # ROIModel.create(self.config['selection'],
-        #                            self.config['model'],
-        #                            fileio=self.config['fileio'],
-        #                            coordsys=self.config['binning']['coordsys'])
-
         workdir = self.config['fileio']['workdir']
         self._name = self.config['name']
 
@@ -4374,7 +4323,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             (self._ebin_edges[1:] + self._ebin_edges[:-1])
 
         if self.config['binning']['npix'] is None:
-            self._npix = int(np.round(self.config['binning']['roiwidth'] /
+            roiwidth = (self.config['binning']['roiwidth']
+                        if self.config['binning']['roiwidth'] is not None else 180.)
+            self._npix = int(np.round(roiwidth /
                                       self.config['binning']['binsz']))
         else:
             self._npix = self.config['binning']['npix']
@@ -4401,37 +4352,22 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._coordsys = self.config['binning']['coordsys']
         self._tmin = self.config['selection']['tmin']
         self._tmax = self.config['selection']['tmax']
-
+        axes = [MapAxis.from_edges(self.energies, interp='log',
+                                   name='energy', unit='MeV')]
         if self.projtype == 'HPX':
-            self._hpx_region = create_hpx_disk_region_string(self.roi.skydir,
-                                                             self._coordsys,
-                                                             0.5 * self.config['binning']['roiwidth'])
-            self._proj = HPX.create_hpx(-1,
-                                        self.config['binning'][
-                                            'hpx_ordering_scheme'] == "NESTED",
-                                        self._coordsys,
-                                        self.config['binning']['hpx_order'],
-                                        ebins=self.energies,
-                                        region=self._hpx_region)
+            is_nested = self.config['binning']['hpx_ordering_scheme'] == "NESTED"
+            self._geom = HpxGeom.create(2**self.config['binning']['hpx_order'],
+                                        nest=is_nested,
+                                        coordsys=self.config['binning']['coordsys'],
+                                        width=self.config['binning']['roiwidth'],
+                                        skydir=self.roi.skydir,
+                                        axes=axes)
         elif self.projtype == "WCS":
-            self._skywcs = wcs_utils.create_wcs(self._roi.skydir,
-                                                coordsys=self._coordsys,
-                                                projection=self.config[
-                                                    'binning']['proj'],
-                                                cdelt=self.binsz,
-                                                crpix=1.0 + 0.5 *
-                                                (self._npix - 1),
-                                                naxis=2)
-            self._proj = wcs_utils.create_wcs(self.roi.skydir,
-                                              coordsys=self._coordsys,
-                                              projection=self.config[
-                                                  'binning']['proj'],
-                                              cdelt=self.binsz,
-                                              crpix=1.0 + 0.5 *
-                                              (self._npix - 1),
-                                              naxis=3,
-                                              energies=self.energies)
-
+            self._geom = WcsGeom.create(npix=self.npix, binsz=self.binsz,
+                                        coordsys=self.config['binning']['coordsys'],
+                                        proj=self.config['binning']['proj'],
+                                        skydir=self.roi.skydir,
+                                        axes=axes)
         else:
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
@@ -4497,6 +4433,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         return self._projtype
 
     @property
+    def geom(self):
+        """ROI geometry."""
+        return self._geom
+
+    @property
     def tmin(self):
         """Return the MET time for the start of the observation."""
         return self._tmin
@@ -4507,15 +4448,19 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         return self._tmax
 
     @property
+    def geom(self):
+        return self._geom
+
+    @property
     def wcs(self):
         if self.projtype == "WCS":
-            return self._proj
+            return self.geom.wcs
         return None
 
     @property
     def hpx(self):
         if self.projtype == "HPX":
-            return self._proj
+            return self.geom
         return None
 
     @property
@@ -4807,12 +4752,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if p_method == 0:  # WCS
             z = cmap.data()
             z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
-            return Map(z, copy.deepcopy(self.wcs))
+            return WcsNDMap(copy.deepcopy(self.geom), z)
         elif p_method == 1:  # HPX
             z = cmap.data()
-            nhpix = self.hpx.npix
-            z = np.array(z).reshape(self.enumbins, nhpix)
-            return HpxMap(z, copy.deepcopy(self.hpx))
+            z = np.array(z).reshape(self.enumbins, np.max(self.geom.npix))
+            return HpxNDMap(copy.deepcopy(self.geom), z)
         else:
             self.logger.error('Did not recognize CountsMap type %i' % p_method,
                               exc_info=True)
@@ -4826,25 +4770,33 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         map : `~fermipy.skymap.MapBase`
 
         """
-        #EAC we need the try block b/c older versions of the ST don't have some of these functions
-        try:
-            if isinstance(self.like, gtutils.SummedLikelihood):
-                cmap = self.like.components[0].logLike.countsMap()
+        # EAC we need the try blocks b/c older versions of the ST don't have some of these functions
+        if isinstance(self.like, gtutils.SummedLikelihood):
+            cmap = self.like.components[0].logLike.countsMap()
+            try:
                 p_method = cmap.projection().method()
+            except AttributeError:
+                p_method = 0
+            try:
                 if self.like.components[0].logLike.has_weights():
                     wmap = self.like.components[0].logLike.weightMap()
-                else: 
+                else:
                     wmap = None
-            else:
-                cmap = self.like.logLike.countsMap()
+            except Exception:
+                wmap = None
+        else:
+            cmap = self.like.logLike.countsMap()
+            try:
                 p_method = cmap.projection().method()
+            except AttributeError:
+                p_method = 0
+            try:
                 if self.like.logLike.has_weights():
                     wmap = self.like.logLike.weightMap()
                 else:
                     wmap = None
-        except Exception:
-            wmap = None
-            p_method = 0
+            except Exception:
+                wmap = None
 
         if p_method == 0:  # WCS
             if wmap is None:
@@ -4852,15 +4804,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             else:
                 z = wmap.model()
                 z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
-            return Map(z, copy.deepcopy(self.wcs))
+            return WcsNDMap(copy.deepcopy(self._geom), z)
         elif p_method == 1:  # HPX
-            nhpix = self.hpx.npix
+            nhpix = np.max(self.geom.npix)
             if wmap is None:
                 z = np.ones((self.enumbins, nhpix))
             else:
                 z = wmap.model()
                 z = np.array(z).reshape(self.enumbins, nhpix)
-            return HpxMap(z, self.hpx)
+            return HpxNDMap(self.geom, z)
         else:
             self.logger.error('Did not recognize CountsMap type %i' % p_method,
                               exc_info=True)
@@ -4886,7 +4838,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
            from the model map.
 
         use_mask : bool
-        
+
            Parameter that specifies in the model counts map should include
            mask pixels (i.e., ones whose weights are <= 0)
 
@@ -4900,7 +4852,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if self.projtype == "WCS":
             v = pyLike.FloatVector(self.npix ** 2 * self.enumbins)
         elif self.projtype == "HPX":
-            v = pyLike.FloatVector(self._proj.npix * self.enumbins)
+            v = pyLike.FloatVector(np.max(self.geom.npix) * self.enumbins)
         else:
             raise Exception("Unknown projection type %s", self.projtype)
 
@@ -4933,7 +4885,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Remove sources in exclude list
         src_names = [str(t) for t in src_names if t not in excluded_names]
 
-        #EAC we need the try blocks b/c older versions of the ST don't have some of these functions
+        # EAC we need the try blocks b/c older versions of the ST don't have some of these functions
         if len(src_names) == len(self.roi.sources):
             try:
                 self.like.logLike.computeModelMap(v, use_mask)
@@ -4945,19 +4897,20 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 try:
                     self.like.logLike.updateModelMap(v, model, use_mask)
                 except (TypeError, NotImplementedError):
-                    self.like.logLike.updateModelMap(v, model)                
+                    self.like.logLike.updateModelMap(v, model)
         else:
             try:
                 if hasattr(self.like.logLike, 'has_weights'):
                     self.like.logLike.computeModelMap(src_names, v, use_mask)
                 else:
-                    self.like.logLike.computeModelMap(src_names, v)            
+                    self.like.logLike.computeModelMap(src_names, v)
             except:
                 vsum = np.zeros(v.size())
                 for s in src_names:
                     vtmp = pyLike.FloatVector(v.size())
                     if hasattr(self.like.logLike, 'has_weights'):
-                        self.like.logLike.computeModelMap(str(s), vtmp, use_mask)
+                        self.like.logLike.computeModelMap(
+                            str(s), vtmp, use_mask)
                     else:
                         self.like.logLike.computeModelMap(str(s), vtmp)
                     vsum += vtmp
@@ -4965,10 +4918,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if self.projtype == "WCS":
             z = np.array(v).reshape(self.enumbins, self.npix, self.npix)
-            return Map(z, copy.deepcopy(self.wcs))
+            return WcsNDMap(copy.deepcopy(self._geom), z)
         elif self.projtype == "HPX":
-            z = np.array(v).reshape(self.enumbins, self._proj.npix)
-            return HpxMap(z, self.hpx)
+            z = np.array(v).reshape(self.enumbins, np.max(self._geom.npix))
+            return HpxNDMap(copy.deepcopy(self._geom), z)
         else:
             raise Exception(
                 "Did not recognize projection type %s", self.projtype)
@@ -4982,9 +4935,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
            Source name.
 
         """
-        # EAC, we need this b/c older version of the ST don't have the right signature        
+        # EAC, we need this b/c older version of the ST don't have the right signature
         try:
-            cs = np.array(self.like.logLike.modelCountsSpectrum(str(name), weighted))
+            cs = np.array(self.like.logLike.modelCountsSpectrum(
+                str(name), weighted))
         except (TypeError, NotImplementedError):
             cs = np.array(self.like.logLike.modelCountsSpectrum(str(name)))
         imin = utils.val_to_edge(self.log_energies, logemin)[0]
@@ -5045,9 +4999,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # This is needed in case the exposure map is in HEALPix
         hpxhduname = "HPXEXPOSURES"
         try:
-            self._bexp = read_map_from_fits(self.files['bexpmap'], hpxhduname)
+            self._bexp = Map.read(self.files['bexpmap'], hdu=hpxhduname)
         except KeyError:
-            self._bexp = read_map_from_fits(self.files['bexpmap'])
+            self._bexp = Map.read(self.files['bexpmap'])
 
         # Write ROI XML
         self.roi.write_xml(self.files['srcmdl'], self.config['model'])
@@ -5422,13 +5376,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
     def restore_counts_maps(self):
 
-        cmap = Map.create_from_fits(self.files['ccube'])
+        cmap = Map.read(self.files['ccube'])
 
         if hasattr(self.like.logLike, 'setCountsMap'):
-            self.like.logLike.setCountsMap(np.ravel(cmap.counts.astype(float)))
+            self.like.logLike.setCountsMap(np.ravel(cmap.data.astype(float)))
 
         srcmap_utils.update_source_maps(self.files['srcmap'],
-                                        {'PRIMARY': cmap.counts},
+                                        {'PRIMARY': cmap.data},
                                         logger=self.logger)
 
     def simulate_roi(self, name=None, clear=True, randomize=True):
@@ -5450,17 +5404,17 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
            the counts expectation value.
 
         """
-
-        data = self.counts_map().counts
+        cm = self.counts_map()
+        data = cm.data
         m = self.model_counts_map(name)
 
         if clear:
             data.fill(0.0)
 
         if randomize:
-            data += np.random.poisson(m.counts).astype(float)
+            data += np.random.poisson(m.data).astype(float)
         else:
-            data += m.counts
+            data += m.data
 
         if hasattr(self.like.logLike, 'setCountsMap'):
             self.like.logLike.setCountsMap(np.ravel(data))
@@ -5468,7 +5422,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         srcmap_utils.update_source_maps(self.files['srcmap'],
                                         {'PRIMARY': data},
                                         logger=self.logger)
-        fits_utils.write_fits_image(data, self.wcs, self.files['ccubemc'])
+        cm.write(self.files['ccubemc'], conv='fgst-ccube')
 
     def write_model_map(self, model_name=None, name=None):
         """Save counts model map to a FITS file.
@@ -5486,14 +5440,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                'mcube%s.fits' % (suffix))
 
         cmap = self.model_counts_map(name, use_mask=False)
-
-        if self.projtype == "HPX":
-            fits_utils.write_hpx_image(cmap.counts, cmap.hpx, outfile)
-        elif self.projtype == "WCS":
-            fits_utils.write_fits_image(cmap.counts, cmap.wcs, outfile)
-        else:
-            raise Exception(
-                "Did not recognize projection type %s", self.projtype)
+        cmap.write(outfile, conv='fgst-ccube')
         return cmap
 
     def write_weight_map(self, model_name=None):
@@ -5512,14 +5459,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                'wcube%s.fits' % (suffix))
 
         wmap = self.weight_map()
-
-        if self.projtype == "HPX":
-            fits_utils.write_hpx_image(wmap.counts, wmap.hpx, outfile)
-        elif self.projtype == "WCS":
-            fits_utils.write_fits_image(wmap.counts, wmap.wcs, outfile)
-        else:
-            raise Exception(
-                "Did not recognize projection type %s", self.projtype)
+        wmap.write(outfile, conv='fgst-ccube')
         return wmap
 
     def _update_srcmap_file(self, sources, overwrite=True):
@@ -5555,8 +5495,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         skydir = src.skydir
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
-        xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
-        exp = self._bexp.interpolate_at_skydir(skydir)
+        xpix, ypix = self.geom.to_image().coord_to_pix(skydir)
+        exp = self._bexp.interp_by_coord(
+            (skydir, self._bexp.geom.axes[0].center))
         rebin = min(int(np.ceil(self.binsz / 0.01)), 8)
         shape_out = (self.enumbins + 1, self.npix, self.npix)
         cache = SourceMapCache.create(self._psf, exp, spatial_model,
@@ -5572,8 +5513,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         skydir = src.skydir
         spatial_model = src['SpatialModel']
         spatial_width = src['SpatialWidth']
-        xpix, ypix = wcs_utils.skydir_to_pix(skydir, self._skywcs)
-        exp = self._bexp.interpolate_at_skydir(skydir)
+        xpix, ypix = self.geom.to_image().coord_to_pix(skydir)
+        exp = self._bexp.interp_by_coord(
+            (skydir, self._bexp.geom.axes[0].center))
         cache = self._srcmap_cache.get(name, None)
         if cache is not None:
             k = cache.create_map([ypix, xpix])
