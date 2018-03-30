@@ -19,9 +19,8 @@ from scipy.optimize import fmin
 
 from astropy.table import Table, Column
 import astropy.units as u
+from gammapy.maps import WcsNDMap, MapAxis
 from fermipy import spectrum
-from fermipy.wcs_utils import wcs_add_energy_axis
-from fermipy.skymap import read_map_from_fits, Map
 from fermipy.sourcefind_utils import fit_error_ellipse
 from fermipy.sourcefind_utils import find_peaks
 from fermipy.spectrum import SpectralFunction, SEDFunctor
@@ -193,12 +192,15 @@ class LnLFn(object):
 
         Calls `scipy.optimize.brentq` to find the roots of the derivative.
         """
-        if self._interp.y[0] == np.min(self._interp.y):
+        min_y = np.min(self._interp.y)
+        if self._interp.y[0] == min_y:
             self._mle = self._interp.x[0]
+        elif self._interp.y[-1] == min_y:
+            self._mle = self._interp.x[-1]
         else:
-            ix0 = max(np.argmin(self._interp.y) - 4, 0)
-            ix1 = min(np.argmin(self._interp.y) + 4,
-                      len(self._interp.x) - 1)
+            argmin_y = np.argmin(self._interp.y)
+            ix0 = max(argmin_y - 4, 0)
+            ix1 = min(argmin_y + 4, len(self._interp.x) - 1)
 
             while np.sign(self._interp.derivative(self._interp.x[ix0])) == \
                     np.sign(self._interp.derivative(self._interp.x[ix1])):
@@ -1387,17 +1389,17 @@ class TSCube(object):
 
         Parameters
         ----------
-        tsmap : `~fermipy.skymap.Map`
+        tsmap : `~gammapy.maps.WcsNDMap`
            A Map object with the TestStatistic values in each pixel
 
-        normmap : `~fermipy.skymap.Map`
+        normmap : `~gammapy.maps.WcsNDMap`
            A Map object with the normalization values in each pixel
 
-        tscube : `~fermipy.skymap.Map`
+        tscube : `~gammapy.maps.WcsNDMap`
            A Map object with the TestStatistic values in each pixel &
            energy bin
 
-        normcube : `~fermipy.skymap.Map`
+        normcube : `~gammapy.maps.WcsNDMap`
            A Map object with the normalization values in each pixel &
            energy bin
 
@@ -1427,7 +1429,7 @@ class TSCube(object):
         self._normmap = normmap
         self._tscube = tscube
         self._normcube = normcube
-        self._ts_cumul = tscube.sum_over_energy()
+        self._ts_cumul = tscube.sum_over_axes()
         self._refSpec = refSpec
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
@@ -1495,7 +1497,7 @@ class TSCube(object):
            String specifying the quantity used for the normalization
 
         """
-        tsmap = read_map_from_fits(fitsfile)
+        tsmap = WcsNDMap.read(fitsfile)
 
         tab_e = Table.read(fitsfile, 'EBOUNDS')
         tab_s = Table.read(fitsfile, 'SCANDATA')
@@ -1521,13 +1523,13 @@ class TSCube(object):
         nebins = len(tab_e)
         npred = tab_e['ref_npred']
 
-        ndim = len(tsmap.counts.shape)
+        ndim = len(tsmap.data.shape)
 
         if ndim == 2:
-            cube_shape = (tsmap.counts.shape[0],
-                          tsmap.counts.shape[1], nebins)
+            cube_shape = (tsmap.data.shape[0],
+                          tsmap.data.shape[1], nebins)
         elif ndim == 1:
-            cube_shape = (tsmap.counts.shape[0], nebins)
+            cube_shape = (tsmap.data.shape[0], nebins)
         else:
             raise RuntimeError("Counts map has dimension %i" % (ndim))
 
@@ -1535,13 +1537,16 @@ class TSCube(object):
         nll_vals = -np.array(tab_s["dloglike_scan"])
         norm_vals = np.array(tab_s["norm_scan"])
 
-        wcs_3d = wcs_add_energy_axis(tsmap.wcs, emin)
-        tscube = Map(np.rollaxis(tab_s["ts"].reshape(cube_shape), 2, 0),
-                     wcs_3d)
-        ncube = Map(np.rollaxis(tab_s["norm"].reshape(cube_shape), 2, 0),
-                    wcs_3d)
-        nmap = Map(tab_f['fit_norm'].reshape(tsmap.counts.shape),
-                   tsmap.wcs)
+        axis = MapAxis.from_edges(np.concatenate((emin, emax[-1:])),
+                                  interp='log')
+        geom_3d = tsmap.geom.to_cube([axis])
+        tscube = WcsNDMap(geom_3d,
+                          np.rollaxis(tab_s["ts"].reshape(cube_shape), 2, 0))
+
+        ncube = WcsNDMap(geom_3d,
+                         np.rollaxis(tab_s["norm"].reshape(cube_shape), 2, 0))
+        nmap = WcsNDMap(tsmap.geom,
+                        tab_f['fit_norm'].reshape(tsmap.data.shape))
 
         ref_colname = 'ref_%s' % norm_type
         norm_vals *= tab_e[ref_colname][np.newaxis, :, np.newaxis]

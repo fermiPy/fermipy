@@ -337,14 +337,14 @@ class ExtensionFit(object):
         for k, v in sorted(maps.items()):
             if v is None:
                 continue
-            hdu_images += [v.create_image_hdu(k)]
+            hdu_images += [v.make_hdu(k)]
 
         tab = fits_utils.dict_to_table(ext)
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'EXT_DATA'
 
         if ext.get('tsmap'):
-            hdus = [ext['tsmap'].create_primary_hdu()]
+            hdus = [ext['tsmap'].make_hdu(hdu='PRIMARY')]
         else:
             hdus = [fits.PrimaryHDU()]
 

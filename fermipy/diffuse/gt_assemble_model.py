@@ -209,7 +209,7 @@ class GtAssembleModel(Link):
         manifest = yaml.safe_load(open(args.input))
 
         compname = args.compname
-        value = manifest[key]
+        value = manifest[compname]
         GtAssembleModel.assemble_component(compname, value, args.hpx_order)
 
 
@@ -259,7 +259,7 @@ class ConfigMaker_AssembleModel(ConfigMaker):
                                                       irf_ver=NAME_FACTORY.irf_ver())
                 logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                 job_configs[fullkey] = dict(input=manifest,
-                                            comp=key,
+                                            compname=key,
                                             logfile=logfile)
         return job_configs
 

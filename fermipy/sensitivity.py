@@ -129,6 +129,7 @@ class SensitivityCalc(object):
         if self._gdiff_fit is not None:
             bkg_fit = []
 
+
         for psf, exp in zip(self._psf, self._exp):
 
             coords0 = np.meshgrid(*[skydir_cel.ra.deg, ectr], indexing='ij')
@@ -147,6 +148,7 @@ class SensitivityCalc(object):
                                            np.ravel(coords1[0]),
                                            np.ravel(coords0[1]))
             bkgv = bkgv.reshape(expv.shape)
+            
 
             # bkgv = self._gdiff.interpolate(
             #    skydir_gal.l.deg, skydir_gal.b.deg, ectr)
@@ -154,6 +156,8 @@ class SensitivityCalc(object):
             isov = np.exp(np.interp(np.log(ectr), np.log(self._iso[0]),
                                     np.log(self._iso[1])))
             bkgv += isov
+
+            
             s0, b0 = irfs.compute_ps_counts(ebins, expv, psf, bkgv, fn,
                                             egy_dim=1,
                                             spatial_model=self.spatial_model,
@@ -214,6 +218,7 @@ class SensitivityCalc(object):
 
         npred = np.squeeze(np.apply_over_axes(np.sum, norms * sig, [2, 3]))
         norms = np.squeeze(norms)
+
         flux = norms * fn.flux(self.ebins[:-1], self.ebins[1:])
         eflux = norms * fn.eflux(self.ebins[:-1], self.ebins[1:])
         dnde = norms * fn.dnde(self.ectr)

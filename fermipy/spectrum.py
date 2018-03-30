@@ -411,14 +411,14 @@ class LogParabola(SpectralFunction):
 class PLExpCutoff(SpectralFunction):
     """Class that evaluates a function with the parameterization:
 
-    F(x) = p_0 * (x/x_s)^(p_1 - p_2*log(x/x_s) )
+    F(x) = p_0 * (x/x_s)^(p_1) * exp(- x/p_2 ) 
 
     where x_s is the scale parameter.  The `params` array should be
     defined with:
 
     * params[0] : Prefactor (p_0)
     * params[1] : Index (p_1)
-    * params[2] : Curvature (p_2)
+    * params[2] : Cutoff (p_2)
 
     """
 
@@ -446,6 +446,54 @@ class PLExpCutoff(SpectralFunction):
     @staticmethod
     def _eval_dnde(x, params, scale=1.0, extra_params=None):
         return params[0] * (x / scale) ** (params[1]) * np.exp(-x / params[2])
+
+    @classmethod
+    def _eval_dnde_deriv(cls, x, params, scale=1.0, extra_params=None):
+        return (cls._eval_dnde(x, params, scale) *
+                (params[1] * params[2] - x) / (params[2] * x))
+
+
+class PLSuperExpCutoff(SpectralFunction):
+    """Class that evaluates a function with the parameterization:
+
+    F(x) = p_0 * (x/x_s)^(p_1) * exp(-(x/p2)**p3)
+
+    where x_s is the scale parameter.  The `params` array should be
+    defined with:
+
+    * params[0] : Prefactor (p_0)
+    * params[1] : Index1 (p_1)
+    * params[2] : Curvature (p_2)
+    * params[3] : Index2 (p3)
+
+    """
+
+    def __init__(self, params=None, scale=1.0, extra_params=None):
+        params = (params if params is not None else
+                  np.array([5e-13, -1.0, 1E4, 1.0]))
+        super(PLSuperExpCutoff, self).__init__(params, scale)
+
+    @staticmethod
+    def params_to_log(params):
+        return [np.log10(params[0]),
+                params[1],
+                np.log10(params[2]),
+                params[3]]
+
+    @staticmethod
+    def log_to_params(params):
+        return [10**params[0],
+                params[1],
+                10**params[2],
+                params[3]]
+
+    @staticmethod
+    def nparam():
+        return 4
+
+    @staticmethod
+    def _eval_dnde(x, params, scale=1.0, extra_params=None):
+        return params[0] * (x / scale) ** (params[1]) * np.exp(- (x / params[2]) ** (params[3]))
 
     @classmethod
     def _eval_dnde_deriv(cls, x, params, scale=1.0, extra_params=None):

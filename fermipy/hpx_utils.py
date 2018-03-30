@@ -404,11 +404,11 @@ class HPX(object):
         return HPX(self.nside, not self.nest, self.coordsys, -1, self.ebins,
                    region=self.region, conv=self.conv, pixels=pixels)
 
-    def copy_and_drop_energy(self):
+    def copy_and_drop_energy(self, pixels=None):
         """
         """        
         return HPX(self.nside, self.nest, self.coordsys, -1, None,
-                   region=self.region, conv=self.conv, pixels=self.pixels)
+                   region=self.region, conv=self.conv, pixels=pixels)
 
     @classmethod
     def create_hpx(cls, nside, nest, coordsys='CEL', order=-1, ebins=None,
@@ -613,7 +613,7 @@ class HPX(object):
         cols = []
 
         if self._ipix is not None:
-            cols.append(fits.Column(conv.idxstring, "J", array=self._ipix))
+            cols.append(fits.Column(self.conv.idxstring, "J", array=self._ipix))
 
         if self.conv.convname == 'FGST_SRCMAP_SPARSE':
             nonzero = data.nonzero()
