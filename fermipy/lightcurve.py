@@ -183,7 +183,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     numfree = gta.get_free_param_vector().count(True)
 
     max_ts_thresholds = [None, 4, 9]
-    for max_ts in max_ts_thresholds:
+    for i, max_ts in enumerate(max_ts_thresholds):
         if max_ts is not None:
             gta.free_sources(minmax_ts=[None, max_ts], free=False, exclude=[name])
 
@@ -197,7 +197,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         const_fit_results = gta.fit()
         if not const_fit_results['fit_success']:
             continue
-        const_srcmodel = gta.get_src_model(name)
+        const_srcmodel = copy.deepcopy(gta.get_src_model(name))
 
         # rerun using shape fixed to full time fit
         # for the fixed-shape lightcurve
@@ -205,8 +205,21 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         fixed_fit_results = gta.fit()
         if not fixed_fit_results['fit_success']:
             continue
-        fixed_srcmodel = gta.get_src_model(name)
+        fixed_srcmodel = copy.deepcopy(gta.get_src_model(name))
         break
+
+    # if none of that ^ worked, give up...
+    try:
+        const_srcmodel
+        fixed_srcmodel
+    except NameError:
+        # dummy contents, hopefully this won't bite me in the backside later
+        const_srcmodel = copy.deepcopy(srcmodel)
+        fixed_srcmodel = copy.deepcopy(srcmodel)
+        fixed_fit_results = copy.deepcopy(fit_results)
+        const_fit_results = copy.deepcopy(fit_results)
+        fixed_fit_results['fit_success'] = False
+        const_fit_results['fit_success'] = False
 
     # special lc output
     o = {'flux_const': const_srcmodel['flux'],
