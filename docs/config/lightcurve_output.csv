@@ -1,13 +1,6 @@
-``name``	str	Name of Source, 
-``plottimes``	`~numpy.ndarray`	Center of Time Bin in MJD
-``model``	str	Best fit model to the source
-``IntFlux``	`~numpy.ndarray`	Integral Flux in user defined energy range
-``IntFluxErr``	`~np.ndarray`	Error on Integral Flux, if 0 this means IntFlux is an Upperlimit
-``Index1``	`~np.ndarray`	Spectral Index
-``Index1Err``	`~np.ndarray`	Error on Spectral Index
-``Index2``	`~np.ndarray`	Spectral Index
-``Index2Err``	`~np.ndarray`	Error on Spectral Index
-``TS``	`~np.ndarray`	Test Statistic
-``retCode``	`~np.ndarray`	Did the likelihood fit converge? 0 if yes, anything else means no
-``npred``	`~np.ndarray`	Number of Predicted photons in time bin from source
+``name``	`~str`	Name of Source, 
+``tmin``	`~numpy.ndarray`	Lower edge of time bin in MET.
+``tmax``	`~numpy.ndarray`	Upper edge of time bin in MET.
+``fit_success``	`~numpy.ndarray`	Did the likelihood fit converge? True if yes.
 ``config``	`~dict`	Copy of the input configuration to this method.
+``ts_var``	`~float`	TS of variability. Should be distributed as :math:`\chi^2` with :math:`n-1` degrees of freedom, where :math:`n` is the number of time bins.

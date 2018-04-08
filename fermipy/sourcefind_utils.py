@@ -18,7 +18,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
 
     Parameters
     ----------
-    tsmap : `~fermipy.skymap.Map`
+    tsmap : `~gammapy.maps.WcsMap`
 
     xy : tuple
 
@@ -33,20 +33,20 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     """
 
     if xy is None:
-        ix, iy = np.unravel_index(np.argmax(tsmap.counts.T),
-                                  tsmap.counts.T.shape)
+        ix, iy = np.unravel_index(np.argmax(tsmap.data.T),
+                                  tsmap.data.T.shape)
     else:
         ix, iy = xy
 
-    pbfit0 = utils.fit_parabola(tsmap.counts.T, ix, iy, dpix=1.5)
-    pbfit1 = utils.fit_parabola(tsmap.counts.T, ix, iy, dpix=dpix,
+    pbfit0 = utils.fit_parabola(tsmap.data.T, ix, iy, dpix=1.5)
+    pbfit1 = utils.fit_parabola(tsmap.data.T, ix, iy, dpix=dpix,
                                 zmin=zmin)
 
-    wcs = tsmap.wcs
-    cdelt0 = tsmap.wcs.wcs.cdelt[0]
-    cdelt1 = tsmap.wcs.wcs.cdelt[1]
-    npix0 = tsmap.counts.T.shape[0]
-    npix1 = tsmap.counts.T.shape[1]
+    wcs = tsmap.geom.wcs
+    cdelt0 = tsmap.geom.wcs.wcs.cdelt[0]
+    cdelt1 = tsmap.geom.wcs.wcs.cdelt[1]
+    npix0 = tsmap.data.T.shape[0]
+    npix1 = tsmap.data.T.shape[1]
 
     o = {}
     o['fit_success'] = pbfit0['fit_success']
@@ -59,7 +59,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     else:
         o['xpix'] = float(ix)
         o['ypix'] = float(iy)
-        o['zoffset'] = tsmap.counts.T[ix, iy]
+        o['zoffset'] = tsmap.data.T[ix, iy]
 
     if pbfit1['fit_success']:
         sigmax = 2.0**0.5 * pbfit1['sigmax'] * np.abs(cdelt0)
@@ -75,7 +75,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
         sigmay = min(sigmay, np.abs(2.0 * npix1 * cdelt1))
     else:
         pix_area = np.abs(cdelt0) * np.abs(cdelt1)
-        mask = get_region_mask(tsmap.data, 1.0, (ix,iy) )
+        mask = get_region_mask(tsmap.data, 1.0, (ix, iy))
         area = np.sum(mask) * pix_area
         sigmax = (area / np.pi)**0.5
         sigmay = (area / np.pi)**0.5
@@ -121,7 +121,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     o['pos_ecc2'] = np.sqrt(a**2 / b**2 - 1)
     o['skydir'] = skydir
 
-    if wcs_utils.get_coordsys(tsmap.wcs) == 'GAL':
+    if tsmap.geom.coordsys == 'GAL':
         gal_cov = utils.ellipse_to_cov(o['pos_err_semimajor'],
                                        o['pos_err_semiminor'],
                                        o['theta'])
@@ -158,7 +158,7 @@ def find_peaks(input_map, threshold, min_separation=0.5):
 
     Parameters
     ----------
-    input_map : `~fermipy.utils.Map`
+    input_map : `~gammapy.maps.WcsMap`
 
     threshold : float
 
@@ -173,16 +173,16 @@ def find_peaks(input_map, threshold, min_separation=0.5):
        each peak.
     """
 
-    data = input_map.counts
+    data = input_map.data
 
-    cdelt = max(input_map.wcs.wcs.cdelt)
+    cdelt = max(input_map.geom.wcs.wcs.cdelt)
     min_separation = max(min_separation, 2 * cdelt)
 
     region_size_pix = int(min_separation / cdelt)
     region_size_pix = max(3, region_size_pix)
 
     deltaxy = utils.make_pixel_distance(region_size_pix * 2 + 3)
-    deltaxy *= max(input_map.wcs.wcs.cdelt)
+    deltaxy *= max(input_map.geom.wcs.wcs.cdelt)
     region = deltaxy < min_separation
 
     local_max = maximum_filter(data, footprint=region) == data
@@ -194,7 +194,7 @@ def find_peaks(input_map, threshold, min_separation=0.5):
     peaks = []
     for s in slices:
         skydir = SkyCoord.from_pixel(s[1].start, s[0].start,
-                                     input_map.wcs)
+                                     input_map.geom.wcs)
         peaks.append({'ix': s[1].start,
                       'iy': s[0].start,
                       'skydir': skydir,

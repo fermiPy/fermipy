@@ -163,12 +163,12 @@ def dispatch_job(jobname, exe, args, opts, batch_opts, dry_run=True):
 def bsub(jobname, command, logfile=None, submit=True, sleep='1m', **kwargs):
 
     # Just one command...
-    #if 'q' in kwargs and kwargs['q'] == 'local':
+    # if 'q' in kwargs and kwargs['q'] == 'local':
     #    if isinstance(command, str):
     #        job = command
     #    else:
     #        raise Exception("Cannot run job array locally.")
-    #else:
+    # else:
     if isinstance(command, str):
         job = create_job(jobname, command, logfile)
     else:
@@ -302,5 +302,5 @@ def submit_jobs(exe, args_list, opts_list, outfiles,
                 check_log(batch_opts['oo']) == 'Successful'):
             print('Output file exists, skipping ', outfile)
             continue
-        
+
         dispatch_job(jobname, exe, args, opts, batch_opts, dry_run=dry_run)

@@ -44,10 +44,11 @@ def make_composite_source(name, catalog_roi_model, spectrum, nested_source_names
     #nested_sources = [ catalog_roi_model[nested_source_name]
     #for nested_source_name in nested_source_names ]
     #data = dict(nested_sources=nested_sources)
-    data = {}
+    data = dict(SpatialType='CompositeSource',
+                SpatialModel='CompositeSource',
+                SourceType='CompositeSource')
     if spectrum is not None:
         data.update(spectrum)
-
     return roi_model.CompositeSource(name, data)
 
 
@@ -163,13 +164,16 @@ class SourceFactory(object):
         catalog_extdir : str
             Path to directory with extended source templates
         """
-        print(catalog_file, catalog_extdir)
         if catalog_type == '2FHL':
             return catalog.Catalog2FHL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '3FGL':
             return catalog.Catalog3FGL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '4FGLP':
             return catalog.Catalog4FGLP(fitsfile=catalog_file, extdir=catalog_extdir)
+        elif catalog_type == '4FGL':
+            return catalog.Catalog4FGL(fitsfile=catalog_file, extdir=catalog_extdir)
+        elif catalog_type == 'FL8Y':
+            return catalog.CatalogFL8Y(fitsfile=catalog_file, extdir=catalog_extdir)
         else:
             table = Table.read(catalog_file)
         return catalog.Catalog(table, extdir=catalog_extdir)

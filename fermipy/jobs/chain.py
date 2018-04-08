@@ -282,7 +282,7 @@ class Link(object):
         if scratch_dir is not None and scratch_dir != 'None':
             self._file_stage = FileStageManager(scratch_dir, '.')
 
-    def get_failed_jobs(self, fail_running=False):
+    def get_failed_jobs(self, fail_running=False, fail_pending=False):
         """Return a dictionary with the subset of jobs that are marked as failed"""
         failed_jobs = {}
         for job_key, job_details in self.jobs.items():
@@ -292,17 +292,23 @@ class Link(object):
                 failed_jobs[job_key] = job_details
             elif fail_running and job_details.status == JobStatus.running:
                 failed_jobs[job_key] = job_details
+            elif fail_pending and job_details.status == JobStatus.pending:
+                failed_jobs[job_key] = job_details
         return failed_jobs
 
 
-    def check_job_status(self, key='__top__', fail_running=False):
+    def check_job_status(self, key='__top__', 
+                         fail_running=False,
+                         fail_pending=False):
         """Check the status of a particular job"""
         if self.jobs.has_key(key):
             return self.jobs[key].status
         else:
             return JobStatus.no_job
 
-    def check_jobs_status(self, fail_running=False):
+    def check_jobs_status(self, 
+                          fail_running=False,
+                          fail_pending=False):
         """Check the status of all the jobs run from this link """
         n_failed = 0
         n_passed = 0
@@ -314,6 +320,8 @@ class Link(object):
             elif job_details.status == JobStatus.partial_failed:
                 n_failed += 1
             elif fail_running and job_details.status == JobStatus.running:
+                n_failed += 1
+            elif fail_pending and job_details.status == JobStatus.pending:
                 n_failed += 1
             elif job_details.status == JobStatus.done:
                 n_passed +=1
@@ -537,7 +545,6 @@ class Link(object):
             stream.write("%s\n" % command)
             stream.flush()
         else:
-            print(command)
             os.system(command)
 
     def register_self(self, logfile, key="__top__", status=JobStatus.unknown):
@@ -922,13 +929,16 @@ class Chain(Link):
         for link in self._links.values():
             link._job_archive = self._job_archive
         
-    def check_links_status(self, fail_running=False):
+    def check_links_status(self,
+                           fail_running=False,
+                           fail_pending=False):
         """Check the status of all the links"""
         n_failed = 0
         n_passed = 0
         n_total = 0        
         for linkname, link in self._links.items():
-            link_status = link.check_job_status(fail_running=fail_running)
+            link_status = link.check_job_status(fail_running=fail_running,
+                                                fail_pending=fail_pending)
             print ("Link status", linkname, link_status)
             n_total +=1
             if link_status == JobStatus.failed:
@@ -937,10 +947,11 @@ class Chain(Link):
                 n_failed += 1
             elif fail_running and link_status == JobStatus.running:
                 n_failed += 1
+            elif fail_pending and link_status == JobStatus.pending:
+                n_failed += 1
             elif link_status == JobStatus.done:
                 n_passed +=1
 
-        print (n_failed, n_passed, n_total)
         if n_failed > 0:
             if n_passed > 0:
                 return JobStatus.partial_failed
@@ -979,7 +990,7 @@ class Chain(Link):
         #ok = self.pre_run_checks(stream, dry_run)
         # if not ok:
         #    return
-        print ('Chain.run_chain ', self.args)
+        #print ('Chain.run_chain ', self.args)
 
         if self.args['list']:
             stream.write("Links: \n")
@@ -1005,7 +1016,7 @@ class Chain(Link):
                 pass
             else:
                 continue
-            print ("Running link ", link.linkname, type(link), dry_run)
+            print ("Running link ", link.linkname)
             logfile = "log_%s_top.log"%link.linkname
             link.archive_self(logfile, status=JobStatus.unknown)
             close_file = False
@@ -1021,7 +1032,6 @@ class Chain(Link):
             link.set_status_self(status=link_status)
                         
             outstr.write("Link status: %i %s\n"%(link_status, link.linkname))
-            print(self.jobs)
             if close_file:
                 outstr.close()
             

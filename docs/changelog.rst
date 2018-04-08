@@ -6,6 +6,26 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+0.16.0 (12/27/2017)
+-------------------
+
+* Improvements and refactoring in the internals of the ``lightcurve``
+  method (see `#156 <https://github.com/fermiPy/fermipy/pull/156>`_,
+  `#157 <https://github.com/fermiPy/fermipy/pull/157>`_, `#160
+  <https://github.com/fermiPy/fermipy/pull/160>`_, `#161
+  <https://github.com/fermiPy/fermipy/pull/161>`_, `#162
+  <https://github.com/fermiPy/fermipy/pull/162>`_).  Resolve fit
+  stability issues that were arising when the source of interest was
+  not significantly detected in a given time bin.  Added options to
+  speed up source map calculation by rescaling source maps (enabled
+  with ``use_scaled_srcmap=True``) and split the lightcurve
+  calculation across N cores (enabled with ``multithread=True`` and
+  ``nthread=N``).  Add calculation of ``TS_var`` to test for
+  variability using method from the 2FGL.
+* Updates to validation tools.  Added MeritSkimmer script
+  (``fermipy-merit-skimmer``) for skimming ROOT merit tuples either
+  locally or on xrootd.
+
 0.15.0 (09/05/2017)
 -------------------
 

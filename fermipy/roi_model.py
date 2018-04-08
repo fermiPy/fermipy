@@ -94,6 +94,7 @@ def create_source_table(scan_shape):
     cols_dict['beta'] = dict(dtype='f8', format='%.3f')
     cols_dict['Exp_Index'] = dict(dtype='f8', format='%.3f')
     cols_dict['Cutoff'] = dict(dtype='f8', format='%.3f', unit='MeV')
+    cols_dict['Expfactor'] = dict(dtype='f8', format='%.3f')
 
     cols_dict['Conf_68_PosAng'] = dict(dtype='f8', format='%.3f', unit='deg')
     cols_dict['Conf_68_SemiMajor'] = dict(
@@ -239,27 +240,24 @@ def spectral_pars_from_catalog(cat):
 
     spectrum_type = cat['SpectrumType']
     pars = get_function_defaults(cat['SpectrumType'])
+    par_idxs = {k: i for i, k in
+                enumerate(get_function_par_names(cat['SpectrumType']))}
+
+    for k in pars:
+        pars[k]['value'] = cat['param_values'][par_idxs[k]]
 
     if spectrum_type == 'PowerLaw':
 
-        pars['Prefactor']['value'] = cat['Flux_Density']
-        pars['Scale']['value'] = cat['Pivot_Energy']
+        pars['Index']['value'] *= -1.0
+        pars['Index']['scale'] = -1.0
         pars['Scale']['scale'] = 1.0
-        pars['Index']['value'] = cat['Spectral_Index']
         pars['Index']['max'] = max(5.0, pars['Index']['value'] + 1.0)
         pars['Index']['min'] = min(0.0, pars['Index']['value'] - 1.0)
-        pars['Index']['scale'] = -1.0
-
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
         pars['Index'] = make_parameter_dict(pars['Index'], False, False)
 
     elif spectrum_type == 'LogParabola':
-
-        pars['norm']['value'] = cat['Flux_Density']
-        pars['Eb']['value'] = cat['Pivot_Energy']
-        pars['alpha']['value'] = cat['Spectral_Index']
-        pars['beta']['value'] = cat['beta']
 
         pars['norm'] = make_parameter_dict(pars['norm'], False, True)
         pars['Eb'] = make_parameter_dict(pars['Eb'], True, False)
@@ -268,25 +266,25 @@ def spectral_pars_from_catalog(cat):
 
     elif spectrum_type == 'PLSuperExpCutoff':
 
-        flux_density = cat['Flux_Density']
-        prefactor = (cat['Flux_Density'] *
-                     np.exp((cat['Pivot_Energy'] / cat['Cutoff']) **
-                            cat['Exp_Index']))
-
-        pars['Prefactor']['value'] = prefactor
-        pars['Index1']['value'] = cat['Spectral_Index']
+        pars['Index1']['value'] *= -1.0
         pars['Index1']['scale'] = -1.0
-        pars['Index2']['value'] = cat['Exp_Index']
         pars['Index2']['scale'] = 1.0
-        pars['Scale']['value'] = cat['Pivot_Energy']
-        pars['Cutoff']['value'] = cat['Cutoff']
-
         pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
         pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
         pars['Index1'] = make_parameter_dict(pars['Index1'], False, False)
         pars['Index2'] = make_parameter_dict(pars['Index2'], False, False)
         pars['Cutoff'] = make_parameter_dict(pars['Cutoff'], False, True)
 
+    elif spectrum_type == 'PLSuperExpCutoff2':
+
+        pars['Index1']['value'] *= -1.0
+        pars['Index1']['scale'] = -1.0
+        pars['Index2']['scale'] = 1.0
+        pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
+        pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
+        pars['Index1'] = make_parameter_dict(pars['Index1'], False, False)
+        pars['Index2'] = make_parameter_dict(pars['Index2'], False, False)
+        pars['Expfactor'] = make_parameter_dict(pars['Expfactor'], False, True)
     else:
         raise Exception('Unsupported spectral type:' + spectrum_type)
 
@@ -305,7 +303,12 @@ class Model(object):
         self._data = defaults.make_default_dict(defaults.source_output)
         self._data['spectral_pars'] = get_function_defaults(
             data['SpectrumType'])
-        self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
+        try:
+            self._data['spatial_pars'] = get_function_defaults(
+                data['SpatialType'])
+        except:
+            print (data)
+            raise KeyError("xx")
         self._data.setdefault('catalog', data.pop('catalog', {}))
         self._data.setdefault('assoc', data.pop('assoc', {}))
         self._data.setdefault('class', '')
@@ -498,7 +501,8 @@ class Model(object):
              'Pivot_Energy': np.nan,
              'beta': np.nan,
              'Exp_Index': np.nan,
-             'Cutoff': np.nan}
+             'Cutoff': np.nan,
+             'Expfactor': np.nan}
 
         params = get_true_params_dict(self.spectral_pars)
         if self['SpectrumType'] == 'PowerLaw':
@@ -516,6 +520,12 @@ class Model(object):
             o['Flux_Density'] = params['Prefactor']['value']
             o['Pivot_Energy'] = params['Scale']['value']
             o['Cutoff'] = params['Cutoff']['value']
+        elif self['SpectrumType'] == 'PLSuperExpCutoff2':
+            o['Spectral_Index'] = -1.0 * params['Index1']['value']
+            o['Exp_Index'] = params['Index2']['value']
+            o['Flux_Density'] = params['Prefactor']['value']
+            o['Pivot_Energy'] = params['Scale']['value']
+            o['Expfactor'] = params['Expfactor']['value']
 
         return o
 
@@ -874,12 +884,13 @@ class Source(Model):
         self['offset_glon'] = offset_gal[0, 0]
         self['offset_glat'] = offset_gal[0, 1]
 
-    def set_roi_projection(self, proj):
+    def set_roi_geom(self, geom):
 
-        if proj is None:
+        if geom is None:
             return
 
-        self['offset_roi_edge'] = proj.distance_to_edge(self.skydir)
+        self['offset_roi_edge'] = float(
+            wcs_utils.distance_to_edge(geom, self.skydir))
 
     def set_spatial_model(self, spatial_model, spatial_pars):
 
@@ -1284,7 +1295,7 @@ class ROIModel(fermipy.config.Configurable):
     def __init__(self, config=None, **kwargs):
         # Coordinate for ROI center (defaults to 0,0)
         self._skydir = kwargs.pop('skydir', SkyCoord(0.0, 0.0, unit=u.deg))
-        self._projection = kwargs.get('projection', None)
+        self._geom = kwargs.get('geom', None)
         coordsys = kwargs.pop('coordsys', 'CEL')
         srcname = kwargs.pop('srcname', None)
         super(ROIModel, self).__init__(config, **kwargs)
@@ -1346,8 +1357,8 @@ class ROIModel(fermipy.config.Configurable):
         return self._skydir
 
     @property
-    def projection(self):
-        return self._projection
+    def geom(self):
+        return self._geom
 
     @property
     def sources(self):
@@ -1370,10 +1381,10 @@ class ROIModel(fermipy.config.Configurable):
         else:
             return extdir
 
-    def set_projection(self, proj):
-        self._projection = proj
+    def set_geom(self, geom):
+        self._geom = geom
         for s in self._srcs:
-            s.set_roi_projection(proj)
+            s.set_roi_geom(geom)
 
     def clear(self):
         """Clear the contents of the ROI."""
@@ -1404,14 +1415,15 @@ class ROIModel(fermipy.config.Configurable):
                 os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
 
         search_dirs = []
-        search_dirs += self.config['diffuse_dir']
+        if config.get('diffuse_dir', []):
+            search_dirs += config.get('diffuse_dir', [])
         search_dirs += [self.config['fileio']['outdir'],
                         os.path.join('$FERMIPY_ROOT', 'data'),
                         '$FERMI_DIFFUSE_DIR']
 
         srcs = []
-        if self.config[name] is not None:
-            srcs = self.config[name]
+        if config[name] is not None:
+            srcs = config[name]
 
         srcs_out = []
         for i, t in enumerate(srcs):
@@ -1492,7 +1504,7 @@ class ROIModel(fermipy.config.Configurable):
 
         if isinstance(src, Source):
             src.set_roi_direction(self.skydir)
-            src.set_roi_projection(self.projection)
+            src.set_roi_geom(self.geom)
 
         self.load_source(src, build_index=build_index,
                          merge_sources=merge_sources)

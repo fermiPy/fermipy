@@ -108,6 +108,8 @@ class ModelComponentInfo(object):
         Flag for moving sources (i.e., the sun and moon)
     selection_dependent : bool
         Flag for selection dependent sources (i.e., the residual cosmic ray model)
+    no_psf : bool
+        Flag to indicate that we do not smear this component with the PSF
     components : dict
         Sub-dictionary of `ModelComponentInfo` objects for moving and selection_dependent sources
     comp_key : str
@@ -124,6 +126,7 @@ class ModelComponentInfo(object):
         self.srcmdl_name = kwargs.get('srcmdl_name')
         self.moving = kwargs.get('moving', False)
         self.selection_dependent = kwargs.get('selection_dependent', False)
+        self.no_psf = kwargs.get('no_psf', False)
         self.components = kwargs.get('components', None)
         self.comp_key = kwargs.get('comp_key', None)
 

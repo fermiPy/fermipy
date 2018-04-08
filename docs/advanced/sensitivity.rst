@@ -47,14 +47,28 @@ By default the flux sensitivity will be computed for a point-source
 morphology.  The assumed source morphology can be changed with the
 ``spatial_model`` and ``spatial_size`` parameters:
 
+It is possible to choose among PowerLaw, LogParabola and
+PLSuperExpCutoff SED shapes using the option ``sedshape``.
+
 .. code-block:: bash
 
    # Generate the sensitivity to a source with a 2D gaussian morphology
-   # and a 68% containment radiu of 1 deg  
+   # and a 68% containment radius of 1 deg located at longitude 30deg and 
+   # latitude 30 deg and with a PLSuperExpCutoff SED with index 2.0 and
+   # cutoff energy 10 GeV
    $ fermipy-flux-sensitivity --output=lat_sensitivity_map.fits \
    --ltcube=ltcube.fits --galdiff=gll_iem_v06.fits --event_class=P8R2_SOURCE_V6 \
-   --spatial_model=RadialGaussian --spatial_size=1.0
-
+   --spatial_model=RadialGaussian --spatial_size=1.0 --glon=30 --glat=30
+   --sedshape=PLSuperExpCutoff --index=2.0 --cutoff=1e4
+ 
+   # Generate the sensitivity map in healpix with nside 128 of a point source with 
+   # LogParabola SED and with spectral index 2.0 and curvature index beta=0.50
+   # between 1 and 10 GeV
+   $ fermipy-flux-sensitivity --output=lat_sensitivity_map.fits \
+   --ltcube=ltcube.fits --galdiff=gll_iem_v06.fits --event_class=P8R2_SOURCE_V6 \
+   --spatial_model=PointSource --sedshape=LogParabola --index=2.0 --beta=0.50 \
+   --hpx_nside=128 --map_type=hpx --emin=1000 --emax=10000
+   
 The output FITS file set with the ``output`` option contains the
 following tables.  Note that ``MAP`` tables are only generated when
 the ``map_type`` argument is set.

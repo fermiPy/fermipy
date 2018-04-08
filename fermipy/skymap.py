@@ -10,6 +10,7 @@ from astropy.wcs import WCS
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Galactic, ICRS
+import gammapy
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
 import fermipy.hpx_utils as hpx_utils
@@ -17,12 +18,28 @@ import fermipy.fits_utils as fits_utils
 from fermipy.hpx_utils import HPX, HpxToWcsMapping
 
 
-def make_coadd_map(maps, proj, shape):
+def coadd_maps(geom, maps, preserve_counts=True):
+    """Coadd a sequence of `~gammapy.maps.Map` objects."""
+
+    # FIXME: This functionality should be built into the Map.coadd method
+    map_out = gammapy.maps.Map.from_geom(geom)
+    for m in maps:
+        m_tmp = m
+        if isinstance(m, gammapy.maps.HpxNDMap):
+            if m.geom.order < map_out.geom.order:
+                factor = map_out.geom.nside // m.geom.nside
+                m_tmp = m.upsample(factor, preserve_counts=preserve_counts)
+        map_out.coadd(m_tmp)
+
+    return map_out
+
+
+def make_coadd_map(maps, proj, shape, preserve_counts=True):
 
     if isinstance(proj, WCS):
         return make_coadd_wcs(maps, proj, shape)
     elif isinstance(proj, HPX):
-        return make_coadd_hpx(maps, proj, shape)
+        return make_coadd_hpx(maps, proj, shape, preserve_counts=preserve_counts)
     else:
         raise Exception("Can't co-add map of unknown type %s" % type(proj))
 
@@ -39,12 +56,16 @@ def make_coadd_wcs(maps, wcs, shape):
     return Map(data, copy.deepcopy(wcs))
 
 
-def make_coadd_hpx(maps, hpx, shape):
+def make_coadd_hpx(maps, hpx, shape, preserve_counts=True):
     data = np.zeros(shape)
     axes = hpx_utils.hpx_to_axes(hpx, shape)
     for m in maps:
-        c = hpx_utils.hpx_to_coords(m.hpx, m.counts.shape)
-        o = np.histogramdd(c.T, bins=axes, weights=np.ravel(m.counts))[0]
+        if m.hpx.order != hpx.order:
+            m_copy = m.ud_grade(hpx.order, preserve_counts)
+        else:
+            m_copy = m
+        c = hpx_utils.hpx_to_coords(m_copy.hpx, m_copy.counts.shape)
+        o = np.histogramdd(c.T, bins=axes, weights=np.ravel(m_copy.counts))[0]
         data += o
     return HpxMap(data, copy.deepcopy(hpx))
 
@@ -54,12 +75,13 @@ def read_map_from_fits(fitsfile, extname=None):
     """
     proj, f, hdu = fits_utils.read_projection_from_fits(fitsfile, extname)
     if isinstance(proj, WCS):
-        m = Map(hdu.data, proj)
+        ebins = fits_utils.find_and_read_ebins(f)
+        m = Map(hdu.data, proj, ebins=ebins)
     elif isinstance(proj, HPX):
         m = HpxMap.create_from_hdu(hdu, proj.ebins)
     else:
         raise Exception("Did not recognize projection type %s" % type(proj))
-    return m, f
+    return m
 
 
 class Map_Base(object):
@@ -202,16 +224,22 @@ class Map(Map_Base):
         return cls(data, wcs, ebins)
 
     @classmethod
-    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT', ebins=None):
+    def create(cls, skydir, cdelt, npix, coordsys='CEL', projection='AIT', ebins=None, differential=False):
         crpix = np.array([n / 2. + 0.5 for n in npix])
-        wcs = wcs_utils.create_wcs(skydir, coordsys, projection,
-                                   cdelt, crpix)
 
         if ebins is not None:
-            data = np.zeros(list(npix) + [len(ebins) - 1]).T
+            if differential:
+                nebins = len(ebins)
+            else:
+                nebins = len(ebins) - 1
+            data = np.zeros(list(npix) + [nebins]).T
+            naxis = 3
         else:
             data = np.zeros(npix).T
+            naxis = 2
 
+        wcs = wcs_utils.create_wcs(skydir, coordsys, projection,
+                                   cdelt, crpix, naxis=naxis, energies=ebins)
         return cls(data, wcs, ebins=ebins)
 
     def create_image_hdu(self, name=None, **kwargs):
@@ -360,7 +388,6 @@ class Map(Map_Base):
         else:
             if egy is None:
                 egy = self._ectr
-
             pixcrd = self.wcs.wcs_world2pix(lon, lat, egy, 0)
             pixcrd[2] = np.array(utils.val_to_pix(np.log(self._ectr),
                                                   np.log(egy)), ndmin=1)
@@ -390,7 +417,7 @@ class HpxMap(Map_Base):
 
     def __init__(self, counts, hpx):
         """ C'tor, fill with a counts vector and a HPX object """
-        Map_Base.__init__(self, counts)
+        super(HpxMap, self).__init__(counts)
         self._hpx = hpx
         self._wcs2d = None
         self._hpx2wcs = None
@@ -406,11 +433,13 @@ class HpxMap(Map_Base):
         hdu    : The FITS
         ebins  : Energy bin edges [optional]
         """
-        hpx = HPX.create_from_header(hdu.header, ebins)
+        hpx = HPX.create_from_hdu(hdu, ebins)
         colnames = hdu.columns.names
         cnames = []
         if hpx.conv.convname == 'FGST_SRCMAP_SPARSE':
-            keys = hdu.data.field('KEY')
+            pixs = hdu.data.field('PIX')
+            chans = hdu.data.field('CHANNEL')
+            keys = chans * hpx.npix + pixs
             vals = hdu.data.field('VALUE')
             nebin = len(ebins)
             data = np.zeros((nebin, hpx.npix))
@@ -433,13 +462,9 @@ class HpxMap(Map_Base):
         extname : The name of the HDU with the map data
         ebounds : The name of the HDU with the energy bin data
         """
-        extname = kwargs.get('hdu', 'SKYMAP')
+        extname = kwargs.get('hdu', hdulist[1].name)
         ebins = fits_utils.find_and_read_ebins(hdulist)
         return cls.create_from_hdu(hdulist[extname], ebins)
-
-    def create_image_hdu(self, name=None, **kwargs):
-        kwargs['extname'] = name
-        return self.hpx.make_hdu(self.counts, **kwargs)
 
     @classmethod
     def create_from_fits(cls, fitsfile, **kwargs):
@@ -529,7 +554,7 @@ class HpxMap(Map_Base):
                              0], self._hpx2wcs.npix[1]))
             # replace the WCS with a 3D one
             wcs = self.hpx.make_wcs(3, proj=self._wcs_proj,
-                                    energies=self.hpx.ebins,
+                                    energies=np.log10(self.hpx.ebins),
                                     oversample=self._wcs_oversample)
         else:
             self._hpx2wcs.fill_wcs_map_from_hpx_data(
@@ -543,10 +568,9 @@ class HpxMap(Map_Base):
         """Get a list of sky coordinates for the centers of every pixel. """
         sky_coords = self._hpx.get_sky_coords()
         if self.hpx.coordsys == 'GAL':
-            frame = Galactic
+            return SkyCoord(l=sky_coords.T[0], b=sky_coords.T[1], unit='deg', frame='galactic')
         else:
-            frame = ICRS
-        return SkyCoord(sky_coords[0], sky_coords[1], frame=frame, unit='deg')
+            return SkyCoord(ra=sky_coords.T[0], dec=sky_coords.T[1], unit='deg', frame='icrs')
 
     def get_pixel_indices(self, lats, lons):
         """Return the indices in the flat array corresponding to a set of coordinates """
@@ -660,11 +684,69 @@ class HpxMap(Map_Base):
                 data_out = hp.pixelfunc.reorder(self.data, r2n=True)
         return HpxMap(data_out, hpx_out)
 
+    def expanded_counts_map(self):
+        """ return the full counts map """
+        if self.hpx._ipix is None:
+            return self.counts
+
+        output = np.zeros(
+            (self.counts.shape[0], self.hpx._maxpix), self.counts.dtype)
+        for i in range(self.counts.shape[0]):
+            output[i][self.hpx._ipix] = self.counts[i]
+        return output
+
+    def explicit_counts_map(self, pixels=None):
+        """ return a counts map with explicit index scheme
+
+        Parameters
+        ----------
+        pixels : `np.ndarray` or None
+            If set, grab only those pixels.  
+            If none, grab only non-zero pixels
+        """
+        # No pixel index, so build one
+        if self.hpx._ipix is None:
+            if self.data.ndim == 2:
+                summed = self.counts.sum(0)
+                if pixels is None:
+                    nz = summed.nonzero()[0]
+                else:
+                    nz = pixels
+                data_out = np.vstack(self.data[i].flat[nz]
+                                     for i in range(self.data.shape[0]))
+            else:
+                if pixels is None:
+                    nz = self.data.nonzero()[0]
+                else:
+                    nz = pixels
+                data_out = self.data[nz]
+            return (nz, data_out)
+        else:
+            if pixels is None:
+                return (self.hpx._ipix, self.data)
+        # FIXME, can we catch this
+        raise RuntimeError(
+            'HPX.explicit_counts_map called with pixels for a map that already has pixels')
+
+    def sparse_counts_map(self):
+        """ return a counts map with sparse index scheme
+        """
+        if self.hpx._ipix is None:
+            flatarray = self.data.flattern()
+        else:
+            flatarray = self.expanded_counts_map()
+        nz = flatarray.nonzero()[0]
+        data_out = flatarray[nz]
+        return (nz, data_out)
+
     def ud_grade(self, order, preserve_counts=False):
         """
         """
         new_hpx = self.hpx.ud_graded_hpx(order)
-        nebins = len(new_hpx.evals)
+        if new_hpx.evals is None:
+            nebins = 1
+        else:
+            nebins = len(new_hpx.evals)
         shape = self.counts.shape
 
         if preserve_counts:
