@@ -15,7 +15,7 @@ if [[ -z $CONDA_DOWNLOAD ]]; then
 fi
 
 if [[ -z $CONDA_DEPS ]]; then
-    CONDA_DEPS='scipy matplotlib pyyaml ipython'
+    CONDA_DEPS='scipy matplotlib pyyaml ipython numpy astropy'
 fi
 
 if [[ -z $CONDA2 ]]; then
@@ -44,9 +44,9 @@ fi
 export PATH="$CONDA_PATH/bin:$PATH"
 
 conda update -q conda -y
-conda config --append channels conda-forge
+conda config --add channels conda-forge
 conda info -a
-conda install -y python=$PYTHON_VERSION pip numpy astropy pytest $CONDA_DEPS
+conda install -y python=$PYTHON_VERSION pip pytest $CONDA_DEPS
 
 if [[ -n $CONDA2 ]]; then
     $CONDA2

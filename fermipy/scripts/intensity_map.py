@@ -8,6 +8,7 @@ import numpy as np
 from fermipy.skymap import HpxMap
 from astropy.io import fits
 
+
 def intensity_cube(ccube, bexpcube, hpx_order):
     """
     """
@@ -15,15 +16,16 @@ def intensity_cube(ccube, bexpcube, hpx_order):
         ccube_at_order = ccube
     else:
         ccube_at_order = ccube.ud_grade(hpx_order, preserve_counts=True)
-    
+
     if hpx_order == bexpcube.hpx.order:
         bexpcube_at_order = bexpcube
     else:
         bexpcube_at_order = bexpcube.ud_grade(hpx_order, preserve_counts=True)
-    
-    bexpcube_data = np.sqrt(bexpcube_at_order.data[0:-1,0:]*bexpcube_at_order.data[1:,0:])
+
+    bexpcube_data = np.sqrt(
+        bexpcube_at_order.data[0:-1, 0:] * bexpcube_at_order.data[1:, 0:])
     out_data = ccube_at_order.counts / bexpcube_data
-    return HpxMap(out_data, ccube_at_order.hpx)    
+    return HpxMap(out_data, ccube_at_order.hpx)
 
 
 def main():
@@ -43,12 +45,12 @@ def main():
                         help='Order of output map: default = counts map order')
     parser.add_argument('--clobber', action='store_true',
                         help='Overwrite output file')
- 
+
     args = parser.parse_args()
 
     ccube = HpxMap.create_from_fits(args.ccube, hdu='SKYMAP')
     bexpcube = HpxMap.create_from_fits(args.bexpcube, hdu='HPXEXPOSURES')
-    
+
     if args.hpx_order:
         hpx_order = args.hpx_order
     else:

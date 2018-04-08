@@ -27,7 +27,16 @@ class ModelComponent(object):
         """
         self.info = kwargs.get('info')
         self.spectrum = kwargs.get('spectrum')
-
+        self.par_overrides = kwargs.get('par_overrides')
+        self.edisp_disable = kwargs.get('edisp_disable', False)
+        if self.par_overrides is not None:
+            for parname, pardict in self.par_overrides.items():
+                try:
+                    self.spectrum['spectral_pars'][parname].update(pardict)
+                except KeyError:
+                    raise KeyError("Failed to update parameter %s in source %s of spectral type %s"%(parname, 
+                                                                                                     self.info.source_name,
+                                                                                                     self.spectrum['SpectrumType']))                
 
 class ModelInfo(object):
     """ Small helper class to keep track of a single fitting model """
@@ -51,6 +60,15 @@ class ModelInfo(object):
         """ Return the key, value pairs of model components """
         return self.model_components.items()
 
+    def edisp_disable_list(self):
+        """ Return the list of source for which energy dispersion should be turned off """
+        l = []
+        for comp_name, model_comp in self.model_components.items():            
+            if model_comp.edisp_disable:
+                l += [comp_name]
+        return l
+            
+
     def make_srcmap_manifest(self, components, name_factory):
         """  Build a yaml file that specfies how to make the srcmap files for a particular model
 
@@ -73,7 +91,9 @@ class ModelInfo(object):
             name_keys = dict(modelkey=self.model_name,
                              zcut=zcut,
                              ebin=comp.ebin_name,
-                             psftype=comp.evtype_name)
+                             mktime='none',
+                             psftype=comp.evtype_name,
+                             coordsys=comp.coordsys)
             outsrcmap = name_factory.merged_srcmaps(**name_keys)
             ccube = name_factory.ccube(**name_keys)
             src_dict = {}
@@ -93,8 +113,7 @@ class ModelInfo(object):
                     #sourcekey = comp_name
                     sources = [comp_info.source_name]
                 src_dict[comp_name] = dict(sourcekey=comp_name,
-                                           srcmap_file=name_factory.srcmaps(
-                                               **name_keys),
+                                           srcmap_file=name_factory.srcmaps(**name_keys),
                                            source_names=sources)
             comp_dict = dict(outsrcmap=outsrcmap,
                              ccube=ccube,
@@ -136,13 +155,14 @@ class ModelInfo(object):
             comp_roi_source_info = {}
             for comp_name, model_comp in sub_comp_sources.items():
                 comp_info = model_comp.info
-                #comps = comp_info.components
+                comps = comp_info.components
                 if comp_info.selection_dependent:
                     key = comp.make_key('{ebin_name}_{evtype_name}')
                 elif comp_info.moving:
                     key = zcut
+                info_clone = comp_info.components[key].clone_and_merge_sub(key)
                 comp_roi_source_info[comp_name] =\
-                    ModelComponent(info=comp_info.clone_and_merge_sub(key),
+                    ModelComponent(info=info_clone,
                                    spectrum=model_comp.spectrum)
 
             # Build the xml for the component
@@ -217,7 +237,7 @@ class ModelManager(object):
         diffuse_yaml : str
             Name of the yaml file with the library of diffuse component definitions
         catalog_yaml : str
-            Name of the yaml file with the library of catalog split definitions
+            Name of the yaml file width the library of catalog split definitions
         binning_yaml : str
             Name of the yaml file with the binning definitions
         """
@@ -226,9 +246,9 @@ class ModelManager(object):
         components_dict = Component.build_from_yamlfile(binning_yaml)
         diffuse_ret_dict = make_diffuse_comp_info_dict(GalpropMapManager=self._gmm,
                                                        DiffuseModelManager=self._dmm,
-                                                       diffuse=diffuse_yaml,
+                                                       library=diffuse_yaml,
                                                        components=components_dict)
-        catalog_ret_dict = make_catalog_comp_dict(sources=catalog_yaml,
+        catalog_ret_dict = make_catalog_comp_dict(library=catalog_yaml,
                                                   CatalogSourceManager=self._csm)
         ret_dict.update(diffuse_ret_dict['comp_info_dict'])
         ret_dict.update(catalog_ret_dict['comp_info_dict'])
@@ -253,8 +273,10 @@ class ModelManager(object):
         self._spec_lib.update(yaml.safe_load(open(spec_model_yaml)))
         for source, source_info in sources.items():
             model_type = source_info.get('model_type', None)
+            par_overrides = source_info.get('par_overides', None)
             version = source_info['version']
             spec_type = source_info['SpectrumType']
+            edisp_disable = source_info.get('edisp_disable', False)
             sourcekey = "%s_%s" % (source, version)
             if model_type == 'galprop_rings':
                 comp_info_dict = self.gmm.diffuse_comp_info_dicts(version)
@@ -263,7 +285,9 @@ class ModelManager(object):
                     model_comp = ModelComponent(info=comp_info,
                                                 spectrum=\
                                                     self._spec_lib[spec_type.get(comp_key,
-                                                                                 def_spec_type)])
+                                                                                 def_spec_type)],
+                                                par_overrides=par_overrides,
+                                                edisp_disable=edisp_disable)
                     components[comp_key] = model_comp
             elif model_type == 'Catalog':
                 comp_info_dict = self.csm.split_comp_info_dict(source, version)
@@ -272,12 +296,16 @@ class ModelManager(object):
                     model_comp = ModelComponent(info=comp_info,
                                                 spectrum=\
                                                     self._spec_lib[spec_type.get(comp_key,
-                                                                                 def_spec_type)])
+                                                                                 def_spec_type)],
+                                                par_overrides=par_overrides,
+                                                edisp_disable=edisp_disable)
                     components[comp_key] = model_comp
             else:
                 comp_info = self.dmm.diffuse_comp_info(sourcekey)
                 model_comp = ModelComponent(info=comp_info,
-                                            spectrum=self._spec_lib[spec_type])
+                                            spectrum=self._spec_lib[spec_type],
+                                            par_overrides=par_overrides,
+                                            edisp_disable=edisp_disable)
                 components[sourcekey] = model_comp
         ret_val = ModelInfo(model_name=modelkey,
                             model_components=components)
@@ -345,18 +373,20 @@ class ModelManager(object):
         master_data = dict(scfile=self._name_factory.ft2file(fullpath=True),
                            cacheft1=False)
         master_binning = dict(projtype='HPX',
-                              coordsys=kwargs.get('coordsys', 'GAL'),
                               roiwidth=180.,
                               binsperdec=8,
                               hpx_ordering_scheme="RING",
                               hpx_order=hpx_order,
                               hpx_ebin=True)
-        master_fileio = dict(outdir=model_dir,
-                             logfile=os.path.join(model_dir, 'fermipy.log'))
+        #master_fileio = dict(outdir=model_dir,
+        #                     logfile=os.path.join(model_dir, 'fermipy.log'))
+        master_fileio = dict(logfile='fermipy.log')
         master_gtlike = dict(irfs=self._name_factory.irfs(**kwargs),
-                             edisp_disable=['isodiff', 'diffuse', 'limb'])
+                             edisp_disable=model_info.edisp_disable_list(),
+                             use_external_srcmap=True)
         master_selection = dict(glat=0., glon=0., radius=180.)
         master_model = dict(catalogs=[master_xml_mdl])
+        master_plotting = dict(label_ts_threshold=1e9)
 
         master = dict(data=master_data,
                       binning=master_binning,
@@ -364,6 +394,7 @@ class ModelManager(object):
                       selection=master_selection,
                       gtlike=master_gtlike,
                       model=master_model,
+                      plotting=master_plotting,
                       components=[])
 
         fermipy_dict = master
@@ -377,6 +408,8 @@ class ModelManager(object):
             name_keys = dict(zcut=zcut,
                              modelkey=modelkey,
                              component=compkey,
+                             mktime='none',
+                             coordsys=comp.coordsys,
                              fullpath=True)
             comp_data = dict(ltcube=self._name_factory.ltcube(**name_keys))
             comp_selection = dict(logemin=comp.log_emin,
@@ -384,9 +417,11 @@ class ModelManager(object):
                                   zmax=comp.zmax,
                                   evtype=comp.evtype)
             comp_binning = dict(enumbins=comp.enumbins,
-                                hpx_order=min(comp.hpx_order, hpx_order))
+                                hpx_order=min(comp.hpx_order, hpx_order),
+                                coordsys=comp.coordsys)
             comp_gtlike = dict(srcmap=self._name_factory.merged_srcmaps(**name_keys),
-                               bexpmap=self._name_factory.bexpcube(**name_keys))
+                               bexpmap=self._name_factory.bexpcube(**name_keys),
+                               use_external_srcmap=True)
             #comp_roi_source_info = {}
 
             comp_xml_mdl = os.path.basename(self._name_factory.comp_srcmdl_xml(modelkey=modelkey,
@@ -425,14 +460,14 @@ class ModelManager(object):
 def make_library(**kwargs):
     """Build and return a ModelManager object and fill the associated model library
     """
-    diffuse_yaml = kwargs.pop('diffuse', 'config/diffuse_components.yaml')
-    catalog_yaml = kwargs.pop('sources', 'config/catalog_components.yaml')
+    library_yaml = kwargs.pop('library', 'models/library.yaml')
     comp_yaml = kwargs.pop('comp', 'config/binning.yaml')
     basedir = kwargs.pop('basedir', 
                          '/nfs/slac/kipac/fs1/u/dmcat/data/flight/diffuse_fitting')
 
     model_man = kwargs.get('ModelManager', ModelManager(basedir=basedir))
-    model_comp_dict = model_man.make_library(diffuse_yaml, catalog_yaml, comp_yaml)
+
+    model_comp_dict = model_man.make_library(library_yaml, library_yaml, comp_yaml)
 
     return dict(model_comp_dict=model_comp_dict,
                 ModelManager=model_man)

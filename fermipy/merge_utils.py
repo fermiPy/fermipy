@@ -7,7 +7,8 @@ import sys
 import argparse
 import numpy as np
 from astropy.io import fits
-
+from fermipy.hpx_utils import HPX
+from fermipy.skymap import HpxMap
 
 def update_null_primary(hdu_in, hdu=None):
     """ 'Update' a null primary HDU
@@ -31,7 +32,7 @@ def update_primary(hdu_in, hdu=None):
     if hdu is None:
         hdu = fits.PrimaryHDU(data=hdu_in.data, header=hdu_in.header)
     else:
-        hdu.data += hdu_in.data        
+        hdu.data += hdu_in.data
     return hdu
 
 
@@ -140,19 +141,22 @@ def extract_gti_data(hdu_in):
     return (data, exposure, tstop)
 
 
-def update_hpx_skymap_allsky(hdu_in, hdu):
+def update_hpx_skymap_allsky(map_in, map_out):
     """ 'Update' a HEALPix skymap
 
-    This checks hdu exists and creates it from hdu_in if it does not.
-    If hdu does exist, this adds the data in hdu_in to hdu
+    This checks map_out exists and creates it from map_in if it does not.
+    If map_out does exist, this adds the data in map_in to map_out
     """
-    if hdu is None:
-        hdu = fits.BinTableHDU(
-            data=hdu_in.data, header=hdu_in.header, name=hdu_in.name)
+    if map_out is None:
+        in_hpx = map_in.hpx
+        out_hpx = HPX.create_hpx(in_hpx.nside, in_hpx.nest, in_hpx.coordsys,
+                                 None, in_hpx.ebins, None, in_hpx.conv, None)
+        data_out = map_in.expanded_counts_map()
+        print(data_out.shape, data_out.sum())
+        map_out = HpxMap(data_out, out_hpx)
     else:
-        for col in hdu.columns:
-            hdu.data[col.name] += hdu_in.data[col.name]
-    return hdu
+        map_out.data += map_in.expanded_counts_map()
+    return map_out
 
 
 def merge_wcs_counts_cubes(filelist):
@@ -209,13 +213,18 @@ def merge_hpx_counts_cubes(filelist):
     nfiles = len(filelist)
     ngti = np.zeros(nfiles, int)
 
+    out_name = None
+
     for i, filename in enumerate(filelist):
         fin = fits.open(filename)
         sys.stdout.write('.')
         sys.stdout.flush()
         if i == 0:
             out_prim = update_null_primary(fin[0], out_prim)
-        out_skymap = update_hpx_skymap_allsky(fin[1], out_skymap)
+            out_name = fin[1].name
+
+        map_in = HpxMap.create_from_hdulist(fin)
+        out_skymap = update_hpx_skymap_allsky(map_in, out_skymap)
         if i == 0:
             try:
                 out_ebounds = update_ebounds(fin["EBOUNDS"], out_ebounds)
@@ -239,7 +248,9 @@ def merge_hpx_counts_cubes(filelist):
         else:
             fin.close()
 
-    hdulist = [out_prim, out_skymap, out_ebounds]
+    out_skymap_hdu = out_skymap.create_image_hdu("SKYMAP")
+
+    hdulist = [out_prim, out_skymap_hdu, out_ebounds]
 
     if len(datalist_gti) > 0:
         out_gti = merge_all_gti_data(datalist_gti, ngti, first['GTI'])

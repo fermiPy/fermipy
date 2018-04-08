@@ -46,7 +46,7 @@ ENERGY_FLUX_UNIT = ':math:`\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}`'
 common = {
     'multithread': (False, 'Split the calculation across number of processes set by nthread option.', bool),
     'nthread': (None, 'Number of processes to create when multithread is True.  If None then one process '
-                 'will be created for each available core.', int),    
+                'will be created for each available core.', int),
     'model': (None, 'Dictionary defining the spatial/spectral properties of the test source. '
               'If model is None the test source will be a PointSource with an Index 2 power-law spectrum.', dict),
     'free_background': (False, 'Leave background parameters free when performing the fit. If True then any '
@@ -57,6 +57,7 @@ common = {
     'free_radius': (None, 'Free normalizations of background sources within this angular distance in degrees '
                     'from the source of interest.  If None then no sources will be freed.', float),
     'make_plots': (False, 'Generate diagnostic plots.', bool),
+    'use_weights' : (False, 'Used weighted version of maps in making plots.', bool),
     'write_fits': (True, 'Write the output to a FITS file.', bool),
     'write_npy': (True, 'Write the output dictionary to a numpy file.', bool),
     'loge_bounds':  (None, 'Restrict the analysis to an energy range (emin,emax) in '
@@ -157,8 +158,8 @@ gtlike = {
     'bexpmap': (None, '', str),
     'bexpmap_roi': (None, '', str),
     'srcmap_base': (None, 'Set the baseline source maps file.  This will be used to generate a scaled source map.', str),
-    'bexpmap_base': (None, 'Set the basline all-sky expoure map file.  This will be used to generate a scaled source map.', str),    
-    'bexpmap_roi_base': (None, 'Set the basline ROI expoure map file.  This will be used to generate a scaled source map.', str),    
+    'bexpmap_base': (None, 'Set the basline all-sky expoure map file.  This will be used to generate a scaled source map.', str),
+    'bexpmap_roi_base': (None, 'Set the basline ROI expoure map file.  This will be used to generate a scaled source map.', str),
     'use_external_srcmap': (False, 'Use an external precomputed source map file.', bool),
     'use_scaled_srcmap': (False, 'Generate source map by scaling an external srcmap file.', bool),
     'wmap': (None, 'Likelihood weights map.', str),
@@ -288,6 +289,7 @@ residmap = {
                 'computing the residual map.', list),
     'loge_bounds': common['loge_bounds'],
     'make_plots': common['make_plots'],
+    'use_weights': common['use_weights'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
 }
@@ -358,7 +360,7 @@ lightcurve = {
     'use_scaled_srcmap': (False, 'Generate approximate source maps for each time bin by scaling '
                           'the current source maps by the exposure ratio with respect to that time bin.', bool),
     'save_bin_data': (True, 'Save analysis directories for individual time bins.  If False then only '
-                      'the analysis results table will be saved.', bool),    
+                      'the analysis results table will be saved.', bool),
     'binsz': (86400.0, 'Set the lightcurve bin size in seconds.', float),
     'shape_ts_threshold': (16.0, 'Set the TS threshold at which shape parameters of '
                            'sources will be freed.  If a source is detected with TS less than this '
@@ -389,12 +391,8 @@ lightcurve_output = OrderedDict((
     ('name', (None, 'Name of Source'', ', str)),
     ('tmin', (None, 'Lower edge of time bin in MET.', np.ndarray)),
     ('tmax', (None, 'Upper edge of time bin in MET.', np.ndarray)),
-    ('model', (None, 'Best fit model to the source', str)),
-    ('ts', (None, 'Test Statistic', np.ndarray)),
-    ('retCode', (None, 'Did the likelihood fit converge? 0 if yes, anything else means no',
-                 np.ndarray)),
-    ('npred', (None, 'Number of Predicted photons in time bin from source',
-               np.ndarray)),
+    ('fit_success', (None, 'Did the likelihood fit converge? True if yes.',
+                     np.ndarray)),
     ('config', ({}, 'Copy of the input configuration to this method.', dict)),
     ('ts_var', (None, r'TS of variability. Should be distributed as :math:`\chi^2` with '
                 ':math:`n-1` degrees of freedom, where :math:`n` is the number of time bins.', float)),
@@ -543,7 +541,7 @@ extension = {
                      'by linearly interpolating the fractional correction factors f in log(E).  The '
                      'corrected PSF is given by P\'(x;E) = P(x/(1+f(E));E) where x is the angular separation.',
                      tuple),
-    'make_tsmap' : (True, 'Make a TS map for the source of interest.', bool), 
+    'make_tsmap': (True, 'Make a TS map for the source of interest.', bool),
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
@@ -582,7 +580,8 @@ localize_output = OrderedDict((
     ('ypix', (np.nan, 'Latitude pixel coordinate of best-fit position.', float)),
     ('deltax', (np.nan, 'Longitude offset from old position (deg).', float)),
     ('deltay', (np.nan, 'Latitude offset from old position (deg).', float)),
-    ('skydir', (None, '', astropy.coordinates.SkyCoord, '`~astropy.coordinates.SkyCoord`')),
+    ('skydir', (None, '', astropy.coordinates.SkyCoord,
+                '`~astropy.coordinates.SkyCoord`')),
     ('ra_preloc', (np.nan, 'Right ascension of pre-localization position (deg).', float)),
     ('dec_preloc', (np.nan, 'Declination of pre-localization position (deg).', float)),
     ('glon_preloc', (np.nan,
@@ -670,24 +669,24 @@ extension_output = OrderedDict((
     # Extension vs. Energy
     ('ebin_e_min', (None, '', np.ndarray)),
     ('ebin_e_ctr', (None, '', np.ndarray)),
-    ('ebin_e_max', (None, '', np.ndarray)),    
+    ('ebin_e_max', (None, '', np.ndarray)),
     ('ebin_ext', (None, 'Best-fit extension as measured in each energy bin (intrinsic 68% containment radius) (deg).',
                   np.ndarray)),
     ('ebin_ext_err', (None,
                       'Symmetric (1-sigma) error on best-fit extension in each energy bin (deg).',
                       np.ndarray)),
     ('ebin_ext_err_hi', (None,
-                      'Upper (1-sigma) error on best-fit extension in each energy bin (deg).',
-                      np.ndarray)),
+                         'Upper (1-sigma) error on best-fit extension in each energy bin (deg).',
+                         np.ndarray)),
     ('ebin_ext_err_lo', (None,
-                      'Lower (1-sigma) error on best-fit extension in each energy bin (deg).',
-                      np.ndarray)),
+                         'Lower (1-sigma) error on best-fit extension in each energy bin (deg).',
+                         np.ndarray)),
     ('ebin_ext_ul95', (None,
-                      '95% CL upper limit on best-fit extension in each energy bin (deg).',
-                      np.ndarray)),
+                       '95% CL upper limit on best-fit extension in each energy bin (deg).',
+                       np.ndarray)),
     ('ebin_ts_ext', (None,
-                      'Test statistic for extension hypothesis in each energy bin.',
-                      np.ndarray)),
+                     'Test statistic for extension hypothesis in each energy bin.',
+                     np.ndarray)),
     ('ebin_dloglike', (None, 'Delta-log-likelihood values for scan over the spatial extension in each energy bin.',
                        np.ndarray)),
     ('ebin_loglike', (None, 'Log-likelihood values for scan over the spatial extension in each energy bin.',
@@ -697,7 +696,7 @@ extension_output = OrderedDict((
                             np.ndarray)),
     ('ebin_loglike_ext', (None, 'Log-Likelihood value of the best-fit extended source model in each energy bin.',
                           np.ndarray)),
-    
+
     # Position
     ('ra', localize_output['ra']),
     ('dec', localize_output['dec']),
@@ -740,7 +739,7 @@ plotting = {
     'figsize': ([8.0, 6.0], 'Set the default figure size.', list),
     'label_ts_threshold':
         (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),
-    'interactive' : (False, 'Enable interactive mode.  If True then plots will be drawn after each plotting command.', bool),
+    'interactive': (False, 'Enable interactive mode.  If True then plots will be drawn after each plotting command.', bool),
 }
 
 # Source dictionary
@@ -763,6 +762,8 @@ source_meta_output = OrderedDict((
     ('correlation', ({}, 'Dictionary of correlation coefficients.', dict)),
     ('model_counts', (None, 'Vector of predicted counts for this source in each analysis energy bin.',
                       np.ndarray)),
+    ('model_counts_wt', (None, 'Vector of predicted counts for this source in each analysis energy bin.',
+                         np.ndarray)),
     ('sed', (None, 'Output of SED analysis.  See :ref:`sed` for more information.', dict)),
 ))
 
@@ -785,7 +786,7 @@ source_pos_output = OrderedDict((
     ('pos_gal_cov', localize_output['pos_gal_cov']),
     ('pos_gal_corr', localize_output['pos_gal_corr']),
     ('pos_cel_cov', localize_output['pos_cel_cov']),
-    ('pos_cel_corr', localize_output['pos_cel_corr']),    
+    ('pos_cel_corr', localize_output['pos_cel_corr']),
     ('offset_ra', (np.nan, 'Right ascension offset from ROI center in local celestial projection (deg).', float)),
     ('offset_dec', (np.nan, 'Declination offset from ROI center in local celestial projection (deg).', float)),
     ('offset_glon', (np.nan, 'Galactic longitude offset from ROI center in local galactic projection (deg).', float)),
@@ -796,7 +797,8 @@ source_pos_output = OrderedDict((
 ))
 
 source_flux_output = OrderedDict((
-    ('param_names', (np.zeros(10, dtype='S32'), 'Names of spectral parameters.', np.ndarray)),
+    ('param_names', (np.zeros(10, dtype='S32'),
+                     'Names of spectral parameters.', np.ndarray)),
     ('param_values', (np.empty(10, dtype=float) * np.nan,
                       'Spectral parameter values.', np.ndarray)),
     ('param_errors', (np.empty(10, dtype=float) * np.nan,
@@ -814,6 +816,7 @@ source_flux_output = OrderedDict((
     ('norm_scan', (np.array(
         [np.nan]), 'Normalization parameters values for scan of source normalization.', np.ndarray)),
     ('npred', (np.nan, 'Number of predicted counts from this source integrated over the analysis energy range.', float)),
+    ('npred_wt', (np.nan, 'Number of predicted counts from this source integrated over the analysis energy range.', float)),
     ('pivot_energy', (np.nan, 'Decorrelation energy in MeV.', float)),
     ('flux', (np.nan, 'Photon flux (%s) integrated over analysis energy range' % FLUX_UNIT,
               float)),

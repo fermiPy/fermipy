@@ -9,13 +9,11 @@ diffuse = {
     'comp': (None, 'Path to yaml file defining binning.', str),
     'data': (None, 'Path to yaml file defining dataset.', str),
     'ft1file' : ('P8_P302_8years_source_zmax105.lst', 'Path to list of input FT1 files', str),
-    'diffuse': (None, 'Path to yaml file defining diffuse components.', str),
-    'sources': (None, 'Path to yaml file defining catalog components.', str),
+    'library': (None, 'Path to yaml file defining model components.', str),
+    'models': (None, 'Path to yaml file defining models.', str),
     'hpx_order_ccube': (9, 'Maximum HEALPIX order for binning counts data.', int),
     'hpx_order_expcube': (6, 'Maximum HEALPIX order for exposure cubes.', int),
     'hpx_order_fitting': (7, 'Maximum HEALPIX order for model fitting.', int),
-    'coordsys': ('GAL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
-    'irf_ver': ('V6', 'Version of IRFs to use.', str),
     'make_xml' : (True, 'Make XML files.', bool),
     'dry_run' : (False, 'Print commands but do not run them', bool),
     }
@@ -28,8 +26,7 @@ residual_cr = {
     'ft2file' : ('ft2_files/ft2_8years_moon.lst', 'Path to FT2 file', str),
     'hpx_order_binning': (6, 'Maximum HEALPIX order for binning counts data.', int),
     'hpx_order_fitting' : (4, 'HEALPIX order for analysis', int),
-    'coordsys' : ('GAL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
-    'irf_ver': ('V6', 'Version of IRFs to use.', str),
+    'scratch' : (None, 'Path to scratch area.', str),
     'dry_run' : (False, 'Print commands but do not run them', bool),
     'full_output' : (False, 'Include diagnostic output', bool),
     }
@@ -38,7 +35,6 @@ residual_cr = {
 sun_moon = {
     'binning_yaml' : (None, 'Path to yaml file defining binning.', str),
     'dataset_yaml' : (None, 'Path to yaml file defining dataset.', str),
-    'irf_ver': ('V6', 'Version of IRFs to use.', str),
     'sourcekeys' : (None, "Keys for sources to make template for", list),
     }
 
@@ -52,7 +48,6 @@ gtopts = {
     'bexpmap' : (None, 'Input binned exposure map file', str),
     'srcmdl' : (None, 'Input source model xml file', str),
     'outfile' : (None, 'Output file', str),
-    'coordsys' : ('GAL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
     'hpx_order': (6, 'HEALPIX order parameter', int),
     }
 

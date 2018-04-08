@@ -112,9 +112,9 @@ class ExtensionFit(object):
         sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
 
         if kwargs['psf_scale_fn']:
-            psf_scale_fn = lambda t: 1.0 + np.interp(np.log10(t),
-                                                     kwargs['psf_scale_fn'][0],
-                                                     kwargs['psf_scale_fn'][1])
+            def psf_scale_fn(t): return 1.0 + np.interp(np.log10(t),
+                                                        kwargs['psf_scale_fn'][0],
+                                                        kwargs['psf_scale_fn'][1])
         else:
             psf_scale_fn = None
 
@@ -337,14 +337,14 @@ class ExtensionFit(object):
         for k, v in sorted(maps.items()):
             if v is None:
                 continue
-            hdu_images += [v.create_image_hdu(k)]
+            hdu_images += [v.make_hdu(k)]
 
         tab = fits_utils.dict_to_table(ext)
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'EXT_DATA'
 
         if ext.get('tsmap'):
-            hdus = [ext['tsmap'].create_primary_hdu()]
+            hdus = [ext['tsmap'].make_hdu(hdu='PRIMARY')]
         else:
             hdus = [fits.PrimaryHDU()]
 
@@ -589,12 +589,12 @@ class ExtensionFit(object):
                                               bounds=[10**-3.0, 10**0.5])
 
         self.logger.debug('width: %s', width)
-        self.logger.debug('loglike: %s', loglike-np.max(loglike))
+        self.logger.debug('loglike: %s', loglike - np.max(loglike))
         self.logger.debug('ul_data:\n %s', pprint.pformat(ul_data))
         self.logger.debug('width2: %s', width2)
-        self.logger.debug('loglike2: %s', loglike2-np.max(loglike2))
+        self.logger.debug('loglike2: %s', loglike2 - np.max(loglike2))
         self.logger.debug('ul_data2:\n %s', pprint.pformat(ul_data2))
-        
+
         return MutableNamedTuple(
             ext=max(ul_data2['x0'], 10**-2.5),
             ext_ul95=ul_data2['ul'],

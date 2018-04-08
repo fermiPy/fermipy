@@ -1,6 +1,7 @@
 ``bin_index``	2.0	Spectral index that will be use when fitting the energy distribution within an energy bin.
 ``cov_scale``	3.0	Scale factor that sets the strength of the prior on nuisance parameters that are free.  Setting this to None disables the prior.
 ``free_background``	False	Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.
+``free_pars``	None	Set the parameters of the source of interest that will be freed when performing the global fit.  By default all parameters will be freed.
 ``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
 ``make_plots``	False	Generate diagnostic plots.
 ``ul_confidence``	0.95	Confidence level for flux upper limit.

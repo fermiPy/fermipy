@@ -175,5 +175,6 @@ def get_git_version(abbrev=4):
     # Finally, return the current version.
     return version
 
+
 if __name__ == "__main__":
     print(get_git_version())

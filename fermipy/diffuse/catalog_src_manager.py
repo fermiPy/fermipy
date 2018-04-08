@@ -207,7 +207,10 @@ class CatalogSourceManager(object):
         catalog_ret_dict = {}
         split_ret_dict = {}
         for key, value in catalog_sources.items():
-            #model_type = value['model_type']
+            if value is None:
+                continue
+            if value['model_type'] != 'catalog':
+                continue
             versions = value['versions']
             for version in versions:
                 ver_key = "%s_%s" % (key, version)
@@ -220,7 +223,7 @@ class CatalogSourceManager(object):
 
                 try:
                     all_sources = [x.strip() for x in full_cat_info.catalog_table[
-                            'Source_Name'].tolist()]
+                            'Source_Name'].astype(str).tolist()]
                 except KeyError:
                     print(full_cat_info.catalog_table.colnames)
                 used_sources = []
@@ -258,12 +261,12 @@ class CatalogSourceManager(object):
 def make_catalog_comp_dict(**kwargs):
     """Build and return the information about the catalog components
     """
-    source_yamlfile = kwargs.pop('sources', 'config/catalog_components.yaml')
+    library_yamlfile = kwargs.pop('library', 'models/library.yaml')
     csm = kwargs.pop('CatalogSourceManager', CatalogSourceManager(**kwargs))
-    if source_yamlfile is None or source_yamlfile == 'None':
+    if library_yamlfile is None or library_yamlfile == 'None':
         yamldict = {}
     else:
-        yamldict = yaml.safe_load(open(source_yamlfile))
+        yamldict = yaml.safe_load(open(library_yamlfile))
     catalog_info_dict, comp_info_dict = csm.make_catalog_comp_info_dict(yamldict)
     return dict(catalog_info_dict=catalog_info_dict,
                 comp_info_dict=comp_info_dict,
@@ -275,7 +278,7 @@ class CatalogComponentChain(Chain):
     """
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
-                           sources=diffuse_defaults.diffuse['sources'],
+                           library=diffuse_defaults.diffuse['library'],
                            make_xml=(False, "Make XML files for diffuse components", bool),
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 
