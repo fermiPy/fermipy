@@ -89,7 +89,8 @@ def main():
                         help='Set the name of the job execution script.  A '
                              'script with this name must be located in each '
                              'analysis subdirectory.')
-
+    parser.add_argument('--ncpu', default=1, type=int,
+                        help='Set the number of CPUs that are used for each job.')
     parser.add_argument('dirs', nargs='+', default=None,
                         help='List of directories in which the analysis will '
                              'be run.')
@@ -101,6 +102,7 @@ def main():
                         args.overwrite, args.max_job_age)
 
     lsf_opts = {'W': args.time,
+                'n': args.ncpu,
                 'R': 'bullet,hequ,kiso && scratch > 5'}
 
     if args.resources is not None:
