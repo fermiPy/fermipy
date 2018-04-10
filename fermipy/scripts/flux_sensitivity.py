@@ -63,7 +63,7 @@ def main(args=None):
                         help='Galactic latitude in deg at which the sensitivity will be evaluated.  '
                         'Also sets the center of the sensitivity map for the `wcs` map type.')
     parser.add_argument('--sedshape', default='PowerLaw', type=str,
-                        choices=['PowerLaw', 'PLExpCutoff', 'LogParabola'], help='SED shape')
+                        choices=['PowerLaw', 'PLSuperExpCutoff', 'LogParabola'], help='SED shape')
     parser.add_argument('--index', default=2.0, type=float,
                         help='Source power-law index.')
     parser.add_argument('--cutoff', default=1e3, type=float,
