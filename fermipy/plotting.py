@@ -312,7 +312,7 @@ class ImagePlotter(object):
         im.set_cmap(colormap)
 
         if kwargs_contour['levels']:
-            cs = ax.contour(data.T, **kwargs_contour)
+            cs = ax.contour(data, **kwargs_contour)
             cs.levels = ['%.0f' % val for val in cs.levels]
             plt.clabel(cs, inline=1, fontsize=8)
 
@@ -1007,7 +1007,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
         # make and draw histogram
         fig, ax = plt.subplots(figsize=figsize)
         nBins = np.linspace(-6, 6, 121)
-        #import pdb; pdb.set_trace()
         data = np.nan_to_num(sigma_hist_data)
         # find best fit parameters
         mu, sigma = norm.fit(data.flatten())
