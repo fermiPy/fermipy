@@ -107,8 +107,10 @@ def add_argument(parser, dest, info):
     """ Add an argument to an `argparse.ArgumentParser` object """
     default, helpstr, typeinfo = info
 
-    if typeinfo == list:
-        parser.add_argument('%s' % dest, nargs='+', default=None, help=helpstr)
+    if dest=='args':
+        parser.add_argument(args, nargs='+', default=None, help=helpstr)
+    elif typeinfo == list:
+        parser.add_argument('--%s' % dest, action='append', help=helpstr)
     elif typeinfo == bool:
         parser.add_argument('--%s' % dest, action='store_true', help=helpstr)
     else:
@@ -420,10 +422,15 @@ class Link(object):
         
         for key, value in format_dict.items():
             # protect whitespace
-            if isinstance(value, list) and key == 'args':
+            if isinstance(value, list):
                 outstr = ""
+                if key == 'args':
+                    outkey = ""
+                else:
+                    outkey = "--%s "
                 for lval in list:
                     outstr += ' '
+                    outstr += outkey
                     outstr += lval
                 format_dict[key] = '"%s"'%outstr
             elif isinstance(value, str) and value.find(' ') >= 0 and key != 'args':
@@ -630,10 +637,10 @@ class Link(object):
                 if opt_val is None:
                     continue
                 elif isinstance(opt_val, str):
-                    arg_string += ' %s' % opt_val
+                    com_out += ' --%s %s' % (key, opt_val)
                 elif isinstance(opt_val, list):
                     for arg_val in opt_val:
-                        arg_string += ' %s' % arg_val
+                        com_out += ' --%s %s' % (key, arg_val)
             else:
                 com_out += ' --%s {%s}' % (key, key)
         com_out += flag_string
