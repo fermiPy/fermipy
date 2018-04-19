@@ -20,8 +20,7 @@ import astropy.io.fits as pf
 from fermipy.utils import init_matplotlib_backend
 init_matplotlib_backend()
 
-from fermipy.hpx_utils import HPX, HpxToWcsMapping
-from fermipy.skymap import HpxMap
+from gammapy.maps import Map
 
 from fermipy.plotting import ImagePlotter
 import matplotlib.pyplot as plt
@@ -56,24 +55,28 @@ def main():
     parser.add_argument("--zmax", type=float, default=None,
                         help="Maximum z-axis value")
 
+    parser.add_argument("--cbar", action='store_true', default=False, 
+                        help="draw color bar")
+
     parser.add_argument("-o", "--output", type=argparse.FileType('w'),
                         help="Output file.  Leave blank for interactive.")
 
     # Parse the command line
     args = parser.parse_args(sys.argv[1:])
 
-    # Get the model
-    f = pf.open(args.input.name)
-    # We need a better check
-    maptype = "None"
-
-    model_hdu = f[args.extension]
-
-    hpxmap = HpxMap.create_from_hdulist(f, hdu=args.extension)
+    hpxmap = Map.read(args.input.name, hdu=args.extension)
     outdata = []
 
+    fig, ax, im = hpxmap.plot(norm=args.zscale, vmin=args.zmin, vmax=args.zmax)
+    outdata.append(fig)
+
+    if args.cbar:
+        cbar = plt.colorbar(im, orientation='horizontal',shrink=0.7,pad=0.15, fraction=0.05)
+
+
+    """
     if args.ebin == "ALL":
-        wcsproj = hpxmap.hpx.make_wcs(
+        wcsproj = hpxmap.geom.make_wcs(
             naxis=2, proj='MOL', energies=None, oversample=2)
         mapping = HpxToWcsMapping(hpxmap.hpx, wcsproj)
 
@@ -97,6 +100,7 @@ def main():
             outdata.append((im, ax))
         except:
             raise ValueError("--ebin argument must be an integer or 'ALL'")
+    """
 
     if args.output is None:
         plt.show()
@@ -110,4 +114,5 @@ def main():
 
 
 if __name__ == "__main__":
+    
     main()

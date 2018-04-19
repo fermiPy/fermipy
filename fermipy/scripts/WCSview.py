@@ -20,7 +20,7 @@ import astropy.io.fits as pf
 from fermipy.utils import init_matplotlib_backend
 init_matplotlib_backend()
 
-from fermipy.skymap import Map
+from gammapy.maps import Map
 
 from fermipy.plotting import ImagePlotter
 import matplotlib.pyplot as plt
@@ -63,31 +63,25 @@ def main():
     args = parser.parse_args(sys.argv[1:])
 
     # Get the map 
-    themap = Map.create_from_fits(args.input.name)
-
-    if args.extension is None:
-        counts = themap.counts
-    else:
-        fin = pf.open(args.input.name)
-        counts = fin[args.extension].data
+    themap = Map.read(args.input.name)
 
     outdata = []
 
     if args.ebin == "ALL":
         for i,data in enumerate(counts):
-            ip =  ImagePlotter(data=data.T, proj=themap.wcs.dropaxis(2))
+            ip =  ImagePlotter(themap)
             fig = plt.figure(i)
             im,ax = ip.plot(zscale=args.zscale, vmin=args.zmin, vmax=args.zmax)
             outdata.append(fig)
 
     elif args.ebin is None:
-        ip =  ImagePlotter(data=counts.sum(0).T, proj=themap.wcs.dropaxis(2))
+        ip =  ImagePlotter(themap.sum_over_axes())
         im,ax = ip.plot(zscale=args.zscale, vmin=args.zmin, vmax=args.zmax)
         outdata.append((im,ax))        
     else:
         try:
             ibin = int(args.ebin)
-            ip =  ImagePlotter(data=counts[ibin].T, proj=themap.wcs.dropaxis(2))
+            ip =  ImagePlotter(themap)
             im,ax = ip.plot(zscale=args.zscale, vmin=args.zmin, vmax=args.zmax)
             outdata.append((im,ax))        
         except:
