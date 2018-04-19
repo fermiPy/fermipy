@@ -549,6 +549,22 @@ class DMFitFunction(SpectralFunction):
         11:  ["dd-bar", "dd"],
         12:  ["ss-bar", "ss"]}
 
+    channel_shortname_mapping = {
+        1: "ee",
+        2: "mumu",
+        3: "tautau",
+        4: "bb",
+        5: "tt",
+        6: "gg",
+        7: "ww",
+        8: "zz",
+        9: "cc",
+        10: "uu",
+        11: "dd",
+        12: "ss"}
+
+   
+
     channel_rev_map = {vv: k for k, v in channel_name_mapping.items()
                        for vv in v}
 
