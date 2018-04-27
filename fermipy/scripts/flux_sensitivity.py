@@ -63,7 +63,7 @@ def main(args=None):
                         help='Galactic latitude in deg at which the sensitivity will be evaluated.  '
                         'Also sets the center of the sensitivity map for the `wcs` map type.')
     parser.add_argument('--sedshape', default='PowerLaw', type=str,
-                        choices=['PowerLaw', 'PLSuperExpCutoff', 'LogParabola'], help='SED shape')
+                        choices=['PowerLaw', 'PLSuperExpCutoff', 'LogParabola', 'DM'], help='SED shape')
     parser.add_argument('--index', default=2.0, type=float,
                         help='Source power-law index.')
     parser.add_argument('--cutoff', default=1e3, type=float,
@@ -72,6 +72,11 @@ def main(args=None):
                         help='Source curvature index')
     parser.add_argument('--beta', default=0.0, type=float,
                         help='Source beta')
+    parser.add_argument('--DMmass', default=100.0, type=float,
+                        help='DM mass')
+    parser.add_argument('--DMchannel', default='bb', type=str,
+                        choices=['ee', 'mumu', 'tautau', 'bb', 'tt', 'gluons', 'ww', 'zz', 'cc', 'uu', 'dd', 'ss'], 
+                        help='DM channel')
     parser.add_argument('--emin', default=10**1.5, type=float,
                         help='Minimum energy in MeV.')
     parser.add_argument('--emax', default=10**6.0, type=float,
@@ -112,6 +117,8 @@ def run_flux_sensitivity(**kwargs):
     cutoff = kwargs.get('cutoff', 1e3)
     curvindex = kwargs.get('curvindex', 1.0)
     beta = kwargs.get('beta', 0.0)
+    dmmass = kwargs.get('DMmass', 100.0)
+    dmchannel = kwargs.get('DMchannel', 'bb')
     emin = kwargs.get('emin', 10**1.5)
     emax = kwargs.get('emax', 10**6.0)
     nbin = kwargs.get('nbin', 18)
@@ -145,6 +152,8 @@ def run_flux_sensitivity(**kwargs):
             [1E-13, -index, cutoff, curvindex], scale=1E3)
     elif sedshape == 'LogParabola':
         fn = spectrum.LogParabola([1E-13, -index, beta], scale=1E3)
+    elif sedshape == 'DM':
+        fn = spectrum.DMFitFunction([1E-26, dmmass], chan=dmchannel)
 
     log_ebins = np.linspace(np.log10(emin),
                             np.log10(emax), nbin + 1)
