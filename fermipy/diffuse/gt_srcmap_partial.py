@@ -17,9 +17,10 @@ import pyLikelihood as pyLike
 
 from fermipy import utils
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.chain import add_argument, Link
+from fermipy.jobs.link import add_argument, Link
 from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.lsf_impl import  make_nfs_path, get_lsf_default_args, LSF_Interface
+from fermipy.jobs.slac_impl import  make_nfs_path, get_slac_default_args, Slac_Interface
+
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.diffuse_src_manager import make_diffuse_comp_info_dict
@@ -31,13 +32,18 @@ NAME_FACTORY = NameFactory()
 HPX_ORDER_TO_KSTEP = {5: -1, 6: -1, 7: -1, 8: 2, 9: 1}
 
 
-class GtSrcmapPartial(Link):
+class GtSrcmapsDiffuse(Link):
     """Small class to create srcmaps for only once source in a model,
     and optionally for only some of the energy layers.
 
     This is useful for parallelizing source map creation.
     """
     NULL_MODEL = 'srcmdls/null.xml'
+ 
+    appname = 'fermipy-srcmaps-diffuse'
+    linkname_default = 'srcmaps-diffuse'
+    usage = '%s [options]' %(appname)
+    description = "Run gtsrcmaps for one or more energy planes for a single source"
 
     default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
                            expcube=diffuse_defaults.gtopts['expcube'],
@@ -50,24 +56,18 @@ class GtSrcmapPartial(Link):
                            kmax=(-1, 'Maximum Energy Bin', int),
                            no_psf=(False, "Do not apply PSF smearing", bool),
                            gzip=(False, 'Compress output file', bool))
+  
+    default_file_args = dict(expcube=FileFlags.input_mask,
+                             cmap=FileFlags.input_mask,
+                             bexpmap=FileFlags.input_mask,
+                             srcmdl=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
 
     def __init__(self, **kwargs):
         """C'tor
         """
-        parser = argparse.ArgumentParser(usage="fermipy-srcmaps-diffuse [options]",
-                                         description="Run gtsrcmaps for one or more energy planes for a single source")
-        
-        Link.__init__(self, kwargs.pop('linkname', 'srcmaps-diffuse'),
-                      parser=parser,
-                      appname='fermipy-srcmaps-diffuse',
-                      options=GtSrcmapPartial.default_options.copy(),
-                      file_args=dict(expcube=FileFlags.input_mask,
-                                     cmap=FileFlags.input_mask,
-                                     bexpmap=FileFlags.input_mask,
-                                     srcmdl=FileFlags.input_mask,
-                                     outfile=FileFlags.output_mask))
-  
-
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(GtSrcmapsDiffuse, self).__init__(linkname, **init_dict)
  
     def run_analysis(self, argv):
         """Run this analysis"""
@@ -85,7 +85,7 @@ class GtSrcmapPartial(Link):
         config = BinnedAnalysis.BinnedConfig(performConvolution=performConvolution)
         like = BinnedAnalysis.BinnedAnalysis(obs,
                                              optimizer='MINUIT',
-                                             srcModel=GtSrcmapPartial.NULL_MODEL,
+                                             srcModel=GtSrcmapsDiffuse.NULL_MODEL,
                                              wmap=None,
                                              config=config)
 
@@ -112,7 +112,7 @@ class GtSrcmapPartial(Link):
             os.system("gzip -9 %s" % args.outfile)
 
 
-class ConfigMaker_SrcmapPartial(ConfigMaker):
+class SrcmapsDiffuse_SG(ConfigMaker):
     """Small class to generate configurations for this script
 
     This adds the following arguments:
@@ -121,6 +121,14 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
     --library  : Diffuse model component definition yaml file'
     --make_xml : Write xml files for the individual components
     """
+    appname = 'fermipy-srcmaps-diffuse-sg'
+    usage = "%s [options]" % (appname)
+    description = "Run gtsrcmaps for diffuse sources"
+    clientclass = GtSrcmapsDiffuse
+
+    batch_args = get_slac_default_args()    
+    batch_interface = Slac_Interface(**batch_args)
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],
@@ -129,9 +137,9 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
     def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',
-                                                ConfigMaker_SrcmapPartial.default_options.copy()))
+        super(SrcmapsDiffuse_SG, self).__init__(link,
+                                                options=kwargs.get('options',
+                                                                   self.default_options.copy()))
 
     @staticmethod
     def _write_xml(xmlfile, srcs):
@@ -164,7 +172,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                                                         comp_dict.srcmdl_name,
                                                         comp_dict.model_type,
                                                         comp_dict.Spatial_Filename))
-        ConfigMaker_SrcmapPartial._write_xml(comp_dict.srcmdl_name, srcdict.values())
+        SrcmapsDiffuse_SG._write_xml(comp_dict.srcmdl_name, srcdict.values())
 
     @staticmethod
     def _make_xml_files(diffuse_comp_info_dict):
@@ -173,10 +181,10 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
         for sourcekey in sorted(diffuse_comp_info_dict.keys()):
             comp_info = diffuse_comp_info_dict[sourcekey]
             if comp_info.components is None:
-                ConfigMaker_SrcmapPartial._handle_component(sourcekey, comp_info)
+                SrcmapsDiffuse_SG._handle_component(sourcekey, comp_info)
             else:
                 for sub_comp_info in comp_info.components.values():
-                    ConfigMaker_SrcmapPartial._handle_component(sourcekey, sub_comp_info)
+                    SrcmapsDiffuse_SG._handle_component(sourcekey, sub_comp_info)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -191,7 +199,7 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
                                                basedir='.')
         diffuse_comp_info_dict = ret_dict['comp_info_dict']
         if args['make_xml']:
-            ConfigMaker_SrcmapPartial._make_xml_files(diffuse_comp_info_dict)
+            SrcmapsDiffuse_SG._make_xml_files(diffuse_comp_info_dict)
 
         for diffuse_comp_info_key in sorted(diffuse_comp_info_dict.keys()):
             diffuse_comp_info_value = diffuse_comp_info_dict[diffuse_comp_info_key]
@@ -244,46 +252,8 @@ class ConfigMaker_SrcmapPartial(ConfigMaker):
 
         return job_configs
 
-def create_link_srcmap_partial(**kwargs):
-    """Build and return a `Link` object that can invoke GtAssembleModel"""
-    gtsrcmap_partial = GtSrcmapPartial(**kwargs)
-    return gtsrcmap_partial
 
-def create_sg_srcmap_partial(**kwargs):
-    """Build and return a ScatterGather object that can invoke this script"""
-    gtsmp = GtSrcmapPartial(**kwargs)
-    link = gtsmp
-    link.linkname = kwargs.pop('linkname', link.linkname)
-    appname = kwargs.pop('appname', 'fermipy-srcmaps-diffuse-sg')
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Build source maps for diffuse model components"
-
-    config_maker = ConfigMaker_SrcmapPartial(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=link.linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
-def main_single():
-    """Entry point for command line use for single job """
-    gtsmp = GtSrcmapPartial()
-    gtsmp.run_analysis(sys.argv[1:])
-
-
-def main_batch():
-    """Entry point for command line use  for dispatching batch jobs """
-    lsf_sg = create_sg_srcmap_partial()
-    lsf_sg(sys.argv)
-
-
-if __name__ == '__main__':
-    main_single()
+def register_srcmaps_diffuse():
+    from fermipy.jobs.factory import LinkFactory
+    LinkFactory.register(GtSrcmapsDiffuse.appname, GtSrcmapsDiffuse)
+    LinkFactory.register(SrcmapsDiffuse_SG.appname, SrcmapsDiffuse_SG)

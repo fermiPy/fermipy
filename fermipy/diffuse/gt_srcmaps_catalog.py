@@ -18,9 +18,10 @@ import pyLikelihood as pyLike
 
 from fermipy import utils
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.chain import add_argument, Link
+from fermipy.jobs.link import add_argument, Link
 from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
+from fermipy.jobs.slac_impl import make_nfs_path, get_slac_default_args, Slac_Interface
+
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.catalog_src_manager import make_catalog_comp_dict
@@ -37,6 +38,11 @@ class GtSrcmapsCatalog(Link):
     This is useful for creating source maps for all the sources in a catalog
     """
     NULL_MODEL = 'srcmdls/null.xml'
+ 
+    appname = 'fermipy-srcmaps-catalog'
+    linkname_default = 'srcmaps-catalog'
+    usage = '%s [options]' %(appname)
+    description = "Run gtsrcmaps for for all the sources in a catalog"
 
     default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
                            expcube=diffuse_defaults.gtopts['expcube'],
@@ -48,23 +54,17 @@ class GtSrcmapsCatalog(Link):
                            srcmax=(-1, 'Index of last source', int),
                            gzip=(False, 'Compress output file', bool))
 
+    default_file_args = dict(expcube=FileFlags.input_mask,
+                             cmap=FileFlags.input_mask,
+                             bexpmap=FileFlags.input_mask,
+                             srcmdl=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
+
     def __init__(self, **kwargs):
         """C'tor
         """
-        parser = argparse.ArgumentParser(usage="fermipy-srcmaps-catalog [options]",
-                                         description="Run gtsrcmaps for all the sources in a catalog")
-        
-        Link.__init__(self, kwargs.pop('linkname', 'srcmaps-diffuse'),
-                      parser=parser,
-                      appname='fermipy-srcmaps-catalog',
-                      options=GtSrcmapsCatalog.default_options.copy(),
-                      file_args=dict(expcube=FileFlags.input_mask,
-                                     cmap=FileFlags.input_mask,
-                                     bexpmap=FileFlags.input_mask,
-                                     srcmdl=FileFlags.input_mask,
-                                     outfile=FileFlags.output_mask))
-  
-
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(GtSrcmapsCatalog, self).__init__(linkname, **init_dict)
  
     def run_analysis(self, argv):
         """Run this analysis"""
@@ -109,7 +109,7 @@ class GtSrcmapsCatalog(Link):
             os.system("gzip -9 %s" % args.outfile)
 
 
-class ConfigMaker_SrcmapsCatalog(ConfigMaker):
+class SrcmapsCatalog_SG(ConfigMaker):
     """Small class to generate configurations for gtsrcmaps for catalog sources
 
     This takes the following arguments:
@@ -119,18 +119,26 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
     --make_xml : Write xml files for the individual components
     --nsrc     : Number of sources per job
     """
+    appname = 'fermipy-srcmaps-catalog-sg'
+    usage = "%s [options]" % (appname)
+    description = "Run gtsrcmaps for catalog sources"
+    clientclass = GtSrcmapsCatalog
+
+    batch_args = get_slac_default_args()    
+    batch_interface = Slac_Interface(**batch_args)
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],
                            nsrc=(500, 'Number of sources per job', int),
-                           make_xml=(False, 'Write xml files needed to make source maps', bool),)
+                           make_xml=diffuse_defaults.diffuse['make_xml'])
 
     def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',
-                                                ConfigMaker_SrcmapsCatalog.default_options.copy()))
+        super(SrcmapsCatalog_SG, self).__init__(link,
+                                                options=kwargs.get('options',
+                                                                   self.default_options.copy()))
         self.link = link
 
     @staticmethod
@@ -162,7 +170,7 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
         n_src_per_job = args['nsrc']
 
         if args['make_xml']:
-            ConfigMaker_SrcmapsCatalog._make_xml_files(catalog_info_dict, comp_info_dict)
+            SrcmapsCatalog_SG._make_xml_files(catalog_info_dict, comp_info_dict)
 
         for catalog_name, catalog_info in catalog_info_dict.items():
 
@@ -201,48 +209,6 @@ class ConfigMaker_SrcmapsCatalog(ConfigMaker):
         return job_configs
 
 
-def create_link_gtsrcmaps_catalog(**kwargs):
-    """Build and return a `Link` object that can invoke GtAssembleModel"""
-    gtsrcmap_partial = GtSrcmapsCatalog(**kwargs)
-    return gtsrcmap_partial
-
-
-def create_sg_gtsrcmaps_catalog(**kwargs):
-    """Build and return a ScatterGather object that can invoke gtsrcmaps for catalog sources"""
-    appname = kwargs.pop('appname', 'fermipy-srcmaps-catalog-sg')
-    link = create_link_gtsrcmaps_catalog(**kwargs)
-    linkname=kwargs.pop('linkname', link.linkname)
-
-    batch_args = get_lsf_default_args()    
-    batch_args['lsf_args']['W'] = 6000
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Run gtsrcmaps for catalog sources"
-
-    config_maker = ConfigMaker_SrcmapsCatalog(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
-
-def main_single():
-    """Entry point for command line use for single job """
-    gtsmc = GtSrcmapsCatalog()
-    gtsmc.run_analysis(sys.argv[1:])
-
-
-def main_batch():
-    """Entry point for command line use  for dispatching batch jobs """
-    lsf_sg = create_sg_gtsrcmaps_catalog()
-    lsf_sg(sys.argv)
-
-
-if __name__ == '__main__':
-    main_single()
+def register_classes():
+    GtSrcmapsCatalog.register_class()
+    SrcmapsCatalog_SG.register_class()

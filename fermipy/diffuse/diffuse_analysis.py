@@ -8,110 +8,98 @@ import sys
 import os
 import argparse
 
-import yaml
+from collections import OrderedDict
 
+from fermipy.utils import load_yaml
 from fermipy.jobs.job_archive import JobArchive
-from fermipy.jobs.chain import Link, Chain
-from fermipy.jobs.lsf_impl import check_log
+from fermipy.jobs.link import Link 
+from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
+from fermipy.jobs.slac_impl import check_log
 
 from fermipy.diffuse import defaults as diffuse_defaults
 
 from fermipy.diffuse.name_policy import NameFactory
-from fermipy.diffuse.job_library import create_sg_gtexpcube2,\
-    create_sg_fermipy_coadd, create_sg_sum_ring_gasmaps,\
-    create_sg_vstack_diffuse, create_sg_gather_srcmaps
-from fermipy.diffuse.gt_srcmaps_catalog import create_sg_gtsrcmaps_catalog
-from fermipy.diffuse.gt_srcmap_partial import create_sg_srcmap_partial
-from fermipy.diffuse.gt_assemble_model import create_sg_assemble_model,\
-    create_link_init_model
-from fermipy.diffuse.gt_split_and_bin import create_sg_split_and_bin
-from fermipy.diffuse.gt_merge_srcmaps import create_sg_merge_srcmaps
-
-
 
 NAME_FACTORY = NameFactory()
 
 
 class DiffuseAnalysisChain(Chain):
     """Small class to define diffuse analysis chain"""
-    default_options = diffuse_defaults.diffuse.copy()
+    appname = 'fermipy-diffuse-analysis'
+    linkname_default = 'diffuse'
+    usage = '%s [options]' %(appname)
+    description='Run diffuse analysis chain'   
 
-    def __init__(self, linkname, **kwargs):
+    default_options = dict(config=diffuse_defaults.diffuse['config'],
+                           dry_run=diffuse_defaults.diffuse['dry_run'])
+
+    def __init__(self, **kwargs):
         """C'tor
         """
-        link_split_and_bin = create_sg_split_and_bin(linkname="%s.split"%linkname,
-                                                     mapping={'hpx_order_max':'hpx_order_ccube',
-                                                              'action': 'action_split'})
-        link_coadd_split = create_sg_fermipy_coadd(linkname="%s.coadd"%linkname,
-                                                   mapping={'action': 'action_coadd'})
-        link_expcube = create_sg_gtexpcube2(linkname="%s.expcube"%linkname,
-                                            mapping={'hpx_order_max':'hpx_order_expcube',
-                                                     'action': 'action_expcube'})
-        link_gasmaps = create_sg_sum_ring_gasmaps(linkname="%s.gasmaps"%linkname,
-                                                  mapping={'action':'action_gasmaps'})
-        link_srcmaps_diffuse = create_sg_srcmap_partial(linkname="%s.srcmaps_diffuse"%linkname,
-                                                        mapping={'action':'action_srcmaps_diffuse'})
-        link_vstack_diffuse = create_sg_vstack_diffuse(linkname="%s.vstack_diffuse"%linkname,
-                                                       mapping={'action':'action_vstack_diffuse'})
-        link_srcmaps_catalogs = create_sg_gtsrcmaps_catalog(linkname="%s.srcmaps_catalog"%linkname,
-                                                            mapping={'action':'action_srcmaps_catalog'})
-        link_gather_catalogs = create_sg_gather_srcmaps(linkname="%s.gather_catalog"%linkname,
-                                                        mapping={'action':'action_gather_catalog'})
-        link_merge_catalogs = create_sg_merge_srcmaps(linkname="%s.merge_catalog"%linkname,
-                                                         mapping={'action':'action_merge_catalog'})
-        link_init_model = create_link_init_model(linkname="%s.init_model"%linkname,
-                                                 mapping={'hpx_order':'hpx_order_fitting',
-                                                          'action': 'action_init'})
-        link_assemble_model = create_sg_assemble_model(linkname="%s.assemble"%linkname,
-                                                       mapping={'hpx_order':'hpx_order_fitting',
-                                                                'action': 'action_assemble'})
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(DiffuseAnalysisChain, self).__init__(linkname, **init_dict)
 
-        parser = argparse.ArgumentParser(usage='fermipy-diffuse-analysis',
-                                         description="Run diffuse analysis setup")
-        
-        Chain.__init__(self, linkname,
-                       appname='fermipy-diffuse-analysis',
-                       links=[link_split_and_bin, link_coadd_split, link_expcube,
-                              link_gasmaps, link_srcmaps_diffuse, link_vstack_diffuse,
-                              link_srcmaps_catalogs, link_gather_catalogs, link_merge_catalogs,
-                              link_init_model, link_assemble_model],
-                       options=DiffuseAnalysisChain.default_options.copy(),
-                       argmapper=self._map_arguments,
-                       parser=parser,
-                       **kwargs)
+    def _register_link_classes(self):    
+        from fermipy.diffuse.gt_split_and_bin import SplitAndBinChain
+        from fermipy.diffuse.diffuse_src_manager import DiffuseCompChain
+        from fermipy.diffuse.catalog_src_manager import CatalogCompChain
+        from fermipy.diffuse.gt_assemble_model import AssembleModelChain
+        SplitAndBinChain.register_class()
+        DiffuseCompChain.register_class()
+        CatalogCompChain.register_class()
+        AssembleModelChain.register_class()
     
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
-        output_dict = input_dict.copy()
-      
-        if input_dict.get('dry_run', False):
-            action = 'run'
-        else:
-            action = 'run'
-       
-        output_dict['action_split'] = action
-        output_dict['action_coadd'] = action
-        output_dict['action_expcube'] = action
-        output_dict['action_gasmaps'] = action
-        output_dict['action_srcmaps_diffuse'] = action
-        output_dict['action_vstack_diffuse'] = action
-        output_dict['action_srcmaps_catalog'] = action
-        output_dict['action_gather_catalog'] = action
-        output_dict['action_merge_catalog'] = action
-        output_dict['action_init'] = action
-        output_dict['action_assemble'] = action
+        config_yaml = input_dict['config']
+        o_dict = OrderedDict()
+        config_dict = load_yaml(config_yaml)
+        
+        dry_run = input_dict.get('dry_run', False)
+        
+        data = config_dict.get('data')
+        comp = config_dict.get('comp')
+        library = config_dict.get('library')
+        models = config_dict.get('models')
+        scratch = config_dict.get('scratch')
 
-        output_dict.pop('link', None)
-        return output_dict
-
+        insert_app_config(o_dict, 'prepare',
+                          'fermipy-split-and-bin-chain',
+                          comp=comp, data=data,
+                          ft1file=config_dict.get('ft1file'),
+                          hpx_order_ccube=config_dict.get('hpx_order_ccube'),
+                          hpx_order_expcube=config_dict.get('hpx_order_expcube'),
+                          scratch=scratch,
+                          dry_run=dry_run)
 
 
-def create_chain_diffuse_analysis(**kwargs):
-    """Build and return a `DiffuseAnalysisChain` object """
-    ret_chain = DiffuseAnalysisChain(linkname=kwargs.pop('linkname', 'Diffuse'),
-                                     **kwargs)
-    return ret_chain
+        insert_app_config(o_dict, 'diffuse-comp',
+                          'fermipy-diffuse-comp-chain',
+                          comp=comp, data=data,
+                          library=library, 
+                          make_xml=config_dict.get('make_diffuse_comp_xml', False),
+                          outdir=config_dict.get('merged_gasmap_dir', 'merged_gasmap'),
+                          dry_run=dry_run)
+
+        insert_app_config(o_dict, 'catalog-comp',
+                          'fermipy-catalog-comp-chain',
+                          comp=comp, data=data,
+                          library=library, 
+                          make_xml=config_dict.get('make_catalog_comp_xml', False),
+                          nsrc=config_dict.get('catalog_nsrc', 500),
+                          dry_run=dry_run)
+        
+        insert_app_config(o_dict, 'assemble-model',
+                          'fermipy-assemble-model-chain',
+                          comp=comp, data=data,
+                          library=library, 
+                          models=models,
+                          hpx_order=config_dict.get('hpx_order_fitting'),
+                          dry_run=dry_run)
+        
+        return o_dict
+
 
 def main_chain():
     """Energy point for running the entire Cosmic-ray analysis """
@@ -135,7 +123,7 @@ def main_chain():
     job_archive.update_job_status(check_log)
     job_archive.write_table_file()
 
-if __name__ == '__main__':
-    main_chain()
 
 
+def register_classes():
+    DiffuseAnalysisChain.register_class()

@@ -154,6 +154,12 @@ class NameFactory(object):
                                  kwargs.get('irf_ver'))
         return irf_name
 
+    def evclassmask(self, evclass_str):
+        """ Get the bitmask for a particular event class
+        """
+        return EVCLASS_MASK_DICTIONARY[evclass_str]
+
+
     def dataset(self, **kwargs):
         """ Return a key that specifies the data selection
         """
