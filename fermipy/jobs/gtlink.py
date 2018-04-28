@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 import sys
 import os
 
-from fermipy.jobs.chain import Link
+from fermipy.jobs.link import Link
 import GtApp
 
 
@@ -154,6 +154,7 @@ class Gtlink(Link):
         try:
             self.__app = build_gtapp(self.appname, **self.args)
         except:
+            print ("Failed to build link %s %s %s" % self.linkname, self.appname, self.args)
             raise ValueError("Failed to build link %s %s %s" % self.linkname, self.appname, self.args)
 
     def update_args(self, override_args):
