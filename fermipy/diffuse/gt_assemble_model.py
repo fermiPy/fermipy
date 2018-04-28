@@ -10,15 +10,19 @@ import sys
 import argparse
 import yaml
 
+from collections import OrderedDict
+
 from astropy.io import fits
 from fermipy.skymap import HpxMap
 
 from fermipy.utils import load_yaml
 
 from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
-from fermipy.jobs.chain import add_argument, Link
+from fermipy.jobs.slac_impl import make_nfs_path, get_slac_default_args, Slac_Interface
+from fermipy.jobs.link import Link 
+from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
 from fermipy.jobs.file_archive import FileFlags
+
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse import defaults as diffuse_defaults
@@ -27,11 +31,16 @@ from fermipy.diffuse.model_manager import make_library
 NAME_FACTORY = NameFactory()
 
 
-class GtInitModel(Link):
+class InitModel(Link):
     """Small class to preprate files fermipy analysis.
 
     Specifically this create the srcmap_manifest and fermipy_config_yaml files
     """
+    appname = 'fermipy-init-model'
+    linkname_default = 'init-model'
+    usage = '%s [options]' %(appname)
+    description = "Initialize model fitting directory"
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],
@@ -41,13 +50,8 @@ class GtInitModel(Link):
     def __init__(self, **kwargs):
         """C'tor
         """
-        parser = argparse.ArgumentParser(usage = "fermipy-init-model [options]",
-                                         description = "Initialize model fitting directory")
-        Link.__init__(self, kwargs.pop('linkname', 'init-model'),
-                      appname='fermipy-init-model',
-                      parser=parser,
-                      options=GtInitModel.default_options.copy(),
-                      **kwargs)
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(InitModel, self).__init__(linkname, **init_dict)
 
     def run_analysis(self, argv):
         """ Build the manifest for all the models
@@ -68,11 +72,16 @@ class GtInitModel(Link):
             
 
 
-class GtAssembleModel(Link):
+class AssembleModel(Link):
     """Small class to assemple source map files for fermipy analysis.
 
     This is useful for re-merging after parallelizing source map creation.
     """
+    appname = 'fermipy-assemble-model'
+    linkname_default = 'assemble-model'
+    usage = '%s [options]' %(appname)
+    description = "Assemble sourcemaps for model fitting"
+
     default_options = dict(input=(None, 'Input yaml file', str),
                            compname=(None, 'Component name.', str),
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'])
@@ -80,15 +89,8 @@ class GtAssembleModel(Link):
     def __init__(self, **kwargs):
         """C'tor
         """
-        parser = argparse.ArgumentParser(usage="fermipy-assemble-model [options]", 
-                                         description="Copy source maps from the library to a analysis directory")
-        Link.__init__(self, kwargs.pop('linkname', 'assemble-model'),
-                      appname='fermipy-assemble-model',
-                      parser=parser,
-                      options=GtAssembleModel.default_options.copy(),
-                      file_args=dict(input=FileFlags.input_mask),
-                      **kwargs)
-
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(AssembleModel, self).__init__(linkname, **init_dict)
  
     @staticmethod
     def copy_ccube(ccube, outsrcmap, hpx_order):
@@ -213,7 +215,7 @@ class GtAssembleModel(Link):
         GtAssembleModel.assemble_component(compname, value, args.hpx_order)
 
 
-class ConfigMaker_AssembleModel(ConfigMaker):
+class AssembleModel_SG(ConfigMaker):
     """Small class to generate configurations for this script
 
     Parameters
@@ -224,6 +226,14 @@ class ConfigMaker_AssembleModel(ConfigMaker):
     --models    : model definitino yaml file
     args        : Names of models to assemble source maps for
     """
+    appname = 'fermipy-assemble-model-sg'
+    usage = "%s [options]" % (appname)
+    description = "Copy source maps from the library to a analysis directory"
+    clientclass = AssembleModel
+
+    batch_args = get_slac_default_args()    
+    batch_interface = Slac_Interface(**batch_args)
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            models=diffuse_defaults.diffuse['models'])
@@ -231,9 +241,9 @@ class ConfigMaker_AssembleModel(ConfigMaker):
     def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',
-                                                ConfigMaker_AssembleModel.default_options.copy()))
+        super(AssembleModel_SG, self).__init__(link,
+                                               options=kwargs.get('options',
+                                                                  self.default_options.copy()))
 
 
     def build_job_configs(self, args):
@@ -263,57 +273,65 @@ class ConfigMaker_AssembleModel(ConfigMaker):
                                             logfile=logfile)
         return job_configs
 
-def create_link_init_model(**kwargs):
-    """Build and return a `Link` object that can invoke GtInitModel"""
-    gtinit = GtInitModel(**kwargs)
-    return gtinit
 
 
-def create_link_assemble_model(**kwargs):
-    """Build and return a `Link` object that can invoke GtAssembleModel"""
-    gtassemble = GtAssembleModel(**kwargs)
-    return gtassemble
+class AssembleModelChain(Chain):
+    """Small class to split, apply mktime and bin data according to some user-provided specification
+    """
+    appname = 'fermipy-assemble-model-chain'
+    linkname_default = 'assemble-model-chain'
+    usage = '%s [options]' %(appname)
+    description='Run init-model and assemble-model'
+
+    default_options = dict(data=diffuse_defaults.diffuse['data'],
+                           comp=diffuse_defaults.diffuse['comp'],
+                           library=diffuse_defaults.diffuse['library'],
+                           models=diffuse_defaults.diffuse['models'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
+                           dry_run=diffuse_defaults.diffuse['dry_run'])
+    
+    def __init__(self, **kwargs):
+        """C'tor
+        """
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(AssembleModelChain, self).__init__(linkname, **init_dict)
+        self.comp_dict = None     
+ 
+    def _register_link_classes(self):    
+        InitModel.register_class()
+        AssembleModel_SG.register_class()
+
+    def _map_arguments(self, input_dict):
+        """Map from the top-level arguments to the arguments provided to
+        the indiviudal links """
+        o_dict = OrderedDict()
+
+        data = input_dict.get('data')
+        comp = input_dict.get('comp')
+        library = input_dict.get('library')
+        models = input_dict.get('models')
+        hpx_order = input_dict.get('hpx_order_fitting')
+        dry_run=input_dict.get('dry_run', False)
+
+        insert_app_config(o_dict, 'init-model',
+                          'fermipy-init-model',
+                          comp=comp, data=data,
+                          library=library,
+                          models=models,
+                          hpx_order=hpx_order,
+                          dry_run=dry_run)
+
+        insert_app_config(o_dict, 'assemble-model',
+                          'fermipy-assemble-model-sg',
+                          comp=comp, data=data,
+                          models=models)
+ 
+        return o_dict
 
 
-def create_sg_assemble_model(**kwargs):
-    """Build and return a ScatterGather object that can invoke this script"""
 
-    gtassemble = GtAssembleModel(**kwargs)
-    link = gtassemble
-
-    appname = kwargs.pop('appname', 'fermipy-assemble-model-sg')
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Copy source maps from the library to a analysis directory"
-
-    config_maker = ConfigMaker_AssembleModel(link)
-    sg = build_sg_from_link(link, config_maker,
-                            interface=batch_interface,
-                            usage=usage,
-                            description=description,
-                            appname=appname,
-                            **kwargs)
-    return sg
-
-
-def main_init():
-    """Entry point for command line use for init job """
-    gtsmp = GtInitModel()
-    gtsmp.run_analysis(sys.argv[1:])
-
-def main_single():
-    """Entry point for command line use for single job """
-    gtsmp = GtAssembleModel()
-    gtsmp.run_analysis(sys.argv[1:])
-
-
-def main_batch():
-    """Entry point for command line use  for dispatching batch jobs """
-    lsf_sg = create_sg_assemble_model()
-    lsf_sg(sys.argv)
-
-if __name__ == '__main__':
-    main_single()
+def register_classes():
+    InitModel.register_class()
+    AssembleModel.register_class()
+    AssembleModel_SG.register_class()
+    AssembleModelChain.register_class()
