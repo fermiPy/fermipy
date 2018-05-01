@@ -4608,6 +4608,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
+        elif src['SpatialType'] == 'RadialProfile':
+            filepath = str(utils.path_to_xmlpath(src['Spatial_Filename']))
+            sm = pyLike.RadialProfile(filepath)
+            sm.setCenter(src['ra'], src['dec'])
+            pylike_src = pyLike.DiffuseSource(sm,
+                                              self.like.logLike.observation(),
+                                              False)
         elif src['SpatialType'] == 'RadialGaussian':
             sm = pyLike.RadialGaussian(src.skydir.ra.deg, src.skydir.dec.deg,
                                        src.spatial_pars['Sigma']['value'])
