@@ -75,7 +75,7 @@ setup(
         'fermipy-sunmoon-chain = fermipy.diffuse.solar:SunMoonChain.main',
         'fermipy-catalog-comp-chain = fermipy.diffuse.catalog_src_manager:CatalogCompChain.main',
         'fermipy-diffuse-comp-chain = fermipy.diffuse.diffuse_src_manager:DiffuseCompChain.main',
-        'fermipy-diffuse-analysis = fermipy.diffuse.diffuse_analysis:DiffuseAnalysisChain:main',
+        'fermipy-diffuse-analysis = fermipy.diffuse.diffuse_analysis:DiffuseAnalysisChain.main',
         'fermipy-job-archive = fermipy.jobs.job_archive:main_browse',
         'fermipy-file-archive = fermipy.jobs.file_archive:main_browse',
     ]},
