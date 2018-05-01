@@ -625,6 +625,11 @@ class Link(object):
         """
         self.jobs.clear()
 
+    def clean_jobs(self, clean_all=False):
+        """ """ 
+        self._interface.clean_jobs(self,
+                                   job_archive=self._job_archive)
+
     def get_jobs(self, recursive=True):
         """Return a dictionary with all the jobs
 
