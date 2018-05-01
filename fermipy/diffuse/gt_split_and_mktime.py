@@ -18,7 +18,7 @@ from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.slac_impl import make_nfs_path, get_slac_default_args, Slac_Interface
+from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
@@ -213,8 +213,7 @@ class SplitAndMktime_SG(ConfigMaker):
     description = "Prepare data for diffuse all-sky analysis"
     clientclass = SplitAndMktime
 
-    batch_args = get_slac_default_args()    
-    batch_interface = Slac_Interface(**batch_args)
+    job_time = 1500
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],

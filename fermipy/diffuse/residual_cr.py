@@ -20,7 +20,7 @@ from fermipy.utils import load_yaml
 from fermipy.jobs.job_archive import JobArchive
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.slac_impl import check_log, make_nfs_path, get_slac_default_args, Slac_Interface
+from fermipy.jobs.slac_impl import check_log, make_nfs_path
 from fermipy.jobs.link import add_argument, Link
 from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
 
@@ -369,8 +369,7 @@ class ResidualCR_SG(ConfigMaker):
     description = "Compute the residual cosmic-ray contamination"
     clientclass = ResidualCR
 
-    batch_args = get_slac_default_args()    
-    batch_interface = Slac_Interface(**batch_args)
+    job_time = 300
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],

@@ -22,9 +22,9 @@ import numpy as np
 
 from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.sys_interface import remove_file, clean_job
+from fermipy.jobs.batch import get_batch_job_interface
 from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobStatusVector, JobDetails, JobArchive, JOB_STATUS_STRINGS
 from fermipy.jobs.link import add_argument, extract_arguments, Link
-
 
 ACTIONS = ['run', 'resubmit', 'check_status', 'config', 'skip', 'clean']
 
@@ -56,9 +56,12 @@ class ConfigMaker(object):
         link = cls.clientclass.create(**kwargs)
         link.linkname = kwargs.pop('linkname', link.linkname)
 
+        default_interface = get_batch_job_interface(cls.job_time)
+        interface = kwargs.pop('interface', default_interface)
+
         config_maker = cls(link)
         sg = build_sg_from_link(link, config_maker,
-                                interface=cls.batch_interface,
+                                interface=interface,
                                 usage=cls.usage,
                                 description=cls.description,
                                 **kwargs)
