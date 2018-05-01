@@ -432,6 +432,9 @@ class Model(object):
 
             if 'mapcube' in src_dict:
                 src_dict['Spatial_Filename'] = src_dict.pop('mapcube')
+                
+            if 'radialprofile' in src_dict:
+                 src_dict['Spatial_Filename'] = src_dict.pop('radialprofile')
 
         if 'spectral_pars' in src_dict:
             src_dict['spectral_pars'] = cast_pars_dict(
@@ -1430,7 +1433,9 @@ class ROIModel(fermipy.config.Configurable):
                         '$FERMI_DIFFUSE_DIR']
 
         srcs = []
-        if self.config[name] is not None:
+        if config is not None:
+            srcs = config[name]
+        elif self.config[name] is not None:
             srcs = self.config[name]
 
         srcs_out = []
@@ -1471,9 +1476,13 @@ class ROIModel(fermipy.config.Configurable):
                 altname = os.path.basename(src_dict['file'])
                 altname = re.sub(r'(\.txt$)', '', altname)
             else:
-                src = MapCubeSource(src_dict['name'], {
-                                    'Spatial_Filename': src_dict['file']})
-                altname = os.path.basename(src_dict['file'])
+#                src = MapCubeSource(src_dict['name'], {
+#                                    'Spatial_Filename': src_dict['file'],
+                sp_filename = src_dict.pop('file')
+                src_dict['Spatial_Filename'] = sp_filename
+                src = MapCubeSource(src_dict['name'], src_dict)
+
+                altname = os.path.basename(sp_filename)
                 altname = re.sub(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',
                                  '', altname)
 
