@@ -4,7 +4,9 @@ from __future__ import absolute_import, division, print_function
 import os
 
 from fermipy.jobs.job_archive import JobStatus, JobDetails, JobArchive
+from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Link
+ 
 
 
 def test_job_details():    
@@ -31,14 +33,32 @@ def test_job_details():
 
 
 def test_job_archive():
-    link = Link('test',
-                appname='test_app',
-                options=dict(optstr='CALDB', infile1=None,
-                             infile2=None, infile3=None,
-                             outfile1=None, outfile2=None),
-                input_file_args=['infile1', 'infile2', 'infile3'],
-                output_file_args=['outfile1', 'outfile2'])
+
+    class DummyLink(Link):
+        appname= 'test_app'
+        linkname_default = 'test'
+        usage = '%s [options]' %(appname)
+        description = "Link to run %s"%(appname)
     
+        default_options = dict(optstr=('CALDB', 'options', str),
+                               infile1=(None, 'Input file 1', str),
+                               infile2=(None, 'Input file 2', str),
+                               infile3=(None, 'Input file 3', str),
+                               outfile1=(None, 'Output file 1', str),
+                               outfile2=(None, 'Output file 1', str))
+        default_file_args=dict(infile1=FileFlags.input_mask,
+                               infile2=FileFlags.input_mask,
+                               infile3=FileFlags.input_mask,
+                               outfile1=FileFlags.output_mask,
+                               outfile2=FileFlags.output_mask)
+
+        def __init__(self, **kwargs):
+            """C'tor
+            """
+            linkname, init_dict = self._init_dict(**kwargs)
+            super(DummyLink, self).__init__(linkname, **init_dict)
+
+    link = DummyLink()
     job_archive = JobArchive(file_archive_table='archive_files.fits',
                              job_archive_table='archive_jobs.fits',
                              base_path=os.path.abspath('.'))
