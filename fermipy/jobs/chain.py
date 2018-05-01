@@ -187,11 +187,6 @@ class Chain(Link):
             Stage files to and from the scratch area
 
         """
-        #ok = self._pre_run_checks(stream, dry_run)
-        # if not ok:
-        #    return
-        #print ('Chain._run_chain ', self.args)
-
         self._set_links_job_archive()
         failed = False
 
@@ -213,10 +208,13 @@ class Chain(Link):
             else:
                 status_vect = None
             link_status = link.check_job_status(key)
-            if link_status in [JobStatus.running, 
-                               JobStatus.done]:
+            if link_status in [JobStatus.done]:
                 if not force_run:
                     print ("Skipping done link", link.full_linkname)
+                    continue
+            elif link_status in [JobStatus.running]:
+                if not force_run and not resubmit_failed:
+                    print ("Skipping running link", link.full_linkname)
                     continue
             elif link_status in [JobStatus.failed,
                                  JobStatus.partial_failed]:
@@ -224,7 +222,6 @@ class Chain(Link):
                     print ("Skipping failed link", link.full_linkname)
                     continue
             print ("Running link ", link.full_linkname)
-            close_file = False
             if dry_run:
                 outstr = sys.stdout
             else:
@@ -232,10 +229,18 @@ class Chain(Link):
             link.run_with_log(dry_run=dry_run, stage_files=False, resubmit_failed=resubmit_failed)
             link_status = link.check_jobs_status()
             link._set_status_self(status=link_status)
-            if link_status in [JobStatus.failed, JobStatus.partial_failed]:
+            if link_status in [JobStatus.failed]:
                 print ("Stoping chain execution at failed link %s"%link.full_linkname)
                 failed = True
                 break
+            elif link_status in [JobStatus.partial_failed]:
+                print ("Resubmitting partially failed link %s"%link.full_linkname)
+                link.run_with_log(dry_run=dry_run, stage_files=False, resubmit_failed=resubmit_failed)
+                link_status = link.check_jobs_status()
+                link._set_status_self(status=link_status)
+                if link_status in [JobStatus.partial_failed]:
+                    print ("Stoping chain execution after resubmission failed link %s"%link.full_linkname)
+                    failed = True
 
         if self._file_stage is not None and stage_files and not failed:
             self._stage_output_files(output_file_mapping, dry_run)
@@ -339,9 +344,6 @@ class Chain(Link):
         self.args = extract_arguments(override_args, self.args)
         self._arg_dict = self._map_arguments(override_args)
         self._load_arguments()
-        #fullkey = JobDetails.make_fullkey(self.linkname)
-        #logfile = os.path.join('logs','top_%s.log'%self.linkname)
-        #self._register_self(logfile, fullkey, status=JobStatus.unknown)
 
         scratch_dir = self.args.get('scratch', None)
         if is_not_null(scratch_dir):
@@ -353,13 +355,8 @@ class Chain(Link):
 
     def print_status(self, indent="", recurse=False):
         """Print a summary of the job status for each `Link` in this `Chain`"""
-        print ("%s%20s : %20s : %20s"%(indent, "Linkname","Link Status","Jobs Status"))    
+        print ("%s%30s : %15s : %20s"%(indent, "Linkname","Link Status","Jobs Status"))    
         for link in self._links.values():
-            if isinstance(link, Chain):
-                if recurse:
-                    print ("----------   %20s    -----------"%link.linkname)
-                    link.print_status(indent+"  ", recurse=True)
-                    continue
             if hasattr(link, 'check_status'):
                 status_vect = link.check_status(stream=sys.stdout, no_wait=True, do_print=False)
             else:
@@ -370,8 +367,13 @@ class Chain(Link):
                 jobs_status = JOB_STATUS_STRINGS[link.check_jobs_status()]
             else:
                 jobs_status = status_vect
-            print ("%s%20s : %20s : %20s"%(indent, link.linkname, link_status, jobs_status))
- 
+            print ("%s%30s : %15s : %20s"%(indent, link.linkname, link_status, jobs_status))
+            if hasattr(link, 'print_status') and recurse:
+                print ("----------   %30s    -----------"%link.linkname)
+                link.print_status(indent+"  ", recurse=True)
+                print ("---------------------------------------------------------")
+
+
     def print_summary(self, stream=sys.stdout, indent="", recurse_level=2):
         """Print a summary of the activity done by this `Chain`.
 
