@@ -3229,7 +3229,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 except RuntimeError:
                     self.logger.warn("Did not set parameter %s:%s"%(src,par_name))                    
                     continue
-                except Exception, msg:
+                except Exception as msg:
                     self.logger.warn(msg)
                     continue
                 if par_free is not None:
