@@ -15,7 +15,7 @@ import pyLikelihood as pyLike
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.link import add_argument, Link
 from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.slac_impl import make_nfs_path, get_slac_default_args, Slac_Interface
+from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.catalog_src_manager import make_catalog_comp_dict
@@ -123,8 +123,7 @@ class MergeSrcmaps_SG(ConfigMaker):
     description = "Merge diffuse maps for all-sky analysis"
     clientclass = GtMergeSrcmaps
 
-    batch_args = get_slac_default_args()    
-    batch_interface = Slac_Interface(**batch_args)
+    job_time = 300
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],

@@ -8,6 +8,7 @@ import sys
 import os
 import time
 import subprocess
+import numpy as np
 
 from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails
 from fermipy.jobs.sys_interface import clean_job, SysInterface, check_log
@@ -234,12 +235,15 @@ class Slac_Interface(SysInterface):
         return JobStatus.done
 
 
-def get_slac_default_args():
-    slac_default_args = dict(lsf_args={'W': 1500,
+def get_slac_default_args(job_time=1500):
+
+    job_check_sleep = np.clip(int(job_time / 5), 60, 300)
+    slac_default_args = dict(lsf_args={'W': job_time,
                                        'R': '\"select[rhel60&&!fell]\"'},
                              max_jobs=500,
                              time_per_cycle=15,
                              jobs_per_cycle=20,
                              max_job_age=90,
+                             job_check_sleep=job_check_sleep,
                              no_batch=False)
     return slac_default_args.copy()

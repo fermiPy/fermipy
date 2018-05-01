@@ -13,7 +13,7 @@ from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.link import Link
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.slac_impl import make_nfs_path, get_slac_default_args, Slac_Interface
+from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
@@ -307,8 +307,7 @@ class Gtexpcube2_SG(ConfigMaker):
     description = "Submit gtexpube2 jobs in parallel"
     clientclass = Gtlink_expcube2
 
-    batch_args = get_slac_default_args()    
-    batch_interface = Slac_Interface(**batch_args)
+    job_time = 300
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
@@ -385,8 +384,7 @@ class Gtltsum_SG(ConfigMaker):
     description = "Submit gtltsum jobs in parallel"
     clientclass = Gtlink_ltsum
 
-    batch_args = get_slac_default_args()    
-    batch_interface = Slac_Interface(**batch_args)
+    job_time = 300
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
@@ -464,8 +462,7 @@ class SumRings_SG(ConfigMaker):
     description = "Submit fermipy-coadd jobs in parallel to sum GALProp rings"
     clientclass = Link_FermipyCoadd
 
-    batch_args = get_slac_default_args()    
-    batch_interface = Slac_Interface(**batch_args)
+    job_time = 300
 
     default_options = dict(library=diffuse_defaults.diffuse['library'],
                            outdir=(None, 'Output directory', str),)
@@ -513,8 +510,7 @@ class Vstack_SG(ConfigMaker):
     description = "Submit fermipy-vstack jobs in parallel"
     clientclass = Link_FermipyVstack
 
-    batch_args = get_slac_default_args()    
-    batch_interface = Slac_Interface(**batch_args)
+    job_time = 300
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
@@ -586,8 +582,7 @@ class GatherSrcmaps_SG(ConfigMaker):
     description = "Submit fermipy-gather-srcmaps  jobs in parallel"
     clientclass = Link_FermipyGatherSrcmaps
 
-    batch_args = get_slac_default_args()    
-    batch_interface = Slac_Interface(**batch_args)
+    job_time = 300
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
@@ -652,8 +647,7 @@ class Healview_SG(ConfigMaker):
     description = "Submit fermipy-healviw jobs in parallel"
     clientclass = Link_FermipyHealview
 
-    batch_args = get_slac_default_args()    
-    batch_interface = Slac_Interface(**batch_args)
+    job_time = 60
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],

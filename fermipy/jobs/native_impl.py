@@ -124,7 +124,7 @@ class Native_Interface(SysInterface):
 
 
 
-def get_native_default_args():
+def get_native_default_args(job_time=1500):
     native_default_args = dict(max_jobs=500,
                                time_per_cycle=15,
                                jobs_per_cycle=20,
