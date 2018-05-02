@@ -2178,6 +2178,15 @@ class ROIModel(fermipy.config.Configurable):
         fits_utils.write_hdus(hdus, fitsfile)
 
     def write_ds9region(self, region, free='box',fixed='cross',frame='fk5',color='green',header=True):
+        """Create a ds9 compatible region file from the ROI
+        :param region: name of the region file (string)
+        :param free: one of the supported ds9 point symbols, used for free sources, see here: http://ds9.si.edu/doc/ref/region.html
+        :param fixed: as free, but for fixed sources
+        :param frame: typically fk5, more to be implemented
+        :param color: color used for the symbols
+        :param header: if True, will prepend a global header line.
+        :return: None.
+        """
         allowed_symbols = ['circle','box','diamond','cross','x','arrow','boxcircle']
         # adding some checks.
         assert free in allowed_symbols, "symbol %s not supported"%free
