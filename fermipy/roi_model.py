@@ -2181,7 +2181,7 @@ class ROIModel(fermipy.config.Configurable):
         allowed_symbols = ['circle','box','diamond','cross','x','arrow','boxcircle']
         # adding some checks.
         assert free in allowed_symbols, "symbol %s not supported"%free
-        assert fixed in allowed_symbols, "symbol %s not supported"fixed
+        assert fixed in allowed_symbols, "symbol %s not supported"%fixed
         with open(region,'w') as fo:
             if header:
                 fo.write("global color=%s\n"%color)
