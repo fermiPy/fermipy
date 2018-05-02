@@ -400,7 +400,7 @@ class Model(object):
 
     @property
     def is_free(self):
-        return bool(np.array([int(value.get("free", False)) for key, value in self.spectral_pars.iteritems()]).sum())
+        return bool(np.array([int(value.get("free", False)) for key, value in self.spectral_pars.items()]).sum())
 
     @property
     def name(self):
