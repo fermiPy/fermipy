@@ -409,6 +409,31 @@ def test_create_point_source(tmppath):
     assert src['SpatialType'] == 'SkyDirFunction'
     assert src['SpectrumType'] == 'PowerLaw'
 
+def test_is_source_free():
+    ra = 252.367
+    dec = 52.6356
+    src1 = Source.create_from_dict({'name': 'testsrc',
+                                   'SpatialModel': 'PointSource',
+                                   'SpectrumType': 'PowerLaw',
+                                   'Index': 2.3,
+                                   'Prefactor': {'value': 1.3, 'scale': 1E-8,
+                                                 'min': 0.15, 'max': 10.0,
+                                                 'free': True},
+                                   'ra': ra, 'dec': dec},
+                                  rescale=True)
+    src2 = Source.create_from_dict({'name': 'testsrc',
+                                   'SpatialModel': 'PointSource',
+                                   'SpectrumType': 'PowerLaw',
+                                   'Index': 2.3,
+                                   'Prefactor': {'value': 1.3, 'scale': 1E-8,
+                                                 'min': 0.15, 'max': 10.0,
+                                                 'free': False},
+                                   'ra': ra, 'dec': dec},
+                                  rescale=True)
+    assert src1.is_free == True
+    assert src2.is_free == False
+
+
 
 def test_create_gaussian_source(tmppath):
     ra = 252.367
