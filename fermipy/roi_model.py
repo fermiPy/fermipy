@@ -2194,14 +2194,14 @@ class ROIModel(fermipy.config.Configurable):
         assert fixed in allowed_symbols, "symbol %s not supported"%fixed
         lines = []
         if header:
-            lines.append("global color=%s\n"%color)
+            lines.append("global color=%s"%color)
         for src in self.get_sources():
             # self.get_sources will return both Source, but also IsoSource and MapCube, in which case the sources
             # should be ignored (since they are by construction all-sky and have no corresponding ds9 region string)
             if not isinstance(src, Source): continue
             # otherwise get ra, dec
             ra, dec = src.radec
-            line = "%s; point( %1.5f, %1.5f) # point=%s text={%s} color=%s \n"%(frame,ra, dec,
+            line = "%s; point( %1.5f, %1.5f) # point=%s text={%s} color=%s"%(frame,ra, dec,
                                                                                 free if src.is_free else fixed,
                                                                                 src.name,
                                                                                 color)
