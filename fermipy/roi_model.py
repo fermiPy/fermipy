@@ -941,6 +941,10 @@ class Source(Model):
         return self['radec']
 
     @property
+    def is_free(self):
+        return bool(np.array([int(value.get("free", False)) for key, value in self.spectral_pars.iteritems()]).sum())
+
+    @property
     def skydir(self):
         """Return a SkyCoord representation of the source position.
 
@@ -2171,3 +2175,14 @@ class ROIModel(fermipy.config.Configurable):
         hdu_data = fits.table_to_hdu(tab)
         hdus = [fits.PrimaryHDU(), hdu_data]
         fits_utils.write_hdus(hdus, fitsfile)
+
+    def write_ds9region(self, region, free='square',fixed='cross',frame='fk5',color='green',header=True):
+        with open(region,'w') as fo:
+            if header:
+                fo.write("global color=%s\n"%color)
+            for src in self.get_sources():
+                if not isinstance(src,Source):
+                    continue
+                ra, dec = src.radec
+                fo.write("%s; point( %1.5f, %1.5f) # point=%s text=\"%s\" color=%s \n"%(frame,ra, dec, free if src.is_free else fixed, color))
+            fo.close()
