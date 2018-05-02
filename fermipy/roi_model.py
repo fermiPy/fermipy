@@ -2184,8 +2184,8 @@ class ROIModel(fermipy.config.Configurable):
             for src in self.get_sources():
                 if not isinstance(src,Source): continue
                 ra, dec = src.radec
-                fo.write("%s; point( %1.5f, %1.5f) # point=%s text=\"%s\" color=%s \n"%(frame,ra, dec,
-                                                                                        free if src.is_free else fixed,
-                                                                                        src.name,
-                                                                                        color))
+                fo.write("%s; point( %1.5f, %1.5f) # point=%s text={%s} color=%s \n"%(frame,ra, dec,
+                                                                                      free if src.is_free else fixed,
+                                                                                      src.name,
+                                                                                      color) )
             fo.close()
