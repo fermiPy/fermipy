@@ -2177,7 +2177,11 @@ class ROIModel(fermipy.config.Configurable):
         hdus = [fits.PrimaryHDU(), hdu_data]
         fits_utils.write_hdus(hdus, fitsfile)
 
-    def write_ds9region(self, region, free='square',fixed='cross',frame='fk5',color='green',header=True):
+    def write_ds9region(self, region, free='box',fixed='cross',frame='fk5',color='green',header=True):
+        allowed_symbols = ['circle','box','diamond','cross','x','arrow','boxcircle']
+        # adding some checks.
+        assert free in allowed_symbols, "symbol %s not supported"%free
+        assert fixed in allowed_symbols, "symbol %s not supported"fixed
         with open(region,'w') as fo:
             if header:
                 fo.write("global color=%s\n"%color)
