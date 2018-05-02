@@ -2201,4 +2201,3 @@ class ROIModel(fermipy.config.Configurable):
                                                                                       free if src.is_free else fixed,
                                                                                       src.name,
                                                                                       color) )
-            fo.close()
