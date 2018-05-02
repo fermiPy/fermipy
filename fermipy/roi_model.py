@@ -2187,6 +2187,7 @@ class ROIModel(fermipy.config.Configurable):
         :param header: if True, will prepend a global header line.
         :return: None.
         """
+        # todo: add support for extended sources?!
         allowed_symbols = ['circle','box','diamond','cross','x','arrow','boxcircle']
         # adding some checks.
         assert free in allowed_symbols, "symbol %s not supported"%free
@@ -2195,7 +2196,10 @@ class ROIModel(fermipy.config.Configurable):
             if header:
                 fo.write("global color=%s\n"%color)
             for src in self.get_sources():
+                # self.get_sources will return both Source, but also IsoSource and MapCube, in which case the sources
+                # should be ignored (since they are by construction all-sky and have no corresponding ds9 region string)
                 if not isinstance(src,Source): continue
+                # otherwise get ra, dec
                 ra, dec = src.radec
                 fo.write("%s; point( %1.5f, %1.5f) # point=%s text={%s} color=%s \n"%(frame,ra, dec,
                                                                                       free if src.is_free else fixed,
