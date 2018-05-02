@@ -399,6 +399,10 @@ class Model(object):
         return get_true_params_dict(self._data['spectral_pars'])
 
     @property
+    def is_free(self):
+        return bool(np.array([int(value.get("free", False)) for key, value in self.spectral_pars.iteritems()]).sum())
+
+    @property
     def name(self):
         return self._data['name']
 
@@ -940,9 +944,6 @@ class Source(Model):
     def radec(self):
         return self['radec']
 
-    @property
-    def is_free(self):
-        return bool(np.array([int(value.get("free", False)) for key, value in self.spectral_pars.iteritems()]).sum())
 
     @property
     def skydir(self):
@@ -2181,8 +2182,7 @@ class ROIModel(fermipy.config.Configurable):
             if header:
                 fo.write("global color=%s\n"%color)
             for src in self.get_sources():
-                if not isinstance(src,Source):
-                    continue
+                if not isinstance(src,Source): continue
                 ra, dec = src.radec
                 fo.write("%s; point( %1.5f, %1.5f) # point=%s text=\"%s\" color=%s \n"%(frame,ra, dec, free if src.is_free else fixed, color))
             fo.close()
