@@ -2177,31 +2177,49 @@ class ROIModel(fermipy.config.Configurable):
         hdus = [fits.PrimaryHDU(), hdu_data]
         fits_utils.write_hdus(hdus, fitsfile)
 
-    def write_ds9region(self, region, free='box',fixed='cross',frame='fk5',color='green',header=True):
-        """Create a ds9 compatible region file from the ROI
+    def to_ds9(self, free='box',fixed='cross',frame='fk5',color='green',header=True):
+        """Returns a list of ds9 region definitions
         :param region: name of the region file (string)
         :param free: one of the supported ds9 point symbols, used for free sources, see here: http://ds9.si.edu/doc/ref/region.html
         :param fixed: as free, but for fixed sources
         :param frame: typically fk5, more to be implemented
         :param color: color used for the symbols
         :param header: if True, will prepend a global header line.
-        :return: None.
+        :return: list of regions (and header if requested)
         """
         # todo: add support for extended sources?!
         allowed_symbols = ['circle','box','diamond','cross','x','arrow','boxcircle']
         # adding some checks.
         assert free in allowed_symbols, "symbol %s not supported"%free
         assert fixed in allowed_symbols, "symbol %s not supported"%fixed
+        lines = []
+        if header:
+            lines.append("global color=%s\n"%color)
+        for src in self.get_sources():
+            # self.get_sources will return both Source, but also IsoSource and MapCube, in which case the sources
+            # should be ignored (since they are by construction all-sky and have no corresponding ds9 region string)
+            if not isinstance(src, Source): continue
+            # otherwise get ra, dec
+            ra, dec = src.radec
+            line = "%s; point( %1.5f, %1.5f) # point=%s text={%s} color=%s \n"%(frame,ra, dec,
+                                                                                free if src.is_free else fixed,
+                                                                                src.name,
+                                                                                color)
+            lines.append(line)
+        return lines
+
+    def write_ds9region(self, region, *args, **kwargs):
+
+        """Create a ds9 compatible region file from the ROI.
+
+        It calls the `to_ds9` method and write the result to the region file. Only the file name is required.
+        All other parameters will be forwarded to the `to_ds9` method, see the documentation of that method
+        for all accepted parameters and options.
+
+        :param region: name of the region file (string)
+
+        :return: None.
+        """
+        lines = self.to_ds9(*args,**kwargs)
         with open(region,'w') as fo:
-            if header:
-                fo.write("global color=%s\n"%color)
-            for src in self.get_sources():
-                # self.get_sources will return both Source, but also IsoSource and MapCube, in which case the sources
-                # should be ignored (since they are by construction all-sky and have no corresponding ds9 region string)
-                if not isinstance(src,Source): continue
-                # otherwise get ra, dec
-                ra, dec = src.radec
-                fo.write("%s; point( %1.5f, %1.5f) # point=%s text={%s} color=%s \n"%(frame,ra, dec,
-                                                                                      free if src.is_free else fixed,
-                                                                                      src.name,
-                                                                                      color) )
+            fo.write("\n".join(lines))
