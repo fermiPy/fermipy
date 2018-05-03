@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function
 import xml.etree.cElementTree as ElementTree
 from numpy.testing import assert_allclose
+import numpy as np
 from astropy.tests.helper import pytest
 from astropy.coordinates import SkyCoord
 from fermipy.tests.utils import requires_dependency
@@ -19,11 +20,39 @@ def tmppath(request, tmpdir_factory):
 
 
 def check_src_params(rm, src_name, par_names, par_vals):
-
     params = rm[src_name].params
     for name, val in zip(par_names, par_vals):
         assert_allclose(params[name]['value'], val, 1E-4)
 
+def test_write_ds9region():
+    skydir = SkyCoord(0.0, 0.0, unit='deg', frame='galactic').icrs
+    rm = ROIModel(catalogs=['3FGL'], skydir=skydir, src_radius=8.0)
+    assert len(rm.sources) == 62
+    rm.write_ds9region("test1.reg",header=True)
+    with open("test1.reg") as fo:
+        dd = fo.readlines()
+        assert len(dd) == 63 # including header
+
+    rm.write_ds9region("test1.reg", header=False)
+    with open("test1.reg") as fo:
+        dd = fo.readlines()
+        assert len(dd) == 62  # excluding header
+
+    # check free sources
+    free_sources = rm.get_nearby_sources("3FGL J1745.6-2859c", 1)[-1]
+    nfree = 0
+    for source in free_sources:
+        if 'Prefactor' in source.spectral_pars:
+            source.spectral_pars['Prefactor']['free'] = True
+            nfree+=1
+    nfixed = len(rm.sources) - nfree
+    rm.write_ds9region("test1.reg", header=False, free='diamond', fixed="cross")
+    with open("test1.reg") as fo:
+        dd = fo.readlines()
+        ffree = np.array([1 if "diamond" in d else 0 for d in dd]).sum()
+        ffix  = np.array([1 if "cross" in d else 0 for d in dd]).sum()
+        assert nfree == ffree
+        assert nfixed== ffix
 
 def test_load_3fgl_catalog_fits():
     skydir = SkyCoord(0.0, 0.0, unit='deg', frame='galactic').icrs
@@ -408,6 +437,31 @@ def test_create_point_source(tmppath):
     assert src['SpatialModel'] == 'PointSource'
     assert src['SpatialType'] == 'SkyDirFunction'
     assert src['SpectrumType'] == 'PowerLaw'
+
+def test_is_source_free():
+    ra = 252.367
+    dec = 52.6356
+    src1 = Source.create_from_dict({'name': 'testsrc',
+                                   'SpatialModel': 'PointSource',
+                                   'SpectrumType': 'PowerLaw',
+                                   'Index': 2.3,
+                                   'Prefactor': {'value': 1.3, 'scale': 1E-8,
+                                                 'min': 0.15, 'max': 10.0,
+                                                 'free': True},
+                                   'ra': ra, 'dec': dec},
+                                  rescale=True)
+    src2 = Source.create_from_dict({'name': 'testsrc',
+                                   'SpatialModel': 'PointSource',
+                                   'SpectrumType': 'PowerLaw',
+                                   'Index': 2.3,
+                                   'Prefactor': {'value': 1.3, 'scale': 1E-8,
+                                                 'min': 0.15, 'max': 10.0,
+                                                 'free': False},
+                                   'ra': ra, 'dec': dec},
+                                  rescale=True)
+    assert src1.is_free == True
+    assert src2.is_free == False
+
 
 
 def test_create_gaussian_source(tmppath):
