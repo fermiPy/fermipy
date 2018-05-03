@@ -589,7 +589,7 @@ class Link(object):
 
         By default this checks the status of the top-level job
         """
-        if key in self.jobs.has_key:
+        if key in self.jobs:
             status = self.jobs[key].status
             if status in [JobStatus.unknown, JobStatus.ready,
                           JobStatus.pending, JobStatus.running] or force_check:
