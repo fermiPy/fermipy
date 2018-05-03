@@ -23,7 +23,7 @@ def test_job_details():
                      status=JobStatus.no_job)
     job_dict = {job.dbkey:job}
     table, table_ids = JobDetails.make_tables(job_dict)
-    job_dict2 = JobDetails.make_dict(table, table_ids)    
+    job_dict2 = JobDetails.make_dict(table)    
     job2 = job_dict2[job.dbkey]
     
     assert(job.jobname == job2.jobname)
