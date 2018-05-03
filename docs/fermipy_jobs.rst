@@ -3,6 +3,15 @@
 fermipy.jobs subpackage
 =======================
 
+fermipy.jobs.link module
+------------------------
+
+.. automodule:: fermipy.jobs.link
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 fermipy.jobs.chain module
 -------------------------
 
@@ -36,10 +45,10 @@ fermipy.jobs.gtlink module
     :undoc-members:
     :show-inheritance:
 
-fermipy.jobs.lsf_impl module
-----------------------------
+fermipy.jobs.batch module
+-------------------------
 
-.. automodule:: fermipy.jobs.lsf_impl
+.. automodule:: fermipy.jobs.batch
     :members:
     :undoc-members:
     :show-inheritance:

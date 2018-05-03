@@ -70,6 +70,9 @@ class Interpolator(object):
         x = x[msk]
         y = y[msk]
 
+        if len(x) == 0 or len(y) == 0:
+            raise ValueError("Failed to build interpolate, empty axis.")
+
         self._x = x
         self._y = y
         self._xmin = x[0]

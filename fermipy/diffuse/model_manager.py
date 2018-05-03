@@ -10,6 +10,7 @@ from collections import OrderedDict
 import yaml
 
 from fermipy import utils
+from fermipy.roi_model import MapCubeSource, IsoSource
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.diffuse_src_manager import GalpropMapManager,\
@@ -65,7 +66,7 @@ class ModelInfo(object):
         l = []
         for comp_name, model_comp in self.model_components.items():            
             if model_comp.edisp_disable:
-                l += [comp_name]
+                l += [model_comp.info.source_name]
         return l
             
 
@@ -363,7 +364,7 @@ class ModelManager(object):
         except KeyError:
             model_info = self.make_model_info(modelkey)
 
-        model_info.make_model_rois(components, self._name_factory)
+        model_rois = model_info.make_model_rois(components, self._name_factory)
 
         #source_names = model_info.component_names
 
@@ -373,8 +374,8 @@ class ModelManager(object):
         master_data = dict(scfile=self._name_factory.ft2file(fullpath=True),
                            cacheft1=False)
         master_binning = dict(projtype='HPX',
-                              roiwidth=180.,
-                              binsperdec=8,
+                              roiwidth=360.,
+                              binsperdec=4,
                               hpx_ordering_scheme="RING",
                               hpx_order=hpx_order,
                               hpx_ebin=True)
@@ -405,6 +406,7 @@ class ModelManager(object):
             zcut = "zmax%i" % comp.zmax
             compkey = "%s_%s" % (zcut, comp.make_key(
                 '{ebin_name}_{evtype_name}'))
+            comp_roi = model_rois[compkey]
             name_keys = dict(zcut=zcut,
                              modelkey=modelkey,
                              component=compkey,
@@ -426,13 +428,26 @@ class ModelManager(object):
 
             comp_xml_mdl = os.path.basename(self._name_factory.comp_srcmdl_xml(modelkey=modelkey,
                                                                                component=compkey))
-            comp_model = dict(catalogs=[master_xml_mdl, comp_xml_mdl])
+
+            diffuse_srcs = []
+            for src in comp_roi.diffuse_sources:
+                if isinstance(src, MapCubeSource):
+                    diffuse_srcs.append(dict(name=src.name, file=src.mapcube))
+                elif isinstance(src, IsoSource):
+                    diffuse_srcs.append(dict(name=src.name, file=src.fileFunction))
+                else:
+                    pass
+            
+            comp_model = dict(diffuse=diffuse_srcs)
             sub_dict = dict(data=comp_data,
                             binning=comp_binning,
                             selection=comp_selection,
                             gtlike=comp_gtlike,
                             model=comp_model)
             fermipy_dict['components'].append(sub_dict)
+
+        # Add placeholder diffuse sources
+        fermipy_dict['model']['diffuse'] = diffuse_srcs
 
         outfile = os.path.join(model_dir, 'config.yaml')
         print("Writing fermipy config file %s"%outfile)

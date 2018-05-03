@@ -57,7 +57,72 @@ JOB_STATUS_STRINGS = ["Unknown",
                       "Running",
                       "Done",
                       "Failed",
-                      "Partially Failed"]
+                      "Partially Failed",
+                      "Removed",
+                      "No Job"]
+
+
+class JobStatusVector(object):
+    """ """
+    def __init__(self):
+        self.reset()
+
+    def __getitem__(self, idx):
+        return self._counters[idx]
+ 
+    def __setitem__(self, idx, val):
+        self._counters[idx] = val
+
+    def __incr__(self, idx):
+        self._counters[idx] += 1
+
+    def __repr__(self):
+        tup = (self.nWaiting,self.nPending,self.nRunning,self.nDone,self.nFailed,self.nTotal)
+        return "%4i/%4i/%4i/%4i/%4i/%4i"%tup
+
+    @property
+    def nWaiting(self):
+        return self._counters[JobStatus.no_job] + self._counters[JobStatus.unknown] + self._counters[JobStatus.not_ready] + self._counters[JobStatus.ready]  
+
+    @property
+    def nPending(self):
+        return self._counters[JobStatus.pending] 
+
+    @property
+    def nRunning(self):
+        return self._counters[JobStatus.running] 
+ 
+    @property
+    def nDone(self):
+        return self._counters[JobStatus.done]
+
+    @property
+    def nFailed(self):
+        return self._counters[JobStatus.failed] + self._counters[JobStatus.partial_failed]
+
+    @property
+    def nTotal(self):
+        return self._counters.sum()    
+
+    def reset(self):
+        self._counters = np.zeros(len(JOB_STATUS_STRINGS), int)
+
+    def get_status(self):
+        if self.nTotal == 0:
+            return JobStatus.no_job
+        elif self.nDone == self.nTotal:
+            return JobStatus.done
+        elif self.nFailed > 0:
+            # If more that a quater of the jobs fail, fail the whole thing
+            if self.nFailed > self.nTotal / 4.:
+                return JobStatus.failed
+            else:
+                return JobStatus.partial_failed
+        elif self.nRunning > 0:
+            return JobStatus.running
+        elif self.nPending > 0:
+            return JobStatus.pending
+        return JobStatus.ready
 
 
 class JobDetails(object):
@@ -103,6 +168,7 @@ class JobDetails(object):
     status : int
         Current job status, one of the enums above
     """
+    topkey = '__top__'
 
     def __init__(self, **kwargs):
         """ C'tor
@@ -130,7 +196,7 @@ class JobDetails(object):
         self.status = kwargs.get('status', JobStatus.unknown)
 
     @staticmethod
-    def make_fullkey(jobkey, jobname):
+    def make_fullkey(jobname, jobkey=topkey):
         """Combine jobname and jobkey to make a unique key
         fullkey = <jobkey>@<jobname>
         """
@@ -178,7 +244,7 @@ class JobDetails(object):
         """Return the fullkey for this job
         fullkey = <jobkey>@<jobname>
         """
-        return JobDetails.make_fullkey(self.jobkey, self.jobname)
+        return JobDetails.make_fullkey(self.jobname, self.jobkey)
 
     def get_file_ids(self, file_archive, creator=None, status=FileStatus.no_file):
         """Fill the file id arrays from the file lists
@@ -350,6 +416,15 @@ class JobDetails(object):
         self.status = checker_func(self.logfile)
         return self.status
 
+    def __repr__(self):
+        """String representation"""
+        s = ""
+        s += "jobname   : %s\n"%(self.jobname)
+        s += "  jobkey  : %s\n"%(self.jobkey)
+        s += "  appname : %s\n"%(self.appname)
+        s += "  logfile : %s\n"%(self.logfile)
+        s += "  status  : %s\n"%(JOB_STATUS_STRINGS[self. status])
+        return s
 
 class JobArchive(object):
     """Class that keeps of all the jobs associated to an analysis.
@@ -440,7 +515,7 @@ class JobArchive(object):
 
     def get_details(self, jobname, jobkey):
         """Get the `JobDetails` associated to a particular job instance"""
-        fullkey = JobDetails.make_fullkey(jobkey, jobname)
+        fullkey = JobDetails.make_fullkey(jobname, jobkey)
         return self._cache[fullkey]
 
     def register_job(self, job_details):
@@ -505,7 +580,7 @@ class JobArchive(object):
         jobkey =  self.table[mask]['jobkey']
         self.table[mask]['status'] =  JobStatus.removed
         for jobname, jobkey in zip(jobnames,jobkey):
-            fullkey = JobDetails.make_fullkey(jobkey, jobname)
+            fullkey = JobDetails.make_fullkey(jobname, jobkey)
             self._cache.pop(fullkey).status = JobStatus.removed            
         self.write_table_file()
 

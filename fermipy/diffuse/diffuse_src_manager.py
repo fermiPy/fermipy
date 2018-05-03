@@ -9,7 +9,10 @@ import argparse
 
 import yaml
 
-from fermipy.jobs.chain import Link, Chain
+from collections import OrderedDict
+
+from fermipy.jobs.link import Link 
+from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
 
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
@@ -488,71 +491,69 @@ def make_diffuse_comp_info_dict(**kwargs):
                 DiffuseModelManager=dmm)
 
 
-class DiffuseComponentChain(Chain):
+
+class DiffuseCompChain(Chain):
     """Small class to build srcmaps for diffuse components
     """
+    appname = 'fermipy-diffuse-comp-chain'
+    linkname_default = 'diffuse-comp'
+    usage = '%s [options]' %(appname)
+    description='Run diffuse component analysis'
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],
-                           make_xml=(False, "Make XML files for diffuse components", bool),
+                           make_xml=diffuse_defaults.diffuse['make_xml'],
+                           outdir=(None, 'Output directory', str),
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 
-    def __init__(self, linkname, **kwargs):
+    def __init__(self, **kwargs):
         """C'tor
         """
-        from fermipy.diffuse.job_library import create_sg_sum_ring_gasmaps, create_sg_vstack_diffuse
-        from fermipy.diffuse.gt_srcmap_partial import create_sg_srcmap_partial
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(DiffuseCompChain, self).__init__(linkname, **init_dict)
+        self.comp_dict = None     
 
-        link_gasmaps = create_sg_sum_ring_gasmaps(linkname="%s.merge_galprop"%linkname)
-
-        link_srcmaps = create_sg_srcmap_partial(linkname="%s.srcmaps"%linkname)
-
-        link_vstack_srcmaps = create_sg_vstack_diffuse(linkname="%s.vstack"%linkname)
-        parser = argparse.ArgumentParser(usage='fermipy-diffuse-chain',
-                                         description="Run diffuse component analysis setup")
-
-        Chain.__init__(self, linkname,
-                       appname='fermipy-diffuse-chain',
-                       links=[link_gasmaps, link_srcmaps,link_vstack_srcmaps],
-                       options=DiffuseComponentChain.default_options.copy(),
-                       argmapper=self._map_arguments,
-                       parser=parser,
-                       **kwargs)
+    def _register_link_classes(self):    
+        from fermipy.diffuse.job_library import SumRings_SG, Vstack_SG
+        from fermipy.diffuse.gt_srcmap_partial import SrcmapsDiffuse_SG
+        SumRings_SG.register_class()
+        SrcmapsDiffuse_SG.register_class()
+        Vstack_SG.register_class()
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
-        output_dict = input_dict.copy()
-        output_dict.pop('link', None)
-        return output_dict
+        o_dict = OrderedDict()
 
+        data = input_dict.get('data')
+        comp = input_dict.get('comp')
+        library = input_dict.get('library')
+        dry_run = input_dict.get('dry_run', False)
 
-    def run_argparser(self, argv):
-        """Initialize a link with a set of arguments using argparser
-        """
-        args = Link.run_argparser(self, argv)
-        for link in self._links.values():
-            link.run_link(stream=sys.stdout, dry_run=True)
-        return args
+        insert_app_config(o_dict, 'sum-rings',
+                          'fermipy-sum-rings-sg',
+                          library=library,
+                          outdir=input_dict['outdir'],
+                          dry_run=dry_run)
 
-
-
-def create_chain_diffuse_comps(**kwargs):
-    """Create and return a `DiffuseComponentChain` object """
-    chain = DiffuseComponentChain(linkname=kwargs.pop('linkname', 'Diffuse.diffuse_comps'),
-                                  **kwargs)
-    return chain
-
-def main_chain():
-    """Entry point for command line use for single job """
-    chain = DiffuseComponentChain("diffuse.diffuse_comps")
-    args = chain.run_argparser(sys.argv[1:])
-    chain.run_chain(sys.stdout, args.dry_run)
-    chain.finalize(args.dry_run)
-
-
-if __name__ == '__main__':
-    main_chain()
+        insert_app_config(o_dict, 'srcmaps-diffuse',
+                          'fermipy-srcmaps-diffuse-sg',
+                          comp=comp, data=data,
+                          library=library,
+                          make_xml=input_dict['make_xml'],
+                          dry_run=dry_run)
+         
+        insert_app_config(o_dict, 'vstack-diffuse',
+                          'fermipy-vstack-sg',
+                          comp=comp, data=data,
+                          library=library,
+                          dry_run=dry_run)
+        
+        return o_dict
 
 
 
+
+def register_classes():
+    DiffuseCompChain.register_class()

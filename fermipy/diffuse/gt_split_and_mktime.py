@@ -11,12 +11,17 @@ import math
 
 import yaml
 
+from collections import OrderedDict
+
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.chain import Chain
+from fermipy.jobs.utils import is_null, is_not_null
+from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
-from fermipy.diffuse.name_policy import NameFactory, EVCLASS_MASK_DICTIONARY
+from fermipy.jobs.slac_impl import make_nfs_path
+
+from fermipy.diffuse.utils import create_inputlist
+from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.gt_coadd_split import CoaddSplit
 from fermipy.diffuse import defaults as diffuse_defaults
 from fermipy.diffuse.binning import EVT_TYPE_DICT 
@@ -40,11 +45,16 @@ def make_full_path(basedir, outkey, origname):
 class SplitAndMktime(Chain):
     """Small class to split, apply mktime and bin data according to some user-provided specification
     """
-    default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
-                           data=diffuse_defaults.residual_cr['dataset_yaml'],
-                           hpx_order_max=diffuse_defaults.residual_cr['hpx_order_binning'],
-                           ft1file=diffuse_defaults.residual_cr['ft1file'],
-                           scfile=diffuse_defaults.residual_cr['ft2file'],
+    appname = 'fermipy-split-and-mktime'
+    linkname_default = 'split-and-mktime'
+    usage = '%s [options]' %(appname)
+    description='Run gtselect and gtbin together'
+
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
+                           hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
+                           ft1file=diffuse_defaults.diffuse['ft1file'],
+                           ft2file=diffuse_defaults.diffuse['ft2file'],
                            evclass=(128, 'Event class bit mask', int),
                            outdir=('counts_cubes', 'Output directory', str),
                            outkey=(None, 'Key for this particular output file', str),
@@ -53,240 +63,172 @@ class SplitAndMktime(Chain):
                            scratch=(None, 'Scratch area', str),
                            dry_run=(False, 'Print commands but do not run them', bool))
 
-    def __init__(self, linkname, **kwargs):
+    def __init__(self, **kwargs):
         """C'tor
         """
-        comp_file = kwargs.get('comp', None)
-        if comp_file:
-            self.comp_dict = yaml.safe_load(open(comp_file))
-            coordsys = self.comp_dict.pop('coordsys')
-            for v in self.comp_dict.values():
-                v['coordsys'] = coordsys
-        else:
-            self.comp_dict = None
-        job_archive = kwargs.get('job_archive', None)
-        parser = argparse.ArgumentParser(usage="fermipy-split-and-mktime [options]",
-                                         description="Run gtselect, gtmktime and gtbin together")
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(SplitAndMktime, self).__init__(linkname, **init_dict)
+        self.comp_dict = None
 
-        Chain.__init__(self, linkname,
-                       appname='fermipy-split-and-mktime',
-                       links=[],
-                       options=SplitAndMktime.default_options.copy(),
-                       argmapper=self._map_arguments,
-                       parser=parser,
-                       **kwargs)
-
-        if self.comp_dict is not None:
-            self.update_links(self.comp_dict)
-        self.set_links_job_archive()
-
-
-    def update_links(self, comp_dict):
-        """Build the links in this chain from the binning specification
-        """
-        self.comp_dict = comp_dict
-        links_to_add = []
-        links_to_add += self._make_energy_select_links()
-        links_to_add += self._make_PSF_select_and_bin_links()
-        for link in links_to_add:
-            self.add_link(link)
-
-    def _make_energy_select_links(self):
-        """Make the links to run gtselect for each energy bin """
-        links = []
-        for key, comp in sorted(self.comp_dict.items()):
-            select_filekey = 'selectfile_%s' % key
-            self.files.file_args[select_filekey] = FileFlags.rm_mask
-            zmax = comp['zmax']
-            link_sel = Gtlink('gtselect_%s' % key,
-                              appname='gtselect',
-                              mapping={'infile': 'ft1file',
-                                       'outfile': select_filekey},
-                              options={'emin': (math.pow(10., comp['log_emin']), "Minimum energy",
-                                                float),
-                                       'emax': (math.pow(10., comp['log_emax']), "Maximum energy",
-                                            float),
-                                       'infile': (None, 'Input FT1 File', str),
-                                       'outfile': (None, 'Output FT1 File', str),
-                                       'zmax': (comp['zmax'], "Zenith angle cut", float),
-                                       'evclass': (None, "Event Class", int),
-                                       'pfiles': (None, "PFILES directory", str)},
-                              file_args=dict(infile=FileFlags.in_stage_mask,
-                                             outfile=FileFlags.out_stage_mask))
-            
-            links.append(link_sel)
-
-            for mktimekey in comp['mktimefilters']:
-                mktime_filekey = 'mktime_%s_%s' % (key, mktimekey)
-                ltcube_filekey = 'ltcube_%s_%s' % (key, mktimekey)
-                filterstring = MKTIME_DICT[mktimekey]
-                self.files.file_args[mktime_filekey] = FileFlags.rm_mask
-                link_mktime = Gtlink('gtmktime_%s_%s' % (key, mktimekey),
-                                     appname='gtmktime',
-                                     mapping={'evfile': select_filekey,
-                                              'outfile': mktime_filekey},
-                                     options={'evfile': (None, 'Input FT1 File', str),
-                                              'outfile': (None, 'Output FT1 File', str),
-                                              'scfile': (None, 'Input FT2 file', str),
-                                              'roicut': (False, 'Apply ROI-based zenith angle cut', bool),
-                                              'filter': (filterstring, 'Filter expression', str),
-                                              'pfiles': (None, "PFILES directory", str)},
-                                     file_args=dict(evfile=FileFlags.in_stage_mask,
-                                                    scfile=FileFlags.in_stage_mask,
-                                                    outfile=FileFlags.out_stage_mask))
-
-                link_ltcube = Gtlink('gtltcube_%s_%s' % (key, mktimekey),
-                                     appname='gtltcube',
-                                     mapping={'evfile': mktime_filekey,
-                                              'outfile': ltcube_filekey},
-                                     options={'evfile': (None, 'Input FT1 File', str),
-                                              'scfile': (None, 'Input FT2 file', str),
-                                              'outfile': (None, 'Output Livetime cube File', str),
-                                              'dcostheta': (0.025, 'Step size in cos(theta)', float),
-                                              'binsz' : (1., 'Pixel size (degrees)', float),
-                                              'phibins' : (0, 'Number of phi bins', int),
-                                              'zmin' : (0, 'Minimum zenith angle', float),
-                                              'zmax' : (zmax, 'Maximum zenith angle', float),
-                                              'pfiles': (None, "PFILES directory", str)},
-                                     file_args=dict(evfile=FileFlags.in_stage_mask,
-                                                    scfile=FileFlags.in_stage_mask,
-                                                    outfile=FileFlags.out_stage_mask))
-                links.append(link_mktime)
-                links.append(link_ltcube)
-
-        return links
-
-    def _make_PSF_select_and_bin_links(self):
-        """Make the links to run gtselect and gtbin for each psf type"""
-        links = []
-        for key_e, comp_e in sorted(self.comp_dict.items()):
-            emin = math.pow(10., comp_e['log_emin'])
-            emax = math.pow(10., comp_e['log_emax'])
-            enumbins = comp_e['enumbins']
-            zmax = comp_e['zmax']
-
-            for mktimekey in comp_e['mktimefilters']:
-                mktime_filekey = 'mktime_%s_%s' % (key_e, mktimekey)
-                ltcube_filekey = 'ltcube_%s_%s' % (key_e, mktimekey)
-
-                for evtclass in comp_e['evtclasses']:
-                    evtclassint = EVCLASS_MASK_DICTIONARY[evtclass]
-                    for psf_type, psf_dict in sorted(comp_e['psf_types'].items()):
-                        key = "%s_%s_%s_%s" % (key_e, mktimekey, evtclass, psf_type)
-                        selectkey_out = 'selectfile_%s' % key
-                        binkey = 'binfile_%s' % key
-                        hpxorder_key = 'hpxorder_%s' % key
-                        self.files.file_args[mktime_filekey] = FileFlags.rm_mask
-                        self.files.file_args[selectkey_out] = FileFlags.rm_mask
-                        self.files.file_args[binkey] = FileFlags.gz_mask | FileFlags.internal_mask
-                        select_link = Gtlink('gtselect_%s' % key,
-                                             appname='gtselect',
-                                             mapping={'infile': mktime_filekey,
-                                                      'outfile': selectkey_out},
-                                             options={'evtype': (EVT_TYPE_DICT[psf_type], "PSF type", int),
-                                                      'zmax': (zmax, "Zenith angle cut", float),
-                                                      'emin': (emin, "Minimum energy", float),
-                                                      'emax': (emax, "Maximum energy", float),
-                                                      'infile': (None, 'Input FT1 File', str),
-                                                      'outfile': (None, 'Output FT1 File', str),
-                                                      'evclass': (evtclassint, "Event class", int),
-                                                      'pfiles': (None, "PFILES directory", str)},
-                                             file_args=dict(infile=FileFlags.in_stage_mask,
-                                                            outfile=FileFlags.out_stage_mask))
-                        bin_link = Gtlink('gtbin_%s' % key,
-                                          appname='gtbin',
-                                          mapping={'evfile': selectkey_out,
-                                                   'outfile': binkey,
-                                                   'hpx_order' : hpxorder_key},
-                                          options={'algorithm': ('HEALPIX', "Binning alogrithm", str),
-                                                   'coordsys': ('GAL', "Coordinate system", str),
-                                                   'hpx_order': (psf_dict['hpx_order'], "HEALPIX ORDER", int),
-                                                   'evfile': (None, 'Input FT1 File', str),
-                                                   'outfile': (None, 'Output binned data File', str),
-                                                   'emin': (emin, "Minimum energy", float),
-                                                   'emax': (emax, "Maximum energy", float),
-                                                   'enumbins': (enumbins, "Number of energy bins", int),
-                                                   'pfiles': (None, "PFILES directory", str)},
-                                          file_args=dict(evfile=FileFlags.in_stage_mask,
-                                                         outfile=FileFlags.out_stage_mask))
-                        links += [select_link, bin_link]
-        return links
-
+    def _register_link_classes(self):    
+         from fermipy.diffuse.job_library import register_classes as register_library
+         register_library()
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
-        if self.comp_dict is None:
-            return None
+        print (input_dict)
+        comp_file = input_dict.get('comp', None)
+        datafile = input_dict.get('data', None)
+        do_ltsum = input_dict.get('do_ltsum', False)
+        o_dict = OrderedDict()
+        if is_null(comp_file):
+            return o_dict
+        if is_null(datafile):
+            return o_dict
 
         NAME_FACTORY.update_base_dict(input_dict['data'])
 
         outdir = input_dict.get('outdir')
         outkey = input_dict.get('outkey')
-        if outdir is None or outkey is None:
-            return None
+        ft1file = input_dict['ft1file']
+        ft2file = input_dict['ft2file']
+        if is_null(outdir) or is_null(outkey):
+            return o_dict
+        pfiles = os.path.join(outdir, outkey) 
         
-        output_dict = input_dict.copy()
-        output_dict['filter'] = input_dict.get('mktimefilter')
-        output_dict.pop('evclass')
+        self.comp_dict = yaml.safe_load(open(comp_file))
+        coordsys = self.comp_dict.pop('coordsys')
 
         for key_e, comp_e in sorted(self.comp_dict.items()):
+            emin = math.pow(10., comp_e['log_emin'])
+            emax = math.pow(10., comp_e['log_emax'])
+            enumbins = comp_e['enumbins']
+            zmax = comp_e['zmax']
             zcut = "zmax%i"%comp_e['zmax']
+            evclassstr = NAME_FACTORY.base_dict['evclass']    
+            
             kwargs_select = dict(zcut=zcut,
                                  ebin=key_e,
                                  psftype='ALL',
-                                 coordsys=comp_e['coordsys'])
-            selectfile = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select) )
-            output_dict['selectfile_%s' % key_e] = selectfile
-            for mktimekey in comp_e['mktimefilters']:
+                                 coordsys=coordsys)
+            linkname = 'select-energy-%s-%s'%(key_e, zcut)
+            selectfile_energy = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select) )
+            insert_app_config(o_dict, linkname,
+                              'gtselect',
+                              linkname=linkname,
+                              infile=ft1file,
+                              outfile=selectfile_energy,
+                              zmax=zmax,
+                              emin=emin,
+                              emax=emax,
+                              evclass=NAME_FACTORY.evclassmask(evclassstr))
+
+            if comp_e.has_key('mktimefilters'):
+                mktimefilters = comp_e['mktimefilters']
+            else:
+                mktimefilters = ['none']
+
+            for mktimekey in mktimefilters:
                 kwargs_mktime = kwargs_select.copy()
                 kwargs_mktime['mktime'] = mktimekey
-                output_dict['mktime_%s_%s' % (key_e, mktimekey)] = make_full_path(outdir, outkey, NAME_FACTORY.mktime(**kwargs_mktime))
-                output_dict['ltcube_%s_%s' % (key_e, mktimekey)] = make_full_path(outdir, outkey, NAME_FACTORY.ltcube(**kwargs_mktime))
+                filterstring = MKTIME_DICT[mktimekey]
+                mktime_file = make_full_path(outdir, outkey, NAME_FACTORY.mktime(**kwargs_mktime))
+                ltcube_file = make_full_path(outdir, outkey, NAME_FACTORY.ltcube(**kwargs_mktime))
+                linkname_mktime = 'mktime-%s-%s-%s'%(key_e, zcut, mktimekey)
+                linkname_ltcube = 'mktime-%s-%s-%s'%(key_e, zcut, mktimekey)
 
-                for evtclass in comp_e['evtclasses']:
+                insert_app_config(o_dict, linkname_mktime,
+                                  'gtmktime',
+                                  linkname=linkname_mktime,
+                                  evfile=selectfile_energy,
+                                  outfile=mktime_file,
+                                  scfile=ft2file,
+                                  filter=filterstring,
+                                  pfiles=pfiles)
+                insert_app_config(o_dict, linkname_ltcube,
+                                  'gtltcube',
+                                  linkname=linkname_ltcube,
+                                  evfile=mktime_file,
+                                  outfile=ltcube_file,
+                                  scfile=ft2file,
+                                  zmax=zmax,
+                                  pfiles=pfiles)
+                
+                if comp_e.has_key('evtclasses'):
+                    evtclasslist_keys = comp_e['evtclasses']
+                    evtclasslist_vals = comp_e['evtclasses']
+                    evtclasslist = comp_e['evtclasses']
+                else:
+                    evtclasslist_keys = ['default']
+                    evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
+                    evtclasslist = ['default']
+
+                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):
                     for psf_type, psf_dict in sorted(comp_e['psf_types'].items()):
-                        key = "%s_%s_%s_%s"%(key_e, mktimekey, evtclass, psf_type)
+                        linkname_select = 'select-type-%s-%s-%s-%s-%s'%(key_e, zcut, mktimekey, evtclassval, psf_type)
+                        linkname_bin = 'bin-%s-%s-%s-%s-%s'%(key_e, zcut, mktimekey, evtclassval, psf_type)
+                        hpx_order = psf_dict['hpx_order']
                         kwargs_bin = kwargs_mktime.copy()
                         kwargs_bin['psftype'] = psf_type
-                        kwargs_bin['coordsys'] = comp_e.coordsys
-                        kwargs_bin['evclass'] = evtclass
-                        output_dict['selectfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
-                        output_dict['binfile_%s' % key] = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
-                        output_dict['hpxorder_%s' % key] = min(input_dict['hpx_order_max'], psf_dict['hpx_order'])
+                        kwargs_bin['coordsys'] = coordsys
+                        kwargs_bin['evclass'] = evtclassval
+                        selectfile_psf = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
+                        binfile_psf = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
+                        hpxorder_psf = min(input_dict['hpx_order_max'], psf_dict['hpx_order'])
+                        linkname_select = 'select-type-%s-%s-%s-%s'%(key_e, zcut, mktimekey, psf_type)
+                        linkname_bin = 'bin-%s-%s-%s-%s'%(key_e, zcut, mktimekey, psf_type)
 
-        return output_dict
+                        insert_app_config(o_dict, linkname_select,
+                                          'gtselect',
+                                          linkname=linkname_select,
+                                          infile=selectfile_energy,
+                                          outfile=selectfile_psf,
+                                          zmax=zmax,
+                                          emin=emin,
+                                          emax=emax,
+                                          evtype=EVT_TYPE_DICT[psf_type],
+                                          evclass=NAME_FACTORY.evclassmask(evtclassval),
+                                          pfiles=pfiles)
+                        insert_app_config(o_dict, linkname_bin,
+                                          'gtbin',
+                                          linkname=linkname_bin,
+                                          coordsys=coordsys,
+                                          hpx_order=hpx_order,
+                                          evfile=selectfile_psf,
+                                          outfile=binfile_psf,
+                                          emin=emin,
+                                          emax=emax,
+                                          enumbins=enumbins,
+                                          pfiles=pfiles)
 
-    def run_argparser(self, argv):
-        """Initialize a link with a set of arguments using argparser
-        """
-        if self._parser is None:
-            raise ValueError('SplitAndMktime was not given a parser on initialization')
-        args = self._parser.parse_args(argv)
-        self.update_links(yaml.safe_load(open(args.comp)))
-        self.update_args(args.__dict__)
-        return args
+        return o_dict
 
 
-class ConfigMaker_SplitAndMktime(ConfigMaker):
+class SplitAndMktime_SG(ConfigMaker):
     """Small class to generate configurations for SplitAndMktime
     """
-    default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
-                           data=diffuse_defaults.residual_cr['dataset_yaml'],
+    appname = 'fermipy-split-and-mktime-sg'
+    usage = "%s [options]" % (appname)
+    description = "Prepare data for diffuse all-sky analysis"
+    clientclass = SplitAndMktime
+
+    job_time = 1500
+
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
-                           ft1file=diffuse_defaults.residual_cr['ft1file'],
-                           ft2file=diffuse_defaults.residual_cr['ft2file'],
-                           evclass=(128, 'Event class bit mask', int),
-                           pfiles=(None, 'Directory for .par files', str),
-                           do_ltsum=(False, 'Sum livetime cube files', bool),                           
-                           scratch=(None, 'Path to scratch area', str),
-                           dry_run=(False, 'Print commands but do not run them', bool))
+                           ft1file=diffuse_defaults.diffuse['ft1file'],
+                           ft2file=diffuse_defaults.diffuse['ft2file'],
+                           do_ltsum=diffuse_defaults.diffuse['do_ltsum'],    
+                           scratch=diffuse_defaults.diffuse['scratch'],   
+                           dry_run=diffuse_defaults.diffuse['dry_run'])
 
     def __init__(self, chain, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self, chain,
-                             options=kwargs.get('options', self.default_options.copy()))
+        super(SplitAndMktime_SG, self).__init__(chain,
+                                                options=kwargs.get('options', self.default_options.copy()))
 
     def make_base_config(self, args):
         """Hook to build a baseline job configuration
@@ -341,46 +283,88 @@ class ConfigMaker_SplitAndMktime(ConfigMaker):
 
         return job_configs
 
-def create_chain_split_and_mktime(**kwargs):
-    """Build and return a `Link` object that can invoke split-and-mktime"""
-    linkname = kwargs.pop('linkname', 'split-and-mktime')
-    chain = SplitAndMktime(**kwargs)
-    return chain
-
-def create_sg_split_and_mktime(**kwargs):
-    """Build and return a `fermipy.jobs.ScatterGather` object that can invoke this script"""
-    linkname = kwargs.pop('linkname', 'split-and-mktime')
-    chain = SplitAndMktime(linkname, **kwargs)
-    appname = kwargs.pop('appname', 'fermipy-split-and-mktime-sg')
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Prepare data for diffuse all-sky analysis"
-
-    config_maker = ConfigMaker_SplitAndMktime(chain)
-    lsf_sg = build_sg_from_link(chain, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-def main_single(): 
-    """Entry point for command line use for single job """
-    chain = SplitAndMktime('SplitAndMktime')
-    args = chain.run_argparser(sys.argv[1:])
-    chain.run_chain(sys.stdout, args.dry_run)
-    chain.finalize(args.dry_run)
 
 
-def main_batch():
-    """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_split_and_mktime()
-    lsf_sg(sys.argv)
 
-if __name__ == "__main__":
-    main_single()
+  
+class SplitAndMktimeChain(Chain):
+    """Small class to split, apply mktime and bin data according to some user-provided specification
+    """
+    appname = 'fermipy-split-and-mktime-chain'
+    linkname_default = 'split-and-mktime-chain'
+    usage = '%s [options]' %(appname)
+    description='Run split-and-mktime, coadd-split and exposure'
+
+    default_options = dict(data=diffuse_defaults.diffuse['data'],
+                           comp=diffuse_defaults.diffuse['comp'],
+                           ft1file=diffuse_defaults.diffuse['ft1file'],
+                           ft2file=diffuse_defaults.diffuse['ft2file'],
+                           hpx_order_ccube=diffuse_defaults.diffuse['hpx_order_ccube'],
+                           hpx_order_expcube=diffuse_defaults.diffuse['hpx_order_expcube'],
+                           do_ltsum=diffuse_defaults.diffuse['do_ltsum'],
+                           scratch=diffuse_defaults.diffuse['scratch'],
+                           dry_run=diffuse_defaults.diffuse['dry_run'])
+   
+    def __init__(self, **kwargs):
+        """C'tor
+        """
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(SplitAndMktimeChain, self).__init__(linkname, **init_dict)
+        self.comp_dict = None     
+
+    def _register_link_classes(self):    
+        from fermipy.diffuse.job_library import register_classes as register_library
+        from fermipy.diffuse.gt_coadd_split import CoaddSplit_SG
+        register_library()
+        SplitAndMktime_SG.register_class()
+        CoaddSplit_SG.register_class()
+
+    def _map_arguments(self, input_dict):
+        """Map from the top-level arguments to the arguments provided to
+        the indiviudal links """
+        o_dict = OrderedDict()
+
+        data = input_dict.get('data')
+        comp = input_dict.get('comp')
+        ft1file = input_dict.get('ft1file')
+        ft2file = input_dict.get('ft2file')
+        evclass = input_dict.get('evclass')
+        scratch=input_dict.get('scratch', None)
+        dry_run=input_dict.get('dry_run', None)
+
+        insert_app_config(o_dict, 'split-and-mktime',
+                          'fermipy-split-and-mktime-sg',
+                          comp=comp, data=data,
+                          hpx_order_max=input_dict.get('hpx_order_ccube', 9),
+                          ft1file=ft1file,
+                          ft2file=ft2file,
+                          do_ltsum=input_dict.get('do_ltsum', False),
+                          scratch=scratch,
+                          dry_run=dry_run)
+
+        insert_app_config(o_dict, 'coadd-split',
+                          'fermipy-coadd-split-sg',
+                          comp=comp, data=data,
+                          ft1file=ft1file)
+ 
+        insert_app_config(o_dict, 'ltsum',
+                          'fermipy-gtltsum-sg',
+                          comp=comp, data=data, 
+                          ft1file=input_dict['ft1file'],
+                          dry_run=dry_run)
+
+        insert_app_config(o_dict, 'expcube2',
+                          'fermipy-gtltsum-sg',
+                          comp=comp, data=data, 
+                          hpx_order_max=input_dict.get('hpx_order_expcube', 5),
+                          dry_run=dry_run)
+     
+        return o_dict
+
+
+def register_classes():
+    SplitAndMktime.register_class()
+    SplitAndMktime_SG.register_class()
+    SplitAndMktimeChain.register_class()
+ 
+

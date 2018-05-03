@@ -11,9 +11,12 @@ import argparse
 import yaml
 import numpy as np
 
+from collections import OrderedDict
+
 from astropy.table import Table
 
-from fermipy.jobs.chain import Link, Chain
+from fermipy.jobs.link import Link 
+from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
 
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.source_factory import SourceFactory
@@ -273,54 +276,66 @@ def make_catalog_comp_dict(**kwargs):
                 CatalogSourceManager=csm)
 
 
-class CatalogComponentChain(Chain):
+class CatalogCompChain(Chain):
     """Small class to build srcmaps for diffuse components
     """
+    appname = 'fermipy-catalog-comp-chain'
+    linkname_default = 'catalog-comp'
+    usage = '%s [options]' %(appname)
+    description='Run catalog component analysis'
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],
+                           nsrc=(500, 'Number of sources per job', int),
                            make_xml=(False, "Make XML files for diffuse components", bool),
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 
-    def __init__(self, linkname):
+    def __init__(self, **kwargs):
         """C'tor
         """
-        from fermipy.diffuse.job_library import create_sg_gtsrcmaps_catalog
-        from fermipy.diffuse.gt_merge_srcmaps import create_sg_merge_srcmaps
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(CatalogCompChain, self).__init__(linkname, **init_dict)
+        self.comp_dict = None     
 
-        link_srcmaps_catalogs = create_sg_gtsrcmaps_catalog(linkname="%s.catalog"%linkname,
-                                                            appname='fermipy-srcmaps-catalog-sg')
+    def _register_link_classes(self):    
+        from fermipy.diffuse.job_library import GatherSrcmaps_SG
+        from fermipy.diffuse.gt_merge_srcmaps import MergeSrcmaps_SG
+        from fermipy.diffuse.gt_srcmaps_catalog import SrcmapsCatalog_SG
+        GatherSrcmaps_SG.register_class()
+        MergeSrcmaps_SG.register_class()
+        SrcmapsCatalog_SG.register_class()
 
-        link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
-                                                         appname='fermipy-merge-srcmaps-sg')
+    def _map_arguments(self, input_dict):
+        """Map from the top-level arguments to the arguments provided to
+        the indiviudal links """        
+        o_dict = OrderedDict()
 
-        parser = argparse.ArgumentParser(usage='fermipy-catalog-chain',
-                                         description="Run catalog component analysis setup")
-        Chain.__init__(self, linkname,
-                       appname='fermipy-catalog-chain',
-                       links=[link_srcmaps_catalogs, link_srcmaps_composite],
-                       options=CatalogComponentChain.default_options.copy(),
-                       parser=parser)
+        data = input_dict.get('data')
+        comp = input_dict.get('comp')
+        library = input_dict.get('library')
+        dry_run = input_dict.get('dry_run', False)
 
-    def run_argparser(self, argv):
-        """Initialize a link with a set of arguments using argparser
-        """
-        args = Link.run_argparser(self, argv)
-        for link in self._links.values():
-            link.run_link(stream=sys.stdout, dry_run=True)
-        return args
+        insert_app_config(o_dict, 'srcmaps-catalog',
+                          'fermipy-srcmaps-catalog-sg',
+                          comp=comp, data=data,
+                          library=library,
+                          nsrc=input_dict.get('nsrc', 500),
+                          dry_run=dry_run)
+ 
+        insert_app_config(o_dict, 'gather-srcmaps',
+                          'fermipy-gather-srcmaps-sg',
+                          comp=comp, data=data,
+                          library=library,
+                          dry_run=dry_run)
 
-def create_chain_catalog_comps(**kwargs):
-    """Create and return a `CatalogComponentChain` object """
-    ret_chain = CatalogComponentChain(linkname=kwargs.pop('linkname', 'diffuse.catalog_comps'))
-    return ret_chain
+        insert_app_config(o_dict, 'merge-srcmaps',
+                          'fermipy-merge-srcmaps-sg',
+                          comp=comp, data=data,
+                          library=library,
+                          dry_run=dry_run)
 
-def main_chain():
-    """Entry point for command line use for single job """
-    the_chain = CatalogComponentChain("diffuse.catalog_comps")
-    args = the_chain.run_argparser(sys.argv[1:])
-    the_chain.run_chain(sys.stdout, args.dry_run)
-    the_chain.finalize(args.dry_run)
+        return o_dict
 
-if __name__ == '__main__':
-    main_chain()
+def register_classes():
+    CatalogCompChain.register_class()

@@ -12,20 +12,21 @@ import numpy as np
 
 import healpy
 
+from collections import OrderedDict
+
 from fermipy.skymap import HpxMap
 from fermipy import fits_utils
+from fermipy.utils import load_yaml
 from fermipy.jobs.job_archive import JobArchive
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.lsf_impl import check_log, make_nfs_path, get_lsf_default_args, LSF_Interface
-from fermipy.jobs.chain import add_argument, Link, Chain
+from fermipy.jobs.slac_impl import check_log, make_nfs_path
+from fermipy.jobs.link import add_argument, Link
+from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
+
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
-from fermipy.diffuse.gt_split_and_bin import create_sg_split_and_bin
-from fermipy.diffuse.gt_split_and_mktime import create_sg_split_and_mktime
-from fermipy.diffuse.job_library import create_sg_gtexpcube2, create_sg_gtltsum, create_sg_fermipy_coadd
 from fermipy.diffuse import defaults as diffuse_defaults
-
 
 
 NAME_FACTORY = NameFactory()
@@ -33,40 +34,37 @@ NAME_FACTORY_CLEAN = NameFactory()
 NAME_FACTORY_DIRTY = NameFactory()
 
 
-class ResidualCRAnalysis(Link):
+class ResidualCR(Link):
     """Small class to analyze the residual cosmic-ray contaimination.
     """
-    default_options = dict(ccube_dirty=(None, 'Input counts cube for dirty event class.', str),
-                           ccube_clean=(None, 'Input counts cube for clean event class.', str),
-                           bexpcube_dirty=(None, 'Input exposure cube for dirty event class.', str),
-                           bexpcube_clean=(None, 'Input exposure cube for clean event class.', str),
-                           hpx_order=diffuse_defaults.residual_cr['hpx_order_fitting'],
-                           outfile=(None, 'Name of output file', str),
-                           select_factor=(5.0, 'Pixel selection factor for Aeff Correction',
-                                          float),
-                           mask_factor=(2.0, 'Pixel selection factor for output mask',
-                                        float),
-                           sigma=(3.0, 'Width of gaussian to smooth output maps [degrees]', float),
-                           full_output=(False, 'Include diagnostic output', bool),
-                           clobber=(False, 'Overwrite output file', bool),)
+    appname = 'fermipy-residual-cr'
+    linkname_default = 'residual-cr'
+    usage = '%s [options]' %(appname)
+    description = "Compute the residual cosmic-ray contamination"
+
+    default_options = dict(ccube_dirty=diffuse_defaults.residual_cr['ccube_dirty'],
+                           ccube_clean=diffuse_defaults.residual_cr['ccube_clean'],
+                           bexpcube_dirty=diffuse_defaults.residual_cr['bexpcube_dirty'],
+                           bexpcube_clean=diffuse_defaults.residual_cr['bexpcube_clean'],
+                           hpx_order=diffuse_defaults.gtopts['hpx_order'],
+                           outfile=diffuse_defaults.gtopts['outfile'],
+                           select_factor=diffuse_defaults.residual_cr['select_factor'],
+                           mask_factor=diffuse_defaults.residual_cr['mask_factor'],
+                           sigma=diffuse_defaults.residual_cr['sigma'],
+                           full_output=diffuse_defaults.residual_cr['full_output'],
+                           clobber=diffuse_defaults.gtopts['clobber'])
+
+    default_file_args = dict(ccube_dirty=FileFlags.input_mask,
+                             bexpcube_dirty=FileFlags.input_mask,
+                             ccube_clean=FileFlags.input_mask,
+                             bexpcube_clean=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
 
     def __init__(self, **kwargs):
         """C'tor
         """
-        parser = argparse.ArgumentParser(usage='fermipy-residual-cr',
-                                         description="Compute the residual cosmic-ray contamination.")
-
-        Link.__init__(self, kwargs.pop('linkname', 'residual_cr'),
-                      appname='fermipy-residual-cr',
-                      options=ResidualCRAnalysis.default_options.copy(),
-                      parser=parser,
-                      file_args=dict(ccube_dirty=FileFlags.input_mask,
-                                     bexpcube_dirty=FileFlags.input_mask,
-                                     ccube_clean=FileFlags.input_mask,
-                                     bexpcube_clean=FileFlags.input_mask,
-                                     outfile=FileFlags.output_mask),
-                      **kwargs)
-
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(ResidualCR, self).__init__(linkname, **init_dict)
 
     @staticmethod
     def _match_cubes(ccube_clean, ccube_dirty,
@@ -363,27 +361,32 @@ class ResidualCRAnalysis(Link):
                                   energy_hdu=out_ebounds)
 
 
-class ConfigMaker_ResidualCR(ConfigMaker):
+class ResidualCR_SG(ConfigMaker):
     """Small class to generate configurations for this script
     """
-    default_options = dict(comp=diffuse_defaults.residual_cr['comp'],
-                           dataset_yaml=diffuse_defaults.residual_cr['dataset_yaml'],
-                           hpx_order=diffuse_defaults.residual_cr['hpx_order_fitting'],
-                           clean=('ultracleanveto', 'Clean event class', str),
-                           dirty=('source', 'Dirty event class', str),
-                           mktime=('nosm', 'Key for gtmktime selection', str),
-                           select_factor=(5.0, 'Pixel selection factor for Aeff Correction',
-                                          float),
-                           mask_factor=(2.0, 'Pixel selection factor for output mask',
-                                        float),
-                           sigma=(3.0, 'Width of gaussian to smooth output maps [degrees]', float),
-                           full_output=(False, 'Include diagnostic output', bool))
+    appname = 'fermipy-residual-cr-sg'
+    usage = "%s [options]" % (appname)
+    description = "Compute the residual cosmic-ray contamination"
+    clientclass = ResidualCR
+
+    job_time = 300
+
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
+                           mktimefilter=diffuse_defaults.diffuse['mktimefilter'],
+                           hpx_order=diffuse_defaults.gtopts['hpx_order'],
+                           clean=diffuse_defaults.residual_cr['clean'],
+                           dirty=diffuse_defaults.residual_cr['dirty'],
+                           select_factor=diffuse_defaults.residual_cr['select_factor'],
+                           mask_factor=diffuse_defaults.residual_cr['mask_factor'],
+                           sigma=diffuse_defaults.residual_cr['sigma'],
+                           full_output=diffuse_defaults.residual_cr['full_output'])
 
     def __init__(self, link, **kwargs):
         """C'tor
         """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options', self.default_options.copy()))
+        super(ResidualCR_SG, self).__init__(link,
+                                            options=kwargs.get('options', self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -391,9 +394,9 @@ class ConfigMaker_ResidualCR(ConfigMaker):
         job_configs = {}
 
         components = Component.build_from_yamlfile(args['comp'])
-        NAME_FACTORY.update_base_dict(args['dataset_yaml'])
-        NAME_FACTORY_CLEAN.update_base_dict(args['dataset_yaml'])
-        NAME_FACTORY_DIRTY.update_base_dict(args['dataset_yaml'])
+        NAME_FACTORY.update_base_dict(args['data'])
+        NAME_FACTORY_CLEAN.update_base_dict(args['data'])
+        NAME_FACTORY_DIRTY.update_base_dict(args['data'])
 
         NAME_FACTORY_CLEAN.base_dict['evclass'] = args['clean']
         NAME_FACTORY_DIRTY.base_dict['evclass'] = args['dirty']
@@ -406,7 +409,7 @@ class ConfigMaker_ResidualCR(ConfigMaker):
                              psftype=comp.evtype_name,
                              coordsys=comp.coordsys,
                              irf_ver=NAME_FACTORY.irf_ver(),
-                             mktime=args['mktime'],
+                             mktime=args['mktimefilter'],
                              fullpath=True)
             outfile = NAME_FACTORY.residual_cr(**name_keys)
             if args['hpx_order']:
@@ -423,148 +426,72 @@ class ConfigMaker_ResidualCR(ConfigMaker):
 
         return job_configs
 
-def create_link_residual_cr(**kwargs):
-    """Build and return a `Link` object that can invoke `ResidualCRAnalysis` """
-    analyzer = ResidualCRAnalysis(**kwargs)
-    return analyzer.link
-
-def create_sg_residual_cr(**kwargs):
-    """Build and return a ScatterGather object that can invoke this script"""
-    analyzer = ResidualCRAnalysis(**kwargs)
-    link = analyzer
-    link.linkname = kwargs.pop('linkname', link.linkname)
-    appname = kwargs.pop('appname', 'gt-residual-cr-sg')
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Copy source maps from the library to a analysis directory"
-
-    config_maker = ConfigMaker_ResidualCR(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=link.linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
 
 class ResidualCRChain(Chain):
     """Small class to preform analysis of residual cosmic-ray contamination
     """
-    default_options = diffuse_defaults.residual_cr.copy()
+    appname = 'fermipy-residual-cr-chain'
+    linkname_default = 'residual-cr-chain'
+    usage = '%s [options]' %(appname)
+    description='Run residual cosmic ray analysis'
+
+    default_options = dict(config=diffuse_defaults.diffuse['config'])
 
     def __init__(self, linkname, **kwargs):
         """C'tor
         """
-        link_split_mktime = create_sg_split_and_mktime(linkname="%s.split"%linkname,
-                                                       mapping={'data':'dataset_yaml',
-                                                                'action': 'action_split',
-                                                                'hpx_order_max':'hpx_order_binning'})
-        link_coadd_split = create_sg_fermipy_coadd(linkname="%s.coadd"%linkname,
-                                                   mapping={'data':'dataset_yaml',
-                                                            'comp':'binning_yaml',
-                                                            'action': 'action_coadd'})
-        link_ltsum = crate_sg_gtltsum(linkname="%s.ltsum"%linkname,
-                                      mapping={'data':'dataset_yaml',
-                                               'comp':'binning_yaml',
-                                               'action': 'action_ltsum'})
-        link_expcube = create_sg_gtexpcube2(linkname="%s.expcube"%linkname,
-                                            mapping={'data':'dataset_yaml',
-                                                     'comp':'binning_yaml',
-                                                     'hpx_order':'hpx_order_binning',
-                                                     'action': 'action_expcube'})
-        link_cr_analysis = create_sg_residual_cr(linkname="%s.cr_analysis"%linkname,
-                                                 mapping={'data_dirty':'dataset_dirty_yaml',
-                                                          'data_clean':'dataset_clean_yaml',
-                                                          'hpx_order':'hpx_order_fitting',
-                                                          'action': 'action_analysis',
-                                                          'comp':'binning_yaml'})
-
-        parser = argparse.ArgumentParser(usage='fermipy-residual-cr-chain',
-                                         description="Run residual cosmic-ray analysis chain")
-        Chain.__init__(self, linkname,
-                       appname='fermipy-residual-cr-chain',
-                       links=[link_split_mktime,
-                              link_coadd_split,
-                              link_ltsum,
-                              link_expcube,
-                              link_cr_analysis],
-                       options=ResidualCRChain.default_options.copy(),
-                       argmapper=self._map_arguments,
-                       parser=parser,
-                       **kwargs)
+        linkname, init_dict = self._init_dict(**kwargs)
+        super(ResidualCRChain, self).__init__(linkname, **init_dict)
+        self.comp_dict = None     
+   
+    def _register_link_classes(self):    
+         from fermipy.diffuse.gt_split_and_mktime import SplitAndMktimeChain         
+         SplitAndMktimeChain.register_class()
+         ResidualCR_SG.register_class()
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
-        output_dict = input_dict.copy()
-        
-        if input_dict.get('dry_run', False):
-            action = 'run'
-        else:
-            action = 'run'
-       
-        output_dict['action_split'] = action
-        output_dict['action_expcube'] = action
-        output_dict['action_analysis'] = action
-        output_dict['do_ltsum'] = True
 
-        return output_dict
+        config_yaml = input_dict['config']
+        o_dict = OrderedDict()
+        config_dict = load_yaml(config_yaml)
 
-    def run_argparser(self, argv):
-        """Initialize a link with a set of arguments using argparser
-        """
-        args = Link.run_argparser(self, argv)
-        for link in self._links.values():
-            link.run_link(stream=sys.stdout, dry_run=True)
-        return args
+        data = config_dict.get('data')
+        comp = config_dict.get('comp')
+        dry_run = input_dict.get('dry_run', False)
+
+        insert_app_config(o_dict, 'split-and-mktime',
+                          'fermipy-split-and-mktime-chain',
+                          comp=comp, data=data,
+                          ft1file=config_dict['ft1file'],
+                          ft2file=config_dict['ft2file'],
+                          hpx_order_ccube=config_dict.get('hpx_order_ccube', 7),
+                          hpx_order_expcube=config_dict.get('hpx_order_expcube', 7),
+                          mktime=config_dict.get('mktimefitler', None),
+                          do_ltsum=config_dict.get('do_ltsum', False),
+                          scratch=config_dict.get('scratch', None),
+                          dry_run=dry_run)
+
+        insert_app_config(o_dict, 'residual-cr',
+                          'fermipy-residual-cr-sg',
+                          comp=comp, data=data, 
+                          hpx_order=config_dict.get('hpx_order_fitting', 4),
+                          clean=config_dict.get('clean_class', None),
+                          dirty=config_dict.get('dirty_class', None),
+                          mktime=config_dict.get('mktimefitler', None),
+                          select_factor=config_dict.get('select_factor', None),
+                          mask_factor=config_dict.get('mask_factor', None),
+                          sigma=config_dict.get('sigma', None),
+                          full_output=config_dict.get('full_output', None),
+                          dry_run=dry_run)
+
+        return o_dict
 
 
-def create_chain_residual_cr(**kwargs):
-    """Build and return a `ResidualCRChain` object """
-    ret_chain = ResidualCRChain(linkname=kwargs.pop('linkname', 'ResidualCR'))
-    return ret_chain
-
-
-def main_single():
-    """Entry point for command line use for single job """
-    gtsmp = ResidualCRAnalysis()
-    gtsmp.run_analysis(sys.argv[1:])
-
-
-def main_batch():
-    """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_residual_cr()
-    lsf_sg(sys.argv)
-
-def main_chain():
-    """Energy point for running the entire Cosmic-ray analysis """
-    job_archive = JobArchive.build_archive(job_archive_table='job_archive_residual_CR.fits',
-                                           file_archive_table='file_archive_residual_CR.fits',
-                                           base_path=os.path.abspath('.') + '/')
-
-    the_chain = ResidualCRChain('ResidualCR', job_archive=job_archive)
-    args = the_chain.run_argparser(sys.argv[1:])
-    logfile = "log_%s_top.log" % the_chain.linkname
-    the_chain.archive_self(logfile)
-    if args.dry_run:
-        outstr = sys.stdout
-    else:
-        outstr = open(logfile, 'append')
-
-    the_chain.run_chain(sys.stdout, args.dry_run, sub_logs=True)
-    if not args.dry_run:
-        outstr.close()
-    the_chain.finalize(args.dry_run)
-    job_archive.update_job_status(check_log)
-    job_archive.write_table_file()
-
-if __name__ == '__main__':
-    main_chain()
-
+def register_residual_cr():
+    from fermipy.jobs.factory import LinkFactory
+    LinkFactory.register(ResidualCR.appname, ResidualCR)
+    LinkFactory.register(ResidualCR_SG.appname, ResidualCR_SG)
+    LinkFactory.register(ResidualCRChain.appname, ResidualCRChain)
 
