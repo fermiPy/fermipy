@@ -48,7 +48,7 @@ def get_batch_job_interface(job_time=1500):
 
     if DEFAULT_JOB_TYPE == 'slac':
         from fermipy.jobs.slac_impl import SlacInterface
-        return Slac_Interface(**batch_job_args)
+        return SlacInterface(**batch_job_args)
     elif DEFAULT_JOB_TYPE == 'native':
         from fermipy.jobs.native_impl import NativeInterface
-        return Native_Interface(**batch_job_args)
+        return NativeInterface(**batch_job_args)
