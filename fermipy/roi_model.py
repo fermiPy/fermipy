@@ -400,6 +400,8 @@ class Model(object):
 
     @property
     def is_free(self):
+        """ returns True if any of the spectral model parameters is set to free, else False
+        """
         return bool(np.array([int(value.get("free", False)) for key, value in self.spectral_pars.items()]).sum())
 
     @property
@@ -2179,13 +2181,23 @@ class ROIModel(fermipy.config.Configurable):
 
     def to_ds9(self, free='box',fixed='cross',frame='fk5',color='green',header=True):
         """Returns a list of ds9 region definitions
-        :param region: name of the region file (string)
-        :param free: one of the supported ds9 point symbols, used for free sources, see here: http://ds9.si.edu/doc/ref/region.html
-        :param fixed: as free, but for fixed sources
-        :param frame: typically fk5, more to be implemented
-        :param color: color used for the symbols
-        :param header: if True, will prepend a global header line.
-        :return: list of regions (and header if requested)
+        Parameters
+        ----------
+        free: bool
+            one of the supported ds9 point symbols, used for free sources, see here: http://ds9.si.edu/doc/ref/region.html
+        fixed: bool
+            as free but for fixed sources
+        frame: str
+            typically fk5, more to be implemented
+        color: str
+            color used for symbols (only ds9 compatible colors)
+        header: bool
+            if True, will prepend a global header line.
+
+        Returns
+        -------
+        lines : list
+            list of regions (and header if requested)
         """
         # todo: add support for extended sources?!
         allowed_symbols = ['circle','box','diamond','cross','x','arrow','boxcircle']
@@ -2215,10 +2227,10 @@ class ROIModel(fermipy.config.Configurable):
         It calls the `to_ds9` method and write the result to the region file. Only the file name is required.
         All other parameters will be forwarded to the `to_ds9` method, see the documentation of that method
         for all accepted parameters and options.
-
-        :param region: name of the region file (string)
-
-        :return: None.
+        Parameters
+        ----------
+        region : str
+            name of the region file (string)
         """
         lines = self.to_ds9(*args,**kwargs)
         with open(region,'w') as fo:
