@@ -8,14 +8,13 @@ import sys
 import os
 import time
 import subprocess
-import numpy as np
 
-from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails
-from fermipy.jobs.sys_interface import clean_job, SysInterface, check_log
+from fermipy.jobs.job_archive import JobStatus
+from fermipy.jobs.sys_interface import clean_job, SysInterface
 
 
 def make_nfs_path(path):
-    """Make a nfs version of a file path. 
+    """Make a nfs version of a file path.
     This just puts /nfs at the beginning instead of /gpfs"""
     if os.path.isabs(path):
         fullpath = path
@@ -27,11 +26,12 @@ def make_nfs_path(path):
         fullpath = fullpath.replace('/gpfs/', '/nfs/')
     return fullpath
 
+
 def make_gpfs_path(path):
-    """Make a gpfs version of a file path. 
+    """Make a gpfs version of a file path.
     This just puts /gpfs at the beginning instead of /nfs"""
     if os.path.isabs(path):
-        fullpath = pathos.path.abspath(path)
+        fullpath = os.path.abspath(path)
     else:
         fullpath = os.path.abspath(path)
     if len(fullpath) < 5:
@@ -39,6 +39,7 @@ def make_gpfs_path(path):
     if fullpath[0:5] == '/nfs/':
         fullpath = fullpath.replace('/nfs/', '/gpfs/')
     return fullpath
+
 
 def get_lsf_status():
     """Count and print the number of jobs in various LSF states
@@ -72,7 +73,6 @@ def get_lsf_status():
     return status_count
 
 
-
 def build_bsub_command(command_template, lsf_args):
     """Build and return a lsf batch command template
 
@@ -90,7 +90,7 @@ def build_bsub_command(command_template, lsf_args):
     return full_command
 
 
-class Slac_Interface(SysInterface):
+class SlacInterface(SysInterface):
     """Implmentation of ScatterGather that uses LSF"""
     string_exited = 'Exited with exit code'
     string_successful = 'Successfully completed'
@@ -100,7 +100,7 @@ class Slac_Interface(SysInterface):
 
         Keyword arguements
         ------------------
-        lsf_args : dict 
+        lsf_args : dict
             Dictionary of arguments passed to LSF
 
         max_jobs : int [500]
@@ -111,18 +111,17 @@ class Slac_Interface(SysInterface):
 
         time_per_cycle : int [15]
             Time per submission cycle in seconds
-        
+
         max_job_age : int [90]
             Max job age in minutes
         """
-        super(Slac_Interface, self).__init__(**kwargs)
+        super(SlacInterface, self).__init__(**kwargs)
         self._lsf_args = kwargs.pop('lsf_args', {})
         self._max_jobs = kwargs.pop('max_jobs', 500)
         self._time_per_cycle = kwargs.pop('time_per_cycle', 15)
         self._jobs_per_cycle = kwargs.pop('jobs_per_cycle', 20)
         self._max_job_age = kwargs.pop('max_job_age', 90)
-        self._no_batch =  kwargs.pop('no_batch', False)
-
+        self._no_batch = kwargs.pop('no_batch', False)
 
     def dispatch_job_hook(self, link, key, job_config, logfile, stream=sys.stdout):
         """Send a single job to the LSF batch
@@ -165,11 +164,11 @@ class Slac_Interface(SysInterface):
                 os.makedirs(logdir)
             except OSError:
                 pass
-            p = subprocess.Popen(full_command.split(), 
-                                 stderr=stream,
-                                 stdout=stream)
-            p.communicate()
-            return p.returncode
+            proc = subprocess.Popen(full_command.split(),
+                                    stderr=stream,
+                                    stdout=stream)
+            proc.communicate()
+            return proc.returncode
 
     def submit_jobs(self, link, job_dict=None, job_archive=None, stream=sys.stdout):
         """Submit all the jobs in job_dict """
@@ -177,18 +176,19 @@ class Slac_Interface(SysInterface):
             return JobStatus.no_job
         if job_dict is None:
             job_keys = link.jobs.keys()
-        else: 
+        else:
             job_keys = sorted(job_dict.keys())
 
         # copy & reverse the keys b/c we will be popping item off the back of
         # the list
         unsubmitted_jobs = job_keys
         unsubmitted_jobs.reverse()
- 
+
         failed = False
-        if unsubmitted_jobs > 0:
+        if len(unsubmitted_jobs) > 0:
             if stream != sys.stdout:
-                sys.stdout.write('Submitting jobs: ')
+                sys.stdout.write('Submitting jobs (%i): ' %
+                                 len(unsubmitted_jobs))
                 sys.stdout.flush()
         while len(unsubmitted_jobs) > 0:
             status = get_lsf_status()
@@ -202,16 +202,17 @@ class Slac_Interface(SysInterface):
             for i in range(njob_to_submit):
                 job_key = unsubmitted_jobs.pop()
 
-                #job_details = job_dict[job_key]
+                # job_details = job_dict[job_key]
                 job_details = link.jobs[job_key]
                 job_config = job_details.job_config
                 if job_details.status == JobStatus.failed:
                     clean_job(job_details.logfile, {}, self._dry_run)
-                    #clean_job(job_details.logfile,
+                    # clean_job(job_details.logfile,
                     #          job_details.outfiles, self.args['dry_run'])
-                    
+
                 job_config['logfile'] = job_details.logfile
-                new_job_details = self.dispatch_job(link, job_key, job_archive, stream)
+                new_job_details = self.dispatch_job(
+                    link, job_key, job_archive, stream)
                 if new_job_details.status == JobStatus.failed:
                     failed = True
                     clean_job(new_job_details.logfile,
@@ -228,7 +229,7 @@ class Slac_Interface(SysInterface):
 
         if failed:
             return JobStatus.failed
-        
+
         if stream != sys.stdout:
             sys.stdout.write('!\n')
 
@@ -236,14 +237,23 @@ class Slac_Interface(SysInterface):
 
 
 def get_slac_default_args(job_time=1500):
+    """ Create a batch job interface object.
 
-    job_check_sleep = np.clip(int(job_time / 5), 60, 300)
+    Parameters
+    ----------
+
+    job_time : int
+        Expected max length of the job, in seconds.
+        This is used to select the batch queue and set the
+        job_check_sleep parameter that sets how often
+        we check for job completion.
+
+    """
     slac_default_args = dict(lsf_args={'W': job_time,
                                        'R': '\"select[rhel60&&!fell]\"'},
                              max_jobs=500,
                              time_per_cycle=15,
                              jobs_per_cycle=20,
                              max_job_age=90,
-                             job_check_sleep=job_check_sleep,
                              no_batch=False)
     return slac_default_args.copy()
