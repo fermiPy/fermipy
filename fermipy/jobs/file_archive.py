@@ -17,7 +17,7 @@ from shutil import copyfile
 from collections import OrderedDict
 
 import numpy as np
-#from numpy.core import defchararray
+# from numpy.core import defchararray
 from astropy.table import Table, Column
 
 from fermipy.fits_utils import write_tables_to_fits
@@ -46,7 +46,7 @@ def get_unique_match(table, colname, value):
     return np.argmax(mask)
 
 
-#@unique
+# @unique
 # class FileStatus(Enum):
 class FileStatus(object):
     """Enumeration of file status types"""
@@ -122,7 +122,7 @@ class FileDict(object):
         """Update self with values from a dictionary
         mapping file path [str] to `FileFlags` enum """
         for key, val in file_dict.items():
-            if self.file_dict.has_key(key):
+            if key in self.file_dict:
                 self.file_dict[key] |= val
             else:
                 self.file_dict[key] = val
@@ -393,7 +393,7 @@ class FileStageManager(object):
             else:
                 print ("copy %s %s" % (key, value))
                 copyfile(key, value)
-                
+
         return file_mapping
 
     @staticmethod
@@ -450,7 +450,7 @@ class FileHandle(object):
         self.flags = kwargs.get('flags', FileFlags.no_flags)
         self.path = kwargs['path']
         if self.path[0] == '@':
-            print ('Removing @ from %s'%self.path)
+            print ('Removing @ from %s' % self.path)
             self.path = self.path[1:]
 
     @staticmethod
@@ -498,7 +498,7 @@ class FileHandle(object):
             fullpath = self.path
         else:
             fullpath = os.path.join(basepath, self.path)
-            
+
         exists = os.path.exists(fullpath)
         if not exists:
             if self.flags & FileFlags.gz_mask != 0:
@@ -740,7 +740,7 @@ class FileArchive(object):
             except KeyError:
                 if creator is None:
                     creator = -1
-                    #raise KeyError("Can not register a file %s without a creator"%fname)
+                    # raise KeyError("Can not register a file %s without a creator"%fname)
                 fhandle = self.register_file(fname, creator, status, flags)
             ret_list.append(fhandle.key)
         return ret_list
@@ -772,17 +772,16 @@ class FileArchive(object):
         if table_file is not None:
             self._table_file = table_file
         if self._table_file is None:
-            raise RuntimeError("No output file specified for table")           
+            raise RuntimeError("No output file specified for table")
         write_tables_to_fits(self._table_file, [self._table], clobber=True,
                              namelist=['FILE_ARCHIVE'])
-
 
     def update_file_status(self):
         """Update the status of all the files in the archive"""
         nfiles = len(self.cache.keys())
         status_vect = np.zeros((6), int)
-        sys.stdout.write("Updating status of %i files: "%nfiles)
-        sys.stdout.flush()    
+        sys.stdout.write("Updating status of %i files: " % nfiles)
+        sys.stdout.flush()
         for i, key in enumerate(self.cache.keys()):
             if i % 200 == 0:
                 sys.stdout.write('.')
@@ -791,16 +790,16 @@ class FileArchive(object):
             fhandle.check_status(self._base_path)
             fhandle.update_table_row(self._table, fhandle.key - 1)
             status_vect[fhandle.status] += 1
-            
+
         sys.stdout.write("!\n")
         sys.stdout.flush()
         sys.stdout.write("Summary:\n")
-        sys.stdout.write("  no_file:      %i\n"%status_vect[0])
-        sys.stdout.write("  expected:     %i\n"%status_vect[1])
-        sys.stdout.write("  exists:       %i\n"%status_vect[2])
-        sys.stdout.write("  missing:      %i\n"%status_vect[3])
-        sys.stdout.write("  superseded:   %i\n"%status_vect[4])
-        sys.stdout.write("  temp_removed: %i\n"%status_vect[5])
+        sys.stdout.write("  no_file:      %i\n" % status_vect[0])
+        sys.stdout.write("  expected:     %i\n" % status_vect[1])
+        sys.stdout.write("  exists:       %i\n" % status_vect[2])
+        sys.stdout.write("  missing:      %i\n" % status_vect[3])
+        sys.stdout.write("  superseded:   %i\n" % status_vect[4])
+        sys.stdout.write("  temp_removed: %i\n" % status_vect[5])
 
     @classmethod
     def get_archive(cls):
@@ -819,7 +818,7 @@ def main_browse():
     """Entry point for command line use for browsing a FileArchive """
 
     import argparse
-    
+
     parser = argparse.ArgumentParser(usage="file_archive.py [options]",
                                      description="Browse a job archive")
 
@@ -827,8 +826,8 @@ def main_browse():
                         type=str, default='file_archive_temp.fits', help="File archive file")
     parser.add_argument('--base', action='store', dest='base_path',
                         type=str, default=os.path.abspath('.'), help="File archive base path")
-    
-    args = parser.parse_args(sys.argv[1:])    
+
+    args = parser.parse_args(sys.argv[1:])
     FileArchive.build_archive(**args.__dict__)
 
 

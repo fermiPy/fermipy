@@ -11,23 +11,19 @@ from __future__ import absolute_import, division, print_function
 
 
 import sys
-import os
 import time
-import copy
 import argparse
 
 import numpy as np
-#from enum import Enum
 
-
-from fermipy.jobs.utils import is_null, is_not_null
-from fermipy.jobs.sys_interface import remove_file, clean_job
 from fermipy.jobs.batch import get_batch_job_interface
-from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobStatusVector, JobDetails, JobArchive, JOB_STATUS_STRINGS
+from fermipy.jobs.job_archive import JobStatus,\
+    JobStatusVector, JobDetails, JobArchive, JOB_STATUS_STRINGS
 from fermipy.jobs.link import add_argument, extract_arguments, Link
 
-ACTIONS = ['run', 'resubmit', 'check_status', 'config', 'skip', 'clean']
+from fermipy.jobs import defaults
 
+ACTIONS = ['run', 'resubmit', 'check_status', 'config', 'skip', 'clean']
 
 
 class ConfigMaker(object):
@@ -42,6 +38,12 @@ class ConfigMaker(object):
                  float_opt=(3.0, "Some float", float),
                  list_opt=(None, "Some list", list))
     """
+    appname = 'dummy-sg'
+    usage = "%s [options]" % (appname)
+    description = "Run multiple analyses"
+    clientclass = Link
+
+    job_time = 1500
 
     def __init__(self, link, **kwargs):
         """C'tor
@@ -52,19 +54,22 @@ class ConfigMaker(object):
     @classmethod
     def create(cls, **kwargs):
         """ Build and return a `ConfigMaker` object """
-        appname = kwargs.pop('appname', cls.appname)
+        kwargs_copy = kwargs.copy()
+        kwargs_copy.pop('appname', cls.appname)
         link = cls.clientclass.create(**kwargs)
-        link.linkname = kwargs.pop('linkname', link.linkname)
+        link.linkname = kwargs_copy.pop('linkname', link.linkname)
 
         default_interface = get_batch_job_interface(cls.job_time)
-        interface = kwargs.pop('interface', default_interface)
+        interface = kwargs_copy.pop('interface', default_interface)
+        job_check_sleep = np.clip(int(cls.job_time / 5), 60, 300)
+        kwargs_copy['job_check_sleep'] = job_check_sleep
 
         config_maker = cls(link)
         sg = build_sg_from_link(link, config_maker,
                                 interface=interface,
                                 usage=cls.usage,
                                 description=cls.description,
-                                **kwargs)
+                                **kwargs_copy)
         return sg
 
     @classmethod
@@ -75,11 +80,11 @@ class ConfigMaker(object):
 
     @classmethod
     def register_class(cls):
-        from fermipy.jobs.factory import LinkFactory   
-        if LinkFactory._class_dict.has_key(cls.appname):
+        """Register this class with the `LinkFactory` """
+        from fermipy.jobs.factory import LinkFactory
+        if cls.appname in LinkFactory._class_dict:
             return
         LinkFactory.register(cls.appname, cls)
-  
 
     def _add_options(self, option_dict):
         """Add options into an option dictionary"""
@@ -122,11 +127,11 @@ class ScatterGather(Link):
     """
     default_prefix_logfile = 'scatter'
 
-    default_options = dict(action=('run', 'Action to perform', str),
-                           dry_run=(False, 'Print commands, but do not execute them', bool),
-                           job_check_sleep=(300, 'Sleep time between checking on job status (s)', int),
-                           print_update=(False, 'Print summary of job status', bool),
-                           check_status_once=(False,'Check status only once before proceeding', bool),)
+    default_options = dict(action=defaults.jobs['action'],
+                           dry_run=defaults.jobs['dry_run'],
+                           job_check_sleep=defaults.jobs['job_check_sleep'],
+                           print_update=defaults.jobs['print_update'],
+                           check_status_once=defaults.jobs['check_status_once'])
 
     def __init__(self, **kwargs):
         """C'tor
@@ -168,6 +173,9 @@ class ScatterGather(Link):
         self._scatter_link = kwargs.pop('scatter')
         self._no_batch = kwargs.pop('no_batch', False)
         options = kwargs.get('options', self.default_options.copy())
+        os = options['job_check_sleep']
+        options['job_check_sleep'] = (kwargs.pop(
+            'job_check_sleep', 300), os[1], os[2])
         self._config_maker._add_options(options)
         Link.__init__(self, linkname,
                       options=options,
@@ -205,7 +213,7 @@ class ScatterGather(Link):
 
         `JobStatusVector`
         """
-        status_vect = self._check_link_completion(self._scatter_link, 
+        status_vect = self._check_link_completion(self._scatter_link,
                                                   fail_pending, fail_running)
         return status_vect
 
@@ -217,13 +225,13 @@ class ScatterGather(Link):
 
         `JobStatusVector`
         """
-        
+
         status_vect = JobStatusVector()
         for job_key, job_details in link.jobs.items():
-            #if job_details.status == JobStatus.failed:
+            # if job_details.status == JobStatus.failed:
             #    failed = True
             #    continue
-            #elif job_details.status == JobStatus.done:
+            # elif job_details.status == JobStatus.done:
             #    continue
             if job_key.find(JobDetails.topkey) >= 0:
                 continue
@@ -260,7 +268,6 @@ class ScatterGather(Link):
         self._base_config = self._config_maker._make_base_config(args)
         self._job_configs = self._config_maker.build_job_configs(args)
 
-
     def _build_job_dict(self):
         """Build a dictionary of `JobDetails` objects for the internal `Link`"""
         if self.args['dry_run']:
@@ -270,7 +277,8 @@ class ScatterGather(Link):
 
         for jobkey, job_config in sorted(self._job_configs.items()):
             full_job_config = self._merge_config(job_config)
-            ScatterGather._make_scatter_logfile_name(jobkey, self.linkname, full_job_config)
+            ScatterGather._make_scatter_logfile_name(
+                jobkey, self.linkname, full_job_config)
             logfile = full_job_config.get('logfile')
             self._scatter_link._register_job(key=jobkey,
                                              job_config=full_job_config,
@@ -323,7 +331,6 @@ class ScatterGather(Link):
             status = JobStatus.done
 
         return status
-        
 
     def update_args(self, override_args):
         """Update the arguments used to invoke the application
@@ -349,7 +356,7 @@ class ScatterGather(Link):
         """
         if recursive:
             self._scatter_link.clear_jobs(recursive)
-        self.jobs.clear()            
+        self.jobs.clear()
 
     def get_jobs(self, recursive=True):
         """Return a dictionary with all the jobs
@@ -364,7 +371,7 @@ class ScatterGather(Link):
             return self.jobs
 
     def check_status(self, stream=sys.stdout,
-                     check_once=False, 
+                     check_once=False,
                      fail_pending=False, fail_running=False,
                      no_wait=False, do_print=True,
                      write_status=False):
@@ -379,8 +386,9 @@ class ScatterGather(Link):
         first = True
 
         if not check_once:
-            if stream != sys.stdout:            
-                sys.stdout.write('Checking status: ')
+            if stream != sys.stdout:
+                sys.stdout.write('Checking status (%is): ' %
+                                 self.args['job_check_sleep'])
                 sys.stdout.flush()
 
         status_vect = JobStatusVector()
@@ -394,7 +402,7 @@ class ScatterGather(Link):
             else:
                 stream.write("Sleeping %.0f seconds between status checks\n" %
                              self.args['job_check_sleep'])
-                if stream != sys.stdout:            
+                if stream != sys.stdout:
                     sys.stdout.write('.')
                     sys.stdout.flush()
                 time.sleep(self.args['job_check_sleep'])
@@ -412,16 +420,16 @@ class ScatterGather(Link):
             if self._job_archive is not None:
                 self._job_archive.write_table_file()
 
-            n_total = status_vect.nTotal
-            n_done = status_vect.nDone
-            n_failed = status_vect.nFailed
+            n_total = status_vect.n_total
+            n_done = status_vect.n_done
+            n_failed = status_vect.n_failed
             if n_done + n_failed == n_total:
                 running = False
-       
+
         status = status_vect.get_status()
         if status in [JobStatus.failed, JobStatus.partial_failed]:
             if do_print:
-                self.print_update(stream, status_vect)            
+                self.print_update(stream, status_vect)
                 self.print_failed(stream)
             if write_status:
                 self._write_status_to_log(status, stream)
@@ -431,8 +439,8 @@ class ScatterGather(Link):
 
         self._set_status_self(status=status)
         if not check_once:
-            if stream != sys.stdout:            
-                sys.stdout.write("! %s\n"%(JOB_STATUS_STRINGS[status]))
+            if stream != sys.stdout:
+                sys.stdout.write("! %s\n" % (JOB_STATUS_STRINGS[status]))
 
         if self._job_archive is not None:
             self._job_archive.write_table_file()
@@ -454,13 +462,12 @@ class ScatterGather(Link):
         status_vect = self.check_status(stream, write_status=True)
         return status_vect.get_status()
 
-
     def resubmit(self, stream=sys.stdout, fail_running=False):
         """Function to resubmit failed jobs and collect results
         """
         self._build_job_dict()
-        status_vect = self.check_status(stream, check_once=True, fail_pending=True, 
-                                            fail_running=fail_running)
+        status_vect = self.check_status(stream, check_once=True, fail_pending=True,
+                                        fail_running=fail_running)
         status = status_vect.get_status()
         if status == JobStatus.done:
             return status
@@ -480,13 +487,12 @@ class ScatterGather(Link):
         return status_vect.get_status()
 
     def clean_jobs(self, clean_all=False):
-        """ """ 
+        """ Clean up all the jobs dispatched by this object.  """
         self._interface.clean_jobs(self.scatter_link,
-                                   job_archive=self._job_archive,
                                    clean_all=clean_all)
 
     def run(self, stream=sys.stdout, dry_run=False, stage_files=True, resubmit_failed=True):
-        """ """
+        """ Submit the jobs for this object """
         return self._run_link(stream, dry_run, stage_files, resubmit_failed)
 
     def print_summary(self, stream=sys.stdout, indent="", recurse_level=2):
@@ -511,8 +517,6 @@ class ScatterGather(Link):
 
     def print_update(self, stream=sys.stdout, job_stats=None):
         """Print an update about the current number of jobs running """
-        n_total = len(self._job_configs)
-        
         if job_stats is None:
             job_stats = JobStatusVector()
             job_det_list = []
@@ -522,17 +526,15 @@ class ScatterGather(Link):
                 if job_dets.status == JobStatus.no_job:
                     continue
                 job_stats[job_dets.status] += 1
-  
+
         stream.write("Status :\n  Total  : %i\n  Unknown: %i\n" %
-                     (job_stats.nTotal, job_stats[JobStatus.unknown]))
+                     (job_stats.n_total, job_stats[JobStatus.unknown]))
         stream.write("  Not Ready: %i\n  Ready: %i\n" %
                      (job_stats[JobStatus.not_ready], job_stats[JobStatus.ready]))
         stream.write("  Pending: %i\n  Running: %i\n" %
                      (job_stats[JobStatus.pending], job_stats[JobStatus.running]))
-        stream.write("  Done: %i\n  Failed: %i\n" % 
+        stream.write("  Done: %i\n  Failed: %i\n" %
                      (job_stats[JobStatus.done], job_stats[JobStatus.failed]))
-        
-        
 
     def print_failed(self, stream=sys.stderr):
         """Print list of the failed jobs """

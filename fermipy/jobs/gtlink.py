@@ -115,7 +115,7 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
             except OSError:
                 pass
         pfiles = "%s:%s" % (pfiles, pfiles_orig)
-        #print("Setting PFILES=%s" % pfiles)
+        # print("Setting PFILES=%s" % pfiles)
         os.environ['PFILES'] = pfiles
 
     stream.write("%s\n" % gtapp.command())
@@ -142,6 +142,10 @@ class Gtlink(Link):
 
     See help for `chain.Link` for additional details
     """
+    appname = 'dummy'
+    linkname_default = 'dummy'
+    usage = '%s [options]' %(appname)
+    description = "Link to run %s"%(appname)
 
     def __init__(self, linkname, **kwargs):
         """C'tor
@@ -154,7 +158,8 @@ class Gtlink(Link):
         try:
             self.__app = build_gtapp(self.appname, **self.args)
         except:
-            raise ValueError("Failed to build link %s %s %s" % (self.linkname, self.appname, self.args))
+            raise ValueError("Failed to build link %s %s %s" %
+                             (self.linkname, self.appname, self.args))
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application
@@ -193,7 +198,7 @@ class Gtlink(Link):
         """
         com_out = self.__app.appName
         for key, val in self.args.items():
-            if self._options.has_key(key):
+            if key in self._options:
                 com_out += ' %s={%s}' % (key, key)
             else:
                 com_out += ' %s=%s' % (key, val)

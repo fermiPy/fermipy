@@ -9,33 +9,55 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import os
-import copy
-import argparse
 
 from collections import OrderedDict
 
 from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.link import Link, extract_arguments
-from fermipy.jobs.file_archive import FileDict, FileStageManager
-from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobStatusVector, JobDetails, JOB_STATUS_STRINGS
+from fermipy.jobs.file_archive import FileStageManager
+from fermipy.jobs.job_archive import JobStatus, JobStatusVector,\
+    JobDetails, JOB_STATUS_STRINGS
 from fermipy.jobs.factory import LinkFactory
 
 
 def purge_dict(idict):
+    """ Remove null items that from a dictionary """
     odict = {}
-    for k, v in idict.items():
-        if v in [None, 'none', 'None']:
+    for key, val in idict.items():
+        if is_null(val):
             continue
-        odict[k] = v
+        odict[key] = val
     return odict
 
+
 def insert_app_config(o_dict, key, appname, **kwargs):
+    """ Insert an item in a the dictionary of `Link` objects
+    that will be build for a particular `Chain`
+
+    Parameters
+    ----------
+
+    o_dict : dict
+        The dictionary we are filling.
+
+    key : str
+        The key this item is placed under.
+
+    appname : str
+        The name of the app associated to the `Link`.
+        This must match a name registers in the `LinkFactory`
+
+    kwargs : dict
+        The options passed to the '`Link`
+
+    """
     o_dict[key] = purge_dict(kwargs.copy())
     o_dict[key]['appname'] = appname
 
 
 class Chain(Link):
-    """ An object tying together a series of applications into a single application.
+    """ An object tying together a series of applications into a
+    single application.
 
     This class keep track of the arguments to pass to the applications
     as well as input and output files.
@@ -97,7 +119,7 @@ class Chain(Link):
 
     def _register_link_classes(self):
         """ Register the classes of the `Link` objects used by this chain """
-        pass    
+        pass
 
     def _latch_file_info(self):
         """Internal function to update the dictionaries
@@ -123,50 +145,31 @@ class Chain(Link):
         """
         raise NotImplementedError('Chain._map_arguments')
 
-    def _build_links(self):
-        """Use the values in self._arg_dict to the links """
-        for k, v in self._arg_dict.items():
-            oo = v.copy()
-            appname = oo.get('appname', None)
-            if is_not_null(appname):
-                oo.pop('appname')
-                linkname = oo.get('linkname', appname)
-                sub_link_prefix = oo.get('link_prefix', '')
-                oo['link_prefix'] = self.link_prefix + sub_link_prefix
-                if self._links.has_key(linkname):
-                    link.update_args(**oo)
-                else:
-                    link = LinkFactory.create(appname, **oo) 
-                    # This will call link.update_args
-                    self.add_link(link, oo)
-            else:
-                raise KeyError("No appname for link %s %s"%(k,v))
-
     def _load_arguments(self):
-        """Transfer the arguments from 
+        """Transfer the arguments from
         self._arg_dict to the links """
         for linkname, opt_vals in self._arg_dict.items():
             appname = opt_vals.get('appname', None)
             if is_not_null(appname):
-                oo = opt_vals.copy()
-                oo.pop('appname')
-                sub_link_prefix = oo.get('link_prefix', '')
-                oo['link_prefix'] = self.link_prefix + sub_link_prefix
-                if self._links.has_key(linkname):
+                val_copy = opt_vals.copy()
+                val_copy.pop('appname')
+                sub_link_prefix = val_copy.get('link_prefix', '')
+                val_copy['link_prefix'] = self.link_prefix + sub_link_prefix
+                if linkname in self._links:
                     link = self._links[linkname]
-                    link.update_args(oo)
+                    link.update_args(val_copy)
                 else:
-                    link = LinkFactory.create(appname, **oo)               
+                    link = LinkFactory.create(appname, **val_copy)
                     # This will call link.update_args
-                    self.add_link(link, oo)
+                    self.add_link(link, val_copy)
             else:
-                raise KeyError("No appname for link %s %s"%(k,v))
+                raise KeyError("No appname for link %s %s" % (linkname, appname))
 
     def _set_links_job_archive(self):
         """Pass job_archive along to links"""
         for link in self._links.values():
             link._job_archive = self._job_archive
-        
+
     def _run_chain(self,
                    stream=sys.stdout,
                    dry_run=False,
@@ -199,14 +202,15 @@ class Chain(Link):
                     output_file_mapping, dry_run)
                 self._stage_input_files(input_file_mapping, dry_run)
 
-        for linkname, link in self._links.items():
-            logfile = os.path.join('logs', "top_%s.log"%link.full_linkname)
+        for link in self._links.values():
+            logfile = os.path.join('logs', "%s.log" % link.full_linkname)
             link._archive_self(logfile, status=JobStatus.unknown)
             key = JobDetails.make_fullkey(link.full_linkname)
             if hasattr(link, 'check_status'):
-                status_vect = link.check_status(stream, no_wait=True, check_once=True, do_print=False)
+                link.check_status(stream, no_wait=True,
+                                  check_once=True, do_print=False)
             else:
-                status_vect = None
+                pass
             link_status = link.check_job_status(key)
             if link_status in [JobStatus.done]:
                 if not force_run:
@@ -222,37 +226,37 @@ class Chain(Link):
                     print ("Skipping failed link", link.full_linkname)
                     continue
             print ("Running link ", link.full_linkname)
-            if dry_run:
-                outstr = sys.stdout
-            else:
-                outstr = stream
-            link.run_with_log(dry_run=dry_run, stage_files=False, resubmit_failed=resubmit_failed)
+            link.run_with_log(dry_run=dry_run, stage_files=False,
+                              resubmit_failed=resubmit_failed)
             link_status = link.check_jobs_status()
             link._set_status_self(status=link_status)
             if link_status in [JobStatus.failed]:
-                print ("Stoping chain execution at failed link %s"%link.full_linkname)
+                print ("Stoping chain execution at failed link %s" %
+                       link.full_linkname)
                 failed = True
                 break
             elif link_status in [JobStatus.partial_failed]:
-                print ("Resubmitting partially failed link %s"%link.full_linkname)
-                link.run_with_log(dry_run=dry_run, stage_files=False, resubmit_failed=resubmit_failed)
+                print ("Resubmitting partially failed link %s" %
+                       link.full_linkname)
+                link.run_with_log(dry_run=dry_run, stage_files=False,
+                                  resubmit_failed=resubmit_failed)
                 link_status = link.check_jobs_status()
                 link._set_status_self(status=link_status)
                 if link_status in [JobStatus.partial_failed]:
-                    print ("Stoping chain execution after resubmission failed link %s"%link.full_linkname)
+                    print ("Stoping chain execution: resubmission failed %s" %
+                           link.full_linkname)
                     failed = True
 
         if self._file_stage is not None and stage_files and not failed:
             self._stage_output_files(output_file_mapping, dry_run)
 
         chain_status = self.check_links_status()
-        print ("Chain status %i"%(chain_status))
+        print ("Chain status %i" % (chain_status))
         self._set_status_self(status=chain_status)
 
         if self._job_archive:
             self._job_archive.file_archive.update_file_status()
             self._job_archive.write_table_file()
-
 
     def clear_jobs(self, recursive=True):
         """Clear a dictionary with all the jobs
@@ -262,7 +266,7 @@ class Chain(Link):
         if recursive:
             for link in self._links.values():
                 link.clear_jobs(recursive)
-        self.jobs.clear()  
+        self.jobs.clear()
 
     def get_jobs(self, recursive=True):
         """Return a dictionary with all the jobs
@@ -278,7 +282,8 @@ class Chain(Link):
             return self.jobs
 
     def missing_input_files(self):
-        """Return a dictionary of the missing input files and `Link` they are associated with """
+        """Return a dictionary of the missing input files and `Link`
+        they are associated with """
         ret_dict = OrderedDict()
         for link in self._links.values():
             link_dict = link.missing_input_files()
@@ -290,7 +295,8 @@ class Chain(Link):
         return ret_dict
 
     def missing_output_files(self):
-        """Return a dictionary of the missing output files and `Link` they are associated with """
+        """Return a dictionary of the missing output files and `Link`
+        they are associated with """
         ret_dict = OrderedDict()
         for link in self._links.values():
             link_dict = link.missing_output_files()
@@ -307,33 +313,33 @@ class Chain(Link):
         if options is None:
             options = OrderedDict()
         self._arg_dict[link.linkname] = options
-        logfile = os.path.join('logs','top_%s.log'%link.full_linkname)
-        link._register_job(JobDetails.topkey, options, logfile, status=JobStatus.unknown)
+        logfile = os.path.join('logs', '%s.log' % link.full_linkname)
+        link._register_job(JobDetails.topkey, options,
+                           logfile, status=JobStatus.unknown)
 
     def check_links_status(self,
                            fail_running=False,
                            fail_pending=False):
         """Check the status of all the links"""
-        n_failed = 0
-        n_passed = 0
-        n_total = 0        
         status_vector = JobStatusVector()
-        for linkname, link in self._links.items():
+        for link in self._links.values():
             link_status = link.check_job_status(fail_running=fail_running,
                                                 fail_pending=fail_pending)
             status_vector[link_status] += 1
-            
+
         return status_vector.get_status()
 
-
-    def run(self, stream=sys.stdout, dry_run=False, stage_files=True, resubmit_failed=False):
+    def run(self, stream=sys.stdout, dry_run=False,
+            stage_files=True, resubmit_failed=False):
         """Run the chain"""
-        self._run_chain(stream, dry_run, stage_files, resubmit_failed=resubmit_failed)
+        self._run_chain(stream, dry_run, stage_files,
+                        resubmit_failed=resubmit_failed)
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application
 
-        Note that this will also update the dictionary of input and output files.
+        Note that this will also update the dictionary of input
+        and output files.
 
         Parameters
         -----------
@@ -352,13 +358,14 @@ class Chain(Link):
             link._set_file_stage(self._file_stage)
         self._latch_file_info()
 
-
     def print_status(self, indent="", recurse=False):
         """Print a summary of the job status for each `Link` in this `Chain`"""
-        print ("%s%30s : %15s : %20s"%(indent, "Linkname","Link Status","Jobs Status"))    
+        print ("%s%30s : %15s : %20s" %
+               (indent, "Linkname", "Link Status", "Jobs Status"))
         for link in self._links.values():
             if hasattr(link, 'check_status'):
-                status_vect = link.check_status(stream=sys.stdout, no_wait=True, do_print=False)
+                status_vect = link.check_status(
+                    stream=sys.stdout, no_wait=True, do_print=False)
             else:
                 status_vect = None
             key = JobDetails.make_fullkey(link.full_linkname)
@@ -367,12 +374,12 @@ class Chain(Link):
                 jobs_status = JOB_STATUS_STRINGS[link.check_jobs_status()]
             else:
                 jobs_status = status_vect
-            print ("%s%30s : %15s : %20s"%(indent, link.linkname, link_status, jobs_status))
+            print ("%s%30s : %15s : %20s" %
+                   (indent, link.linkname, link_status, jobs_status))
             if hasattr(link, 'print_status') and recurse:
-                print ("----------   %30s    -----------"%link.linkname)
-                link.print_status(indent+"  ", recurse=True)
-                print ("---------------------------------------------------------")
-
+                print ("----------   %30s    -----------" % link.linkname)
+                link.print_status(indent + "  ", recurse=True)
+                print ("------------------------------------------------")
 
     def print_summary(self, stream=sys.stdout, indent="", recurse_level=2):
         """Print a summary of the activity done by this `Chain`.
