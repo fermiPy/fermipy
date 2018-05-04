@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import time
-import argparse
 
 import numpy as np
 
@@ -76,22 +75,16 @@ class ScatterGather(Link):
             Link run for the scatter stage
             Defaults to None
 
-        no_batch : bool
-            If true, do not send jobs to the batch to run
-            Defaults to False
         """
         linkname = kwargs.pop('linkname', link.linkname_default)
+        kwargs.setdefault('interface', get_batch_job_interface(self.job_time))
         self._scatter_link = link
-        self._usage = kwargs.pop('usage', "")
-        self._description = kwargs.pop('description', "")
-        self._job_archive = kwargs.pop('job_archive', None)
-        self._no_batch = kwargs.pop('no_batch', False)
-        options = kwargs.pop('options', self.default_options.copy())
-        options.update(self.default_options_base.copy())
+        self.default_options.update(self.default_options_base.copy())
         Link.__init__(self, linkname,
-                      options=options,
-                      parser=self._make_parser(),
                       **kwargs)
+        # Override the value of job_check_sleep to avoid excess waiting
+        job_check_sleep = np.clip(int(self.job_time / 5), 60, 300)
+        self.args['job_check_sleep'] = job_check_sleep
         self._job_configs = {}
 
     @property
@@ -109,20 +102,19 @@ class ScatterGather(Link):
     @classmethod
     def create(cls, **kwargs):
         """ Build and return a `ScatterGather` object """
-        kwargs_copy = kwargs.copy()
-        kwargs_copy.pop('appname', cls.appname)
-        link = cls.clientclass.create(**kwargs)
-
-        default_interface = get_batch_job_interface(cls.job_time)
-        interface = kwargs_copy.pop('interface', default_interface)
-        job_check_sleep = np.clip(int(cls.job_time / 5), 60, 300)
-        kwargs_copy['job_check_sleep'] = job_check_sleep
-
-        sg = build_sg_from_link(link, cls,
-                                interface=interface,
-                                usage=cls.usage,
-                                description=cls.description,
-                                **kwargs_copy)
+        linkname = kwargs.setdefault('linkname', cls.clientclass.linkname_default)
+        # Don't use setdefault b/c we don't want to build a JobArchive
+        # Unless it is needed
+        job_archive = kwargs.get('job_archive', None)
+        if job_archive is None:
+            job_archive = JobArchive.build_temp_job_archive()
+            kwargs.setdefault('job_archive', job_archive)
+        kwargs_client = dict(linkname=linkname,
+                             link_prefix=kwargs.get('link_prefix', ''),
+                             file_stage=kwargs.get('file_stage', None),
+                             job_archive=job_archive)
+        link = cls.clientclass.create(**kwargs_client)
+        sg = cls(link, **kwargs)
         return sg
 
     @classmethod
@@ -193,12 +185,6 @@ class ScatterGather(Link):
             link._set_status_self(job_details.jobkey, job_details.status)
 
         return status_vect
-
-    def _make_parser(self):
-        """Make an argument parser for this chain """
-        parser = argparse.ArgumentParser(usage=self._usage,
-                                         description=self._description)
-        return parser
 
     def _build_configs(self, args):
         """Build the configuration objects.
@@ -483,14 +469,3 @@ class ScatterGather(Link):
     def run_analysis(self, argv):
         """Implemented by sub-classes to run a particular analysis"""
         raise RuntimeError("run_analysis called for ScatterGather type object")
-
-
-def build_sg_from_link(link, cls, **kwargs):
-    """Build a `ScatterGather` that will run multiple instance of a single link
-    """
-    linkname = kwargs.get('linkname', link.linkname_default)
-    job_archive = kwargs.get('job_archive', None)
-    if job_archive is None:
-        kwargs['job_archive'] = JobArchive.build_temp_job_archive()
-    sg = cls(link, **kwargs)
-    return sg
