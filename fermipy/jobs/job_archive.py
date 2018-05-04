@@ -141,8 +141,7 @@ class JobStatusVector(object):
             # If more that a quater of the jobs fail, fail the whole thing
             if self.n_failed > self.n_total / 4.:
                 return JobStatus.failed
-            else:
-                return JobStatus.partial_failed
+            return JobStatus.partial_failed
         elif self.n_running > 0:
             return JobStatus.running
         elif self.n_pending > 0:

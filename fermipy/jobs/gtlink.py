@@ -203,3 +203,7 @@ class Gtlink(Link):
             else:
                 com_out += ' %s=%s' % (key, val)
         return com_out
+
+    def run_analysis(self, argv):
+        """Implemented by sub-classes to run a particular analysis"""
+        raise RuntimeError("run_analysis called for Gtlink type object")

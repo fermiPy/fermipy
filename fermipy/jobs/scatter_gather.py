@@ -345,7 +345,7 @@ class ScatterGather(Link):
         """
         self.args = extract_arguments(override_args, self.args)
         self._build_configs(self.args)
-        if len(self._scatter_link.jobs) == 0:
+        if not self._scatter_link.jobs:
             self._build_job_dict()
         self._latch_file_info()
 
@@ -367,8 +367,7 @@ class ScatterGather(Link):
             ret_dict = self.jobs.copy()
             ret_dict.update(self._scatter_link.get_jobs(recursive))
             return ret_dict
-        else:
-            return self.jobs
+        return self.jobs
 
     def check_status(self, stream=sys.stdout,
                      check_once=False,
@@ -473,7 +472,7 @@ class ScatterGather(Link):
             return status
 
         failed_jobs = self._scatter_link.get_failed_jobs(True, True)
-        if len(failed_jobs) != 0:
+        if failed_jobs:
             scatter_status = self._interface.submit_jobs(self._scatter_link, failed_jobs,
                                                          job_archive=self._job_archive,
                                                          stream=stream)
@@ -542,6 +541,10 @@ class ScatterGather(Link):
             if job_details.status == JobStatus.failed:
                 stream.write("Failed job %s\n  log = %s\n" %
                              (job_key, job_details.logfile))
+
+    def run_analysis(self, argv):
+        """Implemented by sub-classes to run a particular analysis"""
+        raise RuntimeError("run_analysis called for ScatterGather type object")
 
 
 def build_sg_from_link(link, config_maker, **kwargs):

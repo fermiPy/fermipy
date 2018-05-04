@@ -29,7 +29,7 @@ def get_batch_job_args(job_time=1500):
     elif DEFAULT_JOB_TYPE == 'native':
         from fermipy.jobs.native_impl import get_native_default_args
         return get_native_default_args()
-
+    return None
 
 def get_batch_job_interface(job_time=1500):
     """ Create a batch job interface object.
@@ -52,3 +52,4 @@ def get_batch_job_interface(job_time=1500):
     elif DEFAULT_JOB_TYPE == 'native':
         from fermipy.jobs.native_impl import NativeInterface
         return NativeInterface(**batch_job_args)
+    return None

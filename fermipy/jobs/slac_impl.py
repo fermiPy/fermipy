@@ -65,8 +65,7 @@ def get_lsf_status():
 
         status_count['NJOB'] += 1
 
-        for k in status_count.keys():
-
+        for k in status_count:
             if line[2] == k:
                 status_count[k] += 1
 
@@ -159,16 +158,17 @@ class SlacInterface(SysInterface):
         if self._dry_run:
             if print_bsub:
                 stream.write("%s\n" % full_command)
-        else:
-            try:
-                os.makedirs(logdir)
-            except OSError:
-                pass
-            proc = subprocess.Popen(full_command.split(),
-                                    stderr=stream,
-                                    stdout=stream)
-            proc.communicate()
-            return proc.returncode
+            return 0
+
+        try:
+            os.makedirs(logdir)
+        except OSError:
+            pass
+        proc = subprocess.Popen(full_command.split(),
+                                stderr=stream,
+                                stdout=stream)
+        proc.communicate()
+        return proc.returncode
 
     def submit_jobs(self, link, job_dict=None, job_archive=None, stream=sys.stdout):
         """Submit all the jobs in job_dict """
@@ -185,12 +185,12 @@ class SlacInterface(SysInterface):
         unsubmitted_jobs.reverse()
 
         failed = False
-        if len(unsubmitted_jobs) > 0:
+        if unsubmitted_jobs:
             if stream != sys.stdout:
                 sys.stdout.write('Submitting jobs (%i): ' %
                                  len(unsubmitted_jobs))
                 sys.stdout.flush()
-        while len(unsubmitted_jobs) > 0:
+        while unsubmitted_jobs:
             status = get_lsf_status()
             njob_to_submit = min(self._max_jobs - status['NJOB'],
                                  self._jobs_per_cycle,
@@ -219,7 +219,7 @@ class SlacInterface(SysInterface):
                               new_job_details.outfiles, self._dry_run)
                 link.jobs[job_key] = new_job_details
 
-            if len(unsubmitted_jobs) > 0:
+            if unsubmitted_jobs:
                 if stream != sys.stdout:
                     sys.stdout.write('.')
                     sys.stdout.flush()

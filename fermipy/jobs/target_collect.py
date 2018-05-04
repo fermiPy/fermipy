@@ -78,7 +78,7 @@ def vstack_tables(filelist, hdus):
                 sys.stdout.write('x')
             sys.stdout.flush()
         sys.stdout.write('!\n')
-        if len(tlist) > 0:
+        if tlist:
             out_table = vstack(tlist)
             out_tables.append(out_table)
             out_names.append(hdu)
