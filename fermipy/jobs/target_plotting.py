@@ -38,12 +38,6 @@ class PlotCastro(Link):
     default_options = dict(infile=defaults.generic['infile'],
                            outfile=defaults.generic['outfile'])
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(PlotCastro, self).__init__(linkname, **init_dict)
-
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -71,13 +65,6 @@ class PlotCastro_SG(ScatterGather):
 
     default_options = dict(ttype=defaults.common['ttype'],
                            targetlist=defaults.common['targetlist'])
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(PlotCastro_SG, self).__init__(link,
-                                            options=kwargs.get('options',
-                                                               self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations

@@ -175,12 +175,6 @@ class CollectSED(Link):
                dict(name='norm_ul'),
                dict(name='ts')]
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(CollectSED, self).__init__(linkname, **init_dict)
-
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -224,13 +218,6 @@ class CollectSED_SG(ScatterGather):
                            seed=defaults.sims['seed'],
                            write_full=defaults.collect['write_full'],
                            write_summary=defaults.collect['write_summary'])
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(CollectSED_SG, self).__init__(link,
-                                            options=kwargs.get('options',
-                                                               self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations

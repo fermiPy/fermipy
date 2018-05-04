@@ -61,12 +61,6 @@ class GtSrcmapsDiffuse(Link):
                              srcmdl=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(GtSrcmapsDiffuse, self).__init__(linkname, **init_dict)
-
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -130,13 +124,6 @@ class SrcmapsDiffuse_SG(ScatterGather):
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],
                            make_xml=(True, 'Write xml files needed to make source maps', bool))
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(SrcmapsDiffuse_SG, self).__init__(link,
-                                                options=kwargs.get('options',
-                                                                   self.default_options.copy()))
 
     @staticmethod
     def _write_xml(xmlfile, srcs):

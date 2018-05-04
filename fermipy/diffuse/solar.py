@@ -37,12 +37,6 @@ class Gtlink_exphpsun(Gtlink):
     default_file_args = dict(infile=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Gtlink_exphpsun, self).__init__(linkname, **init_dict)
-
 
 class Gtlink_suntemp(Gtlink):
     """Small wrapper to run gtsuntemp """
@@ -80,12 +74,6 @@ class Gtlink_suntemp(Gtlink):
                              sunprof=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Gtlink_suntemp, self).__init__(linkname, **init_dict)
-
 
 class Gtexphpsun_SG(ScatterGather):
     """Small class to generate configurations for gtexphpsun
@@ -103,13 +91,6 @@ class Gtexphpsun_SG(ScatterGather):
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'])
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(Gtexphpsun_SG, self).__init__(link,
-                                           options=kwargs.get('options',
-                                                              self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -163,13 +144,6 @@ class Gtsuntemp_SG(ScatterGather):
                            data=diffuse_defaults.diffuse['data'],
                            sourcekeys=diffuse_defaults.sun_moon['sourcekeys'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(Gtsuntemp_SG, self).__init__(link,
-                                           options=kwargs.get('options',
-                                                              self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -222,8 +196,7 @@ class SunMoonChain(Chain):
     def __init__(self, **kwargs):
         """C'tor
         """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(SunMoonChain, self).__init__(linkname, **init_dict)
+        super(SunMoonChain, self).__init__(**kwargs)
         self.comp_dict = None
 
     def _map_arguments(self, input_dict):

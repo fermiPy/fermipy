@@ -44,20 +44,16 @@ class Chain(Link):
     ----------
 
     """
-
-    def __init__(self, linkname, **kwargs):
+    def __init__(self, **kwargs):
         """ C'tor
-
-        Parameters
-        ----------
-
-        linkname : str
-            Unique name of this particular link
 
         Keyword arguments
         -----------------
+
+        linkname : str
+            Unique name of this particular link
         """
-        Link.__init__(self, linkname, **kwargs)
+        Link.__init__(self, **kwargs)
         self._update_options(self.args.copy())
         self._links = OrderedDict()
 

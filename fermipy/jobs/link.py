@@ -164,16 +164,13 @@ class Link(object):
     default_options = {}
     default_file_args = {}
 
-    def __init__(self, linkname, **kwargs):
+    def __init__(self, **kwargs):
         """ C'tor
-
-        Parameters
-        -----------
-        linkname : str
-            Unique name of this particular link
 
         Keyword arguments
         -----------
+        linkname : str
+            Unique name of this particular link
         appname : str
             Name of the application (e.g., gtbin)
         parser: `argparse.ArguemntParser'
@@ -185,7 +182,7 @@ class Link(object):
         file_stage : `FileStageManager`
             Manager for staging files to and from a scratch area
         """
-        self.linkname = linkname
+        self.linkname = kwargs.pop('linkname', self.linkname_default)
         self.link_prefix = kwargs.get('link_prefix', '')
         self._interface = kwargs.get('interface', SysInterface())
         self._options = self.default_options.copy()
@@ -199,12 +196,6 @@ class Link(object):
         self.files = FileDict(file_args=self.default_file_args.copy())
         self.sub_files = FileDict()
         self.jobs = OrderedDict()
-
-    @classmethod
-    def _init_dict(cls, **kwargs):
-        """ Get the options to build an object of this class """
-        linkname = kwargs.pop('linkname', cls.linkname_default)
-        return linkname, kwargs
 
     @classmethod
     def create(cls, **kwargs):

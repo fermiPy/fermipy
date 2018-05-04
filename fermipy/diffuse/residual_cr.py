@@ -56,12 +56,6 @@ class ResidualCR(Link):
                              bexpcube_clean=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(ResidualCR, self).__init__(linkname, **init_dict)
-
     @staticmethod
     def _match_cubes(ccube_clean, ccube_dirty,
                      bexpcube_clean, bexpcube_dirty,
@@ -377,13 +371,6 @@ class ResidualCR_SG(ScatterGather):
                            sigma=diffuse_defaults.residual_cr['sigma'],
                            full_output=diffuse_defaults.residual_cr['full_output'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(ResidualCR_SG, self).__init__(link,
-                                            options=kwargs.get('options',
-                                                               self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -433,11 +420,10 @@ class ResidualCRChain(Chain):
 
     default_options = dict(config=diffuse_defaults.diffuse['config'])
 
-    def __init__(self, linkname, **kwargs):
+    def __init__(self, **kwargs):
         """C'tor
         """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(ResidualCRChain, self).__init__(linkname, **init_dict)
+        super(ResidualCRChain, self).__init__(**kwargs)
         self.comp_dict = None
 
     def _map_arguments(self, input_dict):

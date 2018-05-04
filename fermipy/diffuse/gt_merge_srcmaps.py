@@ -50,12 +50,6 @@ class GtMergeSrcmaps(Link):
                              outfile=FileFlags.output_mask,
                              outxml=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(GtMergeSrcmaps, self).__init__(linkname, **init_dict)
-
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -124,13 +118,6 @@ class MergeSrcmaps_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'])
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(MergeSrcmaps_SG, self).__init__(link,
-                                              options=kwargs.get('options',
-                                                                 self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
