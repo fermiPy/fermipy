@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function
 from fermipy.utils import init_matplotlib_backend, load_yaml
 
 from fermipy.jobs.link import Link
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.castro import CastroData
@@ -57,7 +57,7 @@ class PlotCastro(Link):
         return plot
 
 
-class PlotCastro_SG(ConfigMaker):
+class PlotCastro_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     This adds the following arguments:

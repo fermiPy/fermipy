@@ -5,7 +5,7 @@ Abstract interface for parallel execution of multiple jobs.
 The main class is `ScatterGather`, which can submit many instances
 of a job with different configurations.
 
-The `ConfigMaker` abstract helper class is used to generate configurations.
+The `ScatterGather` abstract helper class is used to generate configurations.
 """
 from __future__ import absolute_import, division, print_function
 
@@ -19,119 +19,40 @@ import numpy as np
 from fermipy.jobs.batch import get_batch_job_interface
 from fermipy.jobs.job_archive import JobStatus,\
     JobStatusVector, JobDetails, JobArchive, JOB_STATUS_STRINGS
-from fermipy.jobs.link import add_argument, extract_arguments, Link
+from fermipy.jobs.link import extract_arguments, Link
 
 from fermipy.jobs import defaults
 
 ACTIONS = ['run', 'resubmit', 'check_status', 'config', 'skip', 'clean']
 
 
-class ConfigMaker(object):
-    """Abstract helper class to build configuration dictionaries for parallel jobs.
+class ScatterGather(Link):
+    """ Class to dispatch several jobs in parallel and
+    collect and merge the results.
 
     Sub-classes will need to:
 
     Define options by passing a dictionary of option tuples to the c'tor.
     This will take a form something like:
 
-    options=dict(string_opt=("default", "Some string", str),
-                 float_opt=(3.0, "Some float", float),
-                 list_opt=(None, "Some list", list))
+    deafult_options= dict(string_opt=("default", "Some string", str),
+                          float_opt=(3.0, "Some float", float),
+                          list_opt=(None, "Some list", list))
     """
     appname = 'dummy-sg'
     usage = "%s [options]" % (appname)
     description = "Run multiple analyses"
-    clientclass = Link
+    clientclass = None
 
     job_time = 1500
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        self.link = link
-        self._options = kwargs.get('options', {})
-
-    @classmethod
-    def create(cls, **kwargs):
-        """ Build and return a `ConfigMaker` object """
-        kwargs_copy = kwargs.copy()
-        kwargs_copy.pop('appname', cls.appname)
-        link = cls.clientclass.create(**kwargs)
-        link.linkname = kwargs_copy.pop('linkname', link.linkname)
-
-        default_interface = get_batch_job_interface(cls.job_time)
-        interface = kwargs_copy.pop('interface', default_interface)
-        job_check_sleep = np.clip(int(cls.job_time / 5), 60, 300)
-        kwargs_copy['job_check_sleep'] = job_check_sleep
-
-        config_maker = cls(link)
-        sg = build_sg_from_link(link, config_maker,
-                                interface=interface,
-                                usage=cls.usage,
-                                description=cls.description,
-                                **kwargs_copy)
-        return sg
-
-    @classmethod
-    def main(cls):
-        """ Hook for command line interface to sub-classes """
-        link = cls.create()
-        link(sys.argv)
-
-    @classmethod
-    def register_class(cls):
-        """Register this class with the `LinkFactory` """
-        from fermipy.jobs.factory import LinkFactory
-        if cls.appname in LinkFactory._class_dict:
-            return
-        LinkFactory.register(cls.appname, cls)
-
-    def _add_options(self, option_dict):
-        """Add options into an option dictionary"""
-        option_dict.update(self._options)
-
-    def _add_arguments(self, parser, action):
-        """Hook to add arguments to an `argparse.ArgumentParser` """
-        if action is None:
-            return
-        for key, val in self._options.items():
-            add_argument(parser, key, val)
-
-    def _make_base_config(self, args):
-        """Hook to build a baseline job configuration
-
-        Parameters
-        ----------
-
-        args : dict
-            Command line arguments, see add_arguments
-        """
-        self.link.update_args(args)
-        return self.link.args
-
-    def build_job_configs(self, args):
-        """Hook to build job configurations
-
-        Sub-class implementation should return:
-
-        job_configs : dict
-            Dictionary of dictionaries passed to parallel jobs
-        """
-        raise NotImplementedError(
-            "ScatterGather.ConfigMaker.build_job_configs")
-
-
-class ScatterGather(Link):
-    """ Class to dispatch several jobs in parallel and
-    collect and merge the results.
-    """
     default_prefix_logfile = 'scatter'
 
-    default_options = dict(action=defaults.jobs['action'],
-                           dry_run=defaults.jobs['dry_run'],
-                           job_check_sleep=defaults.jobs['job_check_sleep'],
-                           print_update=defaults.jobs['print_update'],
-                           check_status_once=defaults.jobs['check_status_once'])
+    default_options = dict()
+    default_options_base = dict(action=defaults.jobs['action'],
+                                dry_run=defaults.jobs['dry_run'],
+                                job_check_sleep=defaults.jobs['job_check_sleep'],
+                                print_update=defaults.jobs['print_update'],
+                                check_status_once=defaults.jobs['check_status_once'])
 
     def __init__(self, **kwargs):
         """C'tor
@@ -140,11 +61,6 @@ class ScatterGather(Link):
         -----------------
         interface : `SysInterface` subclass
             Object used to interface with batch system
-
-        config_maker : `ConfigMaker'
-            Object used to translate arguments
-            Must have functions 'add_arguments' and 'build_job_configs'
-            Defaults to ConfigMaker()
 
         usage : str
             Usage string for argument parser
@@ -165,23 +81,17 @@ class ScatterGather(Link):
             Defaults to False
         """
         linkname = kwargs.pop('linkname', 'ScatterGather')
-        self._config_maker = kwargs.pop('config_maker')
-        self.appname = self._config_maker.appname
         self._usage = kwargs.pop('usage', "")
         self._description = kwargs.pop('description', "")
         self._job_archive = kwargs.pop('job_archive', None)
         self._scatter_link = kwargs.pop('scatter')
         self._no_batch = kwargs.pop('no_batch', False)
         options = kwargs.get('options', self.default_options.copy())
-        os = options['job_check_sleep']
-        options['job_check_sleep'] = (kwargs.pop(
-            'job_check_sleep', 300), os[1], os[2])
-        self._config_maker._add_options(options)
+        options.update(self.default_options_base.copy())
         Link.__init__(self, linkname,
                       options=options,
                       parser=self._make_parser(),
                       **kwargs)
-        self._base_config = None
         self._job_configs = {}
 
     @property
@@ -195,6 +105,43 @@ class ScatterGather(Link):
         logfile = job_config.get('logfile', "%s_%s_%s.log" %
                                  (cls.default_prefix_logfile, linkname, key))
         job_config['logfile'] = logfile
+
+    @classmethod
+    def create(cls, **kwargs):
+        """ Build and return a `ScatterGather` object """
+        kwargs_copy = kwargs.copy()
+        kwargs_copy.pop('appname', cls.appname)
+        link = cls.clientclass.create(**kwargs)
+        link.linkname = kwargs_copy.pop('linkname', link.linkname)
+
+        default_interface = get_batch_job_interface(cls.job_time)
+        interface = kwargs_copy.pop('interface', default_interface)
+        job_check_sleep = np.clip(int(cls.job_time / 5), 60, 300)
+        kwargs_copy['job_check_sleep'] = job_check_sleep
+
+        sg = build_sg_from_link(link, cls,
+                                interface=interface,
+                                usage=cls.usage,
+                                description=cls.description,
+                                **kwargs_copy)
+        return sg
+
+    @classmethod
+    def main(cls):
+        """ Hook for command line interface to sub-classes """
+        link = cls.create()
+        link.run()
+
+    def build_job_configs(self, args):
+        """Hook to build job configurations
+
+        Sub-class implementation should return:
+
+        job_configs : dict
+            Dictionary of dictionaries passed to parallel jobs
+        """
+        raise NotImplementedError("ScatterGather.build_job_configs")
+
 
     def _latch_file_info(self):
         """Internal function to update the dictionaries
@@ -248,12 +195,6 @@ class ScatterGather(Link):
 
         return status_vect
 
-    def _merge_config(self, config_in):
-        """Merge a configuration with the baseline, return the merged configuration """
-        config_out = self._base_config.copy()
-        config_out.update(config_in)
-        return config_out
-
     def _make_parser(self):
         """Make an argument parser for this chain """
         parser = argparse.ArgumentParser(usage=self._usage,
@@ -263,10 +204,9 @@ class ScatterGather(Link):
     def _build_configs(self, args):
         """Build the configuration objects.
 
-        This invokes the `ConfigMaker` to build the configurations
+        This invokes the `ScatterGather` to build the configurations
         """
-        self._base_config = self._config_maker._make_base_config(args)
-        self._job_configs = self._config_maker.build_job_configs(args)
+        self._job_configs = self.build_job_configs(args)
 
     def _build_job_dict(self):
         """Build a dictionary of `JobDetails` objects for the internal `Link`"""
@@ -276,12 +216,11 @@ class ScatterGather(Link):
             status = JobStatus.not_ready
 
         for jobkey, job_config in sorted(self._job_configs.items()):
-            full_job_config = self._merge_config(job_config)
-            ScatterGather._make_scatter_logfile_name(
-                jobkey, self.linkname, full_job_config)
-            logfile = full_job_config.get('logfile')
+            ScatterGather._make_scatter_logfile_name(jobkey,
+                                                     self.linkname, job_config)
+            logfile = job_config.get('logfile')
             self._scatter_link._register_job(key=jobkey,
-                                             job_config=full_job_config,
+                                             job_config=job_config,
                                              logfile=logfile,
                                              status=status)
 
@@ -547,10 +486,9 @@ class ScatterGather(Link):
         raise RuntimeError("run_analysis called for ScatterGather type object")
 
 
-def build_sg_from_link(link, config_maker, **kwargs):
+def build_sg_from_link(link, cls, **kwargs):
     """Build a `ScatterGather` that will run multiple instance of a single link
     """
-    kwargs['config_maker'] = config_maker
     kwargs['scatter'] = link
     linkname = kwargs.get('linkname', None)
     if linkname is None:
@@ -558,5 +496,5 @@ def build_sg_from_link(link, config_maker, **kwargs):
     job_archive = kwargs.get('job_archive', None)
     if job_archive is None:
         kwargs['job_archive'] = JobArchive.build_temp_job_archive()
-    sg = ScatterGather(**kwargs)
+    sg = cls(**kwargs)
     return sg

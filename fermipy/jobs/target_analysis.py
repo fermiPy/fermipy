@@ -16,7 +16,7 @@ from fermipy.utils import load_yaml, init_matplotlib_backend
 
 from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.link import Link
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.jobs.name_policy import NameFactory
@@ -200,7 +200,7 @@ class AnalyzeSED(Link):
         return gta
 
 
-class AnalyzeROI_SG(ConfigMaker):
+class AnalyzeROI_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     This adds the following arguments:
@@ -253,7 +253,7 @@ class AnalyzeROI_SG(ConfigMaker):
             target_dir = NAME_FACTORY.targetdir(**name_keys)
             config_path = os.path.join(target_dir, config_yaml)
             logfile = make_nfs_path(os.path.join(
-                target_dir, "%s_%s.log" % (self.link.linkname, target_name)))
+                target_dir, "%s_%s.log" % (self.linkname, target_name)))
             job_config = dict(config=config_path,
                               roi_baseline=roi_baseline,
                               make_plots=make_plots,
@@ -263,7 +263,7 @@ class AnalyzeROI_SG(ConfigMaker):
         return job_configs
 
 
-class AnalyzeSED_SG(ConfigMaker):
+class AnalyzeSED_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     This adds the following arguments:
@@ -325,7 +325,7 @@ class AnalyzeSED_SG(ConfigMaker):
                 skydir_path = os.path.join(target_dir, skydirs)
             config_path = os.path.join(target_dir, config_yaml)
             logfile = make_nfs_path(os.path.join(
-                target_dir, "%s_%s.log" % (self.link.linkname, target_name)))
+                target_dir, "%s_%s.log" % (self.linkname, target_name)))
             job_config = dict(config=config_path,
                               roi_baseline=roi_baseline,
                               profiles=target_list,

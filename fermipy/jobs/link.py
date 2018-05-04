@@ -231,12 +231,6 @@ class Link(object):
         if cls.appname in LinkFactory._class_dict:
             return
         LinkFactory.register(cls.appname, cls)
-        cls._register_links()
-
-    @classmethod
-    def _register_links(cls):
-        """Hook to register `Link` classes needed by a `Link` """
-        pass
 
     @property
     def arg_names(self):
