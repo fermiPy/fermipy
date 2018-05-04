@@ -58,12 +58,6 @@ class CopyBaseROI(Link):
 
     copyfiles = ['srcmap_00.fits']
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(CopyBaseROI, self).__init__(linkname, **init_dict)
-
     @classmethod
     def copy_analysis_files(cls, orig_dir, dest_dir, files):
         """ Copy a list of files from orig_dir to dest_dir"""
@@ -125,13 +119,6 @@ class CopyBaseROI_SG(ScatterGather):
                            sim=defaults.sims['sim'],
                            extracopy=defaults.sims['extracopy'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(CopyBaseROI_SG, self).__init__(link,
-                                             options=kwargs.get('options',
-                                                                self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -172,12 +159,6 @@ class RandomDirGen(Link):
     default_options = dict(config=defaults.common['config'],
                            rand_config=defaults.sims['rand_config'],
                            outfile=defaults.generic['outfile'])
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(RandomDirGen, self).__init__(linkname, **init_dict)
 
     @staticmethod
     def _make_wcsgeom_from_config(config):
@@ -276,12 +257,6 @@ class SimulateROI(Link):
                            nsims=defaults.sims['nsims'],
                            seed=defaults.sims['seed'])
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(SimulateROI, self).__init__(linkname, **init_dict)
-
     @staticmethod
     def _run_simulation(gta, roi_baseline,
                         injected_source, test_sources, seed, mcube_file=None):
@@ -378,13 +353,6 @@ class RandomDirGen_SG(ScatterGather):
                            rand_config=defaults.sims['rand_config'],
                            sim=defaults.sims['sim'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(RandomDirGen_SG, self).__init__(link,
-                                              options=kwargs.get('options',
-                                                                 self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -441,13 +409,6 @@ class SimulateROI_SG(ScatterGather):
                            sim_profile=defaults.sims['sim_profile'],
                            nsims=defaults.sims['nsims'],
                            seed=defaults.sims['seed'])
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(SimulateROI_SG, self).__init__(link,
-                                             options=kwargs.get('options',
-                                                                self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations

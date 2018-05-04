@@ -58,12 +58,6 @@ class Gtlink_select(Gtlink):
     default_file_args = dict(infile=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Gtlink_select, self).__init__(linkname, **init_dict)
-
 
 class Gtlink_bin(Gtlink):
     """Small wrapper to run gtbin """
@@ -86,13 +80,6 @@ class Gtlink_bin(Gtlink):
     default_file_args = dict(evfile=FileFlags.in_stage_mask,
                              outfile=FileFlags.out_stage_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Gtlink_bin, self).__init__(linkname, **init_dict)
-
-
 class Gtlink_expcube2(Gtlink):
     """Small wrapper to run gtexpcube2 """
 
@@ -111,13 +98,6 @@ class Gtlink_expcube2(Gtlink):
     default_file_args = dict(infile=FileFlags.input_mask,
                              cmap=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Gtlink_expcube2, self).__init__(linkname, **init_dict)
-
 
 class Gtlink_scrmaps(Gtlink):
     """Small wrapper to run gtscrmaps """
@@ -140,13 +120,6 @@ class Gtlink_scrmaps(Gtlink):
                              srcmdl=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Gtlink_scrmaps, self).__init__(linkname, **init_dict)
-
-
 class Gtlink_ltsum(Gtlink):
     """Small wrapper to run gtltsum """
 
@@ -160,13 +133,6 @@ class Gtlink_ltsum(Gtlink):
                            outfile=(None, "Output file", str))
     default_file_args = dict(infile1=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Gtlink_ltsum, self).__init__(linkname, **init_dict)
-
 
 class Gtlink_mktime(Gtlink):
     """Small wrapper to run gtmktime """
@@ -186,13 +152,6 @@ class Gtlink_mktime(Gtlink):
     default_file_args = dict(evfile=FileFlags.in_stage_mask,
                              scfile=FileFlags.in_stage_mask,
                              outfile=FileFlags.out_stage_mask)
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Gtlink_mktime, self).__init__(linkname, **init_dict)
-
 
 class Gtlink_ltcube(Gtlink):
     """Small wrapper to run gtltcube """
@@ -216,13 +175,6 @@ class Gtlink_ltcube(Gtlink):
                              scfile=FileFlags.in_stage_mask,
                              outfile=FileFlags.out_stage_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Gtlink_ltcube, self).__init__(linkname, **init_dict)
-
-
 class Link_FermipyCoadd(AppLink):
     """Small wrapper to run fermipy-coadd """
 
@@ -235,12 +187,6 @@ class Link_FermipyCoadd(AppLink):
                            output=(None, "Output file", str))
     default_file_args = dict(args=FileFlags.input_mask,
                              output=FileFlags.output_mask)
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Link_FermipyCoadd, self).__init__(linkname, **init_dict)
 
 
 class Link_FermipyGatherSrcmaps(AppLink):
@@ -258,12 +204,6 @@ class Link_FermipyGatherSrcmaps(AppLink):
                            clobber=(False, "Overwrite output", bool))
     default_file_args = dict(args=FileFlags.input_mask,
                              output=FileFlags.output_mask)
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Link_FermipyGatherSrcmaps, self).__init__(linkname, **init_dict)
 
 
 class Link_FermipyVstack(AppLink):
@@ -283,12 +223,6 @@ class Link_FermipyVstack(AppLink):
     default_file_args = dict(args=FileFlags.input_mask,
                              output=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Link_FermipyVstack, self).__init__(linkname, **init_dict)
-
 
 class Link_FermipyHealview(AppLink):
     """Small wrapper to run fermipy-healview """
@@ -304,12 +238,6 @@ class Link_FermipyHealview(AppLink):
                            zscale=("log", "Scaling for color scale", str))
     default_file_args = dict(args=FileFlags.input_mask,
                              output=FileFlags.output_mask)
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(Link_FermipyHealview, self).__init__(linkname, **init_dict)
 
 
 class Gtexpcube2_SG(ScatterGather):
@@ -330,13 +258,6 @@ class Gtexpcube2_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_expcube'])
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(Gtexpcube2_SG, self).__init__(link,
-                                            options=kwargs.get('options',
-                                                               self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -410,12 +331,6 @@ class Gtltsum_SG(ScatterGather):
                            data=diffuse_defaults.diffuse['data'],
                            ft1file=(None, 'Input FT1 file', str))
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(Gtltsum_SG, self).__init__(link,
-                                         options=kwargs.get('options', self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -486,13 +401,6 @@ class SumRings_SG(ScatterGather):
     default_options = dict(library=diffuse_defaults.diffuse['library'],
                            outdir=(None, 'Output directory', str),)
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(SumRings_SG, self).__init__(link,
-                                          options=kwargs.get('options',
-                                                             self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -534,13 +442,6 @@ class Vstack_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],)
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(Vstack_SG, self).__init__(link,
-                                        options=kwargs.get('options',
-                                                           self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -607,13 +508,6 @@ class GatherSrcmaps_SG(ScatterGather):
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(GatherSrcmaps_SG, self).__init__(link,
-                                               options=kwargs.get('options',
-                                                                  self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -669,13 +563,6 @@ class Healview_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'])
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(Healview_SG, self).__init__(link,
-                                          options=kwargs.get('options',
-                                                             self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations

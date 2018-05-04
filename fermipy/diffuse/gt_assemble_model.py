@@ -43,12 +43,6 @@ class InitModel(Link):
                            models=diffuse_defaults.diffuse['models'],
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'])
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(InitModel, self).__init__(linkname, **init_dict)
-
     def run_analysis(self, argv):
         """ Build the manifest for all the models
         """
@@ -80,12 +74,6 @@ class AssembleModel(Link):
     default_options = dict(input=(None, 'Input yaml file', str),
                            compname=(None, 'Component name.', str),
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'])
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(AssembleModel, self).__init__(linkname, **init_dict)
 
     @staticmethod
     def copy_ccube(ccube, outsrcmap, hpx_order):
@@ -232,13 +220,6 @@ class AssembleModel_SG(ScatterGather):
                            data=diffuse_defaults.diffuse['data'],
                            models=diffuse_defaults.diffuse['models'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(AssembleModel_SG, self).__init__(link,
-                                               options=kwargs.get('options',
-                                                                  self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -285,8 +266,7 @@ class AssembleModelChain(Chain):
     def __init__(self, **kwargs):
         """C'tor
         """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(AssembleModelChain, self).__init__(linkname, **init_dict)
+        super(AssembleModelChain, self).__init__(**kwargs)
         self.comp_dict = None
 
     def _register_link_classes(self):

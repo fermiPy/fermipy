@@ -7,7 +7,6 @@ from __future__ import absolute_import, division, print_function
 import os
 import math
 
-from collections import OrderedDict
 import yaml
 
 from fermipy.jobs.utils import is_null
@@ -22,8 +21,7 @@ from fermipy.diffuse.binning import EVT_TYPE_DICT
 from fermipy.diffuse.timefilter import MktimeFilterDict
 
 from fermipy.diffuse.job_library import Gtlink_select, Gtlink_mktime,\
-    Gtlink_ltcube, Gtlink_bin, Link_FermipyCoadd,\
-    Gtltsum_SG, Gtexpcube2_SG
+    Gtlink_ltcube, Gtlink_bin, Gtltsum_SG, Gtexpcube2_SG
 
 from fermipy.diffuse.gt_coadd_split import CoaddSplit_SG
 
@@ -66,8 +64,7 @@ class SplitAndMktime(Chain):
     def __init__(self, **kwargs):
         """C'tor
         """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(SplitAndMktime, self).__init__(linkname, **init_dict)
+        super(SplitAndMktime, self).__init__(**kwargs)
         self.comp_dict = None
 
     def _map_arguments(self, input_dict):
@@ -207,13 +204,6 @@ class SplitAndMktime_SG(ScatterGather):
                            scratch=diffuse_defaults.diffuse['scratch'],
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 
-    def __init__(self, chain, **kwargs):
-        """C'tor
-        """
-        super(SplitAndMktime_SG, self).__init__(chain,
-                                                options=kwargs.get('options',
-                                                                   self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -283,16 +273,8 @@ class SplitAndMktimeChain(Chain):
     def __init__(self, **kwargs):
         """C'tor
         """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(SplitAndMktimeChain, self).__init__(linkname, **init_dict)
+        super(SplitAndMktimeChain, self).__init__(**kwargs)
         self.comp_dict = None
-
-    def _register_link_classes(self):
-        from fermipy.diffuse.job_library import register_classes as register_library
-        from fermipy.diffuse.gt_coadd_split import CoaddSplit_SG
-        register_library()
-        SplitAndMktime_SG.register_class()
-        CoaddSplit_SG.register_class()
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
@@ -327,7 +309,6 @@ class SplitAndMktimeChain(Chain):
                              comp=comp, data=data,
                              hpx_order_max=input_dict.get('hpx_order_expcube', 5),
                              dry_run=dry_run)
-        
 
 def register_classes():
     """Register these classes with the `LinkFactory` """

@@ -47,12 +47,6 @@ class AnalyzeROI(Link):
                            roi_baseline=defaults.common['roi_baseline'],
                            make_plots=defaults.common['make_plots'])
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(AnalyzeROI, self).__init__(linkname, **init_dict)
-
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -121,12 +115,6 @@ class AnalyzeSED(Link):
                            skydirs=defaults.sims['skydirs'],
                            profiles=defaults.common['profiles'],
                            make_plots=defaults.common['make_plots'])
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(AnalyzeSED, self).__init__(linkname, **init_dict)
 
     @staticmethod
     def _build_profile_dict(basedir, profile_name):
@@ -218,13 +206,6 @@ class AnalyzeROI_SG(ScatterGather):
                            roi_baseline=defaults.common['roi_baseline'],
                            make_plots=defaults.common['make_plots'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(AnalyzeROI_SG, self).__init__(link,
-                                            options=kwargs.get('options',
-                                                               self.default_options.copy()))
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -281,13 +262,6 @@ class AnalyzeSED_SG(ScatterGather):
                            roi_baseline=defaults.common['roi_baseline'],
                            skydirs=defaults.sims['skydirs'],
                            make_plots=defaults.common['make_plots'])
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(AnalyzeSED_SG, self).__init__(link,
-                                            options=kwargs.get('options',
-                                                               self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations

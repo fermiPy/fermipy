@@ -38,8 +38,7 @@ class DiffuseCompChain(Chain):
     def __init__(self, **kwargs):
         """C'tor
         """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(DiffuseCompChain, self).__init__(linkname, **init_dict)
+        super(DiffuseCompChain, self).__init__(**kwargs)
         self.comp_dict = None
 
     def _map_arguments(self, input_dict):
@@ -85,8 +84,7 @@ class CatalogCompChain(Chain):
     def __init__(self, **kwargs):
         """C'tor
         """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(CatalogCompChain, self).__init__(linkname, **init_dict)
+        super(CatalogCompChain, self).__init__(**kwargs)
         self.comp_dict = None
 
     def _register_link_classes(self):
@@ -128,12 +126,6 @@ class DiffuseAnalysisChain(Chain):
 
     default_options = dict(config=diffuse_defaults.diffuse['config'],
                            dry_run=diffuse_defaults.diffuse['dry_run'])
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(DiffuseAnalysisChain, self).__init__(linkname, **init_dict)
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to

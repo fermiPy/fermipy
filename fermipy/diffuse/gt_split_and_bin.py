@@ -56,8 +56,7 @@ class SplitAndBin(Chain):
     def __init__(self, **kwargs):
         """C'tor
         """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(SplitAndBin, self).__init__(linkname, **init_dict)
+        super(SplitAndBin, self).__init__(**kwargs)
         self.comp_dict = None
 
     def _map_arguments(self, input_dict):
@@ -158,13 +157,6 @@ class SplitAndBin_SG(ScatterGather):
                            ft1file=(None, 'Input FT1 file', str),
                            scratch=(None, 'Path to scratch area', str))
 
-    def __init__(self, chain, **kwargs):
-        """C'tor
-        """
-        super(SplitAndBin_SG, self).__init__(chain,
-                                             options=kwargs.get('options', self.default_options.copy()))
-
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -219,12 +211,6 @@ class SplitAndBinChain(Chain):
                            hpx_order_expcube=diffuse_defaults.diffuse['hpx_order_expcube'],
                            scratch=diffuse_defaults.diffuse['scratch'],
                            dry_run=diffuse_defaults.diffuse['dry_run'])
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(SplitAndBinChain, self).__init__(linkname, **init_dict)
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to

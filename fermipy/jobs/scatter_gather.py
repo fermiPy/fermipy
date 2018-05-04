@@ -76,12 +76,10 @@ class ScatterGather(Link):
             Defaults to None
 
         """
-        linkname = kwargs.pop('linkname', link.linkname_default)
         kwargs.setdefault('interface', get_batch_job_interface(self.job_time))
         self._scatter_link = link
         self.default_options.update(self.default_options_base.copy())
-        Link.__init__(self, linkname,
-                      **kwargs)
+        Link.__init__(self, **kwargs)
         # Override the value of job_check_sleep to avoid excess waiting
         job_check_sleep = np.clip(int(self.job_time / 5), 60, 300)
         self.args['job_check_sleep'] = job_check_sleep

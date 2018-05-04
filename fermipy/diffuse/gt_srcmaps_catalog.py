@@ -55,12 +55,6 @@ class GtSrcmapsCatalog(Link):
                              srcmdl=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(GtSrcmapsCatalog, self).__init__(linkname, **init_dict)
-
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -126,14 +120,6 @@ class SrcmapsCatalog_SG(ScatterGather):
                            library=diffuse_defaults.diffuse['library'],
                            nsrc=(500, 'Number of sources per job', int),
                            make_xml=diffuse_defaults.diffuse['make_xml'])
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(SrcmapsCatalog_SG, self).__init__(link,
-                                                options=kwargs.get('options',
-                                                                   self.default_options.copy()))
-        self.link = link
 
     @staticmethod
     def _make_xml_files(catalog_info_dict, comp_info_dict):
