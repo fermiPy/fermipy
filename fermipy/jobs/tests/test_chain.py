@@ -2,50 +2,84 @@
 from __future__ import absolute_import, division, print_function
 
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.chain import Link, Chain
+from fermipy.jobs.link import Link
+from fermipy.jobs.chain import Chain
+from fermipy.jobs.app_link import AppLink
+from fermipy.jobs import defaults
 
-
-def test_comlink():
+def test_applink():
     """ Test that we can create `Link` class """
 
-    kwargs = dict(appname='dummy',
-                  options=dict(arg_float=(4.0, 'a float', float),
-                               arg_in=('test.in', 'an input file', str),
-                               arg_out=('test.out', 'an output file', str)),
-                  mapping=dict(arg_in='alias'),
-                  file_args=dict(arg_in=FileFlags.input_mask,
-                                 arg_out=FileFlags.output_mask))
-    link = Link('link', **kwargs)
-    assert link
+    class Link_FermipyCoadd(AppLink):
+        """Small wrapper to run fermipy-coadd """
+        
+        appname = 'fermipy-coadd'
+        linkname_default = 'coadd'
+        usage = '%s [options]' % (appname)
+        description = "Link to run %s" % (appname)
+        
+        default_options = dict(args=([], "List of input files", list),
+                               output=(None, "Output file", str))
+        default_file_args = dict(args=FileFlags.input_mask,
+                                 output=FileFlags.output_mask)
+
+    link = Link_FermipyCoadd()
+    formatted_command = link.formatted_command()
+    print (formatted_command)
+    #assert formatted_command == 'gtsrcmaps irfs=CALDB expcube=None cmap=None srcmdl=None outfile=None bexpmap=None'
+  
 
 def test_chain():
     """ Test that we can create `Chain` class """
-    kwargs = dict(appname='dummy',
-                  options=dict(arg_float=(4.0, 'a float', float),
-                               arg_in=('test.in', 'an input file', str),
-                               arg_out=('test.out', 'an output file', str)),
-                  mapping=dict(arg_in='alias'),
-                  file_args=dict(arg_in=FileFlags.input_mask,
-                                 arg_out=FileFlags.output_mask))
-    link = Link('link', **kwargs)
 
-    kwargs = dict(options=dict(irfs=('CALDB', 'IRF version', str),
-                               expcube=(None, 'Livetime cube file', str),
-                               bexpmap=(None, 'Binned exposure map', str),
-                               cmap=(None, 'Binned counts map', str),
-                               srcmdl=(None, 'Input source model xml file', str),
-                               outfile=(None, 'Output file', str)),
-                  file_args=dict(expcube=FileFlags.input_mask,
-                                 cmap=FileFlags.input_mask,
-                                 bexpmap=FileFlags.input_mask,
-                                 srcmdl=FileFlags.input_mask,
-                                 outfile=FileFlags.output_mask))
-    # This should be a Gtlink, but we only really wanna test the chain
-    # functionality here
-    link2 = Link('gtsrcmaps', **kwargs)
+    class Link_FermipyCoadd(AppLink):
+        """Small wrapper to run fermipy-coadd """
+        
+        appname = 'fermipy-coadd'
+        linkname_default = 'coadd'
+        usage = '%s [options]' % (appname)
+        description = "Link to run %s" % (appname)
+        
+        default_options = dict(args=([], "List of input files", list),
+                               output=(None, "Output file", str))
+        default_file_args = dict(args=FileFlags.input_mask,
+                                 output=FileFlags.output_mask)
 
-    chain = Chain('chain',
-                  links=[link, link2],
-                  options=dict(basename=('dummy', 'Base file name', str)))
+    class Link_FermipyCoadd_v2(AppLink):
+        """Small wrapper to run fermipy-coadd """
+        
+        appname = 'fermipy-coadd-v2'
+        linkname_default = 'coadd-v2'
+        usage = '%s [options]' % (appname)
+        description = "Link to run %s" % (appname)
+        
+        default_options = dict(args=([], "List of input files", list),
+                               output=(None, "Output file", str))
+        default_file_args = dict(args=FileFlags.input_mask,
+                                 output=FileFlags.output_mask)
 
+
+    class TestChain(Chain):
+        """Small test class """
+        appname = 'dmpipe-pipeline-data'
+        linkname_default = 'pipeline-data'
+        usage = '%s [options]' % (appname)
+        description = 'Data analysis pipeline'
+        
+        default_options = dict(dry_run=defaults.common['dry_run'])
+
+        def _map_arguments(self, input_dict):
+            self._load_link_args('coadd',
+                                 Link_FermipyCoadd,
+                                 output="dummy.fits")
+            self._load_link_args('coadd-v2',
+                                 Link_FermipyCoadd_v2,
+                                 output="dummy2.fits")
+
+    chain = TestChain()
     assert chain
+
+
+if __name__ == '__main__':
+    test_applink()
+    test_chain()
