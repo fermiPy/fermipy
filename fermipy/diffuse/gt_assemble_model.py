@@ -6,7 +6,6 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-from collections import OrderedDict
 
 import yaml
 
@@ -15,10 +14,10 @@ from fermipy.skymap import HpxMap
 
 from fermipy.utils import load_yaml
 
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.jobs.link import Link
-from fermipy.jobs.chain import Chain, insert_app_config
+from fermipy.jobs.chain import Chain
 
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
@@ -211,7 +210,7 @@ class AssembleModel(Link):
         self.assemble_component(compname, value, args.hpx_order)
 
 
-class AssembleModel_SG(ConfigMaker):
+class AssembleModel_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     Parameters
@@ -297,8 +296,6 @@ class AssembleModelChain(Chain):
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
-        o_dict = OrderedDict()
-
         data = input_dict.get('data')
         comp = input_dict.get('comp')
         library = input_dict.get('library')
@@ -306,20 +303,16 @@ class AssembleModelChain(Chain):
         hpx_order = input_dict.get('hpx_order_fitting')
         dry_run = input_dict.get('dry_run', False)
 
-        insert_app_config(o_dict, 'init-model',
-                          'fermipy-init-model',
-                          comp=comp, data=data,
-                          library=library,
-                          models=models,
-                          hpx_order=hpx_order,
-                          dry_run=dry_run)
+        self._load_link_args('init-model', InitModel,
+                             comp=comp, data=data,
+                             library=library,
+                             models=models,
+                             hpx_order=hpx_order,
+                             dry_run=dry_run)
 
-        insert_app_config(o_dict, 'assemble-model',
-                          'fermipy-assemble-model-sg',
-                          comp=comp, data=data,
-                          models=models)
-
-        return o_dict
+        self._load_link_args('assemble-model', AssembleModel_SG,
+                             comp=comp, data=data,
+                             models=models)
 
 
 def register_classes():

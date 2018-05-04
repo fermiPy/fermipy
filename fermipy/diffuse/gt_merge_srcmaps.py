@@ -11,7 +11,7 @@ import pyLikelihood as pyLike
 
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.link import Link
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
@@ -106,7 +106,7 @@ class GtMergeSrcmaps(Link):
         like.writeXml(args.outxml)
 
 
-class MergeSrcmaps_SG(ConfigMaker):
+class MergeSrcmaps_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     This adds the following arguments:

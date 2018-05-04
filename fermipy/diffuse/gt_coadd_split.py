@@ -12,14 +12,17 @@ from collections import OrderedDict
 import yaml
 
 from fermipy.jobs.utils import is_null
-from fermipy.jobs.chain import Chain, insert_app_config
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.chain import Chain
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse import defaults as diffuse_defaults
+
+from fermipy.diffuse.job_library import Gtlink_ltsum, Link_FermipyCoadd
+
 
 NAME_FACTORY = NameFactory()
 
@@ -58,10 +61,6 @@ class CoaddSplit(Chain):
         linkname, init_dict = self._init_dict(**kwargs)
         super(CoaddSplit, self).__init__(linkname, **init_dict)
         self.comp_dict = None
-
-    def _register_link_classes(self):
-        from fermipy.diffuse.job_library import register_classes as register_library
-        register_library()
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
@@ -105,11 +104,10 @@ class CoaddSplit(Chain):
                 if do_ltsum:
                     ltsum_listfile = 'ltsumlist_%s_%s' % (key_e, mktimekey)
                     ltsum_outfile = 'ltsum_%s_%s' % (key_e, mktimekey)
-                    insert_app_config(o_dict, 'gtltsum',
-                                      'gtltsum',
-                                      infile1=ltsum_listfile,
-                                      infile2=None,
-                                      outfile=ltsum_outfile)
+                    self._load_link_args('gtltsum', Gtlink_ltsum,
+                                         infile1=ltsum_listfile,
+                                         infile2=None,
+                                         outfile=ltsum_outfile)
 
                 for evtclassval in evtclasslist_vals:
                     for psf_type in sorted(comp_e['psf_types'].keys()):
@@ -120,15 +118,14 @@ class CoaddSplit(Chain):
                             os.path.basename(NAME_FACTORY.ccube(**kwargs_bin))
                         outputfile = os.path.join(outdir_base, ccube_name)
                         args = _make_input_file_list(ccube_name, num_files)
-                        insert_app_config(o_dict, 'coadd',
-                                          'fermipy-coadd',
-                                          args=args,
-                                          output=outputfile)
+                        self._load_link_args('coadd', Link_FermipyCoadd,
+                                             args=args,
+                                             output=outputfile)
 
         return o_dict
 
 
-class CoaddSplit_SG(ConfigMaker):
+class CoaddSplit_SG(ScatterGather):
     """Small class to generate configurations for fermipy-coadd
 
     This takes the following arguments:
@@ -151,7 +148,8 @@ class CoaddSplit_SG(ConfigMaker):
         """C'tor
         """
         super(CoaddSplit_SG, self).__init__(link,
-                                            options=kwargs.get('options', self.default_options.copy()))
+                                            options=kwargs.get('options',
+                                                               self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
