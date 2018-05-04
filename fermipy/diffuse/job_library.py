@@ -5,14 +5,12 @@ Module to collect configuration to run specific jobs
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
 import copy
-import math
 
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.link import Link
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.app_link import AppLink
+from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
@@ -24,13 +22,12 @@ from fermipy.diffuse import defaults as diffuse_defaults
 
 NAME_FACTORY = NameFactory()
 
+
 def _make_ltcube_file_list(ltsumfile, num_files):
     """Make the list of input files for a particular energy bin X psf type """
-    outdir_base = os.path.dirname(ltsumfile)
     outbasename = os.path.basename(ltsumfile)
     lt_list_file = ltsumfile.replace('fits', 'lst')
-    outfile = open(lt_list_file, 'w!')
-    filelist = ""
+    outfile = open(lt_list_file, 'w')
     for i in range(num_files):
         split_key = "%06i" % i
         output_dir = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes', split_key)
@@ -38,14 +35,16 @@ def _make_ltcube_file_list(ltsumfile, num_files):
         outfile.write(filepath)
         outfile.write("\n")
     outfile.close()
-    return '@'+lt_list_file
+    return '@' + lt_list_file
 
 
 class Gtlink_select(Gtlink):
-    appname='gtselect'
+    """Small wrapper to run gtselect """
+
+    appname = 'gtselect'
     linkname_default = 'gtselect'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
 
     default_options = dict(emin=diffuse_defaults.gtopts['emin'],
                            emax=diffuse_defaults.gtopts['emax'],
@@ -67,23 +66,25 @@ class Gtlink_select(Gtlink):
 
 
 class Gtlink_bin(Gtlink):
-    appname='gtbin'
-    linkname_default = 'gtbin'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
+    """Small wrapper to run gtbin """
 
-    default_options=dict(algorithm=('HEALPIX', "Binning alogrithm", str),
-                         coordsys=diffuse_defaults.gtopts['coordsys'],
-                         hpx_order=diffuse_defaults.gtopts['hpx_order'],
-                         evfile=diffuse_defaults.gtopts['evfile'],
-                         outfile=diffuse_defaults.gtopts['outfile'],
-                         emin=diffuse_defaults.gtopts['emin'],
-                         emax=diffuse_defaults.gtopts['emax'],
-                         enumbins=diffuse_defaults.gtopts['enumbins'],
-                         pfiles=diffuse_defaults.gtopts['pfiles'])
-    
-    default_file_args=dict(evfile=FileFlags.in_stage_mask,
-                           outfile=FileFlags.out_stage_mask)
+    appname = 'gtbin'
+    linkname_default = 'gtbin'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(algorithm=('HEALPIX', "Binning alogrithm", str),
+                           coordsys=diffuse_defaults.gtopts['coordsys'],
+                           hpx_order=diffuse_defaults.gtopts['hpx_order'],
+                           evfile=diffuse_defaults.gtopts['evfile'],
+                           outfile=diffuse_defaults.gtopts['outfile'],
+                           emin=diffuse_defaults.gtopts['emin'],
+                           emax=diffuse_defaults.gtopts['emax'],
+                           enumbins=diffuse_defaults.gtopts['enumbins'],
+                           pfiles=diffuse_defaults.gtopts['pfiles'])
+
+    default_file_args = dict(evfile=FileFlags.in_stage_mask,
+                             outfile=FileFlags.out_stage_mask)
 
     def __init__(self, **kwargs):
         """C'tor
@@ -93,10 +94,12 @@ class Gtlink_bin(Gtlink):
 
 
 class Gtlink_expcube2(Gtlink):
-    appname='gtexpcube2'
+    """Small wrapper to run gtexpcube2 """
+
+    appname = 'gtexpcube2'
     linkname_default = 'gtexpcube2'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
 
     default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
                            evtype=diffuse_defaults.gtopts['evtype'],
@@ -117,23 +120,25 @@ class Gtlink_expcube2(Gtlink):
 
 
 class Gtlink_scrmaps(Gtlink):
-    appname= 'gtscrmaps'
-    linkname_default = 'gtscrmaps'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
+    """Small wrapper to run gtscrmaps """
 
-    default_options=dict(irfs=diffuse_defaults.gtopts['irfs'],
-                         expcube=diffuse_defaults.gtopts['expcube'],
-                         bexpmap=diffuse_defaults.gtopts['bexpmap'],
-                         cmap=diffuse_defaults.gtopts['cmap'],
-                         srcmdl=diffuse_defaults.gtopts['srcmdl'],
-                         outfile=diffuse_defaults.gtopts['outfile'])
-    
-    default_file_args=dict(expcube=FileFlags.input_mask,
-                           cmap=FileFlags.input_mask,
-                           bexpmap=FileFlags.input_mask,
-                           srcmdl=FileFlags.input_mask,
-                           outfile=FileFlags.output_mask)
+    appname = 'gtscrmaps'
+    linkname_default = 'gtscrmaps'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
+                           expcube=diffuse_defaults.gtopts['expcube'],
+                           bexpmap=diffuse_defaults.gtopts['bexpmap'],
+                           cmap=diffuse_defaults.gtopts['cmap'],
+                           srcmdl=diffuse_defaults.gtopts['srcmdl'],
+                           outfile=diffuse_defaults.gtopts['outfile'])
+
+    default_file_args = dict(expcube=FileFlags.input_mask,
+                             cmap=FileFlags.input_mask,
+                             bexpmap=FileFlags.input_mask,
+                             srcmdl=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
 
     def __init__(self, **kwargs):
         """C'tor
@@ -143,16 +148,18 @@ class Gtlink_scrmaps(Gtlink):
 
 
 class Gtlink_ltsum(Gtlink):
-    appname= 'gtltsum'
+    """Small wrapper to run gtltsum """
+
+    appname = 'gtltsum'
     linkname_default = 'gtltsum'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
 
     default_options = dict(infile1=(None, "Livetime cube 1 or list of files", str),
                            infile2=("none", "Livetime cube 2", str),
                            outfile=(None, "Output file", str))
-    default_file_args=dict(infile1=FileFlags.input_mask,
-                           outfile=FileFlags.output_mask)
+    default_file_args = dict(infile1=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
 
     def __init__(self, **kwargs):
         """C'tor
@@ -162,10 +169,12 @@ class Gtlink_ltsum(Gtlink):
 
 
 class Gtlink_mktime(Gtlink):
-    appname= 'gtmktime'
+    """Small wrapper to run gtmktime """
+
+    appname = 'gtmktime'
     linkname_default = 'gtmktime'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
 
     default_options = dict(evfile=(None, 'Input FT1 File', str),
                            outfile=(None, 'Output FT1 File', str),
@@ -174,10 +183,10 @@ class Gtlink_mktime(Gtlink):
                            filter=(None, 'Filter expression', str),
                            pfiles=(None, "PFILES directory", str))
 
-    default_file_args=dict(evfile=FileFlags.in_stage_mask,
-                           scfile=FileFlags.in_stage_mask,
-                           outfile=FileFlags.out_stage_mask)
-    
+    default_file_args = dict(evfile=FileFlags.in_stage_mask,
+                             scfile=FileFlags.in_stage_mask,
+                             outfile=FileFlags.out_stage_mask)
+
     def __init__(self, **kwargs):
         """C'tor
         """
@@ -186,25 +195,27 @@ class Gtlink_mktime(Gtlink):
 
 
 class Gtlink_ltcube(Gtlink):
-    appname= 'gtltcube'
+    """Small wrapper to run gtltcube """
+
+    appname = 'gtltcube'
     linkname_default = 'gtltcube'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
 
-    default_options = dict(evfile = (None, 'Input FT1 File', str),
-                           scfile = (None, 'Input FT2 file', str),
-                           outfile = (None, 'Output Livetime cube File', str),
-                           dcostheta = (0.025, 'Step size in cos(theta)', float),
-                           binsz = (1., 'Pixel size (degrees)', float),
-                           phibins = (0, 'Number of phi bins', int),
-                           zmin = (0, 'Minimum zenith angle', float),
-                           zmax = (105, 'Maximum zenith angle', float),
-                           pfiles = (None, "PFILES directory", str))
+    default_options = dict(evfile=(None, 'Input FT1 File', str),
+                           scfile=(None, 'Input FT2 file', str),
+                           outfile=(None, 'Output Livetime cube File', str),
+                           dcostheta=(0.025, 'Step size in cos(theta)', float),
+                           binsz=(1., 'Pixel size (degrees)', float),
+                           phibins=(0, 'Number of phi bins', int),
+                           zmin=(0, 'Minimum zenith angle', float),
+                           zmax=(105, 'Maximum zenith angle', float),
+                           pfiles=(None, "PFILES directory", str))
 
-    default_file_args=dict(evfile=FileFlags.in_stage_mask,
-                           scfile=FileFlags.in_stage_mask,
-                           outfile=FileFlags.out_stage_mask)
-    
+    default_file_args = dict(evfile=FileFlags.in_stage_mask,
+                             scfile=FileFlags.in_stage_mask,
+                             outfile=FileFlags.out_stage_mask)
+
     def __init__(self, **kwargs):
         """C'tor
         """
@@ -212,17 +223,18 @@ class Gtlink_ltcube(Gtlink):
         super(Gtlink_ltcube, self).__init__(linkname, **init_dict)
 
 
+class Link_FermipyCoadd(AppLink):
+    """Small wrapper to run fermipy-coadd """
 
-class Link_FermipyCoadd(Link):
-    appname= 'fermipy-coadd'
-    linkname_default = 'fermipy-coadd'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
+    appname = 'fermipy-coadd'
+    linkname_default = 'coadd'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
 
-    default_options=dict(args=([], "List of input files", list),
-                         output=(None, "Output file", str))
-    default_file_args=dict(args=FileFlags.input_mask,
-                           output=FileFlags.output_mask)
+    default_options = dict(args=([], "List of input files", list),
+                           output=(None, "Output file", str))
+    default_file_args = dict(args=FileFlags.input_mask,
+                             output=FileFlags.output_mask)
 
     def __init__(self, **kwargs):
         """C'tor
@@ -231,20 +243,22 @@ class Link_FermipyCoadd(Link):
         super(Link_FermipyCoadd, self).__init__(linkname, **init_dict)
 
 
-class Link_FermipyGatherSrcmaps(Link):
-    appname= 'fermipy-gather-srcmaps'
-    linkname_default = 'fermipy-gather-srcmaps'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
-    
-    default_options=dict(output=(None, "Output file name", str),
-                         args=([], "List of input files", list),
-                         gzip=(False, "Compress output", bool),
-                         rm=(False, "Remove input files", bool),
-                         clobber=(False, "Overwrite output", bool))    
-    default_file_args=dict(args=FileFlags.input_mask,
-                           output=FileFlags.output_mask)
-   
+class Link_FermipyGatherSrcmaps(AppLink):
+    """Small wrapper to run fermipy-gather-srcmaps """
+
+    appname = 'fermipy-gather-srcmaps'
+    linkname_default = 'gather-srcmaps'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(output=(None, "Output file name", str),
+                           args=([], "List of input files", list),
+                           gzip=(False, "Compress output", bool),
+                           rm=(False, "Remove input files", bool),
+                           clobber=(False, "Overwrite output", bool))
+    default_file_args = dict(args=FileFlags.input_mask,
+                             output=FileFlags.output_mask)
+
     def __init__(self, **kwargs):
         """C'tor
         """
@@ -252,20 +266,22 @@ class Link_FermipyGatherSrcmaps(Link):
         super(Link_FermipyGatherSrcmaps, self).__init__(linkname, **init_dict)
 
 
-class Link_FermipyVstack(Link):
-    appname= 'fermipy-vstack'
-    linkname_default = 'fermipy-vstack'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
-    
+class Link_FermipyVstack(AppLink):
+    """Small wrapper to run fermipy-vstack """
+
+    appname = 'fermipy-vstack'
+    linkname_default = 'vstack'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
     default_options = dict(output=(None, "Output file name", str),
                            hdu=(None, "Name of HDU to stack", str),
                            args=([], "List of input files", list),
                            gzip=(False, "Compress output", bool),
                            rm=(False, "Remove input files", bool),
                            clobber=(False, "Overwrite output", bool))
-    default_file_args=dict(args=FileFlags.input_mask,
-                           output=FileFlags.output_mask)
+    default_file_args = dict(args=FileFlags.input_mask,
+                             output=FileFlags.output_mask)
 
     def __init__(self, **kwargs):
         """C'tor
@@ -274,24 +290,26 @@ class Link_FermipyVstack(Link):
         super(Link_FermipyVstack, self).__init__(linkname, **init_dict)
 
 
-class Link_FermipyHealview(Link):
-    appname= 'fermipy-healview'
+class Link_FermipyHealview(AppLink):
+    """Small wrapper to run fermipy-healview """
+
+    appname = 'fermipy-healview'
     linkname_default = 'fermipy-healview'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
-    
-    default_options=dict(input=(None, "Input file", str),
-                         output=(None, "Output file name", str),
-                         extension=(None, "FITS HDU with HEALPix map", str),
-                         zscale=("log", "Scaling for color scale", str))
-    default_file_args=dict(args=FileFlags.input_mask,
-                           output=FileFlags.output_mask)
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(input=(None, "Input file", str),
+                           output=(None, "Output file name", str),
+                           extension=(None, "FITS HDU with HEALPix map", str),
+                           zscale=("log", "Scaling for color scale", str))
+    default_file_args = dict(args=FileFlags.input_mask,
+                             output=FileFlags.output_mask)
 
     def __init__(self, **kwargs):
         """C'tor
         """
         linkname, init_dict = self._init_dict(**kwargs)
-        super(Link_FermipyHealview,self).__init__(linkname, **init_dict)
+        super(Link_FermipyHealview, self).__init__(linkname, **init_dict)
 
 
 class Gtexpcube2_SG(ConfigMaker):
@@ -317,7 +335,8 @@ class Gtexpcube2_SG(ConfigMaker):
         """C'tor
         """
         super(Gtexpcube2_SG, self).__init__(link,
-                                            options=kwargs.get('options', self.default_options.copy()))
+                                            options=kwargs.get('options',
+                                                               self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -332,20 +351,21 @@ class Gtexpcube2_SG(ConfigMaker):
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax
-            
+
             mktimelist = copy.copy(comp.mktimefilters)
-            if len(mktimelist) == 0:
+            if not mktimelist:
                 mktimelist.append('none')
             evtclasslist_keys = copy.copy(comp.evtclasses)
-            if len(evtclasslist_keys) == 0:
-                evtclasslist_keys.append('default')
+            if not evtclasslist_keys:
                 evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
             else:
                 evtclasslist_vals = copy.copy(evtclasslist_keys)
 
             for mktimekey in mktimelist:
-                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):       
-                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclassval, zcut, mktimekey))
+                for evtclassval in evtclasslist_vals:
+                    fullkey = comp.make_key(
+                        '%s_%s_{ebin_name}_%s_{evtype_name}' %
+                        (evtclassval, zcut, mktimekey))
                     name_keys = dict(zcut=zcut,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
@@ -363,12 +383,12 @@ class Gtexpcube2_SG(ConfigMaker):
                                                 infile=infile,
                                                 outfile=outfile,
                                                 irfs=NAME_FACTORY.irfs(**name_keys),
-                                                hpx_order=min(comp.hpx_order, args['hpx_order_max']),
+                                                hpx_order=min(
+                                                    comp.hpx_order, args['hpx_order_max']),
                                                 evtype=comp.evtype,
                                                 logfile=logfile)
 
         return job_configs
-
 
 
 class Gtltsum_SG(ConfigMaker):
@@ -412,20 +432,21 @@ class Gtltsum_SG(ConfigMaker):
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax
-            
+
             mktimelist = copy.copy(comp.mktimefilters)
-            if len(mktimelist) == 0:
+            if not mktimelist:
                 mktimelist.append('none')
             evtclasslist_keys = copy.copy(comp.evtclasses)
-            if len(evtclasslist_keys) == 0:
-                evtclasslist_keys.append('default')
+            if not evtclasslist_keys:
                 evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
             else:
                 evtclasslist_vals = copy.copy(evtclasslist_keys)
 
             for mktimekey in mktimelist:
-                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):       
-                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclassval, zcut, mktimekey))
+                for evtclassval in evtclasslist_vals:
+                    fullkey = comp.make_key(
+                        '%s_%s_{ebin_name}_%s_{evtype_name}' %
+                        (evtclassval, zcut, mktimekey))
 
                     name_keys = dict(zcut=zcut,
                                      ebin=comp.ebin_name,
@@ -436,7 +457,7 @@ class Gtltsum_SG(ConfigMaker):
                                      evclass=evtclassval,
                                      fullpath=True)
 
-                    outfile = os.path.join(NAME_FACTORY.base_dict['basedir'], 
+                    outfile = os.path.join(NAME_FACTORY.base_dict['basedir'],
                                            NAME_FACTORY.ltcube(**name_keys))
                     infile1 = _make_ltcube_file_list(outfile, num_files)
                     logfile = make_nfs_path(outfile.replace('.fits', '.log'))
@@ -445,8 +466,6 @@ class Gtltsum_SG(ConfigMaker):
                                                 logfile=logfile)
 
         return job_configs
-
-
 
 
 class SumRings_SG(ConfigMaker):
@@ -480,7 +499,7 @@ class SumRings_SG(ConfigMaker):
         job_configs = {}
 
         gmm = make_ring_dicts(library=args['library'], basedir='.')
-        
+
         for galkey in gmm.galkeys():
             ring_dict = gmm.ring_dict(galkey)
             for ring_key, ring_info in ring_dict.items():
@@ -559,7 +578,7 @@ class Vstack_SG(ConfigMaker):
                 outfile_tokens = os.path.splitext(outfile)
                 infile_regexp = "%s_*.fits*" % outfile_tokens[0]
                 full_key = "%s_%s" % (sub_comp_info.sourcekey, key)
-                logfile=make_nfs_path(outfile.replace('.fits', '.log'))
+                logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                 job_configs[full_key] = dict(output=outfile,
                                              args=infile_regexp,
                                              hdu=sub_comp_info.source_name,
@@ -603,13 +622,11 @@ class GatherSrcmaps_SG(ConfigMaker):
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
 
-        ret_dict = make_catalog_comp_dict(library=args['library'], 
+        ret_dict = make_catalog_comp_dict(library=args['library'],
                                           basedir=NAME_FACTORY.base_dict['basedir'])
         catalog_info_dict = ret_dict['catalog_info_dict']
-        comp_info_dict = ret_dict['comp_info_dict']
 
-        for catalog_name, catalog_info in catalog_info_dict.items():
-
+        for catalog_name  in catalog_info_dict:
             for comp in components:
                 zcut = "zmax%i" % comp.zmax
                 key = comp.make_key('{ebin_name}_{evtype_name}')
@@ -705,13 +722,12 @@ class Healview_SG(ConfigMaker):
                                              extension=sub_comp_info.source_name,
                                              zscale=args.get('zscale', 'log'),
                                              logfile=logfile)
-                                            
 
         return job_configs
 
 
-
 def register_classes():
+    """Register these classes with the `LinkFactory` """
     Gtlink_select.register_class()
     Gtlink_bin.register_class()
     Gtlink_expcube2.register_class()
@@ -728,4 +744,3 @@ def register_classes():
     Vstack_SG.register_class()
     GatherSrcmaps_SG.register_class()
     Healview_SG.register_class()
-
