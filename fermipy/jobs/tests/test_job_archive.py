@@ -56,12 +56,6 @@ def test_job_archive():
                                  outfile1=FileFlags.output_mask,
                                  outfile2=FileFlags.output_mask)
 
-        def __init__(self, **kwargs):
-            """C'tor
-            """
-            linkname, init_dict = self._init_dict(**kwargs)
-            super(DummyLink, self).__init__(linkname, **init_dict)
-
     link = DummyLink()
     job_archive = JobArchive(file_archive_table='archive_files.fits',
                              job_archive_table='archive_jobs.fits',

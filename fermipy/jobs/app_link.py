@@ -24,14 +24,14 @@ class AppLink(Link):
     usage = '%s [options]' %(appname)
     description = "Link to run %s"%(appname)
 
-    def __init__(self, linkname, **kwargs):
+    def __init__(self, **kwargs):
         """C'tor
 
         See help for `chain.Link` for details
 
         This calls the base class c'tor then builds a GtApp object
         """
-        Link.__init__(self, linkname, **kwargs)
+        super(AppLink, self).__init__(**kwargs)
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application
