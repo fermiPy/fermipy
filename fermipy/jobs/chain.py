@@ -133,7 +133,7 @@ class Chain(Link):
             self.sub_files.update(link.files.file_dict)
             self.sub_files.update(link.sub_files.file_dict)
 
-    def _map_arguments(self, args):
+    def _map_arguments(self, input_dict):
         """Map arguments to options.
 
         Parameters
@@ -278,8 +278,7 @@ class Chain(Link):
             for link in self._links.values():
                 ret_dict.update(link.get_jobs(recursive))
             return ret_dict
-        else:
-            return self.jobs
+        return self.jobs
 
     def missing_input_files(self):
         """Return a dictionary of the missing input files and `Link`
@@ -400,3 +399,7 @@ class Chain(Link):
             for link in self._links.values():
                 stream.write("\n")
                 link.print_summary(stream, indent, recurse_level)
+
+    def run_analysis(self, argv):
+        """Implemented by sub-classes to run a particular analysis"""
+        raise RuntimeError("run_analysis called for Chain type object")

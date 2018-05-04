@@ -68,8 +68,7 @@ class NameFactory(object):
         localpath = format_string.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def ttypeconfig(self, **kwargs):
         """ return the name of the input configuration file

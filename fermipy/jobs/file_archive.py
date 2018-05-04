@@ -373,7 +373,7 @@ class FileStageManager(object):
         for value in file_mapping.values():
             scratch_dirname = os.path.dirname(value)
             scratch_dirs[scratch_dirname] = True
-        for scratch_dirname in scratch_dirs.keys():
+        for scratch_dirname in scratch_dirs:
             if dry_run:
                 print("mkdir -f %s" % (scratch_dirname))
             else:
@@ -599,8 +599,7 @@ class FileArchive(object):
         """Return filepath with the base_path prefixed """
         if filepath[0] == '/':
             return filepath
-        else:
-            return os.path.join(self._base_path, filepath)
+        return os.path.join(self._base_path, filepath)
 
     def _get_localpath(self, filepath):
         """Return the filepath with the base_path removed """

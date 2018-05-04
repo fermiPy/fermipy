@@ -86,7 +86,7 @@ class NativeInterface(SysInterface):
         unsubmitted_jobs.reverse()
 
         failed = False
-        while len(unsubmitted_jobs) > 0:
+        while unsubmitted_jobs:
             njob_to_submit = min(self._jobs_per_cycle,
                                  len(unsubmitted_jobs))
 
@@ -112,7 +112,7 @@ class NativeInterface(SysInterface):
                               new_job_details.outfiles, self._dry_run)
                 link.jobs[job_key] = new_job_details
 
-            if len(unsubmitted_jobs) > 0:
+            if unsubmitted_jobs:
                 print('Sleeping %.0f seconds between submission cycles' %
                       self._time_per_cycle)
                 time.sleep(self._time_per_cycle)

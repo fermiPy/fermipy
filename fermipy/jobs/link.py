@@ -82,8 +82,7 @@ def check_files(filelist,
         return found
     elif return_missing:
         return missing
-    else:
-        return None
+    return None
 
 
 def add_argument(parser, dest, info):
@@ -331,7 +330,7 @@ class Link(object):
             True if it is ok to proceed with running the link
         """
         input_missing = self.check_input_files(return_found=False)
-        if len(input_missing) != 0:
+        if input_missing:
             if dry_run:
                 stream.write("Input files are missing: %s: %i\n" %
                              (self.linkname, len(input_missing)))
@@ -339,7 +338,7 @@ class Link(object):
                 raise OSError("Input files are missing: %s" % input_missing)
 
         output_found, output_missing = self.check_output_files()
-        if len(output_missing) == 0 and len(output_found) > 0:
+        if output_found and not output_missing:
             stream.write("All output files for %s already exist: %i %i %i\n" %
                          (self.linkname, len(output_found),
                           len(output_missing), len(self.files.output_files)))
@@ -629,8 +628,7 @@ class Link(object):
         if n_failed > 0:
             if n_passed > 0:
                 return JobStatus.partial_failed
-            else:
-                return JobStatus.failed
+            return JobStatus.failed
         elif n_passed == n_total:
             return JobStatus.done
         elif n_passed > 0:
@@ -657,8 +655,7 @@ class Link(object):
         if recursive:
             ret_dict = self.jobs.copy()
             return ret_dict
-        else:
-            return self.jobs
+        return self.jobs
 
     def check_input_files(self,
                           return_found=True,
@@ -751,12 +748,11 @@ class Link(object):
             stream.write("%s\n" % command)
             stream.flush()
             return 0
-        else:
-            proc = subprocess.Popen(command.split(),
-                                    stderr=stream,
-                                    stdout=stream)
-            proc.communicate()
-            return proc.returncode
+        proc = subprocess.Popen(command.split(),
+                                stderr=stream,
+                                stdout=stream)
+        proc.communicate()
+        return proc.returncode
 
     def run(self, stream=sys.stdout, dry_run=False, stage_files=True, resubmit_failed=False):
         """Runs this link.

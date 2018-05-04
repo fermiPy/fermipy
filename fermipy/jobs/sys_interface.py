@@ -63,8 +63,7 @@ def check_log(logfile, exited='Exited with exit code',
         return JobStatus.failed
     elif successful in open(logfile).read():
         return JobStatus.done
-    else:
-        return JobStatus.running
+    return JobStatus.running
 
 
 class SysInterface(object):
