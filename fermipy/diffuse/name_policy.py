@@ -77,7 +77,7 @@ class NameFactory(object):
     select_format = 'counts_cubes/select_{dataset}_{component}.fits'
     # MKtime select events (output of gtmktime)
     mktime_format = 'counts_cubes/mktime_{dataset}_{mktime}_{component}.fits'
-    
+
     # Counts cubes (output of gtbin)
     ccube_format = 'counts_cubes/ccube_{dataset}_{mktime}_{component}_{coordsys}.fits'
     # Binned exposure cubes (output of gtexpcube2)
@@ -101,7 +101,6 @@ class NameFactory(object):
 
     # Binned exposure cubes (output of gtexphpsun, for sun)
     templatesunmoon_format = 'templates/template_{sourcekey}_{zcut}.fits'
-
 
     # residual CR output files
     residual_cr_format = 'residual_cr/residual_cr_{dataset}_{mktime}_{component}_{coordsys}_{irf_ver}.fits'
@@ -140,7 +139,7 @@ class NameFactory(object):
         self.base_dict.update(**yaml.safe_load(open(yamlfile)))
 
     def irf_ver(self, **kwargs):
-        """ Get the name of the IRF version 
+        """ Get the name of the IRF version
         """
         return kwargs.get('irf_ver', self.base_dict.get('irf_ver', None))
 
@@ -158,7 +157,6 @@ class NameFactory(object):
         """ Get the bitmask for a particular event class
         """
         return EVCLASS_MASK_DICTIONARY[evclass_str]
-
 
     def dataset(self, **kwargs):
         """ Return a key that specifies the data selection
@@ -230,8 +228,7 @@ class NameFactory(object):
         localpath = NameFactory.galprop_gasmap_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def merged_gasmap(self, **kwargs):
         """ return the file name for Galprop merged gasmaps
@@ -241,8 +238,7 @@ class NameFactory(object):
         localpath = NameFactory.merged_gasmap_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def diffuse_template(self, **kwargs):
         """ return the file name for other diffuse map templates
@@ -252,8 +248,7 @@ class NameFactory(object):
         localpath = NameFactory.diffuse_template_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def spectral_template(self, **kwargs):
         """ return the file name for spectral templates
@@ -263,8 +258,7 @@ class NameFactory(object):
         localpath = NameFactory.spectral_template_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def srcmdl_xml(self, **kwargs):
         """ return the file name for source model xml files
@@ -274,8 +268,7 @@ class NameFactory(object):
         localpath = NameFactory.srcmdl_xml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def nested_srcmdl_xml(self, **kwargs):
         """ return the file name for source model xml files of nested sources
@@ -285,8 +278,7 @@ class NameFactory(object):
         localpath = NameFactory.nested_srcmdl_xml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def ft1file(self, **kwargs):
         """ return the name of the input ft1 file list
@@ -297,8 +289,7 @@ class NameFactory(object):
         localpath = NameFactory.ft1file_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def ft2file(self, **kwargs):
         """ return the name of the input ft2 file list
@@ -310,8 +301,7 @@ class NameFactory(object):
         localpath = NameFactory.ft2file_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def ltcube(self, **kwargs):
         """ return the name of a livetime cube file
@@ -322,8 +312,7 @@ class NameFactory(object):
         localpath = NameFactory.ltcube_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def select(self, **kwargs):
         """ return the name of a selected events ft1file
@@ -336,8 +325,7 @@ class NameFactory(object):
         localpath = NameFactory.select_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def mktime(self, **kwargs):
         """ return the name of a selected events ft1file
@@ -350,8 +338,7 @@ class NameFactory(object):
         localpath = NameFactory.mktime_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def ccube(self, **kwargs):
         """ return the name of a counts cube file
@@ -364,8 +351,7 @@ class NameFactory(object):
         localpath = NameFactory.ccube_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def bexpcube(self, **kwargs):
         """ return the name of a binned exposure cube file
@@ -378,8 +364,7 @@ class NameFactory(object):
         localpath = NameFactory.bexpcube_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def srcmaps(self, **kwargs):
         """ return the name of a source map file
@@ -392,8 +377,7 @@ class NameFactory(object):
         localpath = NameFactory.srcmaps_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def mcube(self, **kwargs):
         """ return the name of a model cube file
@@ -406,8 +390,7 @@ class NameFactory(object):
         localpath = NameFactory.mcube_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def ltcube_sun(self, **kwargs):
         """ return the name of a livetime cube file
@@ -418,8 +401,7 @@ class NameFactory(object):
         localpath = NameFactory.ltcubesun_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def ltcube_moon(self, **kwargs):
         """ return the name of a livetime cube file
@@ -430,8 +412,7 @@ class NameFactory(object):
         localpath = NameFactory.ltcubemoon_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def bexpcube_sun(self, **kwargs):
         """ return the name of a binned exposure cube file
@@ -444,8 +425,7 @@ class NameFactory(object):
         localpath = NameFactory.bexpcubesun_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def bexpcube_moon(self, **kwargs):
         """ return the name of a binned exposure cube file
@@ -458,9 +438,8 @@ class NameFactory(object):
         localpath = NameFactory.bexpcubemoon_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
-    
+        return localpath
+
     def angprofile(self, **kwargs):
         """ return the file name for sun or moon angular profiles
         """
@@ -469,8 +448,7 @@ class NameFactory(object):
         localpath = NameFactory.angprofile_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def template_sunmoon(self, **kwargs):
         """ return the file name for sun or moon template files
@@ -483,9 +461,8 @@ class NameFactory(object):
         localpath = NameFactory.templatesunmoon_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
-  
+        return localpath
+
     def residual_cr(self, **kwargs):
         """Return the name of the residual CR analysis output files"""
         kwargs_copy = self.base_dict.copy()
@@ -496,8 +473,7 @@ class NameFactory(object):
         localpath = NameFactory.residual_cr_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def galprop_rings_yaml(self, **kwargs):
         """ return the name of a galprop rings merging yaml file
@@ -507,8 +483,7 @@ class NameFactory(object):
         localpath = NameFactory.galprop_rings_yaml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def catalog_split_yaml(self, **kwargs):
         """ return the name of a catalog split yaml file
@@ -518,8 +493,7 @@ class NameFactory(object):
         localpath = NameFactory.catalog_split_yaml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def model_yaml(self, **kwargs):
         """ return the name of a model yaml file
@@ -529,8 +503,7 @@ class NameFactory(object):
         localpath = NameFactory.model_yaml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def merged_srcmaps(self, **kwargs):
         """ return the name of a source map file
@@ -543,8 +516,7 @@ class NameFactory(object):
         localpath = NameFactory.merged_srcmaps_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def master_srcmdl_xml(self, **kwargs):
         """ return the name of a source model file
@@ -554,8 +526,7 @@ class NameFactory(object):
         localpath = NameFactory.master_srcmdl_xml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def comp_srcmdl_xml(self, **kwargs):
         """ return the name of a source model file
@@ -568,8 +539,7 @@ class NameFactory(object):
         localpath = NameFactory.comp_srcmdl_xml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
-        else:
-            return localpath
+        return localpath
 
     def stamp(self, **kwargs):
         """Return the path for a stamp file for a scatter gather job"""

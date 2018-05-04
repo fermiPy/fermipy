@@ -4,18 +4,13 @@ Module to collect configuration to run specific jobs
 """
 from __future__ import absolute_import, division, print_function
 
-import os
-import sys
-import argparse
-
 from collections import OrderedDict
 
 from fermipy.utils import load_yaml
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.link import Link
-from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
+from fermipy.jobs.chain import Chain, insert_app_config
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.diffuse.name_policy import NameFactory
@@ -26,21 +21,23 @@ NAME_FACTORY = NameFactory()
 
 
 class Gtlink_gtexphpsun(Gtlink):
-    appname='gtexphpsun'
-    linkname_default = 'gtexphpsun'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
+    """Small wrapper to run gtexphpsun """
 
-    default_options=dict(irfs=diffuse_defaults.gtopts['irfs'],
-                         evtype=(3, "Event type selection", int),
-                         emin=(100., "Start energy (MeV) of first bin", float),
-                         emax=(1000000., "Stop energy (MeV) of last bin", float),
-                         enumbins=(12,"Number of logarithmically-spaced energy bins", int),
-                         binsz=(1.,"Image scale (in degrees/pixel)", float),                                           
-                         infile=(None, "Input livetime cube file", str),
-                         outfile=diffuse_defaults.gtopts['outfile'])
-    default_file_args=dict(infile=FileFlags.input_mask,
-                           outfile=FileFlags.output_mask)
+    appname = 'gtexphpsun'
+    linkname_default = 'gtexphpsun'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
+                           evtype=(3, "Event type selection", int),
+                           emin=(100., "Start energy (MeV) of first bin", float),
+                           emax=(1000000., "Stop energy (MeV) of last bin", float),
+                           enumbins=(12, "Number of logarithmically-spaced energy bins", int),
+                           binsz=(1., "Image scale (in degrees/pixel)", float),
+                           infile=(None, "Input livetime cube file", str),
+                           outfile=diffuse_defaults.gtopts['outfile'])
+    default_file_args = dict(infile=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
 
     def __init__(self, **kwargs):
         """C'tor
@@ -48,34 +45,42 @@ class Gtlink_gtexphpsun(Gtlink):
         linkname, init_dict = self._init_dict(**kwargs)
         super(Gtlink_gtexphpsun, self).__init__(linkname, **init_dict)
 
-class Gtlink_gtsuntemp(Gtlink):
-    appname='gtsuntemp'
-    linkname_default = 'gtsuntemp'
-    usage = '%s [options]' %(appname)
-    description = "Link to run %s"%(appname)
 
-    default_options=dict(expsun=(None, "Exposure binned in healpix and solar angles", str),
-                         avgexp=(None, "Binned exposure", str),
-                         sunprof=(None, "Fits file containing solar intensity profile", str),
-                         cmap=("none", "Counts map file", str),
-                         irfs=diffuse_defaults.gtopts['irfs'],
-                         evtype=(3, "Event type selection", int),
-                         coordsys=("GAL", "Coordinate system (CEL - celestial, GAL -galactic)", str),
-                         emin=(100., "Start energy (MeV) of first bin", float),
-                         emax=(1000000., "Stop energy (MeV) of last bin", float),
-                         enumbins=(12,"Number of logarithmically-spaced energy bins", int),
-                         nxpix=(1440, "Size of the X axis in pixels", int),
-                         nypix=(720, "Size of the Y axis in pixels", int),
-                         binsz=(0.25, "Image scale (in degrees/pixel)", float),
-                         xref=(0., "First coordinate of image center in degrees (RA or GLON)", float),
-                         yref=(0., "Second coordinate of image center in degrees (DEC or GLAT)", float),
-                         axisrot=(0., "Rotation angle of image axis, in degrees", float),
-                         proj=("CAR", "Projection method e.g. AIT|ARC|CAR|GLS|MER|NCP|SIN|STG|TAN", str),
-                         outfile=diffuse_defaults.gtopts['outfile']),
-    default_file_args=dict(expsun=FileFlags.input_mask,
-                           avgexp=FileFlags.input_mask,
-                           sunprof=FileFlags.input_mask,
-                           outfile=FileFlags.output_mask)
+class Gtlink_gtsuntemp(Gtlink):
+    """Small wrapper to run gtsuntemp """
+
+    appname = 'gtsuntemp'
+    linkname_default = 'gtsuntemp'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(expsun=(None, "Exposure binned in healpix and solar angles", str),
+                           avgexp=(None, "Binned exposure", str),
+                           sunprof=(None, "Fits file containing solar intensity profile", str),
+                           cmap=("none", "Counts map file", str),
+                           irfs=diffuse_defaults.gtopts['irfs'],
+                           evtype=(3, "Event type selection", int),
+                           coordsys=("GAL",
+                                     "Coordinate system (CEL - celestial, GAL -galactic)", str),
+                           emin=(100., "Start energy (MeV) of first bin", float),
+                           emax=(1000000., "Stop energy (MeV) of last bin", float),
+                           enumbins=(12, "Number of logarithmically-spaced energy bins", int),
+                           nxpix=(1440, "Size of the X axis in pixels", int),
+                           nypix=(720, "Size of the Y axis in pixels", int),
+                           binsz=(0.25, "Image scale (in degrees/pixel)", float),
+                           xref=(0.,
+                                 "First coordinate of image center in degrees (RA or GLON)", float),
+                           yref=(0.,
+                                 "Second coordinate of image center in degrees (DEC or GLAT)",
+                                 float),
+                           axisrot=(0., "Rotation angle of image axis, in degrees", float),
+                           proj=("CAR",
+                                 "Projection method e.g. AIT|ARC|CAR|GLS|MER|NCP|SIN|STG|TAN", str),
+                           outfile=diffuse_defaults.gtopts['outfile']),
+    default_file_args = dict(expsun=FileFlags.input_mask,
+                             avgexp=FileFlags.input_mask,
+                             sunprof=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
 
     def __init__(self, **kwargs):
         """C'tor
@@ -84,9 +89,8 @@ class Gtlink_gtsuntemp(Gtlink):
         super(Gtlink_gtsuntemp, self).__init__(linkname, **init_dict)
 
 
-
 class Gtexphpsun_SG(ConfigMaker):
-    """Small class to generate configurations for gtexphpsun 
+    """Small class to generate configurations for gtexphpsun
 
     This takes the following arguments:
     --comp     : binning component definition yaml file
@@ -106,7 +110,8 @@ class Gtexphpsun_SG(ConfigMaker):
         """C'tor
         """
         super(Gtexphpsun_SG, self).__init__(link,
-                                            options=kwargs.get('options', self.default_options.copy()))
+                                            options=kwargs.get('options',
+                                                               self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -136,7 +141,7 @@ class Gtexphpsun_SG(ConfigMaker):
                                     emin=comp.emin,
                                     emax=comp.emax,
                                     enumbins=comp.enumbins,
-                                    logfile=outfile.replace('.fits', '.log'))
+                                    logfile=make_nfs_path(outfile.replace('.fits', '.log')))
 
         return job_configs
 
@@ -164,7 +169,8 @@ class Gtsuntemp_SG(ConfigMaker):
         """C'tor
         """
         super(Gtsuntemp_SG, self).__init__(link,
-                                           options=kwargs.get('options', self.default_options.copy()))
+                                           options=kwargs.get('options',
+                                                              self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -180,7 +186,7 @@ class Gtsuntemp_SG(ConfigMaker):
         for comp in components:
             for sourcekey in args['sourcekeys']:
                 zcut = "zmax%i" % comp.zmax
-                key = comp.make_key('{ebin_name}_{evtype_name}') + "_%s"%sourcekey
+                key = comp.make_key('{ebin_name}_{evtype_name}') + "_%s" % sourcekey
                 name_keys = dict(zcut=zcut,
                                  ebin=comp.ebin_name,
                                  psftype=comp.evtype_name,
@@ -207,11 +213,11 @@ class Gtsuntemp_SG(ConfigMaker):
 
 class SunMoonChain(Chain):
     """Small class to construct sun and moon templates
-    """    
+    """
     appname = 'fermipy-sunmoon-chain'
     linkname_default = 'summoon'
-    usage = '%s [options]' %(appname)
-    description='Run sun and moon template construction'
+    usage = '%s [options]' % (appname)
+    description = 'Run sun and moon template construction'
 
     default_options = dict(config=diffuse_defaults.diffuse['config'])
 
@@ -220,9 +226,9 @@ class SunMoonChain(Chain):
         """
         linkname, init_dict = self._init_dict(**kwargs)
         super(SunMoonChain, self).__init__(linkname, **init_dict)
-        self.comp_dict = None     
- 
-    def _register_link_classes(self):    
+        self.comp_dict = None
+
+    def _register_link_classes(self):
         Gtexphpsun_SG.register_class()
         Gtsuntemp_SG.register_class()
 
@@ -246,12 +252,12 @@ class SunMoonChain(Chain):
                           'fermipy-gtsuntemp-sg',
                           comp=comp, data=data,
                           sourcekeys=sourcekeys)
-                          
+
         return o_dict
 
 
 def register_classes():
-
+    """Register these classes with the `LinkFactory` """
     Gtlink_gtexphpsun.register_class()
     Gtlink_gtsuntemp.register_class()
     Gtexphpsun_SG.register_class()

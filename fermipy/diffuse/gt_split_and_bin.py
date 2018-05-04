@@ -5,33 +5,30 @@ Prepare data for diffuse all-sky analysis
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
-import argparse
 import math
+from collections import OrderedDict
 
 import yaml
 
-from collections import OrderedDict
-
-from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.utils import is_null, is_not_null
-from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
-from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.utils import is_null
+from fermipy.jobs.chain import Chain, insert_app_config
+from fermipy.jobs.scatter_gather import ConfigMaker
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
-from fermipy.diffuse.gt_coadd_split import CoaddSplit, CoaddSplit_SG
+from fermipy.diffuse.gt_coadd_split import CoaddSplit_SG
 from fermipy.diffuse import defaults as diffuse_defaults
-from fermipy.diffuse.binning import EVT_TYPE_DICT 
+from fermipy.diffuse.binning import EVT_TYPE_DICT
 
 
 NAME_FACTORY = NameFactory()
 
+
 def make_full_path(basedir, outkey, origname):
     """Make a full file path"""
-    return os.path.join(basedir, outkey, os.path.basename(origname).replace('.fits','_%s.fits'%outkey))
+    return os.path.join(basedir, outkey, os.path.basename(
+        origname).replace('.fits', '_%s.fits' % outkey))
 
 
 class SplitAndBin(Chain):
@@ -39,19 +36,19 @@ class SplitAndBin(Chain):
     """
     appname = 'fermipy-split-and-bin'
     linkname_default = 'split-and-bin'
-    usage = '%s [options]' %(appname)
-    description='Run gtselect and gtbin together'
+    usage = '%s [options]' % (appname)
+    description = 'Run gtselect and gtbin together'
 
-    default_options=dict(data=diffuse_defaults.diffuse['data'],
-                         comp=diffuse_defaults.diffuse['comp'],
-                         hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
-                         ft1file=(None, 'Input FT1 file', str),
-                         evclass=(128, 'Event class bit mask', int),
-                         outdir=('counts_cubes_cr', 'Base name for output files', str),
-                         outkey=(None, 'Key for this particular output file', str),
-                         pfiles=(None, 'Directory for .par files', str),
-                         scratch=(None, 'Scratch area', str),
-                         dry_run=(False, 'Print commands but do not run them', bool))
+    default_options = dict(data=diffuse_defaults.diffuse['data'],
+                           comp=diffuse_defaults.diffuse['comp'],
+                           hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
+                           ft1file=(None, 'Input FT1 file', str),
+                           evclass=(128, 'Event class bit mask', int),
+                           outdir=('counts_cubes_cr', 'Base name for output files', str),
+                           outkey=(None, 'Key for this particular output file', str),
+                           pfiles=(None, 'Directory for .par files', str),
+                           scratch=(None, 'Scratch area', str),
+                           dry_run=(False, 'Print commands but do not run them', bool))
 
     def __init__(self, **kwargs):
         """C'tor
@@ -59,23 +56,22 @@ class SplitAndBin(Chain):
         linkname, init_dict = self._init_dict(**kwargs)
         super(SplitAndBin, self).__init__(linkname, **init_dict)
         self.comp_dict = None
- 
-    def _register_link_classes(self):    
-         from fermipy.diffuse.job_library import register_classes as register_library
-         register_library()
+
+    def _register_link_classes(self):
+        from fermipy.diffuse.job_library import register_classes as register_library
+        register_library()
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
         comp_file = input_dict.get('comp', None)
         datafile = input_dict.get('data', None)
-        do_ltsum = input_dict.get('do_ltsum', False)
         o_dict = OrderedDict()
         if is_null(comp_file):
             return o_dict
         if is_null(datafile):
             return o_dict
- 
+
         NAME_FACTORY.update_base_dict(datafile)
 
         outdir = input_dict.get('outdir', None)
@@ -84,7 +80,7 @@ class SplitAndBin(Chain):
 
         if is_null(outdir) or is_null(outkey):
             return o_dict
-        pfiles = os.path.join(outdir, outkey) 
+        pfiles = os.path.join(outdir, outkey)
 
         self.comp_dict = yaml.safe_load(open(comp_file))
         coordsys = self.comp_dict.pop('coordsys')
@@ -94,15 +90,15 @@ class SplitAndBin(Chain):
             emax = math.pow(10., comp_e['log_emax'])
             enumbins = comp_e['enumbins']
             zmax = comp_e['zmax']
-            zcut = "zmax%i"%comp_e['zmax']
-            evclassstr = NAME_FACTORY.base_dict['evclass']       
+            zcut = "zmax%i" % comp_e['zmax']
+            evclassstr = NAME_FACTORY.base_dict['evclass']
             kwargs_select = dict(zcut=zcut,
                                  ebin=key_e,
                                  psftype='ALL',
                                  coordsys=coordsys,
-                                 mktime='none')            
+                                 mktime='none')
             selectfile_energy = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select))
-            linkname = 'select-energy-%s-%s'%(key_e, zcut)
+            linkname = 'select-energy-%s-%s' % (key_e, zcut)
             insert_app_config(o_dict, linkname,
                               'gtselect',
                               linkname=linkname,
@@ -113,25 +109,22 @@ class SplitAndBin(Chain):
                               emax=emax,
                               evclass=NAME_FACTORY.evclassmask(evclassstr),
                               pfiles=pfiles)
-            
-            if comp_e.has_key('evtclasses'):
-                evtclasslist_keys = comp_e['evtclasses']
-                evtclasslist_vals = comp_e['evtclasses']
-                evtclasslist = comp_e['evtclasses']
-            else:
-                evtclasslist_keys = ['default']
-                evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
-                evtclasslist = ['default']
 
-            for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):
+            if 'evtclasses' in comp_e:
+                evtclasslist_vals = comp_e['evtclasses']
+            else:
+                evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
+
+            for evtclassval in evtclasslist_vals:
                 for psf_type, psf_dict in sorted(comp_e['psf_types'].items()):
-                    linkname_select = 'select-type-%s-%s-%s-%s'%(key_e, zcut, evtclassval, psf_type)
-                    linkname_bin = 'bin-%s-%s-%s-%s'%(key_e, zcut, evtclassval, psf_type)
+                    linkname_select = 'select-type-%s-%s-%s-%s' % (
+                        key_e, zcut, evtclassval, psf_type)
+                    linkname_bin = 'bin-%s-%s-%s-%s' % (key_e, zcut, evtclassval, psf_type)
                     hpx_order = psf_dict['hpx_order']
-                    key = "%s_%s" % (key_e, psf_type)
                     kwargs_bin = kwargs_select.copy()
                     kwargs_bin['psftype'] = psf_type
-                    selectfile_psf = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
+                    selectfile_psf = make_full_path(
+                        outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
                     binfile = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
                     insert_app_config(o_dict, linkname_select,
                                       'gtselect',
@@ -157,7 +150,6 @@ class SplitAndBin(Chain):
                                       pfiles=pfiles)
 
         return o_dict
-
 
 
 class SplitAndBin_SG(ConfigMaker):
@@ -211,7 +203,6 @@ class SplitAndBin_SG(ConfigMaker):
         inputfiles = create_inputlist(args['ft1file'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
 
-        nfiles = len(inputfiles)
         for idx, infile in enumerate(inputfiles):
             key = "%06i" % idx
             output_dir = os.path.join(outdir_base, key)
@@ -224,13 +215,11 @@ class SplitAndBin_SG(ConfigMaker):
                                     comp=args['comp'],
                                     hpx_order_max=args['hpx_order_max'],
                                     outdir=outdir_base,
-                                    outkey=key,             
+                                    outkey=key,
                                     logfile=logfile,
                                     pfiles=output_dir)
 
-
         return job_configs
-
 
 
 class SplitAndBinChain(Chain):
@@ -238,8 +227,8 @@ class SplitAndBinChain(Chain):
     """
     appname = 'fermipy-split-and-bin-chain'
     linkname_default = 'split-and-bin-chain'
-    usage = '%s [options]' %(appname)
-    description='Run split-and-bin, coadd-split and exposure'
+    usage = '%s [options]' % (appname)
+    description = 'Run split-and-bin, coadd-split and exposure'
 
     default_options = dict(data=diffuse_defaults.diffuse['data'],
                            comp=diffuse_defaults.diffuse['comp'],
@@ -248,14 +237,14 @@ class SplitAndBinChain(Chain):
                            hpx_order_expcube=diffuse_defaults.diffuse['hpx_order_expcube'],
                            scratch=diffuse_defaults.diffuse['scratch'],
                            dry_run=diffuse_defaults.diffuse['dry_run'])
-    
+
     def __init__(self, **kwargs):
         """C'tor
         """
         linkname, init_dict = self._init_dict(**kwargs)
         super(SplitAndBinChain, self).__init__(linkname, **init_dict)
 
-    def _register_link_classes(self):    
+    def _register_link_classes(self):
         from fermipy.diffuse.job_library import register_classes as register_library
         register_library()
         SplitAndBin_SG.register_class()
@@ -269,9 +258,8 @@ class SplitAndBinChain(Chain):
         data = input_dict.get('data')
         comp = input_dict.get('comp')
         ft1file = input_dict.get('ft1file')
-        evclass = input_dict.get('evclass')
-        scratch=input_dict.get('scratch', None)
-        dry_run=input_dict.get('dry_run', None)
+        scratch = input_dict.get('scratch', None)
+        dry_run = input_dict.get('dry_run', None)
 
         insert_app_config(o_dict, 'split-and-bin',
                           'fermipy-split-and-bin-sg',
@@ -285,18 +273,18 @@ class SplitAndBinChain(Chain):
                           'fermipy-coadd-split-sg',
                           comp=comp, data=data,
                           ft1file=ft1file)
- 
+
         insert_app_config(o_dict, 'expcube2',
                           'fermipy-gtltsum-sg',
-                          comp=comp, data=data, 
+                          comp=comp, data=data,
                           hpx_order_max=input_dict.get('hpx_order_expcube', 5),
                           dry_run=dry_run)
-     
+
         return o_dict
 
 
 def register_classes():
+    """Register these classes with the `LinkFactory` """
     SplitAndBin.register_class()
     SplitAndBin_SG.register_class()
     SplitAndBinChain.register_class()
-

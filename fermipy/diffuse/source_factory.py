@@ -38,12 +38,9 @@ def make_isotropic_source(name, Spectrum_Filename, spectrum):
     return roi_model.IsoSource(name, data)
 
 
-def make_composite_source(name, catalog_roi_model, spectrum, nested_source_names):
+def make_composite_source(name, spectrum):
     """Construct and return a `fermipy.roi_model.CompositeSource` object
     """
-    #nested_sources = [ catalog_roi_model[nested_source_name]
-    #for nested_source_name in nested_source_names ]
-    #data = dict(nested_sources=nested_sources)
     data = dict(SpatialType='CompositeSource',
                 SpatialModel='CompositeSource',
                 SourceType='CompositeSource')
@@ -112,9 +109,7 @@ def make_sources(comp_key, comp_dict):
                                                   spectrum)
     elif model_type == 'CompositeSource':
         srcdict[comp_key] = make_composite_source(comp_info.source_name,
-                                                  comp_info.roi_model,
-                                                  spectrum,
-                                                  comp_info.source_names)
+                                                  spectrum)
     elif model_type == 'CatalogSources':
         srcdict.update(make_catalog_sources(comp_info.roi_model,
                                             comp_info.source_names))
@@ -151,7 +146,7 @@ class SourceFactory(object):
             self._sources.update(make_sources(key, value))
 
     @staticmethod
-    def build_catalog(catalog_type, catalog_file, catalog_extdir, **kwargs):
+    def build_catalog(catalog_type, catalog_file, catalog_extdir):
         """Build a `fermipy.catalog.Catalog` object
 
         Parameters
@@ -170,8 +165,6 @@ class SourceFactory(object):
             return catalog.Catalog3FGL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '4FGLP':
             return catalog.Catalog4FGLP(fitsfile=catalog_file, extdir=catalog_extdir)
-        elif catalog_type == '4FGL':
-            return catalog.Catalog4FGL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == 'FL8Y':
             return catalog.CatalogFL8Y(fitsfile=catalog_file, extdir=catalog_extdir)
         else:
@@ -186,13 +179,14 @@ class SourceFactory(object):
         data = dict(catalogs=cataloglist,
                     src_roiwidth=360.)
         return roi_model.ROIModel(data, skydir=SkyCoord(0.0, 0.0, unit='deg'))
-        
 
     @classmethod
-    def make_roi(cls, sources={}):
+    def make_roi(cls, sources=None):
         """Build and return a `fermipy.roi_model.ROIModel` object from
         a dict with information about the sources
         """
+        if sources is None:
+            sources = {}
         src_fact = cls()
         src_fact.add_sources(sources)
         ret_model = roi_model.ROIModel(

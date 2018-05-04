@@ -4,25 +4,19 @@ Compute the residual cosmic-ray contamination
 """
 from __future__ import absolute_import, division, print_function
 
-import sys
-import os
-import argparse
+from collections import OrderedDict
 
 import numpy as np
-
 import healpy
-
-from collections import OrderedDict
 
 from fermipy.skymap import HpxMap
 from fermipy import fits_utils
 from fermipy.utils import load_yaml
-from fermipy.jobs.job_archive import JobArchive
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.slac_impl import check_log, make_nfs_path
-from fermipy.jobs.link import add_argument, Link
-from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
+from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.slac_impl import make_nfs_path
+from fermipy.jobs.link import Link
+from fermipy.jobs.chain import Chain, insert_app_config
 
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
@@ -39,7 +33,7 @@ class ResidualCR(Link):
     """
     appname = 'fermipy-residual-cr'
     linkname_default = 'residual-cr'
-    usage = '%s [options]' %(appname)
+    usage = '%s [options]' % (appname)
     description = "Compute the residual cosmic-ray contamination"
 
     default_options = dict(ccube_dirty=diffuse_defaults.residual_cr['ccube_dirty'],
@@ -228,8 +222,7 @@ class ResidualCR(Link):
         smoothed_ring_map = HpxMap(smoothed_data, ring_map.hpx)
         if hpx_map.hpx.ordering == "NESTED":
             return smoothed_ring_map.swap_scheme()
-        else:
-            return smoothed_ring_map
+        return smoothed_ring_map
 
     @staticmethod
     def _intergral_to_differential(hpx_map, gamma=-2.0):
@@ -282,42 +275,42 @@ class ResidualCR(Link):
             hpx_order = ccube_dirty.hpx.order
 
         # Cast all the input maps to match ccube_clean
-        cube_dict = ResidualCRAnalysis._match_cubes(ccube_clean, ccube_dirty,
-                                                    bexpcube_clean, bexpcube_dirty, hpx_order)
+        cube_dict = ResidualCR._match_cubes(ccube_clean, ccube_dirty,
+                                            bexpcube_clean, bexpcube_dirty, hpx_order)
 
         # Intenstiy maps
-        intensity_clean = ResidualCRAnalysis._compute_intensity(cube_dict['ccube_clean'],
-                                                                cube_dict['bexpcube_clean'])
-        intensity_dirty = ResidualCRAnalysis._compute_intensity(cube_dict['ccube_dirty'],
-                                                                cube_dict['bexpcube_dirty'])
+        intensity_clean = ResidualCR._compute_intensity(cube_dict['ccube_clean'],
+                                                        cube_dict['bexpcube_clean'])
+        intensity_dirty = ResidualCR._compute_intensity(cube_dict['ccube_dirty'],
+                                                        cube_dict['bexpcube_dirty'])
         # Mean & ratio of intensity maps
-        intensity_mean = ResidualCRAnalysis._compute_mean(intensity_dirty,
-                                                          intensity_clean)
-        intensity_ratio = ResidualCRAnalysis._compute_ratio(intensity_dirty,
-                                                            intensity_clean)
+        intensity_mean = ResidualCR._compute_mean(intensity_dirty,
+                                                  intensity_clean)
+        intensity_ratio = ResidualCR._compute_ratio(intensity_dirty,
+                                                    intensity_clean)
         # Selecting the bright pixels for Aeff correction and to mask when filling output map
-        bright_pixel_select = ResidualCRAnalysis._make_bright_pixel_mask(intensity_mean,
-                                                                         args.select_factor)
-        bright_pixel_mask = ResidualCRAnalysis._make_bright_pixel_mask(intensity_mean,
-                                                                       args.mask_factor)
+        bright_pixel_select = ResidualCR._make_bright_pixel_mask(intensity_mean,
+                                                                 args.select_factor)
+        bright_pixel_mask = ResidualCR._make_bright_pixel_mask(intensity_mean,
+                                                               args.mask_factor)
         # Compute thte Aeff corrections using the brightest pixels
-        aeff_corrections = ResidualCRAnalysis._get_aeff_corrections(intensity_ratio,
-                                                                    bright_pixel_select)
+        aeff_corrections = ResidualCR._get_aeff_corrections(intensity_ratio,
+                                                            bright_pixel_select)
         # Apply the Aeff corrections and get the intensity residual
-        corrected_dirty = ResidualCRAnalysis._apply_aeff_corrections(intensity_dirty,
-                                                                     aeff_corrections)
-        corrected_ratio = ResidualCRAnalysis._compute_ratio(corrected_dirty,
-                                                            intensity_clean)
-        intensity_resid = ResidualCRAnalysis._compute_diff(corrected_dirty,
-                                                           intensity_clean)
+        corrected_dirty = ResidualCR._apply_aeff_corrections(intensity_dirty,
+                                                             aeff_corrections)
+        corrected_ratio = ResidualCR._compute_ratio(corrected_dirty,
+                                                    intensity_clean)
+        intensity_resid = ResidualCR._compute_diff(corrected_dirty,
+                                                   intensity_clean)
         # Replace the masked pixels with the map mean to avoid features associates with sources
-        filled_resid = ResidualCRAnalysis._fill_masked_intensity_resid(intensity_resid,
-                                                                       bright_pixel_mask)
+        filled_resid = ResidualCR._fill_masked_intensity_resid(intensity_resid,
+                                                               bright_pixel_mask)
         # Smooth the map
-        smooth_resid = ResidualCRAnalysis._smooth_hpx_map(filled_resid,
-                                                          args.sigma)
+        smooth_resid = ResidualCR._smooth_hpx_map(filled_resid,
+                                                  args.sigma)
         # Convert to a differential map
-        out_model = ResidualCRAnalysis._intergral_to_differential(smooth_resid)
+        out_model = ResidualCR._intergral_to_differential(smooth_resid)
 
         # Make the ENERGIES HDU
         out_energies = ccube_dirty.hpx.make_energies_hdu()
@@ -329,15 +322,15 @@ class ResidualCR(Link):
 
         if args.full_output:
             # Some diagnostics
-            check = ResidualCRAnalysis._differential_to_integral(out_model)
-            check_resid = ResidualCRAnalysis._compute_diff(smooth_resid, check)
+            check = ResidualCR._differential_to_integral(out_model)
+            check_resid = ResidualCR._compute_diff(smooth_resid, check)
             counts_resid =\
-                ResidualCRAnalysis._compute_counts_from_intensity(intensity_resid,
-                                                                  cube_dict['bexpcube_dirty'])
+                ResidualCR._compute_counts_from_intensity(intensity_resid,
+                                                          cube_dict['bexpcube_dirty'])
             pred_counts\
-                = ResidualCRAnalysis._compute_counts_from_model(out_model,
-                                                                cube_dict['bexpcube_dirty'])
-            pred_resid = ResidualCRAnalysis._compute_diff(pred_counts, counts_resid)
+                = ResidualCR._compute_counts_from_model(out_model,
+                                                        cube_dict['bexpcube_dirty'])
+            pred_resid = ResidualCR._compute_diff(pred_counts, counts_resid)
 
             out_ebounds = ccube_dirty.hpx.make_energy_bounds_hdu()
             cubes = dict(INTENSITY_CLEAN=intensity_clean,
@@ -386,7 +379,8 @@ class ResidualCR_SG(ConfigMaker):
         """C'tor
         """
         super(ResidualCR_SG, self).__init__(link,
-                                            options=kwargs.get('options', self.default_options.copy()))
+                                            options=kwargs.get('options',
+                                                               self.default_options.copy()))
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -422,7 +416,7 @@ class ResidualCR_SG(ConfigMaker):
                                     ccube_clean=NAME_FACTORY_CLEAN.ccube(**name_keys),
                                     outfile=outfile,
                                     hpx_order=hpx_order,
-                                    logfile=outfile.replace('.fits', '.log'))
+                                    logfile=make_nfs_path(outfile.replace('.fits', '.log')))
 
         return job_configs
 
@@ -432,8 +426,8 @@ class ResidualCRChain(Chain):
     """
     appname = 'fermipy-residual-cr-chain'
     linkname_default = 'residual-cr-chain'
-    usage = '%s [options]' %(appname)
-    description='Run residual cosmic ray analysis'
+    usage = '%s [options]' % (appname)
+    description = 'Run residual cosmic ray analysis'
 
     default_options = dict(config=diffuse_defaults.diffuse['config'])
 
@@ -442,12 +436,12 @@ class ResidualCRChain(Chain):
         """
         linkname, init_dict = self._init_dict(**kwargs)
         super(ResidualCRChain, self).__init__(linkname, **init_dict)
-        self.comp_dict = None     
-   
-    def _register_link_classes(self):    
-         from fermipy.diffuse.gt_split_and_mktime import SplitAndMktimeChain         
-         SplitAndMktimeChain.register_class()
-         ResidualCR_SG.register_class()
+        self.comp_dict = None
+
+    def _register_link_classes(self):
+        from fermipy.diffuse.gt_split_and_mktime import SplitAndMktimeChain
+        SplitAndMktimeChain.register_class()
+        ResidualCR_SG.register_class()
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
@@ -475,7 +469,7 @@ class ResidualCRChain(Chain):
 
         insert_app_config(o_dict, 'residual-cr',
                           'fermipy-residual-cr-sg',
-                          comp=comp, data=data, 
+                          comp=comp, data=data,
                           hpx_order=config_dict.get('hpx_order_fitting', 4),
                           clean=config_dict.get('clean_class', None),
                           dirty=config_dict.get('dirty_class', None),
@@ -490,8 +484,7 @@ class ResidualCRChain(Chain):
 
 
 def register_residual_cr():
-    from fermipy.jobs.factory import LinkFactory
-    LinkFactory.register(ResidualCR.appname, ResidualCR)
-    LinkFactory.register(ResidualCR_SG.appname, ResidualCR_SG)
-    LinkFactory.register(ResidualCRChain.appname, ResidualCRChain)
-
+    """Register these classes with the `LinkFactory` """
+    ResidualCR.register_class()
+    ResidualCR_SG.register_class()
+    ResidualCRChain.register_class()

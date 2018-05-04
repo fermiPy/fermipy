@@ -30,7 +30,7 @@ class Component(object):
     zmax : float
         Maximum zenith angle cube for this component in degrees
     mktimefilters : list
-        Filters for gtmktime.  
+        Filters for gtmktime.
     hpx_order : int
         HEALPix order to use for this component
     coordsys : str
@@ -50,17 +50,16 @@ class Component(object):
         self.evtype_name = kwargs['evtype_name']
         self.ebin_name = kwargs['ebin_name']
         self.coordsys = kwargs['coordsys']
-        
 
     def __repr__(self):
-        retstr = "Binning component %s_%s\n"%(self.ebin_name, self.evtype_name)
-        retstr += "  log_10(E/MeV) : %.2f %.2f %i bins\n"%(self.log_emin,
-                                                           self.log_emax, self.enumbins)
-        retstr += "  HPX order     : %i\n"%self.hpx_order
-        retstr += "  Coordsys      : %s\n"%self.coordsys
-        retstr += "  Zenith cut    : %.0f\n"%self.zmax
-        retstr += "  Mktime filters: %s\n"%str(self.mktimefilters)
-        retstr += "  Evt classes   : %s"%str(self.evtclasses)
+        retstr = "Binning component %s_%s\n" % (self.ebin_name, self.evtype_name)
+        retstr += "  log_10(E/MeV) : %.2f %.2f %i bins\n" % (self.log_emin,
+                                                             self.log_emax, self.enumbins)
+        retstr += "  HPX order     : %i\n" % self.hpx_order
+        retstr += "  Coordsys      : %s\n" % self.coordsys
+        retstr += "  Zenith cut    : %.0f\n" % self.zmax
+        retstr += "  Mktime filters: %s\n" % str(self.mktimefilters)
+        retstr += "  Evt classes   : %s" % str(self.evtclasses)
         return retstr
 
     def make_key(self, format_str):
@@ -120,4 +119,3 @@ class Component(object):
         """ Build a list of components from a yaml file
         """
         return cls.build_from_yamlstr(open(yamlfile))
-
