@@ -37,12 +37,6 @@ def test_gtlink():
                                  srcmdl=FileFlags.input_mask,
                                  outfile=FileFlags.output_mask)
 
-        def __init__(self, **kwargs):
-            """C'tor
-            """
-            linkname, init_dict = self._init_dict(**kwargs)
-            super(Gtlink_scrmaps, self).__init__(linkname, **init_dict)
-
     gtlink = Gtlink_scrmaps()
     formatted_command = gtlink.formatted_command()
     assert formatted_command == 'gtsrcmaps irfs=CALDB expcube=None cmap=None srcmdl=None outfile=None bexpmap=None'
