@@ -54,7 +54,7 @@ class ScatterGather(Link):
                                 print_update=defaults.jobs['print_update'],
                                 check_status_once=defaults.jobs['check_status_once'])
 
-    def __init__(self, **kwargs):
+    def __init__(self, link, **kwargs):
         """C'tor
 
         Keyword arguments
@@ -80,13 +80,13 @@ class ScatterGather(Link):
             If true, do not send jobs to the batch to run
             Defaults to False
         """
-        linkname = kwargs.pop('linkname', 'ScatterGather')
+        linkname = kwargs.pop('linkname', link.linkname_default)
+        self._scatter_link = link
         self._usage = kwargs.pop('usage', "")
         self._description = kwargs.pop('description', "")
         self._job_archive = kwargs.pop('job_archive', None)
-        self._scatter_link = kwargs.pop('scatter')
         self._no_batch = kwargs.pop('no_batch', False)
-        options = kwargs.get('options', self.default_options.copy())
+        options = kwargs.pop('options', self.default_options.copy())
         options.update(self.default_options_base.copy())
         Link.__init__(self, linkname,
                       options=options,
@@ -112,7 +112,6 @@ class ScatterGather(Link):
         kwargs_copy = kwargs.copy()
         kwargs_copy.pop('appname', cls.appname)
         link = cls.clientclass.create(**kwargs)
-        link.linkname = kwargs_copy.pop('linkname', link.linkname)
 
         default_interface = get_batch_job_interface(cls.job_time)
         interface = kwargs_copy.pop('interface', default_interface)
@@ -489,12 +488,9 @@ class ScatterGather(Link):
 def build_sg_from_link(link, cls, **kwargs):
     """Build a `ScatterGather` that will run multiple instance of a single link
     """
-    kwargs['scatter'] = link
-    linkname = kwargs.get('linkname', None)
-    if linkname is None:
-        kwargs['linkname'] = link.linkname
+    linkname = kwargs.get('linkname', link.linkname_default)
     job_archive = kwargs.get('job_archive', None)
     if job_archive is None:
         kwargs['job_archive'] = JobArchive.build_temp_job_archive()
-    sg = cls(**kwargs)
+    sg = cls(link, **kwargs)
     return sg

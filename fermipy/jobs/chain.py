@@ -119,6 +119,7 @@ class Chain(Link):
         val_copy = purge_dict(kwargs.copy())
         sub_link_prefix = val_copy.get('link_prefix', '')
         val_copy['link_prefix'] = self.link_prefix + sub_link_prefix
+        val_copy['linkname'] = linkname
         if linkname in self._links:
             link = self._links[linkname]
             link.update_args(val_copy)
