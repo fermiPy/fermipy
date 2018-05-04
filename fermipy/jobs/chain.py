@@ -57,9 +57,7 @@ class Chain(Link):
         Keyword arguments
         -----------------
         """
-        options = kwargs.pop('options', {})
-        Link.__init__(self, linkname, options=options, **kwargs)
-        self._register_link_classes()
+        Link.__init__(self, linkname, **kwargs)
         self._update_options(self.args.copy())
         self._links = OrderedDict()
 
@@ -84,10 +82,6 @@ class Chain(Link):
     def __getitem__(self, key):
         """ Return the `Link` whose linkname is key"""
         return self._links[key]
-
-    def _register_link_classes(self):
-        """ Register the classes of the `Link` objects used by this chain """
-        pass
 
     def _latch_file_info(self):
         """Internal function to update the dictionaries
@@ -117,15 +111,19 @@ class Chain(Link):
         """Transfer the arguments from
         self._arg_dict to the links """
         val_copy = purge_dict(kwargs.copy())
-        sub_link_prefix = val_copy.get('link_prefix', '')
-        val_copy['link_prefix'] = self.link_prefix + sub_link_prefix
-        val_copy['linkname'] = linkname
+        sub_link_prefix = val_copy.pop('link_prefix', '')
+        link_prefix = self.link_prefix + sub_link_prefix
+        create_args = dict(linkname=linkname,
+                           link_prefix=link_prefix,
+                           job_archive=val_copy.pop('job_archive', None),
+                           file_stage=val_copy.pop('file_stage', None))
+        job_args = val_copy
         if linkname in self._links:
             link = self._links[linkname]
-            link.update_args(val_copy)
+            link.update_args(job_args)
         else:
-            link = cls.create(**val_copy)
-            self.add_link(link, val_copy)
+            link = cls.create(**create_args)
+            self.add_link(link, job_args)
         return link
 
     def _set_links_job_archive(self):

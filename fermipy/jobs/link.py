@@ -187,32 +187,24 @@ class Link(object):
         """
         self.linkname = linkname
         self.link_prefix = kwargs.get('link_prefix', '')
-        self._parser = kwargs.pop('parser', None)
-        self._interface = kwargs.pop('interface', SysInterface())
-        self._options = {}
-        self._options.update(kwargs.pop('options', {}))
-        if self._parser is not None:
-            self._fill_argparser(self._parser)
+        self._interface = kwargs.get('interface', SysInterface())
+        self._options = self.default_options.copy()
+        self._parser = argparse.ArgumentParser(usage=self.usage,
+                                               description=self.description)
+        self._fill_argparser(self._parser)
         self._file_stage = kwargs.get('file_stage', None)
         self._job_archive = kwargs.get('job_archive', None)
         self.args = {}
         self.args.update(convert_option_dict_to_dict(self._options))
-        self.files = FileDict(**kwargs)
+        self.files = FileDict(file_args=self.default_file_args.copy())
         self.sub_files = FileDict()
         self.jobs = OrderedDict()
 
     @classmethod
     def _init_dict(cls, **kwargs):
-        """ Build a dictionary to pass to the __init__ function """
+        """ Get the options to build an object of this class """
         linkname = kwargs.pop('linkname', cls.linkname_default)
-        parser = argparse.ArgumentParser(
-            usage=cls.usage, description=cls.description)
-        file_args = cls.default_file_args.copy()
-        o_dict = dict(parser=parser,
-                      options=cls.default_options.copy(),
-                      file_args=file_args,
-                      **kwargs)
-        return linkname, o_dict
+        return linkname, kwargs
 
     @classmethod
     def create(cls, **kwargs):
