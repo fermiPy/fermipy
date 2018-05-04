@@ -146,7 +146,7 @@ class SourceFactory(object):
             self._sources.update(make_sources(key, value))
 
     @staticmethod
-    def build_catalog(catalog_type, catalog_file, catalog_extdir):
+    def build_catalog(**kwargs):
         """Build a `fermipy.catalog.Catalog` object
 
         Parameters
@@ -159,6 +159,9 @@ class SourceFactory(object):
         catalog_extdir : str
             Path to directory with extended source templates
         """
+        catalog_type = kwargs.get('catalog_type')
+        catalog_file = kwargs.get('catalog_file')
+        catalog_extdir = kwargs.get('catalog_extdir')
         if catalog_type == '2FHL':
             return catalog.Catalog2FHL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '3FGL':
