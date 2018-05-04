@@ -13,14 +13,16 @@ from fermipy.skymap import HpxMap
 from fermipy import fits_utils
 from fermipy.utils import load_yaml
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.jobs.link import Link
-from fermipy.jobs.chain import Chain, insert_app_config
+from fermipy.jobs.chain import Chain
 
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse import defaults as diffuse_defaults
+
+from fermipy.diffuse.gt_split_and_mktime import SplitAndMktimeChain
 
 
 NAME_FACTORY = NameFactory()
@@ -354,7 +356,7 @@ class ResidualCR(Link):
                                   energy_hdu=out_ebounds)
 
 
-class ResidualCR_SG(ConfigMaker):
+class ResidualCR_SG(ScatterGather):
     """Small class to generate configurations for this script
     """
     appname = 'fermipy-residual-cr-sg'
@@ -438,11 +440,6 @@ class ResidualCRChain(Chain):
         super(ResidualCRChain, self).__init__(linkname, **init_dict)
         self.comp_dict = None
 
-    def _register_link_classes(self):
-        from fermipy.diffuse.gt_split_and_mktime import SplitAndMktimeChain
-        SplitAndMktimeChain.register_class()
-        ResidualCR_SG.register_class()
-
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
@@ -455,30 +452,28 @@ class ResidualCRChain(Chain):
         comp = config_dict.get('comp')
         dry_run = input_dict.get('dry_run', False)
 
-        insert_app_config(o_dict, 'split-and-mktime',
-                          'fermipy-split-and-mktime-chain',
-                          comp=comp, data=data,
-                          ft1file=config_dict['ft1file'],
-                          ft2file=config_dict['ft2file'],
-                          hpx_order_ccube=config_dict.get('hpx_order_ccube', 7),
-                          hpx_order_expcube=config_dict.get('hpx_order_expcube', 7),
-                          mktime=config_dict.get('mktimefitler', None),
-                          do_ltsum=config_dict.get('do_ltsum', False),
-                          scratch=config_dict.get('scratch', None),
-                          dry_run=dry_run)
+        self._load_link_args('split-and-mktime', SplitAndMktimeChain,
+                             comp=comp, data=data,
+                             ft1file=config_dict['ft1file'],
+                             ft2file=config_dict['ft2file'],
+                             hpx_order_ccube=config_dict.get('hpx_order_ccube', 7),
+                             hpx_order_expcube=config_dict.get('hpx_order_expcube', 7),
+                             mktime=config_dict.get('mktimefitler', None),
+                             do_ltsum=config_dict.get('do_ltsum', False),
+                             scratch=config_dict.get('scratch', None),
+                             dry_run=dry_run)
 
-        insert_app_config(o_dict, 'residual-cr',
-                          'fermipy-residual-cr-sg',
-                          comp=comp, data=data,
-                          hpx_order=config_dict.get('hpx_order_fitting', 4),
-                          clean=config_dict.get('clean_class', None),
-                          dirty=config_dict.get('dirty_class', None),
-                          mktime=config_dict.get('mktimefitler', None),
-                          select_factor=config_dict.get('select_factor', None),
-                          mask_factor=config_dict.get('mask_factor', None),
-                          sigma=config_dict.get('sigma', None),
-                          full_output=config_dict.get('full_output', None),
-                          dry_run=dry_run)
+        self._load_link_args('residual-cr', ResidualCR,
+                             comp=comp, data=data,
+                             hpx_order=config_dict.get('hpx_order_fitting', 4),
+                             clean=config_dict.get('clean_class', None),
+                             dirty=config_dict.get('dirty_class', None),
+                             mktime=config_dict.get('mktimefitler', None),
+                             select_factor=config_dict.get('select_factor', None),
+                             mask_factor=config_dict.get('mask_factor', None),
+                             sigma=config_dict.get('sigma', None),
+                             full_output=config_dict.get('full_output', None),
+                             dry_run=dry_run)
 
         return o_dict
 

@@ -10,7 +10,7 @@ import copy
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.app_link import AppLink
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
@@ -312,7 +312,7 @@ class Link_FermipyHealview(AppLink):
         super(Link_FermipyHealview, self).__init__(linkname, **init_dict)
 
 
-class Gtexpcube2_SG(ConfigMaker):
+class Gtexpcube2_SG(ScatterGather):
     """Small class to generate configurations for gtexpcube2
 
     This takes the following arguments:
@@ -391,7 +391,7 @@ class Gtexpcube2_SG(ConfigMaker):
         return job_configs
 
 
-class Gtltsum_SG(ConfigMaker):
+class Gtltsum_SG(ScatterGather):
     """Small class to generate configurations for gtexpcube2
 
     This takes the following arguments:
@@ -468,7 +468,7 @@ class Gtltsum_SG(ConfigMaker):
         return job_configs
 
 
-class SumRings_SG(ConfigMaker):
+class SumRings_SG(ScatterGather):
     """Small class to generate configurations for fermipy-coadd
     to sum galprop ring gasmaps
 
@@ -515,7 +515,7 @@ class SumRings_SG(ConfigMaker):
         return job_configs
 
 
-class Vstack_SG(ConfigMaker):
+class Vstack_SG(ScatterGather):
     """Small class to generate configurations for fermipy-vstack
     to merge source maps
 
@@ -587,7 +587,7 @@ class Vstack_SG(ConfigMaker):
         return job_configs
 
 
-class GatherSrcmaps_SG(ConfigMaker):
+class GatherSrcmaps_SG(ScatterGather):
     """Small class to generate configurations for fermipy-vstack
     to merge source maps
 
@@ -650,7 +650,7 @@ class GatherSrcmaps_SG(ConfigMaker):
         return job_configs
 
 
-class Healview_SG(ConfigMaker):
+class Healview_SG(ScatterGather):
     """Small class to generate configurations for fermipy-healview
     to display source maps
 

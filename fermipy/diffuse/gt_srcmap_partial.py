@@ -16,7 +16,7 @@ import pyLikelihood as pyLike
 from fermipy import utils
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.link import Link
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.diffuse.name_policy import NameFactory
@@ -110,7 +110,7 @@ class GtSrcmapsDiffuse(Link):
             os.system("gzip -9 %s" % args.outfile)
 
 
-class SrcmapsDiffuse_SG(ConfigMaker):
+class SrcmapsDiffuse_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     This adds the following arguments:

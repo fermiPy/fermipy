@@ -14,7 +14,7 @@ import pyLikelihood as pyLike
 
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.link import Link
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.diffuse.name_policy import NameFactory
@@ -104,7 +104,7 @@ class GtSrcmapsCatalog(Link):
             os.system("gzip -9 %s" % args.outfile)
 
 
-class SrcmapsCatalog_SG(ConfigMaker):
+class SrcmapsCatalog_SG(ScatterGather):
     """Small class to generate configurations for gtsrcmaps for catalog sources
 
     This takes the following arguments:
