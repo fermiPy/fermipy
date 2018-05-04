@@ -16,7 +16,7 @@ from fermipy.utils import load_yaml, init_matplotlib_backend
 
 from fermipy.jobs.utils import is_not_null
 from fermipy.jobs.link import Link
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.jobs.name_policy import NameFactory
@@ -204,7 +204,7 @@ class CollectSED(Link):
             summary.write(summaryfile)
 
 
-class CollectSED_SG(ConfigMaker):
+class CollectSED_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     This adds the following arguments:

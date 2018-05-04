@@ -23,7 +23,7 @@ from fermipy.utils import load_yaml, write_yaml, init_matplotlib_backend
 from fermipy import utils
 from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.link import Link
-from fermipy.jobs.scatter_gather import ConfigMaker
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.jobs.name_policy import NameFactory
@@ -107,7 +107,7 @@ class CopyBaseROI(Link):
                              args.roi_baseline, args.extracopy)
 
 
-class CopyBaseROI_SG(ConfigMaker):
+class CopyBaseROI_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     This adds the following arguments:
@@ -360,7 +360,7 @@ class SimulateROI(Link):
                                      injected_source, test_sources, i, mcube_out)
 
 
-class RandomDirGen_SG(ConfigMaker):
+class RandomDirGen_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     This adds the following arguments:
@@ -422,7 +422,7 @@ class RandomDirGen_SG(ConfigMaker):
         return job_configs
 
 
-class SimulateROI_SG(ConfigMaker):
+class SimulateROI_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     This adds the following arguments:
@@ -475,7 +475,7 @@ class SimulateROI_SG(ConfigMaker):
             simdir = NAME_FACTORY.sim_targetdir(**name_keys)
             config_path = os.path.join(simdir, config_yaml)
             logfile = make_nfs_path(os.path.join(
-                simdir, "%s_%s.log" % (self.link.linkname, target_name)))
+                simdir, "%s_%s.log" % (self.linkname, target_name)))
             job_config = dict(config=config_path,
                               logfile=logfile,
                               sim=sim,

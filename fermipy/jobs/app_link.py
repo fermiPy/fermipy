@@ -4,8 +4,6 @@ Utilities to chain together a series of ScienceTools apps
 """
 from __future__ import absolute_import, division, print_function
 
-import sys
-import os
 
 from fermipy.jobs.link import Link
 
@@ -43,7 +41,6 @@ class AppLink(Link):
         This calls the base class function then fills the parameters of the GtApp object
         """
         Link.update_args(self, override_args)
-        update_gtapp(self.__app, **self.args)
 
     def run_analysis(self, argv):
         """Implemented by sub-classes to run a particular analysis"""

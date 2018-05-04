@@ -17,7 +17,6 @@ from fermipy.jobs.link import Link, extract_arguments
 from fermipy.jobs.file_archive import FileStageManager
 from fermipy.jobs.job_archive import JobStatus, JobStatusVector,\
     JobDetails, JOB_STATUS_STRINGS
-from fermipy.jobs.factory import LinkFactory
 
 
 def purge_dict(idict):
@@ -28,31 +27,6 @@ def purge_dict(idict):
             continue
         odict[key] = val
     return odict
-
-
-def insert_app_config(o_dict, key, appname, **kwargs):
-    """ Insert an item in a the dictionary of `Link` objects
-    that will be build for a particular `Chain`
-
-    Parameters
-    ----------
-
-    o_dict : dict
-        The dictionary we are filling.
-
-    key : str
-        The key this item is placed under.
-
-    appname : str
-        The name of the app associated to the `Link`.
-        This must match a name registers in the `LinkFactory`
-
-    kwargs : dict
-        The options passed to the '`Link`
-
-    """
-    o_dict[key] = purge_dict(kwargs.copy())
-    o_dict[key]['appname'] = appname
 
 
 class Chain(Link):
@@ -88,7 +62,6 @@ class Chain(Link):
         self._register_link_classes()
         self._update_options(self.args.copy())
         self._links = OrderedDict()
-        self._arg_dict = OrderedDict()
 
     @classmethod
     def main(cls):
@@ -108,11 +81,6 @@ class Chain(Link):
         """ Return the name of the links """
         return self._links.keys()
 
-    @property
-    def arg_dict(self):
-        """ Return the `OrderedDict` of options """
-        return self._arg_dict
-
     def __getitem__(self, key):
         """ Return the `Link` whose linkname is key"""
         return self._links[key]
@@ -125,8 +93,8 @@ class Chain(Link):
         """Internal function to update the dictionaries
         keeping track of input and output files
         """
-        self._arg_dict = self._map_arguments(self.args)
-        self.files.latch_file_info(self._arg_dict)
+        self._map_arguments(self.args)
+        self.files.latch_file_info(self.args)
         self.sub_files.file_dict.clear()
         self.sub_files.update(self.files.file_dict)
         for link in self._links.values():
@@ -145,25 +113,19 @@ class Chain(Link):
         """
         raise NotImplementedError('Chain._map_arguments')
 
-    def _load_arguments(self):
+    def _load_link_args(self, linkname, cls, **kwargs):
         """Transfer the arguments from
         self._arg_dict to the links """
-        for linkname, opt_vals in self._arg_dict.items():
-            appname = opt_vals.get('appname', None)
-            if is_not_null(appname):
-                val_copy = opt_vals.copy()
-                val_copy.pop('appname')
-                sub_link_prefix = val_copy.get('link_prefix', '')
-                val_copy['link_prefix'] = self.link_prefix + sub_link_prefix
-                if linkname in self._links:
-                    link = self._links[linkname]
-                    link.update_args(val_copy)
-                else:
-                    link = LinkFactory.create(appname, **val_copy)
-                    # This will call link.update_args
-                    self.add_link(link, val_copy)
-            else:
-                raise KeyError("No appname for link %s %s" % (linkname, appname))
+        val_copy = purge_dict(kwargs.copy())
+        sub_link_prefix = val_copy.get('link_prefix', '')
+        val_copy['link_prefix'] = self.link_prefix + sub_link_prefix
+        if linkname in self._links:
+            link = self._links[linkname]
+            link.update_args(val_copy)
+        else:
+            link = cls.create(**val_copy)
+            self.add_link(link, val_copy)
+        return link
 
     def _set_links_job_archive(self):
         """Pass job_archive along to links"""
@@ -311,7 +273,6 @@ class Chain(Link):
         self._links[link.linkname] = link
         if options is None:
             options = OrderedDict()
-        self._arg_dict[link.linkname] = options
         logfile = os.path.join('logs', '%s.log' % link.full_linkname)
         link._register_job(JobDetails.topkey, options,
                            logfile, status=JobStatus.unknown)
@@ -347,8 +308,7 @@ class Chain(Link):
 
         """
         self.args = extract_arguments(override_args, self.args)
-        self._arg_dict = self._map_arguments(override_args)
-        self._load_arguments()
+        self._map_arguments(self.args)
 
         scratch_dir = self.args.get('scratch', None)
         if is_not_null(scratch_dir):
