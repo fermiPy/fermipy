@@ -405,6 +405,7 @@ class SimulateROI_SG(ScatterGather):
     default_options = dict(ttype=defaults.common['ttype'],
                            targetlist=defaults.common['targetlist'],
                            config=defaults.common['config'],
+                           roi_baseline=defaults.common['roi_baseline'],
                            sim=defaults.sims['sim'],
                            sim_profile=defaults.sims['sim_profile'],
                            nsims=defaults.sims['nsims'],
@@ -427,6 +428,7 @@ class SimulateROI_SG(ScatterGather):
 
         targets = load_yaml(targets_yaml)
         sim_profile = args['sim_profile']
+        roi_baseline = args['roi_baseline']
 
         for target_name, target_list in targets.items():
             name_keys = dict(target_type=ttype,
@@ -442,6 +444,7 @@ class SimulateROI_SG(ScatterGather):
                               sim=sim,
                               sim_profile=sim_profile,
                               profiles=target_list,
+                              roi_baseline=roi_baseline,
                               nsims=args['nsims'],
                               seed=args['seed'])
             job_configs[target_name] = job_config
