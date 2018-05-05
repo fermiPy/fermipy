@@ -686,9 +686,10 @@ class Link(object):
 
         This is exactly the command as called from the Unix command line.
         """
+        # FIXME, this isn't really great as it force you to have all the arguments
         command_template = self.command_template()
         format_dict = self.args.copy()
-
+        
         for key, value in format_dict.items():
             # protect whitespace
             if isinstance(value, list):
@@ -704,6 +705,8 @@ class Link(object):
                 format_dict[key] = '"%s"' % outstr
             elif isinstance(value, str) and value.find(' ') >= 0 and key != 'args':
                 format_dict[key] = '"%s"' % value
+            elif value is None:
+                format_dict[key] = 'None'
 
         command = command_template.format(**format_dict)
         return command

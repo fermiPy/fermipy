@@ -198,12 +198,16 @@ class ScatterGather(Link):
         else:
             status = JobStatus.not_ready
 
+        base_config = self.scatter_link.args
+
         for jobkey, job_config in sorted(self._job_configs.items()):
+            full_job_config = base_config.copy()
+            full_job_config.update(job_config)
             ScatterGather._make_scatter_logfile_name(jobkey,
-                                                     self.linkname, job_config)
+                                                     self.linkname, full_job_config)
             logfile = job_config.get('logfile')
             self._scatter_link._register_job(key=jobkey,
-                                             job_config=job_config,
+                                             job_config=full_job_config,
                                              logfile=logfile,
                                              status=status)
 
