@@ -24,24 +24,6 @@ class AppLink(Link):
     usage = '%s [options]' %(appname)
     description = "Link to run %s"%(appname)
 
-    def __init__(self, **kwargs):
-        """C'tor
-
-        See help for `chain.Link` for details
-
-        This calls the base class c'tor then builds a GtApp object
-        """
-        super(AppLink, self).__init__(**kwargs)
-
-    def update_args(self, override_args):
-        """Update the argument used to invoke the application
-
-        See help for `chain.Link` for details
-
-        This calls the base class function then fills the parameters of the GtApp object
-        """
-        Link.update_args(self, override_args)
-
     def run_analysis(self, argv):
         """Implemented by sub-classes to run a particular analysis"""
         self.run_argparser(argv)

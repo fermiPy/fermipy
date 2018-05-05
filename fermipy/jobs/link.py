@@ -689,7 +689,7 @@ class Link(object):
         # FIXME, this isn't really great as it force you to have all the arguments
         command_template = self.command_template()
         format_dict = self.args.copy()
-        
+
         for key, value in format_dict.items():
             # protect whitespace
             if isinstance(value, list):
