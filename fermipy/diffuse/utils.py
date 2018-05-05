@@ -5,6 +5,7 @@ Prepare data for diffuse all-sky analysis
 from __future__ import absolute_import, division, print_function
 
 import os
+from fermipy.jobs.utils import is_null
 
 def readlines(arg):
     """Read lines from a file into a list.
@@ -36,6 +37,8 @@ def create_inputlist(arglist):
                 lines += readlines(arg)
             else:
                 lines.append(arg)
+    elif is_null(arglist):
+        pass
     else:
         if os.path.splitext(arglist)[1] == '.lst':
             lines += readlines(arglist)

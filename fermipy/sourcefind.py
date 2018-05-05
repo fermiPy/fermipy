@@ -452,8 +452,8 @@ class SourceFind(object):
 
             src['glon_err'] = o.glon_err
             src['glat_err'] = o.glat_err
-            src['ra_err'] = o.glon_err
-            src['dec_err'] = o.glat_err
+            src['ra_err'] = o.ra_err
+            src['dec_err'] = o.dec_err
             src['pos_err'] = o.pos_err
             src['pos_err_semimajor'] = o.pos_err_semimajor
             src['pos_err_semiminor'] = o.pos_err_semiminor
