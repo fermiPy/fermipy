@@ -202,7 +202,7 @@ class MapCubeComponentInfo(ModelComponentInfo):
     def __init__(self, **kwargs):
         """C'tor: copies keyword arguments to data members
         """
-        ModelComponentInfo.__init__(self, **kwargs)
+        super(MapCubeComponentInfo, self).__init__(**kwargs)
         self.model_type = 'MapCubeSource'
         self.Spatial_Filename = kwargs.get('Spatial_Filename', None)
 
@@ -220,7 +220,7 @@ class IsoComponentInfo(ModelComponentInfo):
     def __init__(self, **kwargs):
         """C'tor: copies keyword arguments to data members
         """
-        ModelComponentInfo.__init__(self, **kwargs)
+        super(IsoComponentInfo, self).__init__(**kwargs)
         self.model_type = 'IsoSource'
         self.Spectral_Filename = kwargs.get('Spectral_Filename', None)
 
@@ -232,7 +232,7 @@ class PointSourceInfo(ModelComponentInfo):
     def __init__(self, **kwargs):
         """C'tor: copies keyword arguments to data members
         """
-        ModelComponentInfo.__init__(self, **kwargs)
+        super(PointSourceInfo, self).__init__(**kwargs)        
         self.model_type = 'PointSource'
 
 
@@ -253,7 +253,7 @@ class CompositeSourceInfo(ModelComponentInfo):
     def __init__(self, **kwargs):
         """C'tor: copies keyword arguments to data members
         """
-        ModelComponentInfo.__init__(self, **kwargs)
+        super(CompositeSourceInfo, self).__init__(**kwargs)        
         self.model_type = 'CompositeSource'
         self.source_names = kwargs.get('source_names', [])
         self.catalog_info = kwargs.get('catalog_info', None)
@@ -277,7 +277,7 @@ class CatalogSourcesInfo(ModelComponentInfo):
     def __init__(self, **kwargs):
         """C'tor: copies keyword arguments to data members
         """
-        ModelComponentInfo.__init__(self, **kwargs)
+        super(CatalogSourcesInfo, self).__init__(**kwargs)        
         self.model_type = 'CatalogSources'
         self.source_names = kwargs.get('source_names', [])
         self.catalog_info = kwargs.get('catalog_info', None)
