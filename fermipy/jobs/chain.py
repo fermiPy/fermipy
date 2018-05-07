@@ -209,7 +209,8 @@ class Chain(Link):
 
         chain_status = self.check_links_status()
         print ("Chain status %i" % (chain_status))
-        self._set_status_self(status=chain_status)
+        self._write_status_to_log(chain_status, stream)
+        self._set_status_self(status=chain_status)        
 
         if self._job_archive:
             self._job_archive.file_archive.update_file_status()
@@ -278,7 +279,9 @@ class Chain(Link):
         """Check the status of all the links"""
         status_vector = JobStatusVector()
         for link in self._links.values():
-            link_status = link.check_job_status(fail_running=fail_running,
+            key = JobDetails.make_fullkey(link.full_linkname)
+            link_status = link.check_job_status(key,
+                                                fail_running=fail_running,
                                                 fail_pending=fail_pending)
             status_vector[link_status] += 1
 
