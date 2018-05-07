@@ -160,7 +160,7 @@ class SysInterface(object):
         if job_dict is None:
             job_dict = link.jobs
 
-        for job_details in sorted(job_dict.keys()):
+        for job_details in job_dict.values():
             # clean failed jobs
             if job_details.status == JobStatus.failed or clean_all:
                 # clean_job(job_details.logfile, job_details.outfiles, self._dry_run)
