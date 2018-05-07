@@ -130,6 +130,13 @@ def convert_option_dict_to_dict(option_dict):
             ret_dict[key] = value
     return ret_dict
 
+def reduce_by_keys(orig_dict, keys, default=None):
+    """ Reduce a dictionary by selecting a set of keys """
+    ret = {}
+    for key in keys:
+        ret[key] = orig_dict.get(key, default)
+    return ret
+
 
 class Link(object):
     """A wrapper for a command line application.
