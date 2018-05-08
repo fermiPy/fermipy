@@ -439,27 +439,27 @@ class ResidualCRChain(Chain):
         dry_run = input_dict.get('dry_run', False)
 
         self._set_link('split-and-mktime', SplitAndMktimeChain,
-                             comp=comp, data=data,
-                             ft1file=config_dict['ft1file'],
-                             ft2file=config_dict['ft2file'],
-                             hpx_order_ccube=config_dict.get('hpx_order_ccube', 7),
-                             hpx_order_expcube=config_dict.get('hpx_order_expcube', 7),
-                             mktime=config_dict.get('mktimefitler', None),
-                             do_ltsum=config_dict.get('do_ltsum', False),
-                             scratch=config_dict.get('scratch', None),
-                             dry_run=dry_run)
+                       comp=comp, data=data,
+                       ft1file=config_dict['ft1file'],
+                       ft2file=config_dict['ft2file'],
+                       hpx_order_ccube=config_dict.get('hpx_order_ccube', 7),
+                       hpx_order_expcube=config_dict.get('hpx_order_expcube', 7),
+                       mktime=config_dict.get('mktimefitler', None),
+                       do_ltsum=config_dict.get('do_ltsum', False),
+                       scratch=config_dict.get('scratch', None),
+                       dry_run=dry_run)
 
         self._set_link('residual-cr', ResidualCR,
-                             comp=comp, data=data,
-                             hpx_order=config_dict.get('hpx_order_fitting', 4),
-                             clean=config_dict.get('clean_class', None),
-                             dirty=config_dict.get('dirty_class', None),
-                             mktime=config_dict.get('mktimefitler', None),
-                             select_factor=config_dict.get('select_factor', None),
-                             mask_factor=config_dict.get('mask_factor', None),
-                             sigma=config_dict.get('sigma', None),
-                             full_output=config_dict.get('full_output', None),
-                             dry_run=dry_run)
+                       comp=comp, data=data,
+                       hpx_order=config_dict.get('hpx_order_fitting', 4),
+                       clean=config_dict.get('clean_class', None),
+                       dirty=config_dict.get('dirty_class', None),
+                       mktime=config_dict.get('mktimefitler', None),
+                       select_factor=config_dict.get('select_factor', None),
+                       mask_factor=config_dict.get('mask_factor', None),
+                       sigma=config_dict.get('sigma', None),
+                       full_output=config_dict.get('full_output', None),
+                       dry_run=dry_run)
 
         return o_dict
 

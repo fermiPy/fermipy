@@ -104,9 +104,9 @@ class CoaddSplit(Chain):
                     ltsum_listfile = 'ltsumlist_%s_%s' % (key_e, mktimekey)
                     ltsum_outfile = 'ltsum_%s_%s' % (key_e, mktimekey)
                     self._set_link('gtltsum', Gtlink_ltsum,
-                                         infile1=ltsum_listfile,
-                                         infile2=None,
-                                         outfile=ltsum_outfile)
+                                   infile1=ltsum_listfile,
+                                   infile2=None,
+                                   outfile=ltsum_outfile)
 
                 for evtclassval in evtclasslist_vals:
                     for psf_type in sorted(comp_e['psf_types'].keys()):
@@ -118,8 +118,8 @@ class CoaddSplit(Chain):
                         outputfile = os.path.join(outdir_base, ccube_name)
                         args = _make_input_file_list(ccube_name, num_files)
                         self._set_link('coadd', Link_FermipyCoadd,
-                                             args=args,
-                                             output=outputfile)
+                                       args=args,
+                                       output=outputfile)
 
         return o_dict
 

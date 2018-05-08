@@ -211,11 +211,11 @@ class SunMoonChain(Chain):
         sourcekeys = config_dict.get('sourcekeys')
 
         self._set_link('exphpsun', Gtexphpsun_SG,
-                             comp=comp, data=data)
+                       comp=comp, data=data)
 
         self._set_link('suntemp', Gtsuntemp_SG,
-                             comp=comp, data=data,
-                             sourcekeys=sourcekeys)
+                       comp=comp, data=data,
+                       sourcekeys=sourcekeys)
 
 
 

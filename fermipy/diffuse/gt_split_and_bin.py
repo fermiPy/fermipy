@@ -222,20 +222,20 @@ class SplitAndBinChain(Chain):
         dry_run = input_dict.get('dry_run', None)
 
         self._set_link('split-and-bin', SplitAndBin_SG,
-                             comp=comp, data=data,
-                             hpx_order_max=input_dict.get('hpx_order_ccube', 9),
-                             ft1file=ft1file,
-                             scratch=scratch,
-                             dry_run=dry_run)
+                       comp=comp, data=data,
+                       hpx_order_max=input_dict.get('hpx_order_ccube', 9),
+                       ft1file=ft1file,
+                       scratch=scratch,
+                       dry_run=dry_run)
 
         self._set_link('coadd-split', CoaddSplit_SG,
-                             comp=comp, data=data,
-                             ft1file=ft1file)
+                       comp=comp, data=data,
+                       ft1file=ft1file)
 
         self._set_link('expcube2', Gtexpcube2_SG,
-                             comp=comp, data=data,
-                             hpx_order_max=input_dict.get('hpx_order_expcube', 5),
-                             dry_run=dry_run)
+                       comp=comp, data=data,
+                       hpx_order_max=input_dict.get('hpx_order_expcube', 5),
+                       dry_run=dry_run)
 
 def register_classes():
     """Register these classes with the `LinkFactory` """

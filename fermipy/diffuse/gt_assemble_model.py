@@ -284,15 +284,15 @@ class AssembleModelChain(Chain):
         dry_run = input_dict.get('dry_run', False)
 
         self._set_link('init-model', InitModel,
-                             comp=comp, data=data,
-                             library=library,
-                             models=models,
-                             hpx_order=hpx_order,
-                             dry_run=dry_run)
+                       comp=comp, data=data,
+                       library=library,
+                       models=models,
+                       hpx_order=hpx_order,
+                       dry_run=dry_run)
 
         self._set_link('assemble-model', AssembleModel_SG,
-                             comp=comp, data=data,
-                             models=models)
+                       comp=comp, data=data,
+                       models=models)
 
 
 def register_classes():

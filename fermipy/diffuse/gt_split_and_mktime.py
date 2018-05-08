@@ -106,12 +106,12 @@ class SplitAndMktime(Chain):
             linkname = 'select-energy-%s-%s' % (key_e, zcut)
             selectfile_energy = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select))
             self._set_link(linkname, Gtlink_select,
-                                 infile=ft1file,
-                                 outfile=selectfile_energy,
-                                 zmax=zmax,
-                                 emin=emin,
-                                 emax=emax,
-                                 evclass=NAME_FACTORY.evclassmask(evclassstr))
+                           infile=ft1file,
+                           outfile=selectfile_energy,
+                           zmax=zmax,
+                           emin=emin,
+                           emax=emax,
+                           evclass=NAME_FACTORY.evclassmask(evclassstr))
 
             if 'mktimefilters' in comp_e:
                 mktimefilters = comp_e['mktimefilters']
@@ -128,17 +128,17 @@ class SplitAndMktime(Chain):
                 linkname_ltcube = 'mktime-%s-%s-%s' % (key_e, zcut, mktimekey)
 
                 self._set_link(linkname_mktime, Gtlink_mktime,
-                                     evfile=selectfile_energy,
-                                     outfile=mktime_file,
-                                     scfile=ft2file,
-                                     filter=filterstring,
-                                     pfiles=pfiles)
+                               evfile=selectfile_energy,
+                               outfile=mktime_file,
+                               scfile=ft2file,
+                               filter=filterstring,
+                               pfiles=pfiles)
                 self._set_link(linkname_ltcube, Gtlink_ltcube,
-                                     evfile=mktime_file,
-                                     outfile=ltcube_file,
-                                     scfile=ft2file,
-                                     zmax=zmax,
-                                     pfiles=pfiles)
+                               evfile=mktime_file,
+                               outfile=ltcube_file,
+                               scfile=ft2file,
+                               zmax=zmax,
+                               pfiles=pfiles)
 
                 if 'evtclasses' in comp_e:
                     evtclasslist_vals = comp_e['evtclasses']
@@ -166,23 +166,23 @@ class SplitAndMktime(Chain):
                         linkname_bin = 'bin-%s-%s-%s-%s' % (key_e, zcut, mktimekey, psf_type)
 
                         self._set_link(linkname_select, Gtlink_select,
-                                             infile=selectfile_energy,
-                                             outfile=selectfile_psf,
-                                             zmax=zmax,
-                                             emin=emin,
-                                             emax=emax,
-                                             evtype=EVT_TYPE_DICT[psf_type],
-                                             evclass=NAME_FACTORY.evclassmask(evtclassval),
-                                             pfiles=pfiles)
+                                       infile=selectfile_energy,
+                                       outfile=selectfile_psf,
+                                       zmax=zmax,
+                                       emin=emin,
+                                       emax=emax,
+                                       evtype=EVT_TYPE_DICT[psf_type],
+                                       evclass=NAME_FACTORY.evclassmask(evtclassval),
+                                       pfiles=pfiles)
                         self._set_link(linkname_bin, Gtlink_bin,
-                                             coordsys=coordsys,
-                                             hpx_order=hpx_order_psf,
-                                             evfile=selectfile_psf,
-                                             outfile=binfile_psf,
-                                             emin=emin,
-                                             emax=emax,
-                                             enumbins=enumbins,
-                                             pfiles=pfiles)
+                                       coordsys=coordsys,
+                                       hpx_order=hpx_order_psf,
+                                       evfile=selectfile_psf,
+                                       outfile=binfile_psf,
+                                       emin=emin,
+                                       emax=emax,
+                                       enumbins=enumbins,
+                                       pfiles=pfiles)
 
 
 class SplitAndMktime_SG(ScatterGather):
@@ -287,28 +287,28 @@ class SplitAndMktimeChain(Chain):
         dry_run = input_dict.get('dry_run', None)
 
         self._set_link('split-and-mktime', SplitAndMktime_SG,
-                             comp=comp, data=data,
-                             hpx_order_max=input_dict.get('hpx_order_ccube', 9),
-                             ft1file=ft1file,
-                             ft2file=ft2file,
-                             do_ltsum=input_dict.get('do_ltsum', False),
-                             scratch=scratch,
-                             dry_run=dry_run)
+                       comp=comp, data=data,
+                       hpx_order_max=input_dict.get('hpx_order_ccube', 9),
+                       ft1file=ft1file,
+                       ft2file=ft2file,
+                       do_ltsum=input_dict.get('do_ltsum', False),
+                       scratch=scratch,
+                       dry_run=dry_run)
 
         self._set_link('coadd-split', CoaddSplit_SG,
-                             'fermipy-coadd-split-sg',
-                             comp=comp, data=data,
-                             ft1file=ft1file)
+                       'fermipy-coadd-split-sg',
+                       comp=comp, data=data,
+                       ft1file=ft1file)
 
         self._set_link('ltsum', Gtltsum_SG,
-                             comp=comp, data=data,
-                             ft1file=input_dict['ft1file'],
-                             dry_run=dry_run)
+                       comp=comp, data=data,
+                       ft1file=input_dict['ft1file'],
+                       dry_run=dry_run)
 
         self._set_link('expcube2', Gtexpcube2_SG,
-                             comp=comp, data=data,
-                             hpx_order_max=input_dict.get('hpx_order_expcube', 5),
-                             dry_run=dry_run)
+                       comp=comp, data=data,
+                       hpx_order_max=input_dict.get('hpx_order_expcube', 5),
+                       dry_run=dry_run)
 
 def register_classes():
     """Register these classes with the `LinkFactory` """
