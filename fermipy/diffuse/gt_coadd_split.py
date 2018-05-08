@@ -103,7 +103,7 @@ class CoaddSplit(Chain):
                 if do_ltsum:
                     ltsum_listfile = 'ltsumlist_%s_%s' % (key_e, mktimekey)
                     ltsum_outfile = 'ltsum_%s_%s' % (key_e, mktimekey)
-                    self._load_link_args('gtltsum', Gtlink_ltsum,
+                    self._set_link('gtltsum', Gtlink_ltsum,
                                          infile1=ltsum_listfile,
                                          infile2=None,
                                          outfile=ltsum_outfile)
@@ -117,7 +117,7 @@ class CoaddSplit(Chain):
                             os.path.basename(NAME_FACTORY.ccube(**kwargs_bin))
                         outputfile = os.path.join(outdir_base, ccube_name)
                         args = _make_input_file_list(ccube_name, num_files)
-                        self._load_link_args('coadd', Link_FermipyCoadd,
+                        self._set_link('coadd', Link_FermipyCoadd,
                                              args=args,
                                              output=outputfile)
 

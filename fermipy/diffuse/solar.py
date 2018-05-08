@@ -210,10 +210,10 @@ class SunMoonChain(Chain):
         comp = config_dict.get('comp')
         sourcekeys = config_dict.get('sourcekeys')
 
-        self._load_link_args('exphpsun', Gtexphpsun_SG,
+        self._set_link('exphpsun', Gtexphpsun_SG,
                              comp=comp, data=data)
 
-        self._load_link_args('suntemp', Gtsuntemp_SG,
+        self._set_link('suntemp', Gtsuntemp_SG,
                              comp=comp, data=data,
                              sourcekeys=sourcekeys)
 

@@ -438,7 +438,7 @@ class ResidualCRChain(Chain):
         comp = config_dict.get('comp')
         dry_run = input_dict.get('dry_run', False)
 
-        self._load_link_args('split-and-mktime', SplitAndMktimeChain,
+        self._set_link('split-and-mktime', SplitAndMktimeChain,
                              comp=comp, data=data,
                              ft1file=config_dict['ft1file'],
                              ft2file=config_dict['ft2file'],
@@ -449,7 +449,7 @@ class ResidualCRChain(Chain):
                              scratch=config_dict.get('scratch', None),
                              dry_run=dry_run)
 
-        self._load_link_args('residual-cr', ResidualCR,
+        self._set_link('residual-cr', ResidualCR,
                              comp=comp, data=data,
                              hpx_order=config_dict.get('hpx_order_fitting', 4),
                              clean=config_dict.get('clean_class', None),

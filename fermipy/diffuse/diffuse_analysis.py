@@ -49,18 +49,18 @@ class DiffuseCompChain(Chain):
         library = input_dict.get('library')
         dry_run = input_dict.get('dry_run', False)
 
-        self._load_link_args('sum-rings', SumRings_SG,
+        self._set_link('sum-rings', SumRings_SG,
                              library=library,
                              outdir=input_dict['outdir'],
                              dry_run=dry_run)
 
-        self._load_link_args('srcmaps-diffuse', SrcmapsDiffuse_SG,
+        self._set_link('srcmaps-diffuse', SrcmapsDiffuse_SG,
                              comp=comp, data=data,
                              library=library,
                              make_xml=input_dict['make_xml'],
                              dry_run=dry_run)
 
-        self._load_link_args('vstack-diffuse', Vstack_SG,
+        self._set_link('vstack-diffuse', Vstack_SG,
                              comp=comp, data=data,
                              library=library,
                              dry_run=dry_run)
@@ -100,18 +100,18 @@ class CatalogCompChain(Chain):
         library = input_dict.get('library')
         dry_run = input_dict.get('dry_run', False)
 
-        self._load_link_args('srcmaps-catalog', SrcmapsCatalog_SG,
+        self._set_link('srcmaps-catalog', SrcmapsCatalog_SG,
                              comp=comp, data=data,
                              library=library,
                              nsrc=input_dict.get('nsrc', 500),
                              dry_run=dry_run)
 
-        self._load_link_args('gather-srcmaps', GatherSrcmaps_SG,
+        self._set_link('gather-srcmaps', GatherSrcmaps_SG,
                              comp=comp, data=data,
                              library=library,
                              dry_run=dry_run)
 
-        self._load_link_args('merge-srcmaps', MergeSrcmaps_SG,
+        self._set_link('merge-srcmaps', MergeSrcmaps_SG,
                              comp=comp, data=data,
                              library=library,
                              dry_run=dry_run)
@@ -141,7 +141,7 @@ class DiffuseAnalysisChain(Chain):
         models = config_dict.get('models')
         scratch = config_dict.get('scratch')
 
-        self._load_link_args('prepare', SplitAndBinChain,
+        self._set_link('prepare', SplitAndBinChain,
                              comp=comp, data=data,
                              ft1file=config_dict.get('ft1file'),
                              hpx_order_ccube=config_dict.get('hpx_order_ccube'),
@@ -149,21 +149,21 @@ class DiffuseAnalysisChain(Chain):
                              scratch=scratch,
                              dry_run=dry_run)
 
-        self._load_link_args('diffuse-comp', DiffuseCompChain,
+        self._set_link('diffuse-comp', DiffuseCompChain,
                              comp=comp, data=data,
                              library=library,
                              make_xml=config_dict.get('make_diffuse_comp_xml', False),
                              outdir=config_dict.get('merged_gasmap_dir', 'merged_gasmap'),
                              dry_run=dry_run)
 
-        self._load_link_args('catalog-comp', CatalogCompChain,
+        self._set_link('catalog-comp', CatalogCompChain,
                              comp=comp, data=data,
                              library=library,
                              make_xml=config_dict.get('make_catalog_comp_xml', False),
                              nsrc=config_dict.get('catalog_nsrc', 500),
                              dry_run=dry_run)
 
-        self._load_link_args('assemble-model', AssembleModelChain,
+        self._set_link('assemble-model', AssembleModelChain,
                              comp=comp, data=data,
                              library=library,
                              models=models,
