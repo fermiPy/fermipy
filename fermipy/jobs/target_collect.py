@@ -29,7 +29,7 @@ NAME_FACTORY = NameFactory(basedir=('.'))
 
 
 def fill_output_table(filelist, hdu, collist, nbins):
-    """Fill the arrays from the files in filelsit"""
+    """Fill the arrays from the files in filelist"""
     nfiles = len(filelist)
     shape = (nbins, nfiles)
     outdict = {}
@@ -132,9 +132,24 @@ def summarize_sed_results(sed_table):
 
 
 class CollectSED(Link):
-    """Small class wrap an analysis script.
+    """Small class to collect SED results from a series of simulations. 
 
-    This is useful for parallelizing analysis using the fermipy.jobs module.
+    Paramters
+    ---------
+    sed_file : 
+        Path to the SED file we are collecting.  The string _SEED_ will be 
+        replaced with the simulation key numbers to make the list of input files.
+
+    Returns
+    -------
+    outfile :
+        File with all of the collected SED object.
+        If `None` this file is not written.
+
+    summaryfile : 
+        File with summary stats about the collected SEDs.  
+        If `None` this file is not written.
+    
     """
     appname = 'fermipy-collect-sed'
     linkname_default = 'collect-sed'

@@ -22,6 +22,11 @@ def get_batch_job_args(job_time=1500):
         job_check_sleep parameter that sets how often
         we check for job completion.
 
+    Returns
+    -------
+    job_args : dict
+        Dictionary of arguments used to submit a batch job
+
     """
     if DEFAULT_JOB_TYPE == 'slac':
         from fermipy.jobs.slac_impl import get_slac_default_args
@@ -42,6 +47,11 @@ def get_batch_job_interface(job_time=1500):
         This is used to select the batch queue and set the
         job_check_sleep parameter that sets how often
         we check for job completion.
+
+    Returns
+    -------
+    job_interfact : `SysInterface`
+        Object that manages interactions with batch farm
 
     """
     batch_job_args = get_batch_job_args(job_time)
