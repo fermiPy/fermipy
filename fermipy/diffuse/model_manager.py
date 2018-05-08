@@ -35,9 +35,11 @@ class ModelComponent(object):
                 try:
                     self.spectrum['spectral_pars'][parname].update(pardict)
                 except KeyError:
-                    raise KeyError("Failed to update parameter %s in source %s of spectral type %s"%(parname, 
-                                                                                                     self.info.source_name,
-                                                                                                     self.spectrum['SpectrumType']))                
+                    errmsg = "Failed to update parameter %s "%parname
+                    errmsg += "in source %s of spectral type %s"%(self.info.source_name,
+                                                                  self.spectrum['SpectrumType'])
+                    raise KeyError(errmsg)
+
 
 class ModelInfo(object):
     """ Small helper class to keep track of a single fitting model """
@@ -64,11 +66,10 @@ class ModelInfo(object):
     def edisp_disable_list(self):
         """ Return the list of source for which energy dispersion should be turned off """
         l = []
-        for comp_name, model_comp in self.model_components.items():            
+        for model_comp in self.model_components.values():
             if model_comp.edisp_disable:
                 l += [model_comp.info.source_name]
         return l
-            
 
     def make_srcmap_manifest(self, components, name_factory):
         """  Build a yaml file that specfies how to make the srcmap files for a particular model
@@ -150,13 +151,12 @@ class ModelInfo(object):
             zcut = "zmax%i" % comp.zmax
             compkey = "%s_%s" % (zcut, comp.make_key(
                 '{ebin_name}_{evtype_name}'))
-            #name_keys = dict(zcut=zcut,
+            # name_keys = dict(zcut=zcut,
             #                 modelkey=self.model_name,
             #                 component=compkey)
             comp_roi_source_info = {}
             for comp_name, model_comp in sub_comp_sources.items():
                 comp_info = model_comp.info
-                comps = comp_info.components
                 if comp_info.selection_dependent:
                     key = comp.make_key('{ebin_name}_{evtype_name}')
                 elif comp_info.moving:
@@ -379,7 +379,7 @@ class ModelManager(object):
                               hpx_ordering_scheme="RING",
                               hpx_order=hpx_order,
                               hpx_ebin=True)
-        #master_fileio = dict(outdir=model_dir,
+        # master_fileio = dict(outdir=model_dir,
         #                     logfile=os.path.join(model_dir, 'fermipy.log'))
         master_fileio = dict(logfile='fermipy.log')
         master_gtlike = dict(irfs=self._name_factory.irfs(**kwargs),
@@ -425,10 +425,6 @@ class ModelManager(object):
                                bexpmap=self._name_factory.bexpcube(**name_keys),
                                use_external_srcmap=True)
             #comp_roi_source_info = {}
-
-            comp_xml_mdl = os.path.basename(self._name_factory.comp_srcmdl_xml(modelkey=modelkey,
-                                                                               component=compkey))
-
             diffuse_srcs = []
             for src in comp_roi.diffuse_sources:
                 if isinstance(src, MapCubeSource):
@@ -437,7 +433,7 @@ class ModelManager(object):
                     diffuse_srcs.append(dict(name=src.name, file=src.fileFunction))
                 else:
                     pass
-            
+
             comp_model = dict(diffuse=diffuse_srcs)
             sub_dict = dict(data=comp_data,
                             binning=comp_binning,
@@ -450,7 +446,7 @@ class ModelManager(object):
         fermipy_dict['model']['diffuse'] = diffuse_srcs
 
         outfile = os.path.join(model_dir, 'config.yaml')
-        print("Writing fermipy config file %s"%outfile)
+        print("Writing fermipy config file %s" % outfile)
         utils.write_yaml(fermipy_dict, outfile)
         return fermipy_dict
 
@@ -477,7 +473,7 @@ def make_library(**kwargs):
     """
     library_yaml = kwargs.pop('library', 'models/library.yaml')
     comp_yaml = kwargs.pop('comp', 'config/binning.yaml')
-    basedir = kwargs.pop('basedir', 
+    basedir = kwargs.pop('basedir',
                          '/nfs/slac/kipac/fs1/u/dmcat/data/flight/diffuse_fitting')
 
     model_man = kwargs.get('ModelManager', ModelManager(basedir=basedir))

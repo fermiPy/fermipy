@@ -7,21 +7,17 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 
-import argparse
 import yaml
-
-from collections import OrderedDict
 
 from astropy.io import fits
 from fermipy.skymap import HpxMap
 
 from fermipy.utils import load_yaml
 
-from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
-from fermipy.jobs.link import Link 
-from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
-from fermipy.jobs.file_archive import FileFlags
+from fermipy.jobs.link import Link
+from fermipy.jobs.chain import Chain
 
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.name_policy import NameFactory
@@ -38,7 +34,7 @@ class InitModel(Link):
     """
     appname = 'fermipy-init-model'
     linkname_default = 'init-model'
-    usage = '%s [options]' %(appname)
+    usage = '%s [options]' % (appname)
     description = "Initialize model fitting directory"
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
@@ -46,12 +42,6 @@ class InitModel(Link):
                            library=diffuse_defaults.diffuse['library'],
                            models=diffuse_defaults.diffuse['models'],
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'])
-    
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(InitModel, self).__init__(linkname, **init_dict)
 
     def run_analysis(self, argv):
         """ Build the manifest for all the models
@@ -64,12 +54,11 @@ class InitModel(Link):
         models = load_yaml(args.models)
         data = args.data
         hpx_order = args.hpx_order
-        for modelkey, modelpath in models.items():
+        for modelkey in models:
             model_manager.make_srcmap_manifest(modelkey, components, data)
-            fermipy_config = model_manager.make_fermipy_config_yaml(modelkey, components, data, 
-                                                                    hpx_order=hpx_order, 
-                                                                    irf_ver=NAME_FACTORY.irf_ver())
-            
+            model_manager.make_fermipy_config_yaml(modelkey, components, data,
+                                                   hpx_order=hpx_order,
+                                                   irf_ver=NAME_FACTORY.irf_ver())
 
 
 class AssembleModel(Link):
@@ -79,25 +68,19 @@ class AssembleModel(Link):
     """
     appname = 'fermipy-assemble-model'
     linkname_default = 'assemble-model'
-    usage = '%s [options]' %(appname)
+    usage = '%s [options]' % (appname)
     description = "Assemble sourcemaps for model fitting"
 
     default_options = dict(input=(None, 'Input yaml file', str),
                            compname=(None, 'Component name.', str),
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'])
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(AssembleModel, self).__init__(linkname, **init_dict)
- 
     @staticmethod
     def copy_ccube(ccube, outsrcmap, hpx_order):
         """Copy a counts cube into outsrcmap file
         reducing the HEALPix order to hpx_order if needed.
         """
-        sys.stdout.write ("  Copying counts cube from %s to %s\n" % (ccube, outsrcmap))
+        sys.stdout.write("  Copying counts cube from %s to %s\n" % (ccube, outsrcmap))
         try:
             hdulist_in = fits.open(ccube)
         except IOError:
@@ -149,8 +132,8 @@ class AssembleModel(Link):
             try:
                 hdulist_in = fits.open('%s.gz' % srcmap_file)
             except IOError:
-                 sys.stdout.write("  Missing file %s\n" % srcmap_file)
-                 return
+                sys.stdout.write("  Missing file %s\n" % srcmap_file)
+                return
 
         for source_name in source_names:
             sys.stdout.write('.')
@@ -187,20 +170,20 @@ class AssembleModel(Link):
             Maximum order for maps
 
         """
-        sys.stdout.write ("Working on component %s\n" % compname)
+        sys.stdout.write("Working on component %s\n" % compname)
         ccube = compinfo['ccube']
         outsrcmap = compinfo['outsrcmap']
         source_dict = compinfo['source_dict']
 
-        hpx_order = GtAssembleModel.copy_ccube(ccube, outsrcmap, hpx_order)
-        hdulist = GtAssembleModel.open_outsrcmap(outsrcmap)
+        hpx_order = AssembleModel.copy_ccube(ccube, outsrcmap, hpx_order)
+        hdulist = AssembleModel.open_outsrcmap(outsrcmap)
 
         for comp_name in sorted(source_dict.keys()):
             source_info = source_dict[comp_name]
             source_names = source_info['source_names']
             srcmap_file = source_info['srcmap_file']
-            GtAssembleModel.append_hdus(hdulist, srcmap_file,
-                                        source_names, hpx_order)
+            AssembleModel.append_hdus(hdulist, srcmap_file,
+                                      source_names, hpx_order)
         sys.stdout.write("Done!\n")
 
     def run_analysis(self, argv):
@@ -212,10 +195,10 @@ class AssembleModel(Link):
 
         compname = args.compname
         value = manifest[compname]
-        GtAssembleModel.assemble_component(compname, value, args.hpx_order)
+        self.assemble_component(compname, value, args.hpx_order)
 
 
-class AssembleModel_SG(ConfigMaker):
+class AssembleModel_SG(ScatterGather):
     """Small class to generate configurations for this script
 
     Parameters
@@ -237,14 +220,6 @@ class AssembleModel_SG(ConfigMaker):
                            data=diffuse_defaults.diffuse['data'],
                            models=diffuse_defaults.diffuse['models'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(AssembleModel_SG, self).__init__(link,
-                                               options=kwargs.get('options',
-                                                                  self.default_options.copy()))
-
-
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -254,13 +229,13 @@ class AssembleModel_SG(ConfigMaker):
         NAME_FACTORY.update_base_dict(args['data'])
 
         models = load_yaml(args['models'])
-        
-        for modelkey, modelpath in models.items():
+
+        for modelkey in models:
             manifest = os.path.join('analysis', 'model_%s' % modelkey,
                                     'srcmap_manifest_%s.yaml' % modelkey)
             for comp in components:
                 key = comp.make_key('{ebin_name}_{evtype_name}')
-                fullkey = "%s_%s"%(modelkey, key)
+                fullkey = "%s_%s" % (modelkey, key)
                 outfile = NAME_FACTORY.merged_srcmaps(modelkey=modelkey,
                                                       component=key,
                                                       coordsys=comp.coordsys,
@@ -273,14 +248,13 @@ class AssembleModel_SG(ConfigMaker):
         return job_configs
 
 
-
 class AssembleModelChain(Chain):
     """Small class to split, apply mktime and bin data according to some user-provided specification
     """
     appname = 'fermipy-assemble-model-chain'
     linkname_default = 'assemble-model-chain'
-    usage = '%s [options]' %(appname)
-    description='Run init-model and assemble-model'
+    usage = '%s [options]' % (appname)
+    description = 'Run init-model and assemble-model'
 
     default_options = dict(data=diffuse_defaults.diffuse['data'],
                            comp=diffuse_defaults.diffuse['comp'],
@@ -288,48 +262,41 @@ class AssembleModelChain(Chain):
                            models=diffuse_defaults.diffuse['models'],
                            hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
                            dry_run=diffuse_defaults.diffuse['dry_run'])
-    
+
     def __init__(self, **kwargs):
         """C'tor
         """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(AssembleModelChain, self).__init__(linkname, **init_dict)
-        self.comp_dict = None     
- 
-    def _register_link_classes(self):    
+        super(AssembleModelChain, self).__init__(**kwargs)
+        self.comp_dict = None
+
+    def _register_link_classes(self):
         InitModel.register_class()
         AssembleModel_SG.register_class()
 
     def _map_arguments(self, input_dict):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
-        o_dict = OrderedDict()
-
         data = input_dict.get('data')
         comp = input_dict.get('comp')
         library = input_dict.get('library')
         models = input_dict.get('models')
         hpx_order = input_dict.get('hpx_order_fitting')
-        dry_run=input_dict.get('dry_run', False)
+        dry_run = input_dict.get('dry_run', False)
 
-        insert_app_config(o_dict, 'init-model',
-                          'fermipy-init-model',
-                          comp=comp, data=data,
-                          library=library,
-                          models=models,
-                          hpx_order=hpx_order,
-                          dry_run=dry_run)
+        self._load_link_args('init-model', InitModel,
+                             comp=comp, data=data,
+                             library=library,
+                             models=models,
+                             hpx_order=hpx_order,
+                             dry_run=dry_run)
 
-        insert_app_config(o_dict, 'assemble-model',
-                          'fermipy-assemble-model-sg',
-                          comp=comp, data=data,
-                          models=models)
- 
-        return o_dict
-
+        self._load_link_args('assemble-model', AssembleModel_SG,
+                             comp=comp, data=data,
+                             models=models)
 
 
 def register_classes():
+    """Register these classes with the `LinkFactory` """
     InitModel.register_class()
     AssembleModel.register_class()
     AssembleModel_SG.register_class()

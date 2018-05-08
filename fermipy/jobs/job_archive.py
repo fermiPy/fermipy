@@ -15,7 +15,7 @@ import argparse
 import copy
 from collections import OrderedDict
 
-#from enum import Enum
+# from enum import Enum
 
 import numpy as np
 from astropy.table import Table, Column
@@ -34,7 +34,7 @@ def get_matches(table, colname, value):
     return matches
 
 
-#@unique
+# @unique
 # class JobStatus(Enum):
 class JobStatus(object):
     """Enumeration of job status types"""
@@ -52,7 +52,7 @@ class JobStatus(object):
 
 JOB_STATUS_STRINGS = ["Unknown",
                       "Not Ready",
-                      "Ready", 
+                      "Ready",
                       "Pending",
                       "Running",
                       "Done",
@@ -63,64 +63,88 @@ JOB_STATUS_STRINGS = ["Unknown",
 
 
 class JobStatusVector(object):
-    """ """
+    """Vector that counts the status of jobs
+    and returns an overall status flag based on those
+    """
+
     def __init__(self):
+        """C'tor """
         self.reset()
 
     def __getitem__(self, idx):
+        """Get an item by index"""
         return self._counters[idx]
- 
+
     def __setitem__(self, idx, val):
+        """Set an item by index"""
         self._counters[idx] = val
 
     def __incr__(self, idx):
+        """Increment an item by index"""
         self._counters[idx] += 1
 
     def __repr__(self):
-        tup = (self.nWaiting,self.nPending,self.nRunning,self.nDone,self.nFailed,self.nTotal)
-        return "%4i/%4i/%4i/%4i/%4i/%4i"%tup
+        """Turn self into a str listing the number of jobs:
+        Output format is:
+        waiting pending running done failed total
+        """
+        tup = (self.n_waiting, self.n_pending, self.n_running,
+               self.n_done, self.n_failed, self.n_total)
+        return "%4i/%4i/%4i/%4i/%4i/%4i" % tup
 
     @property
-    def nWaiting(self):
-        return self._counters[JobStatus.no_job] + self._counters[JobStatus.unknown] + self._counters[JobStatus.not_ready] + self._counters[JobStatus.ready]  
+    def n_waiting(self):
+        """Number of jobs in various waiting states"""
+        return self._counters[JobStatus.no_job] +\
+            self._counters[JobStatus.unknown] +\
+            self._counters[JobStatus.not_ready] +\
+            self._counters[JobStatus.ready]
 
     @property
-    def nPending(self):
-        return self._counters[JobStatus.pending] 
+    def n_pending(self):
+        """Number of jobs submitted to batch, but not yet running"""
+        return self._counters[JobStatus.pending]
 
     @property
-    def nRunning(self):
-        return self._counters[JobStatus.running] 
- 
+    def n_running(self):
+        """Number of running jobs"""
+        return self._counters[JobStatus.running]
+
     @property
-    def nDone(self):
+    def n_done(self):
+        """Number of successfully completed jobs"""
         return self._counters[JobStatus.done]
 
     @property
-    def nFailed(self):
+    def n_failed(self):
+        """Number of failed jobs"""
         return self._counters[JobStatus.failed] + self._counters[JobStatus.partial_failed]
 
     @property
-    def nTotal(self):
-        return self._counters.sum()    
+    def n_total(self):
+        """Total number of jobs"""
+        return self._counters.sum()
 
     def reset(self):
+        """Reset the counters"""
         self._counters = np.zeros(len(JOB_STATUS_STRINGS), int)
 
     def get_status(self):
-        if self.nTotal == 0:
+        """Return an overall status based
+        on the number of jobs in various states.
+        """
+        if self.n_total == 0:
             return JobStatus.no_job
-        elif self.nDone == self.nTotal:
+        elif self.n_done == self.n_total:
             return JobStatus.done
-        elif self.nFailed > 0:
+        elif self.n_failed > 0:
             # If more that a quater of the jobs fail, fail the whole thing
-            if self.nFailed > self.nTotal / 4.:
+            if self.n_failed > self.n_total / 4.:
                 return JobStatus.failed
-            else:
-                return JobStatus.partial_failed
-        elif self.nRunning > 0:
+            return JobStatus.partial_failed
+        elif self.n_running > 0:
             return JobStatus.running
-        elif self.nPending > 0:
+        elif self.n_pending > 0:
             return JobStatus.pending
         return JobStatus.ready
 
@@ -200,7 +224,7 @@ class JobDetails(object):
         """Combine jobname and jobkey to make a unique key
         fullkey = <jobkey>@<jobname>
         """
-        return "%s@%s"%(jobkey, jobname)
+        return "%s@%s" % (jobkey, jobname)
 
     @staticmethod
     def split_fullkey(fullkey):
@@ -208,7 +232,7 @@ class JobDetails(object):
         fullkey = <jobkey>@<jobname>
         """
         return fullkey.split('@')
-        
+
     @staticmethod
     def make_tables(job_dict):
         """Build and return an `astropy.table.Table' to store `JobDetails`"""
@@ -306,10 +330,14 @@ class JobDetails(object):
         """Get the full paths of the files used by this object from the the id arrays  """
         full_list = []
         status_dict = {}
-        full_list += file_archive.get_file_paths(file_id_array[self.infile_ids])
-        full_list += file_archive.get_file_paths(file_id_array[self.outfile_ids])
-        full_list += file_archive.get_file_paths(file_id_array[self.rmfile_ids])
-        full_list += file_archive.get_file_paths(file_id_array[self.intfile_ids])
+        full_list += file_archive.get_file_paths(
+            file_id_array[self.infile_ids])
+        full_list += file_archive.get_file_paths(
+            file_id_array[self.outfile_ids])
+        full_list += file_archive.get_file_paths(
+            file_id_array[self.rmfile_ids])
+        full_list += file_archive.get_file_paths(
+            file_id_array[self.intfile_ids])
         for filepath in full_list:
             handle = file_archive.get_handle(filepath)
             status_dict[filepath] = handle.status
@@ -330,17 +358,16 @@ class JobDetails(object):
         return [v for v in the_array.nonzero()[0]]
 
     @classmethod
-    def make_dict(cls, table, table_ids):
+    def make_dict(cls, table):
         """Build a dictionary map int to `JobDetails` from an `astropy.table.Table`"""
         ret_dict = {}
-        table_id_array = table_ids['file_id'].data
         for row in table:
-            job_details = cls.create_from_row(row, table_id_array)
+            job_details = cls.create_from_row(row)
         ret_dict[job_details.dbkey] = job_details
         return ret_dict
 
     @classmethod
-    def create_from_row(cls, table_row, table_id_array):
+    def create_from_row(cls, table_row):
         """Create a `JobDetails` from an `astropy.table.row.Row` """
         kwargs = {}
         for key in table_row.colnames:
@@ -410,7 +437,6 @@ class JobDetails(object):
         except IndexError:
             print("Index error", len(table), row_idx)
 
-
     def check_status_logfile(self, checker_func):
         """Check on the status of this particular job using the logfile"""
         self.status = checker_func(self.logfile)
@@ -418,13 +444,14 @@ class JobDetails(object):
 
     def __repr__(self):
         """String representation"""
-        s = ""
-        s += "jobname   : %s\n"%(self.jobname)
-        s += "  jobkey  : %s\n"%(self.jobkey)
-        s += "  appname : %s\n"%(self.appname)
-        s += "  logfile : %s\n"%(self.logfile)
-        s += "  status  : %s\n"%(JOB_STATUS_STRINGS[self. status])
-        return s
+        sout = ""
+        sout += "jobname   : %s\n" % (self.jobname)
+        sout += "  jobkey  : %s\n" % (self.jobkey)
+        sout += "  appname : %s\n" % (self.appname)
+        sout += "  logfile : %s\n" % (self.logfile)
+        sout += "  status  : %s\n" % (JOB_STATUS_STRINGS[self. status])
+        return sout
+
 
 class JobArchive(object):
     """Class that keeps of all the jobs associated to an analysis.
@@ -508,7 +535,7 @@ class JobArchive(object):
     def make_job_details(self, row_idx):
         """Create a `JobDetails` from an `astropy.table.row.Row` """
         row = self._table[row_idx]
-        job_details = JobDetails.create_from_row(row, self._table_id_array)
+        job_details = JobDetails.create_from_row(row)
         job_details.get_file_paths(self._file_archive, self._table_id_array)
         self._cache[job_details.fullkey] = job_details
         return job_details
@@ -526,11 +553,13 @@ class JobArchive(object):
                                                job_details.jobkey)
             if job_details_old.status <= JobStatus.running:
                 job_details_old.status = job_details.status
-                job_details_old.update_table_row(self._table, job_details_old.dbkey - 1)
+                job_details_old.update_table_row(
+                    self._table, job_details_old.dbkey - 1)
             job_details = job_details_old
-        except KeyError:            
+        except KeyError:
             job_details.dbkey = len(self._table) + 1
-            job_details.get_file_ids(self._file_archive, creator=job_details.dbkey)
+            job_details.get_file_ids(
+                self._file_archive, creator=job_details.dbkey)
             job_details.append_to_tables(self._table, self._table_ids)
         self._table_id_array = self._table_ids['file_id'].data
         self._cache[job_details.fullkey] = job_details
@@ -577,11 +606,11 @@ class JobArchive(object):
     def remove_jobs(self, mask):
         """Mark all jobs that match a mask as 'removed' """
         jobnames = self.table[mask]['jobname']
-        jobkey =  self.table[mask]['jobkey']
-        self.table[mask]['status'] =  JobStatus.removed
-        for jobname, jobkey in zip(jobnames,jobkey):
+        jobkey = self.table[mask]['jobkey']
+        self.table[mask]['status'] = JobStatus.removed
+        for jobname, jobkey in zip(jobnames, jobkey):
             fullkey = JobDetails.make_fullkey(jobname, jobkey)
-            self._cache.pop(fullkey).status = JobStatus.removed            
+            self._cache.pop(fullkey).status = JobStatus.removed
         self.write_table_file()
 
     @classmethod
@@ -608,7 +637,7 @@ class JobArchive(object):
         if job_table_file is not None:
             self._table_file = job_table_file
         if self._table_file is None:
-            raise RuntimeError("No output file specified for table")           
+            raise RuntimeError("No output file specified for table")
         write_tables_to_fits(self._table_file, [self._table, self._table_ids], clobber=True,
                              namelist=['JOB_ARCHIVE', 'FILE_IDS'])
         self._file_archive.write_table_file(file_table_file)
@@ -617,7 +646,7 @@ class JobArchive(object):
         """Update the status of all the jobs in the archive"""
         njobs = len(self.cache.keys())
         status_vect = np.zeros((8), int)
-        sys.stdout.write("Updating status of %i jobs: "%njobs)
+        sys.stdout.write("Updating status of %i jobs: " % njobs)
         sys.stdout.flush()
         for i, key in enumerate(self.cache.keys()):
             if i % 200 == 0:
@@ -629,18 +658,20 @@ class JobArchive(object):
                     job_details.check_status_logfile(checker_func)
             job_details.update_table_row(self._table, job_details.dbkey - 1)
             status_vect[job_details.status] += 1
-            
+
         sys.stdout.write("!\n")
         sys.stdout.flush()
         sys.stdout.write("Summary:\n")
-        sys.stdout.write("  Unknown:   %i\n"%status_vect[JobStatus.unknown])
-        sys.stdout.write("  Not Ready: %i\n"%status_vect[JobStatus.not_ready])
-        sys.stdout.write("  Ready:     %i\n"%status_vect[JobStatus.ready])
-        sys.stdout.write("  Pending:   %i\n"%status_vect[JobStatus.pending])
-        sys.stdout.write("  Running:   %i\n"%status_vect[JobStatus.running])
-        sys.stdout.write("  Done:      %i\n"%status_vect[JobStatus.done])
-        sys.stdout.write("  Failed:    %i\n"%status_vect[JobStatus.failed])
-        sys.stdout.write("  Partial:   %i\n"%status_vect[JobStatus.partial_failed])
+        sys.stdout.write("  Unknown:   %i\n" % status_vect[JobStatus.unknown])
+        sys.stdout.write("  Not Ready: %i\n" %
+                         status_vect[JobStatus.not_ready])
+        sys.stdout.write("  Ready:     %i\n" % status_vect[JobStatus.ready])
+        sys.stdout.write("  Pending:   %i\n" % status_vect[JobStatus.pending])
+        sys.stdout.write("  Running:   %i\n" % status_vect[JobStatus.running])
+        sys.stdout.write("  Done:      %i\n" % status_vect[JobStatus.done])
+        sys.stdout.write("  Failed:    %i\n" % status_vect[JobStatus.failed])
+        sys.stdout.write("  Partial:   %i\n" %
+                         status_vect[JobStatus.partial_failed])
 
     @classmethod
     def get_archive(cls):
@@ -666,17 +697,12 @@ def main_browse():
                         type=str, default='file_archive_temp2.fits', help="File archive file")
     parser.add_argument('--base', action='store', dest='base_path',
                         type=str, default=os.path.abspath('.'), help="File archive base path")
-    
-    args = parser.parse_args(sys.argv[1:])    
-    ja = JobArchive.build_archive(**args.__dict__)
-    
-    ja.table.pprint()
+
+    args = parser.parse_args(sys.argv[1:])
+    job_ar = JobArchive.build_archive(**args.__dict__)
+
+    job_ar.table.pprint()
 
 
 if __name__ == '__main__':
     main_browse()
-
-    
-
-    
-    

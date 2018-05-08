@@ -17,9 +17,10 @@ from collections import OrderedDict
 
 from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.file_archive import FileDict, FileStageManager
-from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails, JOB_STATUS_STRINGS
+from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails
 from fermipy.jobs.factory import LinkFactory
 from fermipy.jobs.sys_interface import SysInterface
+
 
 def extract_arguments(args, defaults):
     """ Extract a set of arguments from a large dictionary
@@ -81,15 +82,14 @@ def check_files(filelist,
         return found
     elif return_missing:
         return missing
-    else:
-        return None
+    return None
 
 
 def add_argument(parser, dest, info):
     """ Add an argument to an `argparse.ArgumentParser` object """
     default, helpstr, typeinfo = info
 
-    if dest=='args':
+    if dest == 'args':
         parser.add_argument('args', nargs='+', default=None, help=helpstr)
     elif typeinfo == list:
         parser.add_argument('--%s' % dest, action='append', help=helpstr)
@@ -130,6 +130,13 @@ def convert_option_dict_to_dict(option_dict):
             ret_dict[key] = value
     return ret_dict
 
+def reduce_by_keys(orig_dict, keys, default=None):
+    """ Reduce a dictionary by selecting a set of keys """
+    ret = {}
+    for key in keys:
+        ret[key] = orig_dict.get(key, default)
+    return ret
+
 
 class Link(object):
     """A wrapper for a command line application.
@@ -156,16 +163,21 @@ class Link(object):
     """
     topkey = '__top__'
 
-    def __init__(self, linkname, **kwargs):
-        """ C'tor
+    appname = 'dummy'
+    linkname_default = 'dummy'
+    usage = '%s [options]' %(appname)
+    description = "Link to run %s"%(appname)
 
-        Parameters
-        -----------
-        linkname : str
-            Unique name of this particular link
+    default_options = {}
+    default_file_args = {}
+
+    def __init__(self, **kwargs):
+        """ C'tor
 
         Keyword arguments
         -----------
+        linkname : str
+            Unique name of this particular link
         appname : str
             Name of the application (e.g., gtbin)
         parser: `argparse.ArguemntParser'
@@ -177,36 +189,20 @@ class Link(object):
         file_stage : `FileStageManager`
             Manager for staging files to and from a scratch area
         """
-        self.linkname = linkname
+        self.linkname = kwargs.pop('linkname', self.linkname_default)
         self.link_prefix = kwargs.get('link_prefix', '')
-        self._parser = kwargs.pop('parser', None)
-        self._interface = kwargs.pop('interface', SysInterface())
-        self._options = {}
-        self._options.update(kwargs.pop('options', {}))
-        if self._parser is not None:
-            self._fill_argparser(self._parser)
+        self._interface = kwargs.get('interface', SysInterface())
+        self._options = self.default_options.copy()
+        self._parser = argparse.ArgumentParser(usage=self.usage,
+                                               description=self.description)
+        self._fill_argparser(self._parser)
         self._file_stage = kwargs.get('file_stage', None)
         self._job_archive = kwargs.get('job_archive', None)
         self.args = {}
         self.args.update(convert_option_dict_to_dict(self._options))
-        self.files = FileDict(**kwargs)
+        self.files = FileDict(file_args=self.default_file_args.copy())
         self.sub_files = FileDict()
         self.jobs = OrderedDict()
-
-    @classmethod
-    def _init_dict(cls, **kwargs):
-        """ Build a dictionary to pass to the __init__ function """
-        linkname = kwargs.pop('linkname', cls.linkname_default)
-        parser = argparse.ArgumentParser(usage=cls.usage, description=cls.description)
-        if hasattr(cls, 'default_file_args'):
-            file_args=cls.default_file_args.copy()
-        else:
-            file_args={}
-        o = dict(parser=parser,
-                 options=cls.default_options.copy(),
-                 file_args=file_args,
-                 **kwargs)
-        return linkname, o
 
     @classmethod
     def create(cls, **kwargs):
@@ -221,13 +217,10 @@ class Link(object):
 
     @classmethod
     def register_class(cls):
-        from fermipy.jobs.factory import LinkFactory   
-        if LinkFactory._class_dict.has_key(cls.appname):
+        """ Regsiter this class in the `LinkFactory` """
+        if cls.appname in LinkFactory._class_dict:
             return
         LinkFactory.register(cls.appname, cls)
-        if hasattr(cls, '_register_links'):
-            cls._register_links()
-        
 
     @property
     def arg_names(self):
@@ -236,7 +229,15 @@ class Link(object):
 
     @property
     def full_linkname(self):
-        return self.link_prefix+self.linkname
+        """Return the linkname with the prefix attached
+        This is useful to distinguish between links on
+        different `Chain` objects.
+        """
+        return self.link_prefix + self.linkname
+
+    def run_analysis(self, argv):
+        """Implemented by sub-classes to run a particular analysis"""
+        raise NotImplementedError('run_analysis')
 
     def _get_args(self):
         """Internal function to cast self._options into dictionary
@@ -292,7 +293,7 @@ class Link(object):
                 sub_files.update(job_details.file_dict)
             if job_details.sub_file_dict is not None:
                 sub_files.update(job_details.sub_file_dict)
-                
+
     def _pre_run_checks(self, stream=sys.stdout, dry_run=False):
         """Do some checks before running this link
 
@@ -313,7 +314,7 @@ class Link(object):
             True if it is ok to proceed with running the link
         """
         input_missing = self.check_input_files(return_found=False)
-        if len(input_missing) != 0:
+        if input_missing:
             if dry_run:
                 stream.write("Input files are missing: %s: %i\n" %
                              (self.linkname, len(input_missing)))
@@ -321,7 +322,7 @@ class Link(object):
                 raise OSError("Input files are missing: %s" % input_missing)
 
         output_found, output_missing = self.check_output_files()
-        if len(output_missing) == 0 and len(output_found) > 0:
+        if output_found and not output_missing:
             stream.write("All output files for %s already exist: %i %i %i\n" %
                          (self.linkname, len(output_found),
                           len(output_missing), len(self.files.output_files)))
@@ -329,7 +330,7 @@ class Link(object):
                 pass
             else:
                 pass
-                #return False
+                # return False
         return True
 
     def _set_file_stage(self, file_stage):
@@ -358,12 +359,12 @@ class Link(object):
 
         Returns `JobDetails`
         """
-        #try:
+        # try:
         self.update_args(job_config)
-        #except IOError:
-            # This means that some input file need for the 
-            # configuraiton hasn't been created yet
-        #sys.stderr.write("Warning %s could not be configured\n"%self.full_linkname)
+        # except IOError:
+        # This means that some input file need for the
+        # configuraiton hasn't been created yet
+        # sys.stderr.write("Warning %s could not be configured\n"%self.full_linkname)
         job_details = JobDetails(jobname=self.full_linkname,
                                  jobkey=key,
                                  appname=self.appname,
@@ -374,7 +375,6 @@ class Link(object):
                                  sub_file_dict=copy.deepcopy(self.sub_files),
                                  status=status)
         return job_details
-
 
     def _map_scratch_files(self, file_dict):
         """Build and return the mapping for copying files to and from scratch area"""
@@ -397,19 +397,20 @@ class Link(object):
 
     def _stage_input_files(self, file_mapping, dry_run=True):
         """Stage the input files to the scratch area and adjust the arguments accordingly"""
-        #print ("Staging input ", file_mapping)
+        # print ("Staging input ", file_mapping)
         if self._file_stage is None:
             return
         self._file_stage.copy_to_scratch(file_mapping, dry_run)
 
     def _stage_output_files(self, file_mapping, dry_run=True):
         """Stage the input files to the scratch area and adjust the arguments accordingly"""
-        #print ("Staging output ", file_mapping)
+        # print ("Staging output ", file_mapping)
         if self._file_stage is None:
             return
         self._file_stage.copy_from_scratch(file_mapping, dry_run)
 
-    def _run_link(self, stream=sys.stdout, dry_run=False, stage_files=True, resubmit_failed=False):
+    def _run_link(self, stream=sys.stdout, dry_run=False,
+                  stage_files=True, resubmit_failed=False):
         """Runs this link.
 
         This checks if input and output files are present.
@@ -449,6 +450,8 @@ class Link(object):
                 self._stage_output_files(output_file_mapping, dry_run)
             self._finalize(dry_run)
         else:
+            if resubmit_failed:
+                print ("Not resubmitting failed link %s"%(self.linkname))
             status = JobStatus.failed
         if dry_run:
             return
@@ -476,15 +479,16 @@ class Link(object):
 
         Returns `JobDetails`
         """
-        job_details = self._create_job_details(key, job_config, logfile, status)
+        job_details = self._create_job_details(
+            key, job_config, logfile, status)
         self.jobs[job_details.fullkey] = job_details
         return job_details
 
     def _register_self(self, logfile, key=JobDetails.topkey, status=JobStatus.unknown):
-        """Runs this link, captures output to logfile, 
+        """Runs this link, captures output to logfile,
         and records the job in self.jobs"""
-        fullkey = JobDetails.make_fullkey(self.full_linkname, key)        
-        if self.jobs.has_key(fullkey):
+        fullkey = JobDetails.make_fullkey(self.full_linkname, key)
+        if fullkey in self.jobs:
             job_details = self.jobs[fullkey]
             job_details.status = status
         else:
@@ -499,9 +503,9 @@ class Link(object):
 
     def _set_status_self(self, key=JobDetails.topkey, status=JobStatus.unknown):
         """ Set the status of this job """
-        fullkey = JobDetails.make_fullkey(self.full_linkname, key)                
-        if self.jobs.has_key(fullkey):
-            self.jobs[fullkey].status = status          
+        fullkey = JobDetails.make_fullkey(self.full_linkname, key)
+        if fullkey in self.jobs:
+            self.jobs[fullkey].status = status
             if self._job_archive:
                 self._job_archive.register_job(self.jobs[fullkey])
         else:
@@ -509,12 +513,13 @@ class Link(object):
 
     def _write_status_to_log(self, return_code, stream=sys.stdout):
         """ Write the status of this job to a log stream """
-        stream.write("Timestamp: %i\n"%get_timestamp())
+        stream.write("Timestamp: %i\n" % get_timestamp())
         if return_code == 0:
-            stream.write("%s\n"%self._interface.string_successful)
+            stream.write("%s\n" % self._interface.string_successful)
         else:
-            stream.write("%s %i\n"%(self._interface.string_exited, return_code))
- 
+            stream.write("%s %i\n" %
+                         (self._interface.string_exited, return_code))
+
     def _finalize(self, dry_run=False):
         """Remove / compress files as requested """
         for rmfile in self.files.temp_files:
@@ -524,12 +529,10 @@ class Link(object):
                 os.remove(rmfile)
         for gzfile in self.files.gzip_files:
             if dry_run:
-                #print ("gzip %s" % gzfile)
+                # print ("gzip %s" % gzfile)
                 pass
             else:
                 os.system('gzip -9 %s' % gzfile)
-
-
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application
@@ -561,19 +564,19 @@ class Link(object):
                 failed_jobs[job_key] = job_details
         return failed_jobs
 
-    def check_job_status(self, key=JobDetails.topkey,                          
+    def check_job_status(self, key=JobDetails.topkey,
                          fail_running=False,
                          fail_pending=False,
                          force_check=False):
         """Check the status of a particular job
-        
+
         By default this checks the status of the top-level job
         """
-        if self.jobs.has_key(key):
+        if key in self.jobs:
             status = self.jobs[key].status
-            if status in [JobStatus.unknown, JobStatus.ready, 
+            if status in [JobStatus.unknown, JobStatus.ready,
                           JobStatus.pending, JobStatus.running] or force_check:
-                status = self._interface.check_job(self.jobs[key])            
+                status = self._interface.check_job(self.jobs[key])
             if status == JobStatus.running and fail_running:
                 status = JobStatus.failed
             if status == JobStatus.pending and fail_pending:
@@ -583,18 +586,18 @@ class Link(object):
                 self._job_archive.register_job(self.jobs[key])
         else:
             status = JobStatus.no_job
-        
+
         return status
 
-    def check_jobs_status(self, 
+    def check_jobs_status(self,
                           fail_running=False,
                           fail_pending=False):
         """Check the status of all the jobs run from this link """
         n_failed = 0
         n_passed = 0
         n_total = 0
-        for job_key, job_details in self.jobs.items():
-            n_total +=1
+        for job_details in self.jobs.values():
+            n_total += 1
             if job_details.status == JobStatus.failed:
                 n_failed += 1
             elif job_details.status == JobStatus.partial_failed:
@@ -604,20 +607,19 @@ class Link(object):
             elif fail_pending and job_details.status == JobStatus.pending:
                 n_failed += 1
             elif job_details.status == JobStatus.done:
-                n_passed +=1
+                n_passed += 1
 
         if n_failed > 0:
             if n_passed > 0:
                 return JobStatus.partial_failed
-            else:
-                return JobStatus.failed
+            return JobStatus.failed
         elif n_passed == n_total:
             return JobStatus.done
         elif n_passed > 0:
             return JobStatus.running
 
         return JobStatus.pending
-       
+
     def clear_jobs(self, recursive=True):
         """Clear the dictionary with all the jobs
 
@@ -626,20 +628,18 @@ class Link(object):
         self.jobs.clear()
 
     def clean_jobs(self, clean_all=False):
-        """ """ 
-        self._interface.clean_jobs(self,
-                                   job_archive=self._job_archive)
+        """Clean out all of the jobs associated to this link. """
+        self._interface.clean_jobs(self)
 
     def get_jobs(self, recursive=True):
         """Return a dictionary with all the jobs
 
         If recursive is True this will include jobs from internal `Link`
-        """                
+        """
         if recursive:
             ret_dict = self.jobs.copy()
             return ret_dict
-        else:
-            return self.jobs
+        return self.jobs
 
     def check_input_files(self,
                           return_found=True,
@@ -659,7 +659,8 @@ class Link(object):
 
         Return two lists: (found, missing)
         """
-        all_output_files = self.files.chain_output_files + self.sub_files.chain_output_files
+        all_output_files = self.files.chain_output_files + \
+            self.sub_files.chain_output_files
         return check_files(all_output_files, self._file_stage,
                            return_found, return_missing)
 
@@ -692,9 +693,10 @@ class Link(object):
 
         This is exactly the command as called from the Unix command line.
         """
+        # FIXME, this isn't really great as it force you to have all the arguments
         command_template = self.command_template()
         format_dict = self.args.copy()
-        
+
         for key, value in format_dict.items():
             # protect whitespace
             if isinstance(value, list):
@@ -707,13 +709,14 @@ class Link(object):
                     outstr += ' '
                     outstr += outkey
                     outstr += lval
-                format_dict[key] = '"%s"'%outstr
+                format_dict[key] = '"%s"' % outstr
             elif isinstance(value, str) and value.find(' ') >= 0 and key != 'args':
-                format_dict[key] = '"%s"'%value
+                format_dict[key] = '"%s"' % value
+            elif value is None:
+                format_dict[key] = 'None'
 
         command = command_template.format(**format_dict)
         return command
- 
 
     def run_command(self, stream=sys.stdout, dry_run=False):
         """Runs the command for this link.  This method can be overridden by
@@ -732,13 +735,11 @@ class Link(object):
             stream.write("%s\n" % command)
             stream.flush()
             return 0
-        else:
-            p = subprocess.Popen(command.split(), 
-                                 stderr=stream,
-                                 stdout=stream)
-            p.communicate()
-            return p.returncode
-
+        proc = subprocess.Popen(command.split(),
+                                stderr=stream,
+                                stdout=stream)
+        proc.communicate()
+        return proc.returncode
 
     def run(self, stream=sys.stdout, dry_run=False, stage_files=True, resubmit_failed=False):
         """Runs this link.
@@ -775,7 +776,6 @@ class Link(object):
         ostream = open(job_details.logfile, 'w')
         self.run(ostream, dry_run, stage_files, resubmit_failed)
 
-
     def command_template(self):
         """Build and return a string that can be used as a template invoking
         this chain from the command line.
@@ -797,7 +797,7 @@ class Link(object):
                 opt_val = val
             opt_type = self._options[key][2]
             if key == 'args':
-                # 'args' is special, pull it out and move it to the back                
+                # 'args' is special, pull it out and move it to the back
                 arg_string += ' {%s}' % key
             elif opt_type is bool:
                 if opt_val:
