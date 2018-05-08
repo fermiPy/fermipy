@@ -9,6 +9,7 @@ import sys
 
 from fermipy.jobs.job_archive import JobStatus
 
+
 def remove_file(filepath, dry_run=False):
     """Remove the file at filepath
 
@@ -62,8 +63,7 @@ def check_log(logfile, exited='Exited with exit code',
         return JobStatus.failed
     elif successful in open(logfile).read():
         return JobStatus.done
-    else:
-        return JobStatus.running
+    return JobStatus.running
 
 
 class SysInterface(object):
@@ -72,10 +72,12 @@ class SysInterface(object):
     string_exited = 'Exited with exit code'
     string_successful = 'Successfully completed'
 
-    """C'tor """    
+    """C'tor """
+
     def __init__(self, **kwargs):
         self._dry_run = kwargs.get('dry_run', False)
-        
+        self._job_check_sleep = kwargs.get('job_check_sleep', None)
+
     @classmethod
     def check_job(cls, job_details):
         """ Check the status of a specfic job """
@@ -118,7 +120,7 @@ class SysInterface(object):
         if job_archive is not None:
             job_archive.register_job(job_details)
         return job_details
-    
+
     def submit_jobs(self, link, job_dict=None, job_archive=None, stream=sys.stdout):
         """Run the `Link` with all of the items job_dict as input.
 
@@ -134,10 +136,12 @@ class SysInterface(object):
             job_config = job_details.job_config
             # clean failed jobs
             if job_details.status == JobStatus.failed:
-                clean_job(job_details.logfile, job_details.outfiles, self._dry_run)
-                #clean_job(job_details.logfile, {}, self._dry_run)
+                clean_job(job_details.logfile,
+                          job_details.outfiles, self._dry_run)
+                # clean_job(job_details.logfile, {}, self._dry_run)
             job_config['logfile'] = job_details.logfile
-            new_job_details = self.dispatch_job(link, job_key, job_archive, stream)
+            new_job_details = self.dispatch_job(
+                link, job_key, job_archive, stream)
             if new_job_details.status == JobStatus.failed:
                 failed = True
                 clean_job(new_job_details.logfile,
@@ -147,10 +151,8 @@ class SysInterface(object):
             return JobStatus.failed
         return JobStatus.done
 
-
-    
-    def clean_jobs(self, link, job_dict=None, job_archive=None, clean_all=False):
-        """Clean up all the 
+    def clean_jobs(self, link, job_dict=None, clean_all=False):
+        """ Clean up all the jobs associated with this link.
 
         Returns a `JobStatus` enum
         """
@@ -158,16 +160,12 @@ class SysInterface(object):
         if job_dict is None:
             job_dict = link.jobs
 
-        for job_key, job_details in sorted(job_dict.items()):
-            job_config = job_details.job_config
+        for job_details in job_dict.values():
             # clean failed jobs
             if job_details.status == JobStatus.failed or clean_all:
-                #clean_job(job_details.logfile, job_details.outfiles, self._dry_run)
+                # clean_job(job_details.logfile, job_details.outfiles, self._dry_run)
                 clean_job(job_details.logfile, {}, self._dry_run)
                 job_details.status = JobStatus.ready
         if failed:
             return JobStatus.failed
         return JobStatus.done
-
-
-    

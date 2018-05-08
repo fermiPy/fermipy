@@ -7,41 +7,36 @@ This is useful to parallize the production of the source maps
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
-import argparse
 import math
-
-import xml.etree.cElementTree as ElementTree
 
 import BinnedAnalysis as BinnedAnalysis
 import pyLikelihood as pyLike
 
-from fermipy import utils
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.link import add_argument, Link
-from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.link import Link
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.catalog_src_manager import make_catalog_comp_dict
-from fermipy.diffuse.source_factory import make_sources
 from fermipy.diffuse import defaults as diffuse_defaults
 
 
 NAME_FACTORY = NameFactory()
 
+
 class GtSrcmapsCatalog(Link):
-    """Small class to create and write srcmaps for all the catalog sources, 
+    """Small class to create and write srcmaps for all the catalog sources,
     once source at a time.
 
     This is useful for creating source maps for all the sources in a catalog
     """
     NULL_MODEL = 'srcmdls/null.xml'
- 
+
     appname = 'fermipy-srcmaps-catalog'
     linkname_default = 'srcmaps-catalog'
-    usage = '%s [options]' %(appname)
+    usage = '%s [options]' % (appname)
     description = "Run gtsrcmaps for for all the sources in a catalog"
 
     default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
@@ -60,12 +55,6 @@ class GtSrcmapsCatalog(Link):
                              srcmdl=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(GtSrcmapsCatalog, self).__init__(linkname, **init_dict)
- 
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -89,7 +78,7 @@ class GtSrcmapsCatalog(Link):
         min_idx = args.srcmin
         max_idx = args.srcmax
         if max_idx < 0:
-            max_idx = srcNames.size();
+            max_idx = srcNames.size()
 
         for i in xrange(min_idx, max_idx):
             if i == min_idx:
@@ -109,7 +98,7 @@ class GtSrcmapsCatalog(Link):
             os.system("gzip -9 %s" % args.outfile)
 
 
-class SrcmapsCatalog_SG(ConfigMaker):
+class SrcmapsCatalog_SG(ScatterGather):
     """Small class to generate configurations for gtsrcmaps for catalog sources
 
     This takes the following arguments:
@@ -132,14 +121,6 @@ class SrcmapsCatalog_SG(ConfigMaker):
                            nsrc=(500, 'Number of sources per job', int),
                            make_xml=diffuse_defaults.diffuse['make_xml'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(SrcmapsCatalog_SG, self).__init__(link,
-                                                options=kwargs.get('options',
-                                                                   self.default_options.copy()))
-        self.link = link
-
     @staticmethod
     def _make_xml_files(catalog_info_dict, comp_info_dict):
         """Make all the xml file for individual components
@@ -161,7 +142,7 @@ class SrcmapsCatalog_SG(ConfigMaker):
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
 
-        ret_dict = make_catalog_comp_dict(sources=args['library'], 
+        ret_dict = make_catalog_comp_dict(sources=args['library'],
                                           basedir=NAME_FACTORY.base_dict['basedir'])
         catalog_info_dict = ret_dict['catalog_info_dict']
         comp_info_dict = ret_dict['comp_info_dict']
@@ -174,7 +155,7 @@ class SrcmapsCatalog_SG(ConfigMaker):
         for catalog_name, catalog_info in catalog_info_dict.items():
 
             n_cat_src = len(catalog_info.catalog.table)
-            n_job = int(math.ceil(float(n_cat_src)/n_src_per_job))
+            n_job = int(math.ceil(float(n_cat_src) / n_src_per_job))
 
             for comp in components:
                 zcut = "zmax%i" % comp.zmax
@@ -189,10 +170,11 @@ class SrcmapsCatalog_SG(ConfigMaker):
                                  fullpath=True)
 
                 for i_job in range(n_job):
-                    full_key = "%s_%02i"%(key, i_job)
-                    srcmin = i_job*n_src_per_job
-                    srcmax = min(srcmin+n_src_per_job, n_cat_src)
-                    outfile = NAME_FACTORY.srcmaps(**name_keys).replace('.fits', "_%02i.fits"%(i_job))
+                    full_key = "%s_%02i" % (key, i_job)
+                    srcmin = i_job * n_src_per_job
+                    srcmax = min(srcmin + n_src_per_job, n_cat_src)
+                    outfile = NAME_FACTORY.srcmaps(
+                        **name_keys).replace('.fits', "_%02i.fits" % (i_job))
                     logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                     job_configs[full_key] = dict(cmap=NAME_FACTORY.ccube(**name_keys),
                                                  expcube=NAME_FACTORY.ltcube(**name_keys),
@@ -209,5 +191,6 @@ class SrcmapsCatalog_SG(ConfigMaker):
 
 
 def register_classes():
+    """Register these classes with the `LinkFactory` """
     GtSrcmapsCatalog.register_class()
     SrcmapsCatalog_SG.register_class()
