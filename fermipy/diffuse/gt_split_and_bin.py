@@ -96,7 +96,7 @@ class SplitAndBin(Chain):
                                  mktime='none')
             selectfile_energy = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select))
             linkname = 'select-energy-%s-%s' % (key_e, zcut)
-            self._load_link_args(linkname, Gtlink_select,
+            self._set_link(linkname, Gtlink_select,
                                  infile=ft1file,
                                  outfile=selectfile_energy,
                                  zmax=zmax,
@@ -121,7 +121,7 @@ class SplitAndBin(Chain):
                     selectfile_psf = make_full_path(
                         outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
                     binfile = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
-                    self._load_link_args(linkname_select, Gtlink_select,
+                    self._set_link(linkname_select, Gtlink_select,
                                          infile=selectfile_energy,
                                          outfile=selectfile_psf,
                                          zmax=zmax,
@@ -130,7 +130,7 @@ class SplitAndBin(Chain):
                                          evtype=EVT_TYPE_DICT[psf_type],
                                          evclass=NAME_FACTORY.evclassmask(evtclassval),
                                          pfiles=pfiles)
-                    self._load_link_args(linkname_bin, Gtlink_bin,
+                    self._set_link(linkname_bin, Gtlink_bin,
                                          coordsys=coordsys,
                                          hpx_order=hpx_order,
                                          evfile=selectfile_psf,
@@ -221,18 +221,18 @@ class SplitAndBinChain(Chain):
         scratch = input_dict.get('scratch', None)
         dry_run = input_dict.get('dry_run', None)
 
-        self._load_link_args('split-and-bin', SplitAndBin_SG,
+        self._set_link('split-and-bin', SplitAndBin_SG,
                              comp=comp, data=data,
                              hpx_order_max=input_dict.get('hpx_order_ccube', 9),
                              ft1file=ft1file,
                              scratch=scratch,
                              dry_run=dry_run)
 
-        self._load_link_args('coadd-split', CoaddSplit_SG,
+        self._set_link('coadd-split', CoaddSplit_SG,
                              comp=comp, data=data,
                              ft1file=ft1file)
 
-        self._load_link_args('expcube2', Gtexpcube2_SG,
+        self._set_link('expcube2', Gtexpcube2_SG,
                              comp=comp, data=data,
                              hpx_order_max=input_dict.get('hpx_order_expcube', 5),
                              dry_run=dry_run)
