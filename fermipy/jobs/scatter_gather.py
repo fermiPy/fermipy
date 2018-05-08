@@ -255,7 +255,7 @@ class ScatterGather(Link):
         if args.action == 'skip':
             return JobStatus.no_job
         elif args.action in ['run', 'resubmit', 'check_status', 'config']:
-            self.build_job_configs(args.__dict__)
+            self._job_configs = self.build_job_configs(args.__dict__)
 
         self._interface._dry_run = args.dry_run
 
@@ -285,7 +285,7 @@ class ScatterGather(Link):
             dictionary of arguments to override the current values
         """
         self.args = extract_arguments(override_args, self.args)
-        self.build_job_configs(self.args)
+        self._job_configs = self.build_job_configs(self.args)
         if not self._scatter_link.jobs:
             self._build_job_dict()
         self._latch_file_info()
