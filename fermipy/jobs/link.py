@@ -10,6 +10,7 @@ import os
 import copy
 import argparse
 import subprocess
+import abc
 
 from collections import OrderedDict
 
@@ -242,6 +243,7 @@ class Link(object):
         about all the batch jobs associated to this `Link`
 
     """
+    __metaclass__ = abc.ABCMeta
     topkey = '__top__'
 
     appname = 'dummy'
@@ -289,6 +291,16 @@ class Link(object):
         self.files = FileDict(file_args=self.default_file_args.copy())
         self.sub_files = FileDict()
         self.jobs = OrderedDict()
+
+    @staticmethod
+    def construct_docstring(options):
+        """Construct a docstring for a set of options"""
+        s = "\nParameters\n"
+        s += "----------\n\n"
+        for key, opt in options.items():
+            s += "%s : %s\n      %s [%s]\n" % (key, str(opt[2]),
+                                               str(opt[1]), str(opt[0]))
+        return s
 
     @classmethod
     def create(cls, **kwargs):

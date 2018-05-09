@@ -58,6 +58,8 @@ class CopyBaseROI(Link):
 
     copyfiles = ['srcmap_00.fits']
 
+    __doc__ += Link.construct_docstring(default_options)
+
     @classmethod
     def copy_analysis_files(cls, orig_dir, dest_dir, files):
         """ Copy a list of files from orig_dir to dest_dir"""
@@ -119,28 +121,30 @@ class CopyBaseROI_SG(ScatterGather):
                            sim=defaults.sims['sim'],
                            extracopy=defaults.sims['extracopy'])
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
         job_configs = {}
 
         ttype = args['ttype']
-        roi_baseline = args['roi_baseline']
-        extracopy = args['extracopy']
         (sim_targets_yaml, sim) = NAME_FACTORY.resolve_targetfile(args)
         targets = load_yaml(sim_targets_yaml)
 
+        base_config = dict(ttype=ttype,
+                           roi_baseline=args['roi_baseline'],
+                           extracopy = args['extracopy'],
+                           sim=sim)
+                           
         for target_name in targets.keys():
             targetdir = NAME_FACTORY.sim_targetdir(target_type=ttype,
                                                    target_name=target_name,
                                                    sim_name=sim)
             logfile = os.path.join(targetdir, 'copy_base_dir.log')
-            job_config = dict(ttype=ttype,
-                              target=target_name,
-                              roi_baseline=roi_baseline,
-                              sim=sim,
-                              extracopy=extracopy,
-                              logfile=logfile)
+            job_config = base_config.copy()
+            job_config.update(dict(target=target_name,
+                                   logfile=logfile))
             job_configs[target_name] = job_config
 
         return job_configs
@@ -159,6 +163,8 @@ class RandomDirGen(Link):
     default_options = dict(config=defaults.common['config'],
                            rand_config=defaults.sims['rand_config'],
                            outfile=defaults.generic['outfile'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     @staticmethod
     def _make_wcsgeom_from_config(config):
@@ -257,6 +263,8 @@ class SimulateROI(Link):
                            nsims=defaults.sims['nsims'],
                            seed=defaults.sims['seed'])
 
+    __doc__ += Link.construct_docstring(default_options)
+
     @staticmethod
     def _run_simulation(gta, roi_baseline,
                         injected_source, test_sources, seed, mcube_file=None):
@@ -353,6 +361,8 @@ class RandomDirGen_SG(ScatterGather):
                            rand_config=defaults.sims['rand_config'],
                            sim=defaults.sims['sim'])
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -372,6 +382,8 @@ class RandomDirGen_SG(ScatterGather):
 
         targets = load_yaml(targets_yaml)
 
+        base_config = dict(rand_config=rand_yaml)
+
         for target_name in targets.keys():
             name_keys = dict(target_type=ttype,
                              target_name=target_name,
@@ -381,10 +393,10 @@ class RandomDirGen_SG(ScatterGather):
             config_path = os.path.join(simdir, config_yaml)
             outfile = os.path.join(simdir, 'skydirs.yaml')
             logfile = make_nfs_path(outfile.replace('yaml', 'log'))
-            job_config = dict(config=config_path,
-                              rand_config=rand_yaml,
-                              outfile=outfile,
-                              logfile=logfile)
+            job_config = base_config.copy()
+            job_config.update(dict(config=config_path,
+                                   outfile=outfile,
+                                   logfile=logfile))
             job_configs[target_name] = job_config
 
         return job_configs
@@ -411,6 +423,8 @@ class SimulateROI_SG(ScatterGather):
                            nsims=defaults.sims['nsims'],
                            seed=defaults.sims['seed'])
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -427,8 +441,12 @@ class SimulateROI_SG(ScatterGather):
             config_yaml = config_override
 
         targets = load_yaml(targets_yaml)
-        sim_profile = args['sim_profile']
-        roi_baseline = args['roi_baseline']
+
+        base_config = dict(sim_profile=args['sim_profile'],
+                           roi_baseline=args['roi_baseline'],
+                           sim=sim,
+                           nsims=args['nsims'],
+                           seed=args['seed'])
 
         for target_name, target_list in targets.items():
             name_keys = dict(target_type=ttype,
@@ -439,14 +457,10 @@ class SimulateROI_SG(ScatterGather):
             config_path = os.path.join(simdir, config_yaml)
             logfile = make_nfs_path(os.path.join(
                 simdir, "%s_%s.log" % (self.linkname, target_name)))
-            job_config = dict(config=config_path,
-                              logfile=logfile,
-                              sim=sim,
-                              sim_profile=sim_profile,
-                              profiles=target_list,
-                              roi_baseline=roi_baseline,
-                              nsims=args['nsims'],
-                              seed=args['seed'])
+            job_config = base_config.copy()
+            job_config.update(dict(config=config_path,
+                                   logfile=logfile,
+                                   profiles=target_list))
             job_configs[target_name] = job_config
 
         return job_configs

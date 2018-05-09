@@ -1,6 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Classes and utilites to keep track the various jobs that comprise an analysis pipeline.
+Classes and utilites to keep track the various jobs that are running
+in an analysis pipeline.
 
 The main class is `JobArchive`, which keep track of all the jobs associated to an analysis.
 
@@ -22,16 +23,6 @@ from astropy.table import Table, Column
 
 from fermipy.fits_utils import write_tables_to_fits
 from fermipy.jobs.file_archive import get_timestamp, FileStatus, FileDict, FileArchive
-
-
-def get_matches(table, colname, value):
-    """Get the rows matching a value for a particular column.
-    """
-    if table[colname].dtype.kind in ['S', 'U']:
-        matches = table[colname].astype(str) == value
-    else:
-        matches = table[colname] == value
-    return matches
 
 
 # @unique
@@ -94,7 +85,7 @@ class JobStatusVector(object):
 
     @property
     def n_waiting(self):
-        """Number of jobs in various waiting states"""
+        """Return the number of jobs in various waiting states"""
         return self._counters[JobStatus.no_job] +\
             self._counters[JobStatus.unknown] +\
             self._counters[JobStatus.not_ready] +\
@@ -102,27 +93,27 @@ class JobStatusVector(object):
 
     @property
     def n_pending(self):
-        """Number of jobs submitted to batch, but not yet running"""
+        """Return the number jobs submitted to batch, but not yet running"""
         return self._counters[JobStatus.pending]
 
     @property
     def n_running(self):
-        """Number of running jobs"""
+        """Return the number of running jobs"""
         return self._counters[JobStatus.running]
 
     @property
     def n_done(self):
-        """Number of successfully completed jobs"""
+        """Return the number of successfully completed jobs"""
         return self._counters[JobStatus.done]
 
     @property
     def n_failed(self):
-        """Number of failed jobs"""
+        """Return the number of failed jobs"""
         return self._counters[JobStatus.failed] + self._counters[JobStatus.partial_failed]
 
     @property
     def n_total(self):
-        """Total number of jobs"""
+        """Return the total number of jobs"""
         return self._counters.sum()
 
     def reset(self):
@@ -327,7 +318,17 @@ class JobDetails(object):
                 self.intfile_ids = np.zeros((0), int)
 
     def get_file_paths(self, file_archive, file_id_array):
-        """Get the full paths of the files used by this object from the the id arrays  """
+        """Get the full paths of the files used by this object from the the id arrays
+
+        Parameters
+        ----------
+        file_archive : `FileArchive`
+            Used to look up file ids
+
+        file_id_array : `numpy.array`
+            Array that remaps the file indexes
+
+        """
         full_list = []
         status_dict = {}
         full_list += file_archive.get_file_paths(
