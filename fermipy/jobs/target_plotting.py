@@ -4,7 +4,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 """
-Top level script to make a castro plot in mass / sigmav space
+Module with classes for plotting and SED and to  
+paralleize that analysis.
 """
 from __future__ import absolute_import, division, print_function
 
@@ -26,9 +27,7 @@ NAME_FACTORY = NameFactory(basedir='.')
 
 
 class PlotCastro(Link):
-    """Small class wrap an analysis script.
-
-    This is useful for parallelizing analysis using the fermipy.jobs module.
+    """Small class to plot an SED as a 'Castro' plot.
     """
     appname = 'fermipy-plot-castro'
     linkname_default = 'plot-castro'
@@ -37,6 +36,8 @@ class PlotCastro(Link):
 
     default_options = dict(infile=defaults.generic['infile'],
                            outfile=defaults.generic['outfile'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def run_analysis(self, argv):
         """Run this analysis"""
@@ -52,9 +53,9 @@ class PlotCastro(Link):
 
 
 class PlotCastro_SG(ScatterGather):
-    """Small class to generate configurations for this script
+    """Small class to generate configurations for the `PlotCastro` class.
 
-    This adds the following arguments:
+    This loops over all the targets defined in the target list.
     """
     appname = 'fermipy-plot-castro-sg'
     usage = "%s [options]" % (appname)
@@ -65,6 +66,8 @@ class PlotCastro_SG(ScatterGather):
 
     default_options = dict(ttype=defaults.common['ttype'],
                            targetlist=defaults.common['targetlist'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
