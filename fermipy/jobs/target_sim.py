@@ -321,10 +321,8 @@ class SimulateROI(Link):
 
         injected_source = sim_config.get('injected_source', None)
         if injected_source is not None:
-            injected_source['source_model'][
-                'ra'] = gta.config['selection']['ra']
-            injected_source['source_model'][
-                'dec'] = gta.config['selection']['dec']
+            injected_source['source_model']['ra'] = gta.config['selection']['ra']
+            injected_source['source_model']['dec'] = gta.config['selection']['dec']
 
         test_sources = []
         for profile in args.profiles:
