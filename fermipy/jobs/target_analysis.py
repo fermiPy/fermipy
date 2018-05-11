@@ -17,6 +17,8 @@ from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.link import Link
 from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
+from fermipy.jobs.analysis_utils import baseline_roi_fit, localize_sources,\
+    add_source_get_correlated
 
 from fermipy.jobs.name_policy import NameFactory
 from fermipy.jobs import defaults
@@ -60,28 +62,12 @@ class AnalyzeROI(Link):
                          fileio={'workdir_regex': '\.xml$|\.npy$'})
 
         gta.setup(overwrite=False)
-        gta.free_sources(False)
-        gta.write_roi('base_roi', make_plots=args.make_plots)
 
-        gta.free_sources(True, minmax_npred=[1e3, np.inf])
-        gta.optimize()
-        gta.free_sources(False)      
-        gta.print_roi()
+        baseline_roi_fit(gta, make_plots=args.make_plots,
+                         minmax_npred=[1e3, np.inf])
 
-        # Localize all point sources
-        for src in sorted(gta.roi.sources, key=lambda t: t['ts'], reverse=True):
-            #    for s in gta.roi.sources:
-
-            if not src['SpatialModel'] == 'PointSource':
-                continue
-            if src['offset_roi_edge'] > -0.1:
-                continue
-
-            gta.localize(src.name, nstep=5, dtheta_max=0.5, update=True,
+        localize_sources(gta, nstep=5, dtheta_max=0.5, update=True,
                          prefix='base', make_plots=args.make_plots)
-
-        gta.optimize()
-        gta.print_roi()
 
         gta.find_sources(sqrt_ts_threshold=5.0, search_skydir=gta.roi.skydir,
                          search_minmax_radius=[1.0, np.nan])
@@ -90,7 +76,7 @@ class AnalyzeROI(Link):
         gta.print_params()
 
         gta.free_sources(skydir=gta.roi.skydir, distance=1.0, pars='norm')
-        gta.fit()
+        gta.fit(covar=True)
         gta.print_roi()
         gta.print_params()
 
@@ -112,7 +98,9 @@ class AnalyzeSED(Link):
                            roi_baseline=defaults.common['roi_baseline'],
                            skydirs=defaults.sims['skydirs'],
                            profiles=defaults.common['profiles'],
-                           make_plots=defaults.common['make_plots'])
+                           make_plots=defaults.common['make_plots'],
+                           astro_bkgs=(None, "Astrophysical background sources", list))
+
 
     __doc__ += Link.construct_docstring(default_options)
 
@@ -164,14 +152,12 @@ class AnalyzeSED(Link):
         gta = GTAnalysis(args.config,
                          logging={'verbosity': 3},
                          fileio={'workdir_regex': '\.xml$|\.npy$'})
-        gta.setup(overwrite=False)
-        gta.load_roi('fit_baseline')
+        #gta.setup(overwrite=False)
+        gta.load_roi(args.roi_baseline)
         gta.print_roi()
 
         basedir = os.path.dirname(args.config)
         # This should be a no-op, b/c it was done in the baseline analysis
-
-        gta.free_sources(skydir=gta.roi.skydir, distance=1.0, pars='norm')
 
         for profile in args.profiles:
             if skydir_dict is None:
@@ -192,17 +178,22 @@ class AnalyzeSED(Link):
                     pkey += "_%06i" % skydir_key
 
                 outfile = "sed_%s.fits" % pkey
-                # test_case need to be a dict with spectrum and morphology
-                gta.add_source(pkey, pdict)
-                # refit the ROI
-                gta.fit()
+
+                # Add the source and get the list of correlated soruces
+                correl_list = add_source_get_correlated(gta, pkey,
+                                                        pdict, correl_thresh=0.25)
+                
+                gta.free_sources(False)
+                for src_name in correl_list:
+                    gta.free_source(src_name, pars='norm')
+
                 # build the SED
                 gta.sed(pkey, outfile=outfile, make_plots=args.make_plots)
 
                 # remove the source
                 gta.delete_source(pkey)
                 # put the ROI back to how it was
-                gta.load_xml('fit_baseline')
+                gta.load_xml(args.roi_baseline)
 
         return gta
 

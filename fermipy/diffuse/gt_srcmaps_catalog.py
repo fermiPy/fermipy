@@ -55,6 +55,8 @@ class GtSrcmapsCatalog(Link):
                              srcmdl=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -101,12 +103,6 @@ class GtSrcmapsCatalog(Link):
 class SrcmapsCatalog_SG(ScatterGather):
     """Small class to generate configurations for gtsrcmaps for catalog sources
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --library  : Yaml file with input source model definitions
-    --make_xml : Write xml files for the individual components
-    --nsrc     : Number of sources per job
     """
     appname = 'fermipy-srcmaps-catalog-sg'
     usage = "%s [options]" % (appname)
@@ -121,17 +117,17 @@ class SrcmapsCatalog_SG(ScatterGather):
                            nsrc=(500, 'Number of sources per job', int),
                            make_xml=diffuse_defaults.diffuse['make_xml'])
 
+    __doc__ += Link.construct_docstring(default_options)
+
     @staticmethod
     def _make_xml_files(catalog_info_dict, comp_info_dict):
         """Make all the xml file for individual components
         """
         for val in catalog_info_dict.values():
-            print("%s : %06i" % (val.srcmdl_name, len(val.roi_model.sources)))
             val.roi_model.write_xml(val.srcmdl_name)
 
         for val in comp_info_dict.values():
             for val2 in val.values():
-                print("%s : %06i" % (val2.srcmdl_name, len(val2.roi_model.sources)))
                 val2.roi_model.write_xml(val2.srcmdl_name)
 
     def build_job_configs(self, args):

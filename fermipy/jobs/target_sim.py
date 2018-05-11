@@ -25,6 +25,7 @@ from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.link import Link
 from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
+from fermipy.jobs.analysis_utils import add_source_get_correlated
 
 from fermipy.jobs.name_policy import NameFactory
 from fermipy.jobs import defaults
@@ -267,41 +268,36 @@ class SimulateROI(Link):
 
     @staticmethod
     def _run_simulation(gta, roi_baseline,
-                        injected_source, test_sources, seed, mcube_file=None):
+                        injected_name, test_sources, seed):
         """Simulate a realization of this analysis"""
-        gta.load_roi(roi_baseline)
+        gta.load_roi('sim_baseline')
         gta.set_random_seed(seed)
-        if injected_source:
-            gta.add_source(injected_source['name'],
-                           injected_source['source_model'])
-            if mcube_file is not None:
-                gta.write_model_map(mcube_file)
-                mc_spec_dict = dict(true_counts=gta.model_counts_spectrum(injected_source['name']),
-                                    energies=gta.energies,
-                                    model=injected_source['source_model'])
-                mcspec_file = os.path.join(
-                    gta.workdir, "mcspec_%s.yaml" % mcube_file)
-                utils.write_yaml(mc_spec_dict, mcspec_file)
-
         gta.simulate_roi()
-        if injected_source:
-            gta.delete_source(injected_source['name'])
+        if injected_name:
+            gta.zero_source(injected_name)
+        
         gta.optimize()
         gta.find_sources(sqrt_ts_threshold=5.0, search_skydir=gta.roi.skydir,
                          search_minmax_radius=[1.0, np.nan])
         gta.optimize()
         gta.free_sources(skydir=gta.roi.skydir, distance=1.0, pars='norm')
-        gta.fit()
-        gta.write_roi('sim_baseline')
+        gta.fit(covar=True)
+        gta.write_roi('sim_refit')
+
         for test_source in test_sources:
             test_source_name = test_source['name']
             sedfile = "sed_%s_%06i.fits" % (test_source_name, seed)
-            gta.add_source(test_source_name, test_source['source_model'])
-            gta.fit()
+            correl_list = add_source_get_correlated(gta, test_source_name,
+                                                    test_source['source_model'],
+                                                    correl_thresh=0.25)
+            gta.free_sources(False)
+            for src_name in correl_list:
+                gta.free_source(src_name, pars='norm')
+
             gta.sed(test_source_name, outfile=sedfile)
             # Set things back to how they were
             gta.delete_source(test_source_name)
-            gta.load_xml('sim_baseline')
+            gta.load_xml('sim_refit')
 
     def run_analysis(self, argv):
         """Run this analysis"""
@@ -313,32 +309,44 @@ class SimulateROI(Link):
 
         gta = GTAnalysis(args.config, logging={'verbosity': 3},
                          fileio={'workdir_regex': '\.xml$|\.npy$'})
+        gta.load_roi(args.roi_baseline)
 
         workdir = os.path.dirname(args.config)
         simfile = os.path.join(workdir, 'sim_%s_%s.yaml' %
                                (args.sim, args.sim_profile))
+
+        mcube_file = "%s_%s" % (args.sim, args.sim_profile)
         sim_config = utils.load_yaml(simfile)
 
         injected_source = sim_config.get('injected_source', None)
         if injected_source is not None:
-            injected_source['source_model']['ra'] = gta.config['selection']['ra']
-            injected_source['source_model']['dec'] = gta.config['selection']['dec']
+            src_dict =  injected_source['source_model']
+            src_dict['ra'] = gta.config['selection']['ra']
+            src_dict['dec'] = gta.config['selection']['dec']
+            injected_name = injected_source['name']
+            gta.add_source(injected_name, src_dict)
+            gta.write_model_map(mcube_file)
+            mc_spec_dict = dict(true_counts=gta.model_counts_spectrum(injected_name),
+                                energies=gta.energies,
+                                model=src_dict)
+            mcspec_file = os.path.join(gta.workdir,
+                                       "mcspec_%s.yaml" % mcube_file)
+            utils.write_yaml(mc_spec_dict, mcspec_file)
+        else:
+            injected_name = None
+
+        gta.write_roi('sim_baseline')
 
         test_sources = []
         for profile in args.profiles:
             profile_path = os.path.join(workdir, 'profile_%s.yaml' % profile)
             test_source = load_yaml(profile_path)
             test_sources.append(test_source)
-            mcube_file = "%s_%s" % (args.sim, profile)
             first = args.seed
             last = first + args.nsims
-            for i in range(first, last):
-                if i == first:
-                    mcube_out = mcube_file
-                else:
-                    mcube_out = None
+            for seed in range(first, last):
                 self._run_simulation(gta, args.roi_baseline,
-                                     injected_source, test_sources, i, mcube_out)
+                                     injected_name, test_sources, seed)
 
 
 class RandomDirGen_SG(ScatterGather):

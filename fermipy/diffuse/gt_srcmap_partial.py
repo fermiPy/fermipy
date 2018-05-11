@@ -61,6 +61,8 @@ class GtSrcmapsDiffuse(Link):
                              srcmdl=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -104,14 +106,10 @@ class GtSrcmapsDiffuse(Link):
             os.system("gzip -9 %s" % args.outfile)
 
 
-class SrcmapsDiffuse_SG(ScatterGather):
-    """Small class to generate configurations for this script
 
-    This adds the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --library  : Diffuse model component definition yaml file'
-    --make_xml : Write xml files for the individual components
+class SrcmapsDiffuse_SG(ScatterGather):
+    """Small class to generate configurations for `GtSrcmapsDiffuse`
+
     """
     appname = 'fermipy-srcmaps-diffuse-sg'
     usage = "%s [options]" % (appname)
@@ -124,6 +122,8 @@ class SrcmapsDiffuse_SG(ScatterGather):
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],
                            make_xml=(True, 'Write xml files needed to make source maps', bool))
+
+    __doc__ += Link.construct_docstring(default_options)
 
     @staticmethod
     def _write_xml(xmlfile, srcs):

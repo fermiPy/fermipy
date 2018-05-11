@@ -8,6 +8,7 @@ import os
 import copy
 
 from fermipy.jobs.file_archive import FileFlags
+from fermipy.jobs.link import Link
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.app_link import AppLink
 from fermipy.jobs.scatter_gather import ScatterGather
@@ -58,6 +59,8 @@ class Gtlink_select(Gtlink):
     default_file_args = dict(infile=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
+
 
 class Gtlink_bin(Gtlink):
     """Small wrapper to run gtbin """
@@ -80,6 +83,8 @@ class Gtlink_bin(Gtlink):
     default_file_args = dict(evfile=FileFlags.in_stage_mask,
                              outfile=FileFlags.out_stage_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
+
 class Gtlink_expcube2(Gtlink):
     """Small wrapper to run gtexpcube2 """
 
@@ -98,6 +103,8 @@ class Gtlink_expcube2(Gtlink):
     default_file_args = dict(infile=FileFlags.input_mask,
                              cmap=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
 
 class Gtlink_scrmaps(Gtlink):
     """Small wrapper to run gtscrmaps """
@@ -120,6 +127,8 @@ class Gtlink_scrmaps(Gtlink):
                              srcmdl=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
+
 class Gtlink_ltsum(Gtlink):
     """Small wrapper to run gtltsum """
 
@@ -133,6 +142,8 @@ class Gtlink_ltsum(Gtlink):
                            outfile=(None, "Output file", str))
     default_file_args = dict(infile1=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
 
 class Gtlink_mktime(Gtlink):
     """Small wrapper to run gtmktime """
@@ -152,6 +163,8 @@ class Gtlink_mktime(Gtlink):
     default_file_args = dict(evfile=FileFlags.in_stage_mask,
                              scfile=FileFlags.in_stage_mask,
                              outfile=FileFlags.out_stage_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
 
 class Gtlink_ltcube(Gtlink):
     """Small wrapper to run gtltcube """
@@ -175,6 +188,8 @@ class Gtlink_ltcube(Gtlink):
                              scfile=FileFlags.in_stage_mask,
                              outfile=FileFlags.out_stage_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
+
 class Link_FermipyCoadd(AppLink):
     """Small wrapper to run fermipy-coadd """
 
@@ -188,6 +203,7 @@ class Link_FermipyCoadd(AppLink):
     default_file_args = dict(args=FileFlags.input_mask,
                              output=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
 
 class Link_FermipyGatherSrcmaps(AppLink):
     """Small wrapper to run fermipy-gather-srcmaps """
@@ -205,6 +221,7 @@ class Link_FermipyGatherSrcmaps(AppLink):
     default_file_args = dict(args=FileFlags.input_mask,
                              output=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
 
 class Link_FermipyVstack(AppLink):
     """Small wrapper to run fermipy-vstack """
@@ -223,6 +240,7 @@ class Link_FermipyVstack(AppLink):
     default_file_args = dict(args=FileFlags.input_mask,
                              output=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
 
 class Link_FermipyHealview(AppLink):
     """Small wrapper to run fermipy-healview """
@@ -239,14 +257,11 @@ class Link_FermipyHealview(AppLink):
     default_file_args = dict(args=FileFlags.input_mask,
                              output=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
 
 class Gtexpcube2_SG(ScatterGather):
-    """Small class to generate configurations for gtexpcube2
+    """Small class to generate configurations for `Gtlink_expcube2`
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --hpx_order: HEALPix order parameter
     """
     appname = 'fermipy-gtexcube2-sg'
     usage = "%s [options]" % (appname)
@@ -258,6 +273,8 @@ class Gtexpcube2_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_expcube'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -313,12 +330,8 @@ class Gtexpcube2_SG(ScatterGather):
 
 
 class Gtltsum_SG(ScatterGather):
-    """Small class to generate configurations for gtexpcube2
+    """Small class to generate configurations for `Gtlink_ltsum`
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --ft1file  : Input list of ft1 files
     """
     appname = 'fermipy-gtltsum-sg'
     usage = "%s [options]" % (appname)
@@ -330,6 +343,8 @@ class Gtltsum_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            ft1file=(None, 'Input FT1 file', str))
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -384,12 +399,9 @@ class Gtltsum_SG(ScatterGather):
 
 
 class SumRings_SG(ScatterGather):
-    """Small class to generate configurations for fermipy-coadd
+    """Small class to generate configurations for `Link_FermipyCoadd`
     to sum galprop ring gasmaps
-
-    This takes the following arguments:
-    --library  : Diffuse model component definition yaml file
-    --outdir   : Output directory
+    
     """
     appname = 'fermipy-sum-rings-sg'
     usage = "%s [options]" % (appname)
@@ -400,6 +412,8 @@ class SumRings_SG(ScatterGather):
 
     default_options = dict(library=diffuse_defaults.diffuse['library'],
                            outdir=(None, 'Output directory', str),)
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -424,13 +438,9 @@ class SumRings_SG(ScatterGather):
 
 
 class Vstack_SG(ScatterGather):
-    """Small class to generate configurations for fermipy-vstack
+    """Small class to generate configurations for `Link_FermipyVstack`
     to merge source maps
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --diffuse  : Diffuse model component definition yaml file'
     """
     appname = 'fermipy-vstack-sg'
     usage = "%s [options]" % (appname)
@@ -442,6 +452,8 @@ class Vstack_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],)
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -489,13 +501,8 @@ class Vstack_SG(ScatterGather):
 
 
 class GatherSrcmaps_SG(ScatterGather):
-    """Small class to generate configurations for fermipy-vstack
-    to merge source maps
+    """Small class to generate configurations for `Link_FermipyGatherSrcmaps`
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --library  : Catalog component definition yaml file'
     """
     appname = 'fermipy-gather-srcmaps-sg'
     usage = "%s [options]" % (appname)
@@ -507,6 +514,8 @@ class GatherSrcmaps_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -545,13 +554,8 @@ class GatherSrcmaps_SG(ScatterGather):
 
 
 class Healview_SG(ScatterGather):
-    """Small class to generate configurations for fermipy-healview
-    to display source maps
-
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --library  : Diffuse model component definition yaml file'
+    """Small class to generate configurations for `Link_FermipyHealview`
+    
     """
     appname = 'fermipy-healviw-sg'
     usage = "%s [options]" % (appname)
@@ -563,6 +567,8 @@ class Healview_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations

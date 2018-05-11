@@ -122,7 +122,7 @@ class ScatterGather(Link):
     def main(cls):
         """Hook for command line interface to sub-classes """
         link = cls.create()
-        link.run()
+        link._invoke(sys.argv[1:])
 
     def build_job_configs(self, args):
         """Hook to build job configurations

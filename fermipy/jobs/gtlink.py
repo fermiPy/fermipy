@@ -124,12 +124,18 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
         os.environ['PFILES'] = pfiles_orig
         return
 
-    stdin, stdout = gtapp.runWithOutput(print_command=False)
-    for line in stdout:
-        stream.write(line.strip())
-    stream.flush()
-    os.environ['PFILES'] = pfiles_orig
+    try:
+        stdin, stdout = gtapp.runWithOutput(print_command=False)
+        for line in stdout:
+            stream.write(line.strip())
+        stream.flush()
+        return_code = 0
+    except:
+        stream.write('Exited with exit code -1\n')
+        return_code = -1
 
+    os.environ['PFILES'] = pfiles_orig
+    return return_code
 
 class Gtlink(Link):
     """A wrapper for a single ScienceTools application
@@ -187,7 +193,7 @@ class Gtlink(Link):
         dry_run : bool
             Print command but do not run it
         """
-        run_gtapp(self.__app, stream, dry_run, **self.args)
+        return run_gtapp(self.__app, stream, dry_run, **self.args)
 
     def command_template(self):
         """Build and return a string that can be used as a template invoking

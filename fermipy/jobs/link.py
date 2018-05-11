@@ -403,10 +403,11 @@ class Link(object):
         """
         input_missing = self.check_input_files(return_found=False)
         if input_missing:
-            if dry_run:
+            if dry_run:                
                 stream.write("Input files are missing: %s: %i\n" %
                              (self.linkname, len(input_missing)))
             else:
+                print (self.args)
                 raise OSError("Input files are missing: %s" % input_missing)
 
         output_found, output_missing = self.check_output_files()
