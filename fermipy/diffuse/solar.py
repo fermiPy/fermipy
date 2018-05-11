@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 from fermipy.utils import load_yaml
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Chain
+from fermipy.jobs.link import Link
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
@@ -36,6 +37,8 @@ class Gtlink_exphpsun(Gtlink):
                            outfile=diffuse_defaults.gtopts['outfile'])
     default_file_args = dict(infile=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
 
 
 class Gtlink_suntemp(Gtlink):
@@ -68,19 +71,17 @@ class Gtlink_suntemp(Gtlink):
                            axisrot=(0., "Rotation angle of image axis, in degrees", float),
                            proj=("CAR",
                                  "Projection method e.g. AIT|ARC|CAR|GLS|MER|NCP|SIN|STG|TAN", str),
-                           outfile=diffuse_defaults.gtopts['outfile']),
+                           outfile=diffuse_defaults.gtopts['outfile'])
     default_file_args = dict(expsun=FileFlags.input_mask,
                              avgexp=FileFlags.input_mask,
                              sunprof=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
 
 class Gtexphpsun_SG(ScatterGather):
     """Small class to generate configurations for gtexphpsun
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
     """
     appname = 'fermipy-gtexphpsun-sg'
     usage = "%s [options]" % (appname)
@@ -91,6 +92,8 @@ class Gtexphpsun_SG(ScatterGather):
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -128,10 +131,6 @@ class Gtexphpsun_SG(ScatterGather):
 class Gtsuntemp_SG(ScatterGather):
     """Small class to generate configurations for gtsuntemp
 
-    This takes the following arguments:
-    --comp       : binning component definition yaml file
-    --data       : datset definition yaml file
-    --sourcekeys : Keys for sources to make template for
     """
     appname = 'fermipy-gtsuntemp-sg'
     usage = "%s [options]" % (appname)
@@ -143,6 +142,8 @@ class Gtsuntemp_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            sourcekeys=diffuse_defaults.sun_moon['sourcekeys'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -184,7 +185,16 @@ class Gtsuntemp_SG(ScatterGather):
 
 
 class SunMoonChain(Chain):
-    """Small class to construct sun and moon templates
+    """Chain to construct sun and moon templates
+
+    This chain consists of:
+
+    exphpsun :  `Gtexphpsun_SG`
+        Build the sun-centered exposure cubes
+
+    suntemp : `Gtsuntemp_SG`
+        Build the templates
+
     """
     appname = 'fermipy-sunmoon-chain'
     linkname_default = 'summoon'

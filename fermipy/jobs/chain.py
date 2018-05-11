@@ -121,7 +121,8 @@ class Chain(Link):
         else:
             link = cls.create(**create_args)
             self._links[link.linkname] = link
-            logfile = os.path.join('logs', '%s.log' % link.full_linkname)
+            logfile_default = os.path.join('logs', '%s.log' % link.full_linkname)
+            logfile = kwargs.setdefault('logfile', logfile_default)
             link._register_job(JobDetails.topkey, job_args,
                                logfile, status=JobStatus.unknown)
         return link
@@ -220,7 +221,11 @@ class Chain(Link):
 
         chain_status = self.check_links_status()
         print ("Chain status %i" % (chain_status))
-        self._write_status_to_log(chain_status, stream)
+        if chain_status == 5:
+            job_status = 0
+        else:
+            job_status = -1
+        self._write_status_to_log(job_status, stream)
         self._set_status_self(status=chain_status)
 
         if self._job_archive:
