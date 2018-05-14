@@ -30,14 +30,14 @@ NAME_FACTORY = NameFactory()
 
 def _make_input_file_list(binnedfile, num_files):
     """Make the list of input files for a particular energy bin X psf type """
-    outdir_base = os.path.dirname(binnedfile)
+    outdir_base = os.path.abspath(os.path.dirname(binnedfile))
     outbasename = os.path.basename(binnedfile)
     filelist = ""
     for i in range(num_files):
         split_key = "%06i" % i
         output_dir = os.path.join(outdir_base, split_key)
         filepath = os.path.join(output_dir,
-                                outbasename.replace('.fits', '_%s.fits.gz' % split_key))
+                                outbasename.replace('.fits', '_%s.fits' % split_key))
         filelist += ' %s' % filepath
     return filelist
 
@@ -120,11 +120,11 @@ class CoaddSplit(Chain):
                         linkname = 'coadd_%s' % (fullkey)
                         kwargs_bin = kwargs_mktime.copy()
                         kwargs_bin['psftype'] = psf_type
-                        kwargs_bin['evclass'] = NAME_FACTORY.evclassmask(evtclassval)
+                        kwargs_bin['evclass'] = evtclassval
                         ccube_name =\
                             os.path.basename(NAME_FACTORY.ccube(**kwargs_bin))
                         outputfile = os.path.join(outdir_base, ccube_name)
-                        args = _make_input_file_list(ccube_name, num_files)
+                        args = _make_input_file_list(outputfile, num_files)
                         
                         self._set_link(linkname,
                                        Link_FermipyCoadd,
@@ -140,7 +140,7 @@ class CoaddSplit_SG(ScatterGather):
     appname = 'fermipy-coadd-split-sg'
     usage = "%s [options]" % (appname)
     description = "Submit fermipy-coadd-split- jobs in parallel"
-    clientclass = CoaddSplit
+    clientclass = Link_FermipyCoadd
 
     job_time = 300
 
@@ -190,7 +190,7 @@ class CoaddSplit_SG(ScatterGather):
                                      coordsys=comp.coordsys,
                                      irf_ver=NAME_FACTORY.irf_ver(),
                                      mktime=mktimekey,
-                                     evclass=NAME_FACTORY.evclassmask(evtclassval),
+                                     evclass=evtclassval,
                                      fullpath=True)
 
                     ccube_name = os.path.basename(NAME_FACTORY.ccube(**name_keys))
