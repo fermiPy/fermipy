@@ -453,7 +453,7 @@ class ResidualCRChain(Chain):
         comp = config_dict.get('comp')
         dry_run = args.get('dry_run', False)
 
-        self._set_link('split-and-mktime', SplitAndMktimeChain,
+        self._set_link('prepare', SplitAndMktimeChain,
                        comp=comp, data=data,
                        ft1file=config_dict['ft1file'],
                        ft2file=config_dict['ft2file'],
