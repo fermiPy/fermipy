@@ -450,7 +450,6 @@ class FileHandle(object):
         self.flags = kwargs.get('flags', FileFlags.no_flags)
         self.path = kwargs['path']
         if self.path[0] == '@':
-            print ('Removing @ from %s' % self.path)
             self.path = self.path[1:]
 
     @staticmethod
