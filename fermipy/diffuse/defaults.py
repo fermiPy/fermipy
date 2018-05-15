@@ -16,7 +16,7 @@ diffuse = {
     'hpx_order_ccube': (9, 'Maximum HEALPIX order for binning counts data.', int),
     'hpx_order_expcube': (6, 'Maximum HEALPIX order for exposure cubes.', int),
     'hpx_order_fitting': (7, 'Maximum HEALPIX order for model fitting.', int),
-    'mktimefilter': ('nosm', 'Key for gtmktime selection', str),
+    'mktimefilter': (None, 'Key for gtmktime selection', str),
     'do_ltsum': (False, 'Run gtltsum on inputs', bool),
     'make_xml': (True, 'Make XML files.', bool),
     'dry_run': (False, 'Print commands but do not run them', bool),
