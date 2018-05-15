@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+import yaml
 import numpy as np
 
 
@@ -292,9 +293,9 @@ class CollectSED(Link):
         sedfile = args.sed_file
 
         if is_not_null(args.config):
-            configfile = os.path.join(os.dirname(sedfile), args.config)
+            configfile = os.path.join(os.path.dirname(sedfile), args.config)
         else:
-            configfile = os.path.join(os.dirname(sedfile), 'config.yaml')
+            configfile = os.path.join(os.path.dirname(sedfile), 'config.yaml')
 
         nbins = _get_enum_bins(configfile)
 
