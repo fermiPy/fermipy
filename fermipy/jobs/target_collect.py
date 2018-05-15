@@ -6,6 +6,7 @@ Collect information for simulated realizations of an analysis
 """
 from __future__ import absolute_import, division, print_function
 
+import os
 import sys
 import numpy as np
 
@@ -26,6 +27,36 @@ init_matplotlib_backend('Agg')
 
 
 NAME_FACTORY = NameFactory(basedir=('.'))
+
+
+def _get_enum_bins(configfile):
+    """Get the number of energy bin in the SED
+
+    Parameters
+    ----------
+
+    configfile : str
+        Fermipy configuration file.
+
+    Returns
+    -------
+
+    nbins : int
+        The number of energy bins
+
+    """
+    config = yaml.safe_load(open(configfile))
+
+    emin = config['selection']['emin']
+    emax = config['selection']['emax']
+    log_emin = np.log10(emin)
+    log_emax = np.log10(emax)
+    ndec = log_emax - log_emin
+    binsperdec = config['binning']['binsperdec']
+    nebins = int(np.ceil(binsperdec * ndec))
+
+    return nebins
+
 
 
 def fill_output_table(filelist, hdu, collist, nbins):
@@ -218,6 +249,7 @@ class CollectSED(Link):
 
     default_options = dict(sed_file=defaults.common['sed_file'],
                            outfile=defaults.generic['outfile'],
+                           config=defaults.common['config'],
                            summaryfile=defaults.generic['summaryfile'],
                            nsims=defaults.sims['nsims'],
                            enumbins=(12, 'Number of energy bins', int),
@@ -256,7 +288,16 @@ class CollectSED(Link):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
 
+
         sedfile = args.sed_file
+
+        if is_not_null(args.config):
+            configfile = os.path.join(os.dirname(sedfile), args.config)
+        else:
+            configfile = os.path.join(os.dirname(sedfile), 'config.yaml')
+
+        nbins = _get_enum_bins(configfile)
+
         first = args.seed
         last = first + args.nsims
         flist = [sedfile.replace("_SEED.fits", "_%06i.fits" % seed)
@@ -264,8 +305,9 @@ class CollectSED(Link):
         outfile = args.outfile
         summaryfile = args.summaryfile
 
+
         outtable = fill_output_table(
-            flist, "SED", CollectSED.collist, nbins=args.enumbins)
+            flist, "SED", CollectSED.collist, nbins=nbins)
 
         if is_not_null(outfile):
             outtable.write(outfile)
@@ -289,7 +331,7 @@ class CollectSED_SG(ScatterGather):
 
     default_options = dict(ttype=defaults.common['ttype'],
                            targetlist=defaults.common['targetlist'],
-                           enumbins=(12, 'Number of energy bins', int),
+                           config=defaults.common['config'],
                            sim=defaults.sims['sim'],
                            nsims=defaults.sims['nsims'],
                            seed=defaults.sims['seed'],
@@ -313,7 +355,7 @@ class CollectSED_SG(ScatterGather):
 
         targets = load_yaml(targets_yaml)
 
-        base_config = dict(enumbins=args['enumbins'],
+        base_config = dict(config=args['config'],
                            nsims=args['nsims'],
                            seed=args['seed'])
 
