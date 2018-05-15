@@ -50,6 +50,7 @@ setup(
         'fermipy-vstack-diffuse-sg = fermipy.diffuse.job_library:Vstack_SG.main',
         'fermipy-gather-srcmaps-sg = fermipy.diffuse.job_library:GatherSrcmaps_SG.main',
         'fermipy-healview-sg = fermipy.diffuse.job_library:Healview_SG.main',
+        'fermipy-gtexpcube2wcs-sg = fermipy.diffuse.solar:Gtexpcube2wcs_SG.main',
         'fermipy-gtexphpsun-sg = fermipy.diffuse.solar:Gtexphpsun_SG.main',
         'fermipy-gtsuntemp-sg = fermipy.diffuse.solar:Gtsuntemp_SG.main',
         'fermipy-coadd-split = fermipy.diffuse.gt_coadd_split:CoaddSplit.main',
