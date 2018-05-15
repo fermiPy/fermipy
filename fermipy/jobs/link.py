@@ -201,8 +201,8 @@ class Link(object):
     Derived classes will need to override the appname and linkname-default
     class parameters.
 
-    Class Members
-    -------------
+    Parameters
+    ----------
 
     appname : str
         Name of the application run by this `Link`
@@ -217,10 +217,6 @@ class Link(object):
     default_file_args : dict
         Dictionary specifying if particular parameters are associated
         with input or output files.
-
-
-    Parameters
-    ----------
 
     linkname : str
         Name of this `Link`, used as a key to find it in a `Chain`.
