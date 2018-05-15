@@ -162,6 +162,11 @@ class SrcmapsDiffuse_SG(ScatterGather):
     def _make_xml_files(diffuse_comp_info_dict):
         """Make all the xml file for individual components
         """
+        try:
+            os.makedirs('srcmdls')
+        except OSError:
+            pass
+
         for sourcekey in sorted(diffuse_comp_info_dict.keys()):
             comp_info = diffuse_comp_info_dict[sourcekey]
             if comp_info.components is None:
