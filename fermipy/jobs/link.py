@@ -903,7 +903,7 @@ class Link(object):
             elif isinstance(value, str) and value.find(' ') >= 0 and key != 'args':
                 format_dict[key] = '"%s"' % value
             elif value is None:
-                format_dict[key] = 'None'
+                format_dict[key] = 'none'
 
         command = command_template.format(**format_dict)
         return command
