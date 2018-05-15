@@ -119,6 +119,14 @@ class SrcmapsCatalog_SG(ScatterGather):
 
     __doc__ += Link.construct_docstring(default_options)
 
+    def __init__(self, link, **kwargs):
+        """C'tor
+        """
+        super(SrcmapsCatalog_SG, self).__init__(link, **kwargs)
+        self._comp_dict_file = None
+        self._comp_dict = None
+
+
     @staticmethod
     def _make_xml_files(catalog_info_dict, comp_info_dict):
         """Make all the xml file for individual components
@@ -138,10 +146,15 @@ class SrcmapsCatalog_SG(ScatterGather):
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
 
-        ret_dict = make_catalog_comp_dict(sources=args['library'],
-                                          basedir=NAME_FACTORY.base_dict['basedir'])
-        catalog_info_dict = ret_dict['catalog_info_dict']
-        comp_info_dict = ret_dict['comp_info_dict']
+        if self._comp_dict is None or self._comp_dict_file != args['library']:
+            self._comp_dict_file = args['library']
+            self._comp_dict = make_catalog_comp_dict(sources=self._comp_dict_file,
+                                                     basedir=NAME_FACTORY.base_dict['basedir'])
+        else:
+            print ("Using cached catalog dict from %s" % args['library'])
+
+        catalog_info_dict = self._comp_dict['catalog_info_dict']
+        comp_info_dict = self._comp_dict['comp_info_dict']
 
         n_src_per_job = args['nsrc']
 
