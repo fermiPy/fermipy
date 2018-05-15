@@ -409,6 +409,7 @@ class ResidualCR_SG(ScatterGather):
                                     ccube_clean=NAME_FACTORY_CLEAN.ccube(**name_keys),
                                     outfile=outfile,
                                     hpx_order=hpx_order,
+                                    full_output=args['full_output'],
                                     logfile=make_nfs_path(outfile.replace('.fits', '.log')))
 
         return job_configs
@@ -472,7 +473,7 @@ class ResidualCRChain(Chain):
                        select_factor=config_dict.get('select_factor', None),
                        mask_factor=config_dict.get('mask_factor', None),
                        sigma=config_dict.get('sigma', None),
-                       full_output=config_dict.get('full_output', None),
+                       full_output=config_dict.get('full_output', False),
                        dry_run=dry_run)
 
 
