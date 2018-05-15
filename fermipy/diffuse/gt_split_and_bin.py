@@ -96,6 +96,7 @@ class SplitAndBin(Chain):
 
         self.comp_dict = yaml.safe_load(open(comp_file))
         coordsys = self.comp_dict.pop('coordsys')
+        full_out_dir = make_nfs_path(os.path.join(outdir, outkey))
 
         for key_e, comp_e in sorted(self.comp_dict.items()):
             emin = math.pow(10., comp_e['log_emin'])
@@ -112,13 +113,14 @@ class SplitAndBin(Chain):
             selectfile_energy = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select))
             linkname = 'select-energy-%s-%s' % (key_e, zcut)
             self._set_link(linkname, Gtlink_select,
-                                 infile=ft1file,
-                                 outfile=selectfile_energy,
-                                 zmax=zmax,
-                                 emin=emin,
-                                 emax=emax,
-                                 evclass=NAME_FACTORY.evclassmask(evclassstr),
-                                 pfiles=pfiles)
+                           infile=ft1file,
+                           outfile=selectfile_energy,
+                           zmax=zmax,
+                           emin=emin,
+                           emax=emax,
+                           evclass=NAME_FACTORY.evclassmask(evclassstr),
+                           pfiles=pfiles,
+                           logfile=os.path.join(full_out_dir, "%s.log" % linkname))
 
             if 'evtclasses' in comp_e:
                 evtclasslist_vals = comp_e['evtclasses']
@@ -144,7 +146,9 @@ class SplitAndBin(Chain):
                                    emax=emax,
                                    evtype=EVT_TYPE_DICT[psf_type],
                                    evclass=NAME_FACTORY.evclassmask(evtclassval),
-                                   pfiles=pfiles)
+                                   pfiles=pfiles,
+                                   logfile=os.path.join(full_out_dir, "%s.log" % linkname_select))
+
                     self._set_link(linkname_bin, Gtlink_bin,
                                    coordsys=coordsys,
                                    hpx_order=hpx_order,
@@ -153,7 +157,8 @@ class SplitAndBin(Chain):
                                    emin=emin,
                                    emax=emax,
                                    enumbins=enumbins,
-                                   pfiles=pfiles)
+                                   pfiles=pfiles,
+                                   logfile=os.path.join(full_out_dir, "%s.log" % linkname_bin))
 
 
 class SplitAndBin_SG(ScatterGather):
