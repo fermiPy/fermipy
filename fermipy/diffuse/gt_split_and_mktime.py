@@ -156,6 +156,7 @@ class SplitAndMktime(Chain):
                            emin=emin,
                            emax=emax,
                            evclass=NAME_FACTORY.evclassmask(evclassstr),
+                           pfiles=pfiles,
                            logfile=os.path.join(full_out_dir, "%s.log" % linkname))
 
             if 'mktimefilters' in comp_e:
