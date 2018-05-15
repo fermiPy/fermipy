@@ -29,8 +29,8 @@ class ScatterGather(Link):
     Sub-classes will need to generatare configuration
     for the jobs that they launch.
 
-    Class Members
-    -------------
+    Parameters
+    ----------
 
     clientclass : type
         Type of `Link` object managed by this class.
