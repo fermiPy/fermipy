@@ -133,6 +133,12 @@ class NameFactory(object):
         """
         self.base_dict = kwargs.copy()
 
+    def _replace_none(self, aDict):
+        """ Replace all None values in a dict with 'none' """
+        for k, v in aDict.items():
+            if v is None:
+                aDict[k] = 'none'
+
     def update_base_dict(self, yamlfile):
         """ Update the values in baseline dictionary used to resolve names
         """
@@ -163,6 +169,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)
         try:
             return NameFactory.dataset_format.format(**kwargs_copy)
         except KeyError:
@@ -173,6 +180,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         try:
             return NameFactory.component_format.format(**kwargs_copy)
         except KeyError:
@@ -183,6 +191,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         try:
             return NameFactory.sourcekey_format.format(**kwargs_copy)
         except KeyError:
@@ -193,6 +202,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         try:
             return NameFactory.galprop_ringkey_format.format(**kwargs_copy)
         except KeyError:
@@ -204,6 +214,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         try:
             return NameFactory.galprop_sourcekey_format.format(**kwargs_copy)
         except KeyError:
@@ -215,6 +226,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         try:
             return NameFactory.merged_sourcekey_format.format(**kwargs_copy)
         except KeyError:
@@ -225,6 +237,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.galprop_gasmap_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -235,6 +248,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.merged_gasmap_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -245,6 +259,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.diffuse_template_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -275,6 +290,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.nested_srcmdl_xml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -286,6 +302,7 @@ class NameFactory(object):
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.ft1file_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -298,6 +315,7 @@ class NameFactory(object):
         kwargs_copy.update(**kwargs)
         kwargs_copy['data_time'] = kwargs.get(
             'data_time', self.dataset(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.ft2file_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -322,6 +340,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.select_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -335,6 +354,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.mktime_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -361,6 +381,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.bexpcube_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -374,6 +395,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.srcmaps_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -387,6 +409,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.mcube_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -398,6 +421,7 @@ class NameFactory(object):
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.ltcubesun_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -409,6 +433,7 @@ class NameFactory(object):
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.ltcubemoon_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -422,6 +447,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.bexpcubesun_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -435,6 +461,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.bexpcubemoon_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -445,6 +472,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.angprofile_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -458,6 +486,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.templatesunmoon_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -480,6 +509,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.galprop_rings_yaml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -490,6 +520,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.catalog_split_yaml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -500,6 +531,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.model_yaml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -513,6 +545,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.merged_srcmaps_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -523,6 +556,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.master_srcmdl_xml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -536,6 +570,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         localpath = NameFactory.comp_srcmdl_xml_format.format(**kwargs_copy)
         if kwargs.get('fullpath', False):
             return self.fullpath(localpath=localpath)
@@ -545,6 +580,7 @@ class NameFactory(object):
         """Return the path for a stamp file for a scatter gather job"""
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         return NameFactory.stamp_format.format(**kwargs_copy)
 
     def fullpath(self, **kwargs):
@@ -552,6 +588,7 @@ class NameFactory(object):
         """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
+        self._replace_none(kwargs_copy)        
         return NameFactory.fullpath_format.format(**kwargs_copy)
 
     def generic(self, input_string, **kwargs):
@@ -562,6 +599,7 @@ class NameFactory(object):
         kwargs_copy['dataset'] = kwargs.get('dataset', self.dataset(**kwargs))
         kwargs_copy['component'] = kwargs.get(
             'component', self.component(**kwargs))
+        self._replace_none(kwargs_copy)        
         return input_string.format(**kwargs_copy)
 
     def make_filenames(self, **kwargs):
