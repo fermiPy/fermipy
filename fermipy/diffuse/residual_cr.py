@@ -446,7 +446,6 @@ class ResidualCRChain(Chain):
         the indiviudal links """
 
         config_yaml = args['config']
-        o_dict = OrderedDict()
         config_dict = load_yaml(config_yaml)
 
         data = config_dict.get('data')
@@ -464,19 +463,18 @@ class ResidualCRChain(Chain):
                        scratch=config_dict.get('scratch', None),
                        dry_run=dry_run)
 
-        self._set_link('residual-cr', ResidualCR,
+        self._set_link('residual-cr', ResidualCR_SG,
                        comp=comp, data=data,
+                       mktimefilter=config_dict.get('mktimefitler', None),
                        hpx_order=config_dict.get('hpx_order_fitting', 4),
                        clean=config_dict.get('clean_class', None),
-                       dirty=config_dict.get('dirty_class', None),
-                       mktime=config_dict.get('mktimefitler', None),
+                       dirty=config_dict.get('dirty_class', None),                       
                        select_factor=config_dict.get('select_factor', None),
                        mask_factor=config_dict.get('mask_factor', None),
                        sigma=config_dict.get('sigma', None),
                        full_output=config_dict.get('full_output', None),
                        dry_run=dry_run)
 
-        return o_dict
 
 
 def register_residual_cr():
