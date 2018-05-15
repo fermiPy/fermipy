@@ -96,7 +96,6 @@ def _set_pfiles(dry_run, **kwargs):
             except OSError:
                 pass
         pfiles = "%s:%s" % (pfiles, pfiles_orig)
-        print("Setting PFILES=%s" % pfiles)
         os.environ['PFILES'] = pfiles
     return pfiles_orig
 
