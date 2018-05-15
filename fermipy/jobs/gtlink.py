@@ -247,7 +247,7 @@ class Gtlink(Link):
         The actual command can be obtainted by using
         `self.command_template().format(**self.args)`
         """
-        com_out = self.__app.appName
+        com_out = self.appname
         for key, val in self.args.items():
             if key in self._options:
                 com_out += ' %s={%s}' % (key, key)
