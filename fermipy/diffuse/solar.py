@@ -28,10 +28,19 @@ class Gtlink_expcube2_wcs(Gtlink):
 
     default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
                            evtype=diffuse_defaults.gtopts['evtype'],
+                           cmap=('none', "Input counts cube template", str),
                            emin=(100., "Start energy (MeV) of first bin", float),
                            emax=(1000000., "Stop energy (MeV) of last bin", float),
                            enumbins=(12, "Number of logarithmically-spaced energy bins", int),
                            binsz=(0.25, "Image scale (in degrees/pixel)", float),
+                           xref=(0.,
+                                 "First coordinate of image center in degrees (RA or GLON)", float),
+                           yref=(0.,
+                                 "Second coordinate of image center in degrees (DEC or GLAT)",
+                                 float),
+                           axisrot=(0., "Rotation angle of image axis, in degrees", float),
+                           proj=("CAR",
+                                 "Projection method e.g. AIT|ARC|CAR|GLS|MER|NCP|SIN|STG|TAN", str),
                            nxpix=(1440, "Size of the X axis in pixels", int),
                            nypix=(720, "Size of the Y axis in pixels", int),
                            infile=(None, "Input livetime cube file", str),
@@ -111,7 +120,7 @@ class Gtexpcube2wcs_SG(ScatterGather):
     appname = 'fermipy-gtexpcube2wcs-sg'
     usage = "%s [options]" % (appname)
     description = "Submit gtexpcube2 jobs in parallel"
-    clientclass = Gtlink_exphpsun
+    clientclass = Gtlink_expcube2_wcs
 
     job_time = 300
 
