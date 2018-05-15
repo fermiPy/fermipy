@@ -208,9 +208,11 @@ class SplitAndMktime(Chain):
                         binfile_psf = make_full_path(
                             outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
                         hpx_order_psf = min(args['hpx_order_max'], psf_dict['hpx_order'])
-                        linkname_select = 'select-type-%s-%s-%s-%s' % (
-                            key_e, zcut, mktimekey, psf_type)
-                        linkname_bin = 'bin-%s-%s-%s-%s' % (key_e, zcut, mktimekey, psf_type)
+                        linkname_select = 'select-type-%s-%s-%s-%s-%s' % (key_e, zcut,
+                                                                          mktimekey, evtclassval,
+                                                                          psf_type)
+                        linkname_bin = 'bin-%s-%s-%s-%s-%s' % (key_e, zcut, mktimekey,
+                                                               evtclassval, psf_type)
 
                         self._set_link(linkname_select, Gtlink_select,
                                        infile=selectfile_energy,
