@@ -26,7 +26,7 @@ from fermipy.sourcefind_utils import find_peaks
 from fermipy.spectrum import SpectralFunction, SEDFunctor
 from fermipy.utils import onesided_cl_to_dlnl
 from fermipy.utils import twosided_cl_to_dlnl
-
+from fermipy.utils import load_yaml
 
 PAR_NAMES = {
     "PowerLaw": ["Prefactor", "Index"],
@@ -600,6 +600,9 @@ class CastroData_Base(object):
         norm_vals : `~numpy.ndarray`
            The normalization values in an N X M array, where N is the
            number for bins and M number of sampled values for each bin
+           Note that these should be the true values, with the 
+           reference spectrum included, and _NOT_ the values w.r.t. to the 
+           reference spectrum.
 
         nll_vals : `~numpy.ndarray`
            The _negative_ log-likelihood values in an N X M array,
@@ -960,7 +963,7 @@ class CastroData_Base(object):
         return 2. * (self._nll_null - self.__call__(spec_vals))
 
     def build_scandata_table(self):
-        """
+        """Build an `astropy.table.Table` object from these data.
         """
         shape = self._norm_vals.shape
         col_norm = Column(name="norm", dtype=float)
@@ -1068,6 +1071,26 @@ class CastroData(CastroData_Base):
     def refSpec(self):
         """ Return a `~fermipy.castro.ReferenceSpec` with the spectral data """
         return self._refSpec
+
+    @classmethod
+    def create_from_yamlfile(cls, yamlfile):
+        """Create a Castro data object from a yaml file contains
+        the likelihood data."""
+        data = load_yaml(yamlfile)
+        nebins = len(data)
+        emin = np.array([data[i]['emin'] for i in range(nebins)])
+        emax = np.array([data[i]['emax'] for i in range(nebins)])
+        ref_flux = np.array([data[i]['flux'][1] for i in range(nebins)])
+        ref_eflux = np.array([data[i]['eflux'][1] for i in range(nebins)])
+        conv = np.array([data[i]['eflux2npred'] for i in range(nebins)])
+        ref_npred = conv*ref_eflux
+        ones = np.ones(ref_flux.shape)
+        ref_spec = ReferenceSpec(emin, emax, ones, ref_flux, ref_eflux, ref_npred)
+        norm_data = np.array([data[i]['eflux'] for i in range(nebins)])
+        ll_data =  np.array([data[i]['logLike'] for i in range(nebins)])
+        max_ll = ll_data.max(1)
+        nll_data = (max_ll - ll_data.T).T
+        return cls(norm_data, nll_data, ref_spec, 'eflux')
 
     @classmethod
     def create_from_flux_points(cls, txtfile):
@@ -1240,7 +1263,7 @@ class CastroData(CastroData_Base):
         elif norm_type == "norm":
             norm_vals = np.array(tab_s['norm_scan'])
         else:
-            raise Exception('Unrecognized normalization type: %s' % norm_type)
+            raise ValueError('Unrecognized normalization type: %s' % norm_type)
 
         nll_vals = -np.array(tab_s['dloglike_scan'])
         ref_spec = ReferenceSpec.create_from_table(tab_s)
