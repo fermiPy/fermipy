@@ -9,6 +9,7 @@ paralleize that analysis.
 """
 from __future__ import absolute_import, division, print_function
 
+from os.path import splitext
 
 from fermipy.utils import init_matplotlib_backend, load_yaml
 
@@ -42,14 +43,21 @@ class PlotCastro(Link):
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
-        castro_data = CastroData.create_from_sedfile(args.infile)
+
+        exttype = splitext(args.infile)[-1]
+        if exttype in ['.fits', '.npy']:
+            castro_data = CastroData.create_from_sedfile(args.infile)
+        elif exttype in ['.yaml']:
+            castro_data = CastroData.create_from_yamlfile(args.infile)
+        else:
+            raise ValueError("Can not read file type %s for SED" % extype)
+
         ylims = [1e-8, 1e-5]
 
         plot = plotCastro(castro_data, ylims)
         if args.outfile:
             plot[0].savefig(args.outfile)
-            return None
-        return plot
+
 
 
 class PlotCastro_SG(ScatterGather):
