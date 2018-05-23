@@ -17,7 +17,7 @@ class AppLink(Link):
     This can be used either with other `Link` to build a `Chain`, or as
     as standalone wrapper to pass conifguration to the application.
 
-    See help for `chain.Link` for additional details
+    See help for `Link` for additional details
     """
     appname = 'dummy'
     linkname_default = 'dummy'
@@ -26,5 +26,5 @@ class AppLink(Link):
 
     def run_analysis(self, argv):
         """Implemented by sub-classes to run a particular analysis"""
-        self.run_argparser(argv)
+        self._run_argparser(argv)
         self.run()

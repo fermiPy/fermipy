@@ -4,11 +4,8 @@ Abstract interface for parallel execution of multiple jobs.
 
 The main class is `ScatterGather`, which can submit many instances
 of a job with different configurations.
-
-The `ScatterGather` abstract helper class is used to generate configurations.
 """
 from __future__ import absolute_import, division, print_function
-
 
 import sys
 import time
@@ -29,14 +26,20 @@ class ScatterGather(Link):
     """ Class to dispatch several jobs in parallel and
     collect and merge the results.
 
-    Sub-classes will need to:
+    Sub-classes will need to generatare configuration
+    for the jobs that they launch.
 
-    Define options by passing a dictionary of option tuples to the c'tor.
-    This will take a form something like:
+    Parameters
+    ----------
 
-    deafult_options= dict(string_opt=("default", "Some string", str),
-                          float_opt=(3.0, "Some float", float),
-                          list_opt=(None, "Some list", list))
+    clientclass : type
+        Type of `Link` object managed by this class.
+
+    job_time : int
+        Estimated maximum time it takes to run a job
+        This is used to manage batch farm scheduling and
+        checking for completion.
+
     """
     appname = 'dummy-sg'
     usage = "%s [options]" % (appname)
@@ -92,14 +95,14 @@ class ScatterGather(Link):
 
     @classmethod
     def _make_scatter_logfile_name(cls, key, linkname, job_config):
-        """ Hook to inster the name of a logfile into the input config """
+        """Hook to inster the name of a logfile into the input config """
         logfile = job_config.get('logfile', "%s_%s_%s.log" %
                                  (cls.default_prefix_logfile, linkname, key))
         job_config['logfile'] = logfile
 
     @classmethod
     def create(cls, **kwargs):
-        """ Build and return a `ScatterGather` object """
+        """Build and return a `ScatterGather` object """
         linkname = kwargs.setdefault('linkname', cls.clientclass.linkname_default)
         # Don't use setdefault b/c we don't want to build a JobArchive
         # Unless it is needed
@@ -117,9 +120,9 @@ class ScatterGather(Link):
 
     @classmethod
     def main(cls):
-        """ Hook for command line interface to sub-classes """
+        """Hook for command line interface to sub-classes """
         link = cls.create()
-        link.run()
+        link._invoke(sys.argv[1:])
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -141,25 +144,14 @@ class ScatterGather(Link):
         self.files.latch_file_info(self.args)
         self._scatter_link._update_sub_file_dict(self.sub_files)
 
-    def _check_completion(self, fail_pending=False, fail_running=False):
-        """Internal function to check the completion of all the dispatched jobs
-
-        Returns
-        -------
-
-        `JobStatusVector`
-        """
-        status_vect = self._check_link_completion(self._scatter_link,
-                                                  fail_pending, fail_running)
-        return status_vect
-
     def _check_link_completion(self, link, fail_pending=False, fail_running=False):
         """Internal function to check the completion of all the dispatched jobs
 
         Returns
         -------
 
-        `JobStatusVector`
+        status_vect : `JobStatusVector`
+            Vector that summarize the number of jobs in various states.
         """
 
         status_vect = JobStatusVector()
@@ -184,13 +176,6 @@ class ScatterGather(Link):
 
         return status_vect
 
-    def _build_configs(self, args):
-        """Build the configuration objects.
-
-        This invokes the `ScatterGather` to build the configurations
-        """
-        self._job_configs = self.build_job_configs(args)
-
     def _build_job_dict(self):
         """Build a dictionary of `JobDetails` objects for the internal `Link`"""
         if self.args['dry_run']:
@@ -211,8 +196,30 @@ class ScatterGather(Link):
                                              logfile=logfile,
                                              status=status)
 
-    def _run_link(self, stream=sys.stdout, dry_run=False, stage_files=True, resubmit_failed=False):
-        """ """
+    def _run_link(self, stream=sys.stdout, dry_run=False,
+                  stage_files=True, resubmit_failed=False):
+        """Internal function that actually runs this link.
+
+        This checks if input and output files are present.
+
+        If input files are missing this will raise `OSError` if dry_run is False
+        If all output files are present this will skip execution.
+
+        Parameters
+        -----------
+        stream : `file`
+            Stream that this `Link` will print to,
+            must have 'write' function.
+
+        dry_run : bool
+            Print command but do not run it.
+
+        stage_files : bool
+            Stage files to and from the scratch area.
+
+        resubmit_failed : bool
+            Resubmit failed jobs.
+        """
         if resubmit_failed:
             self.args['action'] = 'resubmit'
         argv = self._make_argv()
@@ -226,12 +233,20 @@ class ScatterGather(Link):
         Parameters
         ----------
 
-        argv : list-like
+        argv : list
             List of command line arguments, passed to helper classes
 
-        Returns str with status
+        stream : `file`
+            Stream that this function will print to,
+            must have 'write' function.
+
+        Returns
+        -------
+        status_vect : `JobStatusVector`
+            Vector that summarize the number of jobs in various states.
+
         """
-        args = self.run_argparser(argv)
+        args = self._run_argparser(argv)
 
         if args.action not in ACTIONS:
             sys.stderr.write(
@@ -240,23 +255,23 @@ class ScatterGather(Link):
         if args.action == 'skip':
             return JobStatus.no_job
         elif args.action in ['run', 'resubmit', 'check_status', 'config']:
-            self._build_configs(args.__dict__)
+            self._job_configs = self.build_job_configs(args.__dict__)
 
         self._interface._dry_run = args.dry_run
 
         if args.action == 'run':
-            status = self.run_jobs(stream)
+            status_vect = self.run_jobs(stream)
         elif args.action == 'resubmit':
-            status = self.resubmit(stream)
+            status_vect = self.resubmit(stream)
         elif args.action == 'check_status':
             self._build_job_dict()
             status_vect = self.check_status(stream)
-            status = status_vect.get_status()
         elif args.action == 'config':
             self._build_job_dict()
-            status = JobStatus.done
+            status_vect = JobStatusVector()
+            status_vect[JobStatus.done] += 1
 
-        return status
+        return status_vect
 
     def update_args(self, override_args):
         """Update the arguments used to invoke the application
@@ -270,13 +285,14 @@ class ScatterGather(Link):
             dictionary of arguments to override the current values
         """
         self.args = extract_arguments(override_args, self.args)
-        self._build_configs(self.args)
+        self._job_configs = self.build_job_configs(self.args)
         if not self._scatter_link.jobs:
             self._build_job_dict()
         self._latch_file_info()
 
     def clear_jobs(self, recursive=True):
-        """Return a dictionary with all the jobs
+        """Clear the self.jobs dictionary that contains information
+        about jobs associated with this `ScatterGather`
 
         If recursive is True this will include jobs from all internal `Link`
         """
@@ -295,6 +311,7 @@ class ScatterGather(Link):
             return ret_dict
         return self.jobs
 
+
     def check_status(self, stream=sys.stdout,
                      check_once=False,
                      fail_pending=False, fail_running=False,
@@ -302,10 +319,34 @@ class ScatterGather(Link):
                      write_status=False):
         """Loop to check on the status of all the jobs in job dict.
 
+        Parameters
+        -----------
+        stream : `file`
+            Stream that this function will print to,
+            Must have 'write' function.
+
+        check_once : bool
+            Check status once and exit loop.
+
+        fail_pending : `bool`
+            If True, consider pending jobs as failed
+
+        fail_running : `bool`
+            If True, consider running jobs as failed
+
+        no_wait : bool
+            Do not sleep before checking jobs.
+
+        do_print : bool
+            Print summary stats.
+
+        write_status : bool
+            Write the status the to log file.
+
         Returns
         -------
-
-        `JobStatusVector`
+        status_vect : `JobStatusVector`
+            Vector that summarize the number of jobs in various states.
         """
         running = True
         first = True
@@ -332,7 +373,8 @@ class ScatterGather(Link):
                     sys.stdout.flush()
                 time.sleep(self.args['job_check_sleep'])
 
-            status_vect = self._check_completion(fail_pending, fail_running)
+            status_vect = self._check_link_completion(self._scatter_link,
+                                                      fail_pending, fail_running)
             if self.args['check_status_once'] or check_once or no_wait:
                 if do_print:
                     self.print_update(stream, status_vect)
@@ -374,6 +416,17 @@ class ScatterGather(Link):
 
     def run_jobs(self, stream=sys.stdout):
         """Function to dipatch jobs and collect results
+
+        Parameters
+        -----------
+        stream : `file`
+            Stream that this function will print to,
+            Must have 'write' function.
+
+        Returns
+        -------
+        status_vect : `JobStatusVector`
+            Vector that summarize the number of jobs in various states.
         """
         self._build_job_dict()
 
@@ -385,10 +438,25 @@ class ScatterGather(Link):
             return JobStatus.failed
 
         status_vect = self.check_status(stream, write_status=True)
-        return status_vect.get_status()
+        return status_vect
 
     def resubmit(self, stream=sys.stdout, fail_running=False):
         """Function to resubmit failed jobs and collect results
+
+        Parameters
+        -----------
+        stream : `file`
+            Stream that this function will print to,
+            Must have 'write' function.
+
+        fail_running : `bool`
+            If True, consider running jobs as failed
+
+        Returns
+        -------
+        status_vect : `JobStatusVector`
+            Vector that summarize the number of jobs in various states.
+
         """
         self._build_job_dict()
         status_vect = self.check_status(stream, check_once=True, fail_pending=True,
@@ -409,16 +477,40 @@ class ScatterGather(Link):
 
         if self.args['dry_run']:
             return JobStatus.unknown
-        return status_vect.get_status()
+        return status_vect
 
-    def clean_jobs(self, clean_all=False):
-        """ Clean up all the jobs dispatched by this object.  """
+    def clean_jobs(self, recursive=False):
+        """Clean up all the jobs associated with this object.
+
+        If recursive is True this also clean jobs dispatch by this
+        object."""
         self._interface.clean_jobs(self.scatter_link,
-                                   clean_all=clean_all)
+                                   clean_all=recursive)
 
-    def run(self, stream=sys.stdout, dry_run=False, stage_files=True, resubmit_failed=True):
-        """ Submit the jobs for this object """
-        return self._run_link(stream, dry_run, stage_files, resubmit_failed)
+    def run(self, stream=sys.stdout, dry_run=False,
+            stage_files=True, resubmit_failed=True):
+        """Runs this `Link`.
+
+        This version is intended to be overwritten by sub-classes so
+        as to provide a single function that behaves the same
+        for all version of `Link`
+
+        Parameters
+        -----------
+        stream : `file`
+            Stream that this `Link` will print to,
+            Must have 'write' function
+
+        dry_run : bool
+            Print command but do not run it.
+
+        stage_files : bool
+            Copy files to and from scratch staging area.
+
+        resubmit_failed : bool
+            Flag for sub-classes to resubmit failed jobs.
+        """
+        self._run_link(stream, dry_run, stage_files, resubmit_failed)
 
     def print_summary(self, stream=sys.stdout, indent="", recurse_level=2):
         """Print a summary of the activity done by this `Link`.
@@ -428,8 +520,10 @@ class ScatterGather(Link):
 
         stream : `file`
             Stream to print to
+
         indent : str
             Indentation at start of line
+
         recurse_level : int
             Number of recursion levels to print
         """

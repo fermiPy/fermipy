@@ -39,7 +39,7 @@ def test_gtlink():
 
     gtlink = Gtlink_scrmaps()
     formatted_command = gtlink.formatted_command()
-    assert formatted_command == 'gtsrcmaps irfs=CALDB expcube=None cmap=None srcmdl=None outfile=None bexpmap=None'
+    assert formatted_command == 'gtsrcmaps irfs=CALDB expcube=none cmap=none srcmdl=none outfile=none bexpmap=none'
 
 
 if __name__ == '__main__':

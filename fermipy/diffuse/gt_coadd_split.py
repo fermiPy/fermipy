@@ -12,6 +12,7 @@ from collections import OrderedDict
 import yaml
 
 from fermipy.jobs.utils import is_null
+from fermipy.jobs.link import Link
 from fermipy.jobs.chain import Chain
 from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
@@ -29,20 +30,26 @@ NAME_FACTORY = NameFactory()
 
 def _make_input_file_list(binnedfile, num_files):
     """Make the list of input files for a particular energy bin X psf type """
-    outdir_base = os.path.dirname(binnedfile)
+    outdir_base = os.path.abspath(os.path.dirname(binnedfile))
     outbasename = os.path.basename(binnedfile)
     filelist = ""
     for i in range(num_files):
         split_key = "%06i" % i
         output_dir = os.path.join(outdir_base, split_key)
         filepath = os.path.join(output_dir,
-                                outbasename.replace('.fits', '_%s.fits.gz' % split_key))
+                                outbasename.replace('.fits', '_%s.fits' % split_key))
         filelist += ' %s' % filepath
     return filelist
 
 
 class CoaddSplit(Chain):
     """Small class to merge counts cubes for a series of binning components
+
+    This chain consists multiple `Link` objects:
+
+    coadd-EBIN-ZCUT-FILTER-EVTYPE : `_Link_FermipyCoadd`
+        Link to coadd data of a particular type.
+
     """
     appname = 'fermipy-coadd-split'
     linkname_default = 'coadd-split'
@@ -55,27 +62,24 @@ class CoaddSplit(Chain):
                            nfiles=(96, 'Number of input files', int),
                            dry_run=(False, 'Print commands but do not run them', bool))
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def __init__(self, **kwargs):
         """C'tor
         """
         super(CoaddSplit, self).__init__(**kwargs)
         self.comp_dict = None
 
-    def _map_arguments(self, input_dict):
+    def _map_arguments(self, args):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
-        comp_file = input_dict.get('comp', None)
-        datafile = input_dict.get('data', None)
-        do_ltsum = input_dict.get('do_ltsum', False)
-        o_dict = OrderedDict()
-        if is_null(comp_file):
-            return o_dict
-        if is_null(datafile):
-            return o_dict
+        comp_file = args.get('comp', None)
+        datafile = args.get('data', None)
+        do_ltsum = args.get('do_ltsum', False)
 
         NAME_FACTORY.update_base_dict(datafile)
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
-        num_files = input_dict.get('nfiles', 96)
+        num_files = args.get('nfiles', 96)
 
         self.comp_dict = yaml.safe_load(open(comp_file))
         coordsys = self.comp_dict.pop('coordsys')
@@ -103,39 +107,40 @@ class CoaddSplit(Chain):
                 if do_ltsum:
                     ltsum_listfile = 'ltsumlist_%s_%s' % (key_e, mktimekey)
                     ltsum_outfile = 'ltsum_%s_%s' % (key_e, mktimekey)
-                    self._load_link_args('gtltsum', Gtlink_ltsum,
-                                         infile1=ltsum_listfile,
-                                         infile2=None,
-                                         outfile=ltsum_outfile)
+                    linkname = 'ltsum_%s_%s' % (key_e, mktimekey)
+                    self._set_link(likname, Gtlink_ltsum,
+                                   infile1=ltsum_listfile,
+                                   infile2=None,
+                                   outfile=ltsum_outfile,
+                                   logfile=os.path.join(outdir_base, "%s.log" % linkname))
 
                 for evtclassval in evtclasslist_vals:
                     for psf_type in sorted(comp_e['psf_types'].keys()):
+                        fullkey = "%s_%s_%s_%s"%(key_e, mktimekey, evtclassval, psf_type)
+                        linkname = 'coadd_%s' % (fullkey)
                         kwargs_bin = kwargs_mktime.copy()
                         kwargs_bin['psftype'] = psf_type
-                        kwargs_bin['evclass'] = NAME_FACTORY.evclassmask(evtclassval)
+                        kwargs_bin['evclass'] = evtclassval
                         ccube_name =\
                             os.path.basename(NAME_FACTORY.ccube(**kwargs_bin))
                         outputfile = os.path.join(outdir_base, ccube_name)
-                        args = _make_input_file_list(ccube_name, num_files)
-                        self._load_link_args('coadd', Link_FermipyCoadd,
-                                             args=args,
-                                             output=outputfile)
+                        args = _make_input_file_list(outputfile, num_files)
+                        
+                        self._set_link(linkname,
+                                       Link_FermipyCoadd,
+                                       args=args,
+                                       output=outputfile,
+                                       logfile=os.path.join(outdir_base, "%s.log" % linkname))
 
-        return o_dict
-
-
+                                                 
 class CoaddSplit_SG(ScatterGather):
     """Small class to generate configurations for fermipy-coadd
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --ft1file  : Input list of ft1 files
-    """
+   """
     appname = 'fermipy-coadd-split-sg'
     usage = "%s [options]" % (appname)
     description = "Submit fermipy-coadd-split- jobs in parallel"
-    clientclass = CoaddSplit
+    clientclass = Link_FermipyCoadd
 
     job_time = 300
 
@@ -143,6 +148,8 @@ class CoaddSplit_SG(ScatterGather):
                            data=diffuse_defaults.diffuse['data'],
                            ft1file=(None, 'Input FT1 file', str))
 
+    __doc__ += Link.construct_docstring(default_options)
+                                               
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -183,7 +190,7 @@ class CoaddSplit_SG(ScatterGather):
                                      coordsys=comp.coordsys,
                                      irf_ver=NAME_FACTORY.irf_ver(),
                                      mktime=mktimekey,
-                                     evclass=NAME_FACTORY.evclassmask(evtclassval),
+                                     evclass=evtclassval,
                                      fullpath=True)
 
                     ccube_name = os.path.basename(NAME_FACTORY.ccube(**name_keys))

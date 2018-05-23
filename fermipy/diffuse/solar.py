@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 from fermipy.utils import load_yaml
 from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Chain
+from fermipy.jobs.link import Link
 from fermipy.jobs.gtlink import Gtlink
 from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
@@ -17,6 +18,39 @@ from fermipy.diffuse import defaults as diffuse_defaults
 
 NAME_FACTORY = NameFactory()
 
+class Gtlink_expcube2_wcs(Gtlink):
+    """Small wrapper to run gtexpcube2 """
+
+    appname = 'gtexpcube2'
+    linkname_default = 'gtexpcube2'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
+                           evtype=diffuse_defaults.gtopts['evtype'],
+                           cmap=('none', "Input counts cube template", str),
+                           emin=(100., "Start energy (MeV) of first bin", float),
+                           emax=(1000000., "Stop energy (MeV) of last bin", float),
+                           enumbins=(12, "Number of logarithmically-spaced energy bins", int),
+                           binsz=(0.25, "Image scale (in degrees/pixel)", float),
+                           xref=(0.,
+                                 "First coordinate of image center in degrees (RA or GLON)", float),
+                           yref=(0.,
+                                 "Second coordinate of image center in degrees (DEC or GLAT)",
+                                 float),
+                           axisrot=(0., "Rotation angle of image axis, in degrees", float),
+                           proj=("CAR",
+                                 "Projection method e.g. AIT|ARC|CAR|GLS|MER|NCP|SIN|STG|TAN", str),
+                           nxpix=(1440, "Size of the X axis in pixels", int),
+                           nypix=(720, "Size of the Y axis in pixels", int),
+                           infile=(None, "Input livetime cube file", str),
+                           outfile=diffuse_defaults.gtopts['outfile'],
+                           coordsys=('GAL', "Coordinate system", str))
+    default_file_args = dict(infile=FileFlags.input_mask,
+                             cmap=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
 
 class Gtlink_exphpsun(Gtlink):
     """Small wrapper to run gtexphpsun """
@@ -36,6 +70,8 @@ class Gtlink_exphpsun(Gtlink):
                            outfile=diffuse_defaults.gtopts['outfile'])
     default_file_args = dict(infile=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
 
 
 class Gtlink_suntemp(Gtlink):
@@ -68,29 +104,34 @@ class Gtlink_suntemp(Gtlink):
                            axisrot=(0., "Rotation angle of image axis, in degrees", float),
                            proj=("CAR",
                                  "Projection method e.g. AIT|ARC|CAR|GLS|MER|NCP|SIN|STG|TAN", str),
-                           outfile=diffuse_defaults.gtopts['outfile']),
+                           outfile=diffuse_defaults.gtopts['outfile'])
     default_file_args = dict(expsun=FileFlags.input_mask,
                              avgexp=FileFlags.input_mask,
                              sunprof=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
 
-class Gtexphpsun_SG(ScatterGather):
+
+class Gtexpcube2wcs_SG(ScatterGather):
     """Small class to generate configurations for gtexphpsun
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
     """
-    appname = 'fermipy-gtexphpsun-sg'
+    appname = 'fermipy-gtexpcube2wcs-sg'
     usage = "%s [options]" % (appname)
-    description = "Submit gtexphpsun jobs in parallel"
-    clientclass = Gtlink_exphpsun
+    description = "Submit gtexpcube2 jobs in parallel"
+    clientclass = Gtlink_expcube2_wcs
 
     job_time = 300
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
-                           data=diffuse_defaults.diffuse['data'])
+                           data=diffuse_defaults.diffuse['data'],
+                           mktimefilter=diffuse_defaults.diffuse['mktimefilter'],
+                           binsz=(1.0, "Image scale (in degrees/pixel)", float),
+                           nxpix=(360, "Size of the X axis in pixels", int),
+                           nypix=(180, "Size of the Y axis in pixels", int))
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -100,8 +141,64 @@ class Gtexphpsun_SG(ScatterGather):
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
 
-        # FIXME
-        mktime = 'nosm'
+        mktime = args['mktimefilter']
+
+        base_config = dict(nxpix=args['nxpix'],
+                           nypix=args['nypix'],
+                           binsz=args['binsz'])
+
+        for comp in components:
+            zcut = "zmax%i" % comp.zmax
+            key = comp.make_key('{ebin_name}_{evtype_name}')
+            name_keys = dict(zcut=zcut,
+                             ebin=comp.ebin_name,
+                             psftype=comp.evtype_name,
+                             irf_ver=NAME_FACTORY.irf_ver(),
+                             coordsys=comp.coordsys,
+                             mktime=mktime,
+                             fullpath=True)
+            outfile = NAME_FACTORY.bexpcube(**name_keys)
+            ltcube = NAME_FACTORY.ltcube(**name_keys)
+            full_config = base_config.copy()
+            full_config.update(dict(infile=ltcube,
+                                    outfile=outfile,
+                                    irfs=NAME_FACTORY.irfs(**name_keys),
+                                    evtype=comp.evtype,
+                                    emin=comp.emin,
+                                    emax=comp.emax,
+                                    enumbins=comp.enumbins,
+                                    logfile=make_nfs_path(outfile.replace('.fits', '.log'))))
+            job_configs[key] = full_config
+
+        return job_configs
+
+
+class Gtexphpsun_SG(ScatterGather):
+    """Small class to generate configurations for gtexphpsun
+
+    """
+    appname = 'fermipy-gtexphpsun-sg'
+    usage = "%s [options]" % (appname)
+    description = "Submit gtexphpsun jobs in parallel"
+    clientclass = Gtlink_exphpsun
+
+    job_time = 300
+
+    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
+                           data=diffuse_defaults.diffuse['data'],
+                           mktimefilter=diffuse_defaults.diffuse['mktimefilter'])
+
+    __doc__ += Link.construct_docstring(default_options)
+
+    def build_job_configs(self, args):
+        """Hook to build job configurations
+        """
+        job_configs = {}
+
+        components = Component.build_from_yamlfile(args['comp'])
+        NAME_FACTORY.update_base_dict(args['data'])
+
+        mktime = args['mktimefilter']
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax
@@ -113,6 +210,7 @@ class Gtexphpsun_SG(ScatterGather):
                              mktime=mktime,
                              fullpath=True)
             outfile = NAME_FACTORY.bexpcube_sun(**name_keys)
+            ltcube_sun = NAME_FACTORY.ltcube_sun(**name_keys)
             job_configs[key] = dict(infile=NAME_FACTORY.ltcube_sun(**name_keys),
                                     outfile=outfile,
                                     irfs=NAME_FACTORY.irfs(**name_keys),
@@ -128,21 +226,20 @@ class Gtexphpsun_SG(ScatterGather):
 class Gtsuntemp_SG(ScatterGather):
     """Small class to generate configurations for gtsuntemp
 
-    This takes the following arguments:
-    --comp       : binning component definition yaml file
-    --data       : datset definition yaml file
-    --sourcekeys : Keys for sources to make template for
     """
     appname = 'fermipy-gtsuntemp-sg'
     usage = "%s [options]" % (appname)
     description = "Submit gtsuntemp jobs in parallel"
-    clientclass = Gtlink_exphpsun
+    clientclass = Gtlink_suntemp
 
     job_time = 300
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
+                           mktimefilter=diffuse_defaults.diffuse['mktimefilter'],
                            sourcekeys=diffuse_defaults.sun_moon['sourcekeys'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -153,7 +250,7 @@ class Gtsuntemp_SG(ScatterGather):
         NAME_FACTORY.update_base_dict(args['data'])
 
         # FIXME
-        mktime = 'nosm'
+        mktime = args['mktimefilter']
 
         for comp in components:
             for sourcekey in args['sourcekeys']:
@@ -184,7 +281,16 @@ class Gtsuntemp_SG(ScatterGather):
 
 
 class SunMoonChain(Chain):
-    """Small class to construct sun and moon templates
+    """Chain to construct sun and moon templates
+
+    This chain consists of:
+
+    exphpsun :  `Gtexphpsun_SG`
+        Build the sun-centered exposure cubes
+
+    suntemp : `Gtsuntemp_SG`
+        Build the templates
+
     """
     appname = 'fermipy-sunmoon-chain'
     linkname_default = 'summoon'
@@ -210,12 +316,20 @@ class SunMoonChain(Chain):
         comp = config_dict.get('comp')
         sourcekeys = config_dict.get('sourcekeys')
 
-        self._load_link_args('exphpsun', Gtexphpsun_SG,
-                             comp=comp, data=data)
+        mktimefilter = config_dict.get('mktimefilter')
 
-        self._load_link_args('suntemp', Gtsuntemp_SG,
-                             comp=comp, data=data,
-                             sourcekeys=sourcekeys)
+        self._set_link('expcube2', Gtexpcube2wcs_SG,
+                       comp=comp, data=data,
+                       mktimefilter=mktimefilter)
+
+        self._set_link('exphpsun', Gtexphpsun_SG,
+                       comp=comp, data=data,
+                       mktimefilter=mktimefilter)
+
+        self._set_link('suntemp', Gtsuntemp_SG,
+                       comp=comp, data=data,
+                       mktimefilter=mktimefilter,
+                       sourcekeys=sourcekeys)
 
 
 

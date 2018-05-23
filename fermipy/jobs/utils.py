@@ -1,6 +1,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Prepare data for diffuse all-sky analysis
+Utility functions for the `fermipy.jobs` module.
 """
 from __future__ import absolute_import, division, print_function
 

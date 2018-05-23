@@ -6,7 +6,9 @@ Collect information for simulated realizations of an analysis
 """
 from __future__ import absolute_import, division, print_function
 
+import os
 import sys
+import yaml
 import numpy as np
 
 
@@ -28,8 +30,61 @@ init_matplotlib_backend('Agg')
 NAME_FACTORY = NameFactory(basedir=('.'))
 
 
+def _get_enum_bins(configfile):
+    """Get the number of energy bin in the SED
+
+    Parameters
+    ----------
+
+    configfile : str
+        Fermipy configuration file.
+
+    Returns
+    -------
+
+    nbins : int
+        The number of energy bins
+
+    """
+    config = yaml.safe_load(open(configfile))
+
+    emin = config['selection']['emin']
+    emax = config['selection']['emax']
+    log_emin = np.log10(emin)
+    log_emax = np.log10(emax)
+    ndec = log_emax - log_emin
+    binsperdec = config['binning']['binsperdec']
+    nebins = int(np.ceil(binsperdec * ndec))
+
+    return nebins
+
+
+
 def fill_output_table(filelist, hdu, collist, nbins):
-    """Fill the arrays from the files in filelsit"""
+    """Fill the arrays from the files in filelist
+
+    Parameters
+    ----------
+
+    filelist : list
+        List of the files to get data from.
+
+    hdu : str
+        Name of the HDU containing the table with the input data.
+
+    colllist : list
+        List of the column names
+
+    nbins : int
+        Number of bins in the input data arrays
+
+    Returns
+    -------
+
+    table : astropy.table.Table
+        A table with all the requested data extracted.
+
+    """
     nfiles = len(filelist)
     shape = (nbins, nfiles)
     outdict = {}
@@ -61,7 +116,27 @@ def fill_output_table(filelist, hdu, collist, nbins):
 
 
 def vstack_tables(filelist, hdus):
-    """Fill the arrays from the files in filelsit"""
+    """vstack a set of HDUs from a set of files
+
+    Parameters
+    ----------
+
+    filelist : list
+        List of the files to get data from.
+
+    hdus : list
+        Names of the HDU containing the table with the input data.
+
+    Returns
+    -------
+
+    out_tables : list
+        A list with the table with all the requested data extracted.
+
+    out_names : list
+        A list with the names of the tables.
+
+    """
     nfiles = len(filelist)
     out_tables = []
     out_names = []
@@ -86,7 +161,26 @@ def vstack_tables(filelist, hdus):
 
 
 def collect_summary_stats(data):
-    """Collect summary statisitics from an array"""
+    """Collect summary statisitics from an array
+
+    This creates a dictionry of output arrays of summary
+    statistics, with the input array dimension reducted by one.
+
+    Parameters
+    ----------
+
+    data : `numpy.ndarray`
+        Array with the collected input data
+
+
+    Returns
+    -------
+
+    output : dict
+        Dictionary of `np.ndarray` with the summary data.
+        These include mean, std, median, and 4 quantiles (0.025, 0.16, 0.86, 0.975).
+
+    """
     mean = np.mean(data, axis=0)
     std = np.std(data, axis=0)
     median = np.median(data, axis=0)
@@ -104,7 +198,21 @@ def collect_summary_stats(data):
 
 
 def add_summary_stats_to_table(table_in, table_out, colnames):
-    """Collect summary statisitics from an input table and add them to an output table """
+    """Collect summary statisitics from an input table and add them to an output table
+
+     Parameters
+    ----------
+
+    table_in : `astropy.table.Table`
+        Table with the input data.
+
+    table_out : `astropy.table.Table`
+        Table with the output data.
+
+    colnames : list
+        List of the column names to get summary statistics for.
+
+    """
     for col in colnames:
         col_in = table_in[col]
         stats = collect_summary_stats(col_in.data)
@@ -132,9 +240,8 @@ def summarize_sed_results(sed_table):
 
 
 class CollectSED(Link):
-    """Small class wrap an analysis script.
+    """Small class to collect SED results from a series of simulations.
 
-    This is useful for parallelizing analysis using the fermipy.jobs module.
     """
     appname = 'fermipy-collect-sed'
     linkname_default = 'collect-sed'
@@ -143,6 +250,7 @@ class CollectSED(Link):
 
     default_options = dict(sed_file=defaults.common['sed_file'],
                            outfile=defaults.generic['outfile'],
+                           config=defaults.common['config'],
                            summaryfile=defaults.generic['summaryfile'],
                            nsims=defaults.sims['nsims'],
                            enumbins=(12, 'Number of energy bins', int),
@@ -175,11 +283,22 @@ class CollectSED(Link):
                dict(name='norm_ul'),
                dict(name='ts')]
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
 
+
         sedfile = args.sed_file
+
+        if is_not_null(args.config):
+            configfile = os.path.join(os.path.dirname(sedfile), args.config)
+        else:
+            configfile = os.path.join(os.path.dirname(sedfile), 'config.yaml')
+
+        nbins = _get_enum_bins(configfile)
+
         first = args.seed
         last = first + args.nsims
         flist = [sedfile.replace("_SEED.fits", "_%06i.fits" % seed)
@@ -187,8 +306,9 @@ class CollectSED(Link):
         outfile = args.outfile
         summaryfile = args.summaryfile
 
+
         outtable = fill_output_table(
-            flist, "SED", CollectSED.collist, nbins=args.enumbins)
+            flist, "SED", CollectSED.collist, nbins=nbins)
 
         if is_not_null(outfile):
             outtable.write(outfile)
@@ -199,9 +319,9 @@ class CollectSED(Link):
 
 
 class CollectSED_SG(ScatterGather):
-    """Small class to generate configurations for this script
+    """Small class to generate configurations for `CollectSED`
 
-    This adds the following arguments:
+    This loops over all the targets defined in the target list
     """
     appname = 'fermipy-collect-sed-sg'
     usage = "%s [options]" % (appname)
@@ -212,12 +332,14 @@ class CollectSED_SG(ScatterGather):
 
     default_options = dict(ttype=defaults.common['ttype'],
                            targetlist=defaults.common['targetlist'],
-                           enumbins=(12, 'Number of energy bins', int),
+                           config=defaults.common['config'],
                            sim=defaults.sims['sim'],
                            nsims=defaults.sims['nsims'],
                            seed=defaults.sims['seed'],
                            write_full=defaults.collect['write_full'],
                            write_summary=defaults.collect['write_summary'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -233,6 +355,14 @@ class CollectSED_SG(ScatterGather):
         write_full = args['write_full']
 
         targets = load_yaml(targets_yaml)
+
+        base_config = dict(config=args['config'],
+                           nsims=args['nsims'],
+                           seed=args['seed'])
+
+        first = args['seed']
+        last = first + args['nsims'] - 1
+
         for target_name, profile_list in targets.items():
             for profile in profile_list:
                 full_key = "%s:%s:%s" % (target_name, profile, sim)
@@ -242,8 +372,6 @@ class CollectSED_SG(ScatterGather):
                                  profile=profile,
                                  fullpath=True)
                 sed_file = NAME_FACTORY.sim_sedfile(**name_keys)
-                first = args['seed']
-                last = first + args['nsims'] - 1
                 outfile = sed_file.replace(
                     '_SEED.fits', '_collected_%06i_%06i.fits' % (first, last))
                 logfile = make_nfs_path(outfile.replace('.fits', '.log'))
@@ -251,14 +379,11 @@ class CollectSED_SG(ScatterGather):
                     outfile = None
                 summaryfile = sed_file.replace(
                     '_SEED.fits', '_summary_%06i_%06i.fits' % (first, last))
-                job_config = dict(sed_file=sed_file,
-                                  outfile=outfile,
-                                  summaryfile=summaryfile,
-                                  logfile=logfile,
-                                  enumbins=args['enumbins'],
-                                  nsims=args['nsims'],
-                                  seed=args['seed'],
-                                  dry_run=args['dry_run'])
+                job_config = base_config.copy()
+                job_config.update(dict(sed_file=sed_file,
+                                       outfile=outfile,
+                                       summaryfile=summaryfile,
+                                       logfile=logfile))
                 job_configs[full_key] = job_config
 
         return job_configs

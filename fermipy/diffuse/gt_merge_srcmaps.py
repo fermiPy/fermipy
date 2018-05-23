@@ -50,6 +50,8 @@ class GtMergeSrcmaps(Link):
                              outfile=FileFlags.output_mask,
                              outxml=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -101,12 +103,8 @@ class GtMergeSrcmaps(Link):
 
 
 class MergeSrcmaps_SG(ScatterGather):
-    """Small class to generate configurations for this script
+    """Small class to generate configurations for `GtMergeSrcmaps`
 
-    This adds the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --sources  : Catalog model component definition yaml file'
     """
     appname = 'fermipy-merge-srcmaps-sg'
     usage = "%s [options]" % (appname)
@@ -118,6 +116,8 @@ class MergeSrcmaps_SG(ScatterGather):
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'])
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -155,7 +155,6 @@ class MergeSrcmaps_SG(ScatterGather):
                                             irf_ver=NAME_FACTORY.irf_ver())
                     outfile = NAME_FACTORY.srcmaps(**name_keys)
                     logfile = make_nfs_path(outfile.replace('.fits', '.log'))
-                    print (key, merged_name, logfile)
                     job_configs[key] = dict(srcmaps=NAME_FACTORY.srcmaps(**nested_name_keys),
                                             expcube=NAME_FACTORY.ltcube(**name_keys),
                                             irfs=NAME_FACTORY.irfs(**name_keys),

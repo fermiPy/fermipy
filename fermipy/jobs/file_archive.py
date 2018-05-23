@@ -82,10 +82,10 @@ class FileDict(object):
     ----------
 
     file_args : dict
-        Dictionary mapping argument [str] to `FileFlags` enum
+        Dictionary mapping argument to `FileFlags` enum
 
     file_dict : dict
-        Dictionary mapping file path [str] to `FileFlags` enum
+        Dictionary mapping file path to `FileFlags` enum
     """
 
     def __init__(self, **kwargs):
@@ -450,7 +450,6 @@ class FileHandle(object):
         self.flags = kwargs.get('flags', FileFlags.no_flags)
         self.path = kwargs['path']
         if self.path[0] == '@':
-            print ('Removing @ from %s' % self.path)
             self.path = self.path[1:]
 
     @staticmethod
