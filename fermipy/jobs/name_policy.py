@@ -52,17 +52,17 @@ class NameFactory(object):
     fullpath_format = '{basedir}/{localpath}'
 
     def __init__(self, **kwargs):
-        """ C'tor.  Set baseline dictionary used to resolve names
+        """C'tor.  Set baseline dictionary used to resolve names
         """
         self.base_dict = kwargs.copy()
 
     def update_base_dict(self, yamlfile):
-        """ Update the values in baseline dictionary used to resolve names
+        """Update the values in baseline dictionary used to resolve names
         """
         self.base_dict.update(**yaml.safe_load(open(yamlfile)))
 
     def _format_from_dict(self, format_string, **kwargs):
-        """ Return a formatted file name dictionary components """
+        """Return a formatted file name dictionary components """
         kwargs_copy = self.base_dict.copy()
         kwargs_copy.update(**kwargs)
         localpath = format_string.format(**kwargs_copy)
@@ -71,52 +71,52 @@ class NameFactory(object):
         return localpath
 
     def ttypeconfig(self, **kwargs):
-        """ return the name of the input configuration file
+        """Return the name of the input configuration file
         """
         return self._format_from_dict(NameFactory.ttypeconfig_format, **kwargs)
 
     def randconfig(self, **kwargs):
-        """ return the name of the random direction configuration file
+        """Return the name of the random direction configuration file
         """
         return self._format_from_dict(NameFactory.randconfig_format, **kwargs)
 
     def targetdir(self, **kwargs):
-        """ return the name for the directory for a particular target
+        """Return the name for the directory for a particular target
         """
         return self._format_from_dict(NameFactory.targetdir_format, **kwargs)
 
     def sim_targetdir(self, **kwargs):
-        """ return the name for the directory for a particular target
+        """Return the name for the directory for a particular target
         """
         return self._format_from_dict(NameFactory.sim_targetdir_format, **kwargs)
 
     def targetfile(self, **kwargs):
-        """ return the name for the Target list file
+        """Return the name for the Target list file
         """
         return self._format_from_dict(NameFactory.targetfile_format, **kwargs)
 
     def sim_targetfile(self, **kwargs):
-        """ return the name for the Target list file for simulation
+        """Return the name for the Target list file for simulation
         """
         return self._format_from_dict(NameFactory.sim_targetfile_format, **kwargs)
 
     def profilefile(self, **kwargs):
-        """ return the name of the yaml file with information about a partiuclar profile
+        """Return the name of the yaml file with information about a partiuclar profile
         """
         return self._format_from_dict(NameFactory.profilefile_format, **kwargs)
 
     def sim_profilefile(self, **kwargs):
-        """ return the name of the yaml file with information about a partiuclar profile
+        """Return the name of the yaml file with information about a partiuclar profile
         """
         return self._format_from_dict(NameFactory.sim_profilefile_format, **kwargs)
 
     def sedfile(self, **kwargs):
-        """ return the name for the SED file for a particular target
+        """Return the name for the SED file for a particular target
         """
         return self._format_from_dict(NameFactory.sedfile_format, **kwargs)
 
     def sim_sedfile(self, **kwargs):
-        """ return the name for the simulated SED file for a particular target
+        """Return the name for the simulated SED file for a particular target
         """
         if 'seed' not in kwargs:
             kwargs['seed'] = 'SEED'

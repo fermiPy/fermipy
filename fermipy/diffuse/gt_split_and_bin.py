@@ -10,6 +10,7 @@ import math
 import yaml
 
 from fermipy.jobs.utils import is_null
+from fermipy.jobs.link import Link
 from fermipy.jobs.chain import Chain
 from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
@@ -36,6 +37,18 @@ def make_full_path(basedir, outkey, origname):
 
 class SplitAndBin(Chain):
     """Small class to split and bin data according to some user-provided specification
+
+    This chain consists multiple `Link` objects:
+
+    select-energy-EBIN-ZCUT : `Gtlink_select`
+        Initial splitting by energy bin and zenith angle cut
+
+    select-type-EBIN-ZCUT-FILTER-TYPE : `Gtlink_select`
+        Refinement of selection from event types
+
+    bin-EBIN-ZCUT-FILTER-TYPE : `Gtlink_bin`
+        Final binning of the data for each event type
+
     """
     appname = 'fermipy-split-and-bin'
     linkname_default = 'split-and-bin'
@@ -53,17 +66,19 @@ class SplitAndBin(Chain):
                            scratch=(None, 'Scratch area', str),
                            dry_run=(False, 'Print commands but do not run them', bool))
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def __init__(self, **kwargs):
         """C'tor
         """
         super(SplitAndBin, self).__init__(**kwargs)
         self.comp_dict = None
 
-    def _map_arguments(self, input_dict):
+    def _map_arguments(self, args):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
-        comp_file = input_dict.get('comp', None)
-        datafile = input_dict.get('data', None)
+        comp_file = args.get('comp', None)
+        datafile = args.get('data', None)
         if is_null(comp_file):
             return
         if is_null(datafile):
@@ -71,9 +86,9 @@ class SplitAndBin(Chain):
 
         NAME_FACTORY.update_base_dict(datafile)
 
-        outdir = input_dict.get('outdir', None)
-        outkey = input_dict.get('outkey', None)
-        ft1file = input_dict['ft1file']
+        outdir = args.get('outdir', None)
+        outkey = args.get('outkey', None)
+        ft1file = args['ft1file']
 
         if is_null(outdir) or is_null(outkey):
             return
@@ -81,6 +96,7 @@ class SplitAndBin(Chain):
 
         self.comp_dict = yaml.safe_load(open(comp_file))
         coordsys = self.comp_dict.pop('coordsys')
+        full_out_dir = make_nfs_path(os.path.join(outdir, outkey))
 
         for key_e, comp_e in sorted(self.comp_dict.items()):
             emin = math.pow(10., comp_e['log_emin'])
@@ -96,14 +112,15 @@ class SplitAndBin(Chain):
                                  mktime='none')
             selectfile_energy = make_full_path(outdir, outkey, NAME_FACTORY.select(**kwargs_select))
             linkname = 'select-energy-%s-%s' % (key_e, zcut)
-            self._load_link_args(linkname, Gtlink_select,
-                                 infile=ft1file,
-                                 outfile=selectfile_energy,
-                                 zmax=zmax,
-                                 emin=emin,
-                                 emax=emax,
-                                 evclass=NAME_FACTORY.evclassmask(evclassstr),
-                                 pfiles=pfiles)
+            self._set_link(linkname, Gtlink_select,
+                           infile=ft1file,
+                           outfile=selectfile_energy,
+                           zmax=zmax,
+                           emin=emin,
+                           emax=emax,
+                           evclass=NAME_FACTORY.evclassmask(evclassstr),
+                           pfiles=pfiles,
+                           logfile=os.path.join(full_out_dir, "%s.log" % linkname))
 
             if 'evtclasses' in comp_e:
                 evtclasslist_vals = comp_e['evtclasses']
@@ -121,24 +138,27 @@ class SplitAndBin(Chain):
                     selectfile_psf = make_full_path(
                         outdir, outkey, NAME_FACTORY.select(**kwargs_bin))
                     binfile = make_full_path(outdir, outkey, NAME_FACTORY.ccube(**kwargs_bin))
-                    self._load_link_args(linkname_select, Gtlink_select,
-                                         infile=selectfile_energy,
-                                         outfile=selectfile_psf,
-                                         zmax=zmax,
-                                         emin=emin,
-                                         emax=emax,
-                                         evtype=EVT_TYPE_DICT[psf_type],
-                                         evclass=NAME_FACTORY.evclassmask(evtclassval),
-                                         pfiles=pfiles)
-                    self._load_link_args(linkname_bin, Gtlink_bin,
-                                         coordsys=coordsys,
-                                         hpx_order=hpx_order,
-                                         evfile=selectfile_psf,
-                                         outfile=binfile,
-                                         emin=emin,
-                                         emax=emax,
-                                         enumbins=enumbins,
-                                         pfiles=pfiles)
+                    self._set_link(linkname_select, Gtlink_select,
+                                   infile=selectfile_energy,
+                                   outfile=selectfile_psf,
+                                   zmax=zmax,
+                                   emin=emin,
+                                   emax=emax,
+                                   evtype=EVT_TYPE_DICT[psf_type],
+                                   evclass=NAME_FACTORY.evclassmask(evtclassval),
+                                   pfiles=pfiles,
+                                   logfile=os.path.join(full_out_dir, "%s.log" % linkname_select))
+
+                    self._set_link(linkname_bin, Gtlink_bin,
+                                   coordsys=coordsys,
+                                   hpx_order=hpx_order,
+                                   evfile=selectfile_psf,
+                                   outfile=binfile,
+                                   emin=emin,
+                                   emax=emax,
+                                   enumbins=enumbins,
+                                   pfiles=pfiles,
+                                   logfile=os.path.join(full_out_dir, "%s.log" % linkname_bin))
 
 
 class SplitAndBin_SG(ScatterGather):
@@ -156,6 +176,8 @@ class SplitAndBin_SG(ScatterGather):
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_ccube'],
                            ft1file=(None, 'Input FT1 file', str),
                            scratch=(None, 'Path to scratch area', str))
+
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -197,7 +219,19 @@ class SplitAndBin_SG(ScatterGather):
 
 
 class SplitAndBinChain(Chain):
-    """Small class to split, apply mktime and bin data according to some user-provided specification
+    """Chain to run split and bin and then make exposure cubes
+
+    This chain consists of:
+
+    split-and-bin : `SplitAndBin_SG`
+        Chain to make the binned counts maps for each input file
+    
+    coadd-split : `CoaddSplit_SG`
+        Link to co-add the binnec counts maps files
+
+    expcube2 : `Gtexpcube2_SG`
+        Link to make the corresponding binned exposure maps
+
     """
     appname = 'fermipy-split-and-bin-chain'
     linkname_default = 'split-and-bin-chain'
@@ -212,30 +246,32 @@ class SplitAndBinChain(Chain):
                            scratch=diffuse_defaults.diffuse['scratch'],
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 
-    def _map_arguments(self, input_dict):
+    __doc__ += Link.construct_docstring(default_options)
+
+    def _map_arguments(self, args):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
-        data = input_dict.get('data')
-        comp = input_dict.get('comp')
-        ft1file = input_dict.get('ft1file')
-        scratch = input_dict.get('scratch', None)
-        dry_run = input_dict.get('dry_run', None)
+        data = args.get('data')
+        comp = args.get('comp')
+        ft1file = args.get('ft1file')
+        scratch = args.get('scratch', None)
+        dry_run = args.get('dry_run', None)
 
-        self._load_link_args('split-and-bin', SplitAndBin_SG,
-                             comp=comp, data=data,
-                             hpx_order_max=input_dict.get('hpx_order_ccube', 9),
-                             ft1file=ft1file,
-                             scratch=scratch,
-                             dry_run=dry_run)
+        self._set_link('split-and-bin', SplitAndBin_SG,
+                       comp=comp, data=data,
+                       hpx_order_max=args.get('hpx_order_ccube', 9),
+                       ft1file=ft1file,
+                       scratch=scratch,
+                       dry_run=dry_run)
 
-        self._load_link_args('coadd-split', CoaddSplit_SG,
-                             comp=comp, data=data,
-                             ft1file=ft1file)
+        self._set_link('coadd-split', CoaddSplit_SG,
+                       comp=comp, data=data,
+                       ft1file=ft1file)
 
-        self._load_link_args('expcube2', Gtexpcube2_SG,
-                             comp=comp, data=data,
-                             hpx_order_max=input_dict.get('hpx_order_expcube', 5),
-                             dry_run=dry_run)
+        self._set_link('expcube2', Gtexpcube2_SG,
+                       comp=comp, data=data,
+                       hpx_order_max=args.get('hpx_order_expcube', 5),
+                       dry_run=dry_run)
 
 def register_classes():
     """Register these classes with the `LinkFactory` """

@@ -56,6 +56,8 @@ class ResidualCR(Link):
                              bexpcube_clean=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
+    __doc__ += Link.construct_docstring(default_options)
+
     @staticmethod
     def _match_cubes(ccube_clean, ccube_dirty,
                      bexpcube_clean, bexpcube_dirty,
@@ -371,6 +373,8 @@ class ResidualCR_SG(ScatterGather):
                            sigma=diffuse_defaults.residual_cr['sigma'],
                            full_output=diffuse_defaults.residual_cr['full_output'])
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def build_job_configs(self, args):
         """Hook to build job configurations
         """
@@ -405,13 +409,23 @@ class ResidualCR_SG(ScatterGather):
                                     ccube_clean=NAME_FACTORY_CLEAN.ccube(**name_keys),
                                     outfile=outfile,
                                     hpx_order=hpx_order,
+                                    full_output=args['full_output'],
                                     logfile=make_nfs_path(outfile.replace('.fits', '.log')))
 
         return job_configs
 
 
 class ResidualCRChain(Chain):
-    """Small class to preform analysis of residual cosmic-ray contamination
+    """Chain to preform analysis of residual cosmic-ray contamination
+
+    This chain consists of:
+
+    split-and-mktime : `SplitAndMktimeChain`
+        Chain to bin up the data and make exposure cubes    
+
+    residual-cr : `ResidualCR`
+        Residual CR analysis
+
     """
     appname = 'fermipy-residual-cr-chain'
     linkname_default = 'residual-cr-chain'
@@ -420,48 +434,48 @@ class ResidualCRChain(Chain):
 
     default_options = dict(config=diffuse_defaults.diffuse['config'])
 
+    __doc__ += Link.construct_docstring(default_options)
+
     def __init__(self, **kwargs):
         """C'tor
         """
         super(ResidualCRChain, self).__init__(**kwargs)
         self.comp_dict = None
 
-    def _map_arguments(self, input_dict):
+    def _map_arguments(self, args):
         """Map from the top-level arguments to the arguments provided to
         the indiviudal links """
 
-        config_yaml = input_dict['config']
-        o_dict = OrderedDict()
+        config_yaml = args['config']
         config_dict = load_yaml(config_yaml)
 
         data = config_dict.get('data')
         comp = config_dict.get('comp')
-        dry_run = input_dict.get('dry_run', False)
+        dry_run = args.get('dry_run', False)
 
-        self._load_link_args('split-and-mktime', SplitAndMktimeChain,
-                             comp=comp, data=data,
-                             ft1file=config_dict['ft1file'],
-                             ft2file=config_dict['ft2file'],
-                             hpx_order_ccube=config_dict.get('hpx_order_ccube', 7),
-                             hpx_order_expcube=config_dict.get('hpx_order_expcube', 7),
-                             mktime=config_dict.get('mktimefitler', None),
-                             do_ltsum=config_dict.get('do_ltsum', False),
-                             scratch=config_dict.get('scratch', None),
-                             dry_run=dry_run)
+        self._set_link('prepare', SplitAndMktimeChain,
+                       comp=comp, data=data,
+                       ft1file=config_dict['ft1file'],
+                       ft2file=config_dict['ft2file'],
+                       hpx_order_ccube=config_dict.get('hpx_order_ccube', 7),
+                       hpx_order_expcube=config_dict.get('hpx_order_expcube', 7),
+                       mktime=config_dict.get('mktimefitler', None),
+                       do_ltsum=config_dict.get('do_ltsum', False),
+                       scratch=config_dict.get('scratch', None),
+                       dry_run=dry_run)
 
-        self._load_link_args('residual-cr', ResidualCR,
-                             comp=comp, data=data,
-                             hpx_order=config_dict.get('hpx_order_fitting', 4),
-                             clean=config_dict.get('clean_class', None),
-                             dirty=config_dict.get('dirty_class', None),
-                             mktime=config_dict.get('mktimefitler', None),
-                             select_factor=config_dict.get('select_factor', None),
-                             mask_factor=config_dict.get('mask_factor', None),
-                             sigma=config_dict.get('sigma', None),
-                             full_output=config_dict.get('full_output', None),
-                             dry_run=dry_run)
+        self._set_link('residual-cr', ResidualCR_SG,
+                       comp=comp, data=data,
+                       mktimefilter=config_dict.get('mktimefitler', None),
+                       hpx_order=config_dict.get('hpx_order_fitting', 4),
+                       clean=config_dict.get('clean_class', None),
+                       dirty=config_dict.get('dirty_class', None),                       
+                       select_factor=config_dict.get('select_factor', None),
+                       mask_factor=config_dict.get('mask_factor', None),
+                       sigma=config_dict.get('sigma', None),
+                       full_output=config_dict.get('full_output', False),
+                       dry_run=dry_run)
 
-        return o_dict
 
 
 def register_residual_cr():

@@ -156,8 +156,8 @@ def plotCastro(castroData, ylims, nstep=25, zlims=None):
 
     returns fig,ax,im,ztmp which are matplotlib figure, axes and image objects
     """
-    xlims = (castroData.refSpec.log_ebins[0],
-             castroData.refSpec.log_ebins[-1])
+    xlims = (castroData.refSpec.ebins[0],
+             castroData.refSpec.ebins[-1])
     xlabel = "Energy [GeV]"
     ylabel = NORM_LABEL[castroData.norm_type]
     return plotCastro_base(castroData, xlims, ylims,

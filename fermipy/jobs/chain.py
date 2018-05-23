@@ -1,7 +1,5 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Utilities to execute command line applications.
-
 The `Chain` class inherits from `Link` and allow chaining together several
 applications into a single object.
 """
@@ -20,7 +18,7 @@ from fermipy.jobs.job_archive import JobStatus, JobStatusVector,\
 
 
 def purge_dict(idict):
-    """ Remove null items that from a dictionary """
+    """Remove null items from a dictionary """
     odict = {}
     for key, val in idict.items():
         if is_null(val):
@@ -30,7 +28,7 @@ def purge_dict(idict):
 
 
 class Chain(Link):
-    """ An object tying together a series of applications into a
+    """An object tying together a series of applications into a
     single application.
 
     This class keep track of the arguments to pass to the applications
@@ -40,43 +38,32 @@ class Chain(Link):
     to write a python module that implements a chain and also has a
     __main__ function to allow it to be called from the shell.
 
-    Parameters
-    ----------
-
     """
     def __init__(self, **kwargs):
-        """ C'tor
-
-        Keyword arguments
-        -----------------
-
-        linkname : str
-            Unique name of this particular link
-        """
-        Link.__init__(self, **kwargs)
-        self._update_options(self.args.copy())
+        """C'tor """
+        super(Chain, self).__init__(**kwargs)
         self._links = OrderedDict()
 
     @classmethod
     def main(cls):
-        """ Hook to run this `Chain` from the command line """
+        """Hook to run this `Chain` from the command line """
         chain = cls.create()
-        args = chain.run_argparser(sys.argv[1:])
+        args = chain._run_argparser(sys.argv[1:])
         chain._run_chain(sys.stdout, args.dry_run)
         chain._finalize(args.dry_run)
 
     @property
     def links(self):
-        """ Return the `OrderedDict` of links """
+        """Return the `OrderedDict` of `Link` objects owned by this `Chain` """
         return self._links
 
     @property
     def linknames(self):
-        """ Return the name of the links """
+        """Return the name of the `Link` objects owned by this `Chain` """
         return self._links.keys()
 
     def __getitem__(self, key):
-        """ Return the `Link` whose linkname is key"""
+        """Return the `Link` whose linkname is key"""
         return self._links[key]
 
     def _latch_file_info(self):
@@ -91,21 +78,35 @@ class Chain(Link):
             self.sub_files.update(link.files.file_dict)
             self.sub_files.update(link.sub_files.file_dict)
 
-    def _map_arguments(self, input_dict):
-        """Map arguments to options.
+    def _map_arguments(self, args):
+        """Map arguments from the top-level `Chain` options
+        to the options of `Link` object contained within.
+
+        Note in many cases this function will also
+        decide what set of `Link` objects to create.
 
         Parameters
         -------------
-        args : dict or `Namespace`
-            If a namespace is given, it will be cast to dict
+        args : dict
+            The current values of the options of the top-level `Chain`
 
-        Returns dict
         """
         raise NotImplementedError('Chain._map_arguments')
 
-    def _load_link_args(self, linkname, cls, **kwargs):
-        """Transfer the arguments from
-        self._arg_dict to the links """
+    def _set_link(self, linkname, cls, **kwargs):
+        """Transfer options kwargs to a `Link` object,
+        optionally building the `Link if needed.
+
+        Parameters
+        ----------
+
+        linkname : str
+            Unique name of this particular link
+
+        cls : type
+            Type of `Link` being created or managed
+
+        """
         val_copy = purge_dict(kwargs.copy())
         sub_link_prefix = val_copy.pop('link_prefix', '')
         link_prefix = self.link_prefix + sub_link_prefix
@@ -119,11 +120,15 @@ class Chain(Link):
             link.update_args(job_args)
         else:
             link = cls.create(**create_args)
-            self.add_link(link, job_args)
+            self._links[link.linkname] = link
+            logfile_default = os.path.join('logs', '%s.log' % link.full_linkname)
+            logfile = kwargs.setdefault('logfile', logfile_default)
+            link._register_job(JobDetails.topkey, job_args,
+                               logfile, status=JobStatus.unknown)
         return link
 
     def _set_links_job_archive(self):
-        """Pass job_archive along to links"""
+        """Pass self._job_archive along to links"""
         for link in self._links.values():
             link._job_archive = self._job_archive
 
@@ -138,13 +143,20 @@ class Chain(Link):
         Parameters
         -----------
         stream : `file`
-            Stream to print to
+            Stream to print to,
+            Must have 'write' function
 
         dry_run : bool
             Print commands but do not run them
 
         stage_files : bool
             Stage files to and from the scratch area
+
+        force_run : bool
+            Run jobs, even if they are marked as done
+
+        resubmit_failed : bool
+            Resubmit failed jobs
 
         """
         self._set_links_job_archive()
@@ -209,8 +221,12 @@ class Chain(Link):
 
         chain_status = self.check_links_status()
         print ("Chain status %i" % (chain_status))
-        self._write_status_to_log(chain_status, stream)
-        self._set_status_self(status=chain_status)        
+        if chain_status == 5:
+            job_status = 0
+        else:
+            job_status = -1
+        self._write_status_to_log(job_status, stream)
+        self._set_status_self(status=chain_status)
 
         if self._job_archive:
             self._job_archive.file_archive.update_file_status()
@@ -219,7 +235,7 @@ class Chain(Link):
     def clear_jobs(self, recursive=True):
         """Clear a dictionary with all the jobs
 
-        If recursive is True this will include jobs from internal `Link`
+        If recursive is True this will include jobs from all internal `Link`
         """
         if recursive:
             for link in self._links.values():
@@ -229,7 +245,7 @@ class Chain(Link):
     def get_jobs(self, recursive=True):
         """Return a dictionary with all the jobs
 
-        If recursive is True this will include jobs from internal `Link`
+        If recursive is True this will include jobs from all internal `Link`
         """
         if recursive:
             ret_dict = self.jobs.copy()
@@ -239,8 +255,11 @@ class Chain(Link):
         return self.jobs
 
     def missing_input_files(self):
-        """Return a dictionary of the missing input files and `Link`
-        they are associated with """
+        """Make and return a dictionary of the missing input files.
+
+        This returns a dictionary mapping
+        filepath to list of `Link` that use the file as input.
+        """
         ret_dict = OrderedDict()
         for link in self._links.values():
             link_dict = link.missing_input_files()
@@ -252,8 +271,11 @@ class Chain(Link):
         return ret_dict
 
     def missing_output_files(self):
-        """Return a dictionary of the missing output files and `Link`
-        they are associated with """
+        """Make and return a dictionary of the missing output files.
+
+        This returns a dictionary mapping
+        filepath to list of links that produce the file as output.
+        """
         ret_dict = OrderedDict()
         for link in self._links.values():
             link_dict = link.missing_output_files()
@@ -264,19 +286,28 @@ class Chain(Link):
                     ret_dict[key] = value
         return ret_dict
 
-    def add_link(self, link, options=None):
-        """Append link to this `Chain` """
-        self._links[link.linkname] = link
-        if options is None:
-            options = OrderedDict()
-        logfile = os.path.join('logs', '%s.log' % link.full_linkname)
-        link._register_job(JobDetails.topkey, options,
-                           logfile, status=JobStatus.unknown)
-
     def check_links_status(self,
                            fail_running=False,
                            fail_pending=False):
-        """Check the status of all the links"""
+        """"Check the status of all the jobs run from the
+        `Link` objects in this `Chain` and return a status
+        flag that summarizes that.
+
+        Parameters
+        ----------
+
+        fail_running : `bool`
+            If True, consider running jobs as failed
+
+        fail_pending : `bool`
+            If True, consider pending jobs as failed
+
+        Returns
+        -------
+        status : `JobStatus`
+            Job status flag that summarizes the status of all the jobs,
+
+        """
         status_vector = JobStatusVector()
         for link in self._links.values():
             key = JobDetails.make_fullkey(link.full_linkname)
@@ -289,7 +320,24 @@ class Chain(Link):
 
     def run(self, stream=sys.stdout, dry_run=False,
             stage_files=True, resubmit_failed=False):
-        """Run the chain"""
+        """Runs this `Chain`.
+
+        Parameters
+        -----------
+        stream : `file`
+            Stream that this `Link` will print to,
+            Must have 'write' function
+
+        dry_run : bool
+            Print command but do not run it.
+
+        stage_files : bool
+            Copy files to and from scratch staging area.
+
+        resubmit_failed : bool
+            Flag for sub-classes to resubmit failed jobs.
+
+        """
         self._run_chain(stream, dry_run, stage_files,
                         resubmit_failed=resubmit_failed)
 
@@ -343,12 +391,16 @@ class Chain(Link):
 
         Parameters
         -----------
+
         stream : `file`
-            Stream to print to
+            Stream to print to, must have 'write' method.
+
         indent : str
             Indentation at start of line
+
         recurse_level : int
             Number of recursion levels to print
+
         """
         Link.print_summary(self, stream, indent, recurse_level)
         if recurse_level > 0:
