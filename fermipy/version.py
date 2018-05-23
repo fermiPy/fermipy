@@ -89,7 +89,7 @@ def call_git_describe(abbrev=4):
 
     try:
         line = check_output(['git', 'describe', '--abbrev=%d' % abbrev,
-                             '--dirty'], cwd=dirname)
+                             '--dirty', '--tags'], cwd=dirname)
 
         return line.strip().decode('utf-8')
 
