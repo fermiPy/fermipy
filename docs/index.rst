@@ -69,6 +69,7 @@ Documentation Contents
    output
    fitting
    model
+   developer
    advanced/index
    validation/index
    fermipy
