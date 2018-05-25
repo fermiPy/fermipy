@@ -81,7 +81,8 @@ def make_colorbar(fig, ax, im, zlims):
     return cax, cbar
 
 
-def plotCastro_base(castroData, xlims, ylims,
+
+def plotCastro_base(castroData, ylims,
                     xlabel, ylabel, nstep=25, zlims=None):
     """ Make a color plot (castro plot) of the 
         log-likelihood as a function of 
@@ -89,7 +90,6 @@ def plotCastro_base(castroData, xlims, ylims,
 
     castroData : A CastroData_Base object, with the 
                  log-likelihood v. normalization for each energy bin
-    xlims      : x-axis limits
     ylims      : y-axis limits
     xlabel     : x-axis title
     ylabel     : y-axis title
@@ -100,8 +100,6 @@ def plotCastro_base(castroData, xlims, ylims,
     """
     import matplotlib.pyplot as plt
 
-    xmin = xlims[0]
-    xmax = xlims[1]
     ymin = ylims[0]
     ymax = ylims[1]
     if zlims is None:
@@ -116,13 +114,14 @@ def plotCastro_base(castroData, xlims, ylims,
 
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.set_xlim((xmin, xmax))
     ax.set_ylim((ymin, ymax))
 
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
     normVals = np.logspace(np.log10(ymin), np.log10(ymax), nstep)
+    
+
     ztmp = []
     for i in range(castroData.nx):
         ztmp.append(castroData[i].interp(normVals))
@@ -131,11 +130,26 @@ def plotCastro_base(castroData, xlims, ylims,
     ztmp *= -1.
     ztmp = np.where(ztmp < zmin, np.nan, ztmp)
     cmap = plt.get_cmap('jet_r')
-    im = ax.imshow(ztmp, extent=[xmin, xmax, ymin, ymax],
-                   origin='lower', aspect='auto', interpolation='nearest',
-                   vmin=zmin, vmax=zmax, cmap=cmap)
+
+
+    xedge = castroData.x_edges()
+    ax.set_xlim((xedge[0], xedge[-1]))
+
+    im = ax.pcolormesh(xedge, normVals, ztmp,                    
+                       vmin=zmin, vmax=zmax, cmap=cmap, linewidth=0)
+
+    #cax = ax
+    #cbar = plt.colorbar(im)
+    #cbar.set_label(r"$\Delta \log \mathcal{L}$")
 
     cax, cbar = make_colorbar(fig, ax, im, (zmin, zmax))
+
+    #ax.set_ylim()
+    #plt.gca().set_yscale('log')
+    #plt.gca().set_xscale('log')
+    #plt.gca().set_xlim(sed['e_min'][0], sed['e_max'][-1])
+    #
+    #cax, cbar = make_colorbar(fig, ax, im, (zmin, zmax))
     # cbar = fig.colorbar(im, ticks=np.arange(zmin,zmax),
     #                    fraction=0.10,panchor=(1.05,0.5))
     #cbar.set_label(r'$\Delta \log\mathcal{L}$')
@@ -156,11 +170,9 @@ def plotCastro(castroData, ylims, nstep=25, zlims=None):
 
     returns fig,ax,im,ztmp which are matplotlib figure, axes and image objects
     """
-    xlims = (castroData.refSpec.ebins[0],
-             castroData.refSpec.ebins[-1])
-    xlabel = "Energy [GeV]"
+    xlabel = "Energy [MeV]"
     ylabel = NORM_LABEL[castroData.norm_type]
-    return plotCastro_base(castroData, xlims, ylims,
+    return plotCastro_base(castroData, ylims,
                            xlabel, ylabel, nstep, zlims)
 
 
