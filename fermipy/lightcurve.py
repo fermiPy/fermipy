@@ -127,7 +127,7 @@ def _fit_lc(gta, name, **kwargs):
     return fit_results
 
 
-def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_spectrum, roi,
+def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_spectrum, roi, lck_params,
                     **kwargs):
     i, time = itime
 
@@ -163,6 +163,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         raise
         return {}
 
+    gta._lck_params = lck_params
     # Recompute source map for source of interest and sources within 3 deg
     if gta.config['gtlike']['use_scaled_srcmap']:
         names = [s.name for s in
@@ -404,6 +405,7 @@ class LightCurve(object):
         const_spectrum = (specname, gtutils.get_function_pars_dict(spectrum))
 
         # Create Configurations
+        lck_params = copy.deepcopy(self._lck_params)
         config = copy.deepcopy(self.config)
         config['ltcube']['use_local_ltcube'] = kwargs['use_local_ltcube']
         config['gtlike']['use_scaled_srcmap'] = kwargs['use_scaled_srcmap']
@@ -437,7 +439,7 @@ class LightCurve(object):
         basedir = outdir + '/' if outdir is not None else ''
         wrap = partial(_process_lc_bin, name=name, config=config,
                        basedir=basedir, workdir=self.workdir, diff_sources=diff_sources,
-                       const_spectrum=const_spectrum, roi=self.roi, **kwargs)
+                       const_spectrum=const_spectrum, roi=self.roi, lck_params=lck_params, **kwargs)
         itimes = enumerate(zip(times[:-1], times[1:]))
         if kwargs.get('multithread', False):
             p = Pool(processes=kwargs.get('nthread', None))
