@@ -60,6 +60,30 @@ def localize_sources(gta, **kwargs):
 
 
 def add_source_get_correlated(gta, name, src_dict, correl_thresh=0.25):
+    """Add a source and get the set of correlated sources
+
+    Parameters
+    ----------
+
+    gta : `fermipy.gtaanalysis.GTAnalysis`
+        The analysis object
+
+    name : str
+        Name of the source we are adding
+
+    src_dict : dict
+        Dictionary of the source parameters
+
+    correl_thresh : float
+        Threshold for considering a source to be correlated
+
+    Returns
+    -------
+
+    cdict : dict
+        Dictionary with names and correlation factors of correlated sources 
+
+    """
     
     gta.add_source(name, src_dict)
     fit_result = gta.fit(covar=True)
@@ -68,12 +92,12 @@ def add_source_get_correlated(gta, name, src_dict, correl_thresh=0.25):
     idx = (src_names == name).argmax()
     correl_vals = fit_result['correlation'][idx][mask]
 
-    clist = []
+    cdict = {}
     for src_name, correl_val in zip(src_names, correl_vals):
         if np.fabs(correl_val) > 0.25:
-            clist.append(src_name)
+            cdict[src_name] = correl_val
 
     gta.zero_source(name)
     gta.fit(covar=True)
 
-    return clist
+    return cdict
