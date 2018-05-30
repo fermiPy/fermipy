@@ -7,6 +7,14 @@ This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
 
+0.17.2 (5/30/2018)
+------------------
+
+* Added lots of documentation for the fermipy.jobs module.
+* Minor changes to the fermipy.jobs module to work with the
+  dark matter analysis pipeline (dmpipe). 
+
+
 0.17.1 (5/23/2018)
 ------------------
 

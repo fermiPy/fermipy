@@ -287,11 +287,17 @@ class SimulateROI(Link):
         for test_source in test_sources:
             test_source_name = test_source['name']
             sedfile = "sed_%s_%06i.fits" % (test_source_name, seed)
-            correl_list = add_source_get_correlated(gta, test_source_name,
+            correl_dict = add_source_get_correlated(gta, test_source_name,
                                                     test_source['source_model'],
                                                     correl_thresh=0.25)
+            
+            # Write the list of correlated sources
+            correl_yaml = os.path.join(gta.workdir,
+                                       "correl_%s_%06i.yaml" % (test_source_name, seed))
+            write_yaml(correl_dict, correl_yaml)
+            
             gta.free_sources(False)
-            for src_name in correl_list:
+            for src_name in correl_dict.keys():
                 gta.free_source(src_name, pars='norm')
 
             gta.sed(test_source_name, outfile=sedfile)
@@ -329,7 +335,7 @@ class SimulateROI(Link):
             mc_spec_dict = dict(true_counts=gta.model_counts_spectrum(injected_name),
                                 energies=gta.energies,
                                 model=src_dict)
-            mcspec_file = os.path.join(gta.workdir,
+            mcspec_file = os.path.join(workdir,
                                        "mcspec_%s.yaml" % mcube_file)
             utils.write_yaml(mc_spec_dict, mcspec_file)
         else:

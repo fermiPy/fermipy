@@ -11,7 +11,7 @@ import os
 import sys
 import numpy as np
 
-from fermipy.utils import load_yaml, init_matplotlib_backend
+from fermipy.utils import load_yaml, write_yaml, init_matplotlib_backend
 
 from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.link import Link
@@ -180,11 +180,15 @@ class AnalyzeSED(Link):
                 outfile = "sed_%s.fits" % pkey
 
                 # Add the source and get the list of correlated soruces
-                correl_list = add_source_get_correlated(gta, pkey,
+                correl_dict = add_source_get_correlated(gta, pkey,
                                                         pdict, correl_thresh=0.25)
                 
+                # Write the list of correlated sources
+                correl_yaml = os.path.join(basedir, "correl_%s.yaml" % pkey)
+                write_yaml(correl_dict, correl_yaml)
+
                 gta.free_sources(False)
-                for src_name in correl_list:
+                for src_name in correl_dict.keys():
                     gta.free_source(src_name, pars='norm')
 
                 # build the SED
