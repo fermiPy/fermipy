@@ -1,6 +1,15 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 from __future__ import absolute_import, division, print_function
 
+from fermipy.tests.utils import requires_dependency, requires_st_version
+
+try:
+    import GtApp
+except ImportError:
+    pass
+
+# Skip tests in this file if Fermi ST aren't available
+pytestmark = requires_dependency('Fermi ST')
 
 def test_gtlink_classes():
     """ Test that we can create `Gtlink` classes """
