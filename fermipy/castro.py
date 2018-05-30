@@ -1025,6 +1025,10 @@ class CastroData_Base(object):
         return norm_vals, nll_vals
 
 
+    def x_edges(self):
+        raise NotImplementedError()
+
+
 class CastroData(CastroData_Base):
     """ This class wraps the data needed to make a "Castro" plot,
     namely the log-likelihood as a function of normalization for a
@@ -1396,6 +1400,11 @@ class CastroData(CastroData_Base):
 
         fn.params = initPars
         return fn
+
+
+    def x_edges(self):
+        return np.insert(self.refSpec.emax, 0, self.refSpec.emin[0])
+    
 
 
 class TSCube(object):
