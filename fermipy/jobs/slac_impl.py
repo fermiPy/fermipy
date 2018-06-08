@@ -62,6 +62,9 @@ def get_lsf_status():
 
     for line in output[1:]:
         line = line.strip().split()
+        # Protect against format of multiproc jobs
+        if len(line) < 5: 
+            continue
 
         status_count['NJOB'] += 1
 
