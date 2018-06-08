@@ -4,10 +4,14 @@ Factory module to return the default interace to the batch farm
 """
 from __future__ import absolute_import, division, print_function
 
+import os
 
-# This sets the default job type.
-# We are going to want a better way to control this down the road
-DEFAULT_JOB_TYPE = 'slac'
+# Set the default job type.  
+# These is probably a better way to do this.
+try: 
+    DEFAULT_JOB_TYPE = os.environ['FERMIPY_BATCH_TYPE']
+except KeyError:
+    DEFAULT_JOB_TYPE = 'slac'
 
 
 def get_batch_job_args(job_time=1500):
