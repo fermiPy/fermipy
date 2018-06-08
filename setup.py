@@ -77,6 +77,8 @@ setup(
         'fermipy-catalog-comp-chain = fermipy.diffuse.diffuse_analysis:CatalogCompChain.main',
         'fermipy-diffuse-comp-chain = fermipy.diffuse.diffuse_analysis:DiffuseCompChain.main',
         'fermipy-diffuse-analysis = fermipy.diffuse.diffuse_analysis:DiffuseAnalysisChain.main',
+        'fermipy-fit-diffuse = fermipy.diffuse.fitting:FitDiffuse.main',
+        'fermipy-fit-diffuse-sg = fermipy.diffuse.fitting:FitDiffuse_SG.main',
         'fermipy-job-archive = fermipy.jobs.job_archive:main_browse',
         'fermipy-file-archive = fermipy.jobs.file_archive:main_browse',
         'fermipy-analyze-roi = fermipy.jobs.target_analysis:AnalyzeROI.main',

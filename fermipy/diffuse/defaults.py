@@ -7,6 +7,11 @@ from __future__ import absolute_import, division, print_function
 # Options for diffuse analysis
 diffuse = {
     'config': (None, 'Config yaml file', str),
+    'roi_baseline' : ('baseline.npy', 'Name of ROI baseline snapshot', str),
+    'fit_strategy' : (None, 'Yaml file with ROI fitting strategy', str),
+    'input_pars' : (None, 'File with input values for fit parameters', str),
+    'load_baseline': (False, 'Load the ROI baseline snapshot', bool),
+    'make_plots': (False, 'Make plots.', bool),
     'comp': ('config/binning.yaml', 'Path to yaml file defining binning.', str),
     'data': ('config/dataset_source.yaml', 'Path to yaml file defining dataset.', str),
     'ft1file': ('P8_P305_8years_source_zmax105.lst', 'Path to list of input FT1 files', str),
