@@ -13,6 +13,7 @@ import sys
 from shutil import copyfile
 
 import numpy as np
+import glob
 
 from astropy import units as u
 from astropy.coordinates import SkyCoord, ICRS, Galactic
@@ -57,20 +58,24 @@ class CopyBaseROI(Link):
                            extracopy=defaults.sims['extracopy'],
                            sim=defaults.sims['sim'])
 
-    copyfiles = ['srcmap_00.fits']
+    copyfiles = ['srcmap_*.fits', 'ccube.fits', 'ccube_*.fits']
 
     __doc__ += Link.construct_docstring(default_options)
 
     @classmethod
-    def copy_analysis_files(cls, orig_dir, dest_dir, files):
+    def copy_analysis_files(cls, orig_dir, dest_dir, copyfiles):
         """ Copy a list of files from orig_dir to dest_dir"""
-        for f in files:
-            orig_path = os.path.join(orig_dir, f)
-            dest_path = os.path.join(dest_dir, f)
-            try:
-                copyfile(orig_path, dest_path)
-            except IOError:
-                sys.stderr.write("WARNING: failed to copy %s\n" % orig_path)
+        for pattern in copyfiles:
+            glob_path = os.path.join(orig_dir, pattern)
+            files = glob.glob(glob_path)
+            for ff in files: 
+                f = os.path.basename(ff)
+                orig_path = os.path.join(orig_dir, f)
+                dest_path = os.path.join(dest_dir, f)            
+                try:
+                    copyfile(orig_path, dest_path)
+                except IOError:
+                    sys.stderr.write("WARNING: failed to copy %s\n" % orig_path)
 
     @classmethod
     def copy_target_dir(cls, orig_dir, dest_dir, roi_baseline, extracopy):
@@ -83,7 +88,7 @@ class CopyBaseROI(Link):
 
         copyfiles = ['%s.fits' % roi_baseline,
                      '%s.npy' % roi_baseline,
-                     '%s_00.xml' % roi_baseline] + cls.copyfiles
+                     '%s_*.xml' % roi_baseline] + cls.copyfiles
         if isinstance(extracopy, list):
             copyfiles += extracopy
 
