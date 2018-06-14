@@ -40,6 +40,11 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+.pytest_cache/
+sed.fits
+sed.yaml
+test.fits
+test1.reg
 
 # Translations
 *.mo
