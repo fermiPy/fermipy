@@ -8,7 +8,9 @@ import os
 import sys
 import numpy as np
 
-from fermipy.utils import load_yaml#, init_matplotlib_backend
+from fermipy.utils import load_yaml, init_matplotlib_backend
+init_matplotlib_backend('Agg')
+
 from fermipy import plotting
 
 from fermipy.jobs.utils import is_null, is_not_null
@@ -19,8 +21,6 @@ from fermipy.jobs.analysis_utils import baseline_roi_fit, localize_sources,\
     add_source_get_correlated
 
 from fermipy.diffuse import defaults
-
-#init_matplotlib_backend('Agg')
 
 try:
     from fermipy.gtanalysis import GTAnalysis
