@@ -297,6 +297,7 @@ class FitDiffuse_SG(ScatterGather):
         # Tweak the batch job args
         try:
             self._interface._lsf_args.update(dict(n=2))
+            self._interface._lsf_args.update(dict(R='\"select[rhel60&&!fell] -R span[hosts=1]\"'))
         except AttributeError:
             pass
 
