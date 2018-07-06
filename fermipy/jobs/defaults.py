@@ -29,6 +29,7 @@ sims = {
     'sims': ([], 'Names of the simulation scenario.', list),
     'sim_profile': ('default', 'Name of the profile to use for simulation.', str),
     'nsims': (20, 'Number of simulations to run.', int),
+    'nsims_job': (0, 'Number of simulations to run per job.', int),
     'seed': (0, 'Seed number for first simulation.', int),
     'rand_config': (None, 'Path to config file for genaration random sky dirs', str),
     'skydirs': (None, 'Yaml file with blank sky directions.', str),
