@@ -411,7 +411,7 @@ class LogParabola(SpectralFunction):
 class PLExpCutoff(SpectralFunction):
     """Class that evaluates a function with the parameterization:
 
-    F(x) = p_0 * (x/x_s)^(p_1) * exp(- x/p_2 ) 
+    F(x) = p_0 * (x/x_s)^(p_1) * exp(- x/p_2 )
 
     where x_s is the scale parameter.  The `params` array should be
     defined with:
@@ -575,7 +575,7 @@ class DMFitFunction(SpectralFunction):
         110:  ["uu-bar_decay", "uu_decay"],
         111:  ["dd-bar_decay", "dd_decay"],
         112:  ["ss-bar_decay", "ss_decay"]}
-        
+
 
     channel_shortname_mapping = {
         1: "ee",
@@ -606,10 +606,13 @@ class DMFitFunction(SpectralFunction):
     channel_rev_map = {vv: k for k, v in channel_name_mapping.items()
                        for vv in v}
 
-    ann_channel_names = [ channel_shortname_mapping[k] for k in range(1,13) ]
-
-    decay_channel_names = [ channel_shortname_mapping[k] for k in range(101,113) ]
-
+    @property
+    def ann_channel_names(self): 
+        return [ self.channel_shortname_mapping[k] for k in range(1,13) ]
+        
+    @property
+    def decay_channel_names(self): 
+        return [ self.channel_shortname_mapping[k] for k in range(101,113) ]
 
     def __init__(self, params, chan='bb', jfactor=1E19, tablepath=None, dfactor=1E17):
         """Constructor.
@@ -636,7 +639,7 @@ class DMFitFunction(SpectralFunction):
             in the same units as the mass parameter.
 
         """
- 
+
         if tablepath is None:
             tablepath = os.path.join('$FERMIPY_DATA_DIR',
                                      'gammamc_dif.dat')
@@ -663,7 +666,7 @@ class DMFitFunction(SpectralFunction):
                                                     bounds_error=False,
                                                     fill_value=None)
         extra_params = dict(dndx_interp=self._dndx_interp,
-                            chan=chan_code, 
+                            chan=chan_code,
                             jfactor=jfactor,
                             dfactor=dfactor)
 
