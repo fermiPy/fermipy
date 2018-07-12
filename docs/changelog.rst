@@ -7,6 +7,17 @@ This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
 
+0.17.3 (7/12/2018)
+------------------
+
+* Added fitting code to fermipy.diffuse module
+* Improved fermipy.jobs to deal with analyses with multiple components
+* Added capability to plot global minimum in castro plots
+* Added spectra for dark matter decay to DMFitFunction
+* Added code to split simulations into smaller batch jobs
+* Added fixed shape lightcurve to correct TS_var computation
+
+
 0.17.2 (5/30/2018)
 ------------------
 
