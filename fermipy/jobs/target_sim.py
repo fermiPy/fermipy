@@ -13,6 +13,7 @@ import sys
 from shutil import copyfile
 
 import numpy as np
+import glob
 
 from astropy import units as u
 from astropy.coordinates import SkyCoord, ICRS, Galactic
@@ -57,20 +58,24 @@ class CopyBaseROI(Link):
                            extracopy=defaults.sims['extracopy'],
                            sim=defaults.sims['sim'])
 
-    copyfiles = ['srcmap_00.fits']
+    copyfiles = ['srcmap_*.fits', 'ccube.fits', 'ccube_*.fits']
 
     __doc__ += Link.construct_docstring(default_options)
 
     @classmethod
-    def copy_analysis_files(cls, orig_dir, dest_dir, files):
+    def copy_analysis_files(cls, orig_dir, dest_dir, copyfiles):
         """ Copy a list of files from orig_dir to dest_dir"""
-        for f in files:
-            orig_path = os.path.join(orig_dir, f)
-            dest_path = os.path.join(dest_dir, f)
-            try:
-                copyfile(orig_path, dest_path)
-            except IOError:
-                sys.stderr.write("WARNING: failed to copy %s\n" % orig_path)
+        for pattern in copyfiles:
+            glob_path = os.path.join(orig_dir, pattern)
+            files = glob.glob(glob_path)
+            for ff in files:
+                f = os.path.basename(ff)
+                orig_path = os.path.join(orig_dir, f)
+                dest_path = os.path.join(dest_dir, f)
+                try:
+                    copyfile(orig_path, dest_path)
+                except IOError:
+                    sys.stderr.write("WARNING: failed to copy %s\n" % orig_path)
 
     @classmethod
     def copy_target_dir(cls, orig_dir, dest_dir, roi_baseline, extracopy):
@@ -83,7 +88,7 @@ class CopyBaseROI(Link):
 
         copyfiles = ['%s.fits' % roi_baseline,
                      '%s.npy' % roi_baseline,
-                     '%s_00.xml' % roi_baseline] + cls.copyfiles
+                     '%s_*.xml' % roi_baseline] + cls.copyfiles
         if isinstance(extracopy, list):
             copyfiles += extracopy
 
@@ -137,7 +142,7 @@ class CopyBaseROI_SG(ScatterGather):
                            roi_baseline=args['roi_baseline'],
                            extracopy = args['extracopy'],
                            sim=sim)
-                           
+
         for target_name in targets.keys():
             targetdir = NAME_FACTORY.sim_targetdir(target_type=ttype,
                                                    target_name=target_name,
@@ -267,22 +272,43 @@ class SimulateROI(Link):
     __doc__ += Link.construct_docstring(default_options)
 
     @staticmethod
+    def _clone_config_and_srcmaps(config_path, seed):
+        """Clone the configuration"""
+        workdir = os.path.dirname(config_path)
+        new_config_path = config_path.replace('.yaml', '_%06i.yaml' % seed)
+        config = load_yaml(config_path)
+        comps = config.get('components', [config])
+        for i, comp in enumerate(comps):
+            comp_name = "%02i" % i
+            if not comp.has_key('gtlike'):
+                comp['gtlike'] = {}
+            orig_srcmap = os.path.abspath(os.path.join(workdir, 'srcmap_%s.fits' % (comp_name)))
+            new_srcmap = os.path.abspath(os.path.join(workdir, 'srcmap_%06i_%s.fits' % (seed, comp_name)))
+            comp['gtlike']['srcmap'] = os.path.abspath(os.path.join(workdir, 'srcmap_%06i_%s.fits' % (seed, comp_name)))
+            comp['gtlike']['use_external_srcmap'] = True
+            copyfile(orig_srcmap, new_srcmap)
+
+        write_yaml(config, new_config_path)
+        return new_config_path
+
+
+    @staticmethod
     def _run_simulation(gta, roi_baseline,
-                        injected_name, test_sources, seed):
+                        injected_name, test_sources, current_seed, seed):
         """Simulate a realization of this analysis"""
-        gta.load_roi('sim_baseline')
+        gta.load_roi('sim_baseline_%06i.npy' % current_seed)
         gta.set_random_seed(seed)
         gta.simulate_roi()
         if injected_name:
             gta.zero_source(injected_name)
-        
+
         gta.optimize()
         gta.find_sources(sqrt_ts_threshold=5.0, search_skydir=gta.roi.skydir,
                          search_minmax_radius=[1.0, np.nan])
         gta.optimize()
         gta.free_sources(skydir=gta.roi.skydir, distance=1.0, pars='norm')
         gta.fit(covar=True)
-        gta.write_roi('sim_refit')
+        gta.write_roi('sim_refit_%06i' % current_seed)
 
         for test_source in test_sources:
             test_source_name = test_source['name']
@@ -290,12 +316,12 @@ class SimulateROI(Link):
             correl_dict = add_source_get_correlated(gta, test_source_name,
                                                     test_source['source_model'],
                                                     correl_thresh=0.25)
-            
+
             # Write the list of correlated sources
             correl_yaml = os.path.join(gta.workdir,
                                        "correl_%s_%06i.yaml" % (test_source_name, seed))
             write_yaml(correl_dict, correl_yaml)
-            
+
             gta.free_sources(False)
             for src_name in correl_dict.keys():
                 gta.free_source(src_name, pars='norm')
@@ -303,7 +329,7 @@ class SimulateROI(Link):
             gta.sed(test_source_name, outfile=sedfile)
             # Set things back to how they were
             gta.delete_source(test_source_name)
-            gta.load_xml('sim_refit')
+            gta.load_xml('sim_refit_%06i' % current_seed)
 
     def run_analysis(self, argv):
         """Run this analysis"""
@@ -313,15 +339,17 @@ class SimulateROI(Link):
             raise RuntimeError(
                 "Trying to run fermipy analysis, but don't have ST")
 
-        gta = GTAnalysis(args.config, logging={'verbosity': 3},
+        workdir = os.path.dirname(args.config)
+        _config_file = self._clone_config_and_srcmaps(args.config, args.seed)
+
+        gta = GTAnalysis(_config_file, logging={'verbosity': 3},
                          fileio={'workdir_regex': '\.xml$|\.npy$'})
         gta.load_roi(args.roi_baseline)
 
-        workdir = os.path.dirname(args.config)
         simfile = os.path.join(workdir, 'sim_%s_%s.yaml' %
                                (args.sim, args.sim_profile))
 
-        mcube_file = "%s_%s" % (args.sim, args.sim_profile)
+        mcube_file = "%s_%s_%06i" % (args.sim, args.sim_profile, args.seed)
         sim_config = utils.load_yaml(simfile)
 
         injected_source = sim_config.get('injected_source', None)
@@ -336,12 +364,12 @@ class SimulateROI(Link):
                                 energies=gta.energies,
                                 model=src_dict)
             mcspec_file = os.path.join(workdir,
-                                       "mcspec_%s.yaml" % mcube_file)
+                                       "mcspec_%s_%06i.yaml" % (mcube_file, args.seed))
             utils.write_yaml(mc_spec_dict, mcspec_file)
         else:
             injected_name = None
 
-        gta.write_roi('sim_baseline')
+        gta.write_roi('sim_baseline_%06i' % args.seed)
 
         test_sources = []
         for profile in args.profiles:
@@ -352,7 +380,7 @@ class SimulateROI(Link):
             last = first + args.nsims
             for seed in range(first, last):
                 self._run_simulation(gta, args.roi_baseline,
-                                     injected_name, test_sources, seed)
+                                     injected_name, test_sources, first, seed)
 
 
 class RandomDirGen_SG(ScatterGather):
@@ -433,7 +461,8 @@ class SimulateROI_SG(ScatterGather):
                            sim=defaults.sims['sim'],
                            sim_profile=defaults.sims['sim_profile'],
                            nsims=defaults.sims['nsims'],
-                           seed=defaults.sims['seed'])
+                           seed=defaults.sims['seed'],
+                           nsims_job=defaults.sims['nsims_job'])
 
     __doc__ += Link.construct_docstring(default_options)
 
@@ -453,12 +482,14 @@ class SimulateROI_SG(ScatterGather):
             config_yaml = config_override
 
         targets = load_yaml(targets_yaml)
+        nsims_job = args['nsims_job']
+        first_seed = args['seed']
+        nsims = args['nsims']
+        last_seed = first_seed + nsims
 
         base_config = dict(sim_profile=args['sim_profile'],
                            roi_baseline=args['roi_baseline'],
-                           sim=sim,
-                           nsims=args['nsims'],
-                           seed=args['seed'])
+                           sim=sim)
 
         for target_name, target_list in targets.items():
             name_keys = dict(target_type=ttype,
@@ -467,13 +498,25 @@ class SimulateROI_SG(ScatterGather):
                              fullpath=True)
             simdir = NAME_FACTORY.sim_targetdir(**name_keys)
             config_path = os.path.join(simdir, config_yaml)
-            logfile = make_nfs_path(os.path.join(
-                simdir, "%s_%s.log" % (self.linkname, target_name)))
+
             job_config = base_config.copy()
             job_config.update(dict(config=config_path,
-                                   logfile=logfile,
                                    profiles=target_list))
-            job_configs[target_name] = job_config
+
+            current_seed = first_seed
+            while current_seed < last_seed:
+                fullkey = "%s_%06i" % (target_name, current_seed)
+                logfile = make_nfs_path(os.path.join(simdir, "%s_%s_%06i.log" % (self.linkname, 
+                                                                                 target_name, current_seed)))
+                if nsims_job <= 0 or current_seed + nsims_job >= last_seed:
+                    nsims_current = last_seed - current_seed
+                else:
+                    nsims_current = nsims_job
+                job_config.update(dict(seed=current_seed,
+                                       nsims=nsims_current,
+                                       logfile=logfile))
+                job_configs[fullkey] = job_config.copy()
+                current_seed += nsims_current
 
         return job_configs
 

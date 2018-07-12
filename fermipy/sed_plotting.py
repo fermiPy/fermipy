@@ -83,7 +83,7 @@ def make_colorbar(fig, ax, im, zlims):
 
 
 def plotCastro_base(castroData, ylims,
-                    xlabel, ylabel, nstep=25, zlims=None):
+                    xlabel, ylabel, nstep=25, zlims=None, global_min=False):
     """ Make a color plot (castro plot) of the 
         log-likelihood as a function of 
         energy and flux normalization
@@ -95,6 +95,7 @@ def plotCastro_base(castroData, ylims,
     ylabel     : y-axis title
     nstep      : Number of y-axis steps to plot for each energy bin
     zlims      : z-axis limits
+    global_min : Plot the log-likelihood w.r.t. the global min.
 
     returns fig,ax,im,ztmp which are matplotlib figure, axes and image objects
     """
@@ -129,6 +130,12 @@ def plotCastro_base(castroData, ylims,
     ztmp = np.asarray(ztmp).T
     ztmp *= -1.
     ztmp = np.where(ztmp < zmin, np.nan, ztmp)
+
+    if global_min:
+        global_offset = castroData.nll_offsets.min()
+        offsets = global_offset - castroData.nll_offsets
+        ztmp += offsets
+
     cmap = plt.get_cmap('jet_r')
 
 

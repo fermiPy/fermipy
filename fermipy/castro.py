@@ -592,7 +592,7 @@ class CastroData_Base(object):
     Sub-classes can implement particul axes choices (e.g., EFlux v. Energy)
     """
 
-    def __init__(self, norm_vals, nll_vals, norm_type):
+    def __init__(self, norm_vals, nll_vals, nll_offsets, norm_type):
         """C'tor
 
         Parameters
@@ -609,6 +609,10 @@ class CastroData_Base(object):
            where N is the number for bins and M number of sampled
            values for each bin
 
+        nll_offsets : `~numpy.ndarray`
+           The offsets of the log-likelihood values (i.e., the minimum value) in an
+           N array, when N is the number for bins
+
         norm_type : str
            String specifying the quantity used for the normalization,
            value depend on the sub-class details
@@ -624,6 +628,7 @@ class CastroData_Base(object):
 
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
+        self._nll_offsets = nll_offsets
         self._loglikes = []
         self._nll_null = 0.0
         self._norm_type = norm_type
@@ -655,6 +660,11 @@ class CastroData_Base(object):
     def nll_null(self):
         """ Return the negative log-likelihood for the null-hypothesis """
         return self._nll_null
+
+    @property
+    def nll_offsets(self):
+        """ Return the offsets in the negative log-likelihoods for each bin """
+        return self._nll_offsets
 
     def __getitem__(self, i):
         """ return the LnLFn object for the ith energy bin
@@ -993,11 +1003,15 @@ class CastroData_Base(object):
 
         Returns
         -------
-        norm_vals : 'numpy.ndarray'
+        norm_vals : `numpy.ndarray`
            N X M array of Normalization values
 
-        nll_vals  : 'numpy.ndarray'
+        nll_vals  : `numpy.ndarray`
            N X M array of log-likelihood values
+
+        nll_offsets :  `numpy.ndarray`
+           N array of maximum log-likelihood values in each bin
+
         """
         n_bins = shape[0]
         n_vals = shape[1]
@@ -1007,22 +1021,22 @@ class CastroData_Base(object):
 
         norm_vals = np.zeros(shape)
         nll_vals = np.zeros(shape)
+        nll_offsets = np.zeros((n_bins))
         for i in range(n_bins):
             log_min = np.log10(ylims[0])
             log_max = np.log10(ylims[1])
             norm_vals[i, 1:] = np.logspace(log_min, log_max, n_vals - 1)
-            check = 0
             for c, w in zip(components, weights):
-                check += w * c[i].interp(norm_vals[i, -1])
-                nll_vals[i] += w * c[i].interp(norm_vals[i])
-                pass
-            # reset the zeros
+                nll_vals[i] += w * c[i].interp(norm_vals[i]) - c.nll_offsets[i]
+
+            # Reset the offsets
             nll_obj = LnLFn(norm_vals[i], nll_vals[i])
-            nll_min = nll_obj.fn_mle()
-            nll_vals[i] -= nll_min
+            ll_offset = nll_obj.fn_mle()
+            nll_vals[i] -= ll_offset
+            nll_offsets[i] = -ll_offset
             pass
 
-        return norm_vals, nll_vals
+        return norm_vals, nll_vals, nll_offsets
 
 
     def x_edges(self):
@@ -1062,7 +1076,8 @@ class CastroData(CastroData_Base):
               MeV^-1 )
 
         """
-        super(CastroData, self).__init__(norm_vals, nll_vals, norm_type)
+        nll_offsets = np.zeros((nll_vals.shape[0]))
+        super(CastroData, self).__init__(norm_vals, nll_vals, nll_offsets, norm_type)
         self._refSpec = refSpec
 
     @property
@@ -1294,8 +1309,10 @@ class CastroData(CastroData_Base):
         """
         if len(components) == 0:
             return None
-        norm_vals, nll_vals = CastroData_Base.stack_nll(
-            shape, components, ylims, weights)
+        norm_vals, nll_vals, nll_offsets = CastroData_Base.stack_nll(shape,
+                                                                     components,
+                                                                     ylims,
+                                                                     weights)
         return cls(norm_vals, nll_vals,
                    components[0].refSpec,
                    components[0].norm_type)
