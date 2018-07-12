@@ -97,14 +97,14 @@ def _fit_lc(gta, name, **kwargs):
                             'fixing TS<4 sources')
             gta.free_sources_by_name(free_sources, False)
             gta.free_sources_by_name(free_sources_norm, pars='norm')
-            gta.free_sources(minmax_ts=[0, 4], free=False, exclude=[name])
+            gta.free_sources(minmax_ts=[None, 4], free=False, exclude=[name])
         elif niter == 3:
             gta.logger.info('Fit Failed with User Supplied List of '
                             'Free/Fixed Sources.....Lets try '
                             'fixing TS<9 sources')
             gta.free_sources_by_name(free_sources, False)
             gta.free_sources_by_name(free_sources_norm, pars='norm')
-            gta.free_sources(minmax_ts=[0, 9], free=False, exclude=[name])
+            gta.free_sources(minmax_ts=[None, 9], free=False, exclude=[name])
         elif niter == 4:
             gta.logger.info('Fit still did not converge, lets try fixing the '
                             'sources up to 1dg out from ROI')
@@ -113,7 +113,7 @@ def _fit_lc(gta, name, **kwargs):
                 src = gta.roi.get_source_by_name(s)
                 if src['offset'] < 1.0:
                     gta.free_source(s, pars='norm')
-            gta.free_sources(minmax_ts=[0, 9], free=False, exclude=[name])
+            gta.free_sources(minmax_ts=[None, 9], free=False, exclude=[name])
         else:
             gta.logger.error('Fit still didnt converge.....please examine this data '
                              'point, setting output to 0')
@@ -127,7 +127,7 @@ def _fit_lc(gta, name, **kwargs):
     return fit_results
 
 
-def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_spectrum, roi,
+def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_spectrum, roi, lck_params,
                     **kwargs):
     i, time = itime
 
@@ -156,7 +156,6 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         gta = GTAnalysis(config, roi, loglevel=logging.DEBUG)
         gta.logger.info('Fitting time range %i %i' % (time[0], time[1]))
         gta.setup()
-        # gta.load_roi(workdir+'/_lc_%s.npy'%name)
     except:
         print('Analysis failed in time range %i %i' %
               (time[0], time[1]))
@@ -164,6 +163,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         raise
         return {}
 
+    gta._lck_params = lck_params
     # Recompute source map for source of interest and sources within 3 deg
     if gta.config['gtlike']['use_scaled_srcmap']:
         names = [s.name for s in
@@ -181,42 +181,78 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     fit_results = _fit_lc(gta, name, **kwargs)
     gta.write_xml('fit_model_final.xml')
     srcmodel = copy.deepcopy(gta.get_src_model(name))
+    numfree = gta.get_free_param_vector().count(True)
 
-    # rerun fit using params from full time (constant) fit using same
-    # param vector as the successful fit to get loglike
-    specname, spectrum = const_spectrum
-    gta.set_source_spectrum(name, spectrum_type=specname,
-                            spectrum_pars=spectrum)
-    gta.free_source(name, free=False)
-    const_fit_results = gta.fit()
-    const_srcmodel = gta.get_src_model(name)
+    max_ts_thresholds = [None, 4, 9]
+    for i, max_ts in enumerate(max_ts_thresholds):
+        if max_ts is not None:
+            gta.free_sources(minmax_ts=[None, max_ts], free=False, exclude=[name])
 
+        # rerun fit using params from full time (constant) fit using same
+        # param vector as the successful fit to get loglike
+        specname, spectrum = const_spectrum
+        gta.set_source_spectrum(name, spectrum_type=specname,
+                                spectrum_pars=spectrum,
+                                update_source=False)
+        gta.free_source(name, free=False)
+        const_fit_results = gta.fit()
+        if not const_fit_results['fit_success']:
+            continue
+        const_srcmodel = copy.deepcopy(gta.get_src_model(name))
+
+        # rerun using shape fixed to full time fit
+        # for the fixed-shape lightcurve
+        gta.free_source(name, pars='norm')
+        fixed_fit_results = gta.fit()
+        if not fixed_fit_results['fit_success']:
+            continue
+        fixed_srcmodel = copy.deepcopy(gta.get_src_model(name))
+        break
+
+    # if none of that ^ worked, give up...
+    try:
+        const_srcmodel
+        fixed_srcmodel
+    except NameError:
+        # dummy contents, hopefully this won't bite me in the backside later
+        const_srcmodel = copy.deepcopy(srcmodel)
+        fixed_srcmodel = copy.deepcopy(srcmodel)
+        fixed_fit_results = copy.deepcopy(fit_results)
+        const_fit_results = copy.deepcopy(fit_results)
+        fixed_fit_results['fit_success'] = False
+        const_fit_results['fit_success'] = False
+
+    # special lc output
     o = {'flux_const': const_srcmodel['flux'],
          'loglike_const': const_fit_results['loglike'],
          'fit_success': fit_results['fit_success'],
+         'fit_success_fixed': fixed_fit_results['fit_success'],
          'fit_quality': fit_results['fit_quality'],
          'fit_status': fit_results['fit_status'],
+         'num_free_params': numfree,
          'config': config}
 
+    # full flux output
     if fit_results['fit_success'] == 1:
         for k in defaults.source_flux_output.keys():
             if not k in srcmodel:
                 continue
             o[k] = srcmodel[k]
+            o[k+'_fixed'] = fixed_srcmodel[k]
 
     gta.logger.info('Finished time range %i %i' % (time[0], time[1]))
     return o
 
 
-def calcTS_var(loglike, loglike_const, flux_err, flux_const, systematic):
+def calcTS_var(loglike, loglike_const, flux_err, flux_const, systematic, fit_success):
     # calculates variability according to Eq. 4 in 2FGL
     # including correction using non-numbered Eq. following Eq. 4
 
     # first, remove failed bins
-    loglike = [elm for elm in loglike if isinstance(elm, float)]
+    loglike = [elm for elm,success in zip(loglike,fit_success) if success]
     loglike_const = [
-        elm for elm in loglike_const if isinstance(elm, float)]
-    flux_err = [elm for elm in flux_err if isinstance(elm, float)]
+        elm for elm,success in zip(loglike_const,fit_success) if success]
+    flux_err = [elm for elm,success in zip(flux_err,fit_success) if success]
 
     v_sqs = [loglike[i] - loglike_const[i] for i in xrange(len(loglike))]
     factors = [flux_err[i]**2 / (flux_err[i]**2 + systematic**2 * flux_const**2)
@@ -316,9 +352,12 @@ class LightCurve(object):
         o['tmin_mjd'] = utils.met_to_mjd(o['tmin'])
         o['tmax_mjd'] = utils.met_to_mjd(o['tmax'])
         o['loglike_const'] = np.nan * np.ones(o['tmin'].shape)
+        o['flux_const'] = np.nan * np.ones(o['tmin'].shape)
         o['fit_success'] = np.zeros(o['tmin'].shape, dtype=bool)
+        o['fit_success_fixed'] = np.zeros(o['tmin'].shape, dtype=bool)
         o['fit_status'] = np.zeros(o['tmin'].shape, dtype=int)
         o['fit_quality'] = np.zeros(o['tmin'].shape, dtype=int)
+        o['num_free_params'] = np.zeros(o['tmin'].shape, dtype=int)
 
         for k, v in defaults.source_flux_output.items():
 
@@ -329,10 +368,13 @@ class LightCurve(object):
 
             if isinstance(v, np.ndarray) and v.dtype.kind in ['S', 'U']:
                 o[k] = np.zeros(o['tmin'].shape + v.shape, dtype=v.dtype)
+                o[k+'_fixed'] = copy.deepcopy(o[k])
             elif isinstance(v, np.ndarray):
                 o[k] = np.nan * np.ones(o['tmin'].shape + v.shape)
+                o[k+'_fixed'] = copy.deepcopy(o[k])
             elif isinstance(v, np.float):
                 o[k] = np.nan * np.ones(o['tmin'].shape)
+                o[k+'_fixed'] = copy.deepcopy(o[k])
 
         return o
 
@@ -357,15 +399,13 @@ class LightCurve(object):
                                                      distance=kwargs['free_radius'],
                                                      exclude=diff_sources)]
 
-        #self.write_roi('_lc_%s'%name, make_plots=False, save_model_map=False)
-        # self.optimize()
-        # self.optimize()
         # save params from full time fit
         spectrum = self.like[name].src.spectrum()
         specname = spectrum.genericName()
         const_spectrum = (specname, gtutils.get_function_pars_dict(spectrum))
 
         # Create Configurations
+        lck_params = copy.deepcopy(self._lck_params)
         config = copy.deepcopy(self.config)
         config['ltcube']['use_local_ltcube'] = kwargs['use_local_ltcube']
         config['gtlike']['use_scaled_srcmap'] = kwargs['use_scaled_srcmap']
@@ -399,7 +439,7 @@ class LightCurve(object):
         basedir = outdir + '/' if outdir is not None else ''
         wrap = partial(_process_lc_bin, name=name, config=config,
                        basedir=basedir, workdir=self.workdir, diff_sources=diff_sources,
-                       const_spectrum=const_spectrum, roi=self.roi, **kwargs)
+                       const_spectrum=const_spectrum, roi=self.roi, lck_params=lck_params, **kwargs)
         itimes = enumerate(zip(times[:-1], times[1:]))
         if kwargs.get('multithread', False):
             p = Pool(processes=kwargs.get('nthread', None))
@@ -439,14 +479,13 @@ class LightCurve(object):
                 except:
                     pass
 
-        #merged = utils.merge_list_of_dicts(mapo)
-        #o = utils.merge_dict(o, merged, add_new_keys=True)
         systematic = kwargs.get('systematic', 0.02)
 
-        o['ts_var'] = calcTS_var(loglike=o['loglike'],
+        o['ts_var'] = calcTS_var(loglike=o['loglike_fixed'],
                                  loglike_const=o['loglike_const'],
-                                 flux_err=o['flux_err'],
+                                 flux_err=o['flux_err_fixed'],
                                  flux_const=mapo[0]['flux_const'],
-                                 systematic=systematic)
+                                 systematic=systematic,
+                                 fit_success=o['fit_success_fixed'])
 
         return o
