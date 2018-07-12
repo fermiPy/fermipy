@@ -9,6 +9,7 @@
 ``flux_scan``	`~numpy.ndarray`	Flux values for scan of source normalization.
 ``norm_scan``	`~numpy.ndarray`	Normalization parameters values for scan of source normalization.
 ``npred``	`~float`	Number of predicted counts from this source integrated over the analysis energy range.
+``npred_wt``	`~float`	Number of predicted counts from this source integrated over the analysis energy range.
 ``pivot_energy``	`~float`	Decorrelation energy in MeV.
 ``flux``	`~float`	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated over analysis energy range
 ``flux100``	`~float`	Photon flux (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`) integrated from 100 MeV to 316 GeV.

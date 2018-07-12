@@ -4,18 +4,12 @@ Classes and utilities that manage the diffuse emission background models
 """
 from __future__ import absolute_import, division, print_function
 
-import sys
-import argparse
-
 import yaml
-
-from fermipy.jobs.chain import Link, Chain
 
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.model_component import GalpropMergedRingInfo,\
     IsoComponentInfo, MapCubeComponentInfo
-from fermipy.diffuse import defaults as diffuse_defaults
 
 
 class GalpropMapManager(object):
@@ -406,7 +400,7 @@ class DiffuseModelManager(object):
             moving = value.get('moving', False)
             versions = value.get('versions', [])
             for version in versions:
-                #sourcekey = self._name_factory.sourcekey(source_name=key,
+                # sourcekey = self._name_factory.sourcekey(source_name=key,
                 #                                         source_ver=version)
                 comp_dict = None
                 if selection_dependent:
@@ -482,77 +476,7 @@ def make_diffuse_comp_info_dict(**kwargs):
         for version in versions:
             galprop_dict = gmm.make_diffuse_comp_info_dict(version)
             diffuse_comp_info_dict.update(galprop_dict)
-    
+
     return dict(comp_info_dict=diffuse_comp_info_dict,
                 GalpropMapManager=gmm,
                 DiffuseModelManager=dmm)
-
-
-class DiffuseComponentChain(Chain):
-    """Small class to build srcmaps for diffuse components
-    """
-    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
-                           data=diffuse_defaults.diffuse['data'],
-                           library=diffuse_defaults.diffuse['library'],
-                           make_xml=(False, "Make XML files for diffuse components", bool),
-                           dry_run=diffuse_defaults.diffuse['dry_run'])
-
-    def __init__(self, linkname, **kwargs):
-        """C'tor
-        """
-        from fermipy.diffuse.job_library import create_sg_sum_ring_gasmaps, create_sg_vstack_diffuse
-        from fermipy.diffuse.gt_srcmap_partial import create_sg_srcmap_partial
-
-        link_gasmaps = create_sg_sum_ring_gasmaps(linkname="%s.merge_galprop"%linkname)
-
-        link_srcmaps = create_sg_srcmap_partial(linkname="%s.srcmaps"%linkname)
-
-        link_vstack_srcmaps = create_sg_vstack_diffuse(linkname="%s.vstack"%linkname)
-        parser = argparse.ArgumentParser(usage='fermipy-diffuse-chain',
-                                         description="Run diffuse component analysis setup")
-
-        Chain.__init__(self, linkname,
-                       appname='fermipy-diffuse-chain',
-                       links=[link_gasmaps, link_srcmaps,link_vstack_srcmaps],
-                       options=DiffuseComponentChain.default_options.copy(),
-                       argmapper=self._map_arguments,
-                       parser=parser,
-                       **kwargs)
-
-    def _map_arguments(self, input_dict):
-        """Map from the top-level arguments to the arguments provided to
-        the indiviudal links """
-        output_dict = input_dict.copy()
-        output_dict.pop('link', None)
-        return output_dict
-
-
-    def run_argparser(self, argv):
-        """Initialize a link with a set of arguments using argparser
-        """
-        args = Link.run_argparser(self, argv)
-        for link in self._links.values():
-            link.run_link(stream=sys.stdout, dry_run=True)
-        return args
-
-
-
-def create_chain_diffuse_comps(**kwargs):
-    """Create and return a `DiffuseComponentChain` object """
-    chain = DiffuseComponentChain(linkname=kwargs.pop('linkname', 'Diffuse.diffuse_comps'),
-                                  **kwargs)
-    return chain
-
-def main_chain():
-    """Entry point for command line use for single job """
-    chain = DiffuseComponentChain("diffuse.diffuse_comps")
-    args = chain.run_argparser(sys.argv[1:])
-    chain.run_chain(sys.stdout, args.dry_run)
-    chain.finalize(args.dry_run)
-
-
-if __name__ == '__main__':
-    main_chain()
-
-
-

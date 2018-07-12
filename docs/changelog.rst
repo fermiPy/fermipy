@@ -6,6 +6,31 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+
+0.17.2 (5/30/2018)
+------------------
+
+* Added lots of documentation for the fermipy.jobs module.
+* Minor changes to the fermipy.jobs module to work with the
+  dark matter analysis pipeline (dmpipe). 
+
+
+0.17.1 (5/23/2018)
+------------------
+
+* Patch release to get versioning working with GitHub release system.
+
+
+0.17.0 (5/22/2018)
+------------------
+
+* The LogParabola, PowerLawSuperExponetial and Dark Matter SEDs have been added to the sensitivity.py script.
+* There are a lot of additions to perform a stacking analysis. This can be applied for instance for the search of dark matter with a stacking analysis of Milky Way dSphs, Galaxy Clusters or other galaxies.
+* It contains scripts to send jobs to SLAC Batch Farm and collect the results.
+* It includes scripts and functions to perform all sky fits.
+* It also fixes a few issues with glon and glat in the localization (#225), and the wrong orientation of residual and TS maps (#216)
+
+
 0.16.0 (12/27/2017)
 -------------------
 

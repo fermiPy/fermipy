@@ -5,20 +5,13 @@ Classes and utilities that manage catalog sources
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
-import argparse
 
 import yaml
 import numpy as np
 
-from astropy.table import Table
-
-from fermipy.jobs.chain import Link, Chain
-
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.source_factory import SourceFactory
 from fermipy.diffuse.model_component import CatalogInfo, CompositeSourceInfo, CatalogSourcesInfo
-from fermipy.diffuse import defaults as diffuse_defaults
 
 
 def mask_extended(cat_table):
@@ -26,13 +19,16 @@ def mask_extended(cat_table):
     """
     return np.invert(select_extended(cat_table))
 
+
 def select_extended(cat_table):
     """Select only rows representing extended sources from a catalog table
     """
     try:
-        return np.array([len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data], bool)
+        l = [len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data]
+        return np.array(l, bool)
     except KeyError:
         return cat_table['Extended']
+
 
 def make_mask(cat_table, cut):
     """Mask a bit mask selecting the rows that pass a selection
@@ -66,7 +62,7 @@ def select_sources(cat_table, cuts):
             full_mask *= select_extended(cat_table)
         else:
             full_mask *= make_mask(cat_table, cut)
-    
+
     lout = [src_name.strip() for src_name in cat_table['Source_Name'][full_mask]]
     return lout
 
@@ -114,10 +110,10 @@ class CatalogSourceManager(object):
         return yaml_dict
 
     def build_catalog_info(self, catalog_info):
-        """ Build a CatalogInfo object """        
+        """ Build a CatalogInfo object """
         cat = SourceFactory.build_catalog(**catalog_info)
         catalog_info['catalog'] = cat
-        #catalog_info['catalog_table'] = 
+        # catalog_info['catalog_table'] =
         #    Table.read(catalog_info['catalog_file'])
         catalog_info['catalog_table'] = cat.table
         catalog_info['roi_model'] =\
@@ -180,12 +176,11 @@ class CatalogSourceManager(object):
                       srcmdl_name=srcmdl_name,
                       source_names=sources,
                       catalog_info=full_cat_info,
-                      roi_model=\
-                          SourceFactory.copy_selected_sources(full_cat_info.roi_model, sources))
+                      roi_model=SourceFactory.copy_selected_sources(full_cat_info.roi_model,
+                                                                    sources))
         if merge:
             return CompositeSourceInfo(**kwargs)
-        else:
-            return CatalogSourcesInfo(**kwargs)
+        return CatalogSourcesInfo(**kwargs)
 
     def make_catalog_comp_info_dict(self, catalog_sources):
         """ Make the information about the catalog components
@@ -223,14 +218,14 @@ class CatalogSourceManager(object):
 
                 try:
                     all_sources = [x.strip() for x in full_cat_info.catalog_table[
-                            'Source_Name'].astype(str).tolist()]
+                        'Source_Name'].astype(str).tolist()]
                 except KeyError:
                     print(full_cat_info.catalog_table.colnames)
                 used_sources = []
                 rules_dict = source_dict['rules_dict']
                 split_dict = {}
                 for rule_key, rule_val in rules_dict.items():
-                    #full_key =\
+                    # full_key =\
                     #    self._name_factory.merged_sourcekey(catalog=ver_key,
                     #                                        rulekey=rule_key)
                     sources = select_sources(
@@ -271,56 +266,3 @@ def make_catalog_comp_dict(**kwargs):
     return dict(catalog_info_dict=catalog_info_dict,
                 comp_info_dict=comp_info_dict,
                 CatalogSourceManager=csm)
-
-
-class CatalogComponentChain(Chain):
-    """Small class to build srcmaps for diffuse components
-    """
-    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
-                           data=diffuse_defaults.diffuse['data'],
-                           library=diffuse_defaults.diffuse['library'],
-                           make_xml=(False, "Make XML files for diffuse components", bool),
-                           dry_run=diffuse_defaults.diffuse['dry_run'])
-
-    def __init__(self, linkname):
-        """C'tor
-        """
-        from fermipy.diffuse.job_library import create_sg_gtsrcmaps_catalog
-        from fermipy.diffuse.gt_merge_srcmaps import create_sg_merge_srcmaps
-
-        link_srcmaps_catalogs = create_sg_gtsrcmaps_catalog(linkname="%s.catalog"%linkname,
-                                                            appname='fermipy-srcmaps-catalog-sg')
-
-        link_srcmaps_composite = create_sg_merge_srcmaps(linkname="%s.composite"%linkname,
-                                                         appname='fermipy-merge-srcmaps-sg')
-
-        parser = argparse.ArgumentParser(usage='fermipy-catalog-chain',
-                                         description="Run catalog component analysis setup")
-        Chain.__init__(self, linkname,
-                       appname='fermipy-catalog-chain',
-                       links=[link_srcmaps_catalogs, link_srcmaps_composite],
-                       options=CatalogComponentChain.default_options.copy(),
-                       parser=parser)
-
-    def run_argparser(self, argv):
-        """Initialize a link with a set of arguments using argparser
-        """
-        args = Link.run_argparser(self, argv)
-        for link in self._links.values():
-            link.run_link(stream=sys.stdout, dry_run=True)
-        return args
-
-def create_chain_catalog_comps(**kwargs):
-    """Create and return a `CatalogComponentChain` object """
-    ret_chain = CatalogComponentChain(linkname=kwargs.pop('linkname', 'diffuse.catalog_comps'))
-    return ret_chain
-
-def main_chain():
-    """Entry point for command line use for single job """
-    the_chain = CatalogComponentChain("diffuse.catalog_comps")
-    args = the_chain.run_argparser(sys.argv[1:])
-    the_chain.run_chain(sys.stdout, args.dry_run)
-    the_chain.finalize(args.dry_run)
-
-if __name__ == '__main__':
-    main_chain()

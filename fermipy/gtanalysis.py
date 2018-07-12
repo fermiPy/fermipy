@@ -547,6 +547,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         gta._roi = copy.deepcopy(self.roi)
         return gta
 
+    def set_random_seed(self, seed):
+        """Set the seed for the random number generator"""
+        self.config['mc']['seed'] = seed
+        np.random.seed(seed)
+
     def set_log_level(self, level):
         self.logger.handlers[1].setLevel(level)
         for c in self.components:
@@ -3207,6 +3212,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         d = utils.load_yaml(yamlfile)
         for src, src_pars in d.items():
             for par_name, par_dict in src_pars.items():
+                if par_name in ['SpectrumType']:
+                    continue
                 par_value = par_dict.get('value', None)
                 par_error = par_dict.get('error', None)
                 par_scale = par_dict.get('scale', None)
@@ -3217,9 +3224,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                     par_bounds = [par_min, par_max]
                 else:
                     par_bounds = None
-                self.set_parameter(src, par_name, par_value, true_value=False,
-                                   scale=par_scale, bounds=par_bounds, error=par_error,
-                                   update_source=update_sources)
+                try:
+                    self.set_parameter(src, par_name, par_value, true_value=False,
+                                       scale=par_scale, bounds=par_bounds, error=par_error,
+                                       update_source=update_sources)
+                except RuntimeError:
+                    self.logger.warn("Did not set parameter %s:%s"%(src,par_name))                    
+                    continue
+                except Exception as msg:
+                    self.logger.warn(msg)
+                    continue
                 if par_free is not None:
                     self.free_parameter(src, par_name, par_free)
 
@@ -4335,7 +4349,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if self.config['binning']['npix'] is None:
             roiwidth = (self.config['binning']['roiwidth']
-                        if self.config['binning']['roiwidth'] is not None else 180.)
+                        if self.config['binning']['roiwidth'] is not None else 360.)
             self._npix = int(np.round(roiwidth /
                                       self.config['binning']['binsz']))
         else:
@@ -4602,6 +4616,13 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         elif src['SpatialType'] == 'SpatialMap':
             filepath = str(utils.path_to_xmlpath(src['Spatial_Filename']))
             sm = pyLike.SpatialMap(filepath)
+            pylike_src = pyLike.DiffuseSource(sm,
+                                              self.like.logLike.observation(),
+                                              False)
+        elif src['SpatialType'] == 'RadialProfile':
+            filepath = str(utils.path_to_xmlpath(src['Spatial_Filename']))
+            sm = pyLike.RadialProfile(filepath)
+            sm.setCenter(src['ra'], src['dec'])
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
@@ -5094,8 +5115,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       coordsys=self.config['binning']['coordsys'],
                       chatter=self.config['logging']['chatter'])
         elif self.projtype == "HPX":
-            hpx_region = "DISK(%.3f,%.3f,%.3f)" % (
-                self._xref, self._yref, 0.5 * self.config['binning']['roiwidth'])
+            if self.config['binning']['roiwidth'] is None or self.config['binning']['roiwidth'] >= 180.:
+                hpx_region = None
+            else:
+                hpx_region = "DISK(%.3f,%.3f,%.3f)" % (
+                    self._xref, self._yref, 0.5 * self.config['binning']['roiwidth'])
             kw = dict(algorithm='healpix',
                       evfile=self.files['ft1'],
                       outfile=self.files['ccube'],

@@ -5,15 +5,14 @@ Module to collect configuration to run specific jobs
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
 import copy
-import math
 
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.chain import Link
+from fermipy.jobs.link import Link
 from fermipy.jobs.gtlink import Gtlink
-from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.lsf_impl import make_nfs_path, get_lsf_default_args, LSF_Interface
+from fermipy.jobs.app_link import AppLink
+from fermipy.jobs.scatter_gather import ScatterGather
+from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.diffuse.utils import create_inputlist
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
@@ -24,26 +23,12 @@ from fermipy.diffuse import defaults as diffuse_defaults
 
 NAME_FACTORY = NameFactory()
 
-def make_input_file_list(binnedfile, num_files):
-    """Make the list of input files for a particular energy bin X psf type """
-    outdir_base = os.path.dirname(binnedfile)
-    outbasename = os.path.basename(binnedfile)
-    filelist = ""
-    for i in range(num_files):
-        split_key = "%06i" % i
-        output_dir = os.path.join(outdir_base, split_key)
-        filepath = os.path.join(output_dir,
-                                outbasename.replace('.fits', '_%s.fits.gz' % split_key))
-        filelist += ' %s' % filepath
-    return filelist
 
-def make_ltcube_file_list(ltsumfile, num_files):
+def _make_ltcube_file_list(ltsumfile, num_files):
     """Make the list of input files for a particular energy bin X psf type """
-    outdir_base = os.path.dirname(ltsumfile)
     outbasename = os.path.basename(ltsumfile)
     lt_list_file = ltsumfile.replace('fits', 'lst')
-    outfile = open(lt_list_file, 'w!')
-    filelist = ""
+    outfile = open(lt_list_file, 'w')
     for i in range(num_files):
         split_key = "%06i" % i
         output_dir = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes', split_key)
@@ -51,128 +36,245 @@ def make_ltcube_file_list(ltsumfile, num_files):
         outfile.write(filepath)
         outfile.write("\n")
     outfile.close()
-    return '@'+lt_list_file
-
-def create_link_gtexpcube2(**kwargs):
-    """Make a `fermipy.jobs.Gtlink` object to run gtexpcube2  """
-    gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtexpcube2'),
-                    appname='gtexpcube2',
-                    options=dict(irfs=diffuse_defaults.gtopts['irfs'],
-                                 evtype=diffuse_defaults.gtopts['evtype'],
-                                 hpx_order=diffuse_defaults.gtopts['hpx_order'],
-                                 infile=(None, "Input livetime cube file", str),
-                                 cmap=diffuse_defaults.gtopts['cmap'],
-                                 outfile=diffuse_defaults.gtopts['outfile'],
-                                 coordsys=('GAL', "Coordinate system", str)),
-                    file_args=dict(infile=FileFlags.input_mask,
-                                   cmap=FileFlags.input_mask,
-                                   outfile=FileFlags.output_mask),
-                    **kwargs)
-    return gtlink
+    return '@' + lt_list_file
 
 
-def create_link_gtscrmaps(**kwargs):
-    """Make a `fermipy.jobs.Gtlink` object to run gtsrcmaps  """
-    gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtsrcmaps'),
-                    appname='gtsrcmaps',
-                    options=dict(irfs=diffuse_defaults.gtopts['irfs'],
-                                 expcube=diffuse_defaults.gtopts['expcube'],
-                                 bexpmap=diffuse_defaults.gtopts['bexpmap'],
-                                 cmap=diffuse_defaults.gtopts['cmap'],
-                                 srcmdl=diffuse_defaults.gtopts['srcmdl'],
-                                 outfile=diffuse_defaults.gtopts['outfile']),
-                    file_args=dict(expcube=FileFlags.input_mask,
-                                   cmap=FileFlags.input_mask,
-                                   bexpmap=FileFlags.input_mask,
-                                   srcmdl=FileFlags.input_mask,
-                                   outfile=FileFlags.output_mask),
-                    **kwargs)
-    return gtlink
+class Gtlink_select(Gtlink):
+    """Small wrapper to run gtselect """
+
+    appname = 'gtselect'
+    linkname_default = 'gtselect'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(emin=diffuse_defaults.gtopts['emin'],
+                           emax=diffuse_defaults.gtopts['emax'],
+                           infile=diffuse_defaults.gtopts['infile'],
+                           outfile=diffuse_defaults.gtopts['outfile'],
+                           zmax=diffuse_defaults.gtopts['zmax'],
+                           evclass=diffuse_defaults.gtopts['evclass'],
+                           evtype=diffuse_defaults.gtopts['evtype'],
+                           pfiles=diffuse_defaults.gtopts['pfiles'])
+
+    default_file_args = dict(infile=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
 
 
-def create_link_gtltsum(**kwargs):
-    """Make a `fermipy.jobs.Gtlink` object to run gtltsum  """
-    gtlink = Gtlink(linkname=kwargs.pop('linkname', 'gtltsum'),
-                    appname='gtltsum',
-                    options=dict(infile1=(None, "Livetime cube 1 or list of files", str),
-                                 infile2=("none", "Livetime cube 2", str),
-                                 outfile=(None, "Output file", str)),
-                    file_args=dict(infile1=FileFlags.input_mask,
-                                   outfile=FileFlags.output_mask),
-                    **kwargs)
-    return gtlink    
+class Gtlink_bin(Gtlink):
+    """Small wrapper to run gtbin """
 
-def create_link_fermipy_coadd(**kwargs):
-    """Make a `fermipy.jobs.Link` object to run fermipy-coadd  """
-    link = Link(linkname=kwargs.pop('linkname', 'fermipy-coadd'),
-                appname='fermipy-coadd',
-                options=dict(args=([], "List of input files", list),
-                             output=(None, "Output file", str)),
-                file_args=dict(args=FileFlags.input_mask,
-                               output=FileFlags.output_mask),
-                **kwargs)
-    return link
+    appname = 'gtbin'
+    linkname_default = 'gtbin'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
 
-def create_link_fermipy_gather_srcmaps(**kwargs):
-    """Make a `fermipy.jobs.Link` object to run fermipy-gather-srcmaps  """
-    link = Link(linkname=kwargs.pop('linkname', 'fermipy-gather-srcmaps'),
-                appname='fermipy-gather-srcmaps',
-                options=dict(output=(None, "Output file name", str),
-                             args=([], "List of input files", list),
-                             gzip=(False, "Compress output", bool),
-                             rm=(False, "Remove input files", bool),
-                             clobber=(False, "Overwrite output", bool)),
-                file_args=dict(args=FileFlags.input_mask,
-                               output=FileFlags.output_mask),
-                **kwargs)
-    return link
+    default_options = dict(algorithm=('HEALPIX', "Binning alogrithm", str),
+                           coordsys=diffuse_defaults.gtopts['coordsys'],
+                           hpx_order=diffuse_defaults.gtopts['hpx_order'],
+                           evfile=diffuse_defaults.gtopts['evfile'],
+                           outfile=diffuse_defaults.gtopts['outfile'],
+                           emin=diffuse_defaults.gtopts['emin'],
+                           emax=diffuse_defaults.gtopts['emax'],
+                           enumbins=diffuse_defaults.gtopts['enumbins'],
+                           pfiles=diffuse_defaults.gtopts['pfiles'])
 
-def create_link_fermipy_vstack(**kwargs):
-    """Make a `fermipy.jobs.Link` object to run fermipy-vstack  """
-    link = Link(linkname=kwargs.pop('linkname', 'fermipy-vstack'),
-                appname='fermipy-vstack',
-                options=dict(output=(None, "Output file name", str),
-                             hdu=(None, "Name of HDU to stack", str),
-                             args=([], "List of input files", list),
-                             gzip=(False, "Compress output", bool),
-                             rm=(False, "Remove input files", bool),
-                             clobber=(False, "Overwrite output", bool)),
-                file_args=dict(args=FileFlags.input_mask,
-                               output=FileFlags.output_mask),
-                **kwargs)
-    return link
+    default_file_args = dict(evfile=FileFlags.in_stage_mask,
+                             outfile=FileFlags.out_stage_mask)
 
-def create_link_fermipy_healview(**kwargs):
-    """Make a `fermipy.jobs.Link` object to run fermipy-healview  """
-    link = Link(linkname=kwargs.pop('linkname', 'fermipy-healview'),
-                appname='fermipy-healview',
-                options=dict(input=(None, "Input file", str),
-                             output=(None, "Output file name", str),
-                             extension=(None, "FITS HDU with HEALPix map", str),
-                             zscale=("log", "Scaling for color scale", str)),
-                file_args=dict(args=FileFlags.input_mask,
-                               output=FileFlags.output_mask),
-                **kwargs)
-    return link
+    __doc__ += Link.construct_docstring(default_options)
 
+class Gtlink_expcube2(Gtlink):
+    """Small wrapper to run gtexpcube2 """
 
-class ConfigMaker_Gtexpcube2(ConfigMaker):
-    """Small class to generate configurations for gtexpcube2
+    appname = 'gtexpcube2'
+    linkname_default = 'gtexpcube2'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --hpx_order: HEALPix order parameter
+    default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
+                           evtype=diffuse_defaults.gtopts['evtype'],
+                           hpx_order=diffuse_defaults.gtopts['hpx_order'],
+                           infile=(None, "Input livetime cube file", str),
+                           cmap=diffuse_defaults.gtopts['cmap'],
+                           outfile=diffuse_defaults.gtopts['outfile'],
+                           coordsys=('GAL', "Coordinate system", str))
+    default_file_args = dict(infile=FileFlags.input_mask,
+                             cmap=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
+
+class Gtlink_scrmaps(Gtlink):
+    """Small wrapper to run gtscrmaps """
+
+    appname = 'gtscrmaps'
+    linkname_default = 'gtscrmaps'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
+                           expcube=diffuse_defaults.gtopts['expcube'],
+                           bexpmap=diffuse_defaults.gtopts['bexpmap'],
+                           cmap=diffuse_defaults.gtopts['cmap'],
+                           srcmdl=diffuse_defaults.gtopts['srcmdl'],
+                           outfile=diffuse_defaults.gtopts['outfile'])
+
+    default_file_args = dict(expcube=FileFlags.input_mask,
+                             cmap=FileFlags.input_mask,
+                             bexpmap=FileFlags.input_mask,
+                             srcmdl=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
+
+class Gtlink_ltsum(Gtlink):
+    """Small wrapper to run gtltsum """
+
+    appname = 'gtltsum'
+    linkname_default = 'gtltsum'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(infile1=(None, "Livetime cube 1 or list of files", str),
+                           infile2=("none", "Livetime cube 2", str),
+                           outfile=(None, "Output file", str))
+    default_file_args = dict(infile1=FileFlags.input_mask,
+                             outfile=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
+
+class Gtlink_mktime(Gtlink):
+    """Small wrapper to run gtmktime """
+
+    appname = 'gtmktime'
+    linkname_default = 'gtmktime'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(evfile=(None, 'Input FT1 File', str),
+                           outfile=(None, 'Output FT1 File', str),
+                           scfile=(None, 'Input FT2 file', str),
+                           roicut=(False, 'Apply ROI-based zenith angle cut', bool),
+                           filter=(None, 'Filter expression', str),
+                           pfiles=(None, "PFILES directory", str))
+
+    default_file_args = dict(evfile=FileFlags.in_stage_mask,
+                             scfile=FileFlags.in_stage_mask,
+                             outfile=FileFlags.out_stage_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
+
+class Gtlink_ltcube(Gtlink):
+    """Small wrapper to run gtltcube """
+
+    appname = 'gtltcube'
+    linkname_default = 'gtltcube'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(evfile=(None, 'Input FT1 File', str),
+                           scfile=(None, 'Input FT2 file', str),
+                           outfile=(None, 'Output Livetime cube File', str),
+                           dcostheta=(0.025, 'Step size in cos(theta)', float),
+                           binsz=(1., 'Pixel size (degrees)', float),
+                           phibins=(0, 'Number of phi bins', int),
+                           zmin=(0, 'Minimum zenith angle', float),
+                           zmax=(105, 'Maximum zenith angle', float),
+                           pfiles=(None, "PFILES directory", str))
+
+    default_file_args = dict(evfile=FileFlags.in_stage_mask,
+                             scfile=FileFlags.in_stage_mask,
+                             outfile=FileFlags.out_stage_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
+
+class Link_FermipyCoadd(AppLink):
+    """Small wrapper to run fermipy-coadd """
+
+    appname = 'fermipy-coadd'
+    linkname_default = 'coadd'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(args=([], "List of input files", list),
+                           output=(None, "Output file", str))
+    default_file_args = dict(args=FileFlags.input_mask,
+                             output=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
+
+class Link_FermipyGatherSrcmaps(AppLink):
+    """Small wrapper to run fermipy-gather-srcmaps """
+
+    appname = 'fermipy-gather-srcmaps'
+    linkname_default = 'gather-srcmaps'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(output=(None, "Output file name", str),
+                           args=([], "List of input files", list),
+                           gzip=(False, "Compress output", bool),
+                           rm=(False, "Remove input files", bool),
+                           clobber=(False, "Overwrite output", bool))
+    default_file_args = dict(args=FileFlags.input_mask,
+                             output=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
+
+class Link_FermipyVstack(AppLink):
+    """Small wrapper to run fermipy-vstack """
+
+    appname = 'fermipy-vstack'
+    linkname_default = 'vstack'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(output=(None, "Output file name", str),
+                           hdu=(None, "Name of HDU to stack", str),
+                           args=([], "List of input files", list),
+                           gzip=(False, "Compress output", bool),
+                           rm=(False, "Remove input files", bool),
+                           clobber=(False, "Overwrite output", bool))
+    default_file_args = dict(args=FileFlags.input_mask,
+                             output=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
+
+class Link_FermipyHealview(AppLink):
+    """Small wrapper to run fermipy-healview """
+
+    appname = 'fermipy-healview'
+    linkname_default = 'fermipy-healview'
+    usage = '%s [options]' % (appname)
+    description = "Link to run %s" % (appname)
+
+    default_options = dict(input=(None, "Input file", str),
+                           output=(None, "Output file name", str),
+                           extension=(None, "FITS HDU with HEALPix map", str),
+                           zscale=("log", "Scaling for color scale", str))
+    default_file_args = dict(args=FileFlags.input_mask,
+                             output=FileFlags.output_mask)
+
+    __doc__ += Link.construct_docstring(default_options)
+
+class Gtexpcube2_SG(ScatterGather):
+    """Small class to generate configurations for `Gtlink_expcube2`
+
     """
+    appname = 'fermipy-gtexcube2-sg'
+    usage = "%s [options]" % (appname)
+    description = "Submit gtexpube2 jobs in parallel"
+    clientclass = Gtlink_expcube2
+
+    job_time = 300
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            hpx_order_max=diffuse_defaults.diffuse['hpx_order_expcube'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options', self.default_options.copy()))
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -187,20 +289,21 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax
-            
+
             mktimelist = copy.copy(comp.mktimefilters)
-            if len(mktimelist) == 0:
+            if not mktimelist:
                 mktimelist.append('none')
             evtclasslist_keys = copy.copy(comp.evtclasses)
-            if len(evtclasslist_keys) == 0:
-                evtclasslist_keys.append('default')
+            if not evtclasslist_keys:
                 evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
             else:
                 evtclasslist_vals = copy.copy(evtclasslist_keys)
 
             for mktimekey in mktimelist:
-                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):       
-                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclassval, zcut, mktimekey))
+                for evtclassval in evtclasslist_vals:
+                    fullkey = comp.make_key(
+                        '%s_%s_{ebin_name}_%s_{evtype_name}' %
+                        (evtclassval, zcut, mktimekey))
                     name_keys = dict(zcut=zcut,
                                      ebin=comp.ebin_name,
                                      psftype=comp.evtype_name,
@@ -218,31 +321,30 @@ class ConfigMaker_Gtexpcube2(ConfigMaker):
                                                 infile=infile,
                                                 outfile=outfile,
                                                 irfs=NAME_FACTORY.irfs(**name_keys),
-                                                hpx_order=min(comp.hpx_order, args['hpx_order_max']),
+                                                hpx_order=min(
+                                                    comp.hpx_order, args['hpx_order_max']),
                                                 evtype=comp.evtype,
                                                 logfile=logfile)
 
         return job_configs
 
 
+class Gtltsum_SG(ScatterGather):
+    """Small class to generate configurations for `Gtlink_ltsum`
 
-class ConfigMaker_Gtltsum(ConfigMaker):
-    """Small class to generate configurations for gtexpcube2
-
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --ft1file  : Input list of ft1 files
     """
+    appname = 'fermipy-gtltsum-sg'
+    usage = "%s [options]" % (appname)
+    description = "Submit gtltsum jobs in parallel"
+    clientclass = Gtlink_ltsum
+
+    job_time = 300
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            ft1file=(None, 'Input FT1 file', str))
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options', self.default_options.copy()))
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -260,20 +362,21 @@ class ConfigMaker_Gtltsum(ConfigMaker):
 
         for comp in components:
             zcut = "zmax%i" % comp.zmax
-            
+
             mktimelist = copy.copy(comp.mktimefilters)
-            if len(mktimelist) == 0:
+            if not mktimelist:
                 mktimelist.append('none')
             evtclasslist_keys = copy.copy(comp.evtclasses)
-            if len(evtclasslist_keys) == 0:
-                evtclasslist_keys.append('default')
+            if not evtclasslist_keys:
                 evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
             else:
                 evtclasslist_vals = copy.copy(evtclasslist_keys)
 
             for mktimekey in mktimelist:
-                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):       
-                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclassval, zcut, mktimekey))
+                for evtclassval in evtclasslist_vals:
+                    fullkey = comp.make_key(
+                        '%s_%s_{ebin_name}_%s_{evtype_name}' %
+                        (evtclassval, zcut, mktimekey))
 
                     name_keys = dict(zcut=zcut,
                                      ebin=comp.ebin_name,
@@ -284,9 +387,9 @@ class ConfigMaker_Gtltsum(ConfigMaker):
                                      evclass=evtclassval,
                                      fullpath=True)
 
-                    outfile = os.path.join(NAME_FACTORY.base_dict['basedir'], 
+                    outfile = os.path.join(NAME_FACTORY.base_dict['basedir'],
                                            NAME_FACTORY.ltcube(**name_keys))
-                    infile1 = make_ltcube_file_list(outfile, num_files)
+                    infile1 = _make_ltcube_file_list(outfile, num_files)
                     logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                     job_configs[fullkey] = dict(infile1=infile1,
                                                 outfile=outfile,
@@ -295,96 +398,22 @@ class ConfigMaker_Gtltsum(ConfigMaker):
         return job_configs
 
 
-class ConfigMaker_CoaddSplit(ConfigMaker):
-    """Small class to generate configurations for fermipy-coadd
-
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --ft1file  : Input list of ft1 files
-    """
-    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
-                           data=diffuse_defaults.diffuse['data'],
-                           ft1file=(None, 'Input FT1 file', str))
-
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options', self.default_options.copy()))
-
-    def build_job_configs(self, args):
-        """Hook to build job configurations
-        """
-        job_configs = {}
-
-        components = Component.build_from_yamlfile(args['comp'])
-
-        datafile = args['data']
-        if datafile is None or datafile == 'None':
-            return job_configs
-        NAME_FACTORY.update_base_dict(args['data'])
-        outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
-
-        inputfiles = create_inputlist(args['ft1file'])
-        num_files = len(inputfiles)
-
-        for comp in components:
-            zcut = "zmax%i" % comp.zmax
-            
-            mktimelist = copy.copy(comp.mktimefilters)
-            if len(mktimelist) == 0:
-                mktimelist.append('none')
-            evtclasslist_keys = copy.copy(comp.evtclasses)
-            if len(evtclasslist_keys) == 0:
-                evtclasslist_keys.append('default')
-                evtclasslist_vals = [NAME_FACTORY.base_dict['evclass']]
-            else:
-                evtclasslist_vals = copy.copy(evtclasslist_keys)
-
-            for mktimekey in mktimelist:
-                for evtclasskey, evtclassval in zip(evtclasslist_keys, evtclasslist_vals):       
-                    fullkey = comp.make_key('%s_%s_{ebin_name}_%s_{evtype_name}'%(evtclassval, zcut, mktimekey))
-
-                    name_keys = dict(zcut=zcut,
-                                     ebin=comp.ebin_name,
-                                     psftype=comp.evtype_name,
-                                     coordsys=comp.coordsys,
-                                     irf_ver=NAME_FACTORY.irf_ver(),
-                                     mktime=mktimekey,
-                                     evclass=evtclassval,
-                                     fullpath=True)
-
-                    ccube_name = os.path.basename(NAME_FACTORY.ccube(**name_keys))
-                    outfile = os.path.join(outdir_base, ccube_name)
-                    infiles = make_input_file_list(outfile, num_files)
-                    logfile = make_nfs_path(outfile.replace('.fits', '.log'))
-                    job_configs[fullkey] = dict(args=infiles,
-                                                output=outfile,
-                                                logfile=logfile)
-
-        return job_configs
-
-
-
-
-class ConfigMaker_SumRings(ConfigMaker):
-    """Small class to generate configurations for fermipy-coadd
+class SumRings_SG(ScatterGather):
+    """Small class to generate configurations for `Link_FermipyCoadd`
     to sum galprop ring gasmaps
-
-    This takes the following arguments:
-    --library  : Diffuse model component definition yaml file
-    --outdir   : Output directory
+    
     """
+    appname = 'fermipy-sum-rings-sg'
+    usage = "%s [options]" % (appname)
+    description = "Submit fermipy-coadd jobs in parallel to sum GALProp rings"
+    clientclass = Link_FermipyCoadd
+
+    job_time = 300
+
     default_options = dict(library=diffuse_defaults.diffuse['library'],
                            outdir=(None, 'Output directory', str),)
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',
-                                                ConfigMaker_SumRings.default_options.copy()))
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -392,7 +421,7 @@ class ConfigMaker_SumRings(ConfigMaker):
         job_configs = {}
 
         gmm = make_ring_dicts(library=args['library'], basedir='.')
-        
+
         for galkey in gmm.galkeys():
             ring_dict = gmm.ring_dict(galkey)
             for ring_key, ring_info in ring_dict.items():
@@ -408,25 +437,23 @@ class ConfigMaker_SumRings(ConfigMaker):
         return job_configs
 
 
-class ConfigMaker_Vstack(ConfigMaker):
-    """Small class to generate configurations for fermipy-vstack
+class Vstack_SG(ScatterGather):
+    """Small class to generate configurations for `Link_FermipyVstack`
     to merge source maps
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --diffuse  : Diffuse model component definition yaml file'
     """
+    appname = 'fermipy-vstack-sg'
+    usage = "%s [options]" % (appname)
+    description = "Submit fermipy-vstack jobs in parallel"
+    clientclass = Link_FermipyVstack
+
+    job_time = 300
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'],)
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',
-                                                ConfigMaker_Vstack.default_options.copy()))
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -464,7 +491,7 @@ class ConfigMaker_Vstack(ConfigMaker):
                 outfile_tokens = os.path.splitext(outfile)
                 infile_regexp = "%s_*.fits*" % outfile_tokens[0]
                 full_key = "%s_%s" % (sub_comp_info.sourcekey, key)
-                logfile=make_nfs_path(outfile.replace('.fits', '.log'))
+                logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                 job_configs[full_key] = dict(output=outfile,
                                              args=infile_regexp,
                                              hdu=sub_comp_info.source_name,
@@ -473,25 +500,22 @@ class ConfigMaker_Vstack(ConfigMaker):
         return job_configs
 
 
-class ConfigMaker_GatherSrcmaps(ConfigMaker):
-    """Small class to generate configurations for fermipy-vstack
-    to merge source maps
+class GatherSrcmaps_SG(ScatterGather):
+    """Small class to generate configurations for `Link_FermipyGatherSrcmaps`
 
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --library  : Catalog component definition yaml file'
     """
+    appname = 'fermipy-gather-srcmaps-sg'
+    usage = "%s [options]" % (appname)
+    description = "Submit fermipy-gather-srcmaps  jobs in parallel"
+    clientclass = Link_FermipyGatherSrcmaps
+
+    job_time = 300
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',
-                                                ConfigMaker_GatherSrcmaps.default_options.copy()))
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -501,13 +525,11 @@ class ConfigMaker_GatherSrcmaps(ConfigMaker):
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
 
-        ret_dict = make_catalog_comp_dict(library=args['library'], 
+        ret_dict = make_catalog_comp_dict(library=args['library'],
                                           basedir=NAME_FACTORY.base_dict['basedir'])
         catalog_info_dict = ret_dict['catalog_info_dict']
-        comp_info_dict = ret_dict['comp_info_dict']
 
-        for catalog_name, catalog_info in catalog_info_dict.items():
-
+        for catalog_name  in catalog_info_dict:
             for comp in components:
                 zcut = "zmax%i" % comp.zmax
                 key = comp.make_key('{ebin_name}_{evtype_name}')
@@ -531,25 +553,22 @@ class ConfigMaker_GatherSrcmaps(ConfigMaker):
         return job_configs
 
 
-class ConfigMaker_healview(ConfigMaker):
-    """Small class to generate configurations for fermipy-healview
-    to display source maps
-
-    This takes the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --library  : Diffuse model component definition yaml file'
+class Healview_SG(ScatterGather):
+    """Small class to generate configurations for `Link_FermipyHealview`
+    
     """
+    appname = 'fermipy-healviw-sg'
+    usage = "%s [options]" % (appname)
+    description = "Submit fermipy-healviw jobs in parallel"
+    clientclass = Link_FermipyHealview
+
+    job_time = 60
+
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        ConfigMaker.__init__(self, link,
-                             options=kwargs.get('options',
-                                                ConfigMaker_healview.default_options.copy()))
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -596,206 +615,25 @@ class ConfigMaker_healview(ConfigMaker):
                                              extension=sub_comp_info.source_name,
                                              zscale=args.get('zscale', 'log'),
                                              logfile=logfile)
-                                            
 
         return job_configs
 
 
-def create_sg_gtexpcube2(**kwargs):
-    """Build and return a ScatterGather object that can invoke gtexpcube2"""
-    appname = kwargs.pop('appname', 'fermipy-gtexcube2-sg')
-    link = create_link_gtexpcube2(**kwargs)
-    linkname = kwargs.pop('linkname', link.linkname)
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Run gtexpcube2 for a series of event types."
-
-    config_maker = ConfigMaker_Gtexpcube2(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
-def create_sg_gtltsum(**kwargs):
-    """Build and return a ScatterGather object that can invoke gtltsum"""
-    appname = kwargs.pop('appname', 'fermipy-gtltsum-sg')
-    link = create_link_gtltsum(**kwargs)
-    linkname = kwargs.pop('linkname', link.linkname)
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Run gtlsum for a series of event types."
-
-    config_maker = ConfigMaker_Gtltsum(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
-def create_sg_fermipy_coadd(**kwargs):
-    """Build and return a ScatterGather object that can invoke fermipy-coadd"""
-    appname = kwargs.pop('appname', 'fermipy-coadd-sg')
-    link = create_link_fermipy_coadd(**kwargs)
-    linkname = kwargs.pop('linkname', link.linkname)
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Run fermipy-coadd for a series of event types."
-
-    config_maker = ConfigMaker_CoaddSplit(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
-def create_sg_sum_ring_gasmaps(**kwargs):
-    """Build and return a ScatterGather object that can invoke fermipy-coadd"""
-    appname = kwargs.pop('appname', 'fermipy-sum-ring-gasmaps-sg')
-    link = create_link_fermipy_coadd(**kwargs)
-    linkname = kwargs.pop('linkname', link.linkname)
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Sum gasmaps to build diffuse model components"
-
-    config_maker = ConfigMaker_SumRings(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
-def create_sg_vstack_diffuse(**kwargs):
-    """Build and return a ScatterGather object that can invoke fermipy-vstack"""
-    appname = kwargs.pop('appname', 'fermipy-vstack-diffuse-sg')
-    link = create_link_fermipy_vstack(**kwargs)
-    linkname = kwargs.pop('linkname', link.linkname)
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Sum gasmaps to build diffuse model components"
-
-    config_maker = ConfigMaker_Vstack(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
-def create_sg_gather_srcmaps(**kwargs):
-    """Build and return a ScatterGather object that can invoke fermipy-vstack"""
-    appname = kwargs.pop('appname', 'fermipy-gather-srcmaps-sg')
-    link = create_link_fermipy_gather_srcmaps(**kwargs)
-    linkname = kwargs.pop('linkname', link.linkname)
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Sum gasmaps to build diffuse model components"
-
-    config_maker = ConfigMaker_GatherSrcmaps(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
-
-def create_sg_healview_diffuse(**kwargs):
-    """Build and return a ScatterGather object that can invoke fermipy-healview"""
-    appname = kwargs.pop('appname', 'fermipy-healview-sg')
-    link = create_link_fermipy_healview(**kwargs)
-    linkname = kwargs.pop('linkname', link.linkname)
-
-    batch_args = get_lsf_default_args()    
-    batch_interface = LSF_Interface(**batch_args)
-
-    usage = "%s [options]"%(appname)
-    description = "Sum gasmaps to build diffuse model components"
-
-    config_maker = ConfigMaker_healview(link)
-    lsf_sg = build_sg_from_link(link, config_maker,
-                                interface=batch_interface,
-                                usage=usage,
-                                description=description,
-                                linkname=linkname,
-                                appname=appname,
-                                **kwargs)
-    return lsf_sg
-
-
-
-
-def invoke_sg_gtexpcube2():
-    """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_gtexpcube2()
-    lsf_sg(sys.argv)
-
-def invoke_sg_gtltsum():
-    """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_gtltsum()
-    lsf_sg(sys.argv)
-
-def invoke_sg_fermipy_coadd():
-    """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_fermipy_coadd()
-    lsf_sg(sys.argv)
-
-def invoke_sg_sum_ring_gasmaps():
-    """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_sum_ring_gasmaps()
-    lsf_sg(sys.argv)
-
-def invoke_sg_vstack_diffuse():
-    """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_vstack_diffuse()
-    lsf_sg(sys.argv)
-
-def invoke_sg_gather_srcmaps():
-    """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_gather_srcmaps()
-    lsf_sg(sys.argv)
-
-def invoke_sg_healview_diffuse():
-    """Entry point for command line use for dispatching batch jobs """
-    lsf_sg = create_sg_healview_diffuse()
-    lsf_sg(sys.argv)
+def register_classes():
+    """Register these classes with the `LinkFactory` """
+    Gtlink_select.register_class()
+    Gtlink_bin.register_class()
+    Gtlink_expcube2.register_class()
+    Gtlink_scrmaps.register_class()
+    Gtlink_mktime.register_class()
+    Gtlink_ltcube.register_class()
+    Link_FermipyCoadd.register_class()
+    Link_FermipyGatherSrcmaps.register_class()
+    Link_FermipyVstack.register_class()
+    Link_FermipyHealview.register_class()
+    Gtexpcube2_SG.register_class()
+    Gtltsum_SG.register_class()
+    SumRings_SG.register_class()
+    Vstack_SG.register_class()
+    GatherSrcmaps_SG.register_class()
+    Healview_SG.register_class()
