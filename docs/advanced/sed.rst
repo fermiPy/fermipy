@@ -49,7 +49,10 @@ default configuration of the method:
 By default the method will use the energy bins of the underlying
 analysis.  The ``loge_bins`` keyword argument can be used to override
 the default binning with the restriction that the SED energy bins
-most align with the analysis bins.
+must align with the analysis bins. The bins used in the analysis can be
+found with ``gta.log_energies``. For example if in the analysis
+8 energy bins per decade are considered and you want to make the SED in 4 bins 
+per decade you can specify ``loge_bins=gta.log_energies[::2]``.
 
 
 The return value of :py:meth:`~fermipy.gtanalysis.GTAnalysis.sed` is a

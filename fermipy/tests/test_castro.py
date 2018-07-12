@@ -20,6 +20,18 @@ def sedfile(request, tmpdir_factory):
     return outfile
 
 
+@pytest.fixture(scope='module')
+def yamlfile(request, tmpdir_factory):
+    path = tmpdir_factory.mktemp('data')
+
+    outfile = 'sed.yaml'
+    url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extra/master/data/sed.yaml'
+    os.system('curl -o %s -OL %s' % (outfile, url))
+    request.addfinalizer(lambda: path.remove(rec=1))
+
+    return outfile
+
+
 def test_castro_test_spectra_sed(sedfile):
     c = castro.CastroData.create_from_sedfile(sedfile)
     test_dict = c.test_spectra()
@@ -36,6 +48,30 @@ def test_castro_test_spectra_sed(sedfile):
     assert_allclose(test_dict['PLExpCutoff']['Result'],
                     np.array([1.04931290e-12, -2.50472567e+00, 6.35096327e+04]),
                     rtol=1E-4)
+
+
+def test_castro_test_spectra_yaml(yamlfile):
+    # There is a bug in numpy that won't let it read back the yaml file we are using for 
+    # this test in python 3.
+    # Catch this for now
+    try:
+        c = castro.CastroData.create_from_yamlfile(yamlfile)        
+    except ValueError:
+        return
+    test_dict = c.test_spectra()
+
+    assert_allclose(test_dict['PowerLaw']['TS'][0], 0.0, atol=0.01)
+    assert_allclose(test_dict['LogParabola']['TS'][0], 0.01304611, atol=0.01)
+    assert_allclose(test_dict['PLExpCutoff']['TS'][0], 0.33051415, atol=0.01)
+
+    assert_allclose(test_dict['PowerLaw']['Result'],
+                    np.array([0.0, -3.44375000e+00]), atol=0.01)
+    assert_allclose(test_dict['LogParabola']['Result'],
+                    np.array([0.0, -2.70092870e+00, 1.73633042e-03]),
+                    atol=0.01)
+    assert_allclose(test_dict['PLExpCutoff']['Result'],
+                    np.array([0.0, -1.00927917e+00, 7.18812858e+02]),
+                    atol=0.01)
 
 
 def test_castro_test_spectra_castro(tmpdir):
@@ -80,3 +116,5 @@ def test_fit_dmfitfunction(sedfile):
 
     assert_allclose(fit_out['ts_spec'], 17.14991598, atol=0.01)
     assert_allclose(fit_out['params'][0], 2.98000000e-25, rtol=0.05)
+
+

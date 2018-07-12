@@ -108,8 +108,9 @@ class prior_functor:
        make priors on parameters.
     """
 
-    def __init__(self, funcname):
+    def __init__(self, funcname, j_ref=1.0):
         self._funcname = funcname
+        self._j_ref = j_ref
 
     def normalization(self):
         """Normalization, i.e. the integral of the function
@@ -134,6 +135,10 @@ class prior_functor:
         raise NotImplementedError(
             "prior_functor.sigma must be implemented by sub-class")
 
+    def j_ref(self):
+        """ Reference value for the function """
+        return self._j_ref        
+
     @property
     def funcname(self):
         """A string identifying the function.
@@ -146,7 +151,7 @@ class prior_functor:
         log_mean = np.log10(self.mean())
         # Default is to marginalize over two decades,
         # centered on mean, using 1000 bins
-        return np.logspace(-1. + log_mean, 1. + log_mean, 1001)
+        return np.logspace(-1. + log_mean, 1. + log_mean, 1001)/self._j_ref
 
     def profile_bins(self):
         """ The binning to use to do the profile fitting
@@ -156,23 +161,23 @@ class prior_functor:
         # Default is to profile over +-5 sigma,
         # centered on mean, using 100 bins
         return np.logspace(log_mean - log_half_width,
-                           log_mean + log_half_width, 101)
+                           log_mean + log_half_width, 101)/self._j_ref
 
     def log_value(self, x):
         """
         """
-        return np.log(self.__call__(x))
+        return np.log(self.__call__(self.j_ref()*x))
 
 
 class function_prior(prior_functor):
     """
     """
 
-    def __init__(self, funcname, mu, sigma, fn, lnfn=None):
+    def __init__(self, funcname, mu, sigma, fn, lnfn=None, j_ref=1.0):
         """
         """
         # FIXME, why doesn't super(function_prior,self) work here?
-        prior_functor.__init__(self, funcname)
+        prior_functor.__init__(self, funcname, j_ref)
         self._mu = mu
         self._sigma = sigma
         self._fn = fn
@@ -182,8 +187,8 @@ class function_prior(prior_functor):
         """ The normalization 
         i.e., the intergral of the function over the normalization_range 
         """
-        norm_r = self.normalization_range()
-        return quad(self, norm_r[0], norm_r[1])[0]
+        norm_r = self.normalization_range()        
+        return quad(self, norm_r[0]*self._j_ref, norm_r[1]*self._j_ref)[0]
 
     def mean(self):
         """ The mean value of the function.
@@ -200,12 +205,12 @@ class function_prior(prior_functor):
         """
         """
         if self._lnfn is None:
-            return np.log(self._fn(x, self._mu, self._sigma))
-        return self._lnfn(x, self._mu, self._sigma)
+            return np.log(self._fn(x*self.j_ref(), self._mu, self._sigma))
+        return self._lnfn(x*self.j_ref(), self._mu, self._sigma)
 
     def __call__(self, x):
         """ Normal function from scipy """
-        return self._fn(x, self._mu, self._sigma)
+        return self._fn(x*self.j_ref(), self._mu, self._sigma)
 
 
 class lognorm_prior(prior_functor):
@@ -251,9 +256,11 @@ class lognorm_prior(prior_functor):
         Variance of the underlying gaussian distribution
     """
 
-    def __init__(self, mu, sigma):
+    def __init__(self, mu, sigma, j_ref=1.0):
+        super(lognorm_prior, self).__init__('norm', j_ref)
         self._mu = mu
         self._sigma = sigma
+        
 
     def mean(self):
         """Mean value of the function.
@@ -268,7 +275,7 @@ class lognorm_prior(prior_functor):
 
     def __call__(self, x):
         """ Log-normal function from scipy """
-        return stats.lognorm(self._sigma, scale=self._mu).pdf(x)
+        return stats.lognorm(self._sigma, scale=self._mu).pdf(x*self.j_ref())
 
 
 class norm_prior(prior_functor):
@@ -281,10 +288,10 @@ class norm_prior(prior_functor):
         Variance of the underlying gaussian distribution
     """
 
-    def __init__(self, mu, sigma):
+    def __init__(self, mu, sigma, j_ref=1.0):
         """
         """
-        super(norm_prior, self).__init__('norm')
+        super(norm_prior, self).__init__('norm', j_ref)
         self._mu = mu
         self._sigma = sigma
 
@@ -301,7 +308,7 @@ class norm_prior(prior_functor):
 
     def __call__(self, x):
         """Normal function from scipy """
-        return stats.norm(loc=self._mu, scale=self._sigma).pdf(x)
+        return stats.norm(loc=self._mu, scale=self._sigma).pdf(x*self.j_ref())
 
 
 def create_prior_functor(d):
@@ -327,25 +334,26 @@ def create_prior_functor(d):
     'lgauss_like'   : Gaussian in log-space, with arguments reversed. 
     'lgauss_logpdf' : ???
     """
-    functype = d.pop('functype', 'lgauss_like')
+    functype = d.get('functype', 'lgauss_like')
+    j_ref = d.get('j_ref', 1.0)
     if functype == 'norm':
-        return norm_prior(**d)
+        return norm_prior(d['mu'], d['sigma'], j_ref)
     elif functype == 'lognorm':
-        return lognorm_prior(**d)
+        return lognorm_prior(d['mu'], d['sigma'], j_ref)
     elif functype == 'gauss':
-        return function_prior(functype, d['mu'], d['sigma'], gauss, lngauss)
+        return function_prior(functype, d['mu'], d['sigma'], gauss, lngauss, j_ref)
     elif functype == 'lgauss':
-        return function_prior(functype, d['mu'], d['sigma'], lgauss, lnlgauss)
+        return function_prior(functype, d['mu'], d['sigma'], lgauss, lnlgauss, j_ref)
     elif functype in ['lgauss_like', 'lgauss_lik']:
         def fn(x, y, s): return lgauss(y, x, s)
 
         def lnfn(x, y, s): return lnlgauss(y, x, s)
-        return function_prior(functype, d['mu'], d['sigma'], fn, lnfn)
+        return function_prior(functype, d['mu'], d['sigma'], fn, lnfn, j_ref)
     elif functype == 'lgauss_log':
         def fn(x, y, s): return lgauss(x, y, s, logpdf=True)
 
         def lnfn(x, y, s): return lnlgauss(x, y, s, logpdf=True)
-        return function_prior(functype, d['mu'], d['sigma'], fn, lnfn)
+        return function_prior(functype, d['mu'], d['sigma'], fn, lnfn, j_ref)
     else:
         raise KeyError("Unrecognized prior_functor type %s" % functype)
 
@@ -433,6 +441,7 @@ class LnLFn_norm_prior(castro.LnLFn):
             self._interp = self._lnlfn.interp
         if ret_type == "profile":
             self._profile_loglike_spline(self._lnlfn.interp.x)
+            #self._profile_loglike(self._lnlfn.interp.x)
             self._interp = self._prof_interp
         elif ret_type == "marginal":
             self._marginal_loglike(self._lnlfn.interp.x)
@@ -488,8 +497,10 @@ class LnLFn_norm_prior(castro.LnLFn):
         y : array_like       
             Array of coordinates in the `y` nuisance parameter.
         """
-        vals = -self._lnlfn.interp(x * y) + \
-            np.log(self._nuis_pdf(y)) - \
+        nuis = self._nuis_pdf(y)
+        log_nuis = np.where( nuis > 0., np.log(nuis), -1e2)
+        vals = -self._lnlfn.interp(x * y ) + \
+            log_nuis - \
             self._nuis_log_norm
         return vals
 
@@ -590,6 +601,7 @@ class LnLFn_norm_prior(castro.LnLFn):
         self._prof_y = np.array(y)
         self._prof_z = np.array(z)
         self._prof_z = self._prof_z.max() - self._prof_z
+        
         self._prof_interp = castro.Interpolator(x, self._prof_z)
         return self._prof_y, self._prof_z
 

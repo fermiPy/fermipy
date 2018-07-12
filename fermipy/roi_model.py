@@ -389,6 +389,12 @@ class Model(object):
         return get_true_params_dict(self._data['spectral_pars'])
 
     @property
+    def is_free(self):
+        """ returns True if any of the spectral model parameters is set to free, else False
+        """
+        return bool(np.array([int(value.get("free", False)) for key, value in self.spectral_pars.items()]).sum())
+
+    @property
     def name(self):
         return self._data['name']
 
@@ -422,6 +428,9 @@ class Model(object):
 
             if 'mapcube' in src_dict:
                 src_dict['Spatial_Filename'] = src_dict.pop('mapcube')
+                
+            if 'radialprofile' in src_dict:
+                 src_dict['Spatial_Filename'] = src_dict.pop('radialprofile')
 
         if 'spectral_pars' in src_dict:
             src_dict['spectral_pars'] = cast_pars_dict(
@@ -931,6 +940,7 @@ class Source(Model):
     def radec(self):
         return self['radec']
 
+
     @property
     def skydir(self):
         """Return a SkyCoord representation of the source position.
@@ -1422,8 +1432,10 @@ class ROIModel(fermipy.config.Configurable):
                         '$FERMI_DIFFUSE_DIR']
 
         srcs = []
-        if config[name] is not None:
+        if config is not None:
             srcs = config[name]
+        elif self.config[name] is not None:
+            srcs = self.config[name]
 
         srcs_out = []
         for i, t in enumerate(srcs):
@@ -1463,9 +1475,13 @@ class ROIModel(fermipy.config.Configurable):
                 altname = os.path.basename(src_dict['file'])
                 altname = re.sub(r'(\.txt$)', '', altname)
             else:
-                src = MapCubeSource(src_dict['name'], {
-                                    'Spatial_Filename': src_dict['file']})
-                altname = os.path.basename(src_dict['file'])
+#                src = MapCubeSource(src_dict['name'], {
+#                                    'Spatial_Filename': src_dict['file'],
+                sp_filename = src_dict.pop('file')
+                src_dict['Spatial_Filename'] = sp_filename
+                src = MapCubeSource(src_dict['name'], src_dict)
+
+                altname = os.path.basename(sp_filename)
                 altname = re.sub(r'(\.fits$|\.fit$|\.fits.gz$|\.fit.gz$)',
                                  '', altname)
 
@@ -2163,3 +2179,60 @@ class ROIModel(fermipy.config.Configurable):
         hdu_data = fits.table_to_hdu(tab)
         hdus = [fits.PrimaryHDU(), hdu_data]
         fits_utils.write_hdus(hdus, fitsfile)
+
+    def to_ds9(self, free='box',fixed='cross',frame='fk5',color='green',header=True):
+        """Returns a list of ds9 region definitions
+        Parameters
+        ----------
+        free: bool
+            one of the supported ds9 point symbols, used for free sources, see here: http://ds9.si.edu/doc/ref/region.html
+        fixed: bool
+            as free but for fixed sources
+        frame: str
+            typically fk5, more to be implemented
+        color: str
+            color used for symbols (only ds9 compatible colors)
+        header: bool
+            if True, will prepend a global header line.
+
+        Returns
+        -------
+        lines : list
+            list of regions (and header if requested)
+        """
+        # todo: add support for extended sources?!
+        allowed_symbols = ['circle','box','diamond','cross','x','arrow','boxcircle']
+        # adding some checks.
+        assert free in allowed_symbols, "symbol %s not supported"%free
+        assert fixed in allowed_symbols, "symbol %s not supported"%fixed
+        lines = []
+        if header:
+            lines.append("global color=%s"%color)
+        for src in self.get_sources():
+            # self.get_sources will return both Source, but also IsoSource and MapCube, in which case the sources
+            # should be ignored (since they are by construction all-sky and have no corresponding ds9 region string)
+            if not isinstance(src, Source): continue
+            # otherwise get ra, dec
+            ra, dec = src.radec
+            line = "%s; point( %1.5f, %1.5f) # point=%s text={%s} color=%s"%(frame,ra, dec,
+                                                                                free if src.is_free else fixed,
+                                                                                src.name,
+                                                                                color)
+            lines.append(line)
+        return lines
+
+    def write_ds9region(self, region, *args, **kwargs):
+
+        """Create a ds9 compatible region file from the ROI.
+
+        It calls the `to_ds9` method and write the result to the region file. Only the file name is required.
+        All other parameters will be forwarded to the `to_ds9` method, see the documentation of that method
+        for all accepted parameters and options.
+        Parameters
+        ----------
+        region : str
+            name of the region file (string)
+        """
+        lines = self.to_ds9(*args,**kwargs)
+        with open(region,'w') as fo:
+            fo.write("\n".join(lines))

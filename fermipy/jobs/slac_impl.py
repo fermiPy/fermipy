@@ -1,6 +1,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Implementation of `ScatterGather` class for dealing with LSF batch jobs
+Implementation of `ScatterGather` interface class for dealing with LSF batch jobs at SLAC
 """
 from __future__ import absolute_import, division, print_function
 
@@ -9,11 +9,12 @@ import os
 import time
 import subprocess
 
-from fermipy.jobs.job_archive import get_timestamp, JobStatus, JobDetails
-from fermipy.jobs.scatter_gather import clean_job, SG_Interface
+from fermipy.jobs.job_archive import JobStatus
+from fermipy.jobs.sys_interface import clean_job, SysInterface
+
 
 def make_nfs_path(path):
-    """Make a nfs version of a file path. 
+    """Make a nfs version of a file path.
     This just puts /nfs at the beginning instead of /gpfs"""
     if os.path.isabs(path):
         fullpath = path
@@ -25,11 +26,12 @@ def make_nfs_path(path):
         fullpath = fullpath.replace('/gpfs/', '/nfs/')
     return fullpath
 
+
 def make_gpfs_path(path):
-    """Make a gpfs version of a file path. 
+    """Make a gpfs version of a file path.
     This just puts /gpfs at the beginning instead of /nfs"""
     if os.path.isabs(path):
-        fullpath = pathos.path.abspath(path)
+        fullpath = os.path.abspath(path)
     else:
         fullpath = os.path.abspath(path)
     if len(fullpath) < 5:
@@ -37,6 +39,7 @@ def make_gpfs_path(path):
     if fullpath[0:5] == '/nfs/':
         fullpath = fullpath.replace('/nfs/', '/gpfs/')
     return fullpath
+
 
 def get_lsf_status():
     """Count and print the number of jobs in various LSF states
@@ -59,46 +62,17 @@ def get_lsf_status():
 
     for line in output[1:]:
         line = line.strip().split()
+        # Protect against format of multiproc jobs
+        if len(line) < 5: 
+            continue
 
         status_count['NJOB'] += 1
 
-        for k in status_count.keys():
-
+        for k in status_count:
             if line[2] == k:
                 status_count[k] += 1
 
     return status_count
-
-
-def check_log(logfile, exited='Exited with exit code',
-              successful='Successfully completed'):
-    """Check a log file to determine status of LSF job
-
-    Often logfile doesn't exist because the job hasn't begun
-    to run. It is unclear what you want to do in that case...
-
-    Parameters
-    ----------
-
-    logfile : str
-        String with path to logfile
-
-    exited  : str
-        Value to check for in existing logfile for exit with failure
-
-    successful : str
-        Value to check for in existing logfile for success
-
-    Returns str, one of 'Pending', 'Running', 'Done', 'Failed'
-    """
-    if not os.path.exists(logfile):
-        return JobStatus.pending
-    if exited in open(logfile).read():
-        return JobStatus.failed
-    elif successful in open(logfile).read():
-        return JobStatus.done
-    else:
-        return JobStatus.running
 
 
 def build_bsub_command(command_template, lsf_args):
@@ -118,22 +92,17 @@ def build_bsub_command(command_template, lsf_args):
     return full_command
 
 
-class LSF_Interface(SG_Interface):
+class SlacInterface(SysInterface):
     """Implmentation of ScatterGather that uses LSF"""
+    string_exited = 'Exited with exit code'
+    string_successful = 'Successfully completed'
 
     def __init__(self, **kwargs):
         """C'tor
 
         Keyword arguements
         ------------------
-
-        lsf_exited : str ['Exited with exit code']
-            String used to identify failed jobs
-
-        lsf_successful : str ['Successfully completed']
-            String used to identify completed jobs
-
-        lsf_args : dict 
+        lsf_args : dict
             Dictionary of arguments passed to LSF
 
         max_jobs : int [500]
@@ -144,28 +113,19 @@ class LSF_Interface(SG_Interface):
 
         time_per_cycle : int [15]
             Time per submission cycle in seconds
-        
+
         max_job_age : int [90]
             Max job age in minutes
         """
-        super(LSF_Interface, self).__init__(**kwargs)
-        self._exited = kwargs.pop('lsf_exited', 'Exited with exit code')
-        self._successful = kwargs.pop('lsf_successful', 'Successfully completed')
+        super(SlacInterface, self).__init__(**kwargs)
         self._lsf_args = kwargs.pop('lsf_args', {})
         self._max_jobs = kwargs.pop('max_jobs', 500)
         self._time_per_cycle = kwargs.pop('time_per_cycle', 15)
         self._jobs_per_cycle = kwargs.pop('jobs_per_cycle', 20)
         self._max_job_age = kwargs.pop('max_job_age', 90)
-        self._no_batch =  kwargs.pop('no_batch', False)
+        self._no_batch = kwargs.pop('no_batch', False)
 
-    def check_job(self, job_details):
-        """Check the status of a single job
-
-        Returns str, one of 'Pending', 'Running', 'Done', 'Failed'
-        """
-        return check_log(job_details.logfile, self._exited, self._successful)
-
-    def dispatch_job_hook(self, link, key, job_config, logfile):
+    def dispatch_job_hook(self, link, key, job_config, logfile, stream=sys.stdout):
         """Send a single job to the LSF batch
 
         Parameters
@@ -200,30 +160,40 @@ class LSF_Interface(SG_Interface):
         print_bsub = True
         if self._dry_run:
             if print_bsub:
-                sys.stdout.write("%s\n" % full_command)
-        else:
-            try:
-                os.makedirs(logdir)
-            except OSError:
-                pass
-            os.system(full_command)
+                stream.write("%s\n" % full_command)
+            return 0
 
-    def submit_jobs(self, link, job_dict=None, job_archive=None):
+        try:
+            os.makedirs(logdir)
+        except OSError:
+            pass
+        proc = subprocess.Popen(full_command.split(),
+                                stderr=stream,
+                                stdout=stream)
+        proc.communicate()
+        return proc.returncode
+
+    def submit_jobs(self, link, job_dict=None, job_archive=None, stream=sys.stdout):
         """Submit all the jobs in job_dict """
         if link is None:
             return JobStatus.no_job
         if job_dict is None:
             job_keys = link.jobs.keys()
-        else: 
+        else:
             job_keys = sorted(job_dict.keys())
 
         # copy & reverse the keys b/c we will be popping item off the back of
         # the list
         unsubmitted_jobs = job_keys
         unsubmitted_jobs.reverse()
- 
+
         failed = False
-        while len(unsubmitted_jobs) > 0:
+        if unsubmitted_jobs:
+            if stream != sys.stdout:
+                sys.stdout.write('Submitting jobs (%i): ' %
+                                 len(unsubmitted_jobs))
+                sys.stdout.flush()
+        while unsubmitted_jobs:
             status = get_lsf_status()
             njob_to_submit = min(self._max_jobs - status['NJOB'],
                                  self._jobs_per_cycle,
@@ -235,40 +205,58 @@ class LSF_Interface(SG_Interface):
             for i in range(njob_to_submit):
                 job_key = unsubmitted_jobs.pop()
 
-                #job_details = job_dict[job_key]
+                # job_details = job_dict[job_key]
                 job_details = link.jobs[job_key]
                 job_config = job_details.job_config
                 if job_details.status == JobStatus.failed:
                     clean_job(job_details.logfile, {}, self._dry_run)
-                    #clean_job(job_details.logfile,
+                    # clean_job(job_details.logfile,
                     #          job_details.outfiles, self.args['dry_run'])
-                    
+
                 job_config['logfile'] = job_details.logfile
-                new_job_details = self.dispatch_job(link, job_key, job_archive)
+                new_job_details = self.dispatch_job(
+                    link, job_key, job_archive, stream)
                 if new_job_details.status == JobStatus.failed:
                     failed = True
                     clean_job(new_job_details.logfile,
                               new_job_details.outfiles, self._dry_run)
                 link.jobs[job_key] = new_job_details
 
-            if len(unsubmitted_jobs) > 0:
-                print('Sleeping %.0f seconds between submission cycles' %
-                      self._time_per_cycle)
+            if unsubmitted_jobs:
+                if stream != sys.stdout:
+                    sys.stdout.write('.')
+                    sys.stdout.flush()
+                stream.write('Sleeping %.0f seconds between submission cycles\n' %
+                             self._time_per_cycle)
                 time.sleep(self._time_per_cycle)
 
-        return failed
+        if failed:
+            return JobStatus.failed
+
+        if stream != sys.stdout:
+            sys.stdout.write('!\n')
+
+        return JobStatus.done
 
 
+def get_slac_default_args(job_time=1500):
+    """ Create a batch job interface object.
 
+    Parameters
+    ----------
 
-def get_lsf_default_args():
-    lsf_default_args = dict(lsf_exited='Exited with exit code',
-                            lsf_successful='Successfully completed',
-                            lsf_args={'W': 1500,
-                                      'R': '\"select[rhel60 && !fell]\"'},
-                            max_jobs=500,
-                            time_per_cycle=15,
-                            jobs_per_cycle=20,
-                            max_job_age=90,
-                            no_batch=False)
-    return lsf_default_args.copy()
+    job_time : int
+        Expected max length of the job, in seconds.
+        This is used to select the batch queue and set the
+        job_check_sleep parameter that sets how often
+        we check for job completion.
+
+    """
+    slac_default_args = dict(lsf_args={'W': job_time,
+                                       'R': '\"select[rhel60&&!fell]\"'},
+                             max_jobs=500,
+                             time_per_cycle=15,
+                             jobs_per_cycle=20,
+                             max_job_age=90,
+                             no_batch=False)
+    return slac_default_args.copy()
