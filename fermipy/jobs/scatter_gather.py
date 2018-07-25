@@ -444,13 +444,16 @@ class ScatterGather(Link):
             return JobStatus.failed
 
         status_vect = self.check_status(stream, write_status=True)
-
         status = status_vect.get_status()
-        if status == JobStatus.partial_failed and resubmit_failed:
-             sys.write("Resubmitting partially failed link %s" %
-                       self.full_linkname)
-             status_vect = self.resubmit(stream=stream, fail_running=False, resubmit_failed=True)
 
+        if status == JobStatus.partial_failed:
+            if resubmit_failed:
+                sys.write("Resubmitting partially failed link %s\n" %
+                          self.full_linkname)
+                status_vect = self.resubmit(stream=stream, fail_running=False, resubmit_failed=True)
+            else:
+                sys.stdout.write("NOT resubmitting partially failed link %s\n" %
+                                 self.full_linkname)
         return status_vect
 
     def resubmit(self, stream=sys.stdout, fail_running=False, resubmit_failed=False):
@@ -489,13 +492,17 @@ class ScatterGather(Link):
             if scatter_status == JobStatus.failed:
                 return JobStatus.failed
 
+        status_vect = self.check_status(stream, write_status=True)
         status = status_vect.get_status()
 
-        status_vect = self.check_status(stream, write_status=True)
-        if status == JobStatus.partial_failed and resubmit_failed:
-            sys.stdout.write("Resubmitting partially failed link %s" %
-                             self.full_linkname)
-            status_vect = self.resubmit(stream=stream, fail_running=False, resubmit_failed=False)
+        if status == JobStatus.partial_failed:
+            if resubmit_failed:
+                sys.stdout.write("Resubmitting partially failed link %s\n" %
+                                 self.full_linkname)
+                status_vect = self.resubmit(stream=stream, fail_running=False, resubmit_failed=False)
+            else:
+                sys.stdout.write("NOT resubmitting partially failed link %s\n" %
+                                 self.full_linkname)
 
         if self.args['dry_run']:
             return JobStatus.unknown
