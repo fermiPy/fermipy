@@ -219,7 +219,7 @@ class FitDiffuse(Link):
             raise RuntimeError(
                 "Trying to run fermipy analysis, but don't have ST")
 
-        if (args.load_baseline):
+        if args.load_baseline:
             gta = GTAnalysis.create(args.roi_baseline,
                                     args.config)
         else:
