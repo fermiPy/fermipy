@@ -485,10 +485,10 @@ class ResidMapGenerator(object):
             mms = mcs.sum_over_axes()
             ems = ecs.sum_over_axes()
 
-            if cms.hpx.order != hpxsky.order:
-                cms = cms.ud_grade(hpxsky.order, preserve_counts=True)
-                mms = mms.ud_grade(hpxsky.order, preserve_counts=True)
-                ems = ems.ud_grade(hpxsky.order, preserve_counts=True)
+            if cms.geom.order != hpxsky.order:
+                cms = cms.to_ud_graded(hpxsky.nside, preserve_counts=True)
+                mms = mms.to_ud_graded(hpxsky.nside, preserve_counts=True)
+                ems = ems.to_ud_graded(hpxsky.nside, preserve_counts=True)
 
             cmst.data += cms.data
             mmst.data += mms.data
