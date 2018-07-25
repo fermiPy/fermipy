@@ -225,9 +225,9 @@ class ScatterGather(Link):
         argv = self._make_argv()
         if dry_run:
             argv.append('--dry_run')
-        self._invoke(argv, stream)
+        self._invoke(argv, stream, resubmit_failed=resubmit_failed)
 
-    def _invoke(self, argv, stream=sys.stdout):
+    def _invoke(self, argv, stream=sys.stdout, resubmit_failed=False):
         """Invoke this object to preform a particular action
 
         Parameters
@@ -239,6 +239,9 @@ class ScatterGather(Link):
         stream : `file`
             Stream that this function will print to,
             must have 'write' function.
+
+        resubmit_failed : bool
+            Resubmit failed jobs.
 
         Returns
         -------
@@ -260,9 +263,9 @@ class ScatterGather(Link):
         self._interface._dry_run = args.dry_run
 
         if args.action == 'run':
-            status_vect = self.run_jobs(stream)
+            status_vect = self.run_jobs(stream, resubmit_failed=resubmit_failed)
         elif args.action == 'resubmit':
-            status_vect = self.resubmit(stream)
+            status_vect = self.resubmit(stream, resubmit_failed=resubmit_failed)
         elif args.action == 'check_status':
             self._build_job_dict()
             status_vect = self.check_status(stream)
@@ -404,7 +407,7 @@ class ScatterGather(Link):
             if write_status:
                 self._write_status_to_log(0, stream)
 
-        self._set_status_self(status=status)
+        self._set_status_self(status=status)            
         if not check_once:
             if stream != sys.stdout:
                 sys.stdout.write("! %s\n" % (JOB_STATUS_STRINGS[status]))
@@ -414,7 +417,7 @@ class ScatterGather(Link):
 
         return status_vect
 
-    def run_jobs(self, stream=sys.stdout):
+    def run_jobs(self, stream=sys.stdout, resubmit_failed=False):
         """Function to dipatch jobs and collect results
 
         Parameters
@@ -422,6 +425,9 @@ class ScatterGather(Link):
         stream : `file`
             Stream that this function will print to,
             Must have 'write' function.
+
+        resubmit_failed : bool
+            Resubmit failed jobs.
 
         Returns
         -------
@@ -438,9 +444,16 @@ class ScatterGather(Link):
             return JobStatus.failed
 
         status_vect = self.check_status(stream, write_status=True)
+
+        status = status_vect.get_status()
+        if status == JobStatus.partial_failed and resubmit_failed:
+             sys.write("Resubmitting partially failed link %s" %
+                       self.full_linkname)
+             status_vect = self.resubmit(stream=stream, fail_running=False, resubmit_failed=True)
+
         return status_vect
 
-    def resubmit(self, stream=sys.stdout, fail_running=False):
+    def resubmit(self, stream=sys.stdout, fail_running=False, resubmit_failed=False):
         """Function to resubmit failed jobs and collect results
 
         Parameters
@@ -451,6 +464,9 @@ class ScatterGather(Link):
 
         fail_running : `bool`
             If True, consider running jobs as failed
+
+        resubmit_failed : bool
+            Resubmit failed jobs.
 
         Returns
         -------
@@ -473,7 +489,13 @@ class ScatterGather(Link):
             if scatter_status == JobStatus.failed:
                 return JobStatus.failed
 
+        status = status_vect.get_status()
+
         status_vect = self.check_status(stream, write_status=True)
+        if status == JobStatus.partial_failed and resubmit_failed:
+            sys.stdout.write("Resubmitting partially failed link %s" %
+                             self.full_linkname)
+            status_vect = self.resubmit(stream=stream, fail_running=False, resubmit_failed=False)
 
         if self.args['dry_run']:
             return JobStatus.unknown
