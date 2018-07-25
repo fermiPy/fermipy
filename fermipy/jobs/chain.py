@@ -221,7 +221,7 @@ class Chain(Link):
             self._stage_output_files(output_file_mapping, dry_run)
 
         chain_status = self.check_links_status()
-        print ("Chain status %i" % (chain_status))
+        print ("Chain status: %s" % (JOB_STATUS_STRINGS[chain_status]))
         if chain_status == 5:
             job_status = 0
         else:
