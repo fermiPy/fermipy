@@ -199,22 +199,23 @@ class Chain(Link):
                               resubmit_failed=resubmit_failed)
             link_status = link.check_jobs_status()
             link._set_status_self(status=link_status)
-            if link_status in [JobStatus.failed]:
+            if link_status in [JobStatus.failed, JobStatus.partial_failed]:
                 print ("Stoping chain execution at failed link %s" %
                        link.full_linkname)
                 failed = True
                 break
-            elif link_status in [JobStatus.partial_failed]:
-                print ("Resubmitting partially failed link %s" %
-                       link.full_linkname)
-                link.run_with_log(dry_run=dry_run, stage_files=False,
-                                  resubmit_failed=resubmit_failed)
-                link_status = link.check_jobs_status()
-                link._set_status_self(status=link_status)
-                if link_status in [JobStatus.partial_failed]:
-                    print ("Stoping chain execution: resubmission failed %s" %
-                           link.full_linkname)
-                    failed = True
+#            elif link_status in [JobStatus.partial_failed]:
+#                print ("Resubmitting partially failed link %s" %
+#                       link.full_linkname)
+#                link.run_with_log(dry_run=dry_run, stage_files=False,
+#                                  resubmit_failed=resubmit_failed)
+#                link_status = link.check_jobs_status()
+#                link._set_status_self(status=link_status)
+#                if link_status in [JobStatus.partial_failed]:
+#                    print ("Stoping chain execution: resubmission failed %s" %
+#                           link.full_linkname)
+#                    failed = True
+#                    break
 
         if self._file_stage is not None and stage_files and not failed:
             self._stage_output_files(output_file_mapping, dry_run)
