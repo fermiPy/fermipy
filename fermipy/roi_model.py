@@ -2186,12 +2186,16 @@ class ROIModel(fermipy.config.Configurable):
         ----------
         free: bool
             one of the supported ds9 point symbols, used for free sources, see here: http://ds9.si.edu/doc/ref/region.html
+
         fixed: bool
             as free but for fixed sources
+        
         frame: str
             typically fk5, more to be implemented
+        
         color: str
             color used for symbols (only ds9 compatible colors)
+        
         header: bool
             if True, will prepend a global header line.
 
