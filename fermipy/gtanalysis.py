@@ -951,7 +951,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             if not savefits and f in fitsfiles:
                 continue
 
+
             self.logger.debug('Copying ' + f)
+            self.logger.info('Copying ' + f)
             shutil.copy(wpath, self.outdir)
 
         self.logger.info('Finished.')
@@ -4205,6 +4207,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         return src_dict
 
+    def compute_srcprob(self,xmlfile=None, overwrite=False):
+        """Run the gtsrcprob app with the current model or a user provided xmlfile"""
+
+        for i,c in enumerate(self.components):
+            # compute diffuse response, necessary for srcprob
+            c._diffrsp_app(xmlfile=xmlfile)
+            # compute srcprob
+            c._srcprob_app(xmlfile = xmlfile, overwrite = overwrite)
+
 
 class GTBinnedAnalysis(fermipy.config.Configurable):
     defaults = dict(selection=defaults.selection,
@@ -5671,3 +5682,61 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   outfile=outfile)
 
         run_gtapp('gttscube', self.logger, kw)
+
+    def _diffrsp_app(self,xmlfile=None, **kwargs):
+        """
+        Compute the diffuse response 
+        """
+        loglevel = kwargs.get('loglevel', self.loglevel)
+
+        self.logger.log(loglevel, 'Computing diffuse repsonce for component %s.',
+                        self.name)
+
+        # set the srcmdl
+        srcmdl_file = self.files['srcmdl']
+        if xmlfile is not None:
+            srcmdl_file = self.get_model_path(xmlfile)
+
+        kw = dict(evfile=self.files['ft1'],
+            scfile=self.data_files['scfile'],
+            irfs = self.config['gtlike']['irfs'],
+            evtype = self.config['selection']['evtype'],
+            srcmdl = srcmdl_file)
+
+        run_gtapp('gtdiffrsp', self.logger, kw, loglevel=loglevel)
+        return 
+
+    def _srcprob_app(self,xmlfile=None, overwrite=False, **kwargs):
+        """
+        Run srcprob for an analysis component as an application
+        """
+
+        loglevel = kwargs.get('loglevel', self.loglevel)
+
+        self.logger.log(loglevel, 'Computing src probability for component %s.',
+                        self.name)
+
+        # set the srcmdl
+        srcmdl_file = self.files['srcmdl']
+        if xmlfile is not None:
+            srcmdl_file = self.get_model_path(xmlfile)
+
+        # set the outfile
+        # it's defined here and not in self.files dict
+        # so that it is copied with the stage_output module
+        # even if savefits is False
+        outfile = os.path.join(self.workdir, 
+                    'ft1_srcprob{0[file_suffix]:s}.fits'.format(self.config))
+
+        kw = dict(evfile=self.files['ft1'],
+            scfile=self.data_files['scfile'],
+            outfile= outfile,
+            irfs = self.config['gtlike']['irfs'],
+            srcmdl = srcmdl_file)
+        self.logger.debug(kw)
+
+        # run gtapp for the srcprob
+        if os.path.isfile(outfile) and not overwrite:
+            self.logger.info('Skipping gtsrcprob')
+        else:
+            run_gtapp('gtsrcprob', self.logger, kw, loglevel=loglevel)
