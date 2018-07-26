@@ -167,8 +167,8 @@ def convolve_map_hpx_gauss(m, sigmas, imin=0, imax=None, wmap=None):
 
     o = np.zeros(m.data.shape)
 
-    nside = m.hpx.nside
-    nest = m.hpx.nest
+    nside = m.geom.nside
+    nest = m.geom.nest
 
     # Loop over energy
     for i, ms in enumerate(m.data[islice, ...]):
@@ -467,7 +467,7 @@ class ResidMapGenerator(object):
 
             if use_weights:
                 wmap = c.weight_map()
-                mask = wmap.sum_over_energy()
+                mask = wmap.sum_over_axes()
                 mask.data = np.where(mask.data > 0., 1., 0.)
             else:
                 wmap = None
@@ -481,14 +481,14 @@ class ResidMapGenerator(object):
             ecs = convolve_map_hpx_gauss(
                 ec, sigmas, imin=imin, imax=imax, wmap=wmap)
 
-            cms = ccs.sum_over_energy()
-            mms = mcs.sum_over_energy()
-            ems = ecs.sum_over_energy()
+            cms = ccs.sum_over_axes()
+            mms = mcs.sum_over_axes()
+            ems = ecs.sum_over_axes()
 
-            if cms.hpx.order != hpxsky.order:
-                cms = cms.ud_grade(hpxsky.order, preserve_counts=True)
-                mms = mms.ud_grade(hpxsky.order, preserve_counts=True)
-                ems = ems.ud_grade(hpxsky.order, preserve_counts=True)
+            if cms.geom.order != hpxsky.order:
+                cms = cms.to_ud_graded(hpxsky.nside, preserve_counts=True)
+                mms = mms.to_ud_graded(hpxsky.nside, preserve_counts=True)
+                ems = ems.to_ud_graded(hpxsky.nside, preserve_counts=True)
 
             cmst.data += cms.data
             mmst.data += mms.data

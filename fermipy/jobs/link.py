@@ -743,13 +743,12 @@ class Link(object):
         """
 
         n_failed = 0
+        n_partial = 0
         n_passed = 0
         n_total = 0
         for job_details in self.jobs.values():
             n_total += 1
-            if job_details.status == JobStatus.failed:
-                n_failed += 1
-            elif job_details.status == JobStatus.partial_failed:
+            if job_details.status in [JobStatus.failed, JobStatus.partial_failed]:
                 n_failed += 1
             elif fail_running and job_details.status == JobStatus.running:
                 n_failed += 1
@@ -759,8 +758,6 @@ class Link(object):
                 n_passed += 1
 
         if n_failed > 0:
-            if n_passed > 0:
-                return JobStatus.partial_failed
             return JobStatus.failed
         elif n_passed == n_total:
             return JobStatus.done
