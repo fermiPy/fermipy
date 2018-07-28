@@ -246,7 +246,7 @@ class FitDiffuse(Link):
         npred_current = None
         npred_prev = None
         
-        plots_only = True
+        plots_only = False
 
         for fit_stage in fit_strategy:
             mask = fit_stage.get('mask', None)
