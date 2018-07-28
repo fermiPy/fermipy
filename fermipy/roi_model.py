@@ -303,6 +303,13 @@ class Model(object):
         self._data = defaults.make_default_dict(defaults.source_output)
         self._data['spectral_pars'] = get_function_defaults(
             data['SpectrumType'])
+        if data.has_key('spectral_pars'):
+            for k, v in data['spectral_pars'].items():
+                if self._data['spectral_pars'].has_key(k):
+                    self._data['spectral_pars'][k].update(v)
+                else:
+                    self._data['spectral_pars'][k] = v.copy()
+
         try:
             self._data['spatial_pars'] = get_function_defaults(
                 data['SpatialType'])
