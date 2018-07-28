@@ -580,9 +580,12 @@ PLSuperExpCutoff2:
   norm_par: Prefactor
   par_names: [Prefactor, Index1, Scale, Expfactor, Index2]
 PiecewisePowerLaw:
-  defaults: {}
-  norm_par: null
-  par_names: []
+  defaults:
+    IndexL : {error: .nan, free: false, max: 5.0, min: 0.0, name: IndexL, scale: -1.0, value: 0.0}
+    IndexH : {error: .nan, free: false, max: 5.0, min: 0.0, name: IndexH, scale: -1.0, value: 0.0}
+    dNdE0 : {error: .nan, free: false, max: 5.0, min: 0.0, name: dNdE0, scale: 1.0, value: 1.0}
+  norm_par: dNdE0
+  par_names: [IndexL, IndexH, dNdE0]
 PowerLaw:
   defaults:
     Index: {error: .nan, free: false, max: 5.0, min: 0.0, name: Index, scale: -1.0,
