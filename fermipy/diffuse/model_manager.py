@@ -376,6 +376,7 @@ class ModelManager(object):
         master_binning = dict(projtype='HPX',
                               roiwidth=360.,
                               binsperdec=4,
+                              coordsys='GAL',
                               hpx_ordering_scheme="RING",
                               hpx_order=hpx_order,
                               hpx_ebin=True)
@@ -473,8 +474,7 @@ def make_library(**kwargs):
     """
     library_yaml = kwargs.pop('library', 'models/library.yaml')
     comp_yaml = kwargs.pop('comp', 'config/binning.yaml')
-    basedir = kwargs.pop('basedir',
-                         '/nfs/slac/kipac/fs1/u/dmcat/data/flight/diffuse_fitting')
+    basedir = kwargs.pop('basedir', os.path.abspath('.'))
 
     model_man = kwargs.get('ModelManager', ModelManager(basedir=basedir))
 
