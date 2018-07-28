@@ -245,6 +245,8 @@ class FitDiffuse(Link):
         fit_strategy = load_yaml(args.fit_strategy)
         npred_current = None
         npred_prev = None
+        
+        plots_only = True
 
         for fit_stage in fit_strategy:
             mask = fit_stage.get('mask', None)
@@ -252,14 +254,23 @@ class FitDiffuse(Link):
             frac_threshold = fit_stage.get('frac_threshold', 0.5)
             npred_frac = fit_stage.get('npred_frac', 0.9999)
 
-            npred_current =  set_wts_get_npred_wt(gta, mask)
-            skip_list_region = get_unchanged(src_list,
-                                             npred_current,
-                                             npred_prev,
-                                             frac_threshold=frac_threshold)
-            gta.optimize(npred_frac=npred_frac, 
-                         npred_threshold=npred_threshold,
-                         skip=skip_list_region)
+            if plots_only:
+                gta.load_roi("%s.npy" % fit_stage['key'])
+                npred_current =  set_wts_get_npred_wt(gta, mask)
+                skip_list_region = get_unchanged(src_list,
+                                                 npred_current,
+                                                 npred_prev,
+                                                 frac_threshold=frac_threshold)
+            else:
+                npred_current =  set_wts_get_npred_wt(gta, mask)
+                skip_list_region = get_unchanged(src_list,
+                                                 npred_current,
+                                                 npred_prev,
+                                                 frac_threshold=frac_threshold)     
+                gta.optimize(npred_frac=npred_frac, 
+                             npred_threshold=npred_threshold,
+                             skip=skip_list_region)
+            
             snapshot(gta, plotter, fit_stage['key'], make_plots=args.make_plots)
             npred_prev = npred_current
             npred_current = build_srcdict(gta, 'npred_wt')
