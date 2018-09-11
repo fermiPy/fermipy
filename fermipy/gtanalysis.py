@@ -406,7 +406,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         proj=self.config['binning']['proj'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
-            
+
             # Update projection of ROI object
             self._roi.set_geom(self.geom)
 
@@ -658,7 +658,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         spatial_pars : dict
            Dictionary of spatial parameters (optional).
 
-        use_cache : bool        
+        use_cache : bool
            Generate the spatial model by interpolating the cached source
            map.
 
@@ -1234,7 +1234,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         Returns
         -------
         map : `~gammapy.maps.Map`
-        """        
+        """
         maps = [c.model_counts_map(name, exclude, use_mask=use_mask)
                 for c in self.components]
         return skymap.coadd_maps(self.geom, maps)
@@ -1244,7 +1244,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """Return the predicted number of model counts versus energy
         for a given source and energy range.  If summed=True return
         the counts spectrum summed over all components otherwise
-        return a list of model spectra.   If weighted=True return 
+        return a list of model spectra.   If weighted=True return
         the weighted version of the counts spectrum
         """
 
@@ -1316,7 +1316,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         use_pylike : bool
             Create source maps with pyLikelihood.
 
-        use_single_psf : bool 
+        use_single_psf : bool
             Use the PSF model calculated for the ROI center.  If false
             then a new model will be generated using the position of
             the source.
@@ -1465,7 +1465,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             selection on the maximum projected distance from the ROI
             center.
 
-        names : list            
+        names : list
             Select sources matching a name in this list.
 
         Returns
@@ -1583,7 +1583,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         Returns
         -------
         srcs : list
-            A list of `~fermipy.roi_model.Model` objects.            
+            A list of `~fermipy.roi_model.Model` objects.
         """
 
         if names is None:
@@ -1840,7 +1840,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         par : str
             Parameter name.
 
-        lock : bool       
+        lock : bool
             Set parameter to locked (True) or unlocked (False) state.
         """
         name = self.roi.get_source_by_name(name).name
@@ -1882,7 +1882,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         name : str
             Source name.
 
-        lock : bool        
+        lock : bool
             Set source parameters to locked (True) or unlocked (False)
             state.
         """
@@ -2828,8 +2828,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
     def _fit_optimizer(self, **kwargs):
 
         errors = kwargs.get('errors', True)
-        optObject = self._create_optObject(optimizer=kwargs.get('optimizer',
-                                                                'MINUIT'))
+
+        optimizer = kwargs.get('optimizer', 'MINUIT')
+
+        if optimizer in ['MINUIT', 'NEWMINUIT']:
+            optObject = self._create_optObject(optimizer=kwargs.get('optimizer',
+                                                                    'MINUIT'))
+        else:
+            optObject = None
 
         kw = {}
 
@@ -3227,7 +3233,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                        scale=par_scale, bounds=par_bounds, error=par_error,
                                        update_source=update_sources)
                 except RuntimeError:
-                    self.logger.warn("Did not set parameter %s:%s"%(src,par_name))                    
+                    self.logger.warn("Did not set parameter %s:%s"%(src,par_name))
                     continue
                 except Exception as msg:
                     self.logger.warn(msg)
