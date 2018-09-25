@@ -507,7 +507,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return self._files
 
     @classmethod
-    def create(cls, infile, config=None):
+    def create(cls, infile, config=None, params=None, mask=None):
         """Create a new instance of GTAnalysis from an analysis output file
         generated with `~fermipy.GTAnalysis.write_roi`.  By default
         the new instance will inherit the configuration of the saved
@@ -525,6 +525,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             Path to a configuration file.  This will override the
             configuration in the ROI results file.
 
+        params : str
+            Path to a yaml file with updated parameter values
+        
+        mask : str
+            Path to a fits file with an updated mask
+
         """
 
         infile = os.path.abspath(infile)
@@ -538,7 +544,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         gta = cls(config, validate=validate)
         gta.setup(init_sources=False)
-        gta.load_roi(infile)
+        gta.load_roi(infile, params=params, mask=mask)
         return gta
 
     def clone(self, config, **kwargs):
@@ -2002,7 +2008,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             Choose whether to free (free=True) or fix (free=False).
 
         """
-
         name = self.get_source_name(name)
         normPar = self.like.normPar(name).getName()
         self.free_source(name, pars=[normPar], free=free, **kwargs)
@@ -2475,6 +2480,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                              dloglike_thresh=2.7059, **kwargs):
 
         parName = self.like.normPar(name).getName()
+
         cl_limit = utils.onesided_dlnl_to_cl(dloglike_thresh)
 
         npts = max(npts, 5)
@@ -3226,7 +3232,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                     self.set_parameter(src, par_name, par_value, true_value=False,
                                        scale=par_scale, bounds=par_bounds, error=par_error,
                                        update_source=update_sources)
-                except RuntimeError:
+                except RuntimeError as msg:
+                    self.logger.warn(msg)
                     self.logger.warn("Did not set parameter %s:%s"%(src,par_name))                    
                     continue
                 except Exception as msg:
@@ -3234,6 +3241,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                     continue
                 if par_free is not None:
                     self.free_parameter(src, par_name, par_free)
+        self._sync_params_state()
 
     def _restore_counts_maps(self):
         """
@@ -3505,7 +3513,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.log(loglevel, o)
 
-    def load_roi(self, infile, reload_sources=False):
+    def load_roi(self, infile, reload_sources=False, params=None, mask=None):
         """This function reloads the analysis state from a previously
         saved instance generated with
         `~fermipy.gtanalysis.GTAnalysis.write_roi`.
@@ -3517,6 +3525,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         reload_sources : bool
            Regenerate source maps for non-diffuse sources.
+
+        params : str
+            Path to a yaml file with updated parameter values
+        
+        mask : str
+            Path to a fits file with an updated mask
 
         """
 
@@ -3579,6 +3593,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self._create_likelihood(infile)
         self.set_energy_range(self.loge_bounds[0], self.loge_bounds[1])
+
+        if params is not None:
+            self.load_parameters_from_yaml(params)
+
+        if mask is not None:
+            self.set_weights_map(mask, update_roi=False)
 
         if reload_sources:
             names = [s.name for s in self.roi.sources if not s.diffuse]
@@ -5566,7 +5586,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
         self.like.logLike.sourceMap(str(name)).model()
 
-        normPar = self.like.normPar(name)
+        normPar = self.like.normPar(name)        
         if not normPar.isFree():
             self.like.logLike.buildFixedModelWts()
 
