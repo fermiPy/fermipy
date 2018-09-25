@@ -18,6 +18,19 @@ def make_point_source(name, src_dict):
     return roi_model.Source(name, src_dict)
 
 
+def make_spatialmap_source(name, Spatial_Filename, spectrum):
+    """Construct and return a `fermipy.roi_model.Source` object
+    """
+    data = dict(Spatial_Filename=Spatial_Filename, 
+                ra=0.0, dec=0.0,
+                SpatialType='SpatialMap',
+                Source_Name=name)
+    if spectrum is not None:
+        data.update(spectrum)
+
+    return roi_model.Source(name, data)
+
+
 def make_mapcube_source(name, Spatial_Filename, spectrum):
     """Construct and return a `fermipy.roi_model.MapCubeSource` object
     """
@@ -99,6 +112,10 @@ def make_sources(comp_key, comp_dict):
     if model_type == 'PointSource':
         srcdict[comp_key] = make_point_source(comp_info.source_name,
                                               comp_info.src_dict)
+    elif model_type == 'SpatialMap':
+        srcdict[comp_key] = make_spatialmap_source(comp_info.source_name,
+                                                   comp_info.Spatial_Filename,
+                                                   spectrum)
     elif model_type == 'MapCubeSource':
         srcdict[comp_key] = make_mapcube_source(comp_info.source_name,
                                                 comp_info.Spatial_Filename,
