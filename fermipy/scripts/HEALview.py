@@ -24,6 +24,7 @@ from gammapy.maps import Map
 
 from fermipy.plotting import ImagePlotter
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm, Normalize, PowerNorm
 
 
 def main():
@@ -67,7 +68,16 @@ def main():
     hpxmap = Map.read(args.input.name, hdu=args.extension)
     outdata = []
 
-    fig, ax, im = hpxmap.plot(norm=args.zscale, vmin=args.zmin, vmax=args.zmax)
+    if args.zscale == 'sqrt':
+        the_norm = PowerNorm(gamma=0.5)
+    elif args.zscale == 'log':
+        the_norm= LogNorm()
+    elif args.zscale == 'lin':
+        the_norm = Normalize()
+    else:
+        the_norm = Normalize()
+
+    fig, ax, im = hpxmap.plot(norm=the_norm, vmin=args.zmin, vmax=args.zmax)
     outdata.append(fig)
 
     if args.cbar:
