@@ -186,6 +186,25 @@ def get_function_defaults(function_type):
     return copy.deepcopy(FUNCTION_DEFAULT_PARS[function_type])
 
 
+def build_piecewise_powerlaw(fn, spectral_pars):
+    ppl = pyLike.PiecewisePowerLaw.cast(fn)
+    index_l = spectral_pars['IndexL']['value']
+    index_h = spectral_pars['IndexH']['value']
+    i = 0
+    energies = pyLike.DoubleVector()
+    dndes = pyLike.DoubleVector()
+    while True:
+        try:
+            energy = spectral_pars['Energy%i'%i]['value']
+            dnde = spectral_pars['dNdE%i'%i]['value']
+            energies.push_back(energy)
+            dndes.push_back(dnde)
+            i += 1
+        except KeyError:
+            break
+    ppl.addParams(index_l, index_h, dndes, energies)
+
+
 def create_spectrum_from_dict(spectrum_type, spectral_pars, fn=None):
     """Create a Function object from a parameter dictionary.
 
@@ -201,6 +220,9 @@ def create_spectrum_from_dict(spectrum_type, spectral_pars, fn=None):
 
     if fn is None:
         fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
+
+    if spectrum_type == 'PiecewisePowerLaw':        
+        build_piecewise_powerlaw(fn, spectral_pars)
 
     for k, v in spectral_pars.items():
 
