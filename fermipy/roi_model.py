@@ -1154,19 +1154,21 @@ class Source(Model):
         """Write this source to an XML node."""
 
         if not self.extended:
-            source_element = utils.create_xml_element(root, 'source',
-                                                      dict(name=self[
-                                                          'Source_Name'],
-                                                          type='PointSource'))
+            try:
+                source_element = utils.create_xml_element(root, 'source',
+                                                          dict(name=self['Source_Name'],
+                                                               type='PointSource'))
+            except TypeError as msg:
+                print (self['Source_Name'], self)
+                raise TypeError(msg)
 
             spat_el = ElementTree.SubElement(source_element, 'spatialModel')
             spat_el.set('type', 'SkyDirFunction')
 
         elif self['SpatialType'] == 'SpatialMap':
             source_element = utils.create_xml_element(root, 'source',
-                                                      dict(name=self[
-                                                          'Source_Name'],
-                                                          type='DiffuseSource'))
+                                                      dict(name=self['Source_Name'],
+                                                           type='DiffuseSource'))
 
             filename = utils.path_to_xmlpath(self['Spatial_Filename'])
             spat_el = utils.create_xml_element(source_element, 'spatialModel',
@@ -1423,6 +1425,7 @@ class ROIModel(fermipy.config.Configurable):
         srcs += self._create_diffuse_src('galdiff', config)
         srcs += self._create_diffuse_src('limbdiff', config)
         srcs += self._create_diffuse_src('diffuse', config)
+        srcs += self._create_diffuse_src_from_xml(config)
         return srcs
 
     def _create_diffuse_src(self, name, config, src_type='FileFunction'):
@@ -1496,6 +1499,17 @@ class ROIModel(fermipy.config.Configurable):
             srcs_out += [src]
 
         return srcs_out
+
+
+    def _create_diffuse_src_from_xml(self, config, src_type='FileFunction'):
+        """Load sources from an XML file.
+        """
+        diffuse_xmls = config.get('diffuse_xml')
+        srcs_out = []
+        for diffuse_xml in diffuse_xmls:
+            srcs_out += self.load_xml(diffuse_xml, coordsys=config.get('coordsys', 'CEL'))
+        return srcs_out
+        
 
     def create_source(self, name, src_dict, build_index=True,
                       merge_sources=True, rescale=True):
@@ -2065,6 +2079,7 @@ class ROIModel(fermipy.config.Configurable):
                              merge_sources=self.config['merge_sources'])
 
         self._build_src_index()
+        return srcs
 
     def _build_src_index(self):
         """Build an indices for fast lookup of a source given its name
