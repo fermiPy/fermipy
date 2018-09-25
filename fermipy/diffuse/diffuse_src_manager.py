@@ -9,7 +9,7 @@ import yaml
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.model_component import GalpropMergedRingInfo,\
-    IsoComponentInfo, MapCubeComponentInfo
+    IsoComponentInfo, MapCubeComponentInfo, SpatialMapComponentInfo
 
 
 class GalpropMapManager(object):
@@ -304,7 +304,7 @@ class DiffuseModelManager(object):
         format_dict['sourcekey'] = sourcekey
         if model_type == 'IsoSource':
             return self._name_factory.spectral_template(**format_dict)
-        elif model_type == 'MapCubeSource':
+        elif model_type in ['MapCubeSource', 'SpatialMap']:
             return self._name_factory.diffuse_template(**format_dict)
         else:
             raise ValueError("Unexpected model_type %s" % model_type)
@@ -368,6 +368,9 @@ class DiffuseModelManager(object):
         elif model_type == 'MapCubeSource':
             kwargs['Spatial_Filename'] = template_name
             return MapCubeComponentInfo(**kwargs)
+        elif model_type == 'SpatialMap':
+            kwargs['Spatial_Filename'] = template_name
+            return SpatialMapComponentInfo(**kwargs)
         else:
             raise ValueError("Unexpected model type %s" % model_type)
 

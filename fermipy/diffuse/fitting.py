@@ -322,8 +322,9 @@ class FitDiffuse_SG(ScatterGather):
         for modelkey in models:
             config_file = os.path.join('analysis', 'model_%s' % modelkey,
                                        args['config'])
-            roi_baseline = os.path.join('analysis', 'model_%s' % modelkey,
-                                       args['roi_baseline'])
+            #roi_baseline = os.path.join('analysis', 'model_%s' % modelkey,
+            #                           args['roi_baseline'])
+            roi_baseline = args['roi_baseline']
             logfile = os.path.join('analysis', 'model_%s' % modelkey,
                                    'fit_%s.log' % modelkey)
             job_config = base_config.copy()
