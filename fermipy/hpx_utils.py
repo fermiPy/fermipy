@@ -110,6 +110,15 @@ def hpx_to_coords(h, shape):
     return np.vstack((x, z))
 
 
+def get_map_skydir(filename):
+    hdulist = fits.open(filename)
+    coordsys = hdulist[1].header['COORDSYS']
+    if coordsys == 'GAL':
+        return SkyCoord(0., 0., unit='deg', frame='galactic').transform_to('icrs')
+    else:
+        return SkyCoord(0., 0., unit='deg', frame='icrs')
+
+
 def make_hpx_to_wcs_mapping_centers(hpx, wcs):
     """ Make the mapping data needed to from from HPX pixelization to a
     WCS-based array
