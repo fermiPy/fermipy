@@ -16,6 +16,7 @@ import fermipy
 import fermipy.config
 from fermipy import utils
 from fermipy import wcs_utils
+from fermipy import hpx_utils
 from fermipy import catalog
 from fermipy import defaults
 from fermipy import model_utils
@@ -1119,8 +1120,13 @@ class Source(Model):
                 src_dict['RAJ2000'] = float(spatial_pars['RA']['value'])
                 src_dict['DEJ2000'] = float(spatial_pars['DEC']['value'])
             else:
-                skydir = wcs_utils.get_map_skydir(os.path.expandvars(
-                    src_dict['Spatial_Filename']))
+                try:
+                    skydir = wcs_utils.get_map_skydir(os.path.expandvars(
+                            src_dict['Spatial_Filename']))
+                except Exception:
+                    skydir = hpx_utils.get_map_skydir(os.path.expandvars(
+                            src_dict['Spatial_Filename']))
+                    print (skydir)
                 src_dict['RAJ2000'] = skydir.ra.deg
                 src_dict['DEJ2000'] = skydir.dec.deg
 
