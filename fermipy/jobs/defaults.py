@@ -22,6 +22,7 @@ common = {
     'nsims': (-1, 'Number of simulations to run.', int),
     'dry_run': (False, 'Print commands but do not run them.', bool),
     'make_plots': (False, 'Make plots', bool),
+    'non_null_src': (False, 'Zero out test source', bool),
 }
 
 sims = {
