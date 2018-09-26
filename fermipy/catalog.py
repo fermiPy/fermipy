@@ -167,7 +167,7 @@ class Catalog(object):
             elif 'gll_psch_v08' in fitsfile:
                 return Catalog2FHL(fitsfile)
 
-            tab = Table.read(fitsfile)
+            tab = Table.read(fitsfile, hdu=1)
 
             if 'NickName' in tab.columns:
                 return Catalog4FGLP(fitsfile)
@@ -194,7 +194,7 @@ class CatalogFPY(Catalog):
             extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
                                   'Extended_archive_v18')
 
-        table = Table.read(fitsfile)
+        table = Table.read(fitsfile, hdu=1)
         strip_columns(table)
         table['Spatial_Filename'][table['Spatial_Filename'] == 'None'] = ''
         super(CatalogFPY, self).__init__(table, extdir)
@@ -367,7 +367,7 @@ class Catalog4FGLP(Catalog):
                                   'Extended_archive_v15')
 
         #hdulist = fits.open(fitsfile)
-        table = Table.read(fitsfile)
+        table = Table.read(fitsfile, hdu=1)
 
         strip_columns(table)
 
@@ -413,7 +413,7 @@ class CatalogFL8Y(Catalog):
                                     'gll_psc_8year_v5.fit')
 
         #hdulist = fits.open(fitsfile)
-        table = Table.read(fitsfile)
+        table = Table.read(fitsfile, hdu=1)
         table_extsrc = Table.read(fitsfile, 'ExtendedSources')
         table_extsrc.meta.clear()
 
