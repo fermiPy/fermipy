@@ -302,18 +302,16 @@ class Model(object):
     def __init__(self, name, data):
 
         self._data = defaults.make_default_dict(defaults.source_output)
-        self._data['spectral_pars'] = get_function_defaults(
-            data['SpectrumType'])
-        if data.has_key('spectral_pars'):
+        self._data['spectral_pars'] = get_function_defaults(data['SpectrumType'])
+        if 'spectral_pars' in data:
             for k, v in data['spectral_pars'].items():
-                if self._data['spectral_pars'].has_key(k):
+                if k in self._data['spectral_pars']:
                     self._data['spectral_pars'][k].update(v)
                 else:
                     self._data['spectral_pars'][k] = v.copy()
 
         try:
-            self._data['spatial_pars'] = get_function_defaults(
-                data['SpatialType'])
+            self._data['spatial_pars'] = get_function_defaults(data['SpatialType'])
         except:
             print (data)
             raise KeyError("xx")

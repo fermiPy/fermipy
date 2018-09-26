@@ -281,7 +281,7 @@ class SimulateROI(Link):
         comps = config.get('components', [config])
         for i, comp in enumerate(comps):
             comp_name = "%02i" % i
-            if not comp.has_key('gtlike'):
+            if 'gtlike' not in comp:
                 comp['gtlike'] = {}
             orig_srcmap = os.path.abspath(os.path.join(workdir, 'srcmap_%s.fits' % (comp_name)))
             new_srcmap = os.path.abspath(os.path.join(workdir, 'srcmap_%06i_%s.fits' % (seed, comp_name)))
