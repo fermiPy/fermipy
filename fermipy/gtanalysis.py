@@ -125,7 +125,7 @@ def make_scaled_srcmap(roi, srcmap0,
     hdulist['PRIMARY'] = hdulist_ccube['PRIMARY']
     hdulist['EBOUNDS'] = hdulist_ccube['EBOUNDS']
     hdulist['GTI'] = hdulist_ccube['GTI']
-    hdulist.writeto(outfile, clobber=True)
+    hdulist.writeto(outfile, overwrite=True)
     hdulist_ccube.close()
     hdulist.close()
 
@@ -5380,7 +5380,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             hdu.header['EXPSCALE'] = (scale,
                                       'Exposure correction applied to this map')
 
-        srcmap.writeto(self.files['srcmap'], clobber=True)
+        srcmap.writeto(self.files['srcmap'], overwrite=True)
         srcmap.close()
 
         # Force reloading the map from disk
@@ -5416,7 +5416,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 continue
             hdu.data *= bexp_ratio
 
-        srcmap.writeto(self.files['srcmap'], clobber=True)
+        srcmap.writeto(self.files['srcmap'], overwrite=True)
 
     def restore_counts_maps(self):
 
