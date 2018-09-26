@@ -701,7 +701,7 @@ class HPX(object):
         if hdu_energy is not None:
             hl.append(hdu_energy)
         hdulist = fits.HDUList(hl)
-        hdulist.writeto(outfile, clobber=clobber)
+        hdulist.writeto(outfile, overwrite=clobber)
 
     @staticmethod
     def get_index_list(nside, nest, region):
@@ -966,7 +966,7 @@ class HpxToWcsMapping(object):
             mult_hdu.header[key] = hpx_header[key]
 
         hdulist = fits.HDUList([prim_hdu, mult_hdu])
-        hdulist.writeto(fitsfile, clobber=clobber)
+        hdulist.writeto(fitsfile, overwrite=clobber)
 
     @classmethod
     def create_from_fitsfile(cls, fitsfile):
