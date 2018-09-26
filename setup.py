@@ -105,7 +105,7 @@ setup(
         'scipy >= 0.14',
         'pyyaml',
         'healpy',
-        'gammapy >= 0.7',
+        'gammapy >= 0.8',
     ],
     extras_require=dict(
         all=[],
