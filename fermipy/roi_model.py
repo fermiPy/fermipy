@@ -1124,7 +1124,6 @@ class Source(Model):
                 except Exception:
                     skydir = hpx_utils.get_map_skydir(os.path.expandvars(
                             src_dict['Spatial_Filename']))
-                    print (skydir)
                 src_dict['RAJ2000'] = skydir.ra.deg
                 src_dict['DEJ2000'] = skydir.dec.deg
 
