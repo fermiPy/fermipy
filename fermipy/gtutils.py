@@ -628,7 +628,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                                                        minbinsz)
                 self._wmap = None
             else:
-                self._wmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap, "SKYMAP")
+                self._wmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap, "")
                 self._wmap.setInterpolation(False)
                 self._wmap.setExtrapolation(True)
                 self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
