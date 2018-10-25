@@ -1014,13 +1014,13 @@ class AnalysisPlotter(fermipy.config.Configurable):
         data[data > 6.0] = 6.0
         data[data < -6.0] = -6.0
 
-        n, bins, patches = ax.hist(data.flatten(), nBins, normed=True,
+        n, bins, patches = ax.hist(data.flatten(), nBins, density=True,
                                    histtype='stepfilled',
                                    facecolor='green', alpha=0.75)
         # make and draw best fit line
-        y = mlab.normpdf(bins, mu, sigma)
+        y = norm.pdf(bins, mu, sigma)
         ax.plot(bins, y, 'r--', linewidth=2)
-        y = mlab.normpdf(bins, 0.0, 1.0)
+        y = norm.pdf(bins, 0.0, 1.0)
         ax.plot(bins, y, 'k', linewidth=1)
 
         # labels and such
@@ -1137,7 +1137,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         data = np.nan_to_num(maps['ts'].data.T)
         data[data > 25.0] = 25.0
         data[data < 0.0] = 0.0
-        n, bins, patches = ax.hist(data.flatten(), bins, normed=True,
+        n, bins, patches = ax.hist(data.flatten(), bins, density=True,
                                    histtype='stepfilled',
                                    facecolor='green', alpha=0.75)
         # ax.plot(bins,(1-chi2.cdf(x,dof))/2.,**kwargs)

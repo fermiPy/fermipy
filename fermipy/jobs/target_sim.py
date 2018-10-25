@@ -264,6 +264,7 @@ class SimulateROI(Link):
     default_options = dict(config=defaults.common['config'],
                            roi_baseline=defaults.common['roi_baseline'],
                            profiles=defaults.common['profiles'],
+                           non_null_src=defaults.common['non_null_src'],
                            sim_profile=defaults.sims['sim_profile'],
                            sim=defaults.sims['sim'],
                            nsims=defaults.sims['nsims'],
@@ -280,7 +281,7 @@ class SimulateROI(Link):
         comps = config.get('components', [config])
         for i, comp in enumerate(comps):
             comp_name = "%02i" % i
-            if not comp.has_key('gtlike'):
+            if 'gtlike' not in comp:
                 comp['gtlike'] = {}
             orig_srcmap = os.path.abspath(os.path.join(workdir, 'srcmap_%s.fits' % (comp_name)))
             new_srcmap = os.path.abspath(os.path.join(workdir, 'srcmap_%06i_%s.fits' % (seed, comp_name)))
@@ -294,7 +295,7 @@ class SimulateROI(Link):
 
     @staticmethod
     def _run_simulation(gta, roi_baseline,
-                        injected_name, test_sources, current_seed, seed):
+                        injected_name, test_sources, current_seed, seed, non_null_src):
         """Simulate a realization of this analysis"""
         gta.load_roi('sim_baseline_%06i.npy' % current_seed)
         gta.set_random_seed(seed)
@@ -313,9 +314,10 @@ class SimulateROI(Link):
         for test_source in test_sources:
             test_source_name = test_source['name']
             sedfile = "sed_%s_%06i.fits" % (test_source_name, seed)
-            correl_dict = add_source_get_correlated(gta, test_source_name,
-                                                    test_source['source_model'],
-                                                    correl_thresh=0.25)
+            correl_dict, test_src_name = add_source_get_correlated(gta, test_source_name,
+                                                                   test_source['source_model'],
+                                                                   correl_thresh=0.25,
+                                                                   non_null_src=non_null_src)
 
             # Write the list of correlated sources
             correl_yaml = os.path.join(gta.workdir,
@@ -326,7 +328,7 @@ class SimulateROI(Link):
             for src_name in correl_dict.keys():
                 gta.free_source(src_name, pars='norm')
 
-            gta.sed(test_source_name, outfile=sedfile)
+            gta.sed(test_source_name, prefix=pkey, outfile=sedfile)
             # Set things back to how they were
             gta.delete_source(test_source_name)
             gta.load_xml('sim_refit_%06i' % current_seed)
@@ -380,7 +382,8 @@ class SimulateROI(Link):
             last = first + args.nsims
             for seed in range(first, last):
                 self._run_simulation(gta, args.roi_baseline,
-                                     injected_name, test_sources, first, seed)
+                                     injected_name, test_sources, first, seed,
+                                     non_null_src=args.non_null_src)
 
 
 class RandomDirGen_SG(ScatterGather):
@@ -458,6 +461,7 @@ class SimulateROI_SG(ScatterGather):
                            targetlist=defaults.common['targetlist'],
                            config=defaults.common['config'],
                            roi_baseline=defaults.common['roi_baseline'],
+                           non_null_src=defaults.common['non_null_src'],
                            sim=defaults.sims['sim'],
                            sim_profile=defaults.sims['sim_profile'],
                            nsims=defaults.sims['nsims'],
@@ -489,6 +493,7 @@ class SimulateROI_SG(ScatterGather):
 
         base_config = dict(sim_profile=args['sim_profile'],
                            roi_baseline=args['roi_baseline'],
+                           non_null_src=args['non_null_src'],
                            sim=sim)
 
         for target_name, target_list in targets.items():
