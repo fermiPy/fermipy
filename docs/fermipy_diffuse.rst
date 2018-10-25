@@ -154,6 +154,42 @@ From python there are a number of ways to do it, we recommend this:
    link.run()				     
 
 
+Top Level Configuration
+-----------------------
+
+We use a yaml file to define the top-level analysis parameters.  
+
+.. code-block:: yaml
+   :caption: Sample *top level* Configuration
+
+    # The binning components
+    comp : config/binning.yaml
+    # The dataset
+    data : config/dataset_source.yaml
+    # Library with the fitting components
+    library : models/library.yaml
+    # Yaml file with the list of models to prepare 
+    models : models/modellist.yaml
+    # Input FT1 file
+    ft1file : P8_P305_8years_source_zmax105.lst
+    # HEALPix order for counts cubes
+    hpx_order_ccube : 9
+    # HEALPix order for exposure cubes
+    hpx_order_expcube : 6
+    # HEALPix order fitting models
+    hpx_order_fitting : 7
+    # Build the XML files for the diffuse emission model components
+    make_diffuse_comp_xml : True
+    # Build the XML files for the catalog source model components 
+    make_catalog_comp_xml : True
+    # Name of the directory for the merged GALProp gasmaps
+    merged_gasmap_dir : merged_gasmap
+    # Number of catalog sources per batch job
+    catalog_nsrc : 500
+
+
+
+
 Binning Configuration
 ---------------------
 
