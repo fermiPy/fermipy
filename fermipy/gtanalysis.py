@@ -62,6 +62,7 @@ norm_parameters = {
     'FileFunction': ['Normalization'],
     'DMFitFunction': ['sigmav'],
     'Gaussian': ['Prefactor'],
+    'PiecewisePowerLaw': ['dNdE0'],
 }
 
 shape_parameters = {
