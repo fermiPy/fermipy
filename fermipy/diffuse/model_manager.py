@@ -368,14 +368,14 @@ class ModelManager(object):
 
         #source_names = model_info.component_names
 
-        master_xml_mdl = os.path.basename(
-            self._name_factory.master_srcmdl_xml(modelkey=modelkey))
+        master_xml_mdl = self._name_factory.master_srcmdl_xml(modelkey=modelkey, fullpath=True)
 
         master_data = dict(scfile=self._name_factory.ft2file(fullpath=True),
                            cacheft1=False)
         master_binning = dict(projtype='HPX',
                               roiwidth=360.,
                               binsperdec=4,
+                              coordsys='GAL',
                               hpx_ordering_scheme="RING",
                               hpx_order=hpx_order,
                               hpx_ebin=True)
@@ -386,7 +386,7 @@ class ModelManager(object):
                              edisp_disable=model_info.edisp_disable_list(),
                              use_external_srcmap=True)
         master_selection = dict(glat=0., glon=0., radius=180.)
-        master_model = dict(catalogs=[master_xml_mdl])
+        master_model = dict(catalogs=[os.path.join(model_dir, master_xml_mdl)])
         master_plotting = dict(label_ts_threshold=1e9)
 
         master = dict(data=master_data,
@@ -424,17 +424,18 @@ class ModelManager(object):
             comp_gtlike = dict(srcmap=self._name_factory.merged_srcmaps(**name_keys),
                                bexpmap=self._name_factory.bexpcube(**name_keys),
                                use_external_srcmap=True)
+            comp_diffuse_xml = [self._name_factory.comp_srcmdl_xml(**name_keys)]
             #comp_roi_source_info = {}
-            diffuse_srcs = []
-            for src in comp_roi.diffuse_sources:
-                if isinstance(src, MapCubeSource):
-                    diffuse_srcs.append(dict(name=src.name, file=src.mapcube))
-                elif isinstance(src, IsoSource):
-                    diffuse_srcs.append(dict(name=src.name, file=src.fileFunction))
-                else:
-                    pass
+            #diffuse_srcs = []
+            #for src in comp_roi.diffuse_sources:
+            #    if isinstance(src, MapCubeSource):
+            #        diffuse_srcs.append(dict(name=src.name, file=src.mapcube))
+            #    elif isinstance(src, IsoSource):
+            #        diffuse_srcs.append(dict(name=src.name, file=src.fileFunction))
+            #    else:
+            #        pass
 
-            comp_model = dict(diffuse=diffuse_srcs)
+            comp_model = dict(diffuse_xml=comp_diffuse_xml)
             sub_dict = dict(data=comp_data,
                             binning=comp_binning,
                             selection=comp_selection,
@@ -443,7 +444,7 @@ class ModelManager(object):
             fermipy_dict['components'].append(sub_dict)
 
         # Add placeholder diffuse sources
-        fermipy_dict['model']['diffuse'] = diffuse_srcs
+        #fermipy_dict['model']['diffuse'] = diffuse_srcs
 
         outfile = os.path.join(model_dir, 'config.yaml')
         print("Writing fermipy config file %s" % outfile)
@@ -473,8 +474,7 @@ def make_library(**kwargs):
     """
     library_yaml = kwargs.pop('library', 'models/library.yaml')
     comp_yaml = kwargs.pop('comp', 'config/binning.yaml')
-    basedir = kwargs.pop('basedir',
-                         '/nfs/slac/kipac/fs1/u/dmcat/data/flight/diffuse_fitting')
+    basedir = kwargs.pop('basedir', os.path.abspath('.'))
 
     model_man = kwargs.get('ModelManager', ModelManager(basedir=basedir))
 

@@ -124,6 +124,7 @@ model = {
                 'generated for each item in this list.', list),
     'limbdiff': (None, '', list),
     'diffuse': (None, '', list),
+    'diffuse_xml': (None, '', list),
     'sources': (None, '', list),
     'extdir': (None, 'Set a directory that will be searched for extended source FITS templates.  Template files in this directory '
                'will take precendence over catalog source templates with the same name.', str),

@@ -354,7 +354,7 @@ def run_flux_sensitivity(**kwargs):
         hdu.name = 'MAP_INT_NPRED'
         hdulist.append(hdu)
 
-    hdulist.writeto(output, clobber=True)
+    hdulist.writeto(output, overwrite=True)
 
 
 if __name__ == "__main__":
