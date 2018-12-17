@@ -53,7 +53,7 @@ Acknowledging Fermipy
 ---------------------
 
 To acknowledge Fermipy in a publication please cite `Wood et al. 2017
-<http://adsabs.harvard.edu/abs/2017arXiv170709551W>`_.
+<https://ui.adsabs.harvard.edu/#abs/2017ICRC...35..824W>`_.
 
 
 Documentation Contents
