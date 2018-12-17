@@ -186,6 +186,25 @@ def get_function_defaults(function_type):
     return copy.deepcopy(FUNCTION_DEFAULT_PARS[function_type])
 
 
+def build_piecewise_powerlaw(fn, spectral_pars):
+    ppl = pyLike.PiecewisePowerLaw.cast(fn)
+    index_l = spectral_pars['IndexL']['value']
+    index_h = spectral_pars['IndexH']['value']
+    i = 0
+    energies = pyLike.DoubleVector()
+    dndes = pyLike.DoubleVector()
+    while True:
+        try:
+            energy = spectral_pars['Energy%i'%i]['value']
+            dnde = spectral_pars['dNdE%i'%i]['value']
+            energies.push_back(energy)
+            dndes.push_back(dnde)
+            i += 1
+        except KeyError:
+            break
+    ppl.addParams(index_l, index_h, dndes, energies)
+
+
 def create_spectrum_from_dict(spectrum_type, spectral_pars, fn=None):
     """Create a Function object from a parameter dictionary.
 
@@ -201,6 +220,9 @@ def create_spectrum_from_dict(spectrum_type, spectral_pars, fn=None):
 
     if fn is None:
         fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
+
+    if spectrum_type == 'PiecewisePowerLaw':        
+        build_piecewise_powerlaw(fn, spectral_pars)
 
     for k, v in spectral_pars.items():
 
@@ -249,13 +271,16 @@ def gtlike_spectrum_to_vectors(spectrum):
     """ Convert a pyLikelihood object to a python dictionary which can
         be easily saved to a file."""
 
-    o = {'param_names': np.zeros(10, dtype='S32'),
-         'param_values': np.empty(10, dtype=float) * np.nan,
-         'param_errors': np.empty(10, dtype=float) * np.nan,
-         }
 
     parameters = pyLike.ParameterVector()
     spectrum.getParams(parameters)
+
+    npar = max(parameters.size(), 10)
+    o = {'param_names': np.zeros(npar, dtype='S32'),
+         'param_values': np.empty(npar, dtype=float) * np.nan,
+         'param_errors': np.empty(npar, dtype=float) * np.nan,
+         }
+
     for i, p in enumerate(parameters):
         o['param_names'][i] = p.getName()
         o['param_values'][i] = p.getTrueValue()
@@ -603,7 +628,7 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
                                                        minbinsz)
                 self._wmap = None
             else:
-                self._wmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap, "SKYMAP")
+                self._wmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap, "")
                 self._wmap.setInterpolation(False)
                 self._wmap.setExtrapolation(True)
                 self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,

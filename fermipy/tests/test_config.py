@@ -31,11 +31,11 @@ default_config = {
 }
 
 
-class TestClass(config.Configurable):
+class ConfigTestClass(config.Configurable):
     defaults = default_config
 
     def __init__(self, config=None, **kwargs):
-        super(TestClass, self).__init__(config, **kwargs)
+        super(ConfigTestClass, self).__init__(config, **kwargs)
 
     def method(self, **kwargs):
 
@@ -56,7 +56,7 @@ def test_class_config():
            'secA': {'optFloatA': 2.0}}
 
     # Default configuration
-    cls = TestClass()
+    cls = ConfigTestClass()
     assert(cls.config['optFloatA'] == None)
     assert(cls.config['optFloatB'] == 3.0)
     assert(cls.config['optFloatC'] == 4.0)
@@ -64,7 +64,7 @@ def test_class_config():
     assert(cls.config['secA']['optFloatB'] == 3.0)
 
     # Configuration dictionary
-    cls = TestClass(cfg)
+    cls = ConfigTestClass(cfg)
     assert(cls.config['optFloatA'] == 2.0)
     assert(cls.config['optFloatB'] == None)
     assert(cls.config['optFloatC'] == 4.0)
@@ -75,9 +75,9 @@ def test_class_config():
     assert(cls.config['secA']['optFloatB'] == 3.0)
 
     # Configuration dictionary + kwargs
-    cls = TestClass(cfg, **{'optFloatA': 5.0,
-                            'optListA': ['x', 'y', 'z'],
-                            'secA': {'optFloatA': 4.0}})
+    cls = ConfigTestClass(cfg, **{'optFloatA': 5.0,
+                                  'optListA': ['x', 'y', 'z'],
+                                  'secA': {'optFloatA': 4.0}})
     assert(cls.config['optFloatA'] == 5.0)
     assert(cls.config['optListA'] == ['x', 'y', 'z'])
     assert(cls.config['secA']['optFloatA'] == 4.0)
@@ -86,7 +86,7 @@ def test_class_config():
 def test_method_config():
 
     cfg = {'secA': {'optFloatA': 1.0}}
-    cls = TestClass(cfg)
+    cls = ConfigTestClass(cfg)
 
     outcfg = cls.method()
     assert(outcfg['optFloatA'] == 1.0)
@@ -113,17 +113,17 @@ def test_config_class_validation():
            'optDictB': {'y': 2.0},
            'secA': {'optFloatA': 2.0}}
 
-    cls = TestClass(cfg, validate=False, secA={'optInvalid': 3.0})
+    cls = ConfigTestClass(cfg, validate=False, secA={'optInvalid': 3.0})
     assert('optInvalid' not in cls.config)
     assert('optInvalid' not in cls.config['secA'])
 
     with pytest.raises(KeyError):
-        cls = TestClass(cfg, validate=True)
+        cls = ConfigTestClass(cfg, validate=True)
 
     cfg.pop('optInvalid')
     cfg['optFloatA'] = {}
     with pytest.raises(TypeError):
-        cls = TestClass(cfg, validate=True)
+        cls = ConfigTestClass(cfg, validate=True)
 
 
 def test_config_method_validation():
@@ -133,7 +133,7 @@ def test_config_method_validation():
            'optDictB': {'y': 2.0},
            'secA': {'optFloatA': 2.0}}
 
-    cls = TestClass()
+    cls = ConfigTestClass()
     with pytest.raises(KeyError):
         cls.method(optInvalid=3.0)
 

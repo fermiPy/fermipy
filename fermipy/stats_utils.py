@@ -334,12 +334,12 @@ def create_prior_functor(d):
     'lgauss_like'   : Gaussian in log-space, with arguments reversed. 
     'lgauss_logpdf' : ???
     """
-    functype = d.pop('functype', 'lgauss_like')
+    functype = d.get('functype', 'lgauss_like')
     j_ref = d.get('j_ref', 1.0)
     if functype == 'norm':
-        return norm_prior(**d)
+        return norm_prior(d['mu'], d['sigma'], j_ref)
     elif functype == 'lognorm':
-        return lognorm_prior(**d)
+        return lognorm_prior(d['mu'], d['sigma'], j_ref)
     elif functype == 'gauss':
         return function_prior(functype, d['mu'], d['sigma'], gauss, lngauss, j_ref)
     elif functype == 'lgauss':

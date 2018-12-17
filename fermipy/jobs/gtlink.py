@@ -64,7 +64,56 @@ def update_gtapp(gtapp, **kwargs):
             raise KeyError("gtapp failed to set parameter %s %s" % (key, val))
 
 
-def build_gtapp(appname, **kwargs):
+def _set_pfiles(dry_run, **kwargs):
+    """Set the PFILES env var
+    
+    Parameters
+    ----------
+
+    dry_run : bool
+        Don't actually run
+
+    Keyword arguments
+    -----------------
+
+    pfiles : str
+        Value to set PFILES
+
+    Returns
+    -------
+
+    pfiles_orig : str
+        Current value of PFILES envar
+    """
+    pfiles_orig = os.environ['PFILES']
+    pfiles = kwargs.get('pfiles', None)
+    if pfiles:
+        if dry_run:
+            print("mkdir %s" % pfiles)
+        else:
+            try:
+                os.makedirs(pfiles)
+            except OSError:
+                pass
+        pfiles = "%s:%s" % (pfiles, pfiles_orig)
+        os.environ['PFILES'] = pfiles
+    return pfiles_orig
+
+
+def _reset_pfiles(pfiles_orig):
+    """Set the PFILES env var
+    
+    Parameters
+    ----------
+
+    pfiles_orig : str
+        Original value of PFILES
+
+    """
+    os.environ['PFILES'] = pfiles_orig
+
+
+def build_gtapp(appname, dry_run, **kwargs):
     """Build an object that can run ScienceTools application
 
     Parameters
@@ -72,12 +121,17 @@ def build_gtapp(appname, **kwargs):
     appname : str
         Name of the application (e.g., gtbin)
 
+    dry_run : bool
+        Print command but do not run it
+
     kwargs : arguments used to invoke the application
 
     Returns `GtApp.GtApp` object that will run the application in question
     """
+    pfiles_orig = _set_pfiles(dry_run, **kwargs)
     gtapp = GtApp.GtApp(appname)
     update_gtapp(gtapp, **kwargs)
+    _reset_pfiles(pfiles_orig)
     return gtapp
 
 
@@ -103,33 +157,27 @@ def run_gtapp(gtapp, stream, dry_run, **kwargs):
     if stream is None:
         stream = sys.stdout
 
+    pfiles_orig = _set_pfiles(dry_run, **kwargs)    
     update_gtapp(gtapp, **kwargs)
-    pfiles = kwargs.get('pfiles', None)
-    pfiles_orig = os.environ['PFILES']
-    if pfiles:
-        if dry_run:
-            print("mkdir %s" % pfiles)
-        else:
-            try:
-                os.makedirs(pfiles)
-            except OSError:
-                pass
-        pfiles = "%s:%s" % (pfiles, pfiles_orig)
-        #print("Setting PFILES=%s" % pfiles)
-        os.environ['PFILES'] = pfiles
 
     stream.write("%s\n" % gtapp.command())
     stream.flush()
     if dry_run:
-        os.environ['PFILES'] = pfiles_orig
-        return
+        _reset_pfiles(pfiles_orig)       
+        return 0
 
-    stdin, stdout = gtapp.runWithOutput(print_command=False)
-    for line in stdout:
-        stream.write(line.strip())
-    stream.flush()
-    os.environ['PFILES'] = pfiles_orig
+    try:
+        stdin, stdout = gtapp.runWithOutput(print_command=False)
+        for line in stdout:
+            stream.write(line.strip())
+        stream.flush()
+        return_code = 0
+    except:
+        stream.write('Exited with exit code -1\n')
+        return_code = -1
 
+    _reset_pfiles(pfiles_orig)
+    return return_code
 
 class Gtlink(Link):
     """A wrapper for a single ScienceTools application
@@ -142,19 +190,20 @@ class Gtlink(Link):
 
     See help for `chain.Link` for additional details
     """
+    appname = 'dummy'
+    linkname_default = 'dummy'
+    usage = '%s [options]' %(appname)
+    description = "Link to run %s"%(appname)
 
-    def __init__(self, linkname, **kwargs):
+    def __init__(self, **kwargs):
         """C'tor
 
         See help for `chain.Link` for details
 
         This calls the base class c'tor then builds a GtApp object
         """
-        Link.__init__(self, linkname, **kwargs)
-        try:
-            self.__app = build_gtapp(self.appname, **self.args)
-        except:
-            raise ValueError("Failed to build link %s %s %s" % (self.linkname, self.appname, self.args))
+        super(Gtlink, self).__init__(**kwargs)
+        self.__app = None
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application
@@ -164,7 +213,14 @@ class Gtlink(Link):
         This calls the base class function then fills the parameters of the GtApp object
         """
         Link.update_args(self, override_args)
-        update_gtapp(self.__app, **self.args)
+        dry_run = override_args.get('dry_run', False)
+        if self.__app is None:
+            self.__app = build_gtapp(self.appname, dry_run, **self.args)
+#except:
+#                raise ValueError("Failed to build link %s %s %s" %
+#                                 (self.linkname, self.appname, self.args))
+        else:
+            update_gtapp(self.__app, **self.args)
 
     def get_gtapp(self):
         """Returns a `GTApp` object that will run this `Link` """
@@ -182,7 +238,7 @@ class Gtlink(Link):
         dry_run : bool
             Print command but do not run it
         """
-        run_gtapp(self.__app, stream, dry_run, **self.args)
+        return run_gtapp(self.__app, stream, dry_run, **self.args)
 
     def command_template(self):
         """Build and return a string that can be used as a template invoking
@@ -191,10 +247,14 @@ class Gtlink(Link):
         The actual command can be obtainted by using
         `self.command_template().format(**self.args)`
         """
-        com_out = self.__app.appName
+        com_out = self.appname
         for key, val in self.args.items():
-            if self._options.has_key(key):
+            if key in self._options:
                 com_out += ' %s={%s}' % (key, key)
             else:
                 com_out += ' %s=%s' % (key, val)
         return com_out
+
+    def run_analysis(self, argv):
+        """Implemented by sub-classes to run a particular analysis"""
+        raise RuntimeError("run_analysis called for Gtlink type object")

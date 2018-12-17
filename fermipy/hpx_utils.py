@@ -110,6 +110,15 @@ def hpx_to_coords(h, shape):
     return np.vstack((x, z))
 
 
+def get_map_skydir(filename):
+    hdulist = fits.open(filename)
+    coordsys = hdulist[1].header['COORDSYS']
+    if coordsys == 'GAL':
+        return SkyCoord(0., 0., unit='deg', frame='galactic').transform_to('icrs')
+    else:
+        return SkyCoord(0., 0., unit='deg', frame='icrs')
+
+
 def make_hpx_to_wcs_mapping_centers(hpx, wcs):
     """ Make the mapping data needed to from from HPX pixelization to a
     WCS-based array
@@ -692,7 +701,7 @@ class HPX(object):
         if hdu_energy is not None:
             hl.append(hdu_energy)
         hdulist = fits.HDUList(hl)
-        hdulist.writeto(outfile, clobber=clobber)
+        hdulist.writeto(outfile, overwrite=clobber)
 
     @staticmethod
     def get_index_list(nside, nest, region):
@@ -957,7 +966,7 @@ class HpxToWcsMapping(object):
             mult_hdu.header[key] = hpx_header[key]
 
         hdulist = fits.HDUList([prim_hdu, mult_hdu])
-        hdulist.writeto(fitsfile, clobber=clobber)
+        hdulist.writeto(fitsfile, overwrite=clobber)
 
     @classmethod
     def create_from_fitsfile(cls, fitsfile):

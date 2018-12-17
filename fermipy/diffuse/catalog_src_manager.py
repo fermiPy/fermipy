@@ -5,23 +5,13 @@ Classes and utilities that manage catalog sources
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
-import argparse
 
 import yaml
 import numpy as np
 
-from collections import OrderedDict
-
-from astropy.table import Table
-
-from fermipy.jobs.link import Link 
-from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
-
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.source_factory import SourceFactory
 from fermipy.diffuse.model_component import CatalogInfo, CompositeSourceInfo, CatalogSourcesInfo
-from fermipy.diffuse import defaults as diffuse_defaults
 
 
 def mask_extended(cat_table):
@@ -29,13 +19,16 @@ def mask_extended(cat_table):
     """
     return np.invert(select_extended(cat_table))
 
+
 def select_extended(cat_table):
     """Select only rows representing extended sources from a catalog table
     """
     try:
-        return np.array([len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data], bool)
+        l = [len(row.strip()) > 0 for row in cat_table['Extended_Source_Name'].data]
+        return np.array(l, bool)
     except KeyError:
         return cat_table['Extended']
+
 
 def make_mask(cat_table, cut):
     """Mask a bit mask selecting the rows that pass a selection
@@ -69,7 +62,7 @@ def select_sources(cat_table, cuts):
             full_mask *= select_extended(cat_table)
         else:
             full_mask *= make_mask(cat_table, cut)
-    
+
     lout = [src_name.strip() for src_name in cat_table['Source_Name'][full_mask]]
     return lout
 
@@ -117,10 +110,10 @@ class CatalogSourceManager(object):
         return yaml_dict
 
     def build_catalog_info(self, catalog_info):
-        """ Build a CatalogInfo object """        
+        """ Build a CatalogInfo object """
         cat = SourceFactory.build_catalog(**catalog_info)
         catalog_info['catalog'] = cat
-        #catalog_info['catalog_table'] = 
+        # catalog_info['catalog_table'] =
         #    Table.read(catalog_info['catalog_file'])
         catalog_info['catalog_table'] = cat.table
         catalog_info['roi_model'] =\
@@ -183,12 +176,11 @@ class CatalogSourceManager(object):
                       srcmdl_name=srcmdl_name,
                       source_names=sources,
                       catalog_info=full_cat_info,
-                      roi_model=\
-                          SourceFactory.copy_selected_sources(full_cat_info.roi_model, sources))
+                      roi_model=SourceFactory.copy_selected_sources(full_cat_info.roi_model,
+                                                                    sources))
         if merge:
             return CompositeSourceInfo(**kwargs)
-        else:
-            return CatalogSourcesInfo(**kwargs)
+        return CatalogSourcesInfo(**kwargs)
 
     def make_catalog_comp_info_dict(self, catalog_sources):
         """ Make the information about the catalog components
@@ -226,14 +218,14 @@ class CatalogSourceManager(object):
 
                 try:
                     all_sources = [x.strip() for x in full_cat_info.catalog_table[
-                            'Source_Name'].astype(str).tolist()]
+                        'Source_Name'].astype(str).tolist()]
                 except KeyError:
                     print(full_cat_info.catalog_table.colnames)
                 used_sources = []
                 rules_dict = source_dict['rules_dict']
                 split_dict = {}
                 for rule_key, rule_val in rules_dict.items():
-                    #full_key =\
+                    # full_key =\
                     #    self._name_factory.merged_sourcekey(catalog=ver_key,
                     #                                        rulekey=rule_key)
                     sources = select_sources(
@@ -274,68 +266,3 @@ def make_catalog_comp_dict(**kwargs):
     return dict(catalog_info_dict=catalog_info_dict,
                 comp_info_dict=comp_info_dict,
                 CatalogSourceManager=csm)
-
-
-class CatalogCompChain(Chain):
-    """Small class to build srcmaps for diffuse components
-    """
-    appname = 'fermipy-catalog-comp-chain'
-    linkname_default = 'catalog-comp'
-    usage = '%s [options]' %(appname)
-    description='Run catalog component analysis'
-
-    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
-                           data=diffuse_defaults.diffuse['data'],
-                           library=diffuse_defaults.diffuse['library'],
-                           nsrc=(500, 'Number of sources per job', int),
-                           make_xml=(False, "Make XML files for diffuse components", bool),
-                           dry_run=diffuse_defaults.diffuse['dry_run'])
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(CatalogCompChain, self).__init__(linkname, **init_dict)
-        self.comp_dict = None     
-
-    def _register_link_classes(self):    
-        from fermipy.diffuse.job_library import GatherSrcmaps_SG
-        from fermipy.diffuse.gt_merge_srcmaps import MergeSrcmaps_SG
-        from fermipy.diffuse.gt_srcmaps_catalog import SrcmapsCatalog_SG
-        GatherSrcmaps_SG.register_class()
-        MergeSrcmaps_SG.register_class()
-        SrcmapsCatalog_SG.register_class()
-
-    def _map_arguments(self, input_dict):
-        """Map from the top-level arguments to the arguments provided to
-        the indiviudal links """        
-        o_dict = OrderedDict()
-
-        data = input_dict.get('data')
-        comp = input_dict.get('comp')
-        library = input_dict.get('library')
-        dry_run = input_dict.get('dry_run', False)
-
-        insert_app_config(o_dict, 'srcmaps-catalog',
-                          'fermipy-srcmaps-catalog-sg',
-                          comp=comp, data=data,
-                          library=library,
-                          nsrc=input_dict.get('nsrc', 500),
-                          dry_run=dry_run)
- 
-        insert_app_config(o_dict, 'gather-srcmaps',
-                          'fermipy-gather-srcmaps-sg',
-                          comp=comp, data=data,
-                          library=library,
-                          dry_run=dry_run)
-
-        insert_app_config(o_dict, 'merge-srcmaps',
-                          'fermipy-merge-srcmaps-sg',
-                          comp=comp, data=data,
-                          library=library,
-                          dry_run=dry_run)
-
-        return o_dict
-
-def register_classes():
-    CatalogCompChain.register_class()

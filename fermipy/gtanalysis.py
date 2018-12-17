@@ -62,6 +62,7 @@ norm_parameters = {
     'FileFunction': ['Normalization'],
     'DMFitFunction': ['sigmav'],
     'Gaussian': ['Prefactor'],
+    'PiecewisePowerLaw': ['dNdE0'],
 }
 
 shape_parameters = {
@@ -125,7 +126,7 @@ def make_scaled_srcmap(roi, srcmap0,
     hdulist['PRIMARY'] = hdulist_ccube['PRIMARY']
     hdulist['EBOUNDS'] = hdulist_ccube['EBOUNDS']
     hdulist['GTI'] = hdulist_ccube['GTI']
-    hdulist.writeto(outfile, clobber=True)
+    hdulist.writeto(outfile, overwrite=True)
     hdulist_ccube.close()
     hdulist.close()
 
@@ -507,7 +508,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return self._files
 
     @classmethod
-    def create(cls, infile, config=None):
+    def create(cls, infile, config=None, params=None, mask=None):
         """Create a new instance of GTAnalysis from an analysis output file
         generated with `~fermipy.GTAnalysis.write_roi`.  By default
         the new instance will inherit the configuration of the saved
@@ -525,6 +526,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             Path to a configuration file.  This will override the
             configuration in the ROI results file.
 
+        params : str
+            Path to a yaml file with updated parameter values
+        
+        mask : str
+            Path to a fits file with an updated mask
+
         """
 
         infile = os.path.abspath(infile)
@@ -538,7 +545,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         gta = cls(config, validate=validate)
         gta.setup(init_sources=False)
-        gta.load_roi(infile)
+        gta.load_roi(infile, params=params, mask=mask)
         return gta
 
     def clone(self, config, **kwargs):
@@ -951,7 +958,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             if not savefits and f in fitsfiles:
                 continue
 
+
             self.logger.debug('Copying ' + f)
+            self.logger.info('Copying ' + f)
             shutil.copy(wpath, self.outdir)
 
         self.logger.info('Finished.')
@@ -2002,7 +2011,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             Choose whether to free (free=True) or fix (free=False).
 
         """
-
         name = self.get_source_name(name)
         normPar = self.like.normPar(name).getName()
         self.free_source(name, pars=[normPar], free=free, **kwargs)
@@ -2475,6 +2483,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                              dloglike_thresh=2.7059, **kwargs):
 
         parName = self.like.normPar(name).getName()
+
         cl_limit = utils.onesided_dlnl_to_cl(dloglike_thresh)
 
         npts = max(npts, 5)
@@ -3226,7 +3235,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                     self.set_parameter(src, par_name, par_value, true_value=False,
                                        scale=par_scale, bounds=par_bounds, error=par_error,
                                        update_source=update_sources)
-                except RuntimeError:
+                except RuntimeError as msg:
+                    self.logger.warn(msg)
                     self.logger.warn("Did not set parameter %s:%s"%(src,par_name))                    
                     continue
                 except Exception as msg:
@@ -3234,6 +3244,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                     continue
                 if par_free is not None:
                     self.free_parameter(src, par_name, par_free)
+        self._sync_params_state()
 
     def _restore_counts_maps(self):
         """
@@ -3369,7 +3380,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         mmap = Map.from_geom(self.geom)
         for m in maps:
             mmap.coadd(m)
-        mmap.write(outfile, conv='fgst-ccube')
+        mmap.write(outfile, overwrite=True, conv='fgst-ccube')
         return [mmap] + maps
 
     def write_weight_map(self, model_name):
@@ -3393,7 +3404,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         # FIXME: Should we average weights maps rather than coadding?
         for m in maps:
             wmap.coadd(m)
-        wmap.write(outfile, conv='fgst-ccube')
+        wmap.write(outfile, overwrite=True, conv='fgst-ccube')
         return [wmap] + maps
 
     def print_roi(self, loglevel=logging.INFO):
@@ -3505,7 +3516,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.log(loglevel, o)
 
-    def load_roi(self, infile, reload_sources=False):
+    def load_roi(self, infile, reload_sources=False, params=None, mask=None):
         """This function reloads the analysis state from a previously
         saved instance generated with
         `~fermipy.gtanalysis.GTAnalysis.write_roi`.
@@ -3517,6 +3528,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         reload_sources : bool
            Regenerate source maps for non-diffuse sources.
+
+        params : str
+            Path to a yaml file with updated parameter values
+        
+        mask : str
+            Path to a fits file with an updated mask
 
         """
 
@@ -3579,6 +3596,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self._create_likelihood(infile)
         self.set_energy_range(self.loge_bounds[0], self.loge_bounds[1])
+
+        if params is not None:
+            self.load_parameters_from_yaml(params)
+
+        if mask is not None:
+            self.set_weights_map(mask, update_roi=False)
 
         if reload_sources:
             names = [s.name for s in self.roi.sources if not s.diffuse]
@@ -3928,7 +3951,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """
         self._ccube = skymap.coadd_maps(self.geom, cmaps)
         self._wcube = skymap.coadd_maps(self.geom, wmaps)
-        self._ccube.write(self.files['ccube'], conv='fgst-ccube')
+        self._ccube.write(self.files['ccube'], overwrite=True, conv='fgst-ccube')
 
         if self.projtype == "WCS":
             rm['counts'] += np.sum(self._ccube.data,
@@ -4204,6 +4227,15 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             src_dict['ts'] = -2.0 * lnlp['dloglike'][0]
 
         return src_dict
+
+    def compute_srcprob(self,xmlfile=None, overwrite=False):
+        """Run the gtsrcprob app with the current model or a user provided xmlfile"""
+
+        for i,c in enumerate(self.components):
+            # compute diffuse response, necessary for srcprob
+            c._diffrsp_app(xmlfile=xmlfile)
+            # compute srcprob
+            c._srcprob_app(xmlfile = xmlfile, overwrite = overwrite)
 
 
 class GTBinnedAnalysis(fermipy.config.Configurable):
@@ -5166,7 +5198,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             ltc_new = LTCube.create_from_gti(self.roi.skydir, tab_sc, tab_gti,
                                              self.config['selection']['zmax'],
                                              radius=radius)
-            ltc_new.write(self.files['ltcube'])
+            ltc_new.write(self.files['ltcube'], overwrite=True)
         else:
             run_gtapp('gtltcube', self.logger, kw, loglevel=loglevel)
 
@@ -5360,7 +5392,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             hdu.header['EXPSCALE'] = (scale,
                                       'Exposure correction applied to this map')
 
-        srcmap.writeto(self.files['srcmap'], clobber=True)
+        srcmap.writeto(self.files['srcmap'], overwrite=True)
         srcmap.close()
 
         # Force reloading the map from disk
@@ -5396,7 +5428,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 continue
             hdu.data *= bexp_ratio
 
-        srcmap.writeto(self.files['srcmap'], clobber=True)
+        srcmap.writeto(self.files['srcmap'], overwrite=True)
 
     def restore_counts_maps(self):
 
@@ -5446,7 +5478,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         srcmap_utils.update_source_maps(self.files['srcmap'],
                                         {'PRIMARY': data},
                                         logger=self.logger)
-        cm.write(self.files['ccubemc'], conv='fgst-ccube')
+        cm.write(self.files['ccubemc'], overwrite=True, conv='fgst-ccube')
 
     def write_model_map(self, model_name=None, name=None):
         """Save counts model map to a FITS file.
@@ -5464,7 +5496,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                'mcube%s.fits' % (suffix))
 
         cmap = self.model_counts_map(name, use_mask=False)
-        cmap.write(outfile, conv='fgst-ccube')
+        cmap.write(outfile, overwrite=True, conv='fgst-ccube')
         return cmap
 
     def write_weight_map(self, model_name=None):
@@ -5483,7 +5515,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                'wcube%s.fits' % (suffix))
 
         wmap = self.weight_map()
-        wmap.write(outfile, conv='fgst-ccube')
+        wmap.write(outfile, overwrite=True, conv='fgst-ccube')
         return wmap
 
     def _update_srcmap_file(self, sources, overwrite=True):
@@ -5566,7 +5598,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
         self.like.logLike.sourceMap(str(name)).model()
 
-        normPar = self.like.normPar(name)
+        normPar = self.like.normPar(name)        
         if not normPar.isFree():
             self.like.logLike.buildFixedModelWts()
 
@@ -5671,3 +5703,61 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   outfile=outfile)
 
         run_gtapp('gttscube', self.logger, kw)
+
+    def _diffrsp_app(self,xmlfile=None, **kwargs):
+        """
+        Compute the diffuse response 
+        """
+        loglevel = kwargs.get('loglevel', self.loglevel)
+
+        self.logger.log(loglevel, 'Computing diffuse repsonce for component %s.',
+                        self.name)
+
+        # set the srcmdl
+        srcmdl_file = self.files['srcmdl']
+        if xmlfile is not None:
+            srcmdl_file = self.get_model_path(xmlfile)
+
+        kw = dict(evfile=self.files['ft1'],
+            scfile=self.data_files['scfile'],
+            irfs = self.config['gtlike']['irfs'],
+            evtype = self.config['selection']['evtype'],
+            srcmdl = srcmdl_file)
+
+        run_gtapp('gtdiffrsp', self.logger, kw, loglevel=loglevel)
+        return 
+
+    def _srcprob_app(self,xmlfile=None, overwrite=False, **kwargs):
+        """
+        Run srcprob for an analysis component as an application
+        """
+
+        loglevel = kwargs.get('loglevel', self.loglevel)
+
+        self.logger.log(loglevel, 'Computing src probability for component %s.',
+                        self.name)
+
+        # set the srcmdl
+        srcmdl_file = self.files['srcmdl']
+        if xmlfile is not None:
+            srcmdl_file = self.get_model_path(xmlfile)
+
+        # set the outfile
+        # it's defined here and not in self.files dict
+        # so that it is copied with the stage_output module
+        # even if savefits is False
+        outfile = os.path.join(self.workdir, 
+                    'ft1_srcprob{0[file_suffix]:s}.fits'.format(self.config))
+
+        kw = dict(evfile=self.files['ft1'],
+            scfile=self.data_files['scfile'],
+            outfile= outfile,
+            irfs = self.config['gtlike']['irfs'],
+            srcmdl = srcmdl_file)
+        self.logger.debug(kw)
+
+        # run gtapp for the srcprob
+        if os.path.isfile(outfile) and not overwrite:
+            self.logger.info('Skipping gtsrcprob')
+        else:
+            run_gtapp('gtsrcprob', self.logger, kw, loglevel=loglevel)

@@ -5,16 +5,13 @@ Merge source maps to build composite sources
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
-
-import argparse
 
 import BinnedAnalysis as BinnedAnalysis
 import pyLikelihood as pyLike
 
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.link import add_argument, Link
-from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
+from fermipy.jobs.link import Link
+from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
@@ -33,7 +30,7 @@ class GtMergeSrcmaps(Link):
 
     appname = 'fermipy-merge-srcmaps'
     linkname_default = 'merge-srcmaps'
-    usage = '%s [options]' %(appname)
+    usage = '%s [options]' % (appname)
     description = "Mrege source maps from a set of sources"
 
     default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
@@ -53,16 +50,11 @@ class GtMergeSrcmaps(Link):
                              outfile=FileFlags.output_mask,
                              outxml=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(GtMergeSrcmaps, self).__init__(linkname, **init_dict)
- 
-       
+    __doc__ += Link.construct_docstring(default_options)
+
     def run_analysis(self, argv):
         """Run this analysis"""
-        args = self.parser.parse_args(argv)
+        args = self._parser.parse_args(argv)
 
         obs = BinnedAnalysis.BinnedObs(irfs=args.irfs,
                                        expCube=args.expcube,
@@ -71,7 +63,7 @@ class GtMergeSrcmaps(Link):
 
         like = BinnedAnalysis.BinnedAnalysis(obs,
                                              optimizer='MINUIT',
-                                             srcModel=GtMergeSourceMaps.NULL_MODEL,
+                                             srcModel=GtMergeSrcmaps.NULL_MODEL,
                                              wmap=None)
 
         like.logLike.set_use_single_fixed_map(False)
@@ -97,8 +89,8 @@ class GtMergeSrcmaps(Link):
         comp = like.mergeSources(args.merged, source_names, 'ConstantValue')
         like.logLike.getSourceMap(comp.getName())
 
-        print("Merged %i sources into %s"%(len(srcs_to_merge), comp.getName()))
-        if len(missing_sources) > 0:
+        print("Merged %i sources into %s" % (len(srcs_to_merge), comp.getName()))
+        if missing_sources:
             print("Missed sources: ", missing_sources)
 
         print("Writing output source map file %s" % args.outfile)
@@ -110,13 +102,9 @@ class GtMergeSrcmaps(Link):
         like.writeXml(args.outxml)
 
 
-class MergeSrcmaps_SG(ConfigMaker):
-    """Small class to generate configurations for this script
+class MergeSrcmaps_SG(ScatterGather):
+    """Small class to generate configurations for `GtMergeSrcmaps`
 
-    This adds the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --sources  : Catalog model component definition yaml file'
     """
     appname = 'fermipy-merge-srcmaps-sg'
     usage = "%s [options]" % (appname)
@@ -129,12 +117,7 @@ class MergeSrcmaps_SG(ConfigMaker):
                            data=diffuse_defaults.diffuse['data'],
                            library=diffuse_defaults.diffuse['library'])
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(MergeSrcmaps_SG, self).__init__(link,
-                                              options=kwargs.get('options',
-                                                                 self.default_options.copy()))
+    __doc__ += Link.construct_docstring(default_options)
 
     def build_job_configs(self, args):
         """Hook to build job configurations
@@ -148,8 +131,8 @@ class MergeSrcmaps_SG(ConfigMaker):
 
         for split_ver, split_dict in comp_info_dict.items():
             for source_key, source_dict in split_dict.items():
-                full_key = "%s_%s"%(split_ver, source_key)
-                merged_name = "%s_%s"%(source_dict.catalog_info.catalog_name, source_key)
+                full_key = "%s_%s" % (split_ver, source_key)
+                merged_name = "%s_%s" % (source_dict.catalog_info.catalog_name, source_key)
                 if source_dict.model_type != 'CompositeSource':
                     continue
 
@@ -172,21 +155,20 @@ class MergeSrcmaps_SG(ConfigMaker):
                                             irf_ver=NAME_FACTORY.irf_ver())
                     outfile = NAME_FACTORY.srcmaps(**name_keys)
                     logfile = make_nfs_path(outfile.replace('.fits', '.log'))
-                    print (key, merged_name, logfile)
                     job_configs[key] = dict(srcmaps=NAME_FACTORY.srcmaps(**nested_name_keys),
-                                                 expcube=NAME_FACTORY.ltcube(**name_keys),
-                                                 irfs=NAME_FACTORY.irfs(**name_keys),
-                                                 bexpmap=NAME_FACTORY.bexpcube(**name_keys),
-                                                 srcmdl=NAME_FACTORY.srcmdl_xml(**name_keys),
-                                                 merged=merged_name,
-                                                 outfile=outfile,
-                                                 outxml=NAME_FACTORY.nested_srcmdl_xml(**name_keys),
-                                                 logfile=logfile)
+                                            expcube=NAME_FACTORY.ltcube(**name_keys),
+                                            irfs=NAME_FACTORY.irfs(**name_keys),
+                                            bexpmap=NAME_FACTORY.bexpcube(**name_keys),
+                                            srcmdl=NAME_FACTORY.srcmdl_xml(**name_keys),
+                                            merged=merged_name,
+                                            outfile=outfile,
+                                            outxml=NAME_FACTORY.nested_srcmdl_xml(**name_keys),
+                                            logfile=logfile)
 
         return job_configs
 
-def register_merge_srcmaps():
-    from fermipy.jobs.factory import LinkFactory
-    LinkFactory.register(GtMergeSourceMaps.appname, GtMergeSourceMaps)
-    LinkFactory.register(MergeSrcmaps_SG.appname, MergeSrcmaps_SG)
 
+def register_merge_srcmaps():
+    """Register these classes with the `LinkFactory` """
+    GtMergeSrcmaps.register_class()
+    MergeSrcmaps_SG.register_class()

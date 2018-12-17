@@ -207,6 +207,24 @@ class MapCubeComponentInfo(ModelComponentInfo):
         self.Spatial_Filename = kwargs.get('Spatial_Filename', None)
 
 
+class SpatialMapComponentInfo(ModelComponentInfo):
+    """ Information about a model component represented by a SpatialMap
+
+    Parameters
+    ----------
+
+    Spatial_Filename : str
+        Name of the template file for the spatial model
+    """
+
+    def __init__(self, **kwargs):
+        """C'tor: copies keyword arguments to data members
+        """
+        super(SpatialMapComponentInfo, self).__init__(**kwargs)
+        self.model_type = 'SpatialMap'
+        self.Spatial_Filename = kwargs.get('Spatial_Filename', None)
+
+
 class IsoComponentInfo(ModelComponentInfo):
     """ Information about a model component represented by a IsoSource
 
@@ -232,7 +250,7 @@ class PointSourceInfo(ModelComponentInfo):
     def __init__(self, **kwargs):
         """C'tor: copies keyword arguments to data members
         """
-        super(PointSourceInfo, self).__init__(**kwargs)        
+        super(PointSourceInfo, self).__init__(**kwargs)
         self.model_type = 'PointSource'
 
 
@@ -253,7 +271,7 @@ class CompositeSourceInfo(ModelComponentInfo):
     def __init__(self, **kwargs):
         """C'tor: copies keyword arguments to data members
         """
-        super(CompositeSourceInfo, self).__init__(**kwargs)        
+        super(CompositeSourceInfo, self).__init__(**kwargs)
         self.model_type = 'CompositeSource'
         self.source_names = kwargs.get('source_names', [])
         self.catalog_info = kwargs.get('catalog_info', None)
@@ -277,7 +295,7 @@ class CatalogSourcesInfo(ModelComponentInfo):
     def __init__(self, **kwargs):
         """C'tor: copies keyword arguments to data members
         """
-        super(CatalogSourcesInfo, self).__init__(**kwargs)        
+        super(CatalogSourcesInfo, self).__init__(**kwargs)
         self.model_type = 'CatalogSources'
         self.source_names = kwargs.get('source_names', [])
         self.catalog_info = kwargs.get('catalog_info', None)
