@@ -9,4 +9,5 @@
 ``Spectrum_Filename``	`~str`	Path to file associated to the spectral model of this source.
 ``correlation``	`~dict`	Dictionary of correlation coefficients.
 ``model_counts``	`~numpy.ndarray`	Vector of predicted counts for this source in each analysis energy bin.
+``model_counts_wt``	`~numpy.ndarray`	Vector of predicted counts for this source in each analysis energy bin.
 ``sed``	`~dict`	Output of SED analysis.  See :ref:`sed` for more information.

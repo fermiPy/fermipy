@@ -26,7 +26,7 @@ from fermipy.sourcefind_utils import find_peaks
 from fermipy.spectrum import SpectralFunction, SEDFunctor
 from fermipy.utils import onesided_cl_to_dlnl
 from fermipy.utils import twosided_cl_to_dlnl
-
+from fermipy.utils import load_yaml
 
 PAR_NAMES = {
     "PowerLaw": ["Prefactor", "Index"],
@@ -592,7 +592,7 @@ class CastroData_Base(object):
     Sub-classes can implement particul axes choices (e.g., EFlux v. Energy)
     """
 
-    def __init__(self, norm_vals, nll_vals, norm_type):
+    def __init__(self, norm_vals, nll_vals, nll_offsets, norm_type):
         """C'tor
 
         Parameters
@@ -600,11 +600,18 @@ class CastroData_Base(object):
         norm_vals : `~numpy.ndarray`
            The normalization values in an N X M array, where N is the
            number for bins and M number of sampled values for each bin
+           Note that these should be the true values, with the 
+           reference spectrum included, and _NOT_ the values w.r.t. to the 
+           reference spectrum.
 
         nll_vals : `~numpy.ndarray`
            The _negative_ log-likelihood values in an N X M array,
            where N is the number for bins and M number of sampled
            values for each bin
+
+        nll_offsets : `~numpy.ndarray`
+           The offsets of the log-likelihood values (i.e., the minimum value) in an
+           N array, when N is the number for bins
 
         norm_type : str
            String specifying the quantity used for the normalization,
@@ -621,6 +628,7 @@ class CastroData_Base(object):
 
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
+        self._nll_offsets = nll_offsets
         self._loglikes = []
         self._nll_null = 0.0
         self._norm_type = norm_type
@@ -652,6 +660,11 @@ class CastroData_Base(object):
     def nll_null(self):
         """ Return the negative log-likelihood for the null-hypothesis """
         return self._nll_null
+
+    @property
+    def nll_offsets(self):
+        """ Return the offsets in the negative log-likelihoods for each bin """
+        return self._nll_offsets
 
     def __getitem__(self, i):
         """ return the LnLFn object for the ith energy bin
@@ -960,7 +973,7 @@ class CastroData_Base(object):
         return 2. * (self._nll_null - self.__call__(spec_vals))
 
     def build_scandata_table(self):
-        """
+        """Build an `astropy.table.Table` object from these data.
         """
         shape = self._norm_vals.shape
         col_norm = Column(name="norm", dtype=float)
@@ -990,11 +1003,15 @@ class CastroData_Base(object):
 
         Returns
         -------
-        norm_vals : 'numpy.ndarray'
+        norm_vals : `numpy.ndarray`
            N X M array of Normalization values
 
-        nll_vals  : 'numpy.ndarray'
+        nll_vals  : `numpy.ndarray`
            N X M array of log-likelihood values
+
+        nll_offsets :  `numpy.ndarray`
+           N array of maximum log-likelihood values in each bin
+
         """
         n_bins = shape[0]
         n_vals = shape[1]
@@ -1004,22 +1021,26 @@ class CastroData_Base(object):
 
         norm_vals = np.zeros(shape)
         nll_vals = np.zeros(shape)
+        nll_offsets = np.zeros((n_bins))
         for i in range(n_bins):
             log_min = np.log10(ylims[0])
             log_max = np.log10(ylims[1])
             norm_vals[i, 1:] = np.logspace(log_min, log_max, n_vals - 1)
-            check = 0
             for c, w in zip(components, weights):
-                check += w * c[i].interp(norm_vals[i, -1])
-                nll_vals[i] += w * c[i].interp(norm_vals[i])
-                pass
-            # reset the zeros
+                nll_vals[i] += w * c[i].interp(norm_vals[i]) - c.nll_offsets[i]
+
+            # Reset the offsets
             nll_obj = LnLFn(norm_vals[i], nll_vals[i])
-            nll_min = nll_obj.fn_mle()
-            nll_vals[i] -= nll_min
+            ll_offset = nll_obj.fn_mle()
+            nll_vals[i] -= ll_offset
+            nll_offsets[i] = -ll_offset
             pass
 
-        return norm_vals, nll_vals
+        return norm_vals, nll_vals, nll_offsets
+
+
+    def x_edges(self):
+        raise NotImplementedError()
 
 
 class CastroData(CastroData_Base):
@@ -1055,7 +1076,8 @@ class CastroData(CastroData_Base):
               MeV^-1 )
 
         """
-        super(CastroData, self).__init__(norm_vals, nll_vals, norm_type)
+        nll_offsets = np.zeros((nll_vals.shape[0]))
+        super(CastroData, self).__init__(norm_vals, nll_vals, nll_offsets, norm_type)
         self._refSpec = refSpec
 
     @property
@@ -1068,6 +1090,26 @@ class CastroData(CastroData_Base):
     def refSpec(self):
         """ Return a `~fermipy.castro.ReferenceSpec` with the spectral data """
         return self._refSpec
+
+    @classmethod
+    def create_from_yamlfile(cls, yamlfile):
+        """Create a Castro data object from a yaml file contains
+        the likelihood data."""
+        data = load_yaml(yamlfile)
+        nebins = len(data)
+        emin = np.array([data[i]['emin'] for i in range(nebins)])
+        emax = np.array([data[i]['emax'] for i in range(nebins)])
+        ref_flux = np.array([data[i]['flux'][1] for i in range(nebins)])
+        ref_eflux = np.array([data[i]['eflux'][1] for i in range(nebins)])
+        conv = np.array([data[i]['eflux2npred'] for i in range(nebins)])
+        ref_npred = conv*ref_eflux
+        ones = np.ones(ref_flux.shape)
+        ref_spec = ReferenceSpec(emin, emax, ones, ref_flux, ref_eflux, ref_npred)
+        norm_data = np.array([data[i]['eflux'] for i in range(nebins)])
+        ll_data =  np.array([data[i]['logLike'] for i in range(nebins)])
+        max_ll = ll_data.max(1)
+        nll_data = (max_ll - ll_data.T).T
+        return cls(norm_data, nll_data, ref_spec, 'eflux')
 
     @classmethod
     def create_from_flux_points(cls, txtfile):
@@ -1240,7 +1282,7 @@ class CastroData(CastroData_Base):
         elif norm_type == "norm":
             norm_vals = np.array(tab_s['norm_scan'])
         else:
-            raise Exception('Unrecognized normalization type: %s' % norm_type)
+            raise ValueError('Unrecognized normalization type: %s' % norm_type)
 
         nll_vals = -np.array(tab_s['dloglike_scan'])
         ref_spec = ReferenceSpec.create_from_table(tab_s)
@@ -1267,8 +1309,10 @@ class CastroData(CastroData_Base):
         """
         if len(components) == 0:
             return None
-        norm_vals, nll_vals = CastroData_Base.stack_nll(
-            shape, components, ylims, weights)
+        norm_vals, nll_vals, nll_offsets = CastroData_Base.stack_nll(shape,
+                                                                     components,
+                                                                     ylims,
+                                                                     weights)
         return cls(norm_vals, nll_vals,
                    components[0].refSpec,
                    components[0].norm_type)
@@ -1373,6 +1417,11 @@ class CastroData(CastroData_Base):
 
         fn.params = initPars
         return fn
+
+
+    def x_edges(self):
+        return np.insert(self.refSpec.emax, 0, self.refSpec.emin[0])
+    
 
 
 class TSCube(object):

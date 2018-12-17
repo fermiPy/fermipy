@@ -1,20 +1,22 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Prepare data for diffuse all-sky analysis
+Utility functions for the `fermipy.jobs` module.
 """
 from __future__ import absolute_import, division, print_function
 
-import os
-
 def is_null(val):
-    if val in [None, 'none', 'None']:
-        return True
-    else:
-        return False
+    """Check if a value is null,
+    This is needed b/c we are parsing
+    command line arguements and 'None' and 'none'
+    can be used.
+    """
+    return val in [None, 'none', 'None']
+
 
 def is_not_null(val):
-    if val in [None, 'none', 'None']:
-        return False
-    else:
-        return True
-
+    """Check if a value is not null,
+    This is needed b/c we are parsing
+    command line arguements and 'None' and 'none'
+    can be used.
+    """
+    return val not in [None, 'none', 'None']

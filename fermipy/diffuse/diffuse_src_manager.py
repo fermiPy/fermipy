@@ -4,21 +4,12 @@ Classes and utilities that manage the diffuse emission background models
 """
 from __future__ import absolute_import, division, print_function
 
-import sys
-import argparse
-
 import yaml
-
-from collections import OrderedDict
-
-from fermipy.jobs.link import Link 
-from fermipy.jobs.chain import Chain, insert_app_config, purge_dict
 
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
 from fermipy.diffuse.model_component import GalpropMergedRingInfo,\
-    IsoComponentInfo, MapCubeComponentInfo
-from fermipy.diffuse import defaults as diffuse_defaults
+    IsoComponentInfo, MapCubeComponentInfo, SpatialMapComponentInfo
 
 
 class GalpropMapManager(object):
@@ -313,7 +304,7 @@ class DiffuseModelManager(object):
         format_dict['sourcekey'] = sourcekey
         if model_type == 'IsoSource':
             return self._name_factory.spectral_template(**format_dict)
-        elif model_type == 'MapCubeSource':
+        elif model_type in ['MapCubeSource', 'SpatialMap']:
             return self._name_factory.diffuse_template(**format_dict)
         else:
             raise ValueError("Unexpected model_type %s" % model_type)
@@ -377,6 +368,9 @@ class DiffuseModelManager(object):
         elif model_type == 'MapCubeSource':
             kwargs['Spatial_Filename'] = template_name
             return MapCubeComponentInfo(**kwargs)
+        elif model_type == 'SpatialMap':
+            kwargs['Spatial_Filename'] = template_name
+            return SpatialMapComponentInfo(**kwargs)
         else:
             raise ValueError("Unexpected model type %s" % model_type)
 
@@ -409,7 +403,7 @@ class DiffuseModelManager(object):
             moving = value.get('moving', False)
             versions = value.get('versions', [])
             for version in versions:
-                #sourcekey = self._name_factory.sourcekey(source_name=key,
+                # sourcekey = self._name_factory.sourcekey(source_name=key,
                 #                                         source_ver=version)
                 comp_dict = None
                 if selection_dependent:
@@ -485,75 +479,7 @@ def make_diffuse_comp_info_dict(**kwargs):
         for version in versions:
             galprop_dict = gmm.make_diffuse_comp_info_dict(version)
             diffuse_comp_info_dict.update(galprop_dict)
-    
+
     return dict(comp_info_dict=diffuse_comp_info_dict,
                 GalpropMapManager=gmm,
                 DiffuseModelManager=dmm)
-
-
-
-class DiffuseCompChain(Chain):
-    """Small class to build srcmaps for diffuse components
-    """
-    appname = 'fermipy-diffuse-comp-chain'
-    linkname_default = 'diffuse-comp'
-    usage = '%s [options]' %(appname)
-    description='Run diffuse component analysis'
-
-    default_options = dict(comp=diffuse_defaults.diffuse['comp'],
-                           data=diffuse_defaults.diffuse['data'],
-                           library=diffuse_defaults.diffuse['library'],
-                           make_xml=diffuse_defaults.diffuse['make_xml'],
-                           outdir=(None, 'Output directory', str),
-                           dry_run=diffuse_defaults.diffuse['dry_run'])
-
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(DiffuseCompChain, self).__init__(linkname, **init_dict)
-        self.comp_dict = None     
-
-    def _register_link_classes(self):    
-        from fermipy.diffuse.job_library import SumRings_SG, Vstack_SG
-        from fermipy.diffuse.gt_srcmap_partial import SrcmapsDiffuse_SG
-        SumRings_SG.register_class()
-        SrcmapsDiffuse_SG.register_class()
-        Vstack_SG.register_class()
-
-    def _map_arguments(self, input_dict):
-        """Map from the top-level arguments to the arguments provided to
-        the indiviudal links """
-        o_dict = OrderedDict()
-
-        data = input_dict.get('data')
-        comp = input_dict.get('comp')
-        library = input_dict.get('library')
-        dry_run = input_dict.get('dry_run', False)
-
-        insert_app_config(o_dict, 'sum-rings',
-                          'fermipy-sum-rings-sg',
-                          library=library,
-                          outdir=input_dict['outdir'],
-                          dry_run=dry_run)
-
-        insert_app_config(o_dict, 'srcmaps-diffuse',
-                          'fermipy-srcmaps-diffuse-sg',
-                          comp=comp, data=data,
-                          library=library,
-                          make_xml=input_dict['make_xml'],
-                          dry_run=dry_run)
-         
-        insert_app_config(o_dict, 'vstack-diffuse',
-                          'fermipy-vstack-sg',
-                          comp=comp, data=data,
-                          library=library,
-                          dry_run=dry_run)
-        
-        return o_dict
-
-
-
-
-def register_classes():
-    DiffuseCompChain.register_class()

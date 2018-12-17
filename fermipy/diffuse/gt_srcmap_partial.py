@@ -7,8 +7,6 @@ This is useful to parallize the production of the source maps
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
-import argparse
 
 import xml.etree.cElementTree as ElementTree
 
@@ -17,9 +15,9 @@ import pyLikelihood as pyLike
 
 from fermipy import utils
 from fermipy.jobs.file_archive import FileFlags
-from fermipy.jobs.link import add_argument, Link
-from fermipy.jobs.scatter_gather import ConfigMaker, build_sg_from_link
-from fermipy.jobs.slac_impl import  make_nfs_path
+from fermipy.jobs.link import Link
+from fermipy.jobs.scatter_gather import ScatterGather
+from fermipy.jobs.slac_impl import make_nfs_path
 
 from fermipy.diffuse.name_policy import NameFactory
 from fermipy.diffuse.binning import Component
@@ -39,10 +37,10 @@ class GtSrcmapsDiffuse(Link):
     This is useful for parallelizing source map creation.
     """
     NULL_MODEL = 'srcmdls/null.xml'
- 
+
     appname = 'fermipy-srcmaps-diffuse'
     linkname_default = 'srcmaps-diffuse'
-    usage = '%s [options]' %(appname)
+    usage = '%s [options]' % (appname)
     description = "Run gtsrcmaps for one or more energy planes for a single source"
 
     default_options = dict(irfs=diffuse_defaults.gtopts['irfs'],
@@ -56,19 +54,15 @@ class GtSrcmapsDiffuse(Link):
                            kmax=(-1, 'Maximum Energy Bin', int),
                            no_psf=(False, "Do not apply PSF smearing", bool),
                            gzip=(False, 'Compress output file', bool))
-  
+
     default_file_args = dict(expcube=FileFlags.input_mask,
                              cmap=FileFlags.input_mask,
                              bexpmap=FileFlags.input_mask,
                              srcmdl=FileFlags.input_mask,
                              outfile=FileFlags.output_mask)
 
-    def __init__(self, **kwargs):
-        """C'tor
-        """
-        linkname, init_dict = self._init_dict(**kwargs)
-        super(GtSrcmapsDiffuse, self).__init__(linkname, **init_dict)
- 
+    __doc__ += Link.construct_docstring(default_options)
+
     def run_analysis(self, argv):
         """Run this analysis"""
         args = self._parser.parse_args(argv)
@@ -112,14 +106,10 @@ class GtSrcmapsDiffuse(Link):
             os.system("gzip -9 %s" % args.outfile)
 
 
-class SrcmapsDiffuse_SG(ConfigMaker):
-    """Small class to generate configurations for this script
 
-    This adds the following arguments:
-    --comp     : binning component definition yaml file
-    --data     : datset definition yaml file
-    --library  : Diffuse model component definition yaml file'
-    --make_xml : Write xml files for the individual components
+class SrcmapsDiffuse_SG(ScatterGather):
+    """Small class to generate configurations for `GtSrcmapsDiffuse`
+
     """
     appname = 'fermipy-srcmaps-diffuse-sg'
     usage = "%s [options]" % (appname)
@@ -133,12 +123,7 @@ class SrcmapsDiffuse_SG(ConfigMaker):
                            library=diffuse_defaults.diffuse['library'],
                            make_xml=(True, 'Write xml files needed to make source maps', bool))
 
-    def __init__(self, link, **kwargs):
-        """C'tor
-        """
-        super(SrcmapsDiffuse_SG, self).__init__(link,
-                                                options=kwargs.get('options',
-                                                                   self.default_options.copy()))
+    __doc__ += Link.construct_docstring(default_options)
 
     @staticmethod
     def _write_xml(xmlfile, srcs):
@@ -163,20 +148,25 @@ class SrcmapsDiffuse_SG(ConfigMaker):
         srcdict = make_sources(fullkey, comp_dict)
         if comp_dict.model_type == 'IsoSource':
             print("Writing xml for %s to %s: %s %s" % (fullkey,
-                                                        comp_dict.srcmdl_name,
-                                                        comp_dict.model_type,
-                                                        comp_dict.Spectral_Filename))
+                                                       comp_dict.srcmdl_name,
+                                                       comp_dict.model_type,
+                                                       comp_dict.Spectral_Filename))
         elif comp_dict.model_type == 'MapCubeSource':
             print("Writing xml for %s to %s: %s %s" % (fullkey,
-                                                        comp_dict.srcmdl_name,
-                                                        comp_dict.model_type,
-                                                        comp_dict.Spatial_Filename))
+                                                       comp_dict.srcmdl_name,
+                                                       comp_dict.model_type,
+                                                       comp_dict.Spatial_Filename))
         SrcmapsDiffuse_SG._write_xml(comp_dict.srcmdl_name, srcdict.values())
 
     @staticmethod
     def _make_xml_files(diffuse_comp_info_dict):
         """Make all the xml file for individual components
         """
+        try:
+            os.makedirs('srcmdls')
+        except OSError:
+            pass
+
         for sourcekey in sorted(diffuse_comp_info_dict.keys()):
             comp_info = diffuse_comp_info_dict[sourcekey]
             if comp_info.components is None:
@@ -192,7 +182,7 @@ class SrcmapsDiffuse_SG(ConfigMaker):
 
         components = Component.build_from_yamlfile(args['comp'])
         NAME_FACTORY.update_base_dict(args['data'])
-        
+
         ret_dict = make_diffuse_comp_info_dict(components=components,
                                                library=args['library'],
                                                basedir='.')
@@ -240,7 +230,7 @@ class SrcmapsDiffuse_SG(ConfigMaker):
                 for k in range(kmin, kmax, kstep):
                     full_key = "%s_%s_%02i" % (diffuse_comp_info_key, key, k)
                     khi = min(kmax, k + kstep)
-                    
+
                     full_dict = base_dict.copy()
                     outfile = outfile_base.replace('.fits', '_%02i.fits' % k)
                     logfile = make_nfs_path(outfile_base.replace('.fits', '_%02i.log' % k))
@@ -253,6 +243,6 @@ class SrcmapsDiffuse_SG(ConfigMaker):
 
 
 def register_srcmaps_diffuse():
-    from fermipy.jobs.factory import LinkFactory
-    LinkFactory.register(GtSrcmapsDiffuse.appname, GtSrcmapsDiffuse)
-    LinkFactory.register(SrcmapsDiffuse_SG.appname, SrcmapsDiffuse_SG)
+    """Register these classes with the `LinkFactory` """
+    GtSrcmapsDiffuse.register_class()
+    SrcmapsDiffuse_SG.register_class()
