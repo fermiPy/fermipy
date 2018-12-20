@@ -1481,7 +1481,10 @@ class TSCube(object):
         self._normmap = normmap
         self._tscube = tscube
         self._normcube = normcube
-        self._ts_cumul = tscube.sum_over_axes()
+        if tscube is not None:
+            self._ts_cumul = tscube.sum_over_axes()
+        else:
+            self._ts_cumul = None
         self._refSpec = refSpec
         self._norm_vals = norm_vals
         self._nll_vals = nll_vals
@@ -1552,12 +1555,14 @@ class TSCube(object):
         tsmap = WcsNDMap.read(fitsfile)
 
         tab_e = Table.read(fitsfile, 'EBOUNDS')
-        tab_s = Table.read(fitsfile, 'SCANDATA')
+        tab_e = convert_sed_cols(tab_e)        
         tab_f = Table.read(fitsfile, 'FITDATA')
-
-        tab_e = convert_sed_cols(tab_e)
-        tab_s = convert_sed_cols(tab_s)
         tab_f = convert_sed_cols(tab_f)
+        try:
+            tab_s = Table.read(fitsfile, 'SCANDATA')
+            tab_s = convert_sed_cols(tab_s)
+        except ValueError:
+            tab_s = None
 
         emin = np.array(tab_e['e_min'])
         emax = np.array(tab_e['e_max'])
@@ -1586,22 +1591,36 @@ class TSCube(object):
             raise RuntimeError("Counts map has dimension %i" % (ndim))
 
         refSpec = ReferenceSpec.create_from_table(tab_e)
-        nll_vals = -np.array(tab_s["dloglike_scan"])
-        norm_vals = np.array(tab_s["norm_scan"])
+
+        if tab_s is not None:
+            nll_vals = -np.array(tab_s["dloglike_scan"])
+            norm_vals = np.array(tab_s["norm_scan"])
+        else:
+            nll_vals = None
+            norm_vals = None
 
         axis = MapAxis.from_edges(np.concatenate((emin, emax[-1:])),
                                   interp='log')
         geom_3d = tsmap.geom.to_cube([axis])
-        tscube = WcsNDMap(geom_3d,
-                          np.rollaxis(tab_s["ts"].reshape(cube_shape), 2, 0))
 
-        ncube = WcsNDMap(geom_3d,
-                         np.rollaxis(tab_s["norm"].reshape(cube_shape), 2, 0))
-        nmap = WcsNDMap(tsmap.geom,
-                        tab_f['fit_norm'].reshape(tsmap.data.shape))
+        if tab_s is not None:
+            tscube = WcsNDMap(geom_3d,
+                              np.rollaxis(tab_s["ts"].reshape(cube_shape), 2, 0))
+            ncube = WcsNDMap(geom_3d,
+                             np.rollaxis(tab_s["norm"].reshape(cube_shape), 2, 0))
+        else:
+            tscube = None
+            ncube = None
+        
+        try:
+            nmap = WcsNDMap(tsmap.geom,
+                            tab_f['fit_norm'].reshape(tsmap.data.shape))
+        except KeyError:
+            nmap = None
 
         ref_colname = 'ref_%s' % norm_type
-        norm_vals *= tab_e[ref_colname][np.newaxis, :, np.newaxis]
+        if norm_vals is not None:
+            norm_vals *= tab_e[ref_colname][np.newaxis, :, np.newaxis]
 
         return cls(tsmap, nmap, tscube, ncube,
                    norm_vals, nll_vals, refSpec,
@@ -1654,21 +1673,19 @@ class TSCube(object):
 
         peaks = find_peaks(theMap, threshold, min_separation)
         for peak in peaks:
-            o, skydir = fit_error_ellipse(theMap, (peak['ix'], peak['iy']),
-                                          dpix=2)
+            o = fit_error_ellipse(theMap, (peak['ix'], peak['iy']),
+                                  dpix=2)
             peak['fit_loc'] = o
-            peak['fit_skydir'] = skydir
             if o['fit_success']:
-                skydir = peak['fit_skydir']
+                peak['fit_skydir'] = o['skydir']
             else:
-                skydir = peak['skydir']
+                peak['fit_skydir'] = peak['skydir']
 
         return peaks
 
     def test_spectra_of_peak(self, peak, spec_types=None):
         """Test different spectral types against the SED represented by the
         CastroData corresponding to a single pixel in this TSCube
-
         Parameters
         ----------
         spec_types  : [str,...]

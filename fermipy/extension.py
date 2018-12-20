@@ -108,6 +108,7 @@ class ExtensionFit(object):
         free_radius = kwargs.get('free_radius', None)
         fix_shape = kwargs.get('fix_shape', False)
         make_tsmap = kwargs.get('make_tsmap', False)
+        tsmap_fitter = kwargs.get('tsmap_fitter', 'tsmap')
         update = kwargs['update']
         sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
 
@@ -235,17 +236,28 @@ class ExtensionFit(object):
                            'SpatialWidth': 0.1 * 0.8246211251235321}
             tsmap_model.update(src.spectral_pars)
             self.logger.info('Generating TS map.')
-            tsmap = self.tsmap(model=tsmap_model,
-                               map_skydir=SkyCoord(
-                                   o['ra'], o['dec'], unit='deg'),
-                               map_size=max(1.0, 4.0 * o['ext']),
-                               exclude=[name],
-                               write_fits=False,
-                               write_npy=False,
-                               use_pylike=False,
-                               make_plots=False,
-                               loglevel=logging.DEBUG)
-            o.tsmap = tsmap['ts']
+            if tsmap_fitter == 'tsmap':
+                tsmap = self.tsmap(model=tsmap_model,
+                                   map_skydir=SkyCoord(o['ra'], o['dec'], unit='deg'),
+                                   map_size=max(1.0, 4.0 * o['ext']),
+                                   exclude=[name],
+                                   write_fits=False,
+                                   write_npy=False,
+                                   use_pylike=False,
+                                   make_plots=False,
+                                   loglevel=logging.DEBUG)
+                o.tsmap = tsmap['ts']
+            elif tsmap_fitter == 'tscube':
+                tscube = self.tscube(model=tsmap_model,
+                                     map_skydir=SkyCoord(o['ra'], o['dec'], unit='deg'),
+                                     map_size=max(1.0, 4.0 * o['ext']),
+                                     do_sed=False,
+                                     write_fits=False,
+                                     write_npy=False,
+                                     make_plots=False,
+                                     loglevel=logging.DEBUG)
+                o.tsmap = tscube['ts']
+               
 
         self.logger.info('Testing point-source model.')
         # Test point-source hypothesis

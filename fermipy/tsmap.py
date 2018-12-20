@@ -681,7 +681,7 @@ class TSMapGenerator(object):
         schema = ConfigSchema(self.defaults['tsmap'])
         schema.add_option('loglevel', logging.INFO)
         schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)
-        schema.add_option('map_size', 1.0)
+        schema.add_option('map_size', None, '', float)
         schema.add_option('threshold', 1E-2, '', float)
         schema.add_option('use_pylike', True, '', bool)
         schema.add_option('outfile', None, '', str)
@@ -820,6 +820,8 @@ class TSMapGenerator(object):
             bm = c.model_counts_map(exclude=kwargs['exclude']).data.astype('float')[
                 eslice, ...]
             cm = c.counts_map().data.astype('float')[eslice, ...]
+
+            c0_mapx = cash(cm, bm)
 
             bkg += [bm]
             counts += [cm]
@@ -1006,9 +1008,13 @@ class TSCubeGenerator(object):
         self.logger.info('Generating TS cube')
 
         schema = ConfigSchema(self.defaults['tscube'])
-        schema.add_option('make_plots', True)
-        schema.add_option('write_fits', True)
-        schema.add_option('write_npy', True)
+        schema.add_option('loglevel', logging.INFO)
+        schema.add_option('map_skydir', None, '', astropy.coordinates.SkyCoord)
+        schema.add_option('map_size', None, ' ', float)
+        schema.add_option('make_plots', True, ' ', bool)
+        schema.add_option('write_fits', True, ' ', bool)
+        schema.add_option('write_npy', True, ' ', bool)
+
         config = schema.create_config(self.config['tscube'], **kwargs)
 
         maps = self._make_ts_cube(prefix, **config)
@@ -1025,48 +1031,63 @@ class TSCubeGenerator(object):
 
     def _make_ts_cube(self, prefix, **kwargs):
 
-        skywcs = kwargs.get('wcs', self.geom.wcs)
-        npix = kwargs.get('npix', self.npix)
+        map_skydir = kwargs.get('map_skydir')
+        map_size = kwargs.get('map_size')
+        exclude = kwargs.get('exclude', [])
 
+        # We take the coordinate system and the bin size from the underlying map
+        skywcs = self._geom.wcs
         galactic = wcs_utils.is_galactic(skywcs)
-        ref_skydir = wcs_utils.wcs_to_skydir(skywcs)
-        refdir = pyLike.SkyDir(ref_skydir.ra.deg,
-                               ref_skydir.dec.deg)
         pixsize = np.abs(skywcs.wcs.cdelt[0])
 
-        skyproj = pyLike.FitScanner.buildSkyProj(str("AIT"),
-                                                 refdir, pixsize, npix,
-                                                 galactic)
+        # If the map_size is specified we need to find the right number of pixels
+        if map_size is None:
+            npix = int(self._geom.npix[0][0])
+            map_size = pixsize*npix
+        else:
+            npix = int(np.round(map_size/pixsize))
+
+        saved_state = LikelihoodState(self.like)
+
+        for ex_src in exclude:
+            self.zero_source(ex_src)
+
+        if map_skydir is None:
+            # Take the center of the wcs
+            map_geom = self._geom.to_image()
+            frame = coordsys_to_frame(map_geom.coordsys)
+            map_skydir = SkyCoord(*map_geom.pix_to_coord(self._geom.wcs.wcs.crpix), frame=frame, unit='deg')
+            map_skydir = map_skydir.transform_to('icrs')
+            
+        refdir = pyLike.SkyDir(map_skydir.ra.deg, map_skydir.dec.deg)
 
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         src_dict = {} if src_dict is None else src_dict
 
-        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
-                      np.round((self.npix - 1.0) / 2.))
-        skydir = wcs_utils.pix_to_skydir(xpix, ypix, skywcs)
-
-        src_dict['ra'] = skydir.ra.deg
-        src_dict['dec'] = skydir.dec.deg
+        src_dict['ra'] = map_skydir.ra.deg
+        src_dict['dec'] = map_skydir.dec.deg
         src_dict.setdefault('SpatialModel', 'PointSource')
         src_dict.setdefault('SpatialWidth', 0.3)
         src_dict.setdefault('Index', 2.0)
-        src_dict.setdefault('Prefactor', 1E-13)
+        src_dict.setdefault('Prefactor', 1.0)
         src_dict['name'] = 'tscube_testsource'
 
         src = Source.create_from_dict(src_dict)
+        if 'Prefactor' in src.spectral_pars:
+            src.spectral_pars['Prefactor']['scale'] = 1.0e-10
 
         modelname = utils.create_model_name(src)
-
-        optFactory = pyLike.OptimizerFactory_instance()
-        optObject = optFactory.create(str("MINUIT"),
-                                      self.components[0].like.logLike)
-
         pylike_src = self.components[0]._create_source(src)
-        fitScanner = pyLike.FitScanner(self.like.composite, optObject, skyproj,
-                                       npix, npix)
-
         pylike_src.spectrum().normPar().setBounds(0, 1E6)
 
+        skyproj = pyLike.FitScanner.buildSkyProj(str("AIT"), refdir, pixsize, npix, galactic)
+
+        optFactory = pyLike.OptimizerFactory_instance()
+        optObject = optFactory.create(str("MINUIT"), self.like.composite)
+
+        fitScanner = pyLike.FitScanner(self.like.composite, optObject, skyproj,
+                                       npix, npix)
+        fitScanner.set_quiet(True)
         fitScanner.setTestSource(pylike_src)
 
         self.logger.info("Running tscube")
@@ -1074,30 +1095,21 @@ class TSCubeGenerator(object):
                                         'tscube.fits',
                                         prefix=[prefix])
 
-        try:
-            fitScanner.run_tscube(True,
-                                  kwargs['do_sed'], kwargs['nnorm'],
-                                  kwargs['norm_sigma'],
-                                  kwargs['cov_scale_bb'], kwargs['cov_scale'],
-                                  kwargs['tol'], kwargs['max_iter'],
-                                  kwargs['tol_type'],
-                                  kwargs['remake_test_source'],
-                                  kwargs['st_scan_level'],
-                                  str(''),
-                                  kwargs['init_lambda'])
-        except Exception:
-            fitScanner.run_tscube(True,
-                                  kwargs['do_sed'], kwargs['nnorm'],
-                                  kwargs['norm_sigma'],
-                                  kwargs['cov_scale_bb'], kwargs['cov_scale'],
-                                  kwargs['tol'], kwargs['max_iter'],
-                                  kwargs['tol_type'],
-                                  kwargs['remake_test_source'],
-                                  kwargs['st_scan_level'])
+        fitScanner.run_tscube(True,
+                              kwargs['do_sed'], kwargs['nnorm'],
+                              kwargs['norm_sigma'],
+                              kwargs['cov_scale_bb'], kwargs['cov_scale'],
+                              kwargs['tol'], kwargs['max_iter'],
+                              kwargs['tol_type'],
+                              kwargs['remake_test_source'],
+                              kwargs['st_scan_level'],
+                              str(''),
+                              kwargs['init_lambda'])
 
         self.logger.info("Writing FITS output")
 
-        fitScanner.writeFitsFile(str(outfile), str("gttscube"))
+        fitScanner.writeFitsFile(str(outfile), str("gttscube"), "", False, pyLike.FitScanner.TSMAP_ONLY)
+        saved_state.restore()
 
         convert_tscube(str(outfile), str(outfile))
 
@@ -1107,8 +1119,7 @@ class TSCubeGenerator(object):
         npred_map = copy.deepcopy(norm_map)
         npred_map.data *= tscube.refSpec.ref_npred.sum()
         amp_map = copy.deepcopy(norm_map)
-        amp_map.data *= src_dict['Prefactor']
-
+        amp_map.data = pylike_src.spectrum().normPar().getValue()
         sqrt_ts_map = copy.deepcopy(ts_map)
         sqrt_ts_map.data[...] = np.abs(sqrt_ts_map.data)**0.5
 
@@ -1125,7 +1136,7 @@ class TSCubeGenerator(object):
 
         if not kwargs['write_fits']:
             os.remove(outfile)
-            os['file'] = None
+            o['file'] = None
 
         self.logger.info("Done")
         return o

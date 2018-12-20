@@ -5331,7 +5331,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if self.config['gtlike']['edisp']:
             self.logger.debug('Enabling energy dispersion')
-            self.like.logLike.set_edisp_flag(True)
+            self.like.logLike.set_edisp_val(self.config['gtlike']['edisp_bins'])
 
         for s in self.config['gtlike']['edisp_disable']:
 
