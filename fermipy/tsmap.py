@@ -1119,7 +1119,7 @@ class TSCubeGenerator(object):
         npred_map = copy.deepcopy(norm_map)
         npred_map.data *= tscube.refSpec.ref_npred.sum()
         amp_map = copy.deepcopy(norm_map)
-        amp_map.data = pylike_src.spectrum().normPar().getValue()
+        amp_map.data *= pylike_src.spectrum().normPar().getValue()
         sqrt_ts_map = copy.deepcopy(ts_map)
         sqrt_ts_map.data[...] = np.abs(sqrt_ts_map.data)**0.5
 
