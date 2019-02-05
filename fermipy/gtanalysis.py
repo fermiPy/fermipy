@@ -5198,7 +5198,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             ltc_new = LTCube.create_from_gti(self.roi.skydir, tab_sc, tab_gti,
                                              self.config['selection']['zmax'],
                                              radius=radius)
-            ltc_new.write(self.files['ltcube'], overwrite=True)
+            ltc_new.write(self.files['ltcube'])
         else:
             run_gtapp('gtltcube', self.logger, kw, loglevel=loglevel)
 
