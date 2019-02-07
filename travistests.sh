@@ -17,7 +17,7 @@ status=$?
 
 if [[ $NAME == 'docs' ]]; then
     cd docs;
-    sphinx-build -b html -d _build/doctrees . _build/html -W;
+    sphinx-build -b html -d _build/doctrees . _build/html;
     status=$[$status | $?]
 fi
 
