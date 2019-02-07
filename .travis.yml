@@ -37,9 +37,9 @@ matrix:
         - os: linux
           env: NAME=docs
                PYTHON_VERSION=3.5
+               PIP_DEPS='coverage pytest-cov coveralls sphinx sphinx_rtd_theme'
                ST_INSTALL=''
                DOCKER_INSTALL=''
-               CONDA_CHANNELS='conda-forge anaconda'
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
 
