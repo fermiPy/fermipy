@@ -18,7 +18,7 @@ env:
       - CONDA2='conda install -y -c conda-forge healpy'
       - INSTALL_CMD='python setup.py install'
       - CONDA_CHANNELS=conda-forge
-      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml'
+      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
 
 matrix:
     include:
@@ -37,7 +37,6 @@ matrix:
         - os: linux
           env: NAME=docs
                PYTHON_VERSION=3.5
-               PIP_DEPS='coverage pytest-cov coveralls sphinx sphinx_rtd_theme'
                ST_INSTALL=''
                DOCKER_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
