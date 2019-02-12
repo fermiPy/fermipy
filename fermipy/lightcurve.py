@@ -182,8 +182,13 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     gta.write_xml('fit_model_final.xml')
     srcmodel = copy.deepcopy(gta.get_src_model(name))
     numfree = gta.get_free_param_vector().count(True)
-
-    max_ts_thresholds = [None, 4, 9]
+    
+    const_srcmodel = gta.get_src_model(name).copy()
+    fixed_fit_results = fit_results.copy()
+    fixed_srcmodel = gta.get_src_model(name).copy()
+    fixed_fit_results['fit_success'],fixed_srcmodel['fit_success'] = [False,False]
+    fixed_fit_results['fit_quality'],fixed_srcmodel['fit_quality'] = [0,0]
+    max_ts_thresholds = [None, 4, 9, 16, 25]
     for max_ts in max_ts_thresholds:
         if max_ts is not None:
             gta.free_sources(minmax_ts=[None, max_ts], free=False, exclude=[name])
@@ -199,12 +204,11 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         if not const_fit_results['fit_success']:
             continue
         const_srcmodel = gta.get_src_model(name)
-
         # rerun using shape fixed to full time fit
         # for the fixed-shape lightcurve
         gta.free_source(name, pars='norm')
         fixed_fit_results = gta.fit()
-        if not fixed_fit_results['fit_success']:
+	if not fixed_fit_results['fit_success']:
             continue
         fixed_srcmodel = gta.get_src_model(name)
         break
@@ -218,7 +222,6 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
          'fit_status': fit_results['fit_status'],
          'num_free_params': numfree,
          'config': config}
-
     # full flux output
     if fit_results['fit_success'] == 1:
         for k in defaults.source_flux_output.keys():
@@ -476,3 +479,4 @@ class LightCurve(object):
                                  fit_success=o['fit_success_fixed'])
 
         return o
+

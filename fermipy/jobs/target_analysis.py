@@ -18,7 +18,7 @@ from fermipy.jobs.link import Link
 from fermipy.jobs.scatter_gather import ScatterGather
 from fermipy.jobs.slac_impl import make_nfs_path
 from fermipy.jobs.analysis_utils import baseline_roi_fit, localize_sources,\
-    add_source_get_correlated
+    add_source_get_correlated, build_profile_dict
 
 from fermipy.jobs.name_policy import NameFactory
 from fermipy.jobs import defaults
@@ -99,42 +99,10 @@ class AnalyzeSED(Link):
                            skydirs=defaults.sims['skydirs'],
                            profiles=defaults.common['profiles'],
                            make_plots=defaults.common['make_plots'],
-                           astro_bkgs=(None, "Astrophysical background sources", list))
-
+                           non_null_src=defaults.common['non_null_src'])
 
     __doc__ += Link.construct_docstring(default_options)
 
-    @staticmethod
-    def _build_profile_dict(basedir, profile_name):
-        """Get the name and source dictionary for the test source.
-
-        Parameters
-        ----------
-        
-        basedir : str
-            Path to the analysis directory
-
-        profile_name : str
-            Key for the spatial from of the target
-
-        Returns
-        -------
-
-        profile_name : str
-            Name of source to use for this particular profile
-
-        profile_dict : dict
-            Dictionary with the source parameters
-
-        """
-        profile_path = os.path.join(basedir, "profile_%s.yaml" % profile_name)
-        profile_config = load_yaml(profile_path)
-        if profile_name != profile_config['name']:
-            sys.stderr.write('Warning, profile name (%s) != name in %s (%s)\n' % (
-                profile_name, profile_config['name'], profile_path))
-
-        profile_dict = profile_config['source_model']
-        return profile_name, profile_dict
 
     def run_analysis(self, argv):
         """Run this analysis"""
@@ -167,12 +135,10 @@ class AnalyzeSED(Link):
 
             for skydir_key in skydir_keys:
                 if skydir_key is None:
-                    pkey, pdict = AnalyzeSED._build_profile_dict(
-                        basedir, profile)
+                    pkey, psrc_name, pdict = build_profile_dict(basedir, profile)
                 else:
                     skydir_val = skydir_dict[skydir_key]
-                    pkey, pdict = AnalyzeSED._build_profile_dict(
-                        basedir, profile)
+                    pkey, psrc_name, pdict = build_profile_dict(basedir, profile)
                     pdict['ra'] = skydir_val['ra']
                     pdict['dec'] = skydir_val['dec']
                     pkey += "_%06i" % skydir_key
@@ -180,9 +146,10 @@ class AnalyzeSED(Link):
                 outfile = "sed_%s.fits" % pkey
 
                 # Add the source and get the list of correlated soruces
-                correl_dict = add_source_get_correlated(gta, pkey,
-                                                        pdict, correl_thresh=0.25)
-                
+                correl_dict, test_src_name = add_source_get_correlated(gta, psrc_name, 
+                                                                       pdict, correl_thresh=0.25, 
+                                                                       non_null_src=args.non_null_src)
+
                 # Write the list of correlated sources
                 correl_yaml = os.path.join(basedir, "correl_%s.yaml" % pkey)
                 write_yaml(correl_dict, correl_yaml)
@@ -192,10 +159,13 @@ class AnalyzeSED(Link):
                     gta.free_source(src_name, pars='norm')
 
                 # build the SED
-                gta.sed(pkey, outfile=outfile, make_plots=args.make_plots)
+                if args.non_null_src:
+                    gta.update_source(test_src_name, reoptimize=True)
+                    gta.write_roi("base_%s"% pkey, make_plots=False)
+                gta.sed(test_src_name, prefix=pkey, outfile=outfile, make_plots=args.make_plots)
 
                 # remove the source
-                gta.delete_source(pkey)
+                gta.delete_source(test_src_name)
                 # put the ROI back to how it was
                 gta.load_xml(args.roi_baseline)
 
@@ -277,7 +247,8 @@ class AnalyzeSED_SG(ScatterGather):
                            config=defaults.common['config'],
                            roi_baseline=defaults.common['roi_baseline'],
                            skydirs=defaults.sims['skydirs'],
-                           make_plots=defaults.common['make_plots'])
+                           make_plots=defaults.common['make_plots'],
+                           non_null_src=defaults.common['non_null_src'])
 
     __doc__ += Link.construct_docstring(default_options)
 
@@ -302,7 +273,8 @@ class AnalyzeSED_SG(ScatterGather):
             skydirs = None
 
         base_config = dict(roi_baseline=args['roi_baseline'],
-                           make_plots=args['make_plots'])
+                           make_plots=args['make_plots'],
+                           non_null_src=args['non_null_src'])
 
         for target_name, target_list in targets.items():
             name_keys = dict(target_type=ttype,

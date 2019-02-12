@@ -308,7 +308,7 @@ def make_cgauss_mapcube(skydir, psf, sigma, outfile, npix=500, cdelt=0.01,
     hdu_image.header['CUNIT3'] = 'MeV'
 
     with fits.HDUList([hdu_image, hdu_energies]) as hdulist:
-        hdulist.writeto(outfile, clobber=True)
+        hdulist.writeto(outfile, overwrite=True)
 
 
 def make_psf_mapcube(skydir, psf, outfile, npix=500, cdelt=0.01, rebin=1):
@@ -338,7 +338,7 @@ def make_psf_mapcube(skydir, psf, outfile, npix=500, cdelt=0.01, rebin=1):
     hdu_image.header['CUNIT3'] = 'MeV'
 
     with fits.HDUList([hdu_image, hdu_energies]) as hdulist:
-        hdulist.writeto(outfile, clobber=True)
+        hdulist.writeto(outfile, overwrite=True)
 
 
 def make_gaussian_spatial_map(skydir, sigma, outfile, cdelt=None, npix=None):
@@ -356,7 +356,7 @@ def make_gaussian_spatial_map(skydir, sigma, outfile, cdelt=None, npix=None):
     hdu_image.data[:, :] = utils.make_gaussian_kernel(sigma, npix=npix,
                                                       cdelt=cdelt)
     with fits.HDUList([hdu_image]) as hdulist:
-        hdulist.writeto(outfile, clobber=True)
+        hdulist.writeto(outfile, overwrite=True)
 
 
 def make_disk_spatial_map(skydir, radius, outfile, cdelt=None, npix=None):
@@ -374,7 +374,7 @@ def make_disk_spatial_map(skydir, radius, outfile, cdelt=None, npix=None):
     hdu_image.data[:, :] = utils.make_disk_kernel(radius, npix=npix,
                                                   cdelt=cdelt)
     with fits.HDUList([hdu_image]) as hdulist:
-        hdulist.writeto(outfile, clobber=True)
+        hdulist.writeto(outfile, overwrite=True)
 
 
 def delete_source_map(srcmap_file, names, logger=None):
@@ -400,7 +400,7 @@ def delete_source_map(srcmap_file, names, logger=None):
                 continue
             del hdulist[name.upper()]
 
-        hdulist.writeto(srcmap_file, clobber=True)
+        hdulist.writeto(srcmap_file, overwrite=True)
 
 
 def update_source_maps(srcmap_file, srcmaps, logger=None):
@@ -425,4 +425,4 @@ def update_source_maps(srcmap_file, srcmaps, logger=None):
 
             hdulist[name].data[...] = data
 
-        hdulist.writeto(srcmap_file, clobber=True)
+        hdulist.writeto(srcmap_file, overwrite=True)

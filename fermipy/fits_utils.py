@@ -17,7 +17,7 @@ def write_fits(hdulist, outfile, keywords):
         h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
         h.header['STVER'] = fermipy.get_st_version()
 
-    hdulist.writeto(outfile, clobber=True)
+    hdulist.writeto(outfile, overwrite=True)
 
 
 def find_and_read_ebins(hdulist):
@@ -109,17 +109,17 @@ def write_hdus(hdus, outfile, **kwargs):
 
         h.header['CREATOR'] = 'fermipy ' + fermipy.__version__
         h.header['STVER'] = fermipy.get_st_version()
-    hdulist.writeto(outfile, clobber=True)
+    hdulist.writeto(outfile, overwrite=True)
 
 
 def write_fits_image(data, wcs, outfile):
     hdu_image = fits.PrimaryHDU(data, header=wcs.to_header())
     hdulist = fits.HDUList([hdu_image])
-    hdulist.writeto(outfile, clobber=True)
+    hdulist.writeto(outfile, overwrite=True)
 
 
 def write_hpx_image(data, hpx, outfile, extname="SKYMAP"):
-    hpx.write_fits(data, outfile, extname, clobber=True)
+    hpx.write_fits(data, outfile, extname, overwrite=True)
 
 
 def read_projection_from_fits(fitsfile, extname=None):
@@ -204,7 +204,7 @@ def write_tables_to_fits(filepath, tablelist, clobber=False,
         for h in hdu_list:
             outhdulist.append(h)
 
-    fits.HDUList(outhdulist).writeto(filepath, clobber=clobber)
+    fits.HDUList(outhdulist).writeto(filepath, overwrite=clobber)
     for rm in rmlist:
         os.unlink(rm)
 
