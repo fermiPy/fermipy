@@ -54,7 +54,7 @@ def _get_enum_bins(configfile):
     log_emax = np.log10(emax)
     ndec = log_emax - log_emin
     binsperdec = config['binning']['binsperdec']
-    nebins = int(np.ceil(binsperdec * ndec))
+    nebins = int(np.round(binsperdec * ndec))
 
     return nebins
 

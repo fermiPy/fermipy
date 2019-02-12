@@ -207,6 +207,24 @@ class MapCubeComponentInfo(ModelComponentInfo):
         self.Spatial_Filename = kwargs.get('Spatial_Filename', None)
 
 
+class SpatialMapComponentInfo(ModelComponentInfo):
+    """ Information about a model component represented by a SpatialMap
+
+    Parameters
+    ----------
+
+    Spatial_Filename : str
+        Name of the template file for the spatial model
+    """
+
+    def __init__(self, **kwargs):
+        """C'tor: copies keyword arguments to data members
+        """
+        super(SpatialMapComponentInfo, self).__init__(**kwargs)
+        self.model_type = 'SpatialMap'
+        self.Spatial_Filename = kwargs.get('Spatial_Filename', None)
+
+
 class IsoComponentInfo(ModelComponentInfo):
     """ Information about a model component represented by a IsoSource
 
