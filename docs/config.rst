@@ -60,7 +60,7 @@ are keyed to a section name (*data*, *binning*, etc.).
    data:
      evfile : ft1.lst
      scfile : ft2.fits
-     ltfile : ltcube.fits
+     ltcube : ltcube.fits
      
    binning:
      roiwidth   : 10.0    
