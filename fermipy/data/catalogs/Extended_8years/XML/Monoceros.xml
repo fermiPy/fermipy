@@ -1,0 +1,16 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="Monoceros" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.3" free="1" max="100" min="0" name="norm" scale="1e-11" value="3.0"/>
+      <parameter error="0.06" free="1" max="5" min="0" name="alpha" scale="1" value="2.23"/>
+      <parameter error="0.3" free="1" max="10" min="0" name="beta" scale="0.1" value="3.5"/>
+      <parameter free="0" max="10" min="0.1" name="Eb" scale="1000" value="1"/>
+    </spectrum>
+    <spatialModel type="RadialGaussian">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="99.86"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="6.93"/>
+      <parameter free="0" max="10" min="0" name="Sigma" scale="1" value="2.3"/>
+    </spatialModel>
+  </source>
+</source_library>

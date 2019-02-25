@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="HB9" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.50" free="1" max="100" min="0" name="norm" scale="1e-12" value="5.84"/>
+      <parameter error="0.09" free="1" max="5" min="0" name="alpha" scale="1" value="2.24"/>
+      <parameter error="1.0" free="1" max="10" min="0" name="beta" scale="0.1" value="4.0"/>
+      <parameter free="0" max="100" min="0.1" name="Eb" scale="1000" value="1"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/HB9.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>
