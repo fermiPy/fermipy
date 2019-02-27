@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="MSH15-52" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter error="0.3" free="1" max="100" min="0" name="Prefactor" scale="1e-14" value="3.3"/>
+      <parameter error="0.07" free="1" max="5" min="0" name="Index" scale="-1" value="1.8"/>
+      <parameter free="0" max="100" min="0.1" name="Scale" scale="1000" value="13"/>
+    </spectrum>
+    <spatialModel type="RadialDisk">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="228.571"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="-59.163"/>
+      <parameter free="0" max="10" min="0" name="Radius" scale="1" value="0.243"/>
+    </spatialModel>
+  </source>
+</source_library>
