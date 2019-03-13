@@ -12,6 +12,7 @@ releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 * Changing catalog.py to use 4FGL catalog
 * Minor fixes to target_collect.py, lightcurve.py and gta.simulate()
 
+
 0.17.3 (7/12/2018)
 ------------------
 
