@@ -52,7 +52,7 @@ supported as well as a gaussian kernel (defined by setting
    # Generate residual map for a power-law point source with Index=2.0 for
    # E > 3.16 GeV
    model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
-   maps = gta.residmap('fit1_emin35',model=model,erange=[3.5,None])
+   maps = gta.residmap('fit1_emin35',model=model,loge_bounds=[3.5,None])
 
    # Generate residual maps for a power-law point source with Index=1.5, 2.0, and 2.5
    model={'SpatialModel' : 'PointSource'}
