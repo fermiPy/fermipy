@@ -2,6 +2,7 @@
 ``catalogs``	None	
 ``diffuse``	None	
 ``diffuse_dir``	None	
+``diffuse_xml``	None	
 ``extdir``	None	Set a directory that will be searched for extended source FITS templates.  Template files in this directory will take precendence over catalog source templates with the same name.
 ``extract_diffuse``	False	Extract a copy of all mapcube components centered on the ROI.
 ``galdiff``	None	Set the path to one or more galactic IEM mapcubes.  A separate component will be generated for each item in this list.
