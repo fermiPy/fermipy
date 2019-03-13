@@ -7,6 +7,13 @@ This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
 
+0.17.4 (3/13/2019)
+------------------
+* Including 4FGL, interstellar emission model and isotropic templates files.
+* Changing catalog.py to use 4FGL catalog
+* Minor fixes to target_collect.py, lightcurve.py and gta.simulate()
+
+
 0.17.3 (7/12/2018)
 ------------------
 
