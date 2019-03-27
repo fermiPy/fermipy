@@ -5198,7 +5198,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             ltc_new = LTCube.create_from_gti(self.roi.skydir, tab_sc, tab_gti,
                                              self.config['selection']['zmax'],
                                              radius=radius)
-            ltc_new.write(self.files['ltcube'], overwrite=True)
+            ltc_new.write(self.files['ltcube'])
         else:
             run_gtapp('gtltcube', self.logger, kw, loglevel=loglevel)
 
@@ -5462,12 +5462,18 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         """
         cm = self.counts_map()
         data = cm.data
-        m = self.model_counts_map(name)
+        m = self.model_counts_map(name) 
 
         if clear:
             data.fill(0.0)
 
         if randomize:
+            if m.data.min()<0.:
+                self.logger.warning('At least on negative value found in model map.'
+                                    ' Changing it/them to 0')
+                indexcond = np.where( m.data <0. )
+                m.data[indexcond]=np.zeros(len(m.data[indexcond]))
+                
             data += np.random.poisson(m.data).astype(float)
         else:
             data += m.data

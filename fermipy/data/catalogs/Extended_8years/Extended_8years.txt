@@ -1,0 +1,60 @@
+Extended sources for 8 years source list, April 2017
+----------------------------------------------------
+
+- Changed spatial model to analytic for all simple radial shapes
+  Radial disks:
+  G296.5+10.0, HB 21, HB 3, HESS J1614-518, HESS J1616-508, MSH 15-56,
+  Vela X, W 28, W 30, gamma Cygni
+  Radial gaussians:
+  Cygnus cocoon, HESS J1303-631, HESS J1825-137, IC 443, W 41
+
+- W 41 / HESS J1834-087 (HESS collaboration 2015, A&A 574, A27)
+  Width was incorrect in v16 with R68 = 0.15° instead of sigma = 0.15°
+
+- Cygnus Loop (ring): position was incorrect,
+  reference point was not at center and ring was not centered.
+
+- HB9: SNR was not centered in image.
+
+Added:
+
+- Monoceros (RadialGauss) and Rosette (template provided by H. Katagiri)
+
+- Galactic sources > 10 GeV (FGES, M. Lemoine-Goumard), all RadialDisk
+  J1745.8-3028 close to HESS J1745-303, J1804.7-2144=HESS J1804-216,
+  J1857.7+0246=HESS J1857+026, J2301.9+5855=CTB 109, J1023.3-5747=Westerlund 2,
+  J1036.3-5833 (on Carina), J1213.3-6240 close to SNR G298.6-0.0,
+  J1409.1-6121 at (l,b)=(312.1,0.1), J1507.9-6228=HESS J1507-622,
+  J1553.8-5325 close to MSH 15-57, J1636.3-4731=SNR G337.0-0.1,
+  J1652.2-4633 at (l,b)=(339.6,-1.5), FGES J1655.5-4737 at (l,b)=(339.1,-2.7)
+
+Changed:
+
+- Galactic sources > 10 GeV (FGES, M. Lemoine-Goumard), all RadialDisk
+  G24.7+0.6 (to J1834.1-0706),
+  HESS J1837-069 (split into J1836.5-0651 and J1838.9-0704),
+  G150.3+4.5 (to J0427.2+5533), Puppis A (to J0822.1-4253),
+  Vela Jr (to J0851.9-4620), G292.2-0.5 (to J1109.4-6115),
+  HESS J1356-645 (to J1355.1-6420), HESS J1420-607 (to J1420.3-6046),
+  MSH 15-52 (to J1514.2-5909),
+  HESS J1632-478 (split into J1631.6-4756 and J1633.0-4746), 
+
+
+After FL8Y, for 4FGL (September 2018):
+--------------------------------------
+
+- Added FHES sources (M. Wood): J0534.5+2201=Crab Nebula, J1501.0-6310,
+  J1626.9-2431=rho Oph, J1642.1-5428=SNR G332.5-5.6, J1723.5-0501,
+  J1741.6-3917, J2129.9+5833, J2208.4+6443, J2304.0+5406
+
+- Magnetar paper (J. Li et al 2017, ApJ 835, 30): Kes 73, Kes 79
+  Kes 79 much bigger than SNR G33.6+0.1
+
+- HESS J1808-204 or SNR G9.7-0.0 (P. Yeung et al 2016, ApJ 827, 41)
+  could be composite of the two
+
+- HESS J1809-193 and HESS J1813-178 (M. Araya 2018, ApJ 859, 69)
+
+- HESS J1534-571 (M. Araya 2017, ApJ 843, 12)
+
+- G326.3-1.8 / MSH 15-56 (J. Devin)
