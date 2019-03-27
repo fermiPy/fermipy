@@ -459,6 +459,50 @@ class ReferenceSpec(object):
         tab = Table(data=cols)
         return tab
 
+    
+    def create_functor(self, specType, initPars=None, scale=1E3):
+        """Create a functor object that computes normalizations in a
+        sequence of energy bins for a given spectral model.
+
+        Parameters
+        ----------
+        normType : The type of normalization to use
+ 
+        specType : str        
+            The type of spectrum to use.  This can be a string
+            corresponding to the spectral model class name or a
+            `~fermipy.spectrum.SpectralFunction` object.
+
+        initPars : `~numpy.ndarray`        
+            Arrays of parameter values with which the spectral
+            function will be initialized.
+
+        scale : float
+            The 'pivot energy' or energy scale to use for the spectrum
+
+        Returns
+        -------
+        fn : `~fermipy.spectrum.SEDFunctor`
+            A functor object.
+        """
+        fn = SpectralFunction.create_functor(specType,
+                                             norm_type,
+                                             self._emin,
+                                             self._emax,
+                                             scale=scale)
+
+        if initPars is None:
+            if specType == 'PowerLaw':
+                initPars = np.array([5e-13, -2.0])
+            elif specType == 'LogParabola':
+                initPars = np.array([5e-13, -2.0, 0.0])
+            elif specType == 'PLExpCutoff':
+                initPars = np.array([5e-13, -1.0, 1E4])
+
+        fn.params = initPars
+        return fn
+
+    
 
 class SpecData(ReferenceSpec):
     """This class encapsulates spectral analysis results (best-fit
@@ -1397,28 +1441,9 @@ class CastroData(CastroData_Base):
         fn : `~fermipy.spectrum.SEDFunctor`
             A functor object.
         """
+        return self._refSpec.create_functor(specType, self.norm_type, initPars, scale)
 
-        emin = self._refSpec.emin
-        emax = self._refSpec.emax
-
-        fn = SpectralFunction.create_functor(specType,
-                                             self.norm_type,
-                                             emin,
-                                             emax,
-                                             scale=scale)
-
-        if initPars is None:
-            if specType == 'PowerLaw':
-                initPars = np.array([5e-13, -2.0])
-            elif specType == 'LogParabola':
-                initPars = np.array([5e-13, -2.0, 0.0])
-            elif specType == 'PLExpCutoff':
-                initPars = np.array([5e-13, -1.0, 1E4])
-
-        fn.params = initPars
-        return fn
-
-
+    
     def x_edges(self):
         return np.insert(self.refSpec.emax, 0, self.refSpec.emin[0])
     
