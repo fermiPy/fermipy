@@ -1353,7 +1353,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if self._like is None:
             return
 
-        use_edisp = self.config['gtlike']['edisp'] != 0
+        use_edisp = self.config['gtlike']['edisp'] and self.config['gtlike']['edisp_bins'] != 0
         if use_edisp and src.name not in \
                 self.config['gtlike']['edisp_disable']:
             self.set_edisp_flag(src.name, True)
@@ -5219,6 +5219,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             cmap = 'none'
 
+        if self.config['gtlike']['edisp']:
+            edisp_bins = self.config['gtlike']['edisp_bins']
+        else:
+            edisp_bins = 0
         # Run gtexpcube2
         kw = dict(infile=self.files['ltcube'], cmap=cmap,
                   ebinalg='LOG',
@@ -5229,7 +5233,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   nxpix=360, nypix=180, binsz=1,
                   xref=0.0, yref=0.0,
                   evtype=self.config['selection']['evtype'],
-                  edisp_bins=self.config['selection']['edisp_bins'],
+                  edisp_bins=edisp_bins,
                   irfs=self.config['gtlike']['irfs'],
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
@@ -5263,6 +5267,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         loglevel = kwargs.get('loglevel', self.loglevel)
         use_scaled_srcmap = self.config['gtlike']['use_scaled_srcmap']
 
+        if self.config['gtlike']['edisp']:
+            edisp_bins = self.config['gtlike']['edisp_bins']
+        else:
+            edisp_bins = 0
         # Run gtsrcmaps
         kw = dict(scfile=self.data_files['scfile'],
                   expcube=self.files['ltcube'],
@@ -5275,7 +5283,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   evtype=self.config['selection']['evtype'],
                   rfactor=self.config['gtlike']['rfactor'],
                   #                   resample=self.config['resample'],
-                  edisp_bins=self.config['gtlike']['edisp'],
+                  edisp_bins=edisp_bins,
                   minbinsz=self.config['gtlike']['minbinsz'],
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no')
@@ -5314,6 +5322,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._obs = ba.BinnedObs(**utils.unicode_to_str(kw))
 
+        if self.config['gtlike']['edisp']:
+            edisp_bins = self.config['gtlike']['edisp_bins']
+        else:
+            edisp_bins = 0
+
         # Create BinnedAnalysis
         self.logger.debug('Creating BinnedAnalysis')
         kw = dict(srcModel=srcmdl_file,
@@ -5323,7 +5336,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   resample=self.config['gtlike']['resample'],
                   minbinsz=self.config['gtlike']['minbinsz'],
                   resamp_fact=self.config['gtlike']['rfactor'],
-                  edisp_bins=self.config['gtlike']['edisp'])
+                  edisp_bins=edisp_bins)
         self.logger.debug(kw)
 
         self._like = BinnedAnalysis(binnedData=self._obs,
@@ -5641,6 +5654,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'mcube%s.fits' % (suffix))
 
+        if self.config['gtlike']['edisp']:
+            edisp_bins = self.config['gtlike']['edisp_bins']
+        else:
+            edisp_bins = 0
         # May consider generating a custom source model file
         if not os.path.isfile(outfile):
 
@@ -5651,7 +5668,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       expcube=self.files['ltcube'],
                       irfs=self.config['gtlike']['irfs'],
                       evtype=self.config['selection']['evtype'],
-                      edisp_bins=self.config['gtlike']['edisp'],
+                      edisp_bins=edisp_bins,
                       outtype='ccube',
                       chatter=self.config['logging']['chatter'])
 
