@@ -1353,7 +1353,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if self._like is None:
             return
 
-        if self.config['gtlike']['edisp'] and src.name not in \
+        use_edisp = self.config['gtlike']['edisp'] != 0
+        if use_edisp and src.name not in \
                 self.config['gtlike']['edisp_disable']:
             self.set_edisp_flag(src.name, True)
 
@@ -5228,6 +5229,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   nxpix=360, nypix=180, binsz=1,
                   xref=0.0, yref=0.0,
                   evtype=self.config['selection']['evtype'],
+                  edisp_bins=self.config['selection']['edisp_bins'],
                   irfs=self.config['gtlike']['irfs'],
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
@@ -5273,6 +5275,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   evtype=self.config['selection']['evtype'],
                   rfactor=self.config['gtlike']['rfactor'],
                   #                   resample=self.config['resample'],
+                  edisp_bins=self.config['gtlike']['edisp'],
                   minbinsz=self.config['gtlike']['minbinsz'],
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no')
@@ -5319,7 +5322,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   convolve=self.config['gtlike']['convolve'],
                   resample=self.config['gtlike']['resample'],
                   minbinsz=self.config['gtlike']['minbinsz'],
-                  resamp_fact=self.config['gtlike']['rfactor'])
+                  resamp_fact=self.config['gtlike']['rfactor'],
+                  edisp_bins=self.config['gtlike']['edisp'])
         self.logger.debug(kw)
 
         self._like = BinnedAnalysis(binnedData=self._obs,
@@ -5328,10 +5332,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 #        print(self.like.logLike.use_single_fixed_map())
 #        self.like.logLike.set_use_single_fixed_map(False)
 #        print(self.like.logLike.use_single_fixed_map())
-
-        if self.config['gtlike']['edisp']:
-            self.logger.debug('Enabling energy dispersion')
-            self.like.logLike.set_edisp_flag(True)
 
         for s in self.config['gtlike']['edisp_disable']:
 
@@ -5651,7 +5651,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       expcube=self.files['ltcube'],
                       irfs=self.config['gtlike']['irfs'],
                       evtype=self.config['selection']['evtype'],
-                      edisp=bool(self.config['gtlike']['edisp']),
+                      edisp_bins=self.config['gtlike']['edisp'],
                       outtype='ccube',
                       chatter=self.config['logging']['chatter'])
 

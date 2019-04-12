@@ -13,7 +13,7 @@ pyIrfLoader.Loader_go()
 
 _funcFactory = pyLike.SourceFactory_funcFactory()
 
-import BinnedAnalysis
+import BinnedAnalysis as ba
 import SummedLikelihood
 
 from fermipy import utils
@@ -598,11 +598,12 @@ class SummedLikelihood(SummedLikelihood.SummedLikelihood):
                     parameter.setValue(newValue)
 
 
-class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
+class BinnedAnalysis(ba.BinnedAnalysis):
 
     def __init__(self, binnedData, srcModel=None, optimizer='Drmngb',
                  use_bl2=False, verbosity=0, psfcorr=True, convolve=True,
-                 resample=True, resamp_fact=2, minbinsz=0.1, wmap=None):
+                 resample=True, resamp_fact=2, minbinsz=0.1, wmap=None, 
+                 edisp_bins=-1):
         AnalysisBase.__init__(self)
         if srcModel is None:
             srcModel, optimizer = self._srcDialog()
@@ -610,35 +611,31 @@ class BinnedAnalysis(BinnedAnalysis.BinnedAnalysis):
         self.srcModel = srcModel
         self.optimizer = optimizer
         if use_bl2:
-            self.logLike = pyLike.BinnedLikelihood2(binnedData.countsMap,
-                                                    binnedData.observation,
-                                                    binnedData.srcMaps,
-                                                    True, psfcorr, convolve,
-                                                    resample,
-                                                    resamp_fact,
-                                                    minbinsz)
+            raise ValueError("BinnedLikelilihood2 is not longer supported")
+
+        if wmap is None or wmap == "none":
+            self._wmap = None
         else:
-            if wmap is None or wmap == "none":
-                self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
-                                                       binnedData.observation,
-                                                       binnedData.srcMaps,
-                                                       True, psfcorr, convolve,
-                                                       resample,
-                                                       resamp_fact,
-                                                       minbinsz)
-                self._wmap = None
-            else:
-                self._wmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap, "")
-                self._wmap.setInterpolation(False)
-                self._wmap.setExtrapolation(True)
-                self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
-                                                       self._wmap,
-                                                       binnedData.observation,
-                                                       binnedData.srcMaps,
-                                                       True, psfcorr, convolve,
-                                                       resample,
-                                                       resamp_fact,
-                                                       minbinsz)
+            self._wmap = pyLike.WcsMapLibrary.instance().wcsmap(wmap, "")
+            self._wmap.setInterpolation(False)
+            self._wmap.setExtrapolation(True)
+
+
+        self.binned_config = ba.BinnedConfig(use_edisp=edisp_bins != 0,
+                                             applyPsfCorrections=psfcorr,
+                                             performConvolutiion=convolve,
+                                             resample=resample,
+                                             resamp_factor=resamp_fact,
+                                             minbinsz=minbinsz,
+                                             verbose=(verbosity>0),
+                                             edisp_bins=edisp_bins)
+
+        self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
+                                               binnedData.observation,
+                                               self.binned_config,
+                                               binnedData.srcMaps,
+                                               self._wmap)                          
+
         self.verbosity = verbosity
         self.logLike.initOutputStreams()
         self.logLike.readXml(srcModel, _funcFactory, False, True, False)

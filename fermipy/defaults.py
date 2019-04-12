@@ -145,7 +145,7 @@ model = {
 # Options for configuring likelihood analysis
 gtlike = {
     'irfs': (None, 'Set the IRF string.', str),
-    'edisp': (True, 'Enable the correction for energy dispersion.', bool),
+    'edisp': (-1, 'Enable the correction for energy dispersion.', int),
     'edisp_disable': (None,
                       'Provide a list of sources for which the edisp '
                       'correction should be disabled.',
