@@ -5345,7 +5345,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   minbinsz=self.config['gtlike']['minbinsz'],
                   resamp_fact=self.config['gtlike']['rfactor'])
 
-        set_edisp_kwargs(self.config. kw)
+        set_edisp_kwargs(self.config, kw)
         self.logger.debug(kw)
 
         self._like = BinnedAnalysis(binnedData=self._obs,
