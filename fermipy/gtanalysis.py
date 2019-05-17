@@ -96,21 +96,15 @@ index_parameters = {
 }
 
 
-def has_new_edisp():
-    gtexpcube = GtApp.GtApp('gtexpcube2')
-    return 'edisp_bins' in gtexpcube.pars.keys()
-
-
-ST_HAS_NEW_EDISP = has_new_edisp()
-
-def set_edisp_kwargs(config, kw):
-    if ST_HAS_NEW_EDISP:
+def set_edisp_kwargs(app, config, kw):
+    gtapp = GtApp.GtApp(app)
+    if 'edisp_bins' in gtapp.pars.keys():
         if config['gtlike']['edisp']:
             edisp_bins = config['gtlike']['edisp_bins']
         else:
             edisp_bins = 0
         kw['edisp_bins'] = edisp_bins
-    else:
+    elif 'edisp' in gtapp.pars.keys():
         kw['edisp'] = config['gtlike']['edisp']
 
 
@@ -5251,7 +5245,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
 
-        set_edisp_kwargs(self.config, kw)
+        set_edisp_kwargs('gtexpcube2', self.config, kw)
         
         run_gtapp('gtexpcube2', self.logger, kw, loglevel=loglevel)
 
@@ -5298,7 +5292,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no')
 
-        set_edisp_kwargs(self.config, kw)
+        set_edisp_kwargs('gtsrcmaps', self.config, kw)
 
         if os.path.isfile(self.files['srcmap']) and not overwrite:
             self.logger.log(loglevel, 'Skipping gtsrcmaps.')
@@ -5345,7 +5339,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   minbinsz=self.config['gtlike']['minbinsz'],
                   resamp_fact=self.config['gtlike']['rfactor'])
 
-        set_edisp_kwargs(self.config, kw)
+        set_edisp_kwargs('gtlike', self.config, kw)
         self.logger.debug(kw)
 
         self._like = BinnedAnalysis(binnedData=self._obs,
@@ -5677,7 +5671,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
                       chatter=self.config['logging']['chatter'])
 
-            set_edisp_kwargs(self.config, kw)
+            set_edisp_kwargs('gtmodel', self.config, kw)
             run_gtapp('gtmodel', self.logger, kw)
         else:
             self.logger.info('Skipping gtmodel')
