@@ -96,6 +96,24 @@ index_parameters = {
 }
 
 
+def has_new_edisp():
+    gtexpcube = GtApp.GtApp('gtexpcube2')
+    return 'edisp_bins' in gtexpcube.pars.keys()
+
+
+ST_HAS_NEW_EDISP = has_new_edisp()
+
+def set_edisp_kwargs(config, kw):
+    if ST_HAS_NEW_EDISP:
+        if config['gtlike']['edisp']:
+            edisp_bins = config['gtlike']['edisp_bins']
+        else:
+            edisp_bins = 0
+        kw['edisp_bins'] = edisp_bins
+    else:
+        kw['edisp'] = config['gtlike']['edisp']
+
+
 def make_scaled_srcmap(roi, srcmap0,
                        bexp_file0, bexproi_file0,
                        bexp_file1, bexproi_file1,
@@ -5219,10 +5237,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             cmap = 'none'
 
-        if self.config['gtlike']['edisp']:
-            edisp_bins = self.config['gtlike']['edisp_bins']
-        else:
-            edisp_bins = 0
         # Run gtexpcube2
         kw = dict(infile=self.files['ltcube'], cmap=cmap,
                   ebinalg='LOG',
@@ -5233,11 +5247,12 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   nxpix=360, nypix=180, binsz=1,
                   xref=0.0, yref=0.0,
                   evtype=self.config['selection']['evtype'],
-                  edisp_bins=edisp_bins,
                   irfs=self.config['gtlike']['irfs'],
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
 
+        set_edisp_kwargs(self.config, kw)
+        
         run_gtapp('gtexpcube2', self.logger, kw, loglevel=loglevel)
 
         if self.projtype == "WCS":
@@ -5267,10 +5282,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         loglevel = kwargs.get('loglevel', self.loglevel)
         use_scaled_srcmap = self.config['gtlike']['use_scaled_srcmap']
 
-        if self.config['gtlike']['edisp']:
-            edisp_bins = self.config['gtlike']['edisp_bins']
-        else:
-            edisp_bins = 0
         # Run gtsrcmaps
         kw = dict(scfile=self.data_files['scfile'],
                   expcube=self.files['ltcube'],
@@ -5283,10 +5294,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   evtype=self.config['selection']['evtype'],
                   rfactor=self.config['gtlike']['rfactor'],
                   #                   resample=self.config['resample'],
-                  edisp_bins=edisp_bins,
                   minbinsz=self.config['gtlike']['minbinsz'],
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no')
+
+        set_edisp_kwargs(self.config, kw)
 
         if os.path.isfile(self.files['srcmap']) and not overwrite:
             self.logger.log(loglevel, 'Skipping gtsrcmaps.')
@@ -5322,10 +5334,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._obs = ba.BinnedObs(**utils.unicode_to_str(kw))
 
-        if self.config['gtlike']['edisp']:
-            edisp_bins = self.config['gtlike']['edisp_bins']
-        else:
-            edisp_bins = 0
 
         # Create BinnedAnalysis
         self.logger.debug('Creating BinnedAnalysis')
@@ -5335,8 +5343,9 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   convolve=self.config['gtlike']['convolve'],
                   resample=self.config['gtlike']['resample'],
                   minbinsz=self.config['gtlike']['minbinsz'],
-                  resamp_fact=self.config['gtlike']['rfactor'],
-                  edisp_bins=edisp_bins)
+                  resamp_fact=self.config['gtlike']['rfactor'])
+
+        set_edisp_kwargs(self.config. kw)
         self.logger.debug(kw)
 
         self._like = BinnedAnalysis(binnedData=self._obs,
@@ -5654,10 +5663,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         outfile = os.path.join(self.config['fileio']['workdir'],
                                'mcube%s.fits' % (suffix))
 
-        if self.config['gtlike']['edisp']:
-            edisp_bins = self.config['gtlike']['edisp_bins']
-        else:
-            edisp_bins = 0
         # May consider generating a custom source model file
         if not os.path.isfile(outfile):
 
@@ -5668,10 +5673,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       expcube=self.files['ltcube'],
                       irfs=self.config['gtlike']['irfs'],
                       evtype=self.config['selection']['evtype'],
-                      edisp_bins=edisp_bins,
                       outtype='ccube',
+
                       chatter=self.config['logging']['chatter'])
 
+            set_edisp_kwargs(self.config, kw)
             run_gtapp('gtmodel', self.logger, kw)
         else:
             self.logger.info('Skipping gtmodel')
