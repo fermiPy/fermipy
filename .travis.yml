@@ -19,7 +19,7 @@ env:
       - CONDA2='conda install -y -c conda-forge healpy'
       - INSTALL_CMD='python setup.py install'
       - CONDA_CHANNELS=conda-forge
-      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml fermitools'
+      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml'
 
 matrix:
     include:
