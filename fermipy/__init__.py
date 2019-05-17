@@ -21,10 +21,20 @@ def get_st_version():
     """Get the version string of the ST release."""
 
     try:
-        import ST_Version
-        return ST_Version.version()
+        import st_version.__version__ as science_tools_version
+        return science_tools_version
     except ImportError:
-        return ''
+        pass
+    
+    try:
+        import ST_Version
+        if hasattr(ST_Version, 'version'):
+            return ST_Version.version()
+        elif hasattr(ST_Version, 'get_git_version'):
+            return ST_Version.get_git_version()
+    except ImportError:
+        pass    
+    return ''
 
 
 PACKAGE_ROOT = os.path.abspath(os.path.dirname(__file__))
