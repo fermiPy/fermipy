@@ -6,6 +6,6 @@ if [[ ! -d "$HOME/ScienceTools" || -n "$1" ]]; then
 #if [ -n "$1" ]; then
 #if (true); then
     wget -nc $ST_URL -O $HOME/ScienceTools-v11r5p3-fssc-20180124-x86_64-unknown-linux-gnu-libc2.17_lite.tgz
-    cd $HOME; tar --warning=no-unknown-keyword xzf $HOME/ScienceTools-v11r5p3-fssc-20180124-x86_64-unknown-linux-gnu-libc2.17_lite.tgz
+    cd $HOME; tar xzf $HOME/ScienceTools-v11r5p3-fssc-20180124-x86_64-unknown-linux-gnu-libc2.17_lite.tgz
     mv $HOME/ScienceTools-v11r5p3-fssc-20180124-x86_64-unknown-linux-gnu-libc2.17 $HOME/ScienceTools
 fi
