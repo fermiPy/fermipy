@@ -56,8 +56,9 @@ def test_castro_test_spectra_yaml(yamlfile):
     # Catch this for now
     try:
         c = castro.CastroData.create_from_yamlfile(yamlfile)        
-    except ValueError:
-        return
+    except Exception:
+        pytest.xfail("Known issue with numpy/pyyaml")
+
     test_dict = c.test_spectra()
 
     assert_allclose(test_dict['PowerLaw']['TS'][0], 0.0, atol=0.01)
