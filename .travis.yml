@@ -30,7 +30,7 @@ matrix:
           env: NAME=fssc-st-10-00-05
                PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
-               ST_INSTALL='conda install --force -c conda-forge/label/cf201901 -c fermi fermitools'
+               ST_INSTALL='conda install -y -c conda-forge/label/cf201901 -c fermi fermitools'
                DOCKER_INSTALL=''
 
         # The Sphinx docs build
