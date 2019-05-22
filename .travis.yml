@@ -20,6 +20,7 @@ env:
       - INSTALL_CMD='python setup.py install'
       - CONDA_CHANNELS=conda-forge
       - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml'
+      - CONDA_PATH='/home/miniconda'
 
 matrix:
     include:
