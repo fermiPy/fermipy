@@ -12,8 +12,7 @@ else
     /usr/bin/Xvfb :99 -screen 0 1280x1024x24 &
 fi
 
-python -m pytest --cov=fermipy --cov-config=fermipy/tests/coveragerc --durations=30
-#python -m pytest -vv --durations=30
+python -m pytest -vv --cov=fermipy --cov-config=fermipy/tests/coveragerc --durations=30
 status=$?
 
 if [[ $NAME == 'docs' ]]; then
