@@ -58,9 +58,9 @@ def requires_git_version(version_str):
     """Decorator to declare minimum ST version needed for tests.
     """
 
-    version = version_str_to_int_git(version_str)
+    version = version_str_to_int(version_str)
     try:
-        st_version = version_str_to_int(get_git_version_fp())
+        st_version = version_str_to_int_git(get_git_version_fp())
     except:
         st_version = 0
 
