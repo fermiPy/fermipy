@@ -25,6 +25,20 @@ def get_st_version():
         return ST_Version.version()
     except ImportError:
         return ''
+    except AttributeError:
+        return ''
+
+
+def get_git_version_fp():
+    """Get the version string of the ST release."""
+
+    try:
+        import ST_Version
+        return ST_Version.get_git_version()
+    except ImportError:
+        return ''
+    except AttributeError:
+        return ''
 
 
 PACKAGE_ROOT = os.path.abspath(os.path.dirname(__file__))
