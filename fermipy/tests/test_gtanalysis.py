@@ -169,6 +169,7 @@ def test_gtanalysis_residmap(create_draco_analysis):
     gta.residmap(model={}, make_plots=True)
 
 
+@requires_git_version('02-00-00')
 def test_gtanalysis_find_sources(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
@@ -278,7 +279,7 @@ def test_gtanalysis_extension_gaussian(create_draco_analysis):
 
     gta.simulate_roi(restore=True)
 
-
+@requires_git_version('02-00-00')
 def test_gtanalysis_localization(create_draco_analysis):
     gta = create_draco_analysis
     gta.simulate_roi(restore=True)
