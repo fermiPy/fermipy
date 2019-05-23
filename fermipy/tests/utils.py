@@ -3,9 +3,9 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 from astropy.tests.helper import pytest
-from fermipy import get_st_version
+from fermipy import get_st_version, get_git_version, get_git_version_fp
 
-__all__ = ['requires_dependency', 'requires_st_version', 'requires_file']
+__all__ = ['requires_dependency', 'requires_st_version', 'requires_git_version', 'requires_file']
 
 
 def requires_file(filepath):
@@ -24,13 +24,45 @@ def version_str_to_int(version_str):
         return (int(m.group(1)) * 10000 +
                 int(m.group(2)) * 100 + int(m.group(3)))
 
+def version_str_to_int_git(version_str):
+
+    m = re.search('Fermitools.(\d*)\.(\d*)\.(\d*).*', version_str)
+
+    if m is None:
+        return 0
+    else:
+        return (int(m.group(1)) * 10000 +
+                int(m.group(2)) * 100 + int(m.group(3)))
+
 
 def requires_st_version(version_str):
     """Decorator to declare minimum ST version needed for tests.
     """
 
     version = version_str_to_int(version_str)
-    st_version = version_str_to_int(get_st_version())
+    try:
+        st_version = version_str_to_int(get_st_version())
+    except:
+        st_version = 0
+
+    if st_version >= version:
+        skip_it = False
+    else:
+        skip_it = True
+
+    reason = 'Requires ST Version >=: {}'.format(version_str)
+    return pytest.mark.skipif(skip_it, reason=reason)
+
+
+def requires_git_version(version_str):
+    """Decorator to declare minimum ST version needed for tests.
+    """
+
+    version = version_str_to_int_git(version_str)
+    try:
+        st_version = version_str_to_int(get_git_version_fp())
+    except:
+        st_version = 0
 
     if st_version >= version:
         skip_it = False
