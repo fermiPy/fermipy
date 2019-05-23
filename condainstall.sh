@@ -33,7 +33,7 @@ if [ ! -d "$CONDA_PATH/bin" ]; then
     curl -o miniconda.sh -L http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD
     bash miniconda.sh -b -p $CONDA_PATH
     rc=$?
-    rm miniconda.sh
+    rm -f miniconda.sh
     if [[ $rc != 0 ]]; then
         exit $rc
     fi
