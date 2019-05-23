@@ -5,7 +5,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
 from astropy.table import Table
-from fermipy.tests.utils import requires_dependency, requires_st_version
+from fermipy.tests.utils import requires_dependency,\
+    requires_st_version, requires_git_version
 from fermipy import spectrum
 
 try:
@@ -136,7 +137,7 @@ def test_gtanalysis_fit(create_draco_analysis):
     assert (np.abs(fit_output0['loglike'] - fit_output1['loglike']) < 0.01)
 
 
-@requires_st_version('11-04-00')
+@requires_git_version('00-00-01')
 def test_gtanalysis_fit_newton(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
@@ -155,7 +156,7 @@ def test_gtanalysis_tsmap(create_draco_analysis):
     gta.tsmap(model={}, make_plots=True)
 
 
-@requires_st_version('11-04-00')
+@requires_git_version('00-00-01')
 def test_gtanalysis_tscube(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
