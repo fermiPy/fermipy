@@ -29,8 +29,8 @@ def create_draco_analysis(request, tmpdir_factory):
     request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_draco', 'config.yaml')
-    if not os.path.isfile(cfgfile):
-        raise RuntimeError("Failed to install config file %s" % cfgfile)
+    if not os.path.isfile(str(cfgfile)):
+        raise RuntimeError("Failed to install config file %s" % str(cfgfile))
     gta = gtanalysis.GTAnalysis(str(cfgfile))
     gta.setup()
 
@@ -64,8 +64,8 @@ def create_pg1553_analysis(request, tmpdir_factory):
     #request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_pg1553', 'config.yaml')
-    if not os.path.isfile(cfgfile):
-        raise RuntimeError("Failed to install config file %s" % cfgfile)
+    if not os.path.isfile(str(cfgfile)):
+        raise RuntimeError("Failed to install config file %s" % str(cfgfile))
 
     gta = gtanalysis.GTAnalysis(str(cfgfile))
     gta.setup()
