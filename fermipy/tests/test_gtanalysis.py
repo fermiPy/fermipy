@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 # Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_dependency('Fermi ST')
+pytestmark = requires_git_version('10-00-03')
 
 
 @pytest.fixture(scope='module')

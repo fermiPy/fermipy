@@ -620,21 +620,24 @@ class BinnedAnalysis(ba.BinnedAnalysis):
             self._wmap.setInterpolation(False)
             self._wmap.setExtrapolation(True)
 
+        try:
+            self.binned_config = ba.BinnedConfig(use_edisp=edisp_bins != 0,
+                                                 applyPsfCorrections=psfcorr,
+                                                 performConvolutiion=convolve,
+                                                 resample=resample,
+                                                 resamp_factor=resamp_fact,
+                                                 minbinsz=minbinsz,
+                                                 verbose=(verbosity>0),
+                                                 edisp_bins=edisp_bins)        
 
-        self.binned_config = ba.BinnedConfig(use_edisp=edisp_bins != 0,
-                                             applyPsfCorrections=psfcorr,
-                                             performConvolutiion=convolve,
-                                             resample=resample,
-                                             resamp_factor=resamp_fact,
-                                             minbinsz=minbinsz,
-                                             verbose=(verbosity>0),
-                                             edisp_bins=edisp_bins)
-
-        self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
-                                               binnedData.observation,
-                                               self.binned_config,
-                                               binnedData.srcMaps,
-                                               self._wmap)                          
+            self.logLike = pyLike.BinnedLikelihood(binnedData.countsMap,
+                                                   binnedData.observation,
+                                                   self.binned_config,
+                                                   binnedData.srcMaps,
+                                                   self._wmap) 
+        except NotImplementedError as msg:
+            print("Failed to construct a BinnedLikelihood object because of a mismatch between fermipy and fermitools versions")
+            raise NotImplementedError(msg)
 
         self.verbosity = verbosity
         self.logLike.initOutputStreams()
