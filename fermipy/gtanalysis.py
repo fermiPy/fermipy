@@ -96,6 +96,18 @@ index_parameters = {
 }
 
 
+def set_edisp_kwargs(app, config, kw):
+    gtapp = GtApp.GtApp(app)
+    if 'edisp_bins' in gtapp.pars.keys():
+        if config['gtlike']['edisp']:
+            edisp_bins = config['gtlike']['edisp_bins']
+        else:
+            edisp_bins = 0
+        kw['edisp_bins'] = edisp_bins
+    elif 'edisp' in gtapp.pars.keys():
+        kw['edisp'] = config['gtlike']['edisp']
+
+
 def make_scaled_srcmap(roi, srcmap0,
                        bexp_file0, bexproi_file0,
                        bexp_file1, bexproi_file1,
@@ -1353,7 +1365,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if self._like is None:
             return
 
-        if self.config['gtlike']['edisp'] and src.name not in \
+        use_edisp = self.config['gtlike']['edisp'] and self.config['gtlike']['edisp_bins'] != 0
+        if use_edisp and src.name not in \
                 self.config['gtlike']['edisp_disable']:
             self.set_edisp_flag(src.name, True)
 
@@ -5232,6 +5245,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   coordsys=self.config['binning']['coordsys'],
                   chatter=self.config['logging']['chatter'])
 
+        set_edisp_kwargs('gtexpcube2', self.config, kw)
+        
         run_gtapp('gtexpcube2', self.logger, kw, loglevel=loglevel)
 
         if self.projtype == "WCS":
@@ -5277,6 +5292,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   chatter=self.config['logging']['chatter'],
                   emapbnds='no')
 
+        set_edisp_kwargs('gtsrcmaps', self.config, kw)
+
         if os.path.isfile(self.files['srcmap']) and not overwrite:
             self.logger.log(loglevel, 'Skipping gtsrcmaps.')
         elif use_scaled_srcmap:
@@ -5311,6 +5328,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         self._obs = ba.BinnedObs(**utils.unicode_to_str(kw))
 
+
         # Create BinnedAnalysis
         self.logger.debug('Creating BinnedAnalysis')
         kw = dict(srcModel=srcmdl_file,
@@ -5320,6 +5338,8 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   resample=self.config['gtlike']['resample'],
                   minbinsz=self.config['gtlike']['minbinsz'],
                   resamp_fact=self.config['gtlike']['rfactor'])
+
+        set_edisp_kwargs('gtlike', self.config, kw)
         self.logger.debug(kw)
 
         self._like = BinnedAnalysis(binnedData=self._obs,
@@ -5328,10 +5348,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 #        print(self.like.logLike.use_single_fixed_map())
 #        self.like.logLike.set_use_single_fixed_map(False)
 #        print(self.like.logLike.use_single_fixed_map())
-
-        if self.config['gtlike']['edisp']:
-            self.logger.debug('Enabling energy dispersion')
-            self.like.logLike.set_edisp_flag(True)
 
         for s in self.config['gtlike']['edisp_disable']:
 
@@ -5651,10 +5667,11 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       expcube=self.files['ltcube'],
                       irfs=self.config['gtlike']['irfs'],
                       evtype=self.config['selection']['evtype'],
-                      edisp=bool(self.config['gtlike']['edisp']),
                       outtype='ccube',
+
                       chatter=self.config['logging']['chatter'])
 
+            set_edisp_kwargs('gtmodel', self.config, kw)
             run_gtapp('gtmodel', self.logger, kw)
         else:
             self.logger.info('Skipping gtmodel')

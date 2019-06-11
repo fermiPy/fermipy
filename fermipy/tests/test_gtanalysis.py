@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 # Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_dependency('Fermi ST')
+pytestmark = requires_git_version('10-00-03')
 
 
 @pytest.fixture(scope='module')
@@ -320,13 +320,17 @@ def test_gtanalysis_lightcurve(create_pg1553_analysis):
                        free_radius=3.0)
 
     rtol = 0.01
-    flux = np.array([2.917568e-08,
-                     2.359114e-08])
-    flux_err = np.array([1.931940e-09,
-                         1.822694e-09])
+    #flux = np.array([2.917568e-08,
+    #                 2.359114e-08])
+    #flux_err = np.array([1.931940e-09,
+    #                     1.822694e-09])
+    flux = np.array([2.860243e-08,
+                     2.312212e-08])
+    flux_err = np.array([1.874528e-09,
+                         1.762850e-09])
     ts = np.array([1463.066,
                    1123.160])
-
+    
     assert_allclose(o['flux'], flux, rtol=rtol)
     assert_allclose(o['flux_err'], flux_err, rtol=rtol)
     assert_allclose(o['ts'], ts, rtol=rtol)
