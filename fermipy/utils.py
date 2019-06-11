@@ -57,7 +57,7 @@ def write_yaml(o, outfile, **kwargs):
 
 
 def load_npy(infile):
-    return np.load(infile).flat[0]
+    return np.load(infile, allow_pickle=True).flat[0]
 
 
 def load_data(infile, workdir=None):

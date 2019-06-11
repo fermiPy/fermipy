@@ -13,6 +13,7 @@ notifications:
 python : 2.7
 env:
     global:
+      - FERMI_DIR=$HOME/ScienceTools/x86_64-unknown-linux-gnu-libc2.17
       - SLAC_ST_BUILD=false
       - PIP_DEPS='coverage pytest-cov'
       - CONDA2='conda install -y -c conda-forge healpy'
