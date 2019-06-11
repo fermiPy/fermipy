@@ -5,7 +5,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 from astropy.tests.helper import pytest
 from astropy.table import Table
-from fermipy.tests.utils import requires_dependency, requires_st_version
+from fermipy.tests.utils import requires_dependency,\
+    requires_st_version, requires_git_version
 from fermipy import spectrum
 
 try:
@@ -28,6 +29,8 @@ def create_draco_analysis(request, tmpdir_factory):
     request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_draco', 'config.yaml')
+    if not os.path.isfile(str(cfgfile)):
+        raise RuntimeError("Failed to install config file %s" % str(cfgfile))
     gta = gtanalysis.GTAnalysis(str(cfgfile))
     gta.setup()
 
@@ -61,6 +64,8 @@ def create_pg1553_analysis(request, tmpdir_factory):
     #request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_pg1553', 'config.yaml')
+    if not os.path.isfile(str(cfgfile)):
+        raise RuntimeError("Failed to install config file %s" % str(cfgfile))
 
     gta = gtanalysis.GTAnalysis(str(cfgfile))
     gta.setup()
@@ -136,7 +141,7 @@ def test_gtanalysis_fit(create_draco_analysis):
     assert (np.abs(fit_output0['loglike'] - fit_output1['loglike']) < 0.01)
 
 
-@requires_st_version('11-04-00')
+@requires_git_version('00-00-01')
 def test_gtanalysis_fit_newton(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
@@ -155,7 +160,7 @@ def test_gtanalysis_tsmap(create_draco_analysis):
     gta.tsmap(model={}, make_plots=True)
 
 
-@requires_st_version('11-04-00')
+@requires_git_version('00-00-01')
 def test_gtanalysis_tscube(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
@@ -168,6 +173,7 @@ def test_gtanalysis_residmap(create_draco_analysis):
     gta.residmap(model={}, make_plots=True)
 
 
+@requires_git_version('02-00-00')
 def test_gtanalysis_find_sources(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
@@ -277,7 +283,7 @@ def test_gtanalysis_extension_gaussian(create_draco_analysis):
 
     gta.simulate_roi(restore=True)
 
-
+@requires_git_version('02-00-00')
 def test_gtanalysis_localization(create_draco_analysis):
     gta = create_draco_analysis
     gta.simulate_roi(restore=True)
