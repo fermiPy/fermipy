@@ -146,7 +146,7 @@ model = {
 gtlike = {
     'irfs': (None, 'Set the IRF string.', str),
     'edisp': (True, 'Enable the correction for energy dispersion.', bool),
-    'edisp_bins': (0, 'Number of bins to consider energy dispersion for.  0 means use scale corrections only', int),
+    'edisp_bins': (-1, 'Number of bins to use for energy correction.', int),
     'edisp_disable': (None,
                       'Provide a list of sources for which the edisp '
                       'correction should be disabled.',
