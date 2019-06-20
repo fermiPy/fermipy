@@ -460,18 +460,18 @@ class ReferenceSpec(object):
         return tab
 
     
-    def create_functor(self, specType, initPars=None, scale=1E3):
+    def create_functor(self, specType, normType, initPars=None, scale=1E3):
         """Create a functor object that computes normalizations in a
         sequence of energy bins for a given spectral model.
 
         Parameters
-        ----------
-        normType : The type of normalization to use
- 
+        ----------  
         specType : str        
             The type of spectrum to use.  This can be a string
             corresponding to the spectral model class name or a
             `~fermipy.spectrum.SpectralFunction` object.
+
+        normType : The type of normalization to use
 
         initPars : `~numpy.ndarray`        
             Arrays of parameter values with which the spectral
@@ -486,7 +486,7 @@ class ReferenceSpec(object):
             A functor object.
         """
         fn = SpectralFunction.create_functor(specType,
-                                             norm_type,
+                                             normType,
                                              self._emin,
                                              self._emax,
                                              scale=scale)
