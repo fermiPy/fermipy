@@ -19,7 +19,7 @@ env:
       - CONDA2='conda install -y -c conda-forge healpy'
       - INSTALL_CMD='python setup.py install'
       - CONDA_CHANNELS=conda-forge
-      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml'
+      - CONDA_DEPS='pytest pyyaml'
 
 matrix:
     include:
@@ -29,7 +29,7 @@ matrix:
         - os: linux
           env: NAME=main
                PYTHON_VERSION=2.7
-               CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
+               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
                ST_INSTALL='conda install -y -c conda-forge/label/cf201901 -c fermi fermitools'
                DOCKER_INSTALL=''
  
@@ -38,7 +38,7 @@ matrix:
         - os: linux
           env: NAME=old
                PYTHON_VERSION=2.7
-               CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
+               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
                ST_INSTALL='conda install -y -c conda-forge/label/cf201901 -c fermi fermitools=1.0.2'
                DOCKER_INSTALL=''
 
@@ -47,7 +47,7 @@ matrix:
         - os: linux
           env: NAME=ancient
                PYTHON_VERSION=2.7
-               CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
+               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
                ST_INSTALL="bash stinstall.sh $HOME"
                FERMI_DIR="$HOME/ScienceTools/x86_64-unknown-linux-gnu-libc2.17"
                DOCKER_INSTALL=''
@@ -79,7 +79,7 @@ matrix:
                PYTHON_VERSION=2.7
                ST_INSTALL=''
                DOCKER_INSTALL=''
-               CONDA_DOWNLOAD=Miniconda-latest-Linux-x86_64.sh
+               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
 
 #    allow_failures:
 #        - env: NAME=py2_slac-st-11-07-00-gammapy-master

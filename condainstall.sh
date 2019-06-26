@@ -41,7 +41,7 @@ fi
 
 export PATH="$CONDA_PATH/bin:$PATH"
 
-conda update -q conda -y python=$PYTHON_VERSION 
+conda update -q conda -y
 #conda config --add channels conda-forge
 conda info -a
 conda install -c conda-forge -y python=$PYTHON_VERSION pip pytest $CONDA_DEPS
