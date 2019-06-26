@@ -41,10 +41,10 @@ fi
 
 export PATH="$CONDA_PATH/bin:$PATH"
 
-conda update -q conda -y
-#conda config --add channels conda-forge
+#conda update -q conda -y
+conda config --add channels conda-forge
 conda info -a
-conda install -c conda-forge -y python=$PYTHON_VERSION pip pytest $CONDA_DEPS
+conda install -y python=$PYTHON_VERSION pip pytest $CONDA_DEPS
 
 if [[ -n $CONDA2 ]]; then
     $CONDA2
