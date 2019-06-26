@@ -4,8 +4,8 @@ export PIP_DEPS='coverage pytest-cov'
 export CONDA2='conda install -y -c conda-forge healpy'
 export INSTALL_CMD='python setup.py install'
 export CONDA_CHANNELS="conda-forge"
-#export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml'
-export CONDA_DEPS='pytest pyyaml'
+export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml'
+#export CONDA_DEPS='pytest pyyaml'
 export CONDA_PATH='/u/ek/echarles/dmcat/software/build_test/miniconda'
 
 NAME='main'
