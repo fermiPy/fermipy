@@ -58,7 +58,7 @@ if [[ -n $PIP_DEPS ]]; then
     python -m pip install $PIP_DEPS
 fi
 
-export CONDA_PREFIX=$CONDA_PATH
+source condasetup.sh
 
 if [[ -n $INSTALL_CMD ]]; then
     $INSTALL_CMD
