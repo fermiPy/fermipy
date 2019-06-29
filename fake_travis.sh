@@ -15,17 +15,17 @@ case $NAME in
     main)
 	export PYTHON_VERSION="2.7"
 	export CONDA_DOWNLOAD="Miniconda2-latest-Linux-x86_64.sh"
-	export ST_INSTALL="conda install -y -c conda-forge -c conda-forge/label/cf201901 -c fermi fermitools"
+	export ST_INSTALL="conda install -y --python==2.7 -c conda-forge -c conda-forge/label/cf201901 -c fermi fermitools"
 	;;
     old)
 	export PYTHON_VERSION="2.7"
 	export CONDA_DOWNLOAD="Miniconda2-latest-Linux-x86_64.sh"
-	export ST_INSTALL="conda install -y -c conda-forge/label/cf201901 -c fermi fermitools=1.0.2"
+	export ST_INSTALL="conda install -y --python==2.7 -c conda-forge/label/cf201901 -c fermi fermitools=1.0.2"
 	;;
     veryold)
 	export PYTHON_VERSION="2.7"
 	export CONDA_DOWNLOAD="Miniconda2-latest-Linux-x86_64.sh"
-	export ST_INSTALL="conda install -y -c conda-forge/label/cf201901 -c fermi fermitools=1.0.0"
+	export ST_INSTALL="conda install -y --python==2.7 -c conda-forge/label/cf201901 -c fermi fermitools=1.0.0"
 	;;
     ancient)
 	export PYTHON_VERSION="2.7"
@@ -68,7 +68,6 @@ echo Running fake_travis for build $NAME
 
 \rm -rf $CONDA_PATH
 source condainstall.sh 
-$ST_INSTALL
 
 bash travistests.sh
 

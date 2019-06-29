@@ -41,7 +41,11 @@ fi
 
 export PATH="$CONDA_PATH/bin:$PATH"
 
-#conda update -q conda -y
+if [[ -n $ST_INSTALL ]]; then
+    $ST_INSTALL
+fi
+
+conda update -q conda -y
 conda config --add channels conda-forge
 conda info -a
 conda install -y python=$PYTHON_VERSION pip pytest $CONDA_DEPS
@@ -53,6 +57,8 @@ fi
 if [[ -n $PIP_DEPS ]]; then
     python -m pip install $PIP_DEPS
 fi
+
+export CONDA_PREFIX=$CONDA_PATH
 
 if [[ -n $INSTALL_CMD ]]; then
     $INSTALL_CMD

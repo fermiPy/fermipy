@@ -111,7 +111,6 @@ install:
   # Download and install the ST binaries
   - if [[ $DOCKER_INSTALL == '' ]]; then
         source condainstall.sh;
-        $ST_INSTALL;
     else
         $DOCKER_INSTALL;
         docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy && python setup.py install";
