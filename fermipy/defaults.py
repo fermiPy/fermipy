@@ -315,6 +315,8 @@ tsmap = {
 # TS Cube
 tscube = {
     'model': common['model'],
+    'exclude': (None, 'List of sources that will be removed from the model when '
+                'computing the TS map.', list),
     'do_sed': (True, 'Compute the energy bin-by-bin fits', bool),
     'nnorm': (10, 'Number of points in the likelihood v. normalization scan', int),
     'norm_sigma': (5.0, 'Number of sigma to use for the scan range ', float),
@@ -544,6 +546,7 @@ extension = {
                      'corrected PSF is given by P\'(x;E) = P(x/(1+f(E));E) where x is the angular separation.',
                      tuple),
     'make_tsmap': (True, 'Make a TS map for the source of interest.', bool),
+    'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.  Valid options are tsmap or tscube.', str),
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
@@ -561,6 +564,7 @@ localize = {
     'fix_shape': common['fix_shape'],
     'free_radius': common['free_radius'],
     'update': (True, 'Update the source model with the best-fit position.', bool),
+    'tsmap_fitter': ('tsmap', 'Set the method for generating the TS map.  Valid options are tsmap or tscube.', str),
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],

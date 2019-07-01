@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 # Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_git_version('01-00-01')
+pytestmark = requires_git_version('01-00-07')
 
 
 @pytest.fixture(scope='module')
@@ -141,7 +141,7 @@ def test_gtanalysis_fit(create_draco_analysis):
     assert (np.abs(fit_output0['loglike'] - fit_output1['loglike']) < 0.01)
 
 
-@requires_git_version('00-00-01')
+#@requires_git_version('00-00-01')
 def test_gtanalysis_fit_newton(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
@@ -160,7 +160,7 @@ def test_gtanalysis_tsmap(create_draco_analysis):
     gta.tsmap(model={}, make_plots=True)
 
 
-@requires_git_version('00-00-01')
+#@requires_git_version('00-00-01')
 def test_gtanalysis_tscube(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
@@ -173,7 +173,7 @@ def test_gtanalysis_residmap(create_draco_analysis):
     gta.residmap(model={}, make_plots=True)
 
 
-@requires_git_version('02-00-00')
+#@requires_git_version('02-00-00')
 def test_gtanalysis_find_sources(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
@@ -283,7 +283,7 @@ def test_gtanalysis_extension_gaussian(create_draco_analysis):
 
     gta.simulate_roi(restore=True)
 
-@requires_git_version('02-00-00')
+#@requires_git_version('02-00-00')
 def test_gtanalysis_localization(create_draco_analysis):
     gta = create_draco_analysis
     gta.simulate_roi(restore=True)
@@ -320,14 +320,14 @@ def test_gtanalysis_lightcurve(create_pg1553_analysis):
                        free_radius=3.0)
 
     rtol = 0.01
-    #flux = np.array([2.917568e-08,
-    #                 2.359114e-08])
-    #flux_err = np.array([1.931940e-09,
-    #                     1.822694e-09])
-    flux = np.array([2.860243e-08,
-                     2.312212e-08])
-    flux_err = np.array([1.874528e-09,
-                         1.762850e-09])
+    flux = np.array([2.917568e-08,
+                     2.359114e-08])
+    flux_err = np.array([1.931940e-09,
+                         1.822694e-09])
+    #flux = np.array([2.860243e-08,
+    #                 2.312212e-08])
+    #flux_err = np.array([1.874528e-09,
+    #                     1.762850e-09])
     ts = np.array([1463.066,
                    1123.160])
     

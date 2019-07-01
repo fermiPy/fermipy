@@ -172,6 +172,7 @@ class SourceFind(object):
         elif tsmap_fitter == 'tscube':
             kw = kwargs.get('tscube', {})
             kw['model'] = src_dict_template
+            kw['do_sed'] = False
             m = self.tscube(utils.join_strings([prefix,
                                                 'sourcefind_%02i' % iiter]),
                             **kw)
@@ -184,6 +185,10 @@ class SourceFind(object):
             (names, src_dicts) = \
                 self._build_src_dicts_from_peaks(peaks, m, src_dict_template)
         elif tsmap_fitter == 'tscube':
+            peaks = find_peaks(m['sqrt_ts'], threshold, min_separation)
+            (names, src_dicts) = \
+                self._build_src_dicts_from_peaks(peaks, m, src_dict_template)
+            """
             sd = m['tscube'].find_sources(threshold ** 2, min_separation,
                                           use_cumul=False,
                                           output_src_dicts=True,
@@ -191,6 +196,7 @@ class SourceFind(object):
             peaks = sd['Peaks']
             names = sd['Names']
             src_dicts = sd['SrcDicts']
+            """
 
         # Loop over the seeds and add them to the model
         new_src_names = []
@@ -324,6 +330,7 @@ class SourceFind(object):
         free_background = kwargs.get('free_background', False)
         free_radius = kwargs.get('free_radius', None)
         fix_shape = kwargs.get('fix_shape', False)
+        tsmap_fitter = kwargs.get('tsmap_fitter', 'tsmap')
 
         saved_state = LikelihoodState(self.like)
         loglike_init = -self.like()
@@ -350,7 +357,8 @@ class SourceFind(object):
         fit0 = self._fit_position_tsmap(name, prefix=prefix,
                                         dtheta_max=dtheta_max,
                                         zmin=-3.0,
-                                        use_pylike=False)
+                                        use_pylike=False,
+                                        tsmap_fitter=tsmap_fitter)
 
         self.logger.debug('Completed localization with TS Map.\n'
                           '(ra,dec) = (%10.4f,%10.4f) '
@@ -506,15 +514,12 @@ class SourceFind(object):
         prefix = kwargs.get('prefix', '')
         dtheta_max = kwargs.get('dtheta_max', 0.5)
         zmin = kwargs.get('zmin', -3.0)
+        tsmap_fitter = kwargs.get('tsmap_fitter', 'tsmap')
 
-        kw = {
-            'map_size': 2.0 * dtheta_max,
-            'write_fits':  kwargs.get('write_fits', False),
-            'write_npy':  kwargs.get('write_npy', False),
-            'use_pylike': kwargs.get('use_pylike', True),
-            'max_kernel_radius': self.config['tsmap']['max_kernel_radius'],
-            'loglevel': logging.DEBUG
-        }
+        kw = {'map_size': 2.0 * dtheta_max,
+              'write_fits':  kwargs.get('write_fits', False),
+              'write_npy':  kwargs.get('write_npy', False),
+              'loglevel': logging.DEBUG}
 
         src = self.roi.copy_source(name)
 
@@ -523,12 +528,25 @@ class SourceFind(object):
                                           2.0 * src['SpatialWidth'])
 
         skydir = kwargs.get('skydir', src.skydir)
-        tsmap = self.tsmap(utils.join_strings([prefix, name.lower().
-                                               replace(' ', '_')]),
-                           model=src.data,
-                           map_skydir=skydir,
-                           exclude=[name],
-                           make_plots=False, **kw)
+        
+        if tsmap_fitter == 'tsmap':
+            tsmap = self.tsmap(utils.join_strings([prefix, name.lower().
+                                                   replace(' ', '_')]),
+                               model=src.data,
+                               map_skydir=skydir,
+                               exclude=[name],
+                               use_pylike=kwargs.get('use_pylike', True),
+                               max_kernel_radius=self.config['tsmap']['max_kernel_radius'],    
+                               make_plots=False, **kw)
+        else:
+            tsmap = self.tscube(utils.join_strings([prefix, name.lower().replace(' ', '_')]),                                
+                                model=src.data,
+                                map_skydir=skydir,
+                                exclude=[name],
+                                make_plots=False,
+                                do_sed=False,
+                                **kw)
+             
 
         # Find peaks with TS > 4
         peaks = find_peaks(tsmap['ts'], 4.0, 0.2)
