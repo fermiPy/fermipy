@@ -47,6 +47,7 @@ fi
 
 conda update -q conda -y
 conda config --add channels conda-forge
+conda config --add channels conda-forge/label/cf201901
 conda info -a
 conda install -y python=$PYTHON_VERSION pip pytest $CONDA_DEPS
 
