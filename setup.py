@@ -100,7 +100,7 @@ setup(
     ]},
     #install_requires=[],
     install_requires=[
-        'numpy >= 1.6.1',
+        'numpy >= 1.10.1',
         'astropy >= 2.0.7',
         'matplotlib >= 1.5.0',
         'scipy >= 0.14',
