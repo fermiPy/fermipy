@@ -9,6 +9,7 @@
 ``save_model_map``	False	Save model counts cubes for the best-fit model of extension.
 ``spatial_model``	RadialGaussian	Spatial model that will be used to test the sourceextension.  The spatial scale parameter of the model will be set such that the 68% containment radius of the model is equal to the width parameter.
 ``sqrt_ts_threshold``	None	Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then nothreshold is applied.
+``tsmap_fitter``	tsmap	Set the method for generating the TS map.  Valid options are tsmap or tscube.
 ``update``	False	Update this source with the best-fit model for spatial extension if TS_ext > ``tsext_threshold``.
 ``width``	None	Sequence of values in degrees for the likelihood scan over spatial extension (68% containment radius).  If this argument is None then the scan points will be determined from width_min/width_max/width_nstep.
 ``width_max``	1.0	Maximum value in degrees for the likelihood scan over spatial extent.
