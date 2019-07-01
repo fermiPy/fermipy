@@ -4,6 +4,7 @@
 ``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
 ``make_plots``	False	Generate diagnostic plots.
 ``nstep``	5	Number of steps in longitude/latitude that will be taken when refining the source position.  The bounds of the scan range are set to the 99% positional uncertainty as determined from the TS map peak fit.  The total number of sampling points will be nstep**2.
+``tsmap_fitter``	tsmap	Set the method for generating the TS map.  Valid options are tsmap or tscube.
 ``update``	True	Update the source model with the best-fit position.
 ``write_fits``	True	Write the output to a FITS file.
 ``write_npy``	True	Write the output dictionary to a numpy file.

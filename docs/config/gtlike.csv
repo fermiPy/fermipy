@@ -4,6 +4,7 @@
 ``bexpmap_roi_base``	None	Set the basline ROI expoure map file.  This will be used to generate a scaled source map.
 ``convolve``	True	
 ``edisp``	True	Enable the correction for energy dispersion.
+``edisp_bins``	-1	Number of bins to use for energy correction.
 ``edisp_disable``	None	Provide a list of sources for which the edisp correction should be disabled.
 ``expscale``	None	Exposure correction that is applied to all sources in the analysis component.  This correction is superseded by `src_expscale` if it is defined for a source.
 ``irfs``	None	Set the IRF string.
