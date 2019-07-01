@@ -7,6 +7,12 @@ This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
 
+0.18.0 (7/01/2019)
+------------------
+* Added tools to use new version of energy dispersion from fermitools.
+* Changed travis testing and conda scripts to work with conda release of fermitools.
+
+
 0.17.4 (3/13/2019)
 ------------------
 * Including 4FGL, interstellar emission model and isotropic templates files.

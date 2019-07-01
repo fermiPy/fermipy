@@ -100,13 +100,13 @@ setup(
     ]},
     #install_requires=[],
     install_requires=[
-        'numpy >= 1.6.1; python_version=="2.7"',
-        'astropy >= 2.0.7; python_version=="2.7"',
-        'matplotlib >= 1.5.0; python_version=="2.7"',
-        'scipy >= 0.14; python_version=="2.7"',
+        'numpy >= 1.10.1',
+        'astropy >= 2.0.7',
+        'matplotlib >= 1.5.0',
+        'scipy >= 0.14',
         'pyyaml',
-        'healpy; python_version=="2.7"',
-        'gammapy >= 0.8; python_version=="2.7"',
+        'healpy',
+        'gammapy >= 0.8',
         ],
 #    extras_require={
 #        ':python_version=="2.7"': [
