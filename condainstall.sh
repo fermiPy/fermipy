@@ -22,14 +22,12 @@ if [[ -z $CONDA2 ]]; then
     CONDA2='conda install -y healpy subprocess32 fermipy jupyter'
 fi
 
-if [ -n "$1" ]; then
-    CONDA_PATH=$1
-elif [[ -z $CONDA_PATH ]]; then
+if [[ -z $CONDA_PATH ]]; then
     CONDA_PATH=$HOME/miniconda
 fi
 
 if [ ! -d "$CONDA_PATH/bin" ]; then
-    echo "Creating a new conda installation under $CONDA_PATH"
+    echo Creating a new conda installation under $CONDA_PATH
     curl -o miniconda.sh -L http://repo.continuum.io/miniconda/$CONDA_DOWNLOAD
     bash miniconda.sh -b -p $CONDA_PATH
     rc=$?
@@ -43,8 +41,13 @@ fi
 
 export PATH="$CONDA_PATH/bin:$PATH"
 
+if [[ -n $ST_INSTALL ]]; then
+    $ST_INSTALL
+fi
+
 conda update -q conda -y
 conda config --add channels conda-forge
+conda config --add channels conda-forge/label/cf201901
 conda info -a
 conda install -y python=$PYTHON_VERSION pip pytest $CONDA_DEPS
 
@@ -55,6 +58,8 @@ fi
 if [[ -n $PIP_DEPS ]]; then
     python -m pip install $PIP_DEPS
 fi
+
+source condasetup.sh
 
 if [[ -n $INSTALL_CMD ]]; then
     $INSTALL_CMD
