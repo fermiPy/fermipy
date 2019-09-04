@@ -519,7 +519,7 @@ class SourceFind(object):
         kw = {'map_size': 2.0 * dtheta_max,
               'write_fits':  kwargs.get('write_fits', False),
               'write_npy':  kwargs.get('write_npy', False),
-	      max_kernel_radius=self.config['tsmap']['max_kernel_radius'],
+              'max_kernel_radius': self.config['tsmap']['max_kernel_radius'],
               'loglevel': logging.DEBUG}
 
         src = self.roi.copy_source(name)
