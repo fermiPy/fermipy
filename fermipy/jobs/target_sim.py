@@ -329,7 +329,6 @@ class SimulateROI(Link):
                 gta.free_source(src_name, pars='norm')
 
 	    gta.sed(test_source_name, outfile=sedfile)
-            #gta.sed(test_source_name, prefix=pkey, outfile=sedfile)
             # Set things back to how they were
             gta.delete_source(test_source_name)
             gta.load_xml('sim_refit_%06i' % current_seed)
