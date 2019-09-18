@@ -3,7 +3,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
 Run gtsrcmaps for a single energy plane for a single source
-
 This is useful to parallize the production of the source maps
 """
 from __future__ import absolute_import, division, print_function
@@ -44,7 +43,6 @@ NAME_FACTORY = NameFactory(basedir=('.'))
 
 class CopyBaseROI(Link):
     """Small class to copy a baseline ROI to a simulation area
-
     This is useful for parallelizing analysis using the fermipy.jobs module.
     """
     appname = 'fermipy-copy-base-roi'
@@ -111,7 +109,6 @@ class CopyBaseROI(Link):
 
 class CopyBaseROI_SG(ScatterGather):
     """Small class to generate configurations for this script
-
     This adds the following arguments:
     """
     appname = 'fermipy-copy-base-roi-sg'
@@ -158,7 +155,6 @@ class CopyBaseROI_SG(ScatterGather):
 
 class RandomDirGen(Link):
     """Small class to generate random sky directions inside an ROI
-
     This is useful for parallelizing analysis using the fermipy.jobs module.
     """
     appname = 'fermipy-random-dir-gen'
@@ -253,7 +249,6 @@ class RandomDirGen(Link):
 
 class SimulateROI(Link):
     """Small class wrap an analysis script.
-
     This is useful for parallelizing analysis using the fermipy.jobs module.
     """
     appname = 'fermipy-simulate-roi'
@@ -328,7 +323,7 @@ class SimulateROI(Link):
             for src_name in correl_dict.keys():
                 gta.free_source(src_name, pars='norm')
 
-            gta.sed(test_source_name, prefix=pkey, outfile=sedfile)
+            gta.sed(test_source_name, outfile=sedfile)
             # Set things back to how they were
             gta.delete_source(test_source_name)
             gta.load_xml('sim_refit_%06i' % current_seed)
@@ -388,7 +383,6 @@ class SimulateROI(Link):
 
 class RandomDirGen_SG(ScatterGather):
     """Small class to generate configurations for this script
-
     This adds the following arguments:
     """
     appname = 'fermipy-random-dir-gen-sg'
@@ -447,7 +441,6 @@ class RandomDirGen_SG(ScatterGather):
 
 class SimulateROI_SG(ScatterGather):
     """Small class to generate configurations for this script
-
     This adds the following arguments:
     """
     appname = 'fermipy-simulate-roi-sg'
